@@ -57,6 +57,14 @@ mistyped join code, and the endpoint has no way to tell the two apart."""
 
 CHUNK_SIZE = 1024 * 1024
 
+SLOT_IDLE_SECONDS = 600
+"""How long a serving slot survives without any request from its holder, and therefore how long a client may wait
+for one answer before deciding the peer is gone. A slot is normally ended by its holder — explicitly, or by the
+import it commits or the download it completes; the expiry reclaims one whose holder sent nothing for this long —
+usually a crash, but also a live transfer whose single request outlasts it, so the cap is approximate under very
+long transfers rather than a hard guarantee. The three delta requests are the ones that can genuinely take that
+long, since the endpoint computes and exports under them, so this is what bounds their read too."""
+
 
 class CollabRequestError(AiidaException):
     """A request to the collab endpoint of a peer failed."""
@@ -81,6 +89,16 @@ class PushRefused(AiidaException):
 
 class VersionSkew(AiidaException):
     """A delta cannot travel between two peers, because one of them cannot read the archives the other writes."""
+
+
+class RenegotiationRequired(AiidaException):
+    """The export cannot serve the computation the requester diffed its manifest against, so it serves nothing.
+
+    A delta is negotiated in two round trips, and only the manifest of the first is what the requester's ``want``
+    was diffed against. Exporting from a different computation cuts an archive whose boundary links name nodes the
+    requester was never offered, which its import refuses whole — bytes wasted and the peer warned, on every
+    attempt against a sender whose daemon seals continuously. Saying so instead costs one negotiation.
+    """
 
 
 @dataclass
@@ -140,6 +158,13 @@ class JoinCode:
 
             if set(policy) != set(modes) or any(policy[key] not in values for key, values in modes.items()):
                 msg = f'it declares a policy this version does not understand: {policy}'
+                raise ValueError(msg)
+
+            # Checked here for the reason the policy is: a code carrying a null URL or an empty token decodes
+            # cleanly and then fails once the profile it governs has already been created, which is the precise
+            # failure this method exists to prevent.
+            if any(not isinstance(data[key], str) or not data[key] for key in ('collab', 'url', 'token')):
+                msg = 'it names a collab, an address or a token that is not a non-empty string'
                 raise ValueError(msg)
 
             return cls(collab=data['collab'], url=data['url'], token=data['token'], policy=policy)
@@ -326,6 +351,12 @@ class DeltaManifest:
 
     manifest: list[str]
     instant: datetime
+    computed: datetime | None = None
+    """When the computation this manifest describes was taken, echoed back with the export request so that the
+    sender can tell whether it is still the one on offer. Distinct from ``instant``, which a withheld seed pulls
+    back to that seed's own mtime and holds there — an identity has to move whenever the computation does, and
+    that one does not. Optional only so that a manifest built by a peer that predates the field still parses."""
+
     refresh: dict[str, datetime] = dataclasses.field(default_factory=dict)
     """Under the ``sync`` extras policy, the mtime the sender holds for each shared node whose extras it may have
     edited since the presented cursor. The requester keeps the ones it holds an older version of and asks for their
@@ -343,6 +374,7 @@ class DeltaManifest:
         return {
             'manifest': self.manifest,
             'instant': self.instant.isoformat(),
+            'computed': self.computed.isoformat() if self.computed is not None else None,
             'refresh': refresh_as_dict(self.refresh),
             'roster': self.roster,
             'members': members_as_dict(self.members),
@@ -353,6 +385,7 @@ class DeltaManifest:
         return cls(
             manifest=data['manifest'],
             instant=datetime.fromisoformat(data['instant']),
+            computed=datetime.fromisoformat(data['computed']) if data.get('computed') else None,
             refresh=refresh_from_dict(data['refresh']),
             roster=data.get('roster', []),
             members=members_from_dict(data.get('members', [])),

@@ -39,6 +39,7 @@ from aiida.tools.collab.config import (
     self_entry,
 )
 from aiida.tools.collab.protocol import (
+    SLOT_IDLE_SECONDS,
     DeltaManifest,
     DeltaOffer,
     EndpointBusy,
@@ -47,6 +48,7 @@ from aiida.tools.collab.protocol import (
     PeerInfo,
     PushHandshake,
     PushRefused,
+    RenegotiationRequired,
     delta_id,
 )
 from aiida.tools.collab.state import CollabState, import_lock, import_lock_held
@@ -63,6 +65,7 @@ from aiida.tools.collab.sync import (
     refresh_snapshots,
     refresh_wanted,
     required_refused,
+    vanished_nodes,
 )
 
 if TYPE_CHECKING:
@@ -80,12 +83,6 @@ LOGGER = AIIDA_LOGGER.getChild('collab')
 # Deltas stay cached while their requester retries an interrupted download; anything beyond a few concurrent
 # requesters is stale cursors accumulating, not live transfers.
 MAX_CACHED_DELTAS = 8
-
-# How long a serving slot survives without any request from its holder. A slot is normally ended by its holder —
-# explicitly, or by the import it commits or the download it completes; the expiry reclaims one whose holder sent
-# nothing for this long — usually a crash, but also a live transfer whose single request outlasts it, so the cap
-# is approximate under very long transfers rather than a hard guarantee.
-SLOT_IDLE_SECONDS = 600
 
 # How long an upload nobody imported is kept staged. A stash exists so that a pusher retrying after a failed
 # import transfers zero bytes, and one that has not retried in a week is not coming back with those bytes;
@@ -372,6 +369,7 @@ class CollabEndpoint:
             return DeltaManifest(
                 manifest=delta.uuids,
                 instant=delta.instant,
+                computed=delta.computed,
                 refresh=self._refresh_offer(cursor),
                 roster=entries,
                 members=self._membership_offer(cursor),
@@ -385,6 +383,7 @@ class CollabEndpoint:
         refresh_want: frozenset[str] = frozenset(),
         refuse: frozenset[str] = frozenset(),
         requester: str = '',
+        computed: datetime | None = None,
     ) -> DeltaOffer:
         """Export the requested subset of a delta, reusing the cached archive while nothing changed.
 
@@ -397,24 +396,49 @@ class CollabEndpoint:
             wanted provenance requires — the import would import those regardless — and drops the links to the
             rest, which the requester could not resolve.
         :param requester: the profile UUID of the peer, whose session the granted slot belongs to.
+        :param computed: when the computation the ``want`` was diffed against was taken. Only that computation may
+            be served; anything else is answered with a renegotiation instead of with a mismatched cut. It is this
+            and not the export instant, because a withheld seed pins the instant to that seed's own mtime and
+            holds it there across recomputations — on a profile with one, comparing instants never fires.
         :raises EndpointBusy: when every serving slot is taken by another peer.
+        :raises RenegotiationRequired: when the computation the requester diffed is not the one on offer here, or
+            no longer resolves.
         """
         self._acquire_pull_slot(requester)
 
         with self._delta_lock:
             delta = self._delta(cursor, claim)
             key = delta_id(cursor, claim, want, refuse)
+
+            # Raised rather than routed through `_renegotiate`, which also evicts: the computation this missed
+            # is valid, and peers presenting one cursor and claim share it.
+            if computed is not None and computed != delta.computed:
+                msg = 'the delta was recomputed since its manifest was served: negotiate again'
+                raise RenegotiationRequired(msg)
+
             cached = self._deltas.pop(key, None)
 
-            # An archive built from a superseded computation of the delta serves stale bytes: the instant ties
-            # the archive to the computation it was cut from.
-            if cached is None or cached.instant != delta.instant:
+            # Cut from this very computation, which is what says the bytes are the ones that were negotiated. Not
+            # the export instant: a withheld seed pins that across recomputations, so an archive cut before one
+            # compares equal to the delta after it and boundary links gained in between never travel.
+            if cached is None or cached.computed != delta.computed:
                 self._counter += 1
 
                 if cached is not None:
                     cached.filepath.unlink(missing_ok=True)
 
+                # Before `required_refused`, which walks from these nodes and raises on one that is gone — a 500
+                # that never reaches `_renegotiate`, so the computation keeps naming it. What that walk returns
+                # needs no check of its own: it is built from rows the walk found alive.
+                if vanished := vanished_nodes(self._backend, want):
+                    msg = (
+                        f'node {sorted(vanished)[0]} of the negotiated delta was deleted here since its manifest '
+                        'was served: negotiate again'
+                    )
+                    self._renegotiate(cursor, claim, msg)
+
                 required = required_refused(delta=delta, backend=self._backend, want=want, refuse=refuse)
+
                 cached = export_delta(
                     self._dirpath / f'delta-{self._counter}.aiida',
                     delta=delta,
@@ -456,12 +480,8 @@ class CollabEndpoint:
         return ManifestDiff(
             missing=sorted(missing - refuse),
             refuse=sorted(refuse),
-            refresh=(
-                refresh_wanted(self._backend, refresh or {}, state.tombstones) if self._extras_mode == 'sync' else []
-            ),
-            members=(
-                members_wanted(self._backend, members or [], state.tombstones) if self._groups_mode == 'grow' else []
-            ),
+            refresh=(refresh_wanted(self._backend, refresh or {}) if self._extras_mode == 'sync' else []),
+            members=(members_wanted(self._backend, members or []) if self._groups_mode == 'grow' else []),
         )
 
     def _refresh_offer(self, cursor: datetime | None) -> dict[str, datetime]:
@@ -500,6 +520,15 @@ class CollabEndpoint:
 
         return cached.filepath
 
+    def staging(self, requester: str) -> None:
+        """Refresh the serving slot of a peer that is uploading, as a download refreshes that of one pulling.
+
+        A transfer is its holder being active, however long it takes. Without this a push slower end to end than
+        ``SLOT_IDLE_SECONDS`` loses its slot while it is actively sending, and the endpoint counts a peer that
+        left where one is still there.
+        """
+        self._slots.acquire(f'push:{requester}')
+
     def release(self, requester: str) -> None:
         """Free the serving slots of a peer whose session ended, whether it transferred anything or not.
 
@@ -511,11 +540,27 @@ class CollabEndpoint:
         for direction in ('pull', 'push'):
             self._slots.release(f'{direction}:{requester}')
 
+    def _renegotiate(self, cursor: datetime | None, claim: frozenset[str], msg: str) -> None:
+        """Drop the cached computation for a cursor and claim, and tell the requester to negotiate again.
+
+        Dropping it is what makes the retry converge: nothing else invalidates a computation whose profile gained
+        no seal and imported nothing, so a requester answered this and sent straight back would be answered it
+        again, forever.
+
+        :raises RenegotiationRequired: always.
+        """
+        self._computed.pop(delta_id(cursor, claim), None)
+
+        raise RenegotiationRequired(msg)
+
     def _acquire_pull_slot(self, requester: str) -> None:
         """Grant or refresh the serving slot of a pulling peer.
 
-        Keyed by the peer rather than by the request it happens to present, so that the cap counts sessions —
-        two newcomers present the very same cursor and claim — and no peer can release the slot of another.
+        Keyed by the peer rather than by the request it happens to present, so that the cap counts sessions:
+        two newcomers present the very same cursor and claim. The peer is the one it named in its header, which
+        no route verifies, so this separates honest peers rather than defending against dishonest ones — a
+        member that names another's session takes or frees that session's slot. Within the trust model, where
+        the token is the membership and its holder can already read every delta.
 
         :raises EndpointBusy: when every slot is taken by another peer.
         """
@@ -563,13 +608,18 @@ class CollabEndpoint:
         from aiida.manage.configuration import get_config
         from aiida.manage.configuration.config import Config
 
-        # Read from the file per import, like the handshake that preceded it: withdrawing consent must take effect
-        # at once, and a pusher that negotiated before it was withdrawn must not be let through afterwards.
-        if not Config.from_file(get_config().filepath).get_option(OPTION_ACCEPT_PUSH, scope=self._profile.name):
-            msg = f'this profile does not accept pushes: its `{OPTION_ACCEPT_PUSH}` option is off'
-            raise PushRefused(msg)
-
         try:
+            # Read from the file per import, like the handshake that preceded it: withdrawing consent must take
+            # effect at once, and a pusher that negotiated before it was withdrawn must not be let through
+            # afterwards. Inside the `try`, so that its refusal frees the slot the handshake granted too — a
+            # consent withdrawn mid-push would otherwise park it until the expiry reclaims it.
+            if not Config.from_file(get_config().filepath).get_option(OPTION_ACCEPT_PUSH, scope=self._profile.name):
+                msg = f'this profile does not accept pushes: its `{OPTION_ACCEPT_PUSH}` option is off'
+                raise PushRefused(msg)
+
+            # An import that runs for longer than a slot lives is still its holder being active, as a download is.
+            self._slots.acquire(f'push:{peer}')
+
             # The import lock wraps the worker stop as well: were it taken inside, a second push could restart the
             # workers while the first is still importing, which is the very starvation the stop exists to prevent.
             with import_lock(self._state_filepath):
@@ -621,6 +671,7 @@ def serve(profile: Profile, backend: StorageBackend) -> None:
         request_delta=endpoint.request_delta,
         resolve_delta=endpoint.resolve_delta,
         release=endpoint.release,
+        staging=endpoint.staging,
         diff_manifest=endpoint.diff_manifest,
         handshake=endpoint.handshake,
         import_staged=endpoint.import_staged,

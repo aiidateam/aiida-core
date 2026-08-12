@@ -176,6 +176,17 @@ def seal_calculation(backend):
     calculation.seal()
 
 
+def delete_node(backend, uuid):
+    """Delete a node from a profile, as a ``verdi node delete`` on the serving machine would.
+
+    Through raw rows, because ``SqliteTempBackend`` does not implement ``delete_nodes_and_connections``.
+    """
+    from aiida.storage.sqlite_zip.models import DbNode
+
+    with backend.transaction() as session:
+        session.query(DbNode).filter(DbNode.uuid == uuid).delete(synchronize_session=False)
+
+
 def withheld_seed(backend):
     """Store a sealed workchain that called a calculation which is still running, and return its mtime.
 
@@ -297,6 +308,164 @@ def test_negotiate_delta_cached(make_profile, temp_backend):
     assert refreshed.instant == fresh.instant
     assert endpoint.resolve_delta(offer.delta) != filepath
     assert not filepath.exists(), 'the superseded delta should have been removed'
+
+
+def test_request_delta_renegotiates_when_the_computation_moved(make_profile, temp_backend):
+    """Test that an export request naming a manifest this endpoint no longer computes is refused, not served.
+
+    The want was diffed against the manifest of one computation, so a cut from another one is an archive nobody
+    ever agreed to: it holds nodes that manifest never named and boundary links the requester cannot resolve.
+    """
+    from aiida.tools.collab.protocol import RenegotiationRequired
+
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    manifest = endpoint.negotiate_delta(None, frozenset())
+
+    seal_calculation(temp_backend)
+
+    with pytest.raises(RenegotiationRequired, match='recomputed'):
+        endpoint.request_delta(None, frozenset(), frozenset(manifest.manifest), computed=manifest.computed)
+
+    fresh = endpoint.negotiate_delta(None, frozenset())
+
+    assert endpoint.request_delta(None, frozenset(), frozenset(fresh.manifest), computed=fresh.computed).instant == (
+        fresh.instant
+    )
+
+
+def test_request_delta_renegotiates_on_a_profile_whose_export_instant_cannot_move(make_profile, temp_backend):
+    """Test that the recomputation check fires where the export instant is pinned, which is the case it is for.
+
+    A withheld seed pulls the export instant back to its own mtime and holds it there for as long as the seed is
+    withheld — which, when the daemon that ran it was killed, is never. The instant is therefore not an identity
+    of a computation on such a profile, and a check comparing it is a no-op precisely where the defect bites: a
+    sender that seals continuously is a sender with processes in flight. ``computed`` is the field that moves
+    whenever the computation does, and the first assertion here is what says the two are not interchangeable.
+    """
+    from aiida.tools.collab.protocol import RenegotiationRequired
+
+    profile = make_profile()
+    withheld_seed(temp_backend)
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    manifest = endpoint.negotiate_delta(None, frozenset())
+
+    seal_calculation(temp_backend)
+    fresh = endpoint.negotiate_delta(None, frozenset())
+
+    assert fresh.manifest != manifest.manifest, 'the second seal has to be a genuine recomputation'
+    assert fresh.instant == manifest.instant, 'the withheld seed pins the export instant across recomputations'
+
+    with pytest.raises(RenegotiationRequired, match='recomputed'):
+        endpoint.request_delta(None, frozenset(), frozenset(manifest.manifest), computed=manifest.computed)
+
+
+def test_request_delta_renegotiates_when_a_wanted_node_was_deleted(make_profile, temp_backend):
+    """Test that a node deleted here since the manifest was served is a renegotiation, and drops the computation.
+
+    A local deletion moves no seal and records no import, so nothing makes the cached computation stale: the cut
+    would leave the row out of the archive while the links naming it still travel. Dropping the computation is
+    what makes the retry converge — the requester would otherwise be told to renegotiate forever.
+    """
+    from aiida.tools.collab.protocol import RenegotiationRequired
+
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    manifest = endpoint.negotiate_delta(None, frozenset())
+    delete_node(temp_backend, manifest.manifest[0])
+
+    with pytest.raises(RenegotiationRequired, match='deleted here'):
+        endpoint.request_delta(None, frozenset(), frozenset(manifest.manifest), computed=manifest.computed)
+
+    assert endpoint.negotiate_delta(None, frozenset()).manifest == []
+
+
+def test_request_delta_renegotiates_for_a_requester_that_also_refuses(make_profile, temp_backend):
+    """Test that the deletion is a renegotiation even when the requester refuses something as well.
+
+    A refusal puts a graph traversal before the guard, and a walk from a node that is gone raises first — a 500
+    the CLI cannot retry, leaving the computation naming the deleted node for every later pull.
+    """
+    from aiida.tools.collab.protocol import RenegotiationRequired
+
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    manifest = endpoint.negotiate_delta(None, frozenset())
+    wanted, refused = manifest.manifest[0], manifest.manifest[1]
+    delete_node(temp_backend, wanted)
+
+    with pytest.raises(RenegotiationRequired, match='deleted here'):
+        endpoint.request_delta(
+            None, frozenset(), frozenset({wanted}), refuse=frozenset({refused}), computed=manifest.computed
+        )
+
+    assert wanted not in endpoint.negotiate_delta(None, frozenset()).manifest, 'the computation has to be dropped'
+
+
+def test_a_renegotiation_of_one_peer_leaves_the_computation_another_diffed(make_profile, temp_backend):
+    """Test that being told to renegotiate does not destroy the computation the next requester is presenting.
+
+    Every newcomer presents the same empty cursor and claim, so one computation serves several peers. Only the
+    deletion case needs the eviction; a recomputation has already produced a valid one.
+    """
+    from aiida.tools.collab.protocol import RenegotiationRequired
+
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    stale = endpoint.negotiate_delta(None, frozenset(), requester='one')
+
+    seal_calculation(temp_backend)
+
+    fresh = endpoint.negotiate_delta(None, frozenset(), requester='two')
+
+    with pytest.raises(RenegotiationRequired, match='recomputed'):
+        endpoint.request_delta(None, frozenset(), frozenset(stale.manifest), requester='one', computed=stale.computed)
+
+    # The peer that diffed the fresh manifest is served it, rather than told to renegotiate a computation that
+    # is still the current one.
+    served = endpoint.request_delta(
+        None, frozenset(), frozenset(fresh.manifest), requester='two', computed=fresh.computed
+    )
+
+    assert served.size > 0
+
+
+def test_a_cached_archive_is_re_cut_when_the_export_instant_cannot_move(make_profile, temp_backend):
+    """Test that the archive cache is validated by the computation it was cut from, not by the export instant.
+
+    A withheld seed pins the instant across recomputations, so an archive cut before new work compares equal to
+    the delta after it and is served in its place, boundary links and all.
+    """
+    withheld_seed(temp_backend)
+    seal_calculation(temp_backend)
+    profile = make_profile()
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    first = endpoint.negotiate_delta(None, frozenset())
+    want = frozenset(first.manifest)
+    offer = endpoint.request_delta(None, frozenset(), want, computed=first.computed)
+    before = endpoint._deltas[offer.delta].filepath
+
+    seal_calculation(temp_backend)
+    second = endpoint.negotiate_delta(None, frozenset())
+
+    assert second.instant == first.instant, 'the withheld seed pins the instant the cache used to be keyed by'
+    assert second.computed != first.computed
+
+    endpoint.request_delta(None, frozenset(), want, computed=second.computed)
+
+    assert endpoint._deltas[offer.delta].filepath != before, 'the archive of a superseded computation was served'
 
 
 def test_the_delta_cache_is_keyed_by_the_refusal_too(make_profile, temp_backend):
@@ -423,6 +592,68 @@ def test_slot_released_after_import(make_profile, record_calls, tmp_path):
     endpoint.import_staged(tmp_path / 'staged', 'pusher-one', timezone.now())
 
     assert endpoint.handshake('pusher-three').busy is False
+
+
+def test_slot_released_when_an_import_is_refused(make_profile, empty_config, record_calls, tmp_path):
+    """Test that a push refused at the import gives its slot back, rather than parking it until it expires.
+
+    Consent can be withdrawn while a pusher is mid-push: it handshook and took a slot while pushes were accepted,
+    and the import that follows is the request that finds the no. That refusal has to free the slot like every
+    other way an import can end — otherwise withdrawing consent costs the endpoint a serving slot for the whole
+    idle timeout, and on a profile serving one peer at a time that is a lockout of everybody, pullers included.
+    """
+    from aiida.manage.configuration.config import Config
+
+    profile = make_profile(storage_backend='core.psql_dos')
+    empty_config.set_option('collab.max_concurrency', 1, scope=profile.name)
+    empty_config.store()
+    record_calls()
+
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+
+    assert endpoint.handshake('pusher-one').busy is False
+
+    withdrawn = Config.from_file(empty_config.filepath)
+    withdrawn.unset_option('collab.accept_push', scope=profile.name)
+    withdrawn.store()
+
+    with pytest.raises(PushRefused):
+        endpoint.import_staged(tmp_path / 'staged', 'pusher-one', timezone.now())
+
+    withdrawn.set_option('collab.accept_push', True, scope=profile.name)
+    withdrawn.store()
+
+    assert endpoint.handshake('pusher-two').busy is False, 'the refused pusher must not still be holding the slot'
+
+
+def test_an_upload_that_outlasts_the_idle_timeout_keeps_its_slot(make_profile, empty_config, monkeypatch):
+    """Test that a peer actively uploading holds its slot however long the transfer takes.
+
+    A slot expires so that a holder which went silent cannot wedge the endpoint. A push of a large delta over a
+    slow link is the opposite of silent, but between the handshake and the import it makes no call the expiry
+    counts, so the endpoint reclaims a slot from a peer that is still sending — and admits a second pusher whose
+    import then queues behind the first on the import lock, which is the serialization the slot cap exists to do
+    before any bytes travel.
+    """
+    from types import SimpleNamespace
+
+    profile = make_profile()
+    empty_config.set_option('collab.max_concurrency', 1, scope=profile.name)
+    empty_config.store()
+
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+    now = time.monotonic()
+    monkeypatch.setattr(endpoint_module, 'time', SimpleNamespace(monotonic=lambda: now))
+
+    assert endpoint.handshake('pusher-one').busy is False
+
+    # Two chunks, each arriving before the slot would expire, but past it in total: this is the sequence a
+    # transfer longer than the timeout produces, and every chunk of it is the holder being active.
+    for _ in range(2):
+        now += endpoint_module.SLOT_IDLE_SECONDS * 0.75
+        endpoint.staging('pusher-one')
+
+    assert endpoint.handshake('pusher-two').busy is True, 'the slot belongs to the peer that is still uploading'
 
 
 def test_slot_released_when_a_negotiation_ends(make_profile, temp_backend):

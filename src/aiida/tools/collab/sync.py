@@ -134,6 +134,10 @@ class DeltaExport:
     uuids: list[str]
     instant: datetime
 
+    computed: datetime | None = None
+    """The computation these bytes were cut from, which says whether they are still the ones on offer. The export
+    instant will not do: a withheld seed pins it across recomputations."""
+
 
 @dataclass
 class DeltaReport:
@@ -280,7 +284,7 @@ def export_delta(
         groups_mode=groups_mode,
     )
 
-    return DeltaExport(filepath=filepath, uuids=sorted(want_uuids), instant=delta.instant)
+    return DeltaExport(filepath=filepath, uuids=sorted(want_uuids), instant=delta.instant, computed=delta.computed)
 
 
 def _write_thin_archive(
@@ -418,14 +422,38 @@ def missing_uuids(backend: StorageBackend, uuids: list[str]) -> list[str]:
     return sorted(set(uuids) - set(query.all(flat=True)))
 
 
+def vanished_nodes(backend: StorageBackend, uuids: set[str] | frozenset[str]) -> set[str]:
+    """Return which of the given nodes the profile no longer holds.
+
+    A delta is computed once and cached, and a ``verdi node delete`` here is no staleness signal for that cache —
+    it moves no seal and records no import. The cut taken from it would name rows that are gone: the node is
+    silently missing from the archive while the links to it still travel, so the requester either refuses the whole
+    delta or attaches a link to a node that exists nowhere.
+
+    Asked by UUID and not by the key the delta holds these under: SQLite reuses a freed rowid, and the cut goes
+    by key, so a replacement would be shipped under a manifest that never named it.
+    """
+    asked = sorted(uuids)
+
+    if not asked:
+        return set()
+
+    query = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': {'in': asked}}, project='uuid')
+
+    return set(asked) - set(query.all(flat=True))
+
+
 def refresh_offer(*, state: CollabState, backend: StorageBackend, cursor: datetime | None) -> dict[str, datetime]:
     """Return the mtime of every node whose extras this profile may hold a newer version of than a peer at ``cursor``.
 
     Under the ``sync`` policy this is what the manifest is for nodes, but for the extras of *shared* ones: the nodes
-    edited here since the cursor, united with those refreshed into this profile since then. That union is the same
-    one that makes relayed provenance travel, here so that an extras edit relayed A→B→C travels with pairwise pulls
-    alone. Only mtimes are offered: the receiver holds the authoritative comparison, its own mtimes, and asks for
-    the snapshots it turns out to need.
+    edited here since the cursor, united with everything that entered this profile since then — refreshed as a
+    snapshot or imported as a node. That union is the same one that makes relayed provenance travel, here so that an
+    extras edit relayed A→B→C travels with pairwise pulls alone. The imported leg is what covers the edit that
+    arrived *inside* a delta: a peer receiving the node for the first time after the edit gets the new extras in the
+    archive row, under the origin's mtime, so neither the mtime bound nor the refresh log names it. Only mtimes are
+    offered: the receiver holds the authoritative comparison, its own mtimes, and asks for the snapshots it turns
+    out to need.
 
     A peer without a cursor is offered every node, because it is not true that such a peer holds nothing of this
     profile: it holds whatever it gave this profile in the first place, and those extras are in no delta. The offer
@@ -435,7 +463,7 @@ def refresh_offer(*, state: CollabState, backend: StorageBackend, cursor: dateti
     filters: dict[str, Any] = {}
 
     if cursor is not None:
-        relayed = sorted(state.refreshed_uuids_since(cursor))
+        relayed = sorted(state.refreshed_uuids_since(cursor) | state.imported_uuids_since(cursor))
         filters = {'mtime': {'>=': cursor}}
 
         if relayed:
@@ -446,22 +474,22 @@ def refresh_offer(*, state: CollabState, backend: StorageBackend, cursor: dateti
     return dict(query.iterall())
 
 
-def refresh_wanted(backend: StorageBackend, offer: dict[str, datetime], tombstones: set[str]) -> list[str]:
+def refresh_wanted(backend: StorageBackend, offer: dict[str, datetime]) -> list[str]:
     """Return which of the offered nodes this profile holds an older version of the extras of.
 
     A node this profile does not hold has no extras to replace — it either travels in the delta with them or is
-    not shared at all — and a tombstoned one was deliberately deleted, so both are dropped.
+    not shared at all — and being held is the whole condition: a tombstone gates delivery, not participation, so a
+    node this profile deleted and provenance later brought back takes part in the extras exchange again. One that
+    is merely deleted has no mtime row and falls out here on its own.
     """
-    candidates = {uuid: mtime for uuid, mtime in offer.items() if uuid not in tombstones}
-
-    if not candidates:
+    if not offer:
         return []
 
     query = orm.QueryBuilder(backend=backend).append(
-        orm.Node, filters={'uuid': {'in': sorted(candidates)}}, project=['uuid', 'mtime']
+        orm.Node, filters={'uuid': {'in': sorted(offer)}}, project=['uuid', 'mtime']
     )
 
-    return sorted(uuid for uuid, mtime in query.iterall() if candidates[uuid] > mtime)
+    return sorted(uuid for uuid, mtime in query.iterall() if offer[uuid] > mtime)
 
 
 def refresh_snapshots(backend: StorageBackend, uuids: list[str]) -> list[ExtrasSnapshot]:
@@ -512,11 +540,13 @@ def membership_offer(*, state: CollabState, backend: StorageBackend, cursor: dat
     ]
 
 
-def members_wanted(backend: StorageBackend, offer: list[GroupMembers], tombstones: set[str]) -> list[GroupMembers]:
+def members_wanted(backend: StorageBackend, offer: list[GroupMembers]) -> list[GroupMembers]:
     """Return the offered memberships this profile can apply and does not hold yet.
 
     A pair whose node is not here — never shared, or deleted — is dropped rather than kept pending: the
-    memberships of a node travel with the node, so whichever later sync delivers it delivers them too. The groups
+    memberships of a node travel with the node, so whichever later sync delivers it delivers them too. Being held
+    is the whole condition, tombstone or not: a node this profile deleted and provenance later brought back is
+    curated again like any other, since a tombstone gates delivery rather than participation. The groups
     AiiDA generates for itself are refused whatever a peer offers: they describe the history of the profile that
     made them, and this profile decides what enters it.
 
@@ -531,7 +561,7 @@ def members_wanted(backend: StorageBackend, offer: list[GroupMembers], tombstone
             folded.setdefault(group.uuid, dataclasses.replace(group, nodes=[])).nodes.extend(group.nodes)
 
     candidates = [dataclasses.replace(group, nodes=list(dict.fromkeys(group.nodes))) for group in folded.values()]
-    wanted_nodes = {node for group in candidates for node in group.nodes} - tombstones
+    wanted_nodes = {node for group in candidates for node in group.nodes}
 
     if not wanted_nodes:
         return []
@@ -566,7 +596,7 @@ def members_wanted(backend: StorageBackend, offer: list[GroupMembers], tombstone
     return [group for group in wanted if group.nodes]
 
 
-def apply_members(backend: StorageBackend, offer: list[GroupMembers], tombstones: set[str]) -> list[tuple[str, str]]:
+def apply_members(backend: StorageBackend, offer: list[GroupMembers]) -> list[tuple[str, str]]:
     """Insert the offered memberships this profile lacks, creating the groups it does not hold, and return them.
 
     A group is created under the offered UUID, so that every member of the collab holds one group where one group
@@ -575,7 +605,7 @@ def apply_members(backend: StorageBackend, offer: list[GroupMembers], tombstones
     """
     from aiida.orm.entities import EntityTypes
 
-    wanted = members_wanted(backend, offer, tombstones)
+    wanted = members_wanted(backend, offer)
 
     if not wanted:
         return []
@@ -650,7 +680,7 @@ def _public_extras(extras: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in extras.items() if not key.startswith(PRIVATE_EXTRA_PREFIX)}
 
 
-def _apply_refresh(backend: StorageBackend, refresh: list[ExtrasSnapshot], tombstones: set[str]) -> list[str]:
+def _apply_refresh(backend: StorageBackend, refresh: list[ExtrasSnapshot]) -> list[str]:
     """Replace the extras of the nodes whose snapshot is the newer one, and return which were written.
 
     The whole dict is replaced rather than merged, which is what propagates a deletion as absence, except that the
@@ -660,7 +690,7 @@ def _apply_refresh(backend: StorageBackend, refresh: list[ExtrasSnapshot], tombs
     """
     from aiida.orm.entities import EntityTypes
 
-    wanted = set(refresh_wanted(backend, {snapshot.uuid: snapshot.mtime for snapshot in refresh}, tombstones))
+    wanted = set(refresh_wanted(backend, {snapshot.uuid: snapshot.mtime for snapshot in refresh}))
 
     if not wanted:
         return []
@@ -782,11 +812,6 @@ def import_delta(
             # A boundary link whose archive endpoint was dropped with its tombstone must not be re-attached.
             boundary = [link for link in boundary if link[0] in uuids or link[1] in uuids]
 
-        # A tombstone speaks for what this import leaves deleted. A node the delta brings back anyway — because
-        # provenance of the delta depends on it, or because `--include-deleted` asked for it — is here afterwards,
-        # and its memberships are as real as it is.
-        honoured = state.tombstones - set(uuids)
-
         # Checked before anything lands: a boundary endpoint that exists neither in the archive nor locally would
         # leave the imported nodes permanently disconnected from provenance the sender counted on, and a boundary
         # link that violates a local link invariant must not be plantable by a diverged or hostile sender.
@@ -814,16 +839,18 @@ def import_delta(
     if computer_uuids:
         _remap_hashes(backend, uuids, computer_uuids)
 
-    refreshed = _apply_refresh(backend, refresh or [], state.tombstones) if extras_mode == 'sync' else []
+    refreshed = _apply_refresh(backend, refresh or []) if extras_mode == 'sync' else []
 
     # Both ways a membership arrives go through the same apply, which is what lets a pair whose group the archive
-    # lost still create it here. Only what was written is journalled — a pair sent back to the peer that already
-    # has it would otherwise bounce between the two forever, and a pair claimed but not written would be relayed
-    # to a third peer this profile cannot back up.
+    # lost still create it here. A tombstone speaks for what this import leaves deleted and nothing more: a node
+    # the delta brings back anyway — because provenance of it depends on the node, or because `--include-deleted`
+    # asked for it — is here afterwards, and the apply's own held-check is what tells the two apart. Only what was
+    # written is journalled — a pair sent back to the peer that already has it would otherwise bounce between the
+    # two forever, and a pair claimed but not written would be relayed to a third peer this profile cannot back up.
     archived = set(uuids)
     applied = sorted(
         {
-            *apply_members(backend, delivered, honoured),
+            *apply_members(backend, delivered),
             # What the import wrote by itself, which is the memberships of a group that was not here before it
             # ran — and nothing at all once the re-filter has taken that group out of the archive.
             *(
@@ -833,11 +860,9 @@ def import_delta(
                 for node in group.nodes
                 if node in archived
             ),
-            *(apply_members(backend, members or [], honoured) if groups_mode == 'grow' else []),
+            *(apply_members(backend, members or []) if groups_mode == 'grow' else []),
         }
     )
-    event = CollabEvent(time=timezone.now(), direction='pull', peer=peer, uuids=uuids, size=size)
-
     # Appended to a freshly read state under the lock instead of saving ``state``: that was read before an import
     # that can take minutes, and writing it back wholesale would erase every tombstone recorded in the meantime.
     with CollabState.mutate(state.filepath) as fresh:
@@ -857,7 +882,10 @@ def import_delta(
         held = fresh.cursors.get(peer)
         fresh.cursors[peer] = max(held, instant) if held is not None else instant
 
-        fresh.events.append(event)
+        # Stamped under the lock, not before waiting for it, as the membership journal is: a negotiation served in
+        # the window between the two reads a state without the event and stamps its computation after its time, so
+        # no later negotiation unions these nodes either — the imported provenance becomes invisible for good.
+        fresh.events.append(CollabEvent(time=timezone.now(), direction='pull', peer=peer, uuids=uuids, size=size))
 
         # Recorded apart from the import: these nodes were already held, so they are no claim of new provenance,
         # but a peer pulling from here later has to learn that their extras moved on.
@@ -1157,20 +1185,23 @@ def resolve_computer_map(backend: StorageBackend, computer_map: dict[str, str]) 
     Both halves must name a computer this profile holds. The local one is what the remapped hash is computed for;
     the peer one is the condition ``_remap_hashes`` silently imposes anyway, since it finds the calculations to
     remap by querying *this* profile for that label — so a mapping naming a computer that has never arrived here
-    used to remap nothing and say nothing. A pair whose halves resolve to the same computer is refused too: it can
-    only be a mistake, and it would write remapped hashes onto this profile's own calculations.
+    used to remap nothing and say nothing. It must also carry the marker every arrived computer is labelled with:
+    a pair written the natural way round, ``lumi=lumi@collab``, otherwise passes every check and writes remapped
+    hashes onto the calculations of this profile's own ``lumi``, breaking local caching for good. A pair whose
+    halves resolve to the same computer is refused for that same reason, and is what the marker rule generalizes.
 
     Every unusable pair of the call is named at once, since the mapping is a single option and applying the good
     half of it leaves a set of equivalences that is harder to reason about than none.
 
     :raises ~aiida.common.exceptions.ConfigurationError: when any pair names a computer this profile does not hold,
-        or maps one onto itself.
+        maps one onto itself, or names as the peer half a computer that did not arrive through the collab.
     """
     from aiida.common.exceptions import ConfigurationError
 
     uuids = dict(orm.QueryBuilder(backend=backend).append(orm.Computer, project=['label', 'uuid']).all())
     unknown_peer = sorted(label for label in computer_map if label not in uuids)
     unknown_local = sorted({label for label in computer_map.values() if label not in uuids})
+    unmarked = {peer: local for peer, local in computer_map.items() if not peer.endswith(COMPUTER_MARKER)}
     reflexive = sorted(
         f'`{peer}`=`{local}`'
         for peer, local in computer_map.items()
@@ -1191,6 +1222,23 @@ def resolve_computer_map(backend: StorageBackend, computer_map: dict[str, str]) 
     if unknown_local:
         listed = ', '.join(f'`{label}`' for label in unknown_local)
         problems.append(f'no local computer of this profile is labelled {listed}.')
+
+    if unmarked:
+        listed = ', '.join(f'`{label}`' for label in sorted(unmarked))
+        problems.append(
+            f'{listed} did not arrive through the collab: a computer that did is labelled '
+            f'`<label>{COMPUTER_MARKER}`, and the peer half of a mapping is that computer.'
+        )
+        # Offered only for a pair that would actually validate the other way round: both halves have to be
+        # computers this profile holds, or the suggestion is one this same function would refuse in turn.
+        swapped = sorted(
+            f'`{local}={peer}`'
+            for peer, local in unmarked.items()
+            if local.endswith(COMPUTER_MARKER) and local in uuids and peer in uuids
+        )
+
+        if swapped:
+            problems.append(f'The halves look the wrong way round; did you mean {", ".join(swapped)}?')
 
     if reflexive:
         problems.append(f'{", ".join(reflexive)}: the two halves are one and the same computer.')

@@ -704,6 +704,9 @@ def seal_calculation_with(backend, label, inputs):
     for index, node in enumerate(inputs):
         calculation.base.links.add_incoming(node, link_type=LinkType.INPUT_CALC, link_label=f'input_{index}')
 
+    # Distinct per calculation, since repository objects are content-addressed: two calculations writing the same
+    # bytes share one key, and "the wanted node brought its own object" would then be true of the held one's.
+    calculation.base.repository.put_object_from_bytes(f'the input of {label}\n'.encode(), 'aiida.in')
     calculation.store()
     outputs = orm.Int(2, backend=backend)
     outputs.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='result')
@@ -719,6 +722,26 @@ def archive_repo_keys(filepath):
 
     with get_format().open(filepath, mode='r') as reader:
         return set(orm.Node.get_collection(reader.get_backend()).iter_repo_keys())
+
+
+def test_vanished_nodes_reports_only_what_is_gone(peers):
+    """Test that a deleted node is reported gone and a held one is not.
+
+    Asking by UUID is what keeps SQLite's rowid reuse out of the answer, and no test can pin that: the key-asking
+    version took the delta as an argument, so the signature is the guard.
+    """
+    from aiida.storage.sqlite_zip.models import DbNode
+    from aiida.tools.collab.sync import vanished_nodes
+
+    backend, _ = peers('one')
+    gone = orm.Int(1, backend=backend).store()
+    held = orm.Int(2, backend=backend).store()
+    gone_uuid = gone.uuid
+
+    with backend.transaction() as session:
+        session.query(DbNode).filter(DbNode.id == gone.pk).delete(synchronize_session=False)
+
+    assert vanished_nodes(backend, {gone_uuid, held.uuid}) == {gone_uuid}
 
 
 def test_thin_export_ships_only_missing(tmp_path, peers):
@@ -754,7 +777,13 @@ def test_thin_export_ships_only_missing(tmp_path, peers):
     assert set(export.uuids) == set(missing)
     assert set(_archive_node_uuids(tmp_path / 'second.aiida')) == set(missing)
     assert heavy.uuid not in export.uuids
-    assert archive_repo_keys(tmp_path / 'second.aiida').isdisjoint(heavy_keys)
+
+    second_keys = archive_repo_keys(tmp_path / 'second.aiida')
+
+    # Both halves, because either alone is satisfied by an archive with no repository objects whatsoever: the
+    # thin export has to leave out what the receiver holds *and* carry what the wanted nodes brought with them.
+    assert second_keys, 'the restart brought a repository object of its own, which has to travel with it'
+    assert second_keys.isdisjoint(heavy_keys)
 
     report = import_delta(
         tmp_path / 'second.aiida',
@@ -1450,7 +1479,7 @@ def sync_pull(
     claim = state_receiver.imported_uuids_since(cursor)
     delta = compute_delta(state=state_sender, backend=backend_sender, cursor=cursor, claim=claim)
     offer = refresh_offer(state=state_sender, backend=backend_sender, cursor=cursor)
-    wanted = refresh_wanted(backend_receiver, offer, state_receiver.tombstones)
+    wanted = refresh_wanted(backend_receiver, offer)
     members = (
         membership_offer(state=state_sender, backend=backend_sender, cursor=cursor) if groups_mode == 'grow' else []
     )
@@ -1475,7 +1504,7 @@ def sync_pull(
         instant=export.instant,
         refresh=refresh_snapshots(backend_sender, wanted),
         groups_mode=receiver_groups_mode,
-        members=members_wanted(backend_receiver, members, state_receiver.tombstones),
+        members=members_wanted(backend_receiver, members),
     )
 
 
@@ -1519,6 +1548,27 @@ def test_refresh_offered_to_a_peer_without_a_cursor_names_every_node(peers):
 
     assert set(offer) == linked_uuids(calculation)
     assert offer[calculation.uuid] == calculation.mtime
+
+
+def test_refresh_offers_a_node_whose_only_trace_since_the_cursor_is_a_pull(peers):
+    """Test that a node imported since the cursor is offered, though nothing refreshed it and its mtime is older.
+
+    The unit pin of the extras edit that arrives baked into a delta: the archive row carries the origin's mtime and
+    the import records a ``pull``, so neither the mtime bound nor the refresh journal names the node.
+    """
+    from datetime import timedelta
+
+    backend, state = peers('one')
+    calculation = seal_calculation(backend, 'sealed')
+    # Strictly past the node's own mtime, so the mtime leg of the union cannot name it however coarse the clock
+    # is. Taking `now()` here instead leaves the two equal on a coarse one, and the `>=` bound then answers with
+    # the node by itself — the imported leg this test is about would be doing no work.
+    cursor = calculation.mtime + timedelta(seconds=1)
+    state.events.append(CollabEvent(time=cursor, direction='pull', peer='two', uuids=[calculation.uuid], size=1))
+
+    offer = refresh_offer(state=state, backend=backend, cursor=cursor)
+
+    assert set(offer) == {calculation.uuid}
 
 
 def test_refresh_offered_to_a_local_profile_is_not_applied(tmp_path, peers):
@@ -1936,7 +1986,7 @@ def test_groups_generated_by_aiida_are_refused_from_an_offer(tmp_path, peers):
 
     offer = [GroupMembers(uuid=str(uuid4()), label='an import', type_string='core.import', nodes=[calculation.uuid])]
 
-    assert apply_members(two[0], offer, set()) == []
+    assert apply_members(two[0], offer) == []
     assert orm.QueryBuilder(backend=two[0]).append(orm.Group).count() == 0
 
 
@@ -1954,7 +2004,7 @@ def test_groups_offer_naming_a_pair_twice_applies_it_once(tmp_path, peers):
     uuid = str(uuid4())
     twice = GroupMembers(uuid=uuid, label='curated', type_string='', nodes=[calculation.uuid, calculation.uuid])
 
-    assert apply_members(two[0], [twice, twice], set()) == [(uuid, calculation.uuid)]
+    assert apply_members(two[0], [twice, twice]) == [(uuid, calculation.uuid)]
     assert group_members(two[0], 'curated') == {calculation.uuid}
 
 
@@ -1971,20 +2021,21 @@ def test_groups_membership_of_an_absent_node_is_dropped(peers):
     offer = membership_offer(state=CollabState.read(one[1].filepath), backend=one[0], cursor=None)
 
     assert member_pairs(offer) == [(group_uuid(one[0], 'curated'), calculation.uuid)]
-    assert members_wanted(two[0], offer, set()) == []
+    assert members_wanted(two[0], offer) == []
 
 
 def test_groups_membership_of_a_tombstoned_node_is_dropped_and_recovered(tmp_path, peers):
     """Test that a pair whose node this profile deleted is dropped, and comes back with the node if it does.
 
     Dropping is safe precisely because the memberships of a node ride the node: whichever later sync delivers it
-    delivers them too.
+    delivers them too. What drops the pair is the node being gone — the tombstone is what keeps it that way.
     """
     one, two = peers('one'), peers('two')
     calculation = seal_calculation(one[0], 'sealed')
 
     sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
 
+    delete_nodes(two[0], [calculation.uuid])
     state_two = CollabState.read(two[1].filepath)
     state_two.tombstones.add(calculation.uuid)
     state_two.save()

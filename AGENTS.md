@@ -35,7 +35,7 @@ Each process class has a corresponding node class that records its execution:
 Code style is enforced via **pre-commit hooks** (`.pre-commit-config.yaml`). Always run `uv run pre-commit` before pushing.
 Formatting: `ruff`. Type checking: `mypy`. Write new code following ruff conventions with proper type hints.
 Typing is progressively strict: modules listed under `[[tool.mypy.overrides]]` in `pyproject.toml` require full annotations, and a module joins that list once it is fully typed.
-Docstrings: Sphinx-style (`:param:`, `:return:`, `:raises:`), types in annotations not docstrings.
+Docstrings: Sphinx-style (`:param:`, `:return:`, `:raises:`) required for public API, types in annotations not docstrings.
 Comments and docstrings explain *why*, not *what*.
 New source files should include the standard copyright header (copy from any existing `.py` file).
 In `cmdline/`: delay `aiida` imports to function level (keeps `verdi` CLI responsive, see the `adding-a-cli-command` skill).
@@ -128,6 +128,7 @@ Don't force code into a pattern it does not need.
 - **Let the container do the work:** `defaultdict`, `Counter`, `deque`, `dict.get(key, default)` over hand-written equivalents.
 - **`functools.cached_property` / `lru_cache`** for expensive computed values.
 - **Timezone-aware datetimes:** `datetime.now(tz=timezone.utc)`, never naive `datetime.now()`.
+- **Monotonic clocks for measuring elapsed time:** use `time.monotonic()` or `time.monotonic_ns()`, never wall-clock time.
 - **Never call blocking I/O from async code:** it stalls the event loop, and in the daemon every other process with it.
 
 ## Claude Code skills

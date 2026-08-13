@@ -307,9 +307,15 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
         return
 
     source_dir = Path(app.srcdir) / 'tutorials'
+    # Only the tutorial module notebooks need this treatment. Other downloadable
+    # notebooks (e.g. howto pages) have their includes outside ``tutorials/`` and
+    # would be mangled by the tutorial-relative image inlining and MyST conversions.
+    module_stems = {path.stem for path in source_dir.glob('module*.md')}
     count = 0
 
     for notebook_path in downloads_dir.rglob('*.ipynb'):
+        if notebook_path.stem not in module_stems:
+            continue
         with open(notebook_path, encoding='utf-8') as f:
             nb = json.load(f)
 

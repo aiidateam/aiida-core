@@ -1,8 +1,8 @@
 (tutorials)=
 # Tutorials
 
-These tutorials teach you the core concepts of AiiDA -- from running a single
-calculation to building automated, error-resilient workflows -- using a running
+These tutorials teach you the core concepts of AiiDA, from running a single
+calculation to orchestrating multi-step, parallel workflows, using a running
 example that progressively grows in complexity.
 
 ## Introductory modules
@@ -91,6 +91,16 @@ Go to Module 3
 ```
 :::
 ::::
+
+## Advanced modules
+
+:::{admonition} Under development
+:class: seealso
+
+The running example continues beyond the basics, onto remote HPC resources,
+querying at scale, adaptive workflows, and robust error handling. These
+modules are being finalized and will land here soon.
+:::
 
 ## Classic tutorial
 

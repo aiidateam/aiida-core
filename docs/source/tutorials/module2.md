@@ -26,7 +26,7 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 If you have not already installed these in an earlier module, run:
 
 ```bash
-uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/aiidateam/gsrd.git
 ```
 :::
 

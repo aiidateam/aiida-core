@@ -55,7 +55,7 @@ This first module uses only the `gsrd` simulator, no AiiDA yet.
 Install it with:
 
 ```bash
-uv pip install git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+uv pip install git+https://github.com/aiidateam/gsrd.git
 ```
 :::
 

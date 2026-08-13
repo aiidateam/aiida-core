@@ -301,7 +301,7 @@ tui = [
 tutorials = [
   'aiida-shell @ git+https://github.com/aiidateam/aiida-shell.git@master',
   'aiida-workgraph @ git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval',
-  'gsrd @ git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state'  # TODO: revert to aiidateam/gsrd@main once the PR merges
+  'gsrd @ git+https://github.com/aiidateam/gsrd.git'
 ]
 
 [project.scripts]

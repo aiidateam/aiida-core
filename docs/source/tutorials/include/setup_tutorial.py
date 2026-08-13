@@ -1,3 +1,11 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Shared tutorial profile setup.
 
 Creates (or loads) a lightweight ``tutorial`` profile with:
@@ -200,7 +208,7 @@ if _gsrd_executable is None:
     msg = (
         "Could not find the 'gsrd' executable. "
         'Install it with '
-        '`uv pip install "gsrd @ git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state"` '
+        '`uv pip install "gsrd @ git+https://github.com/aiidateam/gsrd.git"` '
         'before running the tutorial.'
     )
     raise RuntimeError(msg)

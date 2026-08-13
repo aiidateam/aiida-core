@@ -1,3 +1,11 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Shared calcfunctions for the tutorial pipeline.
 
 ``prepare_input`` and ``parse_output`` are plain AiiDA calcfunctions (also
@@ -20,8 +28,8 @@ from aiida import engine, orm
 class ParseOutputs(TypedDict):
     """Named outputs produced by :func:`parse_output`."""
 
-    variance_V: float
-    mean_V: float
+    variance_V: orm.Float
+    mean_V: orm.Float
 
 
 @engine.calcfunction

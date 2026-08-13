@@ -1,9 +1,16 @@
-"""Reusable WorkGraph definitions used across the tutorial modules.
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Reusable WorkGraph definitions shared across the tutorial modules.
 
-Promoting these out of the per-module notebooks lets Module 6 and Module 7
-import the same pipeline Module 3 builds, instead of redefining it. Each
-notebook runs in its own kernel, so the only way to share definitions is
-through a file on disk.
+Promoting these out of the per-module notebooks lets later modules import the
+same pipeline module 3 builds instead of redefining it. Each notebook runs in
+its own kernel, so a file on disk is the only way to share definitions.
 """
 
 from __future__ import annotations
@@ -27,9 +34,9 @@ class GrayScottOutputs(TypedDict):
 
     :ivar variance_V: variance of the V field after the simulation.
     :ivar mean_V: mean of the V field after the simulation.
-    :ivar results_npz: the full ``results.npz`` file produced by ``gsrd``,
-        kept around so downstream tasks (e.g. an FFT-based diagnostic in
-        Module 6) can read the V and U fields directly.
+    :ivar results_npz: the full ``results.npz`` file produced by ``gsrd``, kept
+        so downstream tasks can read the V and U fields directly (module 3a's
+        pattern gallery does this).
     """
 
     variance_V: orm.Float

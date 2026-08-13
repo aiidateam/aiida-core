@@ -611,7 +611,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
                 raise FileExistsError(f'Directory already exists: {path}')
 
         commands = self.ssh_command_generator(f'mkdir {"-p" if parents else ""} {{}}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             if 'File exists' in stderr:
@@ -624,7 +624,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         # chmod works with octal numbers, so we have to convert the mode to octal
         mode = oct(mode)[2:]  # type: ignore[assignment]
         commands = self.ssh_command_generator(f'chmod {"-h" if not follow_symlinks else ""} {mode} {{}}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to change permissions: {path}')
@@ -646,7 +646,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
     async def glob(self, path: str, ignore_nonexisting: bool = True):
         escaped_path = self._escape_for_glob(path)
         commands = self.ssh_command_generator(f'find {escaped_path} -maxdepth 0')
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             if ignore_nonexisting:
@@ -662,14 +662,14 @@ class _OpenSSH(_AsynchronousSSHBackend):
         """
 
         commands = self.ssh_command_generator('ln -s {} {}', paths=[source, destination])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to create symlink: {source} -> {destination}')
 
     async def path_exists(self, path: str):
         commands = self.ssh_command_generator('test -e {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, stderr = await self.openssh_execute(commands)
 
         if stderr:
             self.logger.debug(f'Stderr from `test -e {path}`: {stderr}')
@@ -680,28 +680,28 @@ class _OpenSSH(_AsynchronousSSHBackend):
 
     async def rmtree(self, path: str):
         commands = self.ssh_command_generator('rm -rf {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to remove path: {path}')
 
     async def rmdir(self, path: str):
         commands = self.ssh_command_generator('rmdir {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError('Failed to remove directory')
 
     async def rename(self, oldpath: str, newpath: str):
         commands = self.ssh_command_generator('mv {} {}', paths=[oldpath, newpath])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to rename path: {oldpath} -> {newpath}')
 
     async def remove(self, path: str):
         commands = self.ssh_command_generator('rm {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to remove path: {path}')
@@ -710,25 +710,25 @@ class _OpenSSH(_AsynchronousSSHBackend):
         commands = self.ssh_command_generator('ls {}', paths=[path])
         # '-d' is used prevents recursive listing of directories.
         # This is useful when 'path' includes glob patterns.
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, stdout, _stderr = await self.openssh_execute(commands)
         if returncode != 0:
             raise FileNotFoundError
         return list(stdout.strip().split())
 
     async def isdir(self, path: str):
         commands = self.ssh_command_generator('test -d {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
         return returncode == 0
 
     async def isfile(self, path: str):
         commands = self.ssh_command_generator('test -f {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
         return returncode == 0
 
     async def lstat(self, path: str):
         # order of stat matters
         commands = self.ssh_command_generator("stat -c '%s %u %g %a %X %Y' {}", paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        _returncode, stdout, _stderr = await self.openssh_execute(commands)
 
         stdout = stdout.strip()
         if not stdout:
@@ -753,7 +753,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         if recursive:
             options.append('-r')
 
-        returncode, stdout, stderr = await self.openssh_execute(
+        returncode, _stdout, stderr = await self.openssh_execute(
             [
                 'scp',
                 *options,
@@ -775,7 +775,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         if recursive:
             options.append('-r')
 
-        returncode, stdout, stderr = await self.openssh_execute(
+        returncode, _stdout, stderr = await self.openssh_execute(
             [
                 'scp',
                 *options,
@@ -829,7 +829,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
                 f'perhaps the parent folder does not exist: {parent_directory}'
             )
 
-        returncode, stdout, stderr = await self.openssh_execute(
+        returncode, _stdout, stderr = await self.openssh_execute(
             [
                 'scp',
                 *options,

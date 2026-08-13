@@ -61,6 +61,6 @@ def test_aiida_profile_tmp(aiida_profile, aiida_profile_tmp):
 
 def test_aiida_profile_factory_unsupported_broker(aiida_config_tmp, aiida_profile_factory):
     """Test that ``aiida_profile_factory`` raises for a broker backend without a default configuration."""
-    with pytest.raises(ValueError, match='Unsupported broker backend: core.unsupported'):
+    with pytest.raises(ValueError, match='Unsupported broker backend: core\\.unsupported'):
         with aiida_profile_factory(aiida_config_tmp, broker_backend='core.unsupported'):
             pass

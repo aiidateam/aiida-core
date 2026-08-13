@@ -1,3 +1,11 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Sphinx extension: make downloaded notebooks Jupyter-friendly.
 
 After the build, post-process every ``.ipynb`` in ``_downloads/``:
@@ -260,7 +268,7 @@ def _clean_markdown(text: str) -> str:
     return text.strip()
 
 
-def _process_markdown_cells(cells: list[dict], source_dir: Path) -> bool:
+def _process_markdown_cells(cells: list[dict[str, Any]], source_dir: Path) -> bool:
     """Convert MyST syntax in markdown cells to Jupyter-compatible markdown."""
     modified = False
 
@@ -316,16 +324,10 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
     for notebook_path in downloads_dir.rglob('*.ipynb'):
         if notebook_path.stem not in module_stems:
             continue
-        with open(notebook_path, encoding='utf-8') as f:
-            nb = json.load(f)
+        nb = json.loads(notebook_path.read_text(encoding='utf-8'))
 
-        cells = nb.get('cells', [])
-        changed_md = _process_markdown_cells(cells, source_dir)
-
-        if changed_md:
-            with open(notebook_path, 'w', encoding='utf-8') as f:
-                json.dump(nb, f, indent=1, ensure_ascii=False)
-                f.write('\n')
+        if _process_markdown_cells(nb.get('cells', []), source_dir):
+            notebook_path.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + '\n', encoding='utf-8')
             count += 1
             logger.info('inline_downloads: processed %s', notebook_path.name)
 

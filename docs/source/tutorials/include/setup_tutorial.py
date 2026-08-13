@@ -6,36 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Shared tutorial profile setup.
+"""Shared tutorial profile setup, run as a visible cell at the top of every module.
 
-Creates (or loads) a lightweight ``tutorial`` profile with:
-
-* SQLite storage (no PostgreSQL required)
-* ZMQ message broker (no external broker service required)
-* A running daemon (so asynchronous submission works in later modules)
-* A ``localhost`` Computer with local transport and direct scheduler
-* A ``gsrd@localhost`` Code pointing to the ``gsrd`` CLI binary
-
-The broker and daemon configuration matches what ``verdi presto`` sets up
-on a fresh machine, so ``verdi status`` in the tutorial mirrors what users
-will see locally.
-
-Every tutorial module runs this in a visible setup cell, so that data created in
-earlier modules is available in later ones (when the modules run in the same
-working directory).
-
-The whole tutorial is confined to its own configuration directory,
-``.aiida-tutorial/`` in the current working directory, set via ``AIIDA_PATH``.
-It therefore never interferes with an AiiDA setup you may already have: nothing
-is written into your real ``~/.aiida``, your default profile is left alone, and
-your running daemons are untouched. This works the same whether the cell runs in
-the docs build (CI), in a downloaded notebook, or pasted into your own notebook.
-Delete ``.aiida-tutorial/`` to remove every trace of the tutorial.
-
-Running this cell is the intended path even if you already use AiiDA: the sandbox
-is fully isolated, and this file also fetches the shared ``include/`` helpers the
-modules import (see ``_ensure_tutorial_helpers`` below), so a bare ``load_profile()``
-would leave those imports unresolved.
+Creates (or loads) an isolated ``tutorial-*`` profile in a sandbox config directory
+(``.aiida-tutorial/`` in the working directory, via ``AIIDA_PATH``): SQLite storage, a
+ZeroMQ broker, a running daemon, a ``localhost`` computer, and a ``gsrd@localhost`` code,
+matching what ``verdi presto`` sets up. Nothing touches your real ``~/.aiida``; delete
+``.aiida-tutorial/`` to remove every trace. The cell also fetches the shared ``include/``
+helpers the modules import, so it is the intended entry point even if you already use AiiDA.
 """
 
 import hashlib
@@ -61,11 +39,9 @@ from aiida.orm import Computer, InstalledCode, load_code, load_computer
 
 
 def _ensure_tutorial_helpers() -> None:
-    """Fetch any missing tutorial helper files into ``include/``.
+    """Fetch missing ``include/`` helpers so a notebook run outside the repo can import them.
 
-    Lets a notebook running outside the tutorial repository (for example, cells
-    pasted into your own notebook) import the shared helpers. No-op when they
-    are already present, as in a repo clone or the docs build.
+    No-op when they are already present (repo clone, docs build).
     """
     include_dir = pathlib.Path('include')
     if all((include_dir / name).exists() for name in ('workflows.py', 'tasks.py', 'input.yaml')):
@@ -82,56 +58,37 @@ def _ensure_tutorial_helpers() -> None:
 _ensure_tutorial_helpers()
 
 
-# Derive a short suffix from the mtimes of all setup scripts: stable across
-# all modules in one build, but bumped whenever any setup logic changes,
-# so stale profiles from older builds don't get reused.
-# ``include/`` relative to the working directory (not ``__file__``), so this still
-# works when the cell is inlined into a downloaded notebook, where ``__file__`` is
-# undefined. Matches the path used by ``_ensure_tutorial_helpers`` above.
+# Suffix the profile name with a hash of the setup scripts' mtimes: stable within one build,
+# bumped when setup logic changes so stale profiles are not reused. Use ``include/`` relative
+# to the CWD (``__file__`` is undefined in a pasted cell).
 _include_dir = pathlib.Path('include')
 _mtimes = sorted(int(p.stat().st_mtime) for p in _include_dir.glob('setup_*.py'))
 _session_hash = hashlib.sha1(str(_mtimes).encode()).hexdigest()[:8]
 profile_name = f'tutorial-{_session_hash}'
 
-# Isolate the whole tutorial in its own configuration directory (``.aiida-tutorial/``
-# in the current working directory), so it never touches an AiiDA setup you may
-# already have: no profiles written into your real ``~/.aiida``, no change to your
-# default profile, no interaction with your running daemons. ``AIIDA_PATH`` also
-# propagates to ``!verdi`` shell calls in the notebook, so they see this same
-# sandbox. Delete ``.aiida-tutorial/`` to remove every trace of the tutorial.
-#
-# ``AIIDA_TUTORIAL_SANDBOX`` lets the docs build relocate this directory out of the
-# watched source tree (see ``docs/source/conf.py``); it has no effect on downloaded or
-# pasted notebooks, which always use ``.aiida-tutorial/`` in the working directory. We
-# still always overwrite ``AIIDA_PATH`` (never honour a user's own exported value), so
-# the sandbox stays fully isolated from any real profile either way.
+# Isolate everything in its own config dir, so it never touches your real ``~/.aiida``.
+# ``AIIDA_TUTORIAL_SANDBOX`` lets the docs build relocate it out of the sphinx-watched source
+# tree (see ``conf.py``); pasted notebooks use ``.aiida-tutorial/`` in the CWD. Always overwrite
+# ``AIIDA_PATH`` (never a user's exported value) to stay isolated.
 _sandbox_dir = os.environ.get('AIIDA_TUTORIAL_SANDBOX', '.aiida-tutorial')
 os.environ['AIIDA_PATH'] = str(pathlib.Path(_sandbox_dir).resolve())
 
-# Creating this fresh config directory is the whole point of the sandbox, so silence
-# the "Creating AiiDA configuration folder" UserWarning AiiDA emits for it: that warning
-# exists to alert users who did not expect a new config dir, which is exactly what we do
-# want here. ``create=True`` likewise creates the sandbox config file on first run instead
-# of raising; on later runs the existing sandbox config is loaded untouched.
+# Silence the "Creating AiiDA configuration folder" warning (we create the sandbox on purpose);
+# ``create=True`` creates its config on first run and loads it untouched afterwards.
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', message='Creating AiiDA configuration folder')
-    AiiDAConfigDir.set()  # re-read AIIDA_PATH (set above) and create the sandbox config dir
+    AiiDAConfigDir.set()  # re-read AIIDA_PATH and create the sandbox config dir
     reset_config()  # drop any config already loaded for a different directory
     config = get_config(create=True)
 
-# Remove stale tutorial profiles left over from previous runs in this sandbox: any
-# ``tutorial-*`` profile whose hash differs from the current one. Safe to run from
-# every module's setup cell, since it never touches the current profile (so data
-# created in earlier modules survives), and the sandbox never contains any of your
-# own profiles. Best-effort: a leftover we cannot fully remove must never block the
-# tutorial from starting.
+# Remove stale ``tutorial-*`` profiles from earlier runs (never the current one, so data from
+# earlier modules survives). Best-effort: a leftover must never block startup.
 for _stale_name in [n for n in config.profile_names if n.startswith('tutorial-') and n != profile_name]:
     try:
         _stale_client = get_daemon_client(_stale_name)
         if _stale_client.is_daemon_running:
-            # ``is_daemon_running`` only checks the PID file; the underlying circus
-            # process may already be gone (``stop_daemon`` then cleans the PID file
-            # and raises), or unreachable (a timeout). Tolerate either.
+            # is_daemon_running only checks the PID file; the circus process may be gone
+            # (stop_daemon then cleans the file and raises) or unreachable. Tolerate both.
             with suppress(DaemonException):
                 _stale_client.stop_daemon(wait=True)
         config.delete_profile(_stale_name, delete_storage=True)
@@ -156,28 +113,23 @@ if profile_name not in config.profile_names:
 load_profile(profile_name, allow_switch=True)
 os.environ['AIIDA_PROFILE'] = profile_name
 
-# Start the daemon (idempotent) so verdi status mirrors `verdi presto`'s.
+# Start the daemon (idempotent) so ``verdi status`` mirrors ``verdi presto``'s. is_daemon_running
+# only checks the PID file, which a kernel restart or reboot can leave stale; clean a stale one
+# first (a healthy daemon's file is untouched).
 _daemon_client = get_daemon_client(profile_name)
-# ``is_daemon_running`` only checks that the PID file exists. That file can be left
-# behind stale when the daemon is killed without cleanup (a kernel restart between
-# runs, a reboot), which then makes ``verdi status`` report the daemon unreachable.
-# Remove a stale PID file first (a healthy daemon's file is left untouched) so the
-# check below reflects reality, then (re)start when needed.
 _daemon_client._clean_potentially_stale_pid_file()
 if not _daemon_client.is_daemon_running:
     _daemon_client.start_daemon()
 
-# Wait for the ZMQ broker watcher to actually be up before continuing.
-# `start_daemon` only waits for circusd itself, not for its child watchers,
-# so a verdi status call right after can still see "Broker is NOT running".
+# Wait for the ZMQ broker watcher: start_daemon only waits for circusd, not its child watchers,
+# so a verdi status right after can still see "Broker is NOT running".
 _broker = get_manager().get_broker()
 if isinstance(_broker, ZeromqBroker):
     _deadline = time.monotonic() + 10.0
     while not _broker.check_service_reachable() and time.monotonic() < _deadline:
         time.sleep(0.2)
 
-# Ensure a localhost Computer exists (create_profile does not create one,
-# unlike ``verdi presto``).
+# create_profile does not create a localhost Computer (unlike ``verdi presto``).
 try:
     computer = load_computer('localhost')
 except NotExistent:
@@ -193,14 +145,11 @@ except NotExistent:
     computer.set_minimum_job_poll_interval(1)
     computer.set_default_mpiprocs_per_machine(1)
 
-# Pre-register a Code pointing at the ``gsrd`` CLI binary installed in the
-# active environment. ``gsrd`` is the small Gray-Scott reaction-diffusion
-# simulator used throughout this tutorial; see https://github.com/aiidateam/gsrd.
+# Pre-register a Code for the ``gsrd`` CLI (https://github.com/aiidateam/gsrd).
 _gsrd_executable = shutil.which('gsrd')
 if _gsrd_executable is None:
-    # Some environments (e.g. the ReadTheDocs build) install the ``gsrd`` console
-    # script next to the interpreter without adding that directory to PATH, so
-    # ``shutil.which`` misses it; look there before giving up.
+    # Some environments (e.g. ReadTheDocs) install the console script next to the interpreter
+    # without putting that directory on PATH, so ``shutil.which`` misses it.
     _candidate = pathlib.Path(sys.executable).parent / 'gsrd'
     if _candidate.is_file():
         _gsrd_executable = str(_candidate)

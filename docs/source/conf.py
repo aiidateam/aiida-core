@@ -56,7 +56,6 @@ exclude_patterns = [
     'import_export/**',
     'internals/global_design.rst',
     'reference/apidoc/**',
-    'tutorials/_notes/**',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -113,13 +112,10 @@ myst_heading_anchors = 4
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 
-# The tutorial setup cell (``tutorials/include/setup_tutorial.py``) creates an isolated
-# ``.aiida-tutorial/`` sandbox profile in the notebook's working directory, which during
-# the build is ``docs/source/tutorials/``. That sandbox runs a live daemon whose broker
-# heartbeat file is rewritten roughly every second; left under the watched source tree it
-# makes ``sphinx-autobuild`` rebuild in an endless loop. Relocate it out of ``docs/source``
-# (into the git-ignored ``docs/build/``) via the dedicated override the setup cell honours;
-# downloaded notebooks do not set this and keep their sandbox in their own working directory.
+# The tutorial setup cell creates a ``.aiida-tutorial/`` sandbox with a live daemon whose broker
+# heartbeat file is rewritten ~1/s. Left under the sphinx-watched source tree that would make
+# ``sphinx-autobuild`` loop forever, so relocate it into the git-ignored ``docs/build/`` via the
+# override the setup cell honours. Downloaded notebooks ignore this and keep the sandbox in the CWD.
 os.environ['AIIDA_TUTORIAL_SANDBOX'] = str(Path(__file__).resolve().parent.parent / 'build' / '.aiida-tutorial')
 
 nb_mime_priority_overrides = [

@@ -65,6 +65,11 @@ pygments_style = 'sphinx'
 # Enable labeling for figures
 numfig = True
 
+# The tutorial embeds its gallery images from the gsrd repository by raw URL,
+# to keep binaries out of this repo. Sphinx flags remote image URIs as
+# `image.nonlocal_uri`; suppress just that so the ``-W`` build does not fail.
+suppress_warnings = ['image.nonlocal_uri']
+
 # -- Extension configuration -----------------------------------------------------
 
 extensions = [

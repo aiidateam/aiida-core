@@ -30,7 +30,7 @@ It models the concentration of particles diffusing and reacting on a 2D grid, pr
 Depending on the feed rate, F, and kill rate, k, it forms strikingly different structures:
 
 :::{dropdown} A gallery of Gray-Scott patterns
-```{image} include/reaction-diffusion-showcase.png
+```{image} https://raw.githubusercontent.com/aiidateam/gsrd/f8721a5398e96da048a61e0bb208e87d1dd0bb98/gallery/showcase.png
 :width: 100%
 :align: center
 ```
@@ -165,7 +165,7 @@ Then run the simulation with the modified input file:
 
 With `F=0.050`, the pattern looks completely different:
 
-```{image} include/reaction-diffusion-dissolved.png
+```{image} https://raw.githubusercontent.com/aiidateam/gsrd/f8721a5398e96da048a61e0bb208e87d1dd0bb98/gallery/dissolved.png
 :width: 60%
 :align: center
 ```

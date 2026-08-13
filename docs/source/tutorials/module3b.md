@@ -299,7 +299,7 @@ The curve's two regimes look strikingly different in the simulated concentration
 :gutter: 2
 
 :::{grid-item}
-```{image} include/reaction-diffusion-fields.png
+```{image} https://raw.githubusercontent.com/aiidateam/gsrd/f8721a5398e96da048a61e0bb208e87d1dd0bb98/gallery/fields.png
 :width: 100%
 :align: center
 ```
@@ -307,7 +307,7 @@ The curve's two regimes look strikingly different in the simulated concentration
 :::
 
 :::{grid-item}
-```{image} include/reaction-diffusion-dissolved.png
+```{image} https://raw.githubusercontent.com/aiidateam/gsrd/f8721a5398e96da048a61e0bb208e87d1dd0bb98/gallery/dissolved.png
 :width: 100%
 :align: center
 ```
@@ -358,7 +358,7 @@ plot_2d_variance_heatmap(
 )
 ```
 
-```{image} include/reaction-diffusion-heatmap.png
+```{image} https://raw.githubusercontent.com/aiidateam/gsrd/f8721a5398e96da048a61e0bb208e87d1dd0bb98/gallery/heatmap.png
 :width: 90%
 :align: center
 :alt: Heatmap of variance(V) over a 5x5 feed-rate-by-kill-rate grid

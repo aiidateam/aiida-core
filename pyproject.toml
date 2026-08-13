@@ -499,6 +499,7 @@ ignore = [
   'RUF059'  # Unpacked variable is never used
 ]
 select = [
+  'C4',  # flake8-comprehensions
   'E',  # pydocstyle
   'W',  # pydocstyle
   'F',  # pyflakes

@@ -102,9 +102,8 @@ class Wf(WorkChain):
     def on_create(self):
         super().on_create()
         # Reset the finished step
-        self.finished_steps = {
-            k: False
-            for k in [
+        self.finished_steps = dict.fromkeys(
+            [
                 self.step1.__name__,
                 self.step2.__name__,
                 self.step3.__name__,
@@ -114,8 +113,9 @@ class Wf(WorkChain):
                 self.is_a.__name__,
                 self.is_b.__name__,
                 self.larger_then_n.__name__,
-            ]
-        }
+            ],
+            False,
+        )
 
     def step1(self):
         self._set_finished(inspect.stack()[0].function)

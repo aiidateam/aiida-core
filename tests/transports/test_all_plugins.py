@@ -196,7 +196,7 @@ def test_listdir_withattributes(custom_transport, tmp_path_remote):
                 # Just put an empty file there at the right file name
                 transport.putfile(tmpf.name, tmp_path_remote / fname)
 
-        comparison_list = {k: True for k in list_of_dir}
+        comparison_list = dict.fromkeys(list_of_dir, True)
         for k in list_of_files:
             comparison_list[k] = False
 

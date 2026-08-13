@@ -504,7 +504,7 @@ class QbFieldArguments(t.TypedDict):
     is_subscriptable: bool
 
 
-def add_field(
+def add_field(  # noqa: PLR0911
     key: str,
     alias: str | None = None,
     *,

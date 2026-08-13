@@ -71,7 +71,7 @@ Don't force code into a pattern it does not need.
 ### API design
 
 - **Flat over nested:** re-export at package level. File layout is an implementation detail.
-- **Keep dependencies acyclic:** needing a `TYPE_CHECKING` guard or a function-level import to break a cycle means the layering is wrong.
+- **Keep dependencies acyclic:** needing a function-level import to break a runtime cycle means the layering is wrong.
 - **Don't repeat context in names:** `kpoints.set_mesh()`, not `kpoints.set_kpoints_mesh()`.
 - **Keyword-only (`*`) arguments** for several or same-typed parameters, and always for booleans.
 - **Progressive disclosure:** simple things simple, complex things possible. Don't front-load complexity.
@@ -81,7 +81,7 @@ Don't force code into a pattern it does not need.
 - **Prefer pure functions:** no side effects, no mutation of inputs, same output for the same arguments.
 - **Minimize mutable state:** return new values over mutating inputs, and a copy or read-only view over an alias to your own container.
 - **No global mutable state:** keyword arguments with defaults, state on a class instance, or `ContextVar`.
-- **Raise exceptions rather than returning `None` or a sentinel;** status values are for failures that must persist or cross a process boundary.
+- **Raise exceptions rather than signalling failure with `None` or a sentinel;** status values are for failures that must persist or cross a process boundary.
 - **Context managers** for acquire/release and setup/teardown, since cleanup the caller must remember gets skipped.
 
 ### Object-oriented design
@@ -121,7 +121,7 @@ Don't force code into a pattern it does not need.
 - **`is None` / `is not None`** over truthiness for optionals, and `isinstance()` rather than `type()`.
 - **No mutable default arguments:** default `None`, assign in the body.
 - **Modern stdlib idioms:** `pathlib.Path` over `os.path`, f-strings over `.format()`/`%`.
-- **Catch specific exceptions,** never bare `except:` or blanket `except Exception:`, which swallow `KeyboardInterrupt` and genuine bugs.
+- **Catch specific exceptions,** never bare `except:`, which swallows `KeyboardInterrupt` and `SystemExit`, nor blanket `except Exception:`, which hides genuine bugs.
 - **`contextlib.suppress(...)`** over `except ...: pass`.
 - **Preserve the cause when re-raising:** `raise ValueError(msg) from err`.
 - **Comprehensions** over `map`/`filter` with lambdas, and `itertools` and generators over large materialized lists.
@@ -129,7 +129,7 @@ Don't force code into a pattern it does not need.
 - **`functools.cached_property` / `lru_cache`** for expensive computed values.
 - **Timezone-aware datetimes:** `datetime.now(tz=timezone.utc)`, never naive `datetime.now()`.
 - **Monotonic clocks for measuring elapsed time:** use `time.monotonic()` or `time.monotonic_ns()`, never wall-clock time.
-- **Never call blocking I/O from async code:** it stalls the event loop, and in the daemon every other process with it.
+- **Never call blocking I/O from async code:** it stalls every other task on that event loop, and in the daemon every AiiDA process the worker is running. Use an async API, or offload the blocking work explicitly.
 
 ## Claude Code skills
 

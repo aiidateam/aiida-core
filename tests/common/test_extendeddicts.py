@@ -290,7 +290,7 @@ class TestFFAD(unittest.TestCase):
         """I test that the get_valid_fields() is working as a class method,
         so I don't need to instantiate the class to get the list.
         """
-        self.assertEqual(set(FFADExample.get_valid_fields()), set(['alpha', 'beta', 'gamma']))
+        self.assertEqual(set(FFADExample.get_valid_fields()), {'alpha', 'beta', 'gamma'})
 
 
 class TestDFAD(unittest.TestCase):
@@ -316,17 +316,17 @@ class TestDFAD(unittest.TestCase):
         dictionary['delta'] = 3
         dictionary.epsilon = 4
 
-        self.assertEqual(set(dictionary.get_default_fields()), set(['alpha', 'beta', 'gamma']))
-        self.assertEqual(set(dictionary.keys()), set(['alpha', 'beta', 'delta', 'epsilon']))
-        self.assertEqual(set(dictionary.defaultkeys()), set(['alpha', 'beta']))
-        self.assertEqual(set(dictionary.extrakeys()), set(['delta', 'epsilon']))
+        self.assertEqual(set(dictionary.get_default_fields()), {'alpha', 'beta', 'gamma'})
+        self.assertEqual(set(dictionary.keys()), {'alpha', 'beta', 'delta', 'epsilon'})
+        self.assertEqual(set(dictionary.defaultkeys()), {'alpha', 'beta'})
+        self.assertEqual(set(dictionary.extrakeys()), {'delta', 'epsilon'})
         self.assertIsNone(dictionary.gamma)
 
     def test_class_attribute(self):
         """I test that the get_default_fields() is working as a class method,
         so I don't need to instantiate the class to get the list.
         """
-        self.assertEqual(set(DFADExample.get_default_fields()), set(['alpha', 'beta', 'gamma']))
+        self.assertEqual(set(DFADExample.get_default_fields()), {'alpha', 'beta', 'gamma'})
 
     def test_validation(self):
         """Test validation."""

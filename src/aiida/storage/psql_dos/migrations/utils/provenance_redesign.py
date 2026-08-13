@@ -105,7 +105,7 @@ def migrate_infer_calculation_entry_point(alembic_op):
     )
 
     query_set = connection.execute(select(DbNode.c.type).where(DbNode.c.type.like('calculation.%'))).fetchall()
-    type_strings = set(entry[0] for entry in query_set)
+    type_strings = {entry[0] for entry in query_set}
     mapping_node_type_to_entry_point = infer_calculation_entry_point(type_strings=type_strings)
 
     fallback_cases = []

@@ -24,7 +24,7 @@ def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
 
     parent = starting_cls().store()
     depth_dict = {}  # saves the descendants, by depth (depth is the key).
-    depth_dict[0] = set([parent.pk])
+    depth_dict[0] = {parent.pk}
 
     number_of_nodes = sum(branching**d for d in range(max_depth))
     adjacency = np.zeros((number_of_nodes, number_of_nodes), dtype=int)
@@ -160,7 +160,7 @@ class TestAiidaGraphExplorer:
         uprule = UpdateRule(queryb, max_iterations=10)
 
         obtained = uprule.run(basket_w1.copy())['nodes'].keyset
-        expected = set((nodes['work_1'].pk, nodes['calc_0'].pk, nodes['data_o'].pk))
+        expected = {nodes['work_1'].pk, nodes['calc_0'].pk, nodes['data_o'].pk}
         assert obtained == expected
 
         # Find all the descendants of work_1 through call_calc (calc_0)
@@ -171,7 +171,7 @@ class TestAiidaGraphExplorer:
         uprule = UpdateRule(queryb, max_iterations=10)
 
         obtained = uprule.run(basket_w1.copy())['nodes'].keyset
-        expected = set((nodes['work_1'].pk, nodes['calc_0'].pk))
+        expected = {nodes['work_1'].pk, nodes['calc_0'].pk}
         assert obtained == expected
 
         # Find all the descendants of work_1 that are data nodes (data_o)
@@ -181,7 +181,7 @@ class TestAiidaGraphExplorer:
         uprule = UpdateRule(queryb, max_iterations=10)
 
         obtained = uprule.run(basket_w1.copy())['nodes'].keyset
-        expected = set((nodes['work_1'].pk, nodes['data_o'].pk))
+        expected = {nodes['work_1'].pk, nodes['data_o'].pk}
         assert obtained == expected
 
         # Find all the ascendants of work_1
@@ -191,7 +191,7 @@ class TestAiidaGraphExplorer:
         uprule = UpdateRule(queryb, max_iterations=10)
 
         obtained = uprule.run(basket_w1.copy())['nodes'].keyset
-        expected = set((nodes['work_1'].pk, nodes['work_2'].pk, nodes['data_i'].pk))
+        expected = {nodes['work_1'].pk, nodes['work_2'].pk, nodes['data_i'].pk}
         assert obtained == expected
 
         # Find all the ascendants of work_1 through input_work (data_i)
@@ -202,7 +202,7 @@ class TestAiidaGraphExplorer:
         uprule = UpdateRule(queryb, max_iterations=10)
 
         obtained = uprule.run(basket_w1.copy())['nodes'].keyset
-        expected = set((nodes['work_1'].pk, nodes['data_i'].pk))
+        expected = {nodes['work_1'].pk, nodes['data_i'].pk}
         assert obtained == expected
 
         # Find all the ascendants of work_1 that are workflow nodes (work_2)
@@ -212,7 +212,7 @@ class TestAiidaGraphExplorer:
         uprule = UpdateRule(queryb, max_iterations=10)
 
         obtained = uprule.run(basket_w1.copy())['nodes'].keyset
-        expected = set((nodes['work_1'].pk, nodes['work_2'].pk))
+        expected = {nodes['work_1'].pk, nodes['work_2'].pk}
         assert obtained == expected
 
         # Only get the descendants that are direct (1st level) (work_1, data_o)
@@ -222,7 +222,7 @@ class TestAiidaGraphExplorer:
         rerule = ReplaceRule(queryb, max_iterations=1)
 
         obtained = rerule.run(basket_w2.copy())['nodes'].keyset
-        expected = set((nodes['work_1'].pk, nodes['data_o'].pk))
+        expected = {nodes['work_1'].pk, nodes['data_o'].pk}
         assert obtained == expected
 
         # Only get the descendants of the descendants (2nd level) (calc_0, data_o)
@@ -232,7 +232,7 @@ class TestAiidaGraphExplorer:
         rerule = ReplaceRule(queryb, max_iterations=2)
 
         obtained = rerule.run(basket_w2.copy())['nodes'].keyset
-        expected = set((nodes['calc_0'].pk, nodes['data_o'].pk))
+        expected = {nodes['calc_0'].pk, nodes['data_o'].pk}
         assert obtained == expected
 
     def test_cycle(self):
@@ -253,24 +253,24 @@ class TestAiidaGraphExplorer:
 
         uprule = UpdateRule(queryb, max_iterations=np.inf)
         obtained = uprule.run(basket.copy())['nodes'].keyset
-        expected = set([data_node.pk, work_node.pk])
+        expected = {data_node.pk, work_node.pk}
         assert obtained == expected
 
         rerule1 = ReplaceRule(queryb, max_iterations=1)
         result1 = rerule1.run(basket.copy())['nodes'].keyset
-        assert result1 == set([work_node.pk])
+        assert result1 == {work_node.pk}
 
         rerule2 = ReplaceRule(queryb, max_iterations=2)
         result2 = rerule2.run(basket.copy())['nodes'].keyset
-        assert result2 == set([data_node.pk])
+        assert result2 == {data_node.pk}
 
         rerule3 = ReplaceRule(queryb, max_iterations=3)
         result3 = rerule3.run(basket.copy())['nodes'].keyset
-        assert result3 == set([work_node.pk])
+        assert result3 == {work_node.pk}
 
         rerule4 = ReplaceRule(queryb, max_iterations=4)
         result4 = rerule4.run(basket.copy())['nodes'].keyset
-        assert result4 == set([data_node.pk])
+        assert result4 == {data_node.pk}
 
     @staticmethod
     def _create_branchy_graph():
@@ -345,18 +345,18 @@ class TestAiidaGraphExplorer:
         queryb_out.append(orm.Node, with_incoming='nodes_in_set')
         uprule_out = UpdateRule(queryb_out)
 
-        expect_base = set([nodes['calc_1'].pk, nodes['data_1'].pk, nodes['calc_2'].pk])
+        expect_base = {nodes['calc_1'].pk, nodes['data_1'].pk, nodes['calc_2'].pk}
 
         # First get outputs, then inputs.
         rule_seq = RuleSequence((uprule_out, uprule_inp))
         obtained = rule_seq.run(basket.copy())['nodes'].keyset
-        expected = expect_base.union(set([nodes['data_i'].pk]))
+        expected = expect_base.union({nodes['data_i'].pk})
         assert obtained == expected
 
         # First get inputs, then outputs.
         rule_seq = RuleSequence((uprule_inp, uprule_out))
         obtained = rule_seq.run(basket.copy())['nodes'].keyset
-        expected = expect_base.union(set([nodes['data_o'].pk]))
+        expected = expect_base.union({nodes['data_o'].pk})
         assert obtained == expected
 
         # Now using the stash option in either order.
@@ -480,7 +480,7 @@ class TestAiidaGraphExplorer:
         basket_out = tested_rule.run(basket_inp.copy())
 
         obtained = basket_out['nodes'].keyset
-        expected = set([node2.pk, node3.pk])
+        expected = {node2.pk, node3.pk}
         assert obtained == expected
 
         obtained = basket_out['groups'].keyset
@@ -506,11 +506,11 @@ class TestAiidaGraphExplorer:
         basket_out = ruleseq.run(basket_inp.copy())
 
         obtained = basket_out['nodes'].keyset
-        expected = set([node2.pk, node3.pk])
+        expected = {node2.pk, node3.pk}
         assert obtained == expected
 
         obtained = basket_out['groups'].keyset
-        expected = set([group2.pk])
+        expected = {group2.pk}
         assert obtained == expected
 
         # ...and starting with a group
@@ -519,11 +519,11 @@ class TestAiidaGraphExplorer:
         basket_out = ruleseq.run(basket_inp.copy())
 
         obtained = basket_out['nodes'].keyset
-        expected = set([node4.pk])
+        expected = {node4.pk}
         assert obtained == expected
 
         obtained = basket_out['groups'].keyset
-        expected = set([group3.pk, group4.pk])
+        expected = {group3.pk, group4.pk}
         assert obtained == expected
 
         # Testing a "group chain"
@@ -561,11 +561,11 @@ class TestAiidaGraphExplorer:
         basket_out = ruleseq.run(basket_inp.copy())
 
         obtained = basket_out['nodes'].keyset
-        expected = set(n.pk for n in nodes)
+        expected = {n.pk for n in nodes}
         assert obtained == expected
 
         obtained = basket_out['groups'].keyset
-        expected = set(g.pk for g in groups)
+        expected = {g.pk for g in groups}
         assert obtained == expected
 
         # testing the edges between groups and nodes:
@@ -585,7 +585,7 @@ class TestAiidaGraphExplorer:
         uprule_result = uprule.run(basket.copy())
 
         obtained = uprule_result['nodes'].keyset
-        expected = set(anode.pk for _, anode in nodes.items())
+        expected = {anode.pk for _, anode in nodes.items()}
         assert obtained == expected
 
         obtained = set()
@@ -613,8 +613,8 @@ class TestAiidaGraphExplorer:
         uprule_result = uprule.run(basket.copy())
 
         obtained = uprule_result['nodes'].keyset
-        expected = set(anode.pk for _, anode in nodes.items())
-        expected = expected.difference(set([nodes['data_i'].pk]))
+        expected = {anode.pk for _, anode in nodes.items()}
+        expected = expected.difference({nodes['data_i'].pk})
         assert obtained == expected
 
         obtained = set()

@@ -80,7 +80,7 @@ class TestGroups:
         assert isinstance(nodes_sliced, list)
         assert len(nodes_sliced) == 2
         assert all(isinstance(node, orm.Data) for node in nodes_sliced)
-        assert all(node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced)
+        assert all(node.uuid in {node.uuid for node in nodes} for node in nodes_sliced)
 
     def test_entry_point(self):
         """Test the :meth:`aiida.orm.groups.Group.entry_point` property."""
@@ -144,15 +144,15 @@ class TestGroups:
         group.add_nodes([node_02, node_03])
 
         # Check
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         # Try to add a node that is already present: there should be no problem
         group.add_nodes(node_01)
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         # Try to add nothing: there should be no problem
         group.add_nodes([])
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         nodes = [orm.Data().store().backend_entity for _ in range(100)]
 
@@ -161,7 +161,7 @@ class TestGroups:
         for batch_size in batch_sizes:
             group = orm.Group(label=f'test_batches_{batch_size!s}').store()
             group.backend_entity.add_nodes(nodes, batch_size=batch_size)
-            assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+            assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
     def test_remove_nodes(self):
         """Test node removal."""
@@ -175,31 +175,31 @@ class TestGroups:
 
         # Add initial nodes
         group.add_nodes(nodes)
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         # Remove a node that is not in the group: nothing should happen
         group.remove_nodes(node_04)
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         # Remove one orm.Node
         nodes.remove(node_03)
         group.remove_nodes(node_03)
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         # Remove a list of Nodes and check
         nodes.remove(node_01)
         nodes.remove(node_02)
         group.remove_nodes([node_01, node_02])
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         # Remove to empty
         nodes.remove(node_05)
         group.remove_nodes([node_05])
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         # Try to remove nothing: there should be no problem
         group.remove_nodes([])
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
     def test_clear(self):
         """Test the `clear` method to remove all nodes."""
@@ -211,7 +211,7 @@ class TestGroups:
 
         # Add initial nodes
         group.add_nodes(nodes)
-        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+        assert {_.pk for _ in nodes} == {_.pk for _ in group.nodes}
 
         group.clear()
         assert not list(group.nodes)

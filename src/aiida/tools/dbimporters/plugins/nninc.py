@@ -73,7 +73,7 @@ class NnincDbImporter(DbImporter):
             for psp in results:
                 for element in elements:
                     if psp.startswith(f'{element}.'):
-                        results_now = results_now | set([psp])
+                        results_now = results_now | {psp}
             results = list(results_now)
 
         return NnincSearchResults([{'id': x} for x in results])

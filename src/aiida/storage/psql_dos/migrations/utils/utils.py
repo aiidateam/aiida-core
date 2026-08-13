@@ -408,7 +408,7 @@ def recursive_datetime_to_isoformat(value):
         return [recursive_datetime_to_isoformat(_) for _ in value]
 
     if isinstance(value, dict):
-        return dict((key, recursive_datetime_to_isoformat(val)) for key, val in value.items())
+        return {key: recursive_datetime_to_isoformat(val) for key, val in value.items()}
 
     if isinstance(value, datetime.datetime):
         return value.isoformat()

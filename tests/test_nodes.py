@@ -456,7 +456,7 @@ class TestNodeBasic:
             a.base.repository.put_object_from_file(handle.name, 'file1.txt')
             a.base.repository.put_object_from_file(handle.name, 'file2.txt')
 
-        assert set(a.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        assert set(a.base.repository.list_object_names()) == {'file1.txt', 'file2.txt'}
         with a.base.repository.open('file1.txt') as fhandle:
             assert fhandle.read() == file_content
         with a.base.repository.open('file2.txt') as fhandle:
@@ -466,7 +466,7 @@ class TestNodeBasic:
         assert a.uuid != b.uuid
 
         # Check that the content is there
-        assert set(b.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        assert set(b.base.repository.list_object_names()) == {'file1.txt', 'file2.txt'}
         with b.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
         with b.base.repository.open('file2.txt') as handle:
@@ -480,12 +480,12 @@ class TestNodeBasic:
             b.base.repository.put_object_from_file(handle.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        assert set(a.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        assert set(a.base.repository.list_object_names()) == {'file1.txt', 'file2.txt'}
         with a.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
         with a.base.repository.open('file2.txt') as handle:
             assert handle.read() == file_content
-        assert set(b.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt', 'file3.txt'])
+        assert set(b.base.repository.list_object_names()) == {'file1.txt', 'file2.txt', 'file3.txt'}
         with b.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
         with b.base.repository.open('file2.txt') as handle:
@@ -506,13 +506,13 @@ class TestNodeBasic:
             c.base.repository.put_object_from_file(handle.name, 'file1.txt')
             c.base.repository.put_object_from_file(handle.name, 'file4.txt')
 
-        assert set(a.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        assert set(a.base.repository.list_object_names()) == {'file1.txt', 'file2.txt'}
         with a.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
         with a.base.repository.open('file2.txt') as handle:
             assert handle.read() == file_content
 
-        assert set(c.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt', 'file4.txt'])
+        assert set(c.base.repository.list_object_names()) == {'file1.txt', 'file2.txt', 'file4.txt'}
         with c.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content_different
         with c.base.repository.open('file2.txt') as handle:
@@ -556,9 +556,9 @@ class TestNodeBasic:
         a.base.repository.put_object_from_tree(tree_1, 'tree_1')
 
         # verify if the node has the structure I expect
-        assert set(a.base.repository.list_object_names()) == set(['tree_1'])
-        assert set(a.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        assert set(a.base.repository.list_object_names()) == {'tree_1'}
+        assert set(a.base.repository.list_object_names('tree_1')) == {'file1.txt', 'dir1'}
+        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == {'dir2', 'file2.txt'}
         with a.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
         with a.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
@@ -573,9 +573,9 @@ class TestNodeBasic:
         assert a.uuid != b.uuid
 
         # Check that the content is there
-        assert set(b.base.repository.list_object_names()) == set(['tree_1'])
-        assert set(b.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(b.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        assert set(b.base.repository.list_object_names()) == {'tree_1'}
+        assert set(b.base.repository.list_object_names('tree_1')) == {'file1.txt', 'dir1'}
+        assert set(b.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == {'dir2', 'file2.txt'}
         with b.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
         with b.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
@@ -594,17 +594,17 @@ class TestNodeBasic:
         b.base.repository.put_object_from_filelike(stream, 'file3.txt')
 
         # I check the new content, and that the old one has not changed old
-        assert set(a.base.repository.list_object_names()) == set(['tree_1'])
-        assert set(a.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        assert set(a.base.repository.list_object_names()) == {'tree_1'}
+        assert set(a.base.repository.list_object_names('tree_1')) == {'file1.txt', 'dir1'}
+        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == {'dir2', 'file2.txt'}
         with a.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
         with a.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
         # new
-        assert set(b.base.repository.list_object_names()) == set(['tree_1', 'file3.txt'])
-        assert set(b.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1', 'dir3'])
-        assert set(b.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        assert set(b.base.repository.list_object_names()) == {'tree_1', 'file3.txt'}
+        assert set(b.base.repository.list_object_names('tree_1')) == {'file1.txt', 'dir1', 'dir3'}
+        assert set(b.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == {'dir2', 'file2.txt'}
         with b.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
         with b.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
@@ -623,20 +623,18 @@ class TestNodeBasic:
         c.base.repository.delete_object(os.path.join('tree_1', 'dir1', 'dir2'))
 
         # check old
-        assert set(a.base.repository.list_object_names()) == set(['tree_1'])
-        assert set(a.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        assert set(a.base.repository.list_object_names()) == {'tree_1'}
+        assert set(a.base.repository.list_object_names('tree_1')) == {'file1.txt', 'dir1'}
+        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == {'dir2', 'file2.txt'}
         with a.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
         with a.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
 
         # check new
-        assert set(c.base.repository.list_object_names()) == set(['tree_1'])
-        assert set(c.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(c.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(
-            ['file2.txt', 'file4.txt']
-        )
+        assert set(c.base.repository.list_object_names()) == {'tree_1'}
+        assert set(c.base.repository.list_object_names('tree_1')) == {'file1.txt', 'dir1'}
+        assert set(c.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == {'file2.txt', 'file4.txt'}
         with c.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content_different
         with c.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
@@ -774,8 +772,8 @@ class TestNodeBasic:
 
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
-        assert set(list(a.base.extras.keys())) == set(all_extras.keys())
-        assert set(list(a.base.attributes.keys())) == set(attrs_to_set.keys())
+        assert set(a.base.extras.keys()) == set(all_extras.keys())
+        assert set(a.base.attributes.keys()) == set(attrs_to_set.keys())
 
         assert a.base.attributes.all == attrs_to_set
 
@@ -1093,10 +1091,10 @@ class TestNodeBasic:
         code2.store()
 
         retrieved_pks = set(orm.Code.list_for_plugin('plugin_name', labels=False))
-        assert retrieved_pks == set([code1.pk, code2.pk])
+        assert retrieved_pks == {code1.pk, code2.pk}
 
         retrieved_labels = set(orm.Code.list_for_plugin('plugin_name', labels=True))
-        assert retrieved_labels == set([code1.label, code2.label])
+        assert retrieved_labels == {code1.label, code2.label}
 
     def test_load_node(self):
         """Tests the load node functionality"""

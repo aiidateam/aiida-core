@@ -76,7 +76,7 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
     The init should raise only ValueError or TypeError on invalid parameters.
     """
 
-    _default_fields = tuple()
+    _default_fields: tuple[str, ...] = ()
 
     @classmethod
     @abc.abstractmethod

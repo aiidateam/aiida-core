@@ -24,10 +24,10 @@ def isort_alls(alls: set[str]) -> list[str]:
     is used to order the elements.
     """
 
-    constants = set(mod for mod in alls if re.match(r'^[A-Z][A-Z_]*$', mod))
+    constants = {mod for mod in alls if re.match(r'^[A-Z][A-Z_]*$', mod)}
     # TODO: This doesn't represent cammel-case, only things that start with capital letters
     # and are not screaming case.
-    classes = set(mod for mod in alls.difference(constants) if re.match(r'^[A-Z].*', mod))
+    classes = {mod for mod in alls.difference(constants) if re.match(r'^[A-Z].*', mod)}
     others = alls.difference(classes, constants)
     return sorted(constants) + sorted(classes) + sorted(others)
 

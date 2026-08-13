@@ -73,10 +73,10 @@ class Postgres(PGSU):
         """
         dbinfo = DEFAULT_DBINFO.copy()
         dbinfo.update(
-            dict(
-                host=profile.storage_config['database_hostname'] or DEFAULT_DBINFO['host'],
-                port=profile.storage_config['database_port'] or DEFAULT_DBINFO['port'],
-            )
+            {
+                'host': profile.storage_config['database_hostname'] or DEFAULT_DBINFO['host'],
+                'port': profile.storage_config['database_port'] or DEFAULT_DBINFO['port'],
+            }
         )
 
         return Postgres(dbinfo=dbinfo, **kwargs)

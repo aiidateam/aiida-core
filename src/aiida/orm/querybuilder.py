@@ -550,18 +550,18 @@ class QueryBuilder:
             path_type = classifiers[0].ormclass_type_string
 
         self._path.append(
-            dict(
-                entity_type=path_type,
-                orm_base=ormclass.value,  # type: ignore[typeddict-item]
-                tag=tag,
+            {
+                'entity_type': path_type,
+                'orm_base': ormclass.value,  # type: ignore[typeddict-item]
+                'tag': tag,
                 # for the first item joining_keyword/joining_value can be None,
                 # but after they always default to 'with_incoming' of the previous item
-                joining_keyword=joining_keyword,  # type: ignore[typeddict-item]
-                joining_value=joining_value,  # type: ignore[typeddict-item]
+                'joining_keyword': joining_keyword,  # type: ignore[typeddict-item]
+                'joining_value': joining_value,  # type: ignore[typeddict-item]
                 # same for edge_tag for which a default is applied
-                edge_tag=edge_tag,  # type: ignore[typeddict-item]
-                outerjoin=outerjoin,
-            )
+                'edge_tag': edge_tag,  # type: ignore[typeddict-item]
+                'outerjoin': outerjoin,
+            }
         )
 
         return self

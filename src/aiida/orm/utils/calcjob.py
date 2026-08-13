@@ -79,7 +79,7 @@ class CalcJobResultManager:
 
     def __dir__(self):
         """Add the keys of the results dictionary such that they can be autocompleted."""
-        return sorted(list(self.get_results().keys()))
+        return sorted(self.get_results().keys())
 
     def __iter__(self):
         """Return an iterator over the keys of the result dictionary."""

@@ -178,8 +178,8 @@ def _json_to_sqlite(
         return None
 
     with engine.begin() as connection:
-        # get mapping of node IDs to node UUIDs
-        node_uuid_map = {
+        # `CursorResult` exposes `keys()`, so `dict()` treats it as a mapping. However, it is not subscriptable.
+        node_uuid_map = {  # noqa: C416
             uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))
         }
 
@@ -209,8 +209,8 @@ def _json_to_sqlite(
 
         # groups to nodes
         if data['groups_uuid']:
-            # get mapping of node IDs to node UUIDs
-            group_uuid_map = {
+            # `CursorResult` exposes `keys()`, so `dict()` treats it as a mapping. However, it is not subscriptable.
+            group_uuid_map = {  # noqa: C416
                 uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))
             }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())

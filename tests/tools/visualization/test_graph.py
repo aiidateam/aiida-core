@@ -113,16 +113,16 @@ class TestVisGraph:
 
         graph = graph_mod.Graph()
         graph.add_node(nodes.pd0)
-        assert graph.nodes == set([nodes.pd0.pk])
+        assert graph.nodes == {nodes.pd0.pk}
         assert graph.edges == set()
 
         # try adding a second time
         graph.add_node(nodes.pd0)
-        assert graph.nodes == set([nodes.pd0.pk])
+        assert graph.nodes == {nodes.pd0.pk}
 
         # add second node
         graph.add_node(nodes.pd1)
-        assert graph.nodes == set([nodes.pd0.pk, nodes.pd1.pk])
+        assert graph.nodes == {nodes.pd0.pk, nodes.pd1.pk}
 
     def test_graph_add_edge(self):
         """Test adding an edge to the graph"""
@@ -132,8 +132,8 @@ class TestVisGraph:
         graph.add_node(nodes.pd0)
         graph.add_node(nodes.rd1)
         graph.add_edge(nodes.pd0, nodes.rd1)
-        assert graph.nodes == set([nodes.pd0.pk, nodes.rd1.pk])
-        assert graph.edges == set([(nodes.pd0.pk, nodes.rd1.pk, None)])
+        assert graph.nodes == {nodes.pd0.pk, nodes.rd1.pk}
+        assert graph.edges == {(nodes.pd0.pk, nodes.rd1.pk, None)}
 
     def test_graph_add_incoming(self):
         """Test adding a node and all its incoming nodes to a graph"""
@@ -142,14 +142,12 @@ class TestVisGraph:
         graph = graph_mod.Graph()
         graph.add_incoming(nodes.calc1)
 
-        assert graph.nodes == set([nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk])
-        assert graph.edges == set(
-            [
-                (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
-                (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
-            ]
-        )
+        assert graph.nodes == {nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk}
+        assert graph.edges == {
+            (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
+            (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
+            (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
+        }
 
     def test_graph_add_outgoing(self):
         """Test adding a node and all its outgoing nodes to a graph"""
@@ -158,13 +156,11 @@ class TestVisGraph:
         graph = graph_mod.Graph()
         graph.add_outgoing(nodes.calcf1)
 
-        assert graph.nodes == set([nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk])
-        assert graph.edges == set(
-            [
-                (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
-                (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
-            ]
-        )
+        assert graph.nodes == {nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk}
+        assert graph.edges == {
+            (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
+            (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
+        }
 
     def test_graph_recurse_ancestors(self):
         """Test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -173,17 +169,15 @@ class TestVisGraph:
         graph = graph_mod.Graph()
         graph.recurse_ancestors(nodes.rd1)
 
-        assert graph.nodes == set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk])
-        assert graph.edges == set(
-            [
-                (nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
-                (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
-                (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
-                (nodes.pd0.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input1')),
-                (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2')),
-            ]
-        )
+        assert graph.nodes == {nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk}
+        assert graph.edges == {
+            (nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
+            (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
+            (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
+            (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
+            (nodes.pd0.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input1')),
+            (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2')),
+        }
 
     def test_graph_recurse_spot_highlight_classes(self):
         """Test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -219,14 +213,12 @@ class TestVisGraph:
         graph = graph_mod.Graph()
         graph.recurse_ancestors(nodes.rd1, link_types=['create', 'input_calc'])
 
-        assert graph.nodes == set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk])
-        assert graph.edges == set(
-            [
-                (nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
-                (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
-            ]
-        )
+        assert graph.nodes == {nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk}
+        assert graph.edges == {
+            (nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
+            (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
+            (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
+        }
 
     def test_graph_recurse_descendants(self):
         """Test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -235,14 +227,12 @@ class TestVisGraph:
         graph = graph_mod.Graph()
         graph.recurse_descendants(nodes.rd1)
 
-        assert graph.nodes == set([nodes.rd1.pk, nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk])
-        assert graph.edges == set(
-            [
-                (nodes.rd1.pk, nodes.calcf1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
-                (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
-            ]
-        )
+        assert graph.nodes == {nodes.rd1.pk, nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk}
+        assert graph.edges == {
+            (nodes.rd1.pk, nodes.calcf1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
+            (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
+            (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
+        }
 
     def test_graph_graphviz_source(self):
         """Test the output of graphviz source"""

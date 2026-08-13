@@ -569,7 +569,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         elif operator == 'in':
             try:
-                value_type_set = set(type(i) for i in value)
+                value_type_set = {type(i) for i in value}
             except TypeError:
                 raise TypeError('Value for operator `in` could not be iterated')
             if not value_type_set:
@@ -979,7 +979,7 @@ def compile_query(query: Query, literal_binds: bool = False) -> SQLCompiler:
                     return f'"{escaped}"'
                 raise
 
-    return _Compiler(dialect, query.statement, compile_kwargs=dict(literal_binds=literal_binds))
+    return _Compiler(dialect, query.statement, compile_kwargs={'literal_binds': literal_binds})
 
 
 def generate_joins(

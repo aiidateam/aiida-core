@@ -13,7 +13,7 @@ import pytest
 from aiida.storage.sqlite_dos.backend import SqliteDosMigrator
 
 
-@pytest.mark.parametrize('version', list(v for v in SqliteDosMigrator.get_schema_versions() if v.startswith('main')))
+@pytest.mark.parametrize('version', [v for v in SqliteDosMigrator.get_schema_versions() if v.startswith('main')])
 def test_main(version, uninitialised_profile, reflect_schema, data_regression):
     """Test that the migrations produce the expected database schema."""
     with SqliteDosMigrator(uninitialised_profile) as migrator:

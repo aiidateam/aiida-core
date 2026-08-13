@@ -89,9 +89,9 @@ class TestMakeHashTest:
 
     def test_collection_with_odicts(self):
         # ordered dicts should always give a different hash (because they are a different type), unless told otherwise:
-        assert make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')])) != make_hash(dict([('a', 'b'), ('c', 'd')]))
+        assert make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')])) != make_hash({'a': 'b', 'c': 'd'})
         assert make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True) == make_hash(
-            dict([('a', 'b'), ('c', 'd')])
+            {'a': 'b', 'c': 'd'}
         )
 
     def test_nested_collections(self):
@@ -108,13 +108,13 @@ class TestMakeHashTest:
                     },
                 ),
                 ('b', 4),
-                ('c', set([2, '5', 'a', 'b', 5])),
+                ('c', {2, '5', 'a', 'b', 5}),
             ]
         )
 
         obj_b = collections.OrderedDict(
             [
-                ('c', set([2, 'b', 5, 'a', '5'])),
+                ('c', {2, 'b', 5, 'a', '5'}),
                 ('b', 4),
                 (
                     'a',

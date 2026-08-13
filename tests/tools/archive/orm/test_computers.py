@@ -107,8 +107,8 @@ def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
     builder.append(orm.Computer, tag='comp')
     builder.append(orm.CalcJobNode, with_computer='comp', project=['label'])
     assert builder.count() == 2, 'Two calculations should be found.'
-    ret_labels = set(_ for [_] in builder.all())
-    assert ret_labels == set([calc1_label, calc2_label]), 'The labels of the calculations are not correct.'
+    ret_labels = {_ for [_] in builder.all()}
+    assert ret_labels == {calc1_label, calc2_label}, 'The labels of the calculations are not correct.'
 
 
 def test_same_computer_different_name_import(aiida_profile, tmp_path, aiida_localhost):

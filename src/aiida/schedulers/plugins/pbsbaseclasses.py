@@ -562,7 +562,7 @@ class PbsBaseClass(BashCliScheduler):
 
             # Double check of redundant info
             if this_job.allocated_machines is not None and this_job.num_machines is not None:  # type: ignore[redundant-expr]
-                if len(set(machine.name for machine in this_job.allocated_machines)) != this_job.num_machines:
+                if len({machine.name for machine in this_job.allocated_machines}) != this_job.num_machines:
                     _LOGGER.error(
                         f'The length of the list of allocated nodes ({len(this_job.allocated_machines)}) is different '
                         f'from the expected number of nodes ({this_job.num_machines})!'

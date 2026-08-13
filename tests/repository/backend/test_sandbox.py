@@ -175,7 +175,7 @@ def test_list_objects(repository, generate_directory):
     with open(directory / 'file_b', 'rb') as handle:
         keylist.append(repository.put_object_from_filelike(handle))
 
-    assert sorted(list(repository.list_objects())) == sorted(keylist)
+    assert sorted(repository.list_objects()) == sorted(keylist)
 
 
 def test_key_format(repository):

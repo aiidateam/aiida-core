@@ -18,7 +18,7 @@ REFERENCE_SCHEMAS = Path(__file__).parent / 'reference_schemas'
 
 
 @pytest.mark.nightly
-@pytest.mark.parametrize('version', list(v for v in PsqlDosMigrator.get_schema_versions() if v.startswith('django')))
+@pytest.mark.parametrize('version', [v for v in PsqlDosMigrator.get_schema_versions() if v.startswith('django')])
 def test_django(version, uninitialised_profile, reflect_schema, data_regression):
     """Test that the migrations (along the legacy django branch) produce the expected database schema."""
     with PsqlDosMigrator(uninitialised_profile) as migrator:

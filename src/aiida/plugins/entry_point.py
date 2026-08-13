@@ -326,7 +326,7 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
         raise MissingEntryPointError(msg)
     # If multiple entry points are found and they have different values we raise, otherwise if they all
     # correspond to the same value, we simply return one of them
-    if len(found) > 1 and len(set(ep.value for ep in found)) != 1:
+    if len(found) > 1 and len({ep.value for ep in found}) != 1:
         msg = f"Multiple entry points '{name}' found in group '{group}': {found}"
         raise MultipleEntryPointError(msg)
     return found[name]

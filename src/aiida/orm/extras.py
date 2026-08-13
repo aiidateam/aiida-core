@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
 
 __all__ = ('EntityExtras',)
 
-_NO_DEFAULT: t.Any = tuple()
+_NO_DEFAULT: t.Any = ()
 
 
 class EntityExtras:

@@ -40,7 +40,7 @@ from .tasks import UPLOAD_COMMAND, Waiting
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs: Any, ctx: PortNamespace) -> str | None:  # noqa: PLR0911
+def validate_calc_job(inputs: Any, ctx: PortNamespace) -> str | None:
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -140,7 +140,7 @@ def validate_unstash_options(unstash_options: Any, _: Any) -> str | None:
     return None
 
 
-def validate_stash_options(stash_options: Any, _: Any) -> str | None:  # noqa: PLR0911
+def validate_stash_options(stash_options: Any, _: Any) -> str | None:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
     from aiida.transports.transport import has_magic

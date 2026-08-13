@@ -231,7 +231,7 @@ class IcsdDbImporter(DbImporter):
         return retval
 
     @staticmethod
-    def _parse_volume(key, values):  # noqa: PLR0911
+    def _parse_volume(key, values):
         """Convert volume, cell parameter and angle queries into right format.
         :param key: query parameter
         :param values: corresponding values

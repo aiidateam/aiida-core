@@ -87,27 +87,6 @@ AiiDA offers two workflow systems.
 **WorkGraph** (declarative, graph-based) is a newer, simpler API for building workflows by connecting tasks in a graph, and is what this tutorial uses.
 :::
 
-<!-- The WorkGraph API is being refactored for inclusion into aiida-core, so this WorkChain-to-WorkGraph mapping may change; commented out until the API stabilizes.
-
-::::{dropdown} WorkChain vs WorkGraph concept mapping
-:icon: table
-
-If you already know the older WorkChain API, or meet it in a plugin, here is how its concepts map to the WorkGraph ones this tutorial uses:
-
-| WorkChain | WorkGraph | Notes |
-|---|---|---|
-| `WorkChain` class | `WorkGraph` / `@task.graph` | both are workflow-level process nodes |
-| `spec.outline(...)` in `define()` | the `@task.graph` body wiring tasks | WorkGraph replaces the imperative outline with a declarative graph |
-| `spec.input(...)` / `spec.output(...)` | input / output sockets | in WorkGraph these come from the wrapped function's signature |
-| `self.submit(SomeCalcJob, ...)` | `task`-wrapped `CalcJob` (`shelljob()` for `ShellJob`) | how each framework runs a CalcJob |
-| calling a `calcfunction` in a step | `@task`-wrapped function | `@task` turns any callable into a graph task |
-| `ToContext` / `self.ctx` | socket links, plus `wg.ctx` for shared state | most data passes via socket links; `wg.ctx` covers state that doesn't fit a socket |
-| `engine.submit(...)` / `engine.run(...)` | `wg.submit()` / `wg.run()` | same semantics: hand to the daemon (`submit`) or block in-process (`run`) |
-| `WorkChainNode` | `WorkGraphNode` | the same kind of provenance node (`WorkGraphNode` subclasses `WorkChainNode`) |
-
-::::
--->
-
 ## The WorkGraph mental model
 
 Before we write any code, it helps to have a mental picture of the four main objects WorkGraph is built from:

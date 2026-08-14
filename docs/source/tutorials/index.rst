@@ -8,6 +8,13 @@ These tutorials teach you the core concepts of AiiDA, from running a single
 calculation to orchestrating multi-step, parallel workflows, using a running
 example that progressively grows in complexity.
 
+.. note::
+
+   These tutorials are actively being iterated on and may still change. If you
+   run into any problems or have suggestions for improvement, please open an
+   issue on `GitHub <https://github.com/aiidateam/aiida-core/issues>`__; your
+   feedback is very welcome.
+
 Introductory modules
 =====================
 
@@ -40,7 +47,7 @@ Introductory modules
       :text-align: center
       :shadow: md
 
-      Run tracked calculations with aiida-shell, inspect provenance, and handle failures.
+      Run tracked calculations with aiida-shell and inspect the provenance AiiDA records for them.
 
       +++
 
@@ -97,13 +104,13 @@ Advanced modules
    querying at scale, adaptive workflows, and robust error handling. These
    modules are being finalized and will land here soon.
 
-Classic tutorial
-================
+More tutorials
+==============
 
-.. grid:: 1 2 2 3
+.. grid:: 1 2 2 2
    :gutter: 3
 
-   .. grid-item-card:: :fa:`graduation-cap;mr-1` Basic Tutorial
+   .. grid-item-card:: :fa:`graduation-cap;mr-1` Basic tutorial
       :text-align: center
       :shadow: md
 
@@ -118,7 +125,23 @@ Classic tutorial
          :color: primary
          :outline:
 
-         Go to Basic Tutorial
+         Go to the basic tutorial
+
+   .. grid-item-card:: :fa:`chalkboard-user;mr-1` Past AiiDA tutorials
+      :text-align: center
+      :shadow: md
+
+      Material from AiiDA's in-person and virtual hands-on tutorials, held regularly since 2016, including recorded presentations and demonstrations.
+
+      +++
+
+      .. button-link:: https://aiida-tutorials.readthedocs.io/en/latest/
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         Browse the material
 
 .. toctree::
    :maxdepth: 1
@@ -130,3 +153,4 @@ Classic tutorial
    module3a
    module3b
    basic
+   Past AiiDA tutorials <https://aiida-tutorials.readthedocs.io/en/latest/>

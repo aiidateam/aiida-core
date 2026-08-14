@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Regexes for the ``gsrd`` stdout diagnostics parsed in module 2."""
+"""Regexes to parse ``gsrd`` stdout diagnostics."""
 
 import re
 

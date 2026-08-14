@@ -386,10 +386,6 @@ for path in sorted(dump_dir.rglob('*')):
 All the relevant entities of the calculation are there: the input file, the simulation script, the submission script, captured stdout and stderr, and AiiDA metadata.
 This is useful for debugging or sharing calculation data outside of AiiDA.
 
-<!-- TODO: Add "Handling failures" section: re-run with bad params (F=0.1),
-     show how AiiDA records the failed CalcJob (exit code, stderr in provenance),
-     contrast with Module 0 where the failure left no trace. From meeting notes. -->
-
 ## Next steps
 
 You can now run external codes through AiiDA with full provenance tracking.

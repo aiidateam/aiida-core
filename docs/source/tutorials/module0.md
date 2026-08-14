@@ -61,11 +61,6 @@ uv pip install git+https://github.com/aiidateam/gsrd.git
 
 ## Running the simulation
 
-<!-- MOTIVATION: Show the typical experience of running a scientific code.
-     Users should recognize the UX from their own work: a CLI tool with
-     an input file that produces output, where critical results are scattered
-     across stdout and the output file. -->
-
 We invoke `gsrd` from the command line, passing the parameters via an `input.yaml` file:
 
 :::{dropdown} `input.yaml`&nbsp;contents
@@ -143,10 +138,6 @@ Some codes go further and implicitly *read* leftover files from the working dire
 
 ## Running again
 
-<!-- MOTIVATION: Show how quickly you lose track of what produced what.
-     The user edits the input file, runs again, and now the original
-     input is gone. The output file doesn't help either. -->
-
 All of this compounds further the moment you run more simulations. So let's do exactly that and try a different set of input parameters.
 The natural thing to do is to make a copy of the input, open it in a text editor, and change `F` from `0.04` to `0.050`.
 ```{code-cell} ipython3
@@ -181,10 +172,6 @@ Tweaking a parameter and re-running like this is how the exploratory phase of a 
 **Typos fail silently.** Editing inputs by hand is convenient, but many scientific codes (`gsrd` included) ignore keys they don't recognize, so a mistyped parameter name runs cleanly using the default value instead of raising an error.
 
 ## Running into errors
-
-<!-- MOTIVATION: Show that errors from scientific codes are often cryptic
-     and leave no useful trace. The user has no idea what went wrong, and
-     no record that the run even happened. -->
 
 Now, let's see what happens when things actually go wrong with our simulation.
 We run it with an oversized timestep (`dt=100`), from a prepared `input_bad.yaml`:

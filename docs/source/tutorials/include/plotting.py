@@ -9,16 +9,15 @@
 """Plotting helpers shared across the tutorial notebooks.
 
 Grouped here so the notebooks can ``import`` a figure helper rather than
-redefine it in every cell.
+redefine it in every cell. Only the provenance-graph helper is AiiDA-specific.
+The gsrd-output plots (pattern gallery, variance heatmap) live in
+:mod:`gsrd.plotting`; the wrappers here just unwrap the AiiDA nodes into the
+plain arrays/floats those functions expect.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
-import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -49,18 +48,15 @@ def plot_pattern_gallery(runs: Mapping[str, SinglefileData]) -> None:
     :param runs: mapping from a label (e.g. ``'labyrinth'``) to the
         ``results.npz`` SinglefileData produced by that run's ``gsrd`` ShellJob.
     """
+    import matplotlib.pyplot as plt
     import numpy as np
+    from gsrd.plotting import plot_field_gallery
 
-    fig: Figure
-    fig, ax_array = plt.subplots(nrows=1, ncols=len(runs), figsize=(4 * len(runs), 4))
-    axes = np.atleast_1d(ax_array)
-    for ax, (label, results_npz) in zip(axes, runs.items()):
+    fields = {}
+    for label, results_npz in runs.items():
         with results_npz.open(mode='rb') as fh:
-            v_field = np.load(fh, allow_pickle=True)['V_final']
-        _ = ax.imshow(v_field, cmap='magma', origin='lower')
-        _ = ax.set_title(label)
-        _ = ax.axis('off')
-    fig.tight_layout()
+            fields[label] = np.load(fh, allow_pickle=True)['V_final']
+    plot_field_gallery(fields)
     plt.show()
 
 
@@ -83,8 +79,9 @@ def plot_2d_variance_heatmap(
         log colour scale focuses on the physical range rather than spanning down
         to numerical underflow.
     """
+    import matplotlib.pyplot as plt
     import numpy as np
-    from matplotlib.colors import LogNorm
+    from gsrd.plotting import plot_variance_heatmap
 
     grid = np.full((len(f_grid), len(k_grid)), np.nan)
     for key, value in variances.items():
@@ -93,6 +90,8 @@ def plot_2d_variance_heatmap(
         k_idx = list(k_grid).index(params['k'])
         grid[f_idx, k_idx] = float(value.value)
 
+    # A more informative error than gsrd's generic one: the usual cause here is a
+    # failed WorkGraph ``Map`` gather, which drops all entries.
     if grid[grid > 0].size == 0:
         msg = (
             'No positive variance values to plot. Did the workflow gather succeed? '
@@ -100,26 +99,5 @@ def plot_2d_variance_heatmap(
         )
         raise ValueError(msg)
 
-    vmin = dead_threshold
-    vmax = float(np.nanmax(grid))
-    grid_for_plot = np.where(grid >= vmin, grid, vmin)
-
-    fig: Figure
-    fig, ax = plt.subplots(figsize=(6, 4.5))
-    ax_typed: Axes = ax
-    im = ax_typed.imshow(
-        grid_for_plot,
-        origin='lower',
-        aspect='auto',
-        extent=(min(k_grid), max(k_grid), min(f_grid), max(f_grid)),
-        norm=LogNorm(vmin=vmin, vmax=vmax),
-        cmap='viridis',
-    )
-    ax_typed.set_xlabel('Kill rate k')
-    ax_typed.set_ylabel('Feed rate F')
-    ax_typed.set_title(f'Gray-Scott pattern strength: variance(V) on a {len(f_grid)}x{len(k_grid)} F-by-k grid')
-    ax_typed.set_xticks(list(k_grid))
-    ax_typed.set_yticks(list(f_grid))
-    fig.colorbar(im, ax=ax_typed, label='variance(V)')
-    fig.tight_layout()
+    plot_variance_heatmap(grid, f_grid, k_grid, dead_threshold=dead_threshold)
     plt.show()

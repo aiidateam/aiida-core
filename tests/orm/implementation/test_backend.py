@@ -186,7 +186,7 @@ def test_finalize_ignores_closed_backend(aiida_profile, caplog):
     backend_repr = repr(backend)
     backend_reference = weakref.ref(backend)
 
-    with caplog.at_level(logging.WARNING, logger=storage_backend_module.LOGGER.name):
+    with caplog.at_level(logging.INFO, logger=storage_backend_module.LOGGER.name):
         del backend
         gc.collect()
 

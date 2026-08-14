@@ -45,7 +45,7 @@ class _BrokerResources:
 def _finalize_broker(resources: _BrokerResources, broker_repr: str) -> None:
     """Close resources held by a broker that was not closed explicitly."""
     if resources.has_pending_release:
-        LOGGER.warning(f'RabbitmqBroker {broker_repr} was not closed explicitly.')
+        LOGGER.info(f'RabbitmqBroker {broker_repr} was not closed explicitly.')
         resources.release()
 
 

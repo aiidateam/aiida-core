@@ -15,7 +15,7 @@ import typing as t
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -1021,7 +1021,7 @@ def test_process_repair_running_daemon(run_cli_command):
 def test_process_repair_consistent(monkeypatch, run_cli_command):
     """Test the ``verdi process repair`` command when everything is consistent."""
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
-    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args, **kwargs: [1, 2, 3])
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'No inconsistencies detected between database and broker.' in result.output
@@ -1031,10 +1031,10 @@ def test_process_repair_consistent(monkeypatch, run_cli_command):
 def test_process_repair_duplicate_tasks(monkeypatch, run_cli_command):
     """Test the ``verdi process repair`` command when there are duplicate tasks."""
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
-    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args, **kwargs: [1, 2, 2])
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
-    assert 'There are duplicates process tasks:' in result.output
+    assert 'There are duplicate process tasks:' in result.output
     assert 'Inconsistencies detected between database and broker.' in result.output
 
 
@@ -1042,7 +1042,7 @@ def test_process_repair_duplicate_tasks(monkeypatch, run_cli_command):
 def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
     """Test the ``verdi process repair`` command when there are additional tasks."""
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
-    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args, **kwargs: [1, 2, 3])
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are process tasks for terminated processes:' in result.output
@@ -1054,7 +1054,7 @@ def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
 def test_process_repair_missing_tasks(monkeypatch, run_cli_command):
     """Test the ``verdi process repair`` command when there are missing tasks."""
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
-    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args, **kwargs: [1, 2])
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are active processes without process task:' in result.output
@@ -1066,7 +1066,7 @@ def test_process_repair_missing_tasks(monkeypatch, run_cli_command):
 def test_process_repair_dry_run(monkeypatch, run_cli_command):
     """Test the ``verdi process repair`` command with ``--dry-run```."""
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3, 4])
-    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args, **kwargs: [1, 2])
 
     result = run_cli_command(cmd_process.process_repair, ['--dry-run'], raises=True, use_subprocess=False)
     assert 'Inconsistencies detected between database and broker.' in result.output
@@ -1077,11 +1077,81 @@ def test_process_repair_dry_run(monkeypatch, run_cli_command):
 def test_process_repair_verbosity(monkeypatch, run_cli_command):
     """Test the ``verdi process repair`` command with ``-v INFO```."""
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3, 4])
-    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args, **kwargs: [1, 2])
 
     result = run_cli_command(cmd_process.process_repair, ['-v', 'INFO'], use_subprocess=False)
     assert 'Active processes: [1, 2, 3, 4]' in result.output
     assert 'Process tasks: [1, 2]' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_all_users(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command with ``--all-users```."""
+    get_active_processes = MagicMock(return_value=[1, 2, 3, 4])
+    get_process_tasks = MagicMock(return_value=[1, 2])
+    monkeypatch.setattr(process_control, 'get_active_processes', get_active_processes)
+    monkeypatch.setattr(process_control, 'get_process_tasks', get_process_tasks)
+
+    result = run_cli_command(cmd_process.process_repair, ['--all-users'], use_subprocess=False)
+    assert 'Inconsistencies detected between database and broker.' in result.output
+    assert 'Attempting to fix inconsistencies' in result.output
+    get_active_processes.assert_called_once_with(user=None, project='id')
+    get_process_tasks.assert_called_once_with(ANY, user=None)
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_single_user(monkeypatch, run_cli_command, default_user):
+    """Test the ``verdi process repair`` command with a single user."""
+    get_active_processes = MagicMock(return_value=[1, 2, 3, 4])
+    get_process_tasks = MagicMock(return_value=[1, 2])
+    monkeypatch.setattr(process_control, 'get_active_processes', get_active_processes)
+    monkeypatch.setattr(process_control, 'get_process_tasks', get_process_tasks)
+
+    result = run_cli_command(cmd_process.process_repair, ['--user', default_user.email], use_subprocess=False)
+    assert 'Inconsistencies detected between database and broker.' in result.output
+    assert 'Attempting to fix inconsistencies' in result.output
+    get_active_processes.assert_called_once_with(user=default_user.email, project='id')
+    get_process_tasks.assert_called_once_with(ANY, user=default_user.email)
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_user_and_all_users_exclusive(run_cli_command, default_user):
+    """Test that ``--user`` and ``--all-users`` cannot be specified together."""
+    result = run_cli_command(
+        cmd_process.process_repair,
+        ['--user', default_user.email, '--all-users'],
+        raises=True,
+        use_subprocess=False,
+    )
+
+    assert result.exit_code == ExitCode.USAGE_ERROR
+    assert 'cannot specify both `--user` and `--all-users`' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_does_not_acknowledge_tasks_of_other_users(monkeypatch, run_cli_command, default_user):
+    """Test that repairing the default user does not acknowledge another user's task in the shared queue."""
+    from aiida.orm import User
+
+    selected_process = CalcJobNode(user=default_user)
+    selected_process.set_process_state(ProcessState.FINISHED)
+    selected_process.store()
+
+    other_user = User('other@example.com').store()
+    other_process = CalcJobNode(user=other_user)
+    other_process.set_process_state(ProcessState.WAITING)
+    other_process.store()
+
+    selected_task = MagicMock()
+    selected_task.body = {'args': {'pid': selected_process.pk}}
+    other_task = MagicMock()
+    other_task.body = {'args': {'pid': other_process.pk}}
+    monkeypatch.setattr(process_control, 'iterate_process_tasks', lambda *args: iter([selected_task, other_task]))
+
+    run_cli_command(cmd_process.process_repair, use_subprocess=False)
+
+    selected_task.processing.assert_called_once_with()
+    other_task.processing.assert_not_called()
 
 
 @pytest.mark.requires_psql
@@ -1097,7 +1167,7 @@ class TestProcessRepairUnreferencedConnections:
         without any RabbitMQ inconsistencies to repair.
         """
         monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
-        monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+        monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args, **kwargs: [])
 
     @pytest.fixture
     def mock_unreferenced_connection(self, monkeypatch):

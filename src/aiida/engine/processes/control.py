@@ -36,15 +36,14 @@ def get_active_processes(
     :param paused: Boolean, if True, filter for processes that are paused.
     :param project: Single or list of properties to project. By default projects the entire node.
     :param user: Email of the user to filter for processes belonging to a specific user.
+        If None, no filtering is applied and all active processes are returned.
     :return: A list of process nodes of active processes.
     """
     filters = CalculationQueryBuilder().get_filters(process_state=('created', 'waiting', 'running'), paused=paused)
     builder = QueryBuilder()
-    qb_kwargs: dict[str, str] = {}
+    builder.append(ProcessNode, filters=filters, project=project, tag='process')
     if user:
-        builder.append(User, filters={'email': user}, tag='user')
-        qb_kwargs = {'with_user': 'user'}
-    builder.append(ProcessNode, filters=filters, project=project, **qb_kwargs)
+        builder.append(User, filters={'email': user}, with_node='process')
     return builder.all(flat=True)
 
 
@@ -56,9 +55,10 @@ def iterate_process_tasks(broker: Broker) -> collections.abc.Iterator[kiwipy.rmq
     yield from broker.iterate_tasks()
 
 
-def get_process_tasks(broker: Broker) -> list[int]:
+def get_process_tasks(broker: Broker, user: str | None = None) -> list[int]:
     """Return the list of process pks that have a process task in the RabbitMQ process queue.
 
+    :param user: Email of the user to filter process tasks by.
     :returns: A list of process pks that have a corresponding process task with RabbitMQ.
     """
     pks = []
@@ -69,7 +69,14 @@ def get_process_tasks(broker: Broker) -> list[int]:
         except KeyError:
             pass
 
-    return pks
+    if user is None or not pks:
+        return pks
+
+    owned_pks = QueryBuilder()
+    owned_pks.append(ProcessNode, filters={'id': {'in': pks}}, project='id', tag='process')
+    owned_pks.append(User, filters={'email': user}, with_node='process')
+    owned_pks_set = set(owned_pks.all(flat=True))
+    return [pk for pk in pks if pk in owned_pks_set]
 
 
 def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> None:

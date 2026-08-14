@@ -515,7 +515,7 @@ def process_watch(broker, processes, most_recent_node):
 @decorators.with_manager
 @decorators.with_broker
 def process_repair(manager, broker, dry_run, force, user, all_users):
-    """Automatically repair all stuck processes (optionally filtered by user).
+    """Automatically repair all stuck processes.
 
     N.B.: This command requires the daemon to be stopped.
 
@@ -525,8 +525,15 @@ def process_repair(manager, broker, dry_run, force, user, all_users):
     worker to complete it and will effectively be "stuck". Any process task that does not correspond to an active
     process is useless and should be discarded. Finally, duplicate process tasks are also problematic and are discarded.
     """
-    from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
+    from aiida.engine.processes.control import (
+        get_active_processes,
+        get_process_tasks,
+        iterate_process_tasks,
+    )
     from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+    if all_users and user:
+        raise click.BadOptionUsage('user', 'cannot specify both `--user` and `--all-users` at the same time.')
 
     # Terminate unreferenced database connections that could be holding locks
     # Note: Use `type()` instead of `isinstance()` because SqliteDosBackend inherits from PsqlDosBackend
@@ -554,34 +561,32 @@ def process_repair(manager, broker, dry_run, force, user, all_users):
         else:
             echo.echo_success('No unreferenced database connections found.')
 
-    active_processes = get_active_processes(
-        user=None if all_users else user if user else profile.default_user_email,
-        project='id',
-    )
-    process_tasks = get_process_tasks(broker)
+    selected_user = None if all_users else user.email if user else profile.default_user_email
+    active_processes = get_active_processes(user=selected_user, project='id')
+    active_processes_set = set(active_processes)
 
-    set_active_processes = set(active_processes)
-    set_process_tasks = set(process_tasks)
+    process_tasks = get_process_tasks(broker, user=selected_user)
+    process_tasks_set = set(process_tasks)
 
     echo.echo_info(f'Active processes: {active_processes}')
     echo.echo_info(f'Process tasks: {process_tasks}')
 
     state_inconsistent = False
 
-    if len(process_tasks) != len(set_process_tasks):
+    if len(process_tasks) != len(process_tasks_set):
         state_inconsistent = True
-        echo.echo_warning('There are duplicates process tasks: ', nl=False)
+        echo.echo_warning('There are duplicate process tasks: ', nl=False)
         echo.echo(set(x for x in process_tasks if process_tasks.count(x) > 1))
 
-    if set_process_tasks.difference(set_active_processes):
+    if process_tasks_set.difference(active_processes_set):
         state_inconsistent = True
         echo.echo_warning('There are process tasks for terminated processes: ', nl=False)
-        echo.echo(set_process_tasks.difference(set_active_processes))
+        echo.echo(process_tasks_set.difference(active_processes_set))
 
-    if set_active_processes.difference(set_process_tasks):
+    if active_processes_set.difference(process_tasks_set):
         state_inconsistent = True
         echo.echo_warning('There are active processes without process task: ', nl=False)
-        echo.echo(set_active_processes.difference(set_process_tasks))
+        echo.echo(active_processes_set.difference(process_tasks_set))
 
     if not state_inconsistent:
         echo.echo_success('No inconsistencies detected between database and broker.')
@@ -599,13 +604,13 @@ def process_repair(manager, broker, dry_run, force, user, all_users):
     # Eliminate duplicate tasks and tasks that correspond to terminated process
     for task in iterate_process_tasks(broker):
         pid = task.body.get('args', {}).get('pid', None)
-        if pid not in set_active_processes:
+        if pid in process_tasks_set and pid not in active_processes_set:
             with task.processing() as outcome:
                 outcome.set_result(False)
             echo.echo_report(f'Acknowledged task `{pid}`')
 
     # Revive zombie processes that no longer have a process task
-    zombies = set_active_processes.difference(set_process_tasks)
+    zombies = active_processes_set.difference(process_tasks_set)
     if zombies:
         from aiida.brokers.zeromq.broker import ZeromqBroker
 

@@ -234,8 +234,7 @@ docs = [
   'sphinxext-rediraffe~=0.2.4',
   'sphinx-sqlalchemy~=0.2.0',
   'sphinx-intl~=2.1.0',
-  'myst-nb~=1.0.0',
-  'sphinx-autobuild'
+  'myst-nb~=1.0.0'
 ]
 notebook = [
   'jupyter-client~=8.0',

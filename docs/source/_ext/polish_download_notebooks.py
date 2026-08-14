@@ -6,13 +6,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Sphinx extension: make downloaded notebooks Jupyter-friendly.
+"""Sphinx extension: polish the downloadable tutorial notebooks (optional).
 
-After the build, post-process every ``.ipynb`` in ``_downloads/``:
+MyST-NB already emits a runnable ``.ipynb`` for every ``{nb-download}`` link, so
+downloads work without this extension. It only makes the *rendering* of those
+notebooks nicer in plain Jupyter, by post-processing each ``.ipynb`` in
+``_downloads/`` after the build:
 
 1. Convert MyST admonitions to HTML ``<div class="alert ...">`` blocks.
-2. Convert MyST dropdowns to ``<details>`` elements (with literalinclude inlined).
-3. Inline ``{image}``/``{figure}`` directives as self-contained base64 ``<img>`` tags.
+2. Convert MyST dropdowns to ``<details>`` elements and flatten grids, recursing
+   into nested directives (images, literalincludes) inside them.
+3. Inline ``{image}``/``{figure}`` directives as self-contained ``<img>`` tags.
 4. Strip MyST-only inline roles to plain text.
 5. Remove target labels and self-referential download links.
 
@@ -36,12 +40,9 @@ from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Patterns
-# ---------------------------------------------------------------------------
-
 # Colon-fence opening: :::{directive} optional_arg
-_FENCE_OPEN = re.compile(r'^(:{3,})\{(\w+)\}\s*(.*)')
+# Directive names may contain hyphens (``grid-item``, ``grid-item-card``).
+_FENCE_OPEN = re.compile(r'^(:{3,})\{([\w-]+)\}\s*(.*)')
 # Directive option: :key: value
 _DIRECTIVE_OPT = re.compile(r'^:(\w[\w-]*):\s*(.*)')
 # Backtick-fence directive: ```{directive} arg
@@ -65,11 +66,6 @@ _ALERT_MAP: dict[str, tuple[str, str]] = {
     'warning': ('warning', 'Warning'),
     'danger': ('danger', 'Danger'),
 }
-
-
-# ---------------------------------------------------------------------------
-# Markdown cell: convert MyST → Jupyter-compatible markdown
-# ---------------------------------------------------------------------------
 
 
 def _read_include(rel_path: str, source_dir: Path) -> str | None:
@@ -177,11 +173,16 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
 
         # --- Convert directive ---
 
+        # Recurse so directives nested inside a container (an ``{image}`` or
+        # ``{literalinclude}`` in a dropdown, images inside a ``{grid}``, ...) are
+        # converted too, not left as raw MyST.
+        inner = _convert_myst_block(content.split('\n'), source_dir)
+
         if directive in _ALERT_MAP:
             alert_type, title = _ALERT_MAP[directive]
             output.append(f'<div class="alert alert-{alert_type}">')
             output.append(f'<strong>{title}:</strong>\n')
-            output.append(content)
+            output.extend(inner)
             output.append('</div>')
 
         elif directive == 'admonition':
@@ -189,60 +190,24 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
             alert_type = 'warning' if css in ('warning', 'important') else 'info'
             output.append(f'<div class="alert alert-{alert_type}">')
             output.append(f'<strong>{arg}:</strong>\n')
-            output.append(content)
+            output.extend(inner)
             output.append('</div>')
 
         elif directive == 'dropdown':
-            # Inline any {literalinclude} inside the dropdown
-            inner = _inline_literalinclude(content, source_dir)
             output.append('<details>')
             output.append(f'<summary>{arg}</summary>\n')
-            output.append(inner)
+            output.extend(inner)
             output.append('</details>')
 
         else:
-            # Unknown directive — keep content as plain markdown
-            if arg:
+            # Layout containers (``grid``, ``grid-item``, ...) have no Jupyter
+            # equivalent: drop the wrapper and keep the converted content. Other
+            # unknown directives keep their argument as a bold lead-in.
+            if arg and not directive.startswith('grid'):
                 output.append(f'**{arg}**\n')
-            output.append(content)
+            output.extend(inner)
 
     return output
-
-
-def _inline_literalinclude(text: str, source_dir: Path) -> str:
-    """Replace ``{literalinclude}`` blocks with the actual file contents."""
-    result_lines: list[str] = []
-    lines = text.split('\n')
-    i = 0
-
-    while i < len(lines):
-        m = _BACKTICK_DIRECTIVE.match(lines[i])
-        if m is not None and m.group(1) == 'literalinclude':
-            rel_path = m.group(2).strip()
-            # Collect options
-            lang = 'python'
-            i += 1
-            while i < len(lines) and _DIRECTIVE_OPT.match(lines[i]):
-                om = _DIRECTIVE_OPT.match(lines[i])
-                if om is not None and om.group(1) == 'language':
-                    lang = om.group(2)
-                i += 1
-            # Skip closing backticks
-            if i < len(lines) and lines[i].strip().startswith('```'):
-                i += 1
-
-            content = _read_include(rel_path, source_dir)
-            if content is not None:
-                result_lines.append(f'```{lang}')
-                result_lines.append(content.rstrip())
-                result_lines.append('```')
-            else:
-                result_lines.append(f'*File not found: {rel_path}*')
-        else:
-            result_lines.append(lines[i])
-            i += 1
-
-    return '\n'.join(result_lines)
 
 
 def _convert_inline_roles(text: str) -> str:
@@ -300,11 +265,6 @@ def _process_markdown_cells(cells: list[dict[str, Any]], source_dir: Path) -> bo
     return modified
 
 
-# ---------------------------------------------------------------------------
-# Sphinx hook
-# ---------------------------------------------------------------------------
-
-
 def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
     """Post-process downloaded notebooks after build completes."""
     if exception is not None:
@@ -329,10 +289,10 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
         if _process_markdown_cells(nb.get('cells', []), source_dir):
             notebook_path.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + '\n', encoding='utf-8')
             count += 1
-            logger.info('inline_downloads: processed %s', notebook_path.name)
+            logger.info('polish_download_notebooks: processed %s', notebook_path.name)
 
     if count:
-        logger.info('inline_downloads: post-processed %d notebook(s)', count)
+        logger.info('polish_download_notebooks: post-processed %d notebook(s)', count)
 
 
 def setup(app: Sphinx) -> dict[str, Any]:

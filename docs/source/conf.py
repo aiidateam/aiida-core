@@ -88,7 +88,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinxext.rediraffe',
     'notfound.extension',
-    'inline_downloads',
+    'polish_download_notebooks',
 ]
 
 intersphinx_mapping = {

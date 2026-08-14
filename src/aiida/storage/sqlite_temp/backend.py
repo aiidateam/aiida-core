@@ -14,6 +14,7 @@ import functools
 import hashlib
 import os
 import shutil
+import weakref
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
@@ -24,6 +25,7 @@ from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
+from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration import Profile
 from aiida.orm.entities import EntityTypes
@@ -37,6 +39,36 @@ if TYPE_CHECKING:
     from aiida.repository.backend.abstract import InfoDictType
 
 __all__ = ('SqliteTempBackend',)
+
+LOGGER = AIIDA_LOGGER.getChild(__file__)
+
+
+class _TempBackendResources:
+    """Resources owned by a :class:`SqliteTempBackend`."""
+
+    def __init__(self) -> None:
+        self.session: Session | None = None
+        self.repo: SandboxShaRepositoryBackend | None = None
+
+    def release(self) -> None:
+        """Release the resources."""
+        if self.session is not None:
+            self.session.close()
+            self.session = None
+        if self.repo is not None:
+            self.repo.erase()
+            self.repo = None
+
+    @property
+    def has_pending_release(self) -> bool:
+        return self.session is not None or self.repo is not None
+
+
+def _finalize_backend(resources: _TempBackendResources, backend_repr: str) -> None:
+    """Release resources held by a backend that was not closed explicitly."""
+    if resources.has_pending_release:
+        LOGGER.warning(f'SqliteTempBackend {backend_repr} was not closed explicitly.')
+        resources.release()
 
 
 class SqliteTempBackend(StorageBackend):
@@ -100,8 +132,9 @@ class SqliteTempBackend(StorageBackend):
 
     def __init__(self, profile: Profile):
         super().__init__(profile)
-        self._session: Session | None = None
-        self._repo: SandboxShaRepositoryBackend | None = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
+        self._resources = _TempBackendResources()
+        self._resources.repo = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
+        self._finalizer = weakref.finalize(self, _finalize_backend, self._resources, repr(self))
         self._globals: dict[str, tuple[Any, str | None]] = {}
         self._closed = False
         self.get_session()  # load the database on initialization
@@ -114,13 +147,24 @@ class SqliteTempBackend(StorageBackend):
     def is_closed(self) -> bool:
         return self._closed
 
+    @property
+    def _session(self) -> Session | None:
+        return self._resources.session
+
+    @_session.setter
+    def _session(self, value: Session | None) -> None:
+        self._resources.session = value
+
+    @property
+    def _repo(self) -> SandboxShaRepositoryBackend | None:
+        return self._resources.repo
+
+    @_repo.setter
+    def _repo(self, value: SandboxShaRepositoryBackend | None) -> None:
+        self._resources.repo = value
+
     def close(self) -> None:
-        if self._session:
-            self._session.close()
-        if self._repo:
-            self._repo.erase()
-        self._session = None
-        self._repo = None
+        self._resources.release()
         self._globals = {}
         self._closed = True
 

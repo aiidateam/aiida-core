@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import functools
 import pathlib
+import weakref
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Any
@@ -70,6 +71,34 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
         raise ConfigurationError(f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute')
 
     return filepath.expanduser() / 'container'
+
+
+class _PsqlDosResources:
+    """Resources owned by a :class:`PsqlDosBackend`."""
+
+    def __init__(self) -> None:
+        self.session_factory: scoped_session | None = None
+
+    def release(self) -> None:
+        """Release the resources."""
+        if self.session_factory is not None:
+            engine = self.session_factory.bind
+            if engine is not None:
+                engine.dispose()  # type: ignore[union-attr]
+            self.session_factory.expunge_all()
+            self.session_factory.remove()
+            self.session_factory = None
+
+    @property
+    def has_pending_release(self) -> bool:
+        return self.session_factory is not None
+
+
+def _finalize_backend(resources: _PsqlDosResources, backend_repr: str) -> None:
+    """Release resources held by a backend that was not closed explicitly."""
+    if resources.has_pending_release:
+        LOGGER.warning(f'StorageBackend {backend_repr} was not closed explicitly.')
+        resources.release()
 
 
 class PsqlDosBackend(StorageBackend):
@@ -135,7 +164,8 @@ class PsqlDosBackend(StorageBackend):
         with self.migrator(profile) as migrator:
             migrator.validate_storage()
 
-        self._session_factory: scoped_session | None = None
+        self._resources = _PsqlDosResources()
+        self._finalizer = weakref.finalize(self, _finalize_backend, self._resources, repr(self))
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
         self._db_url = self.get_session().get_bind().url  # type: ignore[union-attr]
@@ -150,7 +180,15 @@ class PsqlDosBackend(StorageBackend):
 
     @property
     def is_closed(self) -> bool:
-        return self._session_factory is None
+        return self._resources.session_factory is None
+
+    @property
+    def _session_factory(self) -> scoped_session | None:
+        return self._resources.session_factory
+
+    @_session_factory.setter
+    def _session_factory(self, value: scoped_session | None) -> None:
+        self._resources.session_factory = value
 
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'
@@ -168,26 +206,24 @@ class PsqlDosBackend(StorageBackend):
         """
         from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
-        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore[arg-type]
-        self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
+        self._resources.session_factory = scoped_session(
+            sessionmaker(
+                bind=create_sqlalchemy_engine(self._profile.storage_config),  # type: ignore[arg-type]
+                future=True,
+                expire_on_commit=True,
+            )
+        )
 
     def get_session(self) -> Session:
         """Return an SQLAlchemy session bound to the current thread."""
-        if self._session_factory is None:
+        if self._resources.session_factory is None:
             raise ClosedStorage(str(self))
-        return self._session_factory()
+        return self._resources.session_factory()
 
     def close(self) -> None:
-        if self._session_factory is None:
+        if self._resources.session_factory is None:
             return  # the instance is already closed, and so this is a no-op
-        # close the connection
-
-        engine = self._session_factory.bind
-        if engine is not None:
-            engine.dispose()  # type: ignore[union-attr]
-        self._session_factory.expunge_all()
-        self._session_factory.remove()
-        self._session_factory = None
+        self._resources.release()
 
     def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting

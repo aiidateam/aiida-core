@@ -14,6 +14,7 @@ import json
 import shutil
 import tarfile
 import tempfile
+import weakref
 import zipfile
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
@@ -72,6 +73,38 @@ def validate_sqlite_version() -> None:
             f' But you have {sqlite_installed_version} installed.'
         )
         raise IncompatibleExternalDependencies(message)
+
+
+class _ZipBackendResources:
+    """Resources owned by a :class:`SqliteZipBackend`."""
+
+    def __init__(self) -> None:
+        self.db_file: Path | None = None
+        self.session: Session | None = None
+        self.repo: _RoBackendRepository | None = None
+
+    def release(self) -> None:
+        """Release the resources."""
+        if self.session is not None:
+            self.session.close()
+            self.session = None
+        if self.db_file is not None and self.db_file.exists():
+            self.db_file.unlink(missing_ok=True)
+            self.db_file = None
+        if self.repo is not None:
+            self.repo.close()
+            self.repo = None
+
+    @property
+    def has_pending_release(self) -> bool:
+        return self.session is not None or self.db_file is not None or self.repo is not None
+
+
+def _finalize_backend(resources: _ZipBackendResources, backend_repr: str) -> None:
+    """Release resources held by a backend that was not closed explicitly."""
+    if resources.has_pending_release:
+        LOGGER.warning(f'SqliteZipBackend {backend_repr} was not closed explicitly.')
+        resources.release()
 
 
 class SqliteZipBackend(StorageBackend):
@@ -212,10 +245,8 @@ class SqliteZipBackend(StorageBackend):
         super().__init__(profile)
         self._path = Path(profile.storage_config['filepath'])
         validate_storage(self._path)
-        # lazy open the archive zipfile and extract the database file
-        self._db_file: Path | None = None
-        self._session: Session | None = None
-        self._repo: _RoBackendRepository | None = None
+        self._resources = _ZipBackendResources()
+        self._finalizer = weakref.finalize(self, _finalize_backend, self._resources, repr(self))
         self._closed = False
 
     def __str__(self) -> str:
@@ -228,15 +259,7 @@ class SqliteZipBackend(StorageBackend):
 
     def close(self) -> None:
         """Close the backend"""
-        if self._session:
-            self._session.close()
-        if self._db_file and self._db_file.exists():
-            self._db_file.unlink()
-        if self._repo:
-            self._repo.close()
-        self._session = None
-        self._db_file = None
-        self._repo = None
+        self._resources.release()
         self._closed = True
 
     def get_session(self) -> Session:
@@ -245,10 +268,10 @@ class SqliteZipBackend(StorageBackend):
 
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._session is None:
+        if self._resources.session is None:
             if is_zipfile(self._path):
                 _, path = tempfile.mkstemp()
-                db_file = self._db_file = Path(path)
+                db_file = self._resources.db_file = Path(path)
                 with db_file.open('wb') as handle:
                     try:
                         extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
@@ -258,20 +281,20 @@ class SqliteZipBackend(StorageBackend):
                 db_file = self._path / DB_FILENAME
                 if not db_file.exists():
                     raise CorruptStorage(f'database could not be read: non-existent {db_file}')
-            self._session = Session(create_sqla_engine(db_file), future=True)
-        return self._session
+            self._resources.session = Session(create_sqla_engine(db_file), future=True)
+        return self._resources.session
 
     def get_repository(self) -> _RoBackendRepository:
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._repo is None:
+        if self._resources.repo is None:
             if is_zipfile(self._path):
-                self._repo = ZipfileBackendRepository(self._path)
+                self._resources.repo = ZipfileBackendRepository(self._path)
             elif (self._path / REPO_FOLDER).exists():
-                self._repo = FolderBackendRepository(self._path / REPO_FOLDER)
+                self._resources.repo = FolderBackendRepository(self._path / REPO_FOLDER)
             else:
                 raise CorruptStorage(f'repository could not be read: non-existent {self._path / REPO_FOLDER}')
-        return self._repo
+        return self._resources.repo
 
     def query(self) -> orm.SqliteQueryBuilder:
         return orm.SqliteQueryBuilder(self)

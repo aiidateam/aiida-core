@@ -11,7 +11,13 @@
 from __future__ import annotations
 
 import copy
+import gc
 import json
+import logging
+import subprocess
+import sys
+import textwrap
+import weakref
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import psutil
@@ -38,8 +44,8 @@ def aiida_broker():
 
 
 @pytest.fixture
-def zeromq_broker(tmp_path):
-    """Create a ZMQ broker instance rooted in ``tmp_path``."""
+def zeromq_broker_factory(tmp_path):
+    """Return a factory for ZMQ broker instances rooted in ``tmp_path``."""
     profile = MagicMock()
     profile.name = 'test-profile'
     profile.process_control_backend = 'core.zeromq'
@@ -56,7 +62,15 @@ def zeromq_broker(tmp_path):
         return result
 
     with patch.object(config, 'filepaths', side_effect=filepaths):
-        yield ZeromqBroker(profile)
+        yield lambda: ZeromqBroker(profile)
+
+
+@pytest.fixture
+def zeromq_broker(zeromq_broker_factory):
+    """Create a ZMQ broker instance rooted in ``tmp_path``."""
+    broker = zeromq_broker_factory()
+    yield broker
+    broker.close()
 
 
 def test_get_default_config():
@@ -71,6 +85,67 @@ def test_init_invalid_backend():
 
     with pytest.raises(ConfigurationError, match=r'should be `core\.zeromq`'):
         ZeromqBroker(profile)
+
+
+def test_finalize_ignores_closed_broker(zeromq_broker_factory, caplog):
+    """Test the finalizer does nothing when the broker was closed explicitly."""
+    broker = zeromq_broker_factory()
+    communicator = MagicMock()
+    broker._resources.communicator = communicator
+    broker.close()
+    broker_repr = repr(broker)
+    broker_reference = weakref.ref(broker)
+
+    with caplog.at_level(logging.WARNING, logger='aiida.broker.zeromq'):
+        del broker
+        gc.collect()
+
+    assert broker_reference() is None
+    assert f'ZeromqBroker {broker_repr} was not closed explicitly.' not in caplog.messages
+    communicator.close.assert_called_once_with()
+
+
+def test_finalize_runs_at_interpreter_shutdown(tmp_path):
+    """Test the broker finalizer runs when the interpreter exits."""
+    marker = tmp_path / 'zeromq-broker-finalized'
+    config_dir = tmp_path / 'config'
+    service_dir = tmp_path / 'service'
+    log_path = tmp_path / 'broker.log'
+    code = textwrap.dedent(
+        f"""
+        import os
+        from pathlib import Path
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        os.environ['AIIDA_PATH'] = {str(config_dir)!r}
+
+        from aiida.brokers.zeromq.broker import ZeromqBroker
+
+        profile = SimpleNamespace(name='test-profile', process_control_backend='core.zeromq')
+        config = SimpleNamespace(
+            filepaths=lambda current_profile: {{
+                'broker_service': {{'dir': {str(service_dir)!r}, 'log': {str(log_path)!r}}}
+            }},
+        )
+
+        class DummyCommunicator:
+            def __init__(self, marker_path):
+                self._marker_path = Path(marker_path)
+
+            def close(self):
+                self._marker_path.write_text('closed')
+
+        with patch('aiida.manage.configuration.get_config', return_value=config):
+            broker = ZeromqBroker(profile)
+            broker._resources.communicator = DummyCommunicator({str(marker)!r})
+        """
+    )
+
+    result = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=False)
+
+    assert result.returncode == 0, result.stderr
+    assert marker.read_text() == 'closed'
 
 
 class TestZeromqBrokerStatusQueries:

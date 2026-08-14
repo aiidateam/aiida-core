@@ -8,9 +8,14 @@
 ###########################################################################
 """Tests for the `aiida.brokers.rabbitmq` module."""
 
+import gc
 import logging
 import pathlib
+import subprocess
+import sys
+import textwrap
 import uuid
+import weakref
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -108,47 +113,54 @@ def test_check_service_reachable_false(monkeypatch, manager):
     close.assert_called_once_with()
 
 
-def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch, caplog):
-    """Test `__del__` closes the broker when Python is not finalizing."""
+def test_finalize_ignores_closed_broker(aiida_profile, caplog):
+    """Test the finalizer does nothing when the broker was closed explicitly."""
     broker = RabbitmqBroker(aiida_profile)
-    broker._communicator = MagicMock()
-    close = MagicMock()
-    monkeypatch.setattr(broker, 'close', close)
+    communicator = MagicMock()
+    broker._resources.communicator = communicator
+    broker.close()
+    broker_repr = repr(broker)
+    broker_reference = weakref.ref(broker)
 
     with caplog.at_level(logging.WARNING, logger='aiida.broker.rabbitmq'):
-        broker.__del__()
+        del broker
+        gc.collect()
 
-    # Note: we do an in assert because it might be that a broker instance of a
-    # previous test got deleted during the log capture
-    assert (
-        'aiida.broker.rabbitmq',
-        logging.WARNING,
-        f'RabbitmqBroker {broker!r} was not closed explicitly.',
-    ) in caplog.record_tuples
-
-    close.assert_called_once_with()
+    assert broker_reference() is None
+    assert f'RabbitmqBroker {broker_repr} was not closed explicitly.' not in caplog.messages
+    communicator.close.assert_called_once_with()
 
 
-def test_del_logs_but_skips_close_when_finalizing(aiida_profile, monkeypatch, caplog):
-    """Test ``__del__`` logs but skips close when Python is finalizing."""
-    broker = RabbitmqBroker(aiida_profile)
-    close = MagicMock()
-    broker._communicator = MagicMock()
-    monkeypatch.setattr(broker, 'close', close)
-    monkeypatch.setattr('sys.is_finalizing', lambda: True)
+def test_finalize_runs_at_interpreter_shutdown(tmp_path):
+    """Test the broker finalizer runs when the interpreter exits."""
+    marker = tmp_path / 'broker-finalized'
+    config_dir = tmp_path / 'config'
+    code = textwrap.dedent(
+        f"""
+        import os
+        from pathlib import Path
+        from types import SimpleNamespace
 
-    with caplog.at_level(logging.WARNING, logger='aiida.broker.rabbitmq'):
-        broker.__del__()
+        os.environ['AIIDA_PATH'] = {str(config_dir)!r}
 
-    # Note: we do an in assert because it might be that a broker instance of a
-    # previous test got deleted during the log capture
-    assert (
-        'aiida.broker.rabbitmq',
-        logging.WARNING,
-        f'RabbitmqBroker {broker!r} was not closed explicitly.',
-    ) in caplog.record_tuples
+        from aiida.brokers.rabbitmq.broker import RabbitmqBroker
 
-    close.assert_not_called()
+        class DummyCommunicator:
+            def __init__(self, marker_path):
+                self._marker_path = Path(marker_path)
+
+            def close(self):
+                self._marker_path.write_text('closed')
+
+        broker = RabbitmqBroker(SimpleNamespace(uuid='00000000-0000-0000-0000-000000000000'))
+        broker._resources.communicator = DummyCommunicator({str(marker)!r})
+        """
+    )
+
+    result = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=False)
+
+    assert result.returncode == 0, result.stderr
+    assert marker.read_text() == 'closed'
 
 
 @pytest.mark.parametrize(

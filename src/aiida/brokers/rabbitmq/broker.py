@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import functools
-import sys
 import typing as t
+import weakref
 from collections.abc import Iterator
 
 from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus, JsonValue
@@ -23,6 +23,30 @@ if t.TYPE_CHECKING:
 LOGGER = AIIDA_LOGGER.getChild('broker.rabbitmq')
 
 __all__ = ('RabbitmqBroker',)
+
+
+class _BrokerResources:
+    """Resources owned by a :class:`RabbitmqBroker`."""
+
+    def __init__(self) -> None:
+        self.communicator: RmqThreadCommunicator | None = None
+
+    def release(self) -> None:
+        """Release the resources."""
+        if self.communicator is not None:
+            self.communicator.close()
+            self.communicator = None
+
+    @property
+    def has_pending_release(self) -> bool:
+        return self.communicator is not None
+
+
+def _finalize_broker(resources: _BrokerResources, broker_repr: str) -> None:
+    """Close resources held by a broker that was not closed explicitly."""
+    if resources.has_pending_release:
+        LOGGER.warning(f'RabbitmqBroker {broker_repr} was not closed explicitly.')
+        resources.release()
 
 
 class RabbitmqBroker(Broker):
@@ -87,7 +111,8 @@ class RabbitmqBroker(Broker):
         :param profile: The profile.
         """
         self._profile = profile
-        self._communicator: RmqThreadCommunicator | None = None
+        self._resources = _BrokerResources()
+        self._finalizer = weakref.finalize(self, _finalize_broker, self._resources, repr(self))
         self._prefix = f'aiida-{self._profile.uuid}'
 
     def __str__(self) -> str:
@@ -100,7 +125,7 @@ class RabbitmqBroker(Broker):
 
     def probe_service_status(self) -> BrokerServiceStatus:
         """Return status information reported by the RabbitMQ server."""
-        had_communicator = self._communicator is not None
+        had_communicator = self._resources.communicator is not None
 
         try:
             properties = self.get_communicator().server_properties
@@ -122,7 +147,7 @@ class RabbitmqBroker(Broker):
 
     def check_service_reachable(self) -> bool:
         """Return whether the RabbitMQ service is reachable."""
-        had_communicator = self._communicator is not None
+        had_communicator = self._resources.communicator is not None
 
         try:
             self.get_communicator()
@@ -136,27 +161,19 @@ class RabbitmqBroker(Broker):
 
     def close(self) -> None:
         """Close the broker."""
-        if self._communicator is not None:
-            self._communicator.close()
-            self._communicator = None
-
-    def __del__(self) -> None:
-        if self._communicator is not None:
-            LOGGER.warning(f'RabbitmqBroker {self!r} was not closed explicitly.')
-            if not sys.is_finalizing():
-                self.close()
+        self._resources.release()
 
     def iterate_tasks(self) -> Iterator[t.Any]:
         """Return an iterator over the tasks in the launch queue."""
         yield from self.get_communicator().task_queue(get_launch_queue_name(self._prefix))
 
     def get_communicator(self) -> RmqThreadCommunicator:
-        if self._communicator is None:
-            self._communicator = self._create_communicator()
+        if self._resources.communicator is None:
+            self._resources.communicator = self._create_communicator()
             # Check whether a compatible version of RabbitMQ is being used.
             self.check_rabbitmq_version()
 
-        return self._communicator
+        return self._resources.communicator
 
     def _create_communicator(self) -> RmqThreadCommunicator:
         """Return an instance of :class:`kiwipy.Communicator`."""
@@ -164,7 +181,7 @@ class RabbitmqBroker(Broker):
 
         from aiida.orm.utils import serialize
 
-        self._communicator = RmqThreadCommunicator.connect(
+        communicator = RmqThreadCommunicator.connect(
             connection_params={'url': self.get_url()},
             message_exchange=get_message_exchange_name(self._prefix),
             encoder=functools.partial(serialize.serialize, encoding='utf-8'),
@@ -178,7 +195,7 @@ class RabbitmqBroker(Broker):
             testing_mode=self._profile.is_test_profile,
         )
 
-        return self._communicator
+        return communicator
 
     def check_rabbitmq_version(self) -> tuple[Version, bool]:
         """Check the version of RabbitMQ that is being connected to and emit warning if it is not compatible."""

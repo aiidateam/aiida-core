@@ -96,7 +96,7 @@ def test_finalize_ignores_closed_broker(zeromq_broker_factory, caplog):
     broker_repr = repr(broker)
     broker_reference = weakref.ref(broker)
 
-    with caplog.at_level(logging.WARNING, logger='aiida.broker.zeromq'):
+    with caplog.at_level(logging.INFO, logger='aiida.broker.zeromq'):
         del broker
         gc.collect()
 

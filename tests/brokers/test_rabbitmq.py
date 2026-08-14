@@ -122,7 +122,7 @@ def test_finalize_ignores_closed_broker(aiida_profile, caplog):
     broker_repr = repr(broker)
     broker_reference = weakref.ref(broker)
 
-    with caplog.at_level(logging.WARNING, logger='aiida.broker.rabbitmq'):
+    with caplog.at_level(logging.INFO, logger='aiida.broker.rabbitmq'):
         del broker
         gc.collect()
 

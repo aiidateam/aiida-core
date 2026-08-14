@@ -10,10 +10,15 @@
 
 from __future__ import annotations
 
+import gc
 import json
 import logging
 import pathlib
+import subprocess
+import sys
+import textwrap
 import uuid
+import weakref
 from unittest.mock import MagicMock
 
 import pytest
@@ -171,45 +176,53 @@ class TestBackend:
         assert len(group.nodes) == 0
 
 
-def test_del_closes_backend_when_not_finalizing(aiida_profile, monkeypatch, caplog):
-    """Test ``__del__`` closes the backend when Python is not finalizing."""
+def test_finalize_ignores_closed_backend(aiida_profile, caplog):
+    """Test the finalizer does nothing when the backend was closed explicitly."""
     backend = aiida_profile.storage_cls(aiida_profile)
-    close = MagicMock()
-    monkeypatch.setattr(backend, 'close', close)
+    release = MagicMock(wraps=backend._resources.release)
+    backend._resources.release = release
+    backend.close()
+    release.assert_called_once_with()
+    backend_repr = repr(backend)
+    backend_reference = weakref.ref(backend)
 
     with caplog.at_level(logging.WARNING, logger=storage_backend_module.LOGGER.name):
-        backend.__del__()
+        del backend
+        gc.collect()
 
-    # Note: we do an ``in`` assert because it might be that a backend instance of a
-    # previous test got deleted during the log capture
-    assert (
-        storage_backend_module.LOGGER.name,
-        logging.WARNING,
-        f'StorageBackend {backend!r} was not closed explicitly.',
-    ) in caplog.record_tuples
-
-    close.assert_called_once_with()
+    assert backend_reference() is None
+    release.assert_called_once_with()
+    assert f'StorageBackend {backend_repr} was not closed explicitly.' not in caplog.messages
 
 
-def test_del_logs_but_skips_close_when_finalizing(aiida_profile, monkeypatch, caplog):
-    """Test ``__del__`` logs but skips close when Python is finalizing."""
-    backend = aiida_profile.storage_cls(aiida_profile)
-    close = MagicMock()
-    monkeypatch.setattr(backend, 'close', close)
-    monkeypatch.setattr('sys.is_finalizing', lambda: True)
+def test_finalize_runs_at_interpreter_shutdown(tmp_path):
+    """Test the backend finalizer runs when the interpreter exits."""
+    marker = tmp_path / 'backend-finalized'
+    storage_path = tmp_path / 'storage'
+    config_dir = tmp_path / 'config'
+    code = textwrap.dedent(
+        f"""
+        import os
+        from pathlib import Path
 
-    with caplog.at_level(logging.WARNING, logger=storage_backend_module.LOGGER.name):
-        backend.__del__()
+        os.environ['AIIDA_PATH'] = {str(config_dir)!r}
 
-    # Note: we do an ``in`` assert because it might be that a backend instance of a
-    # previous test got deleted during the log capture
-    assert (
-        storage_backend_module.LOGGER.name,
-        logging.WARNING,
-        f'StorageBackend {backend!r} was not closed explicitly.',
-    ) in caplog.record_tuples
+        from aiida.storage.sqlite_temp.backend import SqliteTempBackend
 
-    close.assert_not_called()
+        backend = SqliteTempBackend(SqliteTempBackend.create_profile(filepath={str(storage_path)!r}))
+
+        class DummyRepo:
+            def erase(self):
+                Path({str(marker)!r}).write_text('closed')
+
+        backend._resources.repo = DummyRepo()
+        """
+    )
+
+    result = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=False)
+
+    assert result.returncode == 0, result.stderr
+    assert marker.read_text() == 'closed'
 
 
 def test_backup_not_implemented(aiida_config, backend, monkeypatch, tmp_path):

@@ -509,11 +509,13 @@ def process_watch(broker, processes, most_recent_node):
 @verdi_process.command('repair')
 @options.DRY_RUN()
 @options.FORCE(help='Do not ask for confirmation when terminating database connections.')
+@options.USER(help='Filter to repair processes belonging to a specific user (by email).')
+@options.ALL_USERS(help='Filter to repair processes for all users')
 @decorators.only_if_daemon_not_running()
 @decorators.with_manager
 @decorators.with_broker
-def process_repair(manager, broker, dry_run, force):
-    """Automatically repair all stuck processes.
+def process_repair(manager, broker, dry_run, force, user, all_users):
+    """Automatically repair all stuck processes (optionally filtered by user).
 
     N.B.: This command requires the daemon to be stopped.
 
@@ -552,7 +554,10 @@ def process_repair(manager, broker, dry_run, force):
         else:
             echo.echo_success('No unreferenced database connections found.')
 
-    active_processes = [process.pk for process in get_active_processes() if process.user.is_default]
+    active_processes = get_active_processes(
+        user=None if all_users else user if user else profile.default_user_email,
+        project='id',
+    )
     process_tasks = get_process_tasks(broker)
 
     set_active_processes = set(active_processes)

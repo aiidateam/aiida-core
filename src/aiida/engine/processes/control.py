@@ -16,7 +16,7 @@ from aiida.common.exceptions import AiidaException
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
 from aiida.manage.manager import get_manager
-from aiida.orm import ProcessNode, QueryBuilder
+from aiida.orm import ProcessNode, QueryBuilder, User
 from aiida.tools.query.calculation import CalculationQueryBuilder
 
 LOGGER = AIIDA_LOGGER.getChild('process_control')
@@ -26,15 +26,25 @@ class ProcessTimeoutException(AiidaException):
     """Raised when action to communicate with a process times out."""
 
 
-def get_active_processes(paused: bool = False, project: str | list[str] = '*') -> list[ProcessNode] | list[t.Any]:
+def get_active_processes(
+    paused: bool = False,
+    project: str | list[str] = '*',
+    user: str | None = None,
+) -> list[ProcessNode] | list[t.Any]:
     """Return all active processes, i.e., those with a process state of created, waiting or running.
 
     :param paused: Boolean, if True, filter for processes that are paused.
     :param project: Single or list of properties to project. By default projects the entire node.
+    :param user: Email of the user to filter for processes belonging to a specific user.
     :return: A list of process nodes of active processes.
     """
     filters = CalculationQueryBuilder().get_filters(process_state=('created', 'waiting', 'running'), paused=paused)
-    builder = QueryBuilder().append(ProcessNode, filters=filters, project=project)
+    builder = QueryBuilder()
+    qb_kwargs: dict[str, str] = {}
+    if user:
+        builder.append(User, filters={'email': user}, tag='user')
+        qb_kwargs = {'with_user': 'user'}
+    builder.append(ProcessNode, filters=filters, project=project, **qb_kwargs)
     return builder.all(flat=True)
 
 

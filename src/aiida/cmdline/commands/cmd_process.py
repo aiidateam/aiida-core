@@ -497,10 +497,6 @@ def process_watch(broker, processes, most_recent_node):
     except (SystemExit, KeyboardInterrupt):
         echo.echo('')  # add a new line after the interrupt character
         echo.echo_report('received interrupt, exiting...')
-        try:
-            communicator.close()
-        except RuntimeError:
-            pass
 
         # Reraise to trigger clicks builtin abort sequence
         raise

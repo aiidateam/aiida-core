@@ -10,9 +10,11 @@
 
 from unittest import mock
 
+import click
 import pytest
+from click.testing import CliRunner
 
-from aiida.cmdline.utils.decorators import load_backend_if_not_loaded
+from aiida.cmdline.utils.decorators import load_backend_if_not_loaded, with_broker, with_dbenv
 from aiida.common.exceptions import InvalidOperation
 from aiida.manage import get_manager
 
@@ -48,6 +50,45 @@ def manager(monkeypatch):
     monkeypatch.setattr(manager, '_profile_storage', None)
     monkeypatch.setattr(manager.__class__, 'get_profile_storage', get_profile_storage)
     yield manager
+
+
+def test_with_broker_resets_after_group_closes(config, manager, monkeypatch):
+    """Test ``with_broker`` keeps the broker open for subcommands and then resets it."""
+    manager.load_profile()
+    expected_broker = mock.Mock()
+    reset_broker = mock.Mock()
+    monkeypatch.setattr(manager, 'get_broker', lambda: expected_broker)
+    monkeypatch.setattr(manager, 'reset_broker', reset_broker)
+
+    @click.group()
+    @with_broker
+    def command_group(broker):
+        assert broker is expected_broker
+        reset_broker.assert_not_called()
+
+    @command_group.command()
+    def command():
+        reset_broker.assert_not_called()
+
+    result = CliRunner().invoke(command_group, ['command'])
+
+    assert result.exception is None
+    reset_broker.assert_called_once_with()
+
+
+def test_with_dbenv_preserves_loaded_storage(config, manager):
+    """Test ``with_dbenv`` does not close storage that was already loaded."""
+    manager.load_profile()
+    manager.get_profile_storage()
+
+    @with_dbenv()
+    def wrapped():
+        assert manager.profile_storage_loaded
+
+    wrapped()
+
+    assert manager.profile_storage_loaded
+    manager.reset_profile_storage()
 
 
 def test_load_backend_if_not_loaded(config, manager):

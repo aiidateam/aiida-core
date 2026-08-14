@@ -21,7 +21,7 @@ Provides:
 from __future__ import annotations
 
 import typing as t
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 
 from click_spinner import spinner
 from wrapt import decorator
@@ -46,13 +46,17 @@ def with_manager(wrapped, _, args, kwargs):
 def with_broker(wrapped, _, args, kwargs):
     """Decorate a function injecting a :class:`aiida.brokers.broker.Broker` instance.
 
-    If the currently loaded profile does not define a broker, the command is aborted.
+    The broker is reset after the Click context closes. If the currently loaded profile does not define a broker, the
+    command is aborted.
     """
+    import click
+
     from aiida.common.docs import URL_NO_BROKER
     from aiida.manage import get_manager
 
-    broker = get_manager().get_broker()
-    profile = get_manager().get_profile()
+    manager = get_manager()
+    broker = manager.get_broker()
+    profile = manager.get_profile()
     assert profile is not None
 
     if broker is None:
@@ -62,7 +66,21 @@ def with_broker(wrapped, _, args, kwargs):
         )
 
     kwargs['broker'] = broker
-    return wrapped(*args, **kwargs)
+    context = click.get_current_context(silent=True)
+
+    def reset_broker() -> None:
+        """Reset the broker, ignoring communicators already closed by the command or an interrupt handler."""
+        with suppress(RuntimeError):
+            manager.reset_broker()
+
+    if context is not None:
+        context.call_on_close(reset_broker)
+
+    try:
+        return wrapped(*args, **kwargs)
+    finally:
+        if context is None:
+            reset_broker()
 
 
 def load_backend_if_not_loaded():
@@ -97,14 +115,28 @@ def with_dbenv() -> t.Callable:
     @decorator
     def wrapper(wrapped, _, args, kwargs):
         """The wrapped function that should be called after having loaded the backend."""
+        import click
+
         from aiida.common.exceptions import ConfigurationError, IntegrityError, LockedProfileError
+        from aiida.manage import get_manager
+
+        manager = get_manager()
+        storage_was_loaded = manager.profile_storage_loaded
+        context = click.get_current_context(silent=True)
+
+        if not storage_was_loaded and context is not None:
+            context.call_on_close(manager.reset_profile_storage)
 
         try:
-            load_backend_if_not_loaded()
-        except (IntegrityError, ConfigurationError, LockedProfileError) as exception:
-            echo.echo_critical(str(exception))
+            try:
+                load_backend_if_not_loaded()
+            except (IntegrityError, ConfigurationError, LockedProfileError) as exception:
+                echo.echo_critical(str(exception))
 
-        return wrapped(*args, **kwargs)
+            return wrapped(*args, **kwargs)
+        finally:
+            if not storage_was_loaded and context is None:
+                manager.reset_profile_storage()
 
     return wrapper
 

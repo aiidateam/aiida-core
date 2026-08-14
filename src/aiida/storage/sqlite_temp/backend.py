@@ -67,7 +67,7 @@ class _TempBackendResources:
 def _finalize_backend(resources: _TempBackendResources, backend_repr: str) -> None:
     """Release resources held by a backend that was not closed explicitly."""
     if resources.has_pending_release:
-        LOGGER.warning(f'SqliteTempBackend {backend_repr} was not closed explicitly.')
+        LOGGER.info(f'SqliteTempBackend {backend_repr} was not closed explicitly.')
         resources.release()
 
 

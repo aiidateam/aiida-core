@@ -44,7 +44,7 @@ class _BrokerResources:
 def _finalize_broker(resources: _BrokerResources, broker_repr: str) -> None:
     """Cleanup resources held by a broker that was not closed explicitly."""
     if resources.communicator is not None:
-        LOGGER.warning(f'ZeromqBroker {broker_repr} was not closed explicitly.')
+        LOGGER.info(f'ZeromqBroker {broker_repr} was not closed explicitly.')
         resources.release()
 
 

@@ -9,7 +9,7 @@
 """Test alterations to `db_dbnode.type`values."""
 
 from aiida.common import timezone
-from aiida.common.utils import get_new_uuid
+from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 

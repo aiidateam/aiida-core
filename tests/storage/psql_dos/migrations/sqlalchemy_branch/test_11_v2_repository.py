@@ -12,7 +12,7 @@
 import hashlib
 import os
 
-from aiida.common.utils import get_new_uuid
+from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator

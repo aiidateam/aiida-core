@@ -221,7 +221,7 @@ def export_and_clean_workflow_logs(connection, profile):
 
 def set_new_uuid(connection):
     """Set new and distinct UUIDs to all the logs"""
-    from aiida.common.utils import get_new_uuid
+    from aiida.common._utils import get_new_uuid
 
     # Exit if there are no rows - e.g. initial setup
     id_query = connection.execute(sa.text('SELECT db_dblog.id FROM db_dblog'))

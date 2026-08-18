@@ -12,7 +12,7 @@ import os
 import pathlib
 
 from aiida.common import exceptions
-from aiida.common.log import override_log_level
+from aiida.common.log import _override_log_level
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
 from aiida.orm.pydantic import OrmMetadataField
@@ -378,7 +378,7 @@ class Code(AbstractCode):
             raise exceptions.ValidationError('checking the remote exec path is not available for a local code.')
 
         try:
-            with override_log_level():  # Temporarily suppress noisy logging
+            with _override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
                     file_exists = transport.isfile(filepath)
         except Exception:

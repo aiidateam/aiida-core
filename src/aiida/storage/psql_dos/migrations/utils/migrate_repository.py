@@ -18,7 +18,7 @@ from sqlalchemy.sql import column, func, select, table, text
 
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions
-from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
+from aiida.common._progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
 from aiida.storage.psql_dos.backend import CONTAINER_DEFAULTS, get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 

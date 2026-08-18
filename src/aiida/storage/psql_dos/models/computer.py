@@ -13,7 +13,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import Integer, String, Text
 
-from aiida.common.utils import get_new_uuid
+from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.models.base import Base
 
 

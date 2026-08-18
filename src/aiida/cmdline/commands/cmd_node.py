@@ -23,7 +23,7 @@ from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions, timezone
-from aiida.common.links import GraphTraversalRules
+from aiida.common.links import _GraphTraversalRules
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -376,7 +376,7 @@ def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
     is_flag=True,
     help='Also clean the remote work directory, if applicable.',
 )
-@options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
+@options.graph_traversal_rules(_GraphTraversalRules.DELETE.value)
 @with_dbenv()
 def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
     """Delete nodes from the provenance graph.

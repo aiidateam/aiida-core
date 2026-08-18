@@ -22,11 +22,11 @@ from typing import Any
 from tabulate import tabulate
 
 from aiida import orm
+from aiida.common._progress_reporter import get_progress_reporter
+from aiida.common._utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
 from aiida.common.lang import type_check
-from aiida.common.links import GraphTraversalRules
+from aiida.common.links import _GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.progress_reporter import get_progress_reporter
-from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -97,7 +97,7 @@ def create_archive(
 
     Note, the logging level and progress reporter should be set externally, for example::
 
-        from aiida.common.progress_reporter import set_progress_bar_tqdm
+        from aiida.common._progress_reporter import set_progress_bar_tqdm
 
         EXPORT_LOGGER.setLevel('DEBUG')
         set_progress_bar_tqdm(leave=True)
@@ -144,7 +144,7 @@ def create_archive(
 
     :param backend: the backend to export from. If not specified, the default backend is used.
 
-    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links._GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
 
     :raises `~aiida.tools.archive.exceptions.ArchiveExportError`:
@@ -179,9 +179,9 @@ def create_archive(
     type_check(archive_format, ArchiveFormatAbstract)
 
     # check traversal rules
-    validate_traversal_rules(GraphTraversalRules.EXPORT, **traversal_rules)
+    validate_traversal_rules(_GraphTraversalRules.EXPORT, **traversal_rules)
     full_traversal_rules = {
-        name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
+        name: traversal_rules.get(name, rule.default) for name, rule in _GraphTraversalRules.EXPORT.value.items()
     }
 
     initial_summary = get_init_summary(

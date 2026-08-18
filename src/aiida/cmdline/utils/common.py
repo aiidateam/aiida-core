@@ -94,7 +94,7 @@ def print_last_process_state_change(process_type: Literal['work'] | Literal['cal
     """
     from aiida.cmdline.utils.echo import echo_report
     from aiida.common import timezone
-    from aiida.common.utils import str_timedelta
+    from aiida.common._utils import str_timedelta
     from aiida.engine.utils import get_process_state_change_timestamp
 
     timestamp = get_process_state_change_timestamp(process_type)

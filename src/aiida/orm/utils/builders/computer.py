@@ -8,8 +8,8 @@
 ###########################################################################
 """Manage computer objects with lazy loading of the db env"""
 
+from aiida.common._utils import ErrorAccumulator
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import ErrorAccumulator
 
 
 class ComputerBuilder:

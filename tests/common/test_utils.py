@@ -6,11 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the aiida.common.utils functionality."""
+"""Tests for the aiida.common._utils functionality."""
 
 import unittest
 
-from aiida.common import escaping, utils
+from aiida.common import _utils, escaping
 
 
 class UniqueTest(unittest.TestCase):
@@ -20,25 +20,25 @@ class UniqueTest(unittest.TestCase):
         filename = 'different.txt'
         filename_list = ['file1.txt', 'file2.txt']
 
-        self.assertEqual(filename, utils.get_unique_filename(filename, filename_list))
+        self.assertEqual(filename, _utils.get_unique_filename(filename, filename_list))
 
     def test_unique_2(self):
         filename = 'file1.txt'
         filename_list = ['file1.txt', 'file2.txt']
 
-        self.assertEqual('file1-1.txt', utils.get_unique_filename(filename, filename_list))
+        self.assertEqual('file1-1.txt', _utils.get_unique_filename(filename, filename_list))
 
     def test_unique_3(self):
         filename = 'file1.txt'
         filename_list = ['file1.txt', 'file1-1.txt']
 
-        self.assertEqual('file1-2.txt', utils.get_unique_filename(filename, filename_list))
+        self.assertEqual('file1-2.txt', _utils.get_unique_filename(filename, filename_list))
 
     def test_unique_4(self):
         filename = 'file1.txt'
         filename_list = ['file1.txt', 'file1-2.txt']
 
-        self.assertEqual('file1-1.txt', utils.get_unique_filename(filename, filename_list))
+        self.assertEqual('file1-1.txt', _utils.get_unique_filename(filename, filename_list))
 
     # The counter & the method that increments it and
     # returns its value. It is used in the tests
@@ -89,8 +89,8 @@ class PrettifierTest(unittest.TestCase):
             },
         }
 
-        for prettifier_id in utils.Prettifier.get_prettifiers():
-            prettifier = utils.Prettifier(prettifier_id)
+        for prettifier_id in _utils.Prettifier.get_prettifiers():
+            prettifier = _utils.Prettifier(prettifier_id)
 
             for label, prettified in prettifier_data[prettifier_id].items():
                 self.assertEqual(prettifier.prettify(label), prettified)

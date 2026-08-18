@@ -338,7 +338,7 @@ class StorageBackend(abc.ABC):
         import tempfile
 
         from aiida.common import exceptions
-        from aiida.common.log import override_log_level
+        from aiida.common.log import _override_log_level
         from aiida.manage.configuration import get_config
         from aiida.manage.configuration.config import Config
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
@@ -354,7 +354,7 @@ class StorageBackend(abc.ABC):
 
                 # Temporarily disable all logging because the verbose rsync output just for copying the config file
                 # is a bit much.
-                with override_log_level():
+                with _override_log_level():
                     backup_manager.call_rsync(filepath_config, backup_manager.path / DEFAULT_CONFIG_FILE_NAME)
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
             raise exceptions.StorageBackupError('AiiDA config.json not found!') from exc

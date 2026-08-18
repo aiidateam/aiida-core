@@ -19,8 +19,8 @@ from string import Template
 
 import numpy
 
+from aiida.common._utils import join_labels, prettify_labels
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import join_labels, prettify_labels
 from aiida.orm.pydantic import OrmMetadataField
 
 from .kpoints import KpointsData

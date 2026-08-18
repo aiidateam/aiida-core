@@ -170,8 +170,8 @@ def storage_info(detailed):
 @click.pass_context
 def storage_maintain(ctx, full, no_repack, force, dry_run, compress, incremental_cleanup):
     """Performs maintenance tasks on the repository."""
+    from aiida.common._progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.common.exceptions import LockingProfileError
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.manager import get_manager
     from aiida.storage.log import STORAGE_LOGGER
 

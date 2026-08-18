@@ -24,7 +24,7 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.types import TypeEngine
 
-from aiida.common.utils import batch_iter
+from aiida.common._utils import batch_iter
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session

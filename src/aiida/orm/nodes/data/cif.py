@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from aiida.common.utils import Capturing
+from aiida.common._utils import Capturing
 from aiida.orm.pydantic import OrmMetadataField
 
 from .singlefile import SinglefileData

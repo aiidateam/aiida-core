@@ -172,7 +172,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         from disk_objectstore import CompressMode
 
-        from aiida.common.progress_reporter import create_callback, get_progress_reporter
+        from aiida.common._progress_reporter import create_callback, get_progress_reporter
 
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}

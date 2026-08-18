@@ -216,7 +216,7 @@ class Profile:
         """
         from urllib.parse import urlparse
 
-        from aiida.common.utils import url2pathname
+        from aiida.common._utils import url2pathname
         from aiida.common.warnings import warn_deprecation
 
         warn_deprecation('This method has been deprecated', version=3)

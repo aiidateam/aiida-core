@@ -21,9 +21,9 @@ from functools import singledispatch
 from itertools import chain
 from operator import itemgetter
 
+from aiida.common._utils import DatetimePrecision
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
-from aiida.common.utils import DatetimePrecision
 
 from .folders import Folder
 

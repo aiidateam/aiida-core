@@ -23,11 +23,11 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
+from aiida.common._utils import DEFAULT_BATCH_SIZE
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
-from aiida.common.links import GraphTraversalRules
+from aiida.common.links import _GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.typing import FilePath
-from aiida.common.utils import DEFAULT_BATCH_SIZE
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -111,7 +111,7 @@ def inspect(ctx, archive, version, meta_data, database):
 @options.GROUPS()
 @options.NODES()
 @options.FORCE(help='Overwrite output file if it already exists.')
-@options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
+@options.graph_traversal_rules(_GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
     default=True,
@@ -175,7 +175,7 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
+    from aiida.common._progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.archive.create import create_archive
     from aiida.tools.archive.exceptions import ArchiveExportError
@@ -250,7 +250,7 @@ def create(
 )
 def migrate(input_file, output_file, force, in_place, version):
     """Migrate an archive to a more recent schema version."""
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
+    from aiida.common._progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.archive.abstract import get_format
 
     if in_place:
@@ -385,7 +385,7 @@ def import_archive(
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
+    from aiida.common._progress_reporter import set_progress_bar_tqdm, set_progress_reporter
 
     if test_run:
         echo.echo_deprecated('the `--test-run` option is deprecated. Use `-n/--dry-run` option instead')

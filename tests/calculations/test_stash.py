@@ -469,7 +469,7 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
     from pathlib import Path
 
     # Setup source directory and files
-    from aiida.common.utils import get_new_uuid
+    from aiida.common._utils import get_new_uuid
     from aiida.engine import run, run_get_node
 
     uuid = get_new_uuid()

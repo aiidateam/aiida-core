@@ -15,8 +15,8 @@ import tempfile
 import numpy as np
 import pytest
 
+from aiida.common._utils import Capturing
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.common.utils import Capturing
 from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
 from aiida.orm.nodes.data.cif import has_pycifrw
 from aiida.orm.nodes.data.structure import (

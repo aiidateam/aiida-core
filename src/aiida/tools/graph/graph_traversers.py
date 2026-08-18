@@ -17,7 +17,7 @@ from typing_extensions import TypedDict
 
 from aiida import orm
 from aiida.common import exceptions
-from aiida.common.links import GraphTraversalRules, LinkType
+from aiida.common.links import LinkType, _GraphTraversalRules
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
@@ -52,11 +52,11 @@ def get_nodes_delete(
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
         For example to ignore them: ``missing_callback=lambda missing_pks: None``
 
-    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links._GraphTraversalRules` what rule names
         are toggleable and what the defaults are.
 
     """
-    traverse_links = validate_traversal_rules(GraphTraversalRules.DELETE, **traversal_rules)
+    traverse_links = validate_traversal_rules(_GraphTraversalRules.DELETE, **traversal_rules)
 
     traverse_output = traverse_graph(
         starting_pks,
@@ -97,7 +97,7 @@ def get_nodes_export(
     :param call_calc_backward: will traverse CALL_CALC links in the backward direction.
     :param call_work_backward: will traverse CALL_WORK links in the backward direction.
     """
-    traverse_links = validate_traversal_rules(GraphTraversalRules.EXPORT, **traversal_rules)
+    traverse_links = validate_traversal_rules(_GraphTraversalRules.EXPORT, **traversal_rules)
 
     traverse_output = traverse_graph(
         starting_pks,
@@ -115,7 +115,7 @@ def get_nodes_export(
 
 
 def validate_traversal_rules(
-    ruleset: GraphTraversalRules = GraphTraversalRules.DEFAULT, **traversal_rules: bool
+    ruleset: _GraphTraversalRules = _GraphTraversalRules.DEFAULT, **traversal_rules: bool
 ) -> dict[str, Any]:
     """Validates the keywords with a ruleset template and returns a parsed dictionary
     ready to be used.
@@ -134,9 +134,9 @@ def validate_traversal_rules(
     :param call_work_forward: will traverse CALL_WORK links in the forward direction.
     :param call_work_backward: will traverse CALL_WORK links in the backward direction.
     """
-    if not isinstance(ruleset, GraphTraversalRules):
+    if not isinstance(ruleset, _GraphTraversalRules):
         raise TypeError(
-            f'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {type(ruleset)}'
+            f'ruleset input must be of type aiida.common.links._GraphTraversalRules\ninstead, it is: {type(ruleset)}'
         )
 
     rules_applied: dict[str, bool] = {}

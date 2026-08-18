@@ -510,7 +510,7 @@ class TrajectoryData(ArrayData):
         self, trajectory_index: int | None = None, main_file_name: str = ''
     ) -> tuple[bytes, dict[str, t.Any]]:
         """Write the given trajectory to a string of format CIF."""
-        from aiida.common.utils import Capturing
+        from aiida.common._utils import Capturing
         from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
 
         cif = ''

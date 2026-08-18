@@ -1260,7 +1260,7 @@ The dropdown panels below explain some expanded use cases on how to create a :py
   AiiDA provides a number of functions to "prettify" the labels of band structures (if labels are present in the data node), i.e., replace ``GAMMA`` with :math:`\Gamma` or ``K_1`` with :math:`K_{1}` for instance.
   This makes sense for some output formats (e.g. Xmgrace, Gnuplot, matplotlib).
 
-  The prettifier functions are defined as methods of the :py:class:`~aiida.common.utils.Prettifier` class and can be obtained calling :py:meth:`Prettifier.get_prettifiers()<aiida.common.utils.Prettifier.get_prettifiers>`.
+  The prettifier functions are defined as methods of the :py:class:`~aiida.common._utils.Prettifier` class and can be obtained calling :py:meth:`Prettifier.get_prettifiers()<aiida.common._utils.Prettifier.get_prettifiers>`.
 
   The prettifiers should be chosen depending on two aspects:
 

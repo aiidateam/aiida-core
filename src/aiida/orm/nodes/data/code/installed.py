@@ -21,7 +21,7 @@ from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.common.log import override_log_level
+from aiida.common.log import _override_log_level
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity
 from aiida.orm.pydantic import OrmMetadataField
@@ -113,7 +113,7 @@ class InstalledCode(Code):
             return
 
         try:
-            with override_log_level():  # Temporarily suppress noisy logging
+            with _override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
                     file_exists = transport.isfile(str(self.filepath_executable))
                     if file_exists:

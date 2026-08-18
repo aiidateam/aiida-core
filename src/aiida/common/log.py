@@ -20,7 +20,7 @@ import typing as t
 
 from aiida.common.typing import FilePath
 
-__all__ = ('AIIDA_LOGGER', 'override_log_level')
+__all__ = ('AIIDA_LOGGER',)
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
@@ -346,7 +346,7 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
 
 
 @contextlib.contextmanager
-def override_log_level(level: int = logging.CRITICAL) -> collections.abc.Iterator[None]:
+def _override_log_level(level: int = logging.CRITICAL) -> collections.abc.Iterator[None]:
     """Temporarily adjust the log-level of logger."""
     logging.disable(level=level)
     try:

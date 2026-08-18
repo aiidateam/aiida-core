@@ -19,7 +19,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
-from aiida.common.log import override_log_level
+from aiida.common.log import _override_log_level
 from aiida.common.warnings import warn_deprecation
 
 from ..utils.echo import ExitCode
@@ -95,7 +95,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     # Check the backend storage
     storage_head_version = None
     try:
-        with override_log_level():  # temporarily suppress noisy logging
+        with _override_log_level():  # temporarily suppress noisy logging
             storage_cls = profile.storage_cls
             storage_head_version = storage_cls.version_head()
             storage_backend = storage_cls(profile)

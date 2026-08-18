@@ -13,7 +13,7 @@ from enum import Enum
 
 from .lang import isidentifier, type_check
 
-__all__ = ('GraphTraversalRule', 'GraphTraversalRules', 'LinkType', 'validate_link_label')
+__all__ = ('LinkType', 'validate_link_label')
 
 
 class LinkType(Enum):
@@ -27,7 +27,7 @@ class LinkType(Enum):
     CALL_WORK = 'call_work'
 
 
-GraphTraversalRule = namedtuple('GraphTraversalRule', ['link_type', 'direction', 'toggleable', 'default'])
+_GraphTraversalRule = namedtuple('_GraphTraversalRule', ['link_type', 'direction', 'toggleable', 'default'])
 """A namedtuple that defines a graph traversal rule.
 
 When starting from a certain sub set of nodes, the graph traversal rules specify which links should be followed to
@@ -42,52 +42,52 @@ add adjacent nodes to finally arrive at a set of nodes that represent a valid an
 """
 
 
-class GraphTraversalRules(Enum):
+class _GraphTraversalRules(Enum):
     """Graph traversal rules when deleting or exporting nodes."""
 
     DEFAULT = {
-        'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
-        'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', True, False),
-        'create_forward': GraphTraversalRule(LinkType.CREATE, 'forward', True, False),
-        'create_backward': GraphTraversalRule(LinkType.CREATE, 'backward', True, False),
-        'return_forward': GraphTraversalRule(LinkType.RETURN, 'forward', True, False),
-        'return_backward': GraphTraversalRule(LinkType.RETURN, 'backward', True, False),
-        'input_work_forward': GraphTraversalRule(LinkType.INPUT_WORK, 'forward', True, False),
-        'input_work_backward': GraphTraversalRule(LinkType.INPUT_WORK, 'backward', True, False),
-        'call_calc_forward': GraphTraversalRule(LinkType.CALL_CALC, 'forward', True, False),
-        'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, False),
-        'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', True, False),
-        'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, False),
+        'input_calc_forward': _GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
+        'input_calc_backward': _GraphTraversalRule(LinkType.INPUT_CALC, 'backward', True, False),
+        'create_forward': _GraphTraversalRule(LinkType.CREATE, 'forward', True, False),
+        'create_backward': _GraphTraversalRule(LinkType.CREATE, 'backward', True, False),
+        'return_forward': _GraphTraversalRule(LinkType.RETURN, 'forward', True, False),
+        'return_backward': _GraphTraversalRule(LinkType.RETURN, 'backward', True, False),
+        'input_work_forward': _GraphTraversalRule(LinkType.INPUT_WORK, 'forward', True, False),
+        'input_work_backward': _GraphTraversalRule(LinkType.INPUT_WORK, 'backward', True, False),
+        'call_calc_forward': _GraphTraversalRule(LinkType.CALL_CALC, 'forward', True, False),
+        'call_calc_backward': _GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, False),
+        'call_work_forward': _GraphTraversalRule(LinkType.CALL_WORK, 'forward', True, False),
+        'call_work_backward': _GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, False),
     }
 
     DELETE = {
-        'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', False, True),
-        'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', False, False),
-        'create_forward': GraphTraversalRule(LinkType.CREATE, 'forward', True, True),
-        'create_backward': GraphTraversalRule(LinkType.CREATE, 'backward', False, True),
-        'return_forward': GraphTraversalRule(LinkType.RETURN, 'forward', False, False),
-        'return_backward': GraphTraversalRule(LinkType.RETURN, 'backward', False, True),
-        'input_work_forward': GraphTraversalRule(LinkType.INPUT_WORK, 'forward', False, True),
-        'input_work_backward': GraphTraversalRule(LinkType.INPUT_WORK, 'backward', False, False),
-        'call_calc_forward': GraphTraversalRule(LinkType.CALL_CALC, 'forward', True, True),
-        'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', False, True),
-        'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', True, True),
-        'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', False, True),
+        'input_calc_forward': _GraphTraversalRule(LinkType.INPUT_CALC, 'forward', False, True),
+        'input_calc_backward': _GraphTraversalRule(LinkType.INPUT_CALC, 'backward', False, False),
+        'create_forward': _GraphTraversalRule(LinkType.CREATE, 'forward', True, True),
+        'create_backward': _GraphTraversalRule(LinkType.CREATE, 'backward', False, True),
+        'return_forward': _GraphTraversalRule(LinkType.RETURN, 'forward', False, False),
+        'return_backward': _GraphTraversalRule(LinkType.RETURN, 'backward', False, True),
+        'input_work_forward': _GraphTraversalRule(LinkType.INPUT_WORK, 'forward', False, True),
+        'input_work_backward': _GraphTraversalRule(LinkType.INPUT_WORK, 'backward', False, False),
+        'call_calc_forward': _GraphTraversalRule(LinkType.CALL_CALC, 'forward', True, True),
+        'call_calc_backward': _GraphTraversalRule(LinkType.CALL_CALC, 'backward', False, True),
+        'call_work_forward': _GraphTraversalRule(LinkType.CALL_WORK, 'forward', True, True),
+        'call_work_backward': _GraphTraversalRule(LinkType.CALL_WORK, 'backward', False, True),
     }
 
     EXPORT = {
-        'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
-        'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', False, True),
-        'create_forward': GraphTraversalRule(LinkType.CREATE, 'forward', False, True),
-        'create_backward': GraphTraversalRule(LinkType.CREATE, 'backward', True, True),
-        'return_forward': GraphTraversalRule(LinkType.RETURN, 'forward', False, True),
-        'return_backward': GraphTraversalRule(LinkType.RETURN, 'backward', True, False),
-        'input_work_forward': GraphTraversalRule(LinkType.INPUT_WORK, 'forward', True, False),
-        'input_work_backward': GraphTraversalRule(LinkType.INPUT_WORK, 'backward', False, True),
-        'call_calc_forward': GraphTraversalRule(LinkType.CALL_CALC, 'forward', False, True),
-        'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, True),
-        'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', False, True),
-        'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, True),
+        'input_calc_forward': _GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
+        'input_calc_backward': _GraphTraversalRule(LinkType.INPUT_CALC, 'backward', False, True),
+        'create_forward': _GraphTraversalRule(LinkType.CREATE, 'forward', False, True),
+        'create_backward': _GraphTraversalRule(LinkType.CREATE, 'backward', True, True),
+        'return_forward': _GraphTraversalRule(LinkType.RETURN, 'forward', False, True),
+        'return_backward': _GraphTraversalRule(LinkType.RETURN, 'backward', True, False),
+        'input_work_forward': _GraphTraversalRule(LinkType.INPUT_WORK, 'forward', True, False),
+        'input_work_backward': _GraphTraversalRule(LinkType.INPUT_WORK, 'backward', False, True),
+        'call_calc_forward': _GraphTraversalRule(LinkType.CALL_CALC, 'forward', False, True),
+        'call_calc_backward': _GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, True),
+        'call_work_forward': _GraphTraversalRule(LinkType.CALL_WORK, 'forward', False, True),
+        'call_work_backward': _GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, True),
     }
 
 

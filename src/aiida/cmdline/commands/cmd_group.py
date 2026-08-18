@@ -17,7 +17,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import UniquenessError
-from aiida.common.links import GraphTraversalRules
+from aiida.common.links import _GraphTraversalRules
 
 
 @verdi.group('group')
@@ -178,7 +178,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 @click.option(
     '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
 )
-@options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
+@options.graph_traversal_rules(_GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
 @with_dbenv()
 def group_delete(
@@ -364,7 +364,7 @@ def group_show(group, raw, limit, uuid):
     from tabulate import tabulate
 
     from aiida.common import timezone
-    from aiida.common.utils import str_timedelta
+    from aiida.common._utils import str_timedelta
 
     if limit:
         node_iterator = group.nodes[:limit]

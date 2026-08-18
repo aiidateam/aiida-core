@@ -107,8 +107,8 @@ class TemplatereplacerCalculation(CalcJob):
 
         :param folder: a aiida.common.folders.Folder subclass where the plugin should put all its files.
         """
+        from aiida.common._utils import validate_list_of_string_tuples
         from aiida.common.exceptions import ValidationError
-        from aiida.common.utils import validate_list_of_string_tuples
 
         code = self.inputs.code
         template = self.inputs.template.get_dict()

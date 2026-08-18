@@ -15,8 +15,8 @@ from flask import jsonify
 from flask.json.provider import DefaultJSONProvider
 from wrapt import decorator
 
+from aiida.common._utils import DatetimePrecision
 from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.common.utils import DatetimePrecision
 from aiida.manage import get_manager
 from aiida.restapi.common.exceptions import RestInputValidationError, RestValidationError
 

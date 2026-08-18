@@ -17,8 +17,8 @@ import pytest
 
 from aiida import orm
 from aiida.common import exceptions
+from aiida.common._utils import Capturing
 from aiida.common.links import LinkType
-from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage import enable_caching, get_manager

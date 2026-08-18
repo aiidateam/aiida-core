@@ -461,7 +461,7 @@ def empty_config(tmp_path) -> Config:
 
     :return: a new empty config instance.
     """
-    from aiida.common.utils import Capturing
+    from aiida.common._utils import Capturing
     from aiida.manage import configuration
     from aiida.manage.configuration.settings import AiiDAConfigDir
 

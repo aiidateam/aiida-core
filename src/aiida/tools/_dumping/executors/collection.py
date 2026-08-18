@@ -17,8 +17,9 @@ from typing import TYPE_CHECKING
 import click
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER, NotExistent
 from aiida.common._progress_reporter import get_progress_reporter, set_progress_bar_tqdm
+from aiida.common.exceptions import NotExistent
+from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.detect import DumpChangeDetector
 from aiida.tools._dumping.tracking import DumpRecord, DumpTracker
 from aiida.tools._dumping.utils import DUMP_PROGRESS_BAR_FORMAT, DumpChanges, DumpPaths, ProcessingQueue

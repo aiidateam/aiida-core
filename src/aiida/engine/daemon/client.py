@@ -196,9 +196,9 @@ def get_daemon_client(profile_name: str | None = None) -> DaemonClient:
     :param profile_name: Optional profile name.
     :return: The daemon client.
 
-    :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found.
-    :raises aiida.common.ProfileConfigurationError: if the given profile does not exist.
-    :raises aiida.common.ConfigurationError: if no profile is loaded and ``profile_name`` is not specified.
+    :raises aiida.common.exceptions.MissingConfigurationError: if the configuration file cannot be found.
+    :raises aiida.common.exceptions.ProfileConfigurationError: if the given profile does not exist.
+    :raises aiida.common.exceptions.ConfigurationError: if no profile is loaded and ``profile_name`` is not specified.
     """
     manager = get_manager()
 

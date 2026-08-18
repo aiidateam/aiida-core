@@ -60,7 +60,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         UniquenessError will be raised
 
         :param label: the new group label
-        :raises aiida.common.UniquenessError: if another group of same type and label already exists
+        :raises aiida.common.exceptions.UniquenessError: if another group of same type and label already exists
         """
         self.model.label = label
 

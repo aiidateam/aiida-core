@@ -142,7 +142,7 @@ class TestProcess:
 
     def test_input_after_stored(self):
         """Verify that adding an input link after storing a `ProcessNode` will raise because it is illegal."""
-        from aiida.common import LinkType
+        from aiida.common.links import LinkType
 
         process = test_processes.DummyProcess()
 
@@ -369,7 +369,7 @@ class TestProcess:
 
     def test_exposed_outputs(self):
         """Test the ``Process.exposed_outputs`` method."""
-        from aiida.common import AttributeDict
+        from aiida.common.extendeddicts import AttributeDict
         from aiida.common.links import LinkType
         from aiida.engine.utils import instantiate_process
         from aiida.manage import get_manager

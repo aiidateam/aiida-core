@@ -57,7 +57,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         UniquenessError will be raised
 
         :param name: the new group name
-        :raises aiida.common.UniquenessError: if another group of same type and name already exists
+        :raises aiida.common.exceptions.UniquenessError: if another group of same type and name already exists
         """
 
     @property

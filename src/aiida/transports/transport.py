@@ -114,7 +114,7 @@ class Transport(abc.ABC):
         :param use_login_shell: (optional, default True)
            if False, do not use a login shell when executing command
         """
-        from aiida.common import AIIDA_LOGGER
+        from aiida.common.log import AIIDA_LOGGER
 
         self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._use_login_shell = kwargs.pop('use_login_shell', True)

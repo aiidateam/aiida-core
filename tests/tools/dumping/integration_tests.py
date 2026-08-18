@@ -15,7 +15,8 @@ from typing import Any
 import pytest
 
 from aiida import load_profile, orm
-from aiida.common import AIIDA_LOGGER, LinkType
+from aiida.common.links import LinkType
+from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.utils import DumpPaths
 
 from .utils import compare_tree

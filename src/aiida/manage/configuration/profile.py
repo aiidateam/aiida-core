@@ -329,7 +329,7 @@ class Profile:
         :param relabel_groups: Update group directory names when labels change, defaults to True
         :return: Path where the profile was dumped, or None if nothing was dumped
         """
-        from aiida.common import AIIDA_LOGGER
+        from aiida.common.log import AIIDA_LOGGER
         from aiida.tools._dumping.config import ProfileDumpConfig
         from aiida.tools._dumping.engine import DumpEngine
         from aiida.tools._dumping.utils import DumpPaths

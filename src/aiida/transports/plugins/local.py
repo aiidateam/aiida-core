@@ -58,7 +58,7 @@ class LocalTransport(BlockingTransport):
     def open(self):
         """Opens a local transport channel
 
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raise aiida.common.exceptions.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 
@@ -72,7 +72,7 @@ class LocalTransport(BlockingTransport):
     def close(self):
         """Closes the local transport channel
 
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raise aiida.common.exceptions.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 

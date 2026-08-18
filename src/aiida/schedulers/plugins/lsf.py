@@ -170,7 +170,7 @@ class LsfJobResource(JobResource):
 
         :raise ValueError: on invalid parameters.
         :raise TypeError: on invalid parameters.
-        :raise aiida.common.ConfigurationError: if default_mpiprocs_per_machine was set for this
+        :raise aiida.common.exceptions.ConfigurationError: if default_mpiprocs_per_machine was set for this
             computer, since LsfJobResource cannot accept this parameter.
         """
         resources = self.validate_resources(**kwargs)

@@ -62,8 +62,9 @@ def get_pseudos_from_structure(structure, family_name):
     :param structure: a `StructureData`
     :param family_name: the name of a UPF family group
     :return: dictionary mapping each structure kind name onto `UpfData` of corresponding element
-    :raise aiida.common.MultipleObjectsError: if more than one UPF for the same element is found in the group.
-    :raise aiida.common.NotExistent: if no UPF for an element in the group is found in the group.
+    :raise aiida.common.exceptions.MultipleObjectsError: if more than one UPF for the same element is found in the
+        group.
+    :raise aiida.common.exceptions.NotExistent: if no UPF for an element in the group is found in the group.
     """
     from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
@@ -103,9 +104,9 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     import os
 
     from aiida import orm
-    from aiida.common import AIIDA_LOGGER
     from aiida.common._files import md5_file
     from aiida.common.exceptions import UniquenessError
+    from aiida.common.log import AIIDA_LOGGER
 
     emit_deprecation()
 
@@ -211,8 +212,8 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
     """
     import os
 
-    from aiida.common import AIIDA_LOGGER
     from aiida.common.exceptions import ParsingError
+    from aiida.common.log import AIIDA_LOGGER
     from aiida.orm.nodes.data.structure import _valid_symbols
 
     emit_deprecation()

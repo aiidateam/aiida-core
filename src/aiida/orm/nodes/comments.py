@@ -33,8 +33,8 @@ class NodeComments:
         """Return a comment corresponding to the given identifier.
 
         :param identifier: the comment pk
-        :raise aiida.common.NotExistent: if the comment with the given id does not exist
-        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        :raise aiida.common.exceptions.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.exceptions.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
         return Comment.get_collection(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
@@ -53,8 +53,8 @@ class NodeComments:
 
         :param identifier: the comment pk
         :param content: the new comment content
-        :raise aiida.common.NotExistent: if the comment with the given id does not exist
-        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        :raise aiida.common.exceptions.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.exceptions.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
         comment = Comment.get_collection(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
         comment.set_content(content)

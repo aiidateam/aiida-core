@@ -25,9 +25,10 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from typing_extensions import Self
 
-from aiida.common import AIIDA_LOGGER, CodeRunMode
 from aiida.common._timezone import make_aware, timezone_from_name
+from aiida.common.datastructures import CodeRunMode
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
+from aiida.common.log import AIIDA_LOGGER
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 

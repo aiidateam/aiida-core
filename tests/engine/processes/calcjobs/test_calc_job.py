@@ -21,8 +21,9 @@ from unittest.mock import patch
 import pytest
 
 from aiida import orm
-from aiida.common import CalcJobState, LinkType, StashMode, exceptions
-from aiida.common.datastructures import _FileCopyOperation
+from aiida.common import exceptions
+from aiida.common.datastructures import CalcJobState, StashMode, _FileCopyOperation
+from aiida.common.links import LinkType
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult

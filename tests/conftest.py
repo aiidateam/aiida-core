@@ -956,7 +956,7 @@ def construct_calculation_node_add(tmp_path_factory):
         import json
         import textwrap
 
-        from aiida.common import LinkType
+        from aiida.common.links import LinkType
         from aiida.orm import CalcJobNode, Computer, FolderData, InstalledCode, Int
 
         # Create a minimal computer

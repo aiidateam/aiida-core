@@ -52,7 +52,7 @@ def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, vali
     :param entry_point_name: name of the entry point
     :param entry_point_group: name of the entry point group
     :param valid_classes: tuple of valid classes for the given entry point group
-    :raises aiida.common.InvalidEntryPointTypeError: always
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: always
     """
     template = 'entry point `{}` registered in group `{}` is invalid because its type is not one of: {}'
     args = (entry_point_name, entry_point_group, ', '.join([e.__name__ for e in valid_classes]))
@@ -66,9 +66,9 @@ def BaseFactory(group: str, name: str, load: bool = True) -> EntryPoint | Any:
     :param name: entry point name
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: the plugin class
-    :raises aiida.common.MissingEntryPointError: entry point was not registered
-    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
-    :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
+    :raises aiida.common.exceptions.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.exceptions.MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.exceptions.LoadingEntryPointError: entry point could not be loaded
     """
     from .entry_point import get_entry_point, load_entry_point
 
@@ -92,7 +92,7 @@ def BrokerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.brokers.broker.Broker`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -125,7 +125,7 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> EntryPoint |
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -160,7 +160,7 @@ def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoi
 
     :param entry_point_name: the entry point name.
     :return: the loaded :class:`~aiida.engine.processes.calcjobs.importer.CalcJobImporter` plugin.
-    :raises ``aiida.common.InvalidEntryPointTypeError``: if the type of the loaded entry point is invalid.
+    :raises ``aiida.common.exceptions.InvalidEntryPointTypeError``: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -193,7 +193,7 @@ def DataFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[D
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.orm.nodes.data.data.Data`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -226,7 +226,7 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoint | 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.tools.dbimporters.baseclasses.DbImporter`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -259,7 +259,7 @@ def GroupFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.orm.groups.Group`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -292,7 +292,7 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> EntryPoint | typ
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.tools.data.orbital.orbital.Orbital`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -325,7 +325,7 @@ def ParserFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.parsers.parser.Parser`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -358,7 +358,7 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | t
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.schedulers.scheduler.Scheduler`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -391,7 +391,7 @@ def StorageFactory(entry_point_name: str, load: bool = True) -> EntryPoint | typ
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.orm.implementation.storage_backend.StorageBackend`.
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -423,7 +423,7 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> EntryPoint | t
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
@@ -456,7 +456,7 @@ def WorkflowFactory(entry_point_name: str, load: bool = True) -> EntryPoint | ty
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain` or a `workfunction`
-    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    :raises aiida.common.exceptions.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 

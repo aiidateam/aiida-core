@@ -442,7 +442,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         .. note:: it also sets the ``builder.code`` value.
 
         :return: a ``ProcessBuilder`` instance with the ``code`` input already populated with ourselves
-        :raise aiida.common.EntryPointError: if the specified plugin does not exist.
+        :raise aiida.common.exceptions.EntryPointError: if the specified plugin does not exist.
         :raise ValueError: if no default plugin was specified.
         """
         entry_point = self.default_calc_job_plugin

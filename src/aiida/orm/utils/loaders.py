@@ -53,8 +53,8 @@ def load_entity(
     :returns: the Code instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise aiida.common.NotExistent: if no matching Code is found
-    :raise aiida.common.MultipleObjectsError: if more than one Code was found
+    :raise aiida.common.exceptions.NotExistent: if no matching Code is found
+    :raise aiida.common.exceptions.MultipleObjectsError: if more than one Code was found
     """
     if entity_loader is None or not issubclass(entity_loader, OrmEntityLoader):
         raise TypeError(f'entity_loader should be a sub class of {type(OrmEntityLoader)}')
@@ -111,8 +111,8 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :return: the Code instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise aiida.common.NotExistent: if no matching Code is found
-    :raise aiida.common.MultipleObjectsError: if more than one Code was found
+    :raise aiida.common.exceptions.NotExistent: if no matching Code is found
+    :raise aiida.common.exceptions.MultipleObjectsError: if more than one Code was found
     """
     return load_entity(
         CodeEntityLoader,
@@ -143,8 +143,8 @@ def load_computer(
     :return: the Computer instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise aiida.common.NotExistent: if no matching Computer is found
-    :raise aiida.common.MultipleObjectsError: if more than one Computer was found
+    :raise aiida.common.exceptions.NotExistent: if no matching Computer is found
+    :raise aiida.common.exceptions.MultipleObjectsError: if more than one Computer was found
     """
     return load_entity(
         ComputerEntityLoader,
@@ -173,8 +173,8 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None
     :return: the Group instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise aiida.common.NotExistent: if no matching Group is found
-    :raise aiida.common.MultipleObjectsError: if more than one Group was found
+    :raise aiida.common.exceptions.NotExistent: if no matching Group is found
+    :raise aiida.common.exceptions.MultipleObjectsError: if more than one Group was found
     """
     return load_entity(
         GroupEntityLoader,
@@ -201,8 +201,8 @@ def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :returns: the node instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise aiida.common.NotExistent: if no matching Node is found
-    :raise aiida.common.MultipleObjectsError: if more than one Node was found
+    :raise aiida.common.exceptions.NotExistent: if no matching Node is found
+    :raise aiida.common.exceptions.MultipleObjectsError: if more than one Node was found
     """
     return load_entity(
         NodeEntityLoader,
@@ -277,7 +277,7 @@ class OrmEntityLoader:
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         raise NotImplementedError
 
@@ -385,8 +385,8 @@ class OrmEntityLoader:
         :param sub_classes: an optional tuple of orm classes, that should each be strict sub classes of the
             base orm class of the loader, that will narrow the queryset
         :returns: the loaded entity
-        :raises aiida.common.MultipleObjectsError: if the identifier maps onto multiple entities
-        :raises aiida.common.NotExistent: if the identifier maps onto not a single entity
+        :raises aiida.common.exceptions.MultipleObjectsError: if the identifier maps onto multiple entities
+        :raises aiida.common.exceptions.NotExistent: if the identifier maps onto not a single entity
         """
         builder, query_parameters = cls.get_query_builder(identifier, identifier_type, sub_classes, query_with_dashes)
         builder.limit(2)
@@ -513,7 +513,7 @@ class ProcessEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
 
@@ -552,7 +552,7 @@ class CalculationEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
 
@@ -591,7 +591,7 @@ class WorkflowEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
 
@@ -630,7 +630,7 @@ class CodeEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
         from aiida.orm import Computer
@@ -678,7 +678,7 @@ class ComputerEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
 
@@ -717,7 +717,7 @@ class DataEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
 
@@ -756,7 +756,7 @@ class GroupEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
 
@@ -795,7 +795,7 @@ class NodeEntityLoader(OrmEntityLoader):
         :param project: the property or properties to project for entities matching the query
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.exceptions.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.common._escaping import escape_for_sql_like
 

@@ -85,7 +85,8 @@ class Manager:
         """Return the current config.
 
         :return: current loaded config instance
-        :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
+        :raises aiida.common.exceptions.ConfigurationError: if the configuration file could not be found, read or
+            deserialized
 
         """
         from .configuration import get_config
@@ -306,7 +307,7 @@ class Manager:
 
     def get_profile_storage(self) -> StorageBackend:
         """Return the current profile's storage backend, loading it if necessary."""
-        from aiida.common import ConfigurationError
+        from aiida.common.exceptions import ConfigurationError
         from aiida.common.log import configure_logging
         from aiida.manage.profile_access import ProfileAccessManager
 
@@ -343,7 +344,7 @@ class Manager:
 
         :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
         """
-        from aiida.common import ConfigurationError
+        from aiida.common.exceptions import ConfigurationError
 
         if self._profile is None:
             raise ConfigurationError(
@@ -383,7 +384,7 @@ class Manager:
         :return: a global communicator instance
 
         """
-        from aiida.common import ConfigurationError
+        from aiida.common.exceptions import ConfigurationError
 
         broker = self.get_broker()
 
@@ -400,10 +401,10 @@ class Manager:
 
         :return: the daemon client
 
-        :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
-        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.exceptions.MissingConfigurationError: if the configuration file cannot be found
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the given profile does not exist
         """
-        from aiida.common import ConfigurationError
+        from aiida.common.exceptions import ConfigurationError
         from aiida.engine.daemon.client import DaemonClient
 
         if self._daemon_client is None:
@@ -459,7 +460,7 @@ class Manager:
         :return: a new runner instance
 
         """
-        from aiida.common import ConfigurationError
+        from aiida.common.exceptions import ConfigurationError
         from aiida.engine import runners
 
         profile = self.get_profile()

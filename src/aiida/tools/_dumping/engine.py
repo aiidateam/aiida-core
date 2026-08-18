@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
 from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 from aiida.tools._dumping.detect import DumpChangeDetector

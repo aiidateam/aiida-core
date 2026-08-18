@@ -15,8 +15,8 @@ from importlib import import_module
 from logging import Logger
 from types import FunctionType
 
-from aiida.common import AIIDA_LOGGER
 from aiida.common.exceptions import EntryPointError
+from aiida.common.log import AIIDA_LOGGER
 
 from .entry_point import load_entry_point_from_string
 

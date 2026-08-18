@@ -34,7 +34,7 @@ class NodeLinks:
         :param source: the node from which the link is coming
         :param link_type: the link type
         :param link_label: the link label
-        :raise aiida.common.UniquenessError: if the given link triple already exists in the cache
+        :raise aiida.common.exceptions.UniquenessError: if the given link triple already exists in the cache
         """
         assert self.incoming_cache is not None, 'incoming_cache not initialised'
 

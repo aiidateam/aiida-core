@@ -17,8 +17,8 @@ from types import FunctionType
 from typing import TYPE_CHECKING, Any
 
 from aiida import orm
-from aiida.common import AttributeDict
 from aiida.common._warnings import warn_deprecation
+from aiida.common.extendeddicts import AttributeDict
 from aiida.common.links import LinkType
 
 from .context import ToContext, append_

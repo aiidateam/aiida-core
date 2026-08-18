@@ -29,7 +29,7 @@ We first load a profile, containing the provenance graph (in this case we load a
 
 ```{code-cell} ipython3
 from aiida import load_profile
-from aiida.common import LinkType
+from aiida.common.links import LinkType
 from aiida.orm import LinkPair
 from aiida.storage.sqlite_zip import SqliteZipBackend
 from aiida.tools.visualization import Graph, pstate_node_styles

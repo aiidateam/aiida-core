@@ -570,7 +570,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         :param user: a User instance.
         :return: a AuthInfo instance
-        :raise aiida.common.NotExistent: if the computer is not configured for the given
+        :raise aiida.common.exceptions.NotExistent: if the computer is not configured for the given
             user.
         """
         from . import authinfos

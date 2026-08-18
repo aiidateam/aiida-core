@@ -895,7 +895,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _verify_are_parents_stored(self) -> None:
         """Verify that all `parent` nodes are already stored.
 
-        :raise aiida.common.ModificationNotAllowed: if one of the source nodes of incoming links is not stored.
+        :raise aiida.common.exceptions.ModificationNotAllowed: if one of the source nodes of incoming links is not
+            stored.
         """
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:

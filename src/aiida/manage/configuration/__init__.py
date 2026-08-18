@@ -85,7 +85,8 @@ def load_config(create=False) -> 'Config':
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
+    :raises aiida.common.exceptions.MissingConfigurationError: if the configuration file could not be found and
+        ``create=False``
     """
     from aiida.common import exceptions
 
@@ -308,7 +309,8 @@ def get_config(create=False) -> 'Config':
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
+    :raises aiida.common.exceptions.ConfigurationError: if the configuration file could not be found, read or
+        deserialized
     """
     global CONFIG  # noqa: PLW0603
 

@@ -101,7 +101,7 @@ def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> No
     If it not provided, the directory returned from ``AiiDAConfigDir.get()`` will be the default config folder,
     unless it already exists. Subsequently, it will create the daemon directory within it and the daemon log directory.
     """
-    from aiida.common import ConfigurationError
+    from aiida.common.exceptions import ConfigurationError
 
     path_resolver = AiiDAConfigPathResolver(aiida_config_folder)
 

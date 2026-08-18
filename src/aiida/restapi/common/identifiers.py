@@ -135,7 +135,7 @@ def load_entry_point_from_full_type(full_type):
     :raises TypeError: if the `full_type` is not a string type
     :raises `~aiida.common.exceptions.EntryPointError`: if the corresponding entry point cannot be loaded
     """
-    from aiida.common import EntryPointError
+    from aiida.common.exceptions import EntryPointError
     from aiida.plugins.entry_point import is_valid_entry_point_string, load_entry_point, load_entry_point_from_string
 
     data_prefix = 'data.'

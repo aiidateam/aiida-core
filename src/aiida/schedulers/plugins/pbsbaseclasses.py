@@ -19,8 +19,9 @@ import typing as t
 
 from typing_extensions import override
 
-from aiida.common import AttributeDict, FeatureNotAvailable
 from aiida.common._escaping import escape_for_bash
+from aiida.common.exceptions import FeatureNotAvailable
+from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, MachineInfo, NodeNumberJobResource
 

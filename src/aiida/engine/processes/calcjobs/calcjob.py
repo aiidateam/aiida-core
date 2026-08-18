@@ -22,11 +22,12 @@ import plumpy.ports
 import plumpy.process_states
 
 from aiida import orm
-from aiida.common import AttributeDict, exceptions
+from aiida.common import exceptions
 from aiida.common._folders import Folder
 from aiida.common._lang import classproperty, override
 from aiida.common._typing import FilePath
 from aiida.common.datastructures import CalcInfo, _FileCopyOperation
+from aiida.common.extendeddicts import AttributeDict
 from aiida.common.links import LinkType
 
 from ..exit_code import ExitCode

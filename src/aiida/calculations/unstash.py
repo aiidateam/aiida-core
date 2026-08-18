@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, UnstashTargetMode
+from aiida.common.log import AIIDA_LOGGER
 from aiida.engine import CalcJob
 
 from .stash import StashCalculation

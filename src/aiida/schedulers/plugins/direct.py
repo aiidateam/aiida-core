@@ -15,7 +15,7 @@ import typing as t
 
 from typing_extensions import override
 
-from aiida.common.escaping import escape_for_bash
+from aiida.common._escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 

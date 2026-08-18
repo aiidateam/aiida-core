@@ -15,7 +15,7 @@ from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
-from aiida.common.utils import Prettifier
+from aiida.common._utils import Prettifier
 
 LIST_PROJECT_HEADERS = ['ID', 'Formula', 'Ctime', 'Label']
 EXPORT_FORMATS = [

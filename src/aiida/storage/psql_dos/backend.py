@@ -21,9 +21,9 @@ from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
+from aiida.common._pydantic import AiiDABaseModel, MetadataField
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -52,7 +52,7 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
     """Return the filepath of the disk-object store container."""
     from urllib.parse import urlparse
 
-    from aiida.common.utils import url2pathname
+    from aiida.common._utils import url2pathname
 
     try:
         parts = urlparse(profile.storage_config['repository_uri'])

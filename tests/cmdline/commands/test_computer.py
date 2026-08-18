@@ -32,7 +32,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_test,
 )
 from aiida.cmdline.utils.echo import ExitCode
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common._warnings import AiidaDeprecationWarning
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):

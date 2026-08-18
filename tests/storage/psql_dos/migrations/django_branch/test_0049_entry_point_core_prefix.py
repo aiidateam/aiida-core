@@ -8,8 +8,8 @@
 ###########################################################################
 """Test migration that updates node types after `core.` prefix was added to entry point names."""
 
-from aiida.common import timezone
-from aiida.common.utils import get_new_uuid
+from aiida.common import _timezone
+from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -48,8 +48,8 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
         calcjob = node_model(
             uuid=get_new_uuid(),
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             node_type='process.calcjob.',
@@ -60,8 +60,8 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
         workflow = node_model(
             uuid=get_new_uuid(),
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             node_type='process.workflow.',

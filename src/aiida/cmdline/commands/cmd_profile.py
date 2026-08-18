@@ -59,12 +59,12 @@ def command_create_profile(
     """
     # Handle deprecated --use-rabbitmq/--no-use-rabbitmq option
     if use_rabbitmq is not None:
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
 
         warn_deprecation('The `--use-rabbitmq` option is deprecated. Use `--broker` instead.', version=3)
         if not use_rabbitmq:
             broker = 'none'
-    from aiida.common import docs
+    from aiida.common import _docs
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if not storage_cls.read_only and email is None:
@@ -105,7 +105,7 @@ def command_create_profile(
         echo.echo_report(
             'It can be configured at a later point in time with `verdi profile configure-broker core.rabbitmq`.'
         )
-        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
+        echo.echo_report(f'See {_docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
 
     try:
         profile = create_profile(
@@ -255,7 +255,7 @@ def _configure_profile_broker(
         return
 
     if backend == 'none':
-        from aiida.common import docs
+        from aiida.common import _docs
 
         _update_profile_broker_configuration(ctx, profile, backend=None, config=None)
         echo.echo_report(f'Broker disabled for `{profile.name}`.')
@@ -269,7 +269,7 @@ def _configure_profile_broker(
                 daemon_client.stop_daemon(wait=True)
                 echo.echo_success('Daemon stopped successfully.')
 
-        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
+        echo.echo_report(f'See {_docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
         return
 
     msg = f'unsupported broker backend: {backend}'

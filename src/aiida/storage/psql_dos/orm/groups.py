@@ -10,8 +10,8 @@
 
 import logging
 
+from aiida.common._lang import type_check
 from aiida.common.exceptions import UniquenessError
-from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
 
@@ -60,7 +60,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         UniquenessError will be raised
 
         :param label: the new group label
-        :raises aiida.common.UniquenessError: if another group of same type and label already exists
+        :raises aiida.common.exceptions.UniquenessError: if another group of same type and label already exists
         """
         self.model.label = label
 

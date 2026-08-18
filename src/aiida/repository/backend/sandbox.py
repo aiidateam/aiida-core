@@ -9,7 +9,7 @@ import shutil
 import typing as t
 import uuid
 
-from aiida.common.folders import SandboxFolder
+from aiida.common._folders import SandboxFolder
 
 from .abstract import AbstractRepositoryBackend, InfoDictType
 

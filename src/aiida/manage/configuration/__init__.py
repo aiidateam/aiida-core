@@ -56,7 +56,7 @@ import warnings
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Optional
 
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common._warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
     from aiida.orm import User
@@ -85,7 +85,8 @@ def load_config(create=False) -> 'Config':
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
+    :raises aiida.common.exceptions.MissingConfigurationError: if the configuration file could not be found and
+        ``create=False``
     """
     from aiida.common import exceptions
 
@@ -117,12 +118,12 @@ def _merge_deprecated_cache_yaml(config, filepath):
 
     import yaml
 
-    from aiida.common import timezone
+    from aiida.common import _timezone
 
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist
     while not cache_path_backup or os.path.isfile(cache_path_backup):
-        cache_path_backup = f'{cache_path}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
+        cache_path_backup = f'{cache_path}.{_timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
     warnings.warn(
         'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
@@ -308,7 +309,8 @@ def get_config(create=False) -> 'Config':
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
+    :raises aiida.common.exceptions.ConfigurationError: if the configuration file could not be found, read or
+        deserialized
     """
     global CONFIG  # noqa: PLW0603
 
@@ -347,10 +349,10 @@ def get_config_option(option_name: str) -> Any:
     from aiida.manage import get_manager
 
     if (
-        log.CLI_ACTIVE is True
-        and log.CLI_LOG_LEVEL is not None
+        log._CLI_ACTIVE is True
+        and log._CLI_LOG_LEVEL is not None
         and option_name in ['logging.aiida_loglevel', 'logging.terminal_handler']
     ):
-        return log.CLI_LOG_LEVEL
+        return log._CLI_LOG_LEVEL
 
     return get_manager().get_option(option_name)

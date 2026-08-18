@@ -12,7 +12,7 @@ from datetime import datetime
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from aiida.common import exceptions, lang
+from aiida.common import _lang, exceptions
 from aiida.orm.implementation.comments import BackendComment, BackendCommentCollection
 from aiida.storage.psql_dos.models import comment as models
 
@@ -35,7 +35,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         :param mtime: The modification time as datetime object
         """
         super().__init__(backend)
-        lang.type_check(user, self.USER_CLASS)
+        _lang.type_check(user, self.USER_CLASS)
 
         arguments = {
             'dbnode': node.bare_model,
@@ -44,11 +44,11 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         }
 
         if ctime:
-            lang.type_check(ctime, datetime, f'the given ctime is of type {type(ctime)}')
+            _lang.type_check(ctime, datetime, f'the given ctime is of type {type(ctime)}')
             arguments['ctime'] = ctime
 
         if mtime:
-            lang.type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
+            _lang.type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
         self._model = utils.ModelWrapper(self.MODEL_CLASS(**arguments), backend)

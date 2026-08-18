@@ -31,7 +31,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     import datetime
 
     from aiida import orm
-    from aiida.common import timezone
+    from aiida.common import _timezone
 
     qbl = orm.QueryBuilder()
     if all_users is False:
@@ -47,7 +47,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     # If there is a time restriction
     data_filters = {}
     if past_days is not None:
-        now = timezone.now()
+        now = _timezone.now()
         n_days_ago = now - datetime.timedelta(days=past_days)
         data_filters.update({'ctime': {'>=': n_days_ago}})
 

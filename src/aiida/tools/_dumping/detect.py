@@ -16,8 +16,8 @@ from typing import TYPE_CHECKING, Any
 import click
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER
-from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
+from aiida.common._progress_reporter import get_progress_reporter, set_progress_bar_tqdm
+from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.config import GroupDumpConfig, GroupDumpScope, ProfileDumpConfig
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import (

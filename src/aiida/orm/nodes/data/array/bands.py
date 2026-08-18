@@ -19,8 +19,8 @@ from string import Template
 
 import numpy
 
+from aiida.common._utils import join_labels, prettify_labels
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import join_labels, prettify_labels
 from aiida.orm.pydantic import OrmMetadataField
 
 from .kpoints import KpointsData
@@ -1783,7 +1783,7 @@ def get_bands_and_parents_structure(args, backend=None):
     import datetime
 
     from aiida import orm
-    from aiida.common import timezone
+    from aiida.common import _timezone
 
     if backend:
         user = orm.User.get_collection(backend).get_default()
@@ -1817,7 +1817,7 @@ def get_bands_and_parents_structure(args, backend=None):
 
     bdata_filters = {}
     if args.past_days is not None:
-        bdata_filters.update({'ctime': {'>=': timezone.now() - datetime.timedelta(days=args.past_days)}})
+        bdata_filters.update({'ctime': {'>=': _timezone.now() - datetime.timedelta(days=args.past_days)}})
 
     q_build.append(orm.BandsData, tag='bdata', filters=bdata_filters, project=['id', 'label', 'ctime'], **with_args)  # type: ignore[arg-type]
     bands_list_data = q_build.all()

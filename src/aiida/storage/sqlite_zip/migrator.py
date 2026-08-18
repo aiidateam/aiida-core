@@ -27,8 +27,8 @@ from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
 from archive_path import ZipPath, extract_file_in_zip, open_file_in_tar, open_file_in_zip
 
+from aiida.common._progress_reporter import get_progress_reporter
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
-from aiida.common.progress_reporter import get_progress_reporter
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 
@@ -53,7 +53,7 @@ def list_versions() -> list[str]:
 def validate_storage(inpath: Path) -> None:
     """Validate that the storage is at the head version.
 
-    :raises: :class:`aiida.common.exceptions.UnreachableStorage` if the file does not exist
+    :raises: :class:`aiida.common.exceptions._UnreachableStorage` if the file does not exist
     :raises: :class:`aiida.common.exceptions.CorruptStorage`
         if the version cannot be read from the storage.
     :raises: :class:`aiida.common.exceptions.IncompatibleStorageSchema`

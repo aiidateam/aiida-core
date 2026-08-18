@@ -8,8 +8,8 @@
 ###########################################################################
 """Test removing legacy workflows."""
 
-from aiida.common import timezone
-from aiida.common.utils import get_new_uuid
+from aiida.common import _timezone
+from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -34,8 +34,8 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
             is_superuser=False,
             is_staff=False,
             is_active=True,
-            last_login=timezone.now(),
-            date_joined=timezone.now(),
+            last_login=_timezone.now(),
+            date_joined=_timezone.now(),
         )
         session.add(user)
         session.commit()
@@ -43,8 +43,8 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
             uuid=get_new_uuid(),
             node_type='node.process.calculation.calcjob.CalcJobNode.',
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             nodeversion=1,
@@ -56,8 +56,8 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
             label='Legacy WorkflowNode',
             uuid=get_new_uuid(),
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             module='',
             module_class='',
             lastsyncedversion=1,
@@ -73,7 +73,7 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
         workflow_data = wfdata_model(
             parent_id=workflow.id,
             aiida_obj_id=node_calc.id,
-            time=timezone.now(),
+            time=_timezone.now(),
             name='',
             data_type='dict',
             value_type='dict',
@@ -84,7 +84,7 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
         workflow_step = wfstep_model(
             user_id=user.id,
             parent_id=workflow.id,
-            time=timezone.now(),
+            time=_timezone.now(),
             name='',
             nextcall='',
             state='',

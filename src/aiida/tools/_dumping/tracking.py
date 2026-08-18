@@ -17,7 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from aiida.common import AIIDA_LOGGER, timezone
+from aiida.common import _timezone
+from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import DumpPaths, DumpTimes, RegistryNameType
 
@@ -66,7 +67,7 @@ class DumpRecord:
                 dir_mtime = datetime.fromisoformat(dir_mtime_str)
                 # Ensure timezone-awareness if needed (assuming UTC if naive)
                 if dir_mtime.tzinfo is None:
-                    dir_mtime = timezone.make_aware(dir_mtime)  # Use AiiDA's timezone utility
+                    dir_mtime = _timezone.make_aware(dir_mtime)  # Use AiiDA's timezone utility
             except ValueError:
                 logger.warning(f'Could not parse dir_mtime string: {dir_mtime_str}')
 

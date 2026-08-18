@@ -8,8 +8,8 @@
 ###########################################################################
 """Test ``main_0002_recompute_hash_calc_job_node.py``."""
 
-from aiida.common import timezone
-from aiida.common.utils import get_new_uuid
+from aiida.common import _timezone
+from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -28,8 +28,8 @@ def test_migration(perform_migrations: PsqlDosMigrator):
         calcjob = node_model(
             uuid=get_new_uuid(),
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             node_type='process.calculation.calcjob.CalcJobNode.',
@@ -41,8 +41,8 @@ def test_migration(perform_migrations: PsqlDosMigrator):
         workflow = node_model(
             uuid=get_new_uuid(),
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             node_type='process.workflow.workchain.WorkChainNode.',

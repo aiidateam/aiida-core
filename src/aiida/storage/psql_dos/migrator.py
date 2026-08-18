@@ -97,7 +97,7 @@ class PsqlDosMigrator:
         Will automatically create the engine and open an connection if not already opened in a previous call.
 
         :return: Open connection to the database.
-        :raises: :class:`aiida.common.exceptions.UnreachableStorage` if connecting to the database fails.
+        :raises: :class:`aiida.common.exceptions._UnreachableStorage` if connecting to the database fails.
         """
         if self._connection is None:
             if self._engine is None:
@@ -105,7 +105,7 @@ class PsqlDosMigrator:
             try:
                 self._connection = self._engine.connect()
             except OperationalError as exception:
-                raise exceptions.UnreachableStorage(f'Could not connect to database: {exception}') from exception
+                raise exceptions._UnreachableStorage(f'Could not connect to database: {exception}') from exception
 
         return self._connection
 
@@ -146,7 +146,7 @@ class PsqlDosMigrator:
         1. That the database schema is at the head version, i.e. is compatible with the code API.
         2. That the repository ID is equal to the UUID set in the database
 
-        :raises: :class:`aiida.common.exceptions.UnreachableStorage` if the storage cannot be connected to
+        :raises: :class:`aiida.common.exceptions._UnreachableStorage` if the storage cannot be connected to
         :raises: :class:`aiida.common.exceptions.IncompatibleStorageSchema`
             if the storage is not compatible with the code API.
         :raises: :class:`aiida.common.exceptions.CorruptStorage`
@@ -201,13 +201,13 @@ class PsqlDosMigrator:
         """Return the UUID of the repository.
 
         :returns: The repository UUID.
-        :raises: :class:`~aiida.common.exceptions.UnreachableStorage` if the UUID cannot be retrieved, which probably
+        :raises: :class:`~aiida.common.exceptions._UnreachableStorage` if the UUID cannot be retrieved, which probably
             means that the repository is not initialised.
         """
         try:
             return self.get_container().container_id
         except Exception as exception:
-            raise exceptions.UnreachableStorage(
+            raise exceptions._UnreachableStorage(
                 f'Could not access disk-objectstore {self.get_container()}: {exception}'
             ) from exception
 
@@ -349,7 +349,7 @@ class PsqlDosMigrator:
     def migrate(self) -> None:
         """Migrate the storage for this profile to the head version.
 
-        :raises: :class:`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed.
+        :raises: :class:`~aiida.common.exceptions._UnreachableStorage` if the storage cannot be accessed.
         :raises: :class:`~aiida.common.exceptions.StorageMigrationError` if the storage is not initialised.
         """
         # The database can be in one of a few states:

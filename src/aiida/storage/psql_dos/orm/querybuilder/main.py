@@ -262,7 +262,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         To avoid unnecessary re-builds of the query, the hashed dictionary representation of this instance
         is compared to the last query returned, which is cached by its hash.
         """
-        from aiida.common.hashing import make_hash
+        from aiida.common._hashing import make_hash
 
         query_hash = make_hash(data)
 

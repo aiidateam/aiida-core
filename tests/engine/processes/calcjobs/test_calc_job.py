@@ -21,8 +21,9 @@ from unittest.mock import patch
 import pytest
 
 from aiida import orm
-from aiida.common import CalcJobState, LinkType, StashMode, exceptions
-from aiida.common.datastructures import FileCopyOperation
+from aiida.common import exceptions
+from aiida.common.datastructures import CalcJobState, StashMode, _FileCopyOperation
+from aiida.common.links import LinkType
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
@@ -1527,7 +1528,7 @@ class FileCopyOperationOrderInvalid(CalcJob):
         calc_info = CalcInfo()
         calc_info.codes_info = [code_info]
         calc_info.file_copy_operation_order = [
-            FileCopyOperation.REMOTE,
+            _FileCopyOperation.REMOTE,
             'sandbox',
         ]
         return calc_info
@@ -1538,9 +1539,9 @@ def test_file_copy_operation_order_default(fixture_sandbox, arithmetic_add_input
     process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
     calc_info = process.presubmit(fixture_sandbox)
     assert calc_info.file_copy_operation_order == [
-        FileCopyOperation.SANDBOX,
-        FileCopyOperation.LOCAL,
-        FileCopyOperation.REMOTE,
+        _FileCopyOperation.SANDBOX,
+        _FileCopyOperation.LOCAL,
+        _FileCopyOperation.REMOTE,
     ]
 
 

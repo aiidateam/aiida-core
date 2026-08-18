@@ -34,7 +34,7 @@ Examples of invalid full types:
 from collections.abc import MutableMapping
 from typing import Any
 
-from aiida.common.escaping import escape_for_sql_like
+from aiida.common._escaping import escape_for_sql_like
 
 FULL_TYPE_CONCATENATOR = '|'
 LIKE_OPERATOR_CHARACTER = '%'
@@ -48,7 +48,7 @@ def validate_full_type(full_type):
     :raises ValueError: if the `full_type` is invalid
     :raises TypeError: if the `full_type` is not a string type
     """
-    from aiida.common.lang import type_check
+    from aiida.common._lang import type_check
 
     type_check(full_type, str)
 
@@ -135,7 +135,7 @@ def load_entry_point_from_full_type(full_type):
     :raises TypeError: if the `full_type` is not a string type
     :raises `~aiida.common.exceptions.EntryPointError`: if the corresponding entry point cannot be loaded
     """
-    from aiida.common import EntryPointError
+    from aiida.common.exceptions import EntryPointError
     from aiida.plugins.entry_point import is_valid_entry_point_string, load_entry_point, load_entry_point_from_string
 
     data_prefix = 'data.'

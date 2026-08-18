@@ -20,7 +20,7 @@ import typing as t
 from typing_extensions import override
 
 import aiida.schedulers
-from aiida.common.escaping import escape_for_bash
+from aiida.common._escaping import escape_for_bash
 from aiida.common.exceptions import ConfigurationError, FeatureNotAvailable
 from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
@@ -170,7 +170,7 @@ class LsfJobResource(JobResource):
 
         :raise ValueError: on invalid parameters.
         :raise TypeError: on invalid parameters.
-        :raise aiida.common.ConfigurationError: if default_mpiprocs_per_machine was set for this
+        :raise aiida.common.exceptions.ConfigurationError: if default_mpiprocs_per_machine was set for this
             computer, since LsfJobResource cannot accept this parameter.
         """
         resources = self.validate_resources(**kwargs)

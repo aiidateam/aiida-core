@@ -60,7 +60,7 @@ def delete_nodes(
         If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
 
     :param traversal_rules: graph traversal rules.
-        See :const:`aiida.common.links.GraphTraversalRules` for what rule names
+        See :const:`aiida.common.links._GraphTraversalRules` for what rule names
         are toggleable and what the defaults are.
 
     :returns: (pks to delete, whether they were deleted)
@@ -144,7 +144,7 @@ def delete_group_nodes(
         If False, delete the pks without confirmation
         If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
 
-    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links._GraphTraversalRules` what rule names
         are toggleable and what the defaults are.
 
     :returns: (node pks to delete, whether they were deleted)

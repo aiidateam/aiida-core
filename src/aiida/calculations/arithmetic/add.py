@@ -9,8 +9,8 @@
 """`CalcJob` implementation to add two numbers using bash for testing and demonstration purposes."""
 
 from aiida import orm
+from aiida.common._folders import Folder
 from aiida.common.datastructures import CalcInfo, CodeInfo
-from aiida.common.folders import Folder
 from aiida.engine import CalcJob, CalcJobProcessSpec
 
 

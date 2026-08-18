@@ -28,7 +28,7 @@ def plugin_list(entry_point_group, entry_point):
     import inspect
 
     from aiida.cmdline.utils.common import print_process_info
-    from aiida.common import EntryPointError
+    from aiida.common.exceptions import EntryPointError
     from aiida.engine import Process
     from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 

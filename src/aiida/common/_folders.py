@@ -22,9 +22,9 @@ from collections.abc import Iterator
 
 from typing_extensions import Self
 
-from . import timezone
-from .lang import type_check
-from .typing import FilePath
+from . import _timezone
+from ._lang import type_check
+from ._typing import FilePath
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
@@ -446,7 +446,7 @@ class SubmitTestFolder(Folder):
 
         # Iteratively try to create a new sub folder based on the current date and an index that automatically increases
         counter = 0
-        subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
+        subfolder_basename = _timezone.localtime(_timezone.now()).strftime('%Y%m%d')
 
         while True:
             counter += 1

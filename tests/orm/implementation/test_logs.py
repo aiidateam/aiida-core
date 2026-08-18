@@ -15,8 +15,8 @@ from uuid import UUID, uuid4
 import pytest
 
 from aiida import orm
-from aiida.common import exceptions, timezone
-from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common import _timezone, exceptions
+from aiida.common.log import _LOG_LEVEL_REPORT
 
 
 class TestBackendLog:
@@ -35,13 +35,13 @@ class TestBackendLog:
 
     def create_log(self, **kwargs):
         """Create BackendLog"""
-        time = kwargs['time'] if 'time' in kwargs else timezone.now()
+        time = kwargs['time'] if 'time' in kwargs else _timezone.now()
         dbnode_id = kwargs['dbnode_id'] if 'dbnode_id' in kwargs else self.node.id
 
         return self.backend.logs.create(
             time=time,
             loggername='loggername',
-            levelname=logging.getLevelName(LOG_LEVEL_REPORT),
+            levelname=logging.getLevelName(_LOG_LEVEL_REPORT),
             dbnode_id=dbnode_id,
             message=self.log_message,
             metadata={'content': 'test'},
@@ -86,7 +86,7 @@ class TestBackendLog:
         """Test creation of a BackendLog when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        time = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
+        time = datetime(2019, 2, 27, 16, 20, 12, 245738, _timezone.utc)
 
         log = self.create_log(time=time)
 
@@ -207,7 +207,7 @@ class TestBackendLog:
         found_logs_time = []
         found_logs_uuid = []
 
-        now = timezone.now()
+        now = _timezone.now()
         two_days_ago = now - timedelta(days=2)
         one_day_ago = now - timedelta(days=1)
         log_times = [now, one_day_ago, two_days_ago]

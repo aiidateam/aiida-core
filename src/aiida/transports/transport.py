@@ -17,9 +17,9 @@ import sys
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
 
+from aiida.common._lang import classproperty
+from aiida.common._warnings import warn_deprecation
 from aiida.common.exceptions import InternalError
-from aiida.common.lang import classproperty
-from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
@@ -114,7 +114,7 @@ class Transport(abc.ABC):
         :param use_login_shell: (optional, default True)
            if False, do not use a login shell when executing command
         """
-        from aiida.common import AIIDA_LOGGER
+        from aiida.common.log import AIIDA_LOGGER
 
         self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._use_login_shell = kwargs.pop('use_login_shell', True)
@@ -451,7 +451,7 @@ class Transport(abc.ABC):
         .. note:: the supported keys in kwargs are callback, dereference,
            overwrite and ignore_nonexisting.
         """
-        from aiida.common.folders import SandboxFolder
+        from aiida.common._folders import SandboxFolder
 
         kwargs_get = {
             'callback': None,

@@ -86,7 +86,7 @@ class AiiDALoaderMagics(magic.Magics):
         from click import Context
 
         from aiida.cmdline.commands.cmd_verdi import verdi
-        from aiida.common import AttributeDict
+        from aiida.common.extendeddicts import AttributeDict
         from aiida.manage import get_config, get_profile
 
         config = get_config()

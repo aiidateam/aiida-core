@@ -22,8 +22,8 @@ from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common import exceptions, timezone
-from aiida.common.links import GraphTraversalRules
+from aiida.common import _timezone, exceptions
+from aiida.common.links import _GraphTraversalRules
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -60,7 +60,7 @@ def node_list(entry_point, subclassing, project, past_days, order_by, order_dir,
     node_class = DataFactory(entry_point) if entry_point else Node
 
     if past_days is not None:
-        filters = {'ctime': {'>': timezone.now() - datetime.timedelta(days=past_days)}}
+        filters = {'ctime': {'>': _timezone.now() - datetime.timedelta(days=past_days)}}
     else:
         filters = {}
 
@@ -376,7 +376,7 @@ def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
     is_flag=True,
     help='Also clean the remote work directory, if applicable.',
 )
-@options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
+@options.graph_traversal_rules(_GraphTraversalRules.DELETE.value)
 @with_dbenv()
 def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
     """Delete nodes from the provenance graph.
@@ -708,8 +708,8 @@ def comment_show(user, nodes):
         for comment in comments:
             comment_msg = [
                 f'Comment<{comment.pk}> for Node<{node.pk}> by {comment.user.email}',
-                f'Created on {timezone.localtime(comment.ctime).strftime("%Y-%m-%d %H:%M")}',
-                f'Last modified on {timezone.localtime(comment.mtime).strftime("%Y-%m-%d %H:%M")}',
+                f'Created on {_timezone.localtime(comment.ctime).strftime("%Y-%m-%d %H:%M")}',
+                f'Last modified on {_timezone.localtime(comment.mtime).strftime("%Y-%m-%d %H:%M")}',
                 f'\n{comment.content}\n',
             ]
             echo.echo('\n'.join(comment_msg))

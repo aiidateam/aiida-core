@@ -18,9 +18,9 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
-from aiida.common.log import override_log_level
-from aiida.common.warnings import warn_deprecation
+from aiida.common._warnings import warn_deprecation
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, _UnreachableStorage
+from aiida.common.log import _override_log_level
 
 from ..utils.echo import ExitCode
 
@@ -61,7 +61,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     """Print status of AiiDA services."""
     from aiida import __version__
     from aiida.cmdline.utils.daemon import validate_daemon_env
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._docs import URL_NO_BROKER
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
     from aiida.manage.configuration.settings import AiiDAConfigDir
     from aiida.manage.manager import get_manager
@@ -95,11 +95,11 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     # Check the backend storage
     storage_head_version = None
     try:
-        with override_log_level():  # temporarily suppress noisy logging
+        with _override_log_level():  # temporarily suppress noisy logging
             storage_cls = profile.storage_cls
             storage_head_version = storage_cls.version_head()
             storage_backend = storage_cls(profile)
-    except UnreachableStorage as exc:
+    except _UnreachableStorage as exc:
         message = "Unable to connect to profile's storage."
         print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL

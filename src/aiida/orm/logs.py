@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from uuid import UUID
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.manage import get_manager
 
 from . import entities
@@ -77,7 +77,7 @@ class LogCollection(entities.Collection['Log']):
                 metadata[key] = str(metadata[key])
 
         return Log(
-            time=timezone.make_aware(datetime.fromtimestamp(record.created)),
+            time=_timezone.make_aware(datetime.fromtimestamp(record.created)),
             loggername=record.name,
             levelname=record.levelname,
             dbnode_id=dbnode_id,

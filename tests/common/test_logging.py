@@ -15,7 +15,7 @@ from unittest.mock import Mock
 import pytest
 
 from aiida.common import log
-from aiida.common.log import capture_logging
+from aiida.common.log import _capture_logging
 
 
 def test_logging_before_dbhandler_loaded(caplog):
@@ -34,7 +34,7 @@ def test_log_report(caplog):
     """Test that the ``logging`` module is patched such that the ``Logger`` class has the ``report`` method.
 
     The ``report`` method corresponds to a call to the :meth:``Logger.log`` method where the log level used is the
-    :data:`aiida.common.log.LOG_LEVEL_REPORT`.
+    :data:`aiida.common.log._LOG_LEVEL_REPORT`.
     """
     msg = 'Testing a report message'
     logger = logging.getLogger()
@@ -46,16 +46,16 @@ def test_log_report(caplog):
 
 
 def test_capture_logging():
-    """Test the :func:`aiida.common.log.capture_logging` function."""
+    """Test the :func:`aiida.common.log._capture_logging` function."""
     logger = logging.getLogger()
     message = 'Some message'
-    with capture_logging(logger) as stream:
+    with _capture_logging(logger) as stream:
         logging.getLogger().error(message)
         assert stream.getvalue().strip() == message
 
 
 class TestValidateHandler:
-    """Tests for :func:`aiida.common.log.validate_handler`."""
+    """Tests for :func:`aiida.common.log._validate_handler`."""
 
     def test_warns_when_more_verbose_than_loggers(self):
         """A handler level below every logger level cannot take effect and should return a warning."""
@@ -68,7 +68,7 @@ class TestValidateHandler:
             'logging.kiwipy_loglevel': 'INHERIT',
         }
         config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
-        message = log.validate_handler(config, 'logging.terminal_handler')
+        message = log._validate_handler(config, 'logging.terminal_handler')
         assert message is not None
         assert 'no logger emits messages at that level' in message
         assert 'logging.aiida_loglevel' in message
@@ -82,7 +82,7 @@ class TestValidateHandler:
             'logging.aiida_core_loglevel': 'INHERIT',
         }
         config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
-        assert log.validate_handler(config, 'logging.database_handler') is None
+        assert log._validate_handler(config, 'logging.database_handler') is None
 
     def test_warns_when_aiida_core_logger_overrides_fallback(self):
         """An explicit ``logging.aiida_core_loglevel`` should be respected for handler validation."""
@@ -92,7 +92,7 @@ class TestValidateHandler:
             'logging.aiida_core_loglevel': 'CRITICAL',
         }
         config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
-        message = log.validate_handler(config, 'logging.database_handler')
+        message = log._validate_handler(config, 'logging.database_handler')
         assert message is not None
         assert 'logging.aiida_core_loglevel' in message
         assert 'CRITICAL' in message
@@ -146,18 +146,18 @@ class TestVerbosityOverridesCliHandler:
         import logging.config
 
         original_dict_config = logging.config.dictConfig
-        original_cli_active = log.CLI_ACTIVE
-        original_cli_log_level = log.CLI_LOG_LEVEL
+        original_cli_active = log._CLI_ACTIVE
+        original_cli_log_level = log._CLI_LOG_LEVEL
 
         try:
-            log.CLI_ACTIVE = True
-            log.CLI_LOG_LEVEL = 'DEBUG'
+            log._CLI_ACTIVE = True
+            log._CLI_LOG_LEVEL = 'DEBUG'
             logging.config.dictConfig = capture_dict_config
             log.configure_logging()
         finally:
             logging.config.dictConfig = original_dict_config
-            log.CLI_ACTIVE = original_cli_active
-            log.CLI_LOG_LEVEL = original_cli_log_level
+            log._CLI_ACTIVE = original_cli_active
+            log._CLI_LOG_LEVEL = original_cli_log_level
 
         # The cli handler level should be overridden to DEBUG
         assert captured_config['handlers']['cli']['level'] == 'DEBUG'
@@ -172,18 +172,18 @@ class TestVerbosityOverridesCliHandler:
         import logging.config
 
         original_dict_config = logging.config.dictConfig
-        original_cli_active = log.CLI_ACTIVE
-        original_cli_log_level = log.CLI_LOG_LEVEL
+        original_cli_active = log._CLI_ACTIVE
+        original_cli_log_level = log._CLI_LOG_LEVEL
 
         try:
-            log.CLI_ACTIVE = True
-            log.CLI_LOG_LEVEL = None
+            log._CLI_ACTIVE = True
+            log._CLI_LOG_LEVEL = None
             logging.config.dictConfig = capture_dict_config
             log.configure_logging()
         finally:
             logging.config.dictConfig = original_dict_config
-            log.CLI_ACTIVE = original_cli_active
-            log.CLI_LOG_LEVEL = original_cli_log_level
+            log._CLI_ACTIVE = original_cli_active
+            log._CLI_LOG_LEVEL = original_cli_log_level
 
         # The cli handler level should remain REPORT (from terminal_handler default)
         assert captured_config['handlers']['cli']['level'] == 'REPORT'

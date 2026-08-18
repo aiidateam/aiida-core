@@ -17,7 +17,7 @@ from pathlib import Path
 from archive_path import TarPath, ZipPath
 
 from aiida.common import exceptions
-from aiida.common.progress_reporter import create_callback, get_progress_reporter
+from aiida.common._progress_reporter import create_callback, get_progress_reporter
 
 
 def update_metadata(metadata, version):

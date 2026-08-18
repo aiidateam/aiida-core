@@ -16,7 +16,7 @@ import unittest
 from aiida.common import exceptions, extendeddicts
 
 
-class FFADExample(extendeddicts.FixedFieldsAttributeDict):
+class FFADExample(extendeddicts._FixedFieldsAttributeDict):
     """An example class that accepts only the 'alpha', 'beta' and 'gamma' keys/attributes."""
 
     _valid_fields = ('alpha', 'beta', 'gamma')

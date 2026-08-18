@@ -62,7 +62,7 @@ def get_strict_version():
     else:
         from distutils.version import StrictVersion
 
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
 
         warn_deprecation(
             'This method is deprecated as the `distutils` package it uses will be removed in Python 3.12.', version=3

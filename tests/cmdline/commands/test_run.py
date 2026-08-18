@@ -14,7 +14,7 @@ import textwrap
 import pytest
 
 from aiida.cmdline.commands import cmd_run
-from aiida.common.log import override_log_level
+from aiida.common.log import _override_log_level
 
 
 class TestVerdiRun:
@@ -270,7 +270,7 @@ class TestAutoGroups:
                 fhandle.flush()
 
                 options = ['--auto-group'] + flags + ['--', fhandle.name, str(idx)]
-                with override_log_level():
+                with _override_log_level():
                     result = run_cli_command(cmd_run.run, options)
 
                 pk1_str, pk2_str, pk3_str, pk4_str, pk5_str, pk6_str = result.output_lines[-1].split()

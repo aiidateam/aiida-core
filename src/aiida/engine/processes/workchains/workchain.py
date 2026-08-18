@@ -23,8 +23,8 @@ from plumpy.workchains import Stepper, _PropagateReturn, if_, return_, while_
 from plumpy.workchains import WorkChainSpec as PlumpyWorkChainSpec
 
 from aiida.common import exceptions
+from aiida.common._lang import override
 from aiida.common.extendeddicts import AttributeDict
-from aiida.common.lang import override
 from aiida.orm import Node, ProcessNode, WorkChainNode
 from aiida.orm.utils import load_node
 

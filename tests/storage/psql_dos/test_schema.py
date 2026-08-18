@@ -12,8 +12,8 @@ import warnings
 
 from sqlalchemy import exc as sa_exc
 
+from aiida.common._utils import get_new_uuid
 from aiida.common.links import LinkType
-from aiida.common.utils import get_new_uuid
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Data
 from aiida.storage.psql_dos.models.node import DbNode

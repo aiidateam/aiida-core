@@ -20,7 +20,8 @@ from typing import Literal
 from typing_extensions import assert_never
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER, timezone
+from aiida.common import _timezone
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import Profile
 from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 
@@ -67,7 +68,7 @@ def registry_name_for(entity: orm.Node | orm.Group) -> RegistryNameType:
 class DumpTimes:
     """Holds relevant timestamps for a dump operation."""
 
-    current: datetime = field(default_factory=timezone.now)
+    current: datetime = field(default_factory=_timezone.now)
     last: datetime | None = None
 
     @classmethod
@@ -432,7 +433,7 @@ class DumpPaths:
         if latest_mtime_ts > 0:
             # Create naive datetime from timestamp, then make it timezone-aware
             naive_datetime = datetime.fromtimestamp(latest_mtime_ts)
-            dir_mtime = timezone.make_aware(naive_datetime)
+            dir_mtime = _timezone.make_aware(naive_datetime)
         return dir_mtime, total_size
 
     @staticmethod

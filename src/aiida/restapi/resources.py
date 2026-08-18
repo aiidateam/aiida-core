@@ -13,7 +13,7 @@ from urllib.parse import unquote
 from flask import make_response, request
 from flask_restful import Resource
 
-from aiida.common.lang import classproperty
+from aiida.common._lang import classproperty
 from aiida.manage import get_config_option, load_profile
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.restapi.common.utils import Utils, close_thread_connection

@@ -10,8 +10,8 @@
 
 import json
 
-from aiida.common import timezone
-from aiida.common.utils import get_new_uuid
+from aiida.common import _timezone
+from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -41,16 +41,16 @@ def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):
             is_superuser=False,
             is_staff=False,
             is_active=True,
-            last_login=timezone.now(),
-            date_joined=timezone.now(),
+            last_login=_timezone.now(),
+            date_joined=_timezone.now(),
         )
         session.add(user)
         session.commit()
         node = node_model(
             uuid=get_new_uuid(),
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             nodeversion=1,
@@ -109,7 +109,7 @@ def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):
         }
         log_kwargs = {
             'uuid': get_new_uuid(),
-            'time': timezone.now(),
+            'time': _timezone.now(),
             'loggername': 'localhost',
             'levelname': 'localhost',
             'message': '',

@@ -152,7 +152,7 @@ def set_progress_reporter(
     :param kwargs: If present, set a partial function with these kwargs
 
     The reporter should be a context manager that implements the
-    :func:`~aiida.common.progress_reporter.ProgressReporterAbstract` interface.
+    :func:`~aiida.common._progress_reporter.ProgressReporterAbstract` interface.
 
     Example Usage::
 
@@ -175,7 +175,7 @@ def set_progress_reporter(
 def set_progress_bar_tqdm(bar_format: str | None = TQDM_BAR_FORMAT, leave: bool | None = False, **kwargs: Any) -> None:
     """Set a `tqdm <https://github.com/tqdm/tqdm>`__ implementation of the progress reporter interface.
 
-    See :func:`~aiida.common.progress_reporter.set_progress_reporter` for details.
+    See :func:`~aiida.common._progress_reporter.set_progress_reporter` for details.
 
     :param bar_format: Specify a custom bar string format.
     :param leave: If True, keeps all traces of the progressbar upon termination of iteration.

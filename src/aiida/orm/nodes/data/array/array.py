@@ -125,7 +125,7 @@ class ArrayData(Data):
         :param arrays: Mapping of array names to numpy arrays.
         :return: Mapping of array names to base64-encoded bytes.
         """
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
 
         warn_deprecation(
             '`ArrayData.save_arrays` is deprecated. Use `numpy.save` with `io.BytesIO` directly instead.',
@@ -150,7 +150,7 @@ class ArrayData(Data):
         :param arrays: Mapping of array names to base64-encoded bytes.
         :return: Mapping of array names to numpy arrays.
         """
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
 
         warn_deprecation(
             '`ArrayData.load_arrays` is deprecated. Use `numpy.load` with `io.BytesIO` directly instead.',

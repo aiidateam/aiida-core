@@ -18,7 +18,7 @@ import time
 from collections.abc import Hashable, Iterator
 from typing import TYPE_CHECKING, cast
 
-from aiida.common import lang
+from aiida.common import _lang
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ class JobsList:
         :param last_updated: initialize the last updated timestamp
 
         """
-        lang.type_check(last_updated, float, allow_none=True)
+        _lang.type_check(last_updated, float, allow_none=True)
 
         self._authinfo = authinfo
         self._transport_queue = transport_queue

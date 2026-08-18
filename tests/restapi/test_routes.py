@@ -85,14 +85,14 @@ class TestRestApi:
         # create log message for calcjob
         import logging
 
-        from aiida.common.log import LOG_LEVEL_REPORT
-        from aiida.common.timezone import now
+        from aiida.common._timezone import now
+        from aiida.common.log import _LOG_LEVEL_REPORT
         from aiida.orm import Log
 
         log_record = {
             'time': now(),
             'loggername': 'loggername',
-            'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
+            'levelname': logging.getLevelName(_LOG_LEVEL_REPORT),
             'dbnode_id': calc.pk,
             'message': 'This is a template record message',
             'metadata': {'content': 'test'},

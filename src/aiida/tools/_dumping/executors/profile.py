@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from aiida import orm
-from aiida.common import NotExistent
+from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.detect import DumpChangeDetector
 from aiida.tools._dumping.executors.collection import CollectionDumpExecutor

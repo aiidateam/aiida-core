@@ -8,6 +8,6 @@
 ###########################################################################
 """A utility module with simple functions to format variables into strings for cli outputs."""
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._warnings import warn_deprecation
 
 warn_deprecation('This module is deprecated, use `aiida.tools.query.formatting` instead.', version=3)

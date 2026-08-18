@@ -29,8 +29,8 @@ from typing import TYPE_CHECKING
 
 import psutil
 
+from aiida.common._lang import type_check
 from aiida.common.exceptions import AiidaException, ConfigurationError
-from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
@@ -196,9 +196,9 @@ def get_daemon_client(profile_name: str | None = None) -> DaemonClient:
     :param profile_name: Optional profile name.
     :return: The daemon client.
 
-    :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found.
-    :raises aiida.common.ProfileConfigurationError: if the given profile does not exist.
-    :raises aiida.common.ConfigurationError: if no profile is loaded and ``profile_name`` is not specified.
+    :raises aiida.common.exceptions.MissingConfigurationError: if the configuration file cannot be found.
+    :raises aiida.common.exceptions.ProfileConfigurationError: if the given profile does not exist.
+    :raises aiida.common.exceptions.ConfigurationError: if no profile is loaded and ``profile_name`` is not specified.
     """
     manager = get_manager()
 

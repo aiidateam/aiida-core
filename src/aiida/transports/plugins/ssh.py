@@ -18,8 +18,8 @@ import click
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
-from aiida.common.escaping import escape_for_bash
-from aiida.common.warnings import warn_deprecation
+from aiida.common._escaping import escape_for_bash
+from aiida.common._warnings import warn_deprecation
 
 from ..transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
@@ -417,7 +417,7 @@ class SshTransport(BlockingTransport):
         Also opens a sftp channel, ready to be used.
         The current working directory is set explicitly, so it is not None.
 
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raise aiida.common.exceptions.InvalidOperation: if the channel is already open
         """
         import paramiko
         from paramiko.ssh_exception import SSHException
@@ -541,7 +541,7 @@ class SshTransport(BlockingTransport):
 
         :todo: correctly manage exceptions
 
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raise aiida.common.exceptions.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 
@@ -1396,7 +1396,7 @@ class SshTransport(BlockingTransport):
         exec_command_wait.
 
         :param  command: the command to execute. The command is assumed to be
-            already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
+            already escaped using :py:func:`aiida.common._escaping.escape_for_bash`.
         :param combine_stderr: (default False) if True, combine stdout and
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.

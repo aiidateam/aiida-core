@@ -8,6 +8,6 @@
 ###########################################################################
 """A utility module with a factory of standard QueryBuilder instances for Calculation nodes."""
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._warnings import warn_deprecation
 
 warn_deprecation('This module is deprecated, use `aiida.tools.query.calculation` instead.', version=3)

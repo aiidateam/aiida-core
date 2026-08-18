@@ -33,8 +33,8 @@ from typing import (
     overload,
 )
 
+from aiida.common._warnings import warn_deprecation
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
@@ -1331,7 +1331,7 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
     :returns: dictionary in QueryBuilder filter language to pass into {"type": ... }
     """
-    from aiida.common.escaping import escape_for_sql_like
+    from aiida.common._escaping import escape_for_sql_like
     from aiida.orm.utils.node import get_query_type_from_type_string
 
     value = classifiers.ormclass_type_string
@@ -1365,8 +1365,8 @@ def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict
 
     :returns: dictionary in QueryBuilder filter language to pass into {"process_type": ... }
     """
-    from aiida.common.escaping import escape_for_sql_like
-    from aiida.common.warnings import AiidaEntryPointWarning
+    from aiida.common._escaping import escape_for_sql_like
+    from aiida.common._warnings import AiidaEntryPointWarning
     from aiida.engine.processes.process import get_query_string_from_process_type_string
 
     value = classifiers.process_type_string
@@ -1487,7 +1487,7 @@ def _get_group_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
     :returns: dictionary in QueryBuilder filter language to pass into {'type_string': ... }
     """
-    from aiida.common.escaping import escape_for_sql_like
+    from aiida.common._escaping import escape_for_sql_like
 
     value = classifiers.ormclass_type_string[len(GROUP_ENTITY_TYPE_PREFIX) :]
 

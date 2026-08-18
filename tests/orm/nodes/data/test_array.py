@@ -11,7 +11,7 @@
 import numpy
 import pytest
 
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common._warnings import AiidaDeprecationWarning
 from aiida.orm import ArrayData, load_node
 
 

@@ -16,7 +16,7 @@ from typing import Any
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
 
-from aiida.common.exceptions import AiidaException, CorruptStorage, UnreachableStorage
+from aiida.common.exceptions import AiidaException, CorruptStorage, _UnreachableStorage
 
 META_FILENAME = 'metadata.json'
 """The filename containing meta information about the storage instance."""
@@ -100,7 +100,7 @@ def extract_metadata(path: str | Path, *, search_limit: int | None = 10) -> dict
 
     path = Path(path)
     if not path.exists():
-        raise UnreachableStorage(f'path not found: {path}')
+        raise _UnreachableStorage(f'path not found: {path}')
 
     if path.is_dir():
         if not path.joinpath(META_FILENAME).is_file():

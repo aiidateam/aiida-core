@@ -28,7 +28,7 @@ depends_on = None
 
 def upgrade():
     """Add an UUID column an populate it with unique UUIDs"""
-    from aiida.common.utils import get_new_uuid
+    from aiida.common._utils import get_new_uuid
     from aiida.storage.psql_dos.migrations.utils.dblog_update import set_new_uuid
 
     connection = op.get_bind()

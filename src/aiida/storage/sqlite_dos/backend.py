@@ -24,8 +24,8 @@ from sqlalchemy import insert, inspect, select
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.common import exceptions
+from aiida.common._pydantic import AiiDABaseModel, MetadataField
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
@@ -132,7 +132,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
         1. That the database schema is at the head version, i.e. is compatible with the code API.
         2. That the repository ID is equal to the UUID set in the database
 
-        :raises: :class:`aiida.common.exceptions.UnreachableStorage` if the storage cannot be connected to
+        :raises: :class:`aiida.common.exceptions._UnreachableStorage` if the storage cannot be connected to
         :raises: :class:`aiida.common.exceptions.IncompatibleStorageSchema`
             if the storage is not compatible with the code API.
         :raises: :class:`aiida.common.exceptions.CorruptStorage`
@@ -180,7 +180,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
     def migrate(self) -> None:
         """Migrate the storage for this profile to the head version.
 
-        :raises: :class:`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed.
+        :raises: :class:`~aiida.common.exceptions._UnreachableStorage` if the storage cannot be accessed.
         :raises: :class:`~aiida.common.exceptions.StorageMigrationError` if the storage is not initialised.
         """
         if not inspect(self.connection).has_table(self.alembic_version_tbl_name):

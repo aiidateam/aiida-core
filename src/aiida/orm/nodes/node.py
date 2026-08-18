@@ -32,11 +32,11 @@ import pydantic as pdt
 from typing_extensions import Self
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty, type_check
+from aiida.common._lang import classproperty, type_check
+from aiida.common._pydantic import get_metadata
+from aiida.common._warnings import warn_deprecation
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import get_metadata
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.fields import QbAttributesField, QbFields, add_field
 from aiida.orm.utils.node import (
@@ -60,7 +60,7 @@ from .links import NodeLinks
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
-    from aiida.common.log import AiidaLoggerType
+    from aiida.common.log import _AiidaLoggerType
 
     from ..implementation import StorageBackend
     from ..implementation.nodes import BackendNode
@@ -196,7 +196,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return cls.__query_type_string
 
     # This will be set by the metaclass call but we set default
-    _logger: AiidaLoggerType = AIIDA_LOGGER
+    _logger: _AiidaLoggerType = AIIDA_LOGGER
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
@@ -506,7 +506,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         compat_model = cls.__dict__.get('_COMPAT_MODEL')
         if compat_model is not None and isinstance(model, compat_model):
-            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+            from aiida.common._docs import URL_CHANGELOG_ORM_MODELS
 
             class_name = cast(Any, cls).__name__
             msg = (
@@ -699,7 +699,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
-    def logger(self) -> AiidaLoggerType:
+    def logger(self) -> _AiidaLoggerType:
         """Return the logger configured for this Node.
 
         :return: Logger object
@@ -895,7 +895,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _verify_are_parents_stored(self) -> None:
         """Verify that all `parent` nodes are already stored.
 
-        :raise aiida.common.ModificationNotAllowed: if one of the source nodes of incoming links is not stored.
+        :raise aiida.common.exceptions.ModificationNotAllowed: if one of the source nodes of incoming links is not
+            stored.
         """
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
@@ -1293,7 +1294,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if repository_metadata:
             import hashlib
 
-            from aiida.common.hashing import chunked_file_hash
+            from aiida.common._hashing import chunked_file_hash
             from aiida.repository import Repository
 
             if not files:

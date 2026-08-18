@@ -109,7 +109,7 @@ def get_calcjob_remote_paths(
     """
     from datetime import timedelta
 
-    from aiida.common import timezone
+    from aiida.common import _timezone
     from aiida.orm import CalcJobNode
 
     filters_calc: dict[str, t.Any] = {}
@@ -126,10 +126,10 @@ def get_calcjob_remote_paths(
         filters_computer['id'] = {'in': [computer.pk for computer in computers]}
 
     if past_days is not None:
-        filters_calc['mtime'] = {'>': timezone.now() - timedelta(days=past_days)}
+        filters_calc['mtime'] = {'>': _timezone.now() - timedelta(days=past_days)}
 
     if older_than is not None:
-        older_filter = {'<': timezone.now() - timedelta(days=older_than)}
+        older_filter = {'<': _timezone.now() - timedelta(days=older_than)}
         # Check if we need to apply the AND condition
         if 'mtime' not in filters_calc:
             filters_calc['mtime'] = older_filter

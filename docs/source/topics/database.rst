@@ -447,7 +447,7 @@ To do this, you have to specify:
     Filters enable you to further specify the query.
     This is an example for a query for structures that were added after a certain time (say last 4 days) and have an id larger than 50::
 
-        from aiida.common import timezone
+        from aiida.common import _timezone
         from datetime import timedelta
 
         query_dict = {
@@ -457,7 +457,7 @@ To do this, you have to specify:
             ],
             'filters':{
                 StructureData:{
-                    'ctime':{'>':  timezone.now() - timedelta(days=4)},
+                    'ctime':{'>':  _timezone.now() - timedelta(days=4)},
                     'id':{'>': 50}
                 }
             }

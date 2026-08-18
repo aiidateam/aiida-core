@@ -13,7 +13,7 @@ import re
 
 from upf_to_json import upf_to_json
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._warnings import warn_deprecation
 
 from .singlefile import SinglefileData
 
@@ -62,8 +62,9 @@ def get_pseudos_from_structure(structure, family_name):
     :param structure: a `StructureData`
     :param family_name: the name of a UPF family group
     :return: dictionary mapping each structure kind name onto `UpfData` of corresponding element
-    :raise aiida.common.MultipleObjectsError: if more than one UPF for the same element is found in the group.
-    :raise aiida.common.NotExistent: if no UPF for an element in the group is found in the group.
+    :raise aiida.common.exceptions.MultipleObjectsError: if more than one UPF for the same element is found in the
+        group.
+    :raise aiida.common.exceptions.NotExistent: if no UPF for an element in the group is found in the group.
     """
     from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
@@ -103,9 +104,9 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     import os
 
     from aiida import orm
-    from aiida.common import AIIDA_LOGGER
+    from aiida.common._files import md5_file
     from aiida.common.exceptions import UniquenessError
-    from aiida.common.files import md5_file
+    from aiida.common.log import AIIDA_LOGGER
 
     emit_deprecation()
 
@@ -211,8 +212,8 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
     """
     import os
 
-    from aiida.common import AIIDA_LOGGER
     from aiida.common.exceptions import ParsingError
+    from aiida.common.log import AIIDA_LOGGER
     from aiida.orm.nodes.data.structure import _valid_symbols
 
     emit_deprecation()
@@ -289,7 +290,7 @@ class UpfData(SinglefileData):
         """
         import os
 
-        from aiida.common.files import md5_file
+        from aiida.common._files import md5_file
 
         emit_deprecation()
 
@@ -322,8 +323,8 @@ class UpfData(SinglefileData):
 
     def store(self, *args, **kwargs):
         """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
+        from aiida.common._files import md5_from_filelike
         from aiida.common.exceptions import ParsingError
-        from aiida.common.files import md5_from_filelike
 
         if self.is_stored:
             return self
@@ -372,8 +373,8 @@ class UpfData(SinglefileData):
             Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
         :param filename: specify filename to use (defaults to name of provided file).
         """
+        from aiida.common._files import md5_file, md5_from_filelike
         from aiida.common.exceptions import ParsingError
-        from aiida.common.files import md5_file, md5_from_filelike
 
         parsed_data = parse_upf(file, check_filename=self.CHECK_FILENAME)
 
@@ -419,8 +420,8 @@ class UpfData(SinglefileData):
 
     def _validate(self):
         """Validate the UPF potential file stored for this node."""
+        from aiida.common._files import md5_from_filelike
         from aiida.common.exceptions import ValidationError
-        from aiida.common.files import md5_from_filelike
 
         super()._validate()
 

@@ -142,7 +142,7 @@ class TestSessionSqla:
         Tests for bug #1372
         """
         import aiida.storage.psql_dos as sa
-        from aiida.common import timezone
+        from aiida.common import _timezone
 
         session = sessionmaker(bind=self.backend.get_session().bind, future=True)
         custom_session = session()
@@ -163,7 +163,7 @@ class TestSessionSqla:
                 do_value_checks(custom_session, node, dbnode_reloaded, str_attr, 'original', 'changed')
 
             for str_attr in ['ctime', 'mtime']:
-                do_value_checks(custom_session, node, dbnode_reloaded, str_attr, timezone.now(), timezone.now())
+                do_value_checks(custom_session, node, dbnode_reloaded, str_attr, _timezone.now(), _timezone.now())
 
             # Attributes
             assert node.attributes == dbnode_reloaded.attributes

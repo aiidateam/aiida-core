@@ -13,8 +13,8 @@ import warnings
 import pytest
 
 from aiida import get_profile
+from aiida.common._warnings import AiidaDeprecationWarning
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.config import GlobalOptionsSchema
 from aiida.manage.configuration.options import Option, get_option, get_option_names, parse_option

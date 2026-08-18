@@ -22,7 +22,7 @@ import pytest
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common.exceptions import NotExistent
 from aiida.common.links import LinkType
 from aiida.orm import CalcJobNode, RemoteData, WorkflowNode
@@ -883,7 +883,7 @@ def create_nodes_verdi_node_list(aiida_profile_clean_class):
         orm.Int(2).store(),
         orm.ArrayData().store(),
         orm.KpointsData().store(),
-        orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),
+        orm.WorkflowNode(ctime=_timezone.now() - datetime.timedelta(days=3)).store(),
     )
 
 

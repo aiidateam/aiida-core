@@ -20,7 +20,7 @@ import typing as t
 
 from pydantic import field_validator
 
-from aiida.common.constants import elements
+from aiida.common._constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -1591,7 +1591,7 @@ class StructureData(Data):
         :param conserve_particle: if True, allows the possibility of removing a site.
             currently not implemented.
 
-        :raises aiida.common.ModificationNotAllowed: if object is stored already
+        :raises aiida.common.exceptions.ModificationNotAllowed: if object is stored already
         :raises ValueError: if positions are invalid
 
         .. note:: it is assumed that the order of the new_positions is

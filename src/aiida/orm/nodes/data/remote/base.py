@@ -227,7 +227,7 @@ class RemoteData(Data):
         :return: Total size of given file or directory.
         """
 
-        from aiida.common.utils import format_directory_size
+        from aiida.common._utils import format_directory_size
 
         total_size: int = -1
 

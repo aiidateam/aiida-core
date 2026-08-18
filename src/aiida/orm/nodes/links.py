@@ -6,8 +6,8 @@ import typing as t
 from typing import cast
 
 from aiida.common import exceptions
-from aiida.common.escaping import sql_string_match
-from aiida.common.lang import type_check
+from aiida.common._escaping import sql_string_match
+from aiida.common._lang import type_check
 from aiida.common.links import LinkType
 
 from ..querybuilder import QueryBuilder
@@ -34,7 +34,7 @@ class NodeLinks:
         :param source: the node from which the link is coming
         :param link_type: the link type
         :param link_label: the link label
-        :raise aiida.common.UniquenessError: if the given link triple already exists in the cache
+        :raise aiida.common.exceptions.UniquenessError: if the given link triple already exists in the cache
         """
         assert self.incoming_cache is not None, 'incoming_cache not initialised'
 

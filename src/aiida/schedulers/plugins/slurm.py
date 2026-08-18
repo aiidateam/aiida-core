@@ -20,15 +20,15 @@ import typing as t
 
 from typing_extensions import override
 
+from aiida.common._lang import type_check
 from aiida.common.exceptions import FeatureNotAvailable
-from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 
 from .bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
-    from aiida.common import AttributeDict
+    from aiida.common.extendeddicts import AttributeDict
     from aiida.engine.processes.exit_code import ExitCode
 
 

@@ -14,7 +14,7 @@ from collections.abc import Iterable, Mapping
 from decimal import Decimal
 
 from aiida.common import exceptions
-from aiida.common.constants import AIIDA_FLOAT_PRECISION
+from aiida.common._constants import AIIDA_FLOAT_PRECISION
 
 # This separator character is reserved to indicate nested fields in node attribute and extras dictionaries and
 # therefore is not allowed in individual attribute or extra keys.
@@ -26,7 +26,7 @@ __all__ = ('clean_value', 'validate_attribute_extra_key')
 def validate_attribute_extra_key(key):
     """Validate the key for an entity attribute or extra.
 
-    :raise aiida.common.ValidationError: if the key is not a string or contains reserved separator character
+    :raise aiida.common.exceptions.ValidationError: if the key is not a string or contains reserved separator character
     """
     if not key or not isinstance(key, str):
         raise exceptions.ValidationError('key for attributes or extras should be a string')

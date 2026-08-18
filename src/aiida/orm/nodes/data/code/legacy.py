@@ -12,8 +12,8 @@ import os
 import pathlib
 
 from aiida.common import exceptions
-from aiida.common.log import override_log_level
-from aiida.common.warnings import warn_deprecation
+from aiida.common._warnings import warn_deprecation
+from aiida.common.log import _override_log_level
 from aiida.orm import Computer
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -108,7 +108,7 @@ class Code(AbstractCode):
         :return: ``True`` if the code can run on ``computer``, ``False`` otherwise.
         """
         from aiida import orm
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
 
         if self.is_local():
             return True
@@ -209,8 +209,8 @@ class Code(AbstractCode):
         """:param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise aiida.common.NotExistent: if no code identified by the given string is found
-        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.exceptions.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.exceptions.MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -249,8 +249,8 @@ class Code(AbstractCode):
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise aiida.common.NotExistent: if no code identified by the given string is found
-        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely a code
+        :raise aiida.common.exceptions.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.exceptions.MultipleObjectsError: if the string cannot identify uniquely a code
         :raise ValueError: if neither a pk nor a label was passed in
         """
         from aiida.orm.utils import load_code
@@ -287,8 +287,8 @@ class Code(AbstractCode):
 
         :param code_string: the code string identifying the code to load
 
-        :raise aiida.common.NotExistent: if no code identified by the given string is found
-        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.exceptions.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.exceptions.MultipleObjectsError: if the string cannot identify uniquely
             a code
         :raise TypeError: if code_string is not of string type
 
@@ -378,7 +378,7 @@ class Code(AbstractCode):
             raise exceptions.ValidationError('checking the remote exec path is not available for a local code.')
 
         try:
-            with override_log_level():  # Temporarily suppress noisy logging
+            with _override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
                     file_exists = transport.isfile(filepath)
         except Exception:
@@ -492,7 +492,7 @@ class Code(AbstractCode):
             remote_exec_path is the absolute path of the main executable on remote computer.
         """
         from aiida import orm
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
 
         warn_deprecation('`Code.set_remote_computer_exec` method is deprecated, use `InstalledCode`.', version=3)
 
@@ -577,7 +577,7 @@ class Code(AbstractCode):
         TODO: add filters to mask the remote machines on which a local code can run.
         """
         from aiida import orm
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
 
         warn_deprecation('`Code.can_run_on` method is deprecated, use `can_run_on_computer` instead.', version=3)
 

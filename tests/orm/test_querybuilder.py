@@ -29,11 +29,11 @@ class TestBasic:
     @pytest.mark.requires_psql
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
-        from aiida.common import timezone
+        from aiida.common import _timezone
 
         # Using timezone.now() rather than datetime.now() to get a timezone-aware object rather than a naive one
-        orm.Data(ctime=timezone.now() - timedelta(days=3)).store()
-        orm.Data(ctime=timezone.now() - timedelta(days=1)).store()
+        orm.Data(ctime=_timezone.now() - timedelta(days=3)).store()
+        orm.Data(ctime=_timezone.now() - timedelta(days=1)).store()
 
         builder = orm.QueryBuilder().append(orm.Node, filters={'ctime': {'>': date.today() - timedelta(days=1)}})
         assert builder.count() == 1
@@ -140,7 +140,7 @@ class TestBasic:
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_process_query(self):
         """Test querying for a process class."""
-        from aiida.common.warnings import AiidaEntryPointWarning
+        from aiida.common._warnings import AiidaEntryPointWarning
         from aiida.engine import ExitCode, WorkChain, if_, return_, run
 
         class PotentialFailureWorkChain(WorkChain):

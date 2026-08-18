@@ -17,7 +17,7 @@ from typing_extensions import Self
 
 from . import exceptions
 
-__all__ = ('AttributeDict', 'DefaultFieldsAttributeDict', 'FixedFieldsAttributeDict')
+__all__ = ('AttributeDict', 'DefaultFieldsAttributeDict')
 
 
 class AttributeDict(dict[str, Any]):
@@ -98,7 +98,7 @@ class AttributeDict(dict[str, Any]):
         return self.keys()
 
 
-class FixedFieldsAttributeDict(AttributeDict):
+class _FixedFieldsAttributeDict(AttributeDict):
     """A dictionary with access to the keys as attributes, and with filtering
     of valid attributes.
     This is only the base class, without valid attributes;

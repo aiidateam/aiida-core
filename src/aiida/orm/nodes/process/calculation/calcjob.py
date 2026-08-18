@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING, Any, AnyStr, cast
 from pydantic import field_validator
 
 from aiida.common import exceptions
+from aiida.common._lang import classproperty
 from aiida.common.datastructures import CalcJobState
-from aiida.common.lang import classproperty
 from aiida.orm.pydantic import OrmMetadataField
 
 from ..process import ProcessNodeCaching
@@ -373,14 +373,14 @@ class CalcJobNode(CalculationNode):
 
         :param state: an instance of `JobState`
         """
-        from aiida.common import timezone
+        from aiida.common import _timezone
         from aiida.schedulers.datastructures import JobState
 
         if not isinstance(state, JobState):
             raise ValueError(f'scheduler state should be an instance of JobState, got: {state}')
 
         self.base.attributes.set(self.SCHEDULER_STATE_KEY, state.value)
-        self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.now().isoformat())
+        self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, _timezone.now().isoformat())
 
     def get_scheduler_state(self) -> JobState | None:
         """Return the status of the calculation according to the cluster scheduler.

@@ -5,7 +5,7 @@ import pathlib
 import pytest
 from pydantic_core import ValidationError
 
-from aiida.common.exceptions import IncompatibleExternalDependencies
+from aiida.common.exceptions import _IncompatibleExternalDependencies
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend, validate_sqlite_version
 from aiida.storage.sqlite_zip.migrator import validate_storage
 
@@ -73,7 +73,7 @@ def test_validate_sqlite_version(monkeypatch):
     monkeypatch.setattr('sqlite3.sqlite_version', '0.0.0')
     monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')
     with pytest.raises(
-        IncompatibleExternalDependencies, match=r'.*Storage backend requires sqlite 100.0.0 or higher.*'
+        _IncompatibleExternalDependencies, match=r'.*Storage backend requires sqlite 100.0.0 or higher.*'
     ):
         validate_sqlite_version()
 

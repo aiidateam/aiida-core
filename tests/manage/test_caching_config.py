@@ -44,7 +44,7 @@ def test_merge_deprecated_yaml(tmp_path):
 
     An AiidaDeprecationWarning should also be raised.
     """
-    from aiida.common.warnings import AiidaDeprecationWarning
+    from aiida.common._warnings import AiidaDeprecationWarning
     from aiida.manage import configuration, get_manager
     from aiida.manage.configuration import get_config_option, load_profile
     from aiida.manage.configuration.settings import AiiDAConfigDir

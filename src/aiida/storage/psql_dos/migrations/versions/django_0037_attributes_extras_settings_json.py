@@ -22,7 +22,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import column, table
 
 from aiida.cmdline.utils import echo
-from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common._progress_reporter import get_progress_reporter
 from aiida.storage.psql_dos.migrations.utils import ReflectMigrations
 
 revision = 'django_0037'

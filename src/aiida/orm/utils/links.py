@@ -13,7 +13,7 @@ from collections.abc import Generator, Iterator, Mapping
 from typing import TYPE_CHECKING, NamedTuple, Optional
 
 from aiida.common import exceptions
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 
 if TYPE_CHECKING:
     from aiida.common.links import LinkType
@@ -319,7 +319,7 @@ class LinkManager:
         """Return the node from list for given label.
 
         :return: node that corresponds to the given label
-        :raises aiida.common.NotExistent: if the label is not present among the link_triples
+        :raises aiida.common.exceptions.NotExistent: if the label is not present among the link_triples
         """
         matching_entry = None
         for entry in self.link_triples:

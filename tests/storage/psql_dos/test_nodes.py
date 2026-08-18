@@ -74,7 +74,7 @@ class TestNodeBasicSQLA:
         (and subsequently committed) when a user is in the session.
         It tests the fix for the issue #234
         """
-        from aiida.common.utils import get_new_uuid
+        from aiida.common._utils import get_new_uuid
         from aiida.storage.psql_dos.models.node import DbNode
 
         # Get the automatic user

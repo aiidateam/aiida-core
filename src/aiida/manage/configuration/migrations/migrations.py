@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from typing import Any, Protocol
 
 from aiida.common import exceptions
-from aiida.common.docs import URL_CONFIG_SCHEMA_COMPATIBILITY
+from aiida.common._docs import URL_CONFIG_SCHEMA_COMPATIBILITY
 from aiida.common.log import AIIDA_LOGGER
 
 __all__ = (
@@ -624,7 +624,8 @@ def config_needs_migrating(config, filepath: str | None = None):
 
     :param filepath: the path to the configuration file (optional, for error reporting)
     :return: True if the configuration has an older version and needs to be migrated, False otherwise
-    :raises aiida.common.ConfigurationVersionError: if the config's oldest compatible version is higher than the current
+    :raises aiida.common.exceptions.ConfigurationVersionError: if the config's oldest compatible version is higher
+        than the current
     """
     current_version = get_current_version(config)
     oldest_compatible_version = get_oldest_compatible_version(config)

@@ -60,7 +60,7 @@ py:obj NodeType
 py:obj ModelType
 py:class aiida.common.ReturnType
 py:class aiida.common.SelfType
-py:class aiida.common.lang.MethodType
+py:class aiida.common._lang.MethodType
 py:class aiida.cmdline.params._shims.C
 py:class aiida.orm.entitites.CollectionType
 py:class aiida.orm.entitites.EntityType
@@ -84,11 +84,11 @@ py:class aiida.tools.archive.SelfType
 py:class aiida.tools.archive.EntityType
 py:class aiida.tools.archive.abstract.EntityType
 py:class aiida.tools.archive.abstract.SelfType
-py:class aiida.common.lang.SelfType
-py:class aiida.common.lang.ReturnType
+py:class aiida.common._lang.SelfType
+py:class aiida.common._lang.ReturnType
 py:obj aiida.common.ReturnType
 py:obj aiida.common.SelfType
-py:obj aiida.common.lang.ReturnType
+py:obj aiida.common._lang.ReturnType
 py:obj aiida.orm.entitites.CollectionType
 py:obj aiida.orm.entitites.EntityType
 py:obj aiida.orm.entitites.BackendEntityType
@@ -127,11 +127,11 @@ py:class T
 py:class _ContainerTypes
 py:class _NodeOrGroupCls
 py:class aiida.cmdline.params.types.choice.T
-py:class aiida.common.lang.T
+py:class aiida.common._lang.T
 py:class aiida.engine.processes.functions.N
 py:class aiida.engine.processes.functions.R_co
-py:class aiida.common.utils.T
-py:class aiida.common.utils.R
+py:class aiida.common._utils.T
+py:class aiida.common._utils.R
 
 ### third-party packages
 # Note: These exceptions are needed if

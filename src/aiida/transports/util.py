@@ -12,10 +12,10 @@ import time
 
 from paramiko import ProxyCommand
 
-from aiida.common.extendeddicts import FixedFieldsAttributeDict
+from aiida.common.extendeddicts import _FixedFieldsAttributeDict
 
 
-class FileAttribute(FixedFieldsAttributeDict):
+class FileAttribute(_FixedFieldsAttributeDict):
     """A class, resembling a dictionary, to describe the attributes of a file,
     that is returned by get_attribute().
     Possible keys: st_size, st_uid, st_gid, st_mode, st_atime, st_mtime

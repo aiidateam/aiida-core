@@ -32,7 +32,7 @@ def cmd():
     """
     assert 'cli' in [handler.name for handler in log.AIIDA_LOGGER.handlers]
 
-    for log_level in log.LOG_LEVELS.values():
+    for log_level in log._LOG_LEVELS.values():
         log.AIIDA_LOGGER.log(log_level, 'aiida')
 
     echo.echo_debug('verdi')
@@ -50,7 +50,7 @@ def verify_log_output(output: str, log_level_aiida: int, log_level_verdi: int):
     :param log_level_aiida: The expected log level of the ``aiida`` logger.
     :param log_level_verdi: The expected log level of the ``verdi`` logger.
     """
-    for log_level_name, log_level in log.LOG_LEVELS.items():
+    for log_level_name, log_level in log._LOG_LEVELS.items():
         prefix = log_level_name.capitalize()
 
         if log_level >= log_level_aiida:
@@ -74,7 +74,7 @@ def test_default(run_cli_command):
     verify_log_output(result.output, logging.REPORT, logging.REPORT)
 
 
-@pytest.mark.parametrize('option_log_level', [level for level in log.LOG_LEVELS.values() if level != logging.NOTSET])
+@pytest.mark.parametrize('option_log_level', [level for level in log._LOG_LEVELS.values() if level != logging.NOTSET])
 @pytest.mark.usefixtures('reset_log_level')
 def test_explicit(run_cli_command, option_log_level):
     """Test explicitly settings a verbosity"""
@@ -93,8 +93,8 @@ def test_config_option_override(run_cli_command, isolated_config):
     result = run_cli_command(cmd, raises=True, use_subprocess=False)
     verify_log_output(result.output, logging.ERROR, logging.WARNING)
 
-    # Manually reset the ``aiida.common.log.CLI_ACTIVE`` global otherwise the verbosity callback is a no-op
-    log.CLI_ACTIVE = None
+    # Manually reset the ``aiida.common.log._CLI_ACTIVE`` global otherwise the verbosity callback is a no-op
+    log._CLI_ACTIVE = None
 
     # If ``--verbosity`` is explicitly defined, it overrides ``logging.aiida_loglevel`` but keeps explicit
     # logger-specific levels such as ``logging.verdi_loglevel``.

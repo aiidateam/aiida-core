@@ -143,7 +143,7 @@ def get_quicksetup_password(ctx: click.Context, param: click.Parameter, value: s
     :param ctx: click context which should contain the contextual parameters
     :return: the password
     """
-    from aiida.common.hashing import get_random_string
+    from aiida.common._hashing import get_random_string
 
     if value is not None:
         return value

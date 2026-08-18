@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._warnings import warn_deprecation
 from aiida.orm.pydantic import OrmMetadataField
 
 from .array import ArrayData
@@ -471,7 +471,7 @@ class TrajectoryData(ArrayData):
 
     def _prepare_xsf(self, index: int | None = None, main_file_name: str = '') -> tuple[bytes, dict[str, t.Any]]:
         """Write the given trajectory to a string of format XSF (for XCrySDen)."""
-        from aiida.common.constants import elements
+        from aiida.common._constants import elements
 
         _atomic_numbers = {data['symbol']: num for num, data in elements.items()}
 
@@ -510,7 +510,7 @@ class TrajectoryData(ArrayData):
         self, trajectory_index: int | None = None, main_file_name: str = ''
     ) -> tuple[bytes, dict[str, t.Any]]:
         """Write the given trajectory to a string of format CIF."""
-        from aiida.common.utils import Capturing
+        from aiida.common._utils import Capturing
         from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
 
         cif = ''

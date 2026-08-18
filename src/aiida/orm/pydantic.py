@@ -7,8 +7,8 @@ from copy import deepcopy
 import pydantic as pdt
 from pydantic_core import PydanticUndefined
 
+from aiida.common._pydantic import AiiDABaseModel, MetadataField, get_metadata
 from aiida.common.exceptions import EntryPointError, NotExistent
-from aiida.common.pydantic import AiiDABaseModel, MetadataField, get_metadata
 
 if t.TYPE_CHECKING:
     from aiida.orm import Entity

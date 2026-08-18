@@ -22,12 +22,13 @@ import plumpy.ports
 import plumpy.process_states
 
 from aiida import orm
-from aiida.common import AttributeDict, exceptions
-from aiida.common.datastructures import CalcInfo, FileCopyOperation
-from aiida.common.folders import Folder
-from aiida.common.lang import classproperty, override
+from aiida.common import exceptions
+from aiida.common._folders import Folder
+from aiida.common._lang import classproperty, override
+from aiida.common._typing import FilePath
+from aiida.common.datastructures import CalcInfo, _FileCopyOperation
+from aiida.common.extendeddicts import AttributeDict
 from aiida.common.links import LinkType
-from aiida.common.typing import FilePath
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -731,7 +732,7 @@ class CalcJob(Process):
         input script and the absolute path to the sandbox folder are stored in the `dry_run_info` attribute of the node
         of this process.
         """
-        from aiida.common.folders import SubmitTestFolder
+        from aiida.common._folders import SubmitTestFolder
         from aiida.engine.daemon.execmanager import upload_calculation
         from aiida.transports.plugins.local import LocalTransport
 
@@ -751,8 +752,8 @@ class CalcJob(Process):
         as a normal calculation job, but rather the results are already computed outside of AiiDA and merely need to be
         imported.
         """
+        from aiida.common._folders import SandboxFolder
         from aiida.common.datastructures import CalcJobState
-        from aiida.common.folders import SandboxFolder
         from aiida.engine.daemon.execmanager import retrieve_calculation
         from aiida.manage import get_config_option
         from aiida.transports.plugins.local import LocalTransport
@@ -937,9 +938,9 @@ class CalcJob(Process):
         :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
 
         """
+        from aiida.common._utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
-        from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import AbstractCode, Computer, load_code
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
@@ -1112,7 +1113,7 @@ class CalcJob(Process):
 
         if calc_info.file_copy_operation_order is not None:
             if not isinstance(calc_info.file_copy_operation_order, list) or any(  # type: ignore[redundant-expr]
-                not isinstance(e, FileCopyOperation) for e in calc_info.file_copy_operation_order
+                not isinstance(e, _FileCopyOperation) for e in calc_info.file_copy_operation_order
             ):
                 raise PluginInternalError(
                     'calc_info.file_copy_operation_order is not a list of `FileCopyOperation` enums.'
@@ -1120,9 +1121,9 @@ class CalcJob(Process):
         else:
             # Set the default
             calc_info.file_copy_operation_order = [
-                FileCopyOperation.SANDBOX,
-                FileCopyOperation.LOCAL,
-                FileCopyOperation.REMOTE,
+                _FileCopyOperation.SANDBOX,
+                _FileCopyOperation.LOCAL,
+                _FileCopyOperation.REMOTE,
             ]
 
         ########################################################################

@@ -216,8 +216,8 @@ class Profile:
         """
         from urllib.parse import urlparse
 
-        from aiida.common.utils import url2pathname
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._utils import url2pathname
+        from aiida.common._warnings import warn_deprecation
 
         warn_deprecation('This method has been deprecated', version=3)
 
@@ -240,7 +240,7 @@ class Profile:
 
         :return: a dictionary of filepaths
         """
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
         from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
         warn_deprecation('This method has been deprecated, use `filepaths` method from `Config` obj instead', version=3)
@@ -329,7 +329,7 @@ class Profile:
         :param relabel_groups: Update group directory names when labels change, defaults to True
         :return: Path where the profile was dumped, or None if nothing was dumped
         """
-        from aiida.common import AIIDA_LOGGER
+        from aiida.common.log import AIIDA_LOGGER
         from aiida.tools._dumping.config import ProfileDumpConfig
         from aiida.tools._dumping.engine import DumpEngine
         from aiida.tools._dumping.utils import DumpPaths

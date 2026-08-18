@@ -22,7 +22,7 @@ from enum import Enum
 
 from plumpy.loaders import get_object_loader
 
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 from .base import to_aiida_type

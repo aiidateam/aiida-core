@@ -39,10 +39,10 @@ from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
 from aiida.common import exceptions
+from aiida.common._lang import classproperty, override
 from aiida.common.extendeddicts import AttributeDict
-from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common.log import _LOG_LEVEL_REPORT
 from aiida.engine.utils import InterruptableFuture
 from aiida.orm.implementation.utils import clean_value
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
@@ -638,7 +638,7 @@ class Process(PlumpyProcess):
 
         """
         message = f'[{self.node.pk}|{self.__class__.__name__}|{inspect.stack()[1][3]}]: {msg}'
-        self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
+        self.logger.log(_LOG_LEVEL_REPORT, message, *args, **kwargs)
 
     def _create_and_setup_db_record(self) -> int | UUID:
         """Create and setup the database record for this process

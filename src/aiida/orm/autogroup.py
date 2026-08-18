@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import re
 
-from aiida.common import exceptions, timezone
-from aiida.common.escaping import escape_for_sql_like, get_regex_pattern_from_sql
+from aiida.common import _timezone, exceptions
+from aiida.common._escaping import escape_for_sql_like, get_regex_pattern_from_sql
 from aiida.orm import AutoGroup, QueryBuilder
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
@@ -48,7 +48,7 @@ class AutogroupManager:
         self._exclude: list[str] | None = None
         self._include: list[str] | None = None
 
-        self._group_label_prefix = f'Verdi autogroup on {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'
+        self._group_label_prefix = f'Verdi autogroup on {_timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'
         self._group_label = None  # Actual group label, set by `get_or_create_group`
 
     @property
@@ -134,7 +134,7 @@ class AutogroupManager:
     def set_group_label_prefix(self, label_prefix: str | None) -> None:
         """Set the label of the group to be created (or use a default)."""
         if label_prefix is None:
-            label_prefix = f'Verdi autogroup on {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'
+            label_prefix = f'Verdi autogroup on {_timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'
         if not isinstance(label_prefix, str):
             raise exceptions.ValidationError('group label must be a string')
         self._group_label_prefix = label_prefix

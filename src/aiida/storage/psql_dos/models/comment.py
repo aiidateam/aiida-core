@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import DateTime, Integer, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.models.base import Base
 
@@ -34,8 +34,8 @@ class DbComment(Base):
         nullable=False,
         index=True,
     )
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
+    ctime = Column(DateTime(timezone=True), default=_timezone.now, nullable=False)
+    mtime = Column(DateTime(timezone=True), default=_timezone.now, onupdate=_timezone.now, nullable=False)
     user_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
@@ -49,5 +49,5 @@ class DbComment(Base):
 
     def __str__(self):
         return 'DbComment for [{} {}] on {}'.format(
-            self.dbnode.get_simple_name(), self.dbnode.id, timezone.localtime(self.ctime).strftime('%Y-%m-%d')
+            self.dbnode.get_simple_name(), self.dbnode.id, _timezone.localtime(self.ctime).strftime('%Y-%m-%d')
         )

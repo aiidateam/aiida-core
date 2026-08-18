@@ -16,7 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.common import exceptions
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.orm.implementation import BackendNode, BackendNodeCollection
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 from aiida.storage.psql_dos.models import node as models

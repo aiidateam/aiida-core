@@ -21,11 +21,11 @@ from functools import singledispatch
 from itertools import chain
 from operator import itemgetter
 
+from aiida.common._constants import AIIDA_FLOAT_PRECISION
 from aiida.common._utils import DatetimePrecision
-from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
 
-from .folders import Folder
+from ._folders import Folder
 
 
 def get_random_string(length: int = 12) -> str:

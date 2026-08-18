@@ -928,7 +928,7 @@ class TestNodeBasic:
         from datetime import timedelta
         from time import sleep
 
-        from aiida.common import timezone
+        from aiida.common import _timezone
 
         user = orm.User.collection.get_default()
 
@@ -939,11 +939,11 @@ class TestNodeBasic:
         a.store()
         assert a.base.comments.all() == []
 
-        before = timezone.now() - timedelta(seconds=1)
+        before = _timezone.now() - timedelta(seconds=1)
         a.base.comments.add('text', user=user)
         sleep(0.1)
         a.base.comments.add('text2', user=user)
-        after = timezone.now() + timedelta(seconds=1)
+        after = _timezone.now() + timedelta(seconds=1)
 
         # Make sure comments are sorted to avoid
         # random test failures

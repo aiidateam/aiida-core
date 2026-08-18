@@ -8,7 +8,7 @@
 ###########################################################################
 """Test alterations to `db_dbnode.type`values."""
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
@@ -31,15 +31,15 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
             is_superuser=False,
             is_staff=False,
             is_active=True,
-            last_login=timezone.now(),
-            date_joined=timezone.now(),
+            last_login=_timezone.now(),
+            date_joined=_timezone.now(),
         )
         session.add(user)
         session.commit()
         kwargs = dict(
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             nodeversion=1,

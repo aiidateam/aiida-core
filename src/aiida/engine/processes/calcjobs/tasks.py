@@ -22,9 +22,9 @@ import plumpy.futures
 import plumpy.persistence
 import plumpy.process_states
 
+from aiida.common._folders import SandboxFolder
 from aiida.common.datastructures import CalcJobState
-from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
-from aiida.common.folders import SandboxFolder
+from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException, _StashingError
 from aiida.engine import utils
 from aiida.engine.daemon import execmanager
 from aiida.engine.processes.exit_code import ExitCode
@@ -379,11 +379,11 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             initial_interval,
             max_attempts,
             logger=node.logger,
-            ignore_exceptions=(plumpy.process_states.Interruption, StashingError),
+            ignore_exceptions=(plumpy.process_states.Interruption, _StashingError),
         )
     except plumpy.process_states.Interruption:
         raise
-    except StashingError:
+    except _StashingError:
         # Re-raise StashingError so it can be handled in the Waiting state with an exit code
         raise
     except Exception as exception:
@@ -626,7 +626,7 @@ class Waiting(plumpy.process_states.Waiting):
 
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
-        except StashingError as exception:
+        except _StashingError as exception:
             exit_code = self.process.exit_codes.ERROR_STASHING_FAILED.format(message=str(exception))
             return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
         except plumpy.process_states.KillInterruption as exception:

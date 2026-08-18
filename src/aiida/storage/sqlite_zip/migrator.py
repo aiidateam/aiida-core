@@ -53,7 +53,7 @@ def list_versions() -> list[str]:
 def validate_storage(inpath: Path) -> None:
     """Validate that the storage is at the head version.
 
-    :raises: :class:`aiida.common.exceptions.UnreachableStorage` if the file does not exist
+    :raises: :class:`aiida.common.exceptions._UnreachableStorage` if the file does not exist
     :raises: :class:`aiida.common.exceptions.CorruptStorage`
         if the version cannot be read from the storage.
     :raises: :class:`aiida.common.exceptions.IncompatibleStorageSchema`

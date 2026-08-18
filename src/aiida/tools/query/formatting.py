@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import str_timedelta
 
 
@@ -22,7 +22,7 @@ def format_relative_time(value: datetime) -> str:
     :param value: The datetime to format.
     :return: String representation of the relative time since the given datetime.
     """
-    return str_timedelta(timezone.delta(value), negative_to_zero=True, max_num_fields=1)
+    return str_timedelta(_timezone.delta(value), negative_to_zero=True, max_num_fields=1)
 
 
 def format_state(process_state: str, paused: bool | None = None, exit_status: int | None = None) -> str:

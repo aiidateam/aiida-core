@@ -299,7 +299,7 @@ class Manager:
 
         Deprecated: use `get_profile_storage` instead.
         """
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
 
         warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3, stacklevel=3)
         return self.get_profile_storage()

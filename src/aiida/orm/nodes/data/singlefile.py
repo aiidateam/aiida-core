@@ -17,7 +17,7 @@ import pathlib
 import typing as t
 
 from aiida.common import exceptions
-from aiida.common.typing import FilePath
+from aiida.common._typing import FilePath
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 from .data import Data

@@ -8,7 +8,7 @@
 ###########################################################################
 """Test migration adding the `repository_metadata` column to the `Node` model."""
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
@@ -33,8 +33,8 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
         node = node_model(
             uuid=get_new_uuid(),
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             node_type='data.',

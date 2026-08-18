@@ -14,8 +14,8 @@ import pytest
 
 from aiida import orm
 from aiida.common import AttributeDict, LinkType
+from aiida.common._warnings import AiidaDeprecationWarning
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
-from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def test_dot_dict_manager():

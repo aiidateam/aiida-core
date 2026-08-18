@@ -16,8 +16,8 @@ from pathlib import Path
 
 import psutil
 
+from aiida.common._lang import type_check
 from aiida.common.exceptions import LockedProfileError, LockingProfileError
-from aiida.common.lang import type_check
 from aiida.manage.configuration import Profile
 from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 

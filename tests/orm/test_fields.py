@@ -14,7 +14,7 @@ import pytest
 from importlib_metadata import entry_points
 
 from aiida import orm
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common._warnings import AiidaDeprecationWarning
 from aiida.orm.fields import add_field
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.plugins import load_entry_point

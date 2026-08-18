@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, ParamSpec
 
 import docstring_parser
 
-from aiida.common.lang import override
+from aiida.common._lang import override
 from aiida.manage import get_manager
 from aiida.orm import (
     Bool,

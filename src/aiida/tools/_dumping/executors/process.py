@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import yaml
 
 from aiida import orm
-from aiida.common import LinkType, timezone
+from aiida.common import LinkType, _timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools._dumping.config import DumpMode
@@ -192,7 +192,7 @@ class ProcessDumpExecutor:
             if logged_dir_mtime is None:
                 needs_update = True
             # Ensure comparison is between timezone-aware datetimes
-            elif node_mtime.astimezone(timezone.utc) > logged_dir_mtime.astimezone(timezone.utc):
+            elif node_mtime.astimezone(_timezone.utc) > logged_dir_mtime.astimezone(_timezone.utc):
                 needs_update = True
 
             if needs_update:

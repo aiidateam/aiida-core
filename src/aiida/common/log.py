@@ -18,46 +18,46 @@ import logging
 import types
 import typing as t
 
-from aiida.common.typing import FilePath
+from aiida.common._typing import FilePath
 
 __all__ = ('AIIDA_LOGGER',)
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
 # the value 25 is already reserved for SUBWARNING by the multiprocessing module.
-LOG_LEVEL_REPORT = 23
+_LOG_LEVEL_REPORT = 23
 
 # Add the custom log level to the :mod:`logging` module and add a corresponding report logging method.
-logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
+logging.addLevelName(_LOG_LEVEL_REPORT, 'REPORT')
 
 
-def report(self: logging.Logger, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
+def _report(self: logging.Logger, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
     """Log a message at the ``REPORT`` level."""
-    self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
+    self.log(_LOG_LEVEL_REPORT, msg, *args, **kwargs)
 
 
-class AiidaLoggerType(logging.Logger):
+class _AiidaLoggerType(logging.Logger):
     def report(self, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
         """Log a message at the ``REPORT`` level."""
 
 
-setattr(logging, 'REPORT', LOG_LEVEL_REPORT)
-setattr(logging.Logger, 'report', report)
-setattr(logging.LoggerAdapter, 'report', report)
+setattr(logging, 'REPORT', _LOG_LEVEL_REPORT)
+setattr(logging.Logger, 'report', _report)
+setattr(logging.LoggerAdapter, 'report', _report)
 
 # Convenience dictionary of available log level names and their log level integer
-LOG_LEVELS = {
+_LOG_LEVELS = {
     logging.getLevelName(logging.NOTSET): logging.NOTSET,
     logging.getLevelName(logging.DEBUG): logging.DEBUG,
     logging.getLevelName(logging.INFO): logging.INFO,
-    logging.getLevelName(LOG_LEVEL_REPORT): LOG_LEVEL_REPORT,
+    logging.getLevelName(_LOG_LEVEL_REPORT): _LOG_LEVEL_REPORT,
     logging.getLevelName(logging.WARNING): logging.WARNING,
     logging.getLevelName(logging.ERROR): logging.ERROR,
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
 
 
-class LogLevels(str, enum.Enum):
+class _LogLevels(str, enum.Enum):
     """Supported log levels."""
 
     NOTSET = 'NOTSET'
@@ -69,7 +69,7 @@ class LogLevels(str, enum.Enum):
     CRITICAL = 'CRITICAL'
 
 
-class AdvancedLogLevels(str, enum.Enum):
+class _AdvancedLogLevels(str, enum.Enum):
     """Supported log levels for advanced logger-specific configuration options."""
 
     NOTSET = 'NOTSET'
@@ -82,18 +82,18 @@ class AdvancedLogLevels(str, enum.Enum):
     INHERIT = 'INHERIT'
 
 
-AIIDA_LOGGER = t.cast(AiidaLoggerType, logging.getLogger('aiida'))
+AIIDA_LOGGER = t.cast(_AiidaLoggerType, logging.getLogger('aiida'))
 
-CLI_ACTIVE: bool | None = None
+_CLI_ACTIVE: bool | None = None
 """Flag that is set to ``True`` if the module is imported by ``verdi`` being called."""
 
-CLI_LOG_LEVEL: str | None = None
+_CLI_LOG_LEVEL: str | None = None
 """Set if ``verdi`` is called with ``--verbosity`` flag specified, and is set to corresponding log level."""
 
 
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
-def get_logging_config() -> dict[str, t.Any]:
+def _get_logging_config() -> dict[str, t.Any]:
     from aiida.manage.configuration import get_config_option
 
     return {
@@ -193,7 +193,7 @@ _HANDLER_TO_LOGGER: dict[str, tuple[str, ...]] = {
 }
 
 
-def validate_handler(config: t.Any, option_name: str, scope: str | None = None) -> str | None:
+def _validate_handler(config: t.Any, option_name: str, scope: str | None = None) -> str | None:
     """Validate that a handler-side filter can take effect given the configured logger levels.
 
     ``logging.terminal_handler`` and ``logging.database_handler`` filter messages at the output handler, so they can
@@ -214,20 +214,20 @@ def validate_handler(config: t.Any, option_name: str, scope: str | None = None) 
     if logger_level_options is None:
         return None
 
-    log_level = LogLevels(t.cast(str, config.get_option(option_name, scope=scope)))
-    fallback_level = LogLevels(t.cast(str, config.get_option('logging.aiida_loglevel', scope=scope)))
+    log_level = _LogLevels(t.cast(str, config.get_option(option_name, scope=scope)))
+    fallback_level = _LogLevels(t.cast(str, config.get_option('logging.aiida_loglevel', scope=scope)))
 
-    def resolve_level(name: str) -> LogLevels:
-        level = AdvancedLogLevels(t.cast(str, config.get_option(name, scope=scope)))
-        if level is AdvancedLogLevels.INHERIT:
+    def resolve_level(name: str) -> _LogLevels:
+        level = _AdvancedLogLevels(t.cast(str, config.get_option(name, scope=scope)))
+        if level is _AdvancedLogLevels.INHERIT:
             return fallback_level
-        return LogLevels(level.value)
+        return _LogLevels(level.value)
 
     # The most verbose logger is the one with the lowest numeric level.
-    most_verbose_logger = min(logger_level_options, key=lambda name: LOG_LEVELS[resolve_level(name).value])
+    most_verbose_logger = min(logger_level_options, key=lambda name: _LOG_LEVELS[resolve_level(name).value])
     most_verbose_level = resolve_level(most_verbose_logger)
 
-    if LOG_LEVELS[log_level.value] < LOG_LEVELS[most_verbose_level.value]:
+    if _LOG_LEVELS[log_level.value] < _LOG_LEVELS[most_verbose_level.value]:
         return (
             f'`{option_name}` is set to `{log_level.value}` but no logger emits messages at that level: '
             f'the most verbose logger level is `{most_verbose_logger}` (`{most_verbose_level.value}`). '
@@ -236,7 +236,7 @@ def validate_handler(config: t.Any, option_name: str, scope: str | None = None) 
     return None
 
 
-def evaluate_logging_configuration(dictionary: collections.abc.Mapping[t.Any, t.Any]) -> dict[t.Any, t.Any]:
+def _evaluate_logging_configuration(dictionary: collections.abc.Mapping[t.Any, t.Any]) -> dict[t.Any, t.Any]:
     """Recursively evaluate the logging configuration, calling lambdas when encountered.
 
     This allows the configuration options that are dependent on the active profile to be loaded lazily.
@@ -247,7 +247,7 @@ def evaluate_logging_configuration(dictionary: collections.abc.Mapping[t.Any, t.
 
     for key, value in dictionary.items():
         if isinstance(value, collections.abc.Mapping):
-            result[key] = evaluate_logging_configuration(value)
+            result[key] = _evaluate_logging_configuration(value)
         elif isinstance(value, types.LambdaType):
             result[key] = value()
         else:
@@ -275,14 +275,14 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
     # currently configured profile.
     from aiida.manage.configuration import get_config_option
 
-    config = evaluate_logging_configuration(get_logging_config())
+    config = _evaluate_logging_configuration(_get_logging_config())
 
-    fallback_level = LogLevels(t.cast(str, get_config_option('logging.aiida_loglevel')))
+    fallback_level = _LogLevels(t.cast(str, get_config_option('logging.aiida_loglevel')))
 
     # Replace ``INHERIT`` logger levels by their inherited fallback value
     for logger in config['loggers'].values():
         level = logger.get('level')
-        if isinstance(level, str) and AdvancedLogLevels(level) is AdvancedLogLevels.INHERIT:
+        if isinstance(level, str) and _AdvancedLogLevels(level) is _AdvancedLogLevels.INHERIT:
             logger['level'] = fallback_level.value
 
     if daemon is True:
@@ -315,7 +315,7 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
 
     # If the ``CLI_ACTIVE`` is set, a ``verdi`` command is being executed, so we replace the ``console`` handler with
     # the ``cli`` one for all loggers.
-    if CLI_ACTIVE is True and not daemon:
+    if _CLI_ACTIVE is True and not daemon:
         for logger in config['loggers'].values():
             handlers = logger['handlers']
             try:
@@ -327,10 +327,10 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
         # case we override the aiida_loglevel and the cli to be sure it outputed to terminal.
         # Note: One has to also ensure that when reading from the corresponding config options while CLI is active are
         #       also updated. This should be in ``src.aiida.manage.configuration.get_config_option``
-        if CLI_LOG_LEVEL is not None:
-            config['loggers']['aiida']['level'] = CLI_LOG_LEVEL
-            config['handlers']['cli']['level'] = CLI_LOG_LEVEL
-            config['handlers']['console']['level'] = CLI_LOG_LEVEL
+        if _CLI_LOG_LEVEL is not None:
+            config['loggers']['aiida']['level'] = _CLI_LOG_LEVEL
+            config['handlers']['cli']['level'] = _CLI_LOG_LEVEL
+            config['handlers']['console']['level'] = _CLI_LOG_LEVEL
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:
@@ -356,7 +356,7 @@ def _override_log_level(level: int = logging.CRITICAL) -> collections.abc.Iterat
 
 
 @contextlib.contextmanager
-def capture_logging(logger: logging.Logger = AIIDA_LOGGER) -> t.Generator[io.StringIO, None, None]:
+def _capture_logging(logger: logging.Logger = AIIDA_LOGGER) -> t.Generator[io.StringIO, None, None]:
     """Capture logging to a stream in memory.
 
     Note, this only copies any content that is being logged to a stream in memory. It does not interfere with any other

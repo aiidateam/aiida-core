@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+from aiida.common._lang import type_check
 from aiida.common.datastructures import StashMode
-from aiida.common.lang import type_check
 from aiida.orm.pydantic import OrmMetadataField
 
 from .base import RemoteStashData

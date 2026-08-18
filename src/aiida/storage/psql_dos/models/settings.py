@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.storage.psql_dos.models.base import Base
 
 
@@ -28,7 +28,7 @@ class DbSetting(Base):
 
     # I also add a description field for the variables
     description = Column(Text, default='', nullable=False)
-    time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
+    time = Column(DateTime(timezone=True), default=_timezone.now, onupdate=_timezone.now, nullable=False)
 
     __table_args__ = (
         Index(

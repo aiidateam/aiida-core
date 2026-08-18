@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from aiida.common import exceptions
-from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common.log import _LOG_LEVEL_REPORT
 from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
 from aiida.manage.configuration import Profile, settings
 from aiida.manage.configuration.config import Config
@@ -463,7 +463,7 @@ def test_delete_profile(config_with_profile, profile_factory, monkeypatch, caplo
     logger = logging.getLogger('aiida.manage.configuration.config')
     logger.addHandler(caplog.handler)
     try:
-        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+        with caplog.at_level(_LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
             config.delete_profile(profile_name, delete_storage=False)
     finally:
         logger.removeHandler(caplog.handler)
@@ -557,7 +557,7 @@ def test_delete_profile_sqlite_zip(
     logger = logging.getLogger('aiida.manage.configuration.config')
     logger.addHandler(caplog.handler)
     try:
-        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+        with caplog.at_level(_LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
             config.delete_profile(profile_name, delete_storage=delete_storage)
     finally:
         logger.removeHandler(caplog.handler)

@@ -16,7 +16,7 @@ from pgtest.pgtest import PGTest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
-from aiida.common import docs
+from aiida.common import _docs
 from aiida.engine.daemon.client import DaemonException, DaemonStalePidException, DaemonTimeoutException
 from aiida.manage import configuration
 from aiida.manage.configuration import profile_context
@@ -493,7 +493,7 @@ def test_configure_broker_none(run_cli_command, isolated_config):
     assert profile.process_control_backend is None
     assert profile.process_control_config == {}
     assert f'Broker disabled for `{profile.name}`.' in cli_result.stdout
-    assert docs.URL_NO_BROKER in cli_result.stdout
+    assert _docs.URL_NO_BROKER in cli_result.stdout
 
 
 @pytest.mark.requires_rmq

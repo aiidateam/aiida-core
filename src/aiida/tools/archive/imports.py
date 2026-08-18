@@ -15,11 +15,11 @@ from typing import Any, Literal
 from tabulate import tabulate
 
 from aiida import orm
-from aiida.common import timezone
+from aiida.common import _timezone
+from aiida.common._lang import type_check
 from aiida.common._progress_reporter import get_progress_reporter
 from aiida.common._utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
 from aiida.common.exceptions import IncompatibleStorageSchema
-from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
@@ -1132,7 +1132,7 @@ def _make_import_group(
     # Get the Group id
     if group is None:
         # Get an unique name for the import group, based on the current (local) time
-        label = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
+        label = _timezone.localtime(_timezone.now()).strftime('%Y%m%d-%H%M%S')
         if label in labels:
             for i in range(DUPLICATE_LABEL_MAX):
                 new_label = DUPLICATE_LABEL_TEMPLATE.format(label, i)

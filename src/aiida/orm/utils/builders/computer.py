@@ -66,7 +66,7 @@ class ComputerBuilder:
 
     def new(self):
         """Build and return a new computer instance (not stored)"""
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
         from aiida.manage import get_manager
         from aiida.orm import Computer
 

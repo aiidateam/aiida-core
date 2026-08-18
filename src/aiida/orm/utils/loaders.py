@@ -12,8 +12,8 @@ from abc import abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from aiida.common._lang import classproperty
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
-from aiida.common.lang import classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
 if TYPE_CHECKING:
@@ -515,7 +515,7 @@ class ProcessEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
 
         if operator == 'like':
             identifier = f'{escape_for_sql_like(identifier)}%'
@@ -554,7 +554,7 @@ class CalculationEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
 
         if operator == 'like':
             identifier = f'{escape_for_sql_like(identifier)}%'
@@ -593,7 +593,7 @@ class WorkflowEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
 
         if operator == 'like':
             identifier = f'{escape_for_sql_like(identifier)}%'
@@ -632,7 +632,7 @@ class CodeEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
         from aiida.orm import Computer
 
         try:
@@ -680,7 +680,7 @@ class ComputerEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
 
         if operator == 'like':
             identifier = f'{escape_for_sql_like(identifier)}%'
@@ -719,7 +719,7 @@ class DataEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
 
         if operator == 'like':
             identifier = f'{escape_for_sql_like(identifier)}%'
@@ -758,7 +758,7 @@ class GroupEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
 
         if operator == 'like':
             identifier = f'{escape_for_sql_like(identifier)}%'
@@ -797,7 +797,7 @@ class NodeEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common._escaping import escape_for_sql_like
 
         if operator == 'like':
             identifier = f'{escape_for_sql_like(identifier)}%'

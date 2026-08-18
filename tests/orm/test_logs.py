@@ -15,8 +15,8 @@ import pytest
 
 from aiida import orm
 from aiida.common import exceptions
-from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.common.timezone import now
+from aiida.common._timezone import now
+from aiida.common.log import _LOG_LEVEL_REPORT
 from aiida.orm import Log
 
 
@@ -29,7 +29,7 @@ class TestBackendLog:
         self.log_record = {
             'time': now(),
             'loggername': 'loggername',
-            'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
+            'levelname': logging.getLevelName(_LOG_LEVEL_REPORT),
             'dbnode_id': None,
             'message': 'This is a template record message',
             'metadata': {'content': 'test'},
@@ -246,8 +246,8 @@ class TestBackendLog:
 
         # Setup nodes
         log_1, calc = self.create_log()
-        log_2 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.pk, 'log message #2')
-        log_3 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.pk, 'log message #3')
+        log_2 = Log(now(), 'loggername', logging.getLevelName(_LOG_LEVEL_REPORT), calc.pk, 'log message #2')
+        log_3 = Log(now(), 'loggername', logging.getLevelName(_LOG_LEVEL_REPORT), calc.pk, 'log message #3')
 
         # Retrieve a node by joining on a specific log ('log_1')
         builder = QueryBuilder()
@@ -294,7 +294,7 @@ class TestBackendLog:
             Log(
                 now(),
                 'loggername',
-                logging.getLevelName(LOG_LEVEL_REPORT),
+                logging.getLevelName(_LOG_LEVEL_REPORT),
                 calc.pk,
                 'To keep your balance, you must keep moving',
                 metadata=wrong_metadata_format,
@@ -304,7 +304,7 @@ class TestBackendLog:
         correct_metadata_log = Log(
             now(),
             'loggername',
-            logging.getLevelName(LOG_LEVEL_REPORT),
+            logging.getLevelName(_LOG_LEVEL_REPORT),
             calc.pk,
             'To keep your balance, you must keep moving',
             metadata=correct_metadata_format,
@@ -317,7 +317,7 @@ class TestBackendLog:
         json_metadata_log = Log(
             now(),
             'loggername',
-            logging.getLevelName(LOG_LEVEL_REPORT),
+            logging.getLevelName(_LOG_LEVEL_REPORT),
             calc.pk,
             'To keep your balance, you must keep moving',
             metadata=json_metadata_format,
@@ -330,7 +330,7 @@ class TestBackendLog:
         no_metadata_log = Log(
             now(),
             'loggername',
-            logging.getLevelName(LOG_LEVEL_REPORT),
+            logging.getLevelName(_LOG_LEVEL_REPORT),
             calc.pk,
             'To keep your balance, you must keep moving',
             metadata=None,

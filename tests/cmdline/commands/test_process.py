@@ -23,7 +23,7 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.links import LinkType
-from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common.log import _LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.engine.utils import exponential_backoff_retry
@@ -601,9 +601,9 @@ class TestVerdiProcess:
         child.base.links.add_incoming(parent, link_type=LinkType.CALL_WORK, link_label='link')
         child.store()
 
-        grandparent.logger.log(LOG_LEVEL_REPORT, 'grandparent_message')
-        parent.logger.log(LOG_LEVEL_REPORT, 'parent_message')
-        child.logger.log(LOG_LEVEL_REPORT, 'child_message')
+        grandparent.logger.log(_LOG_LEVEL_REPORT, 'grandparent_message')
+        parent.logger.log(_LOG_LEVEL_REPORT, 'parent_message')
+        child.logger.log(_LOG_LEVEL_REPORT, 'child_message')
 
         result = run_cli_command(cmd_process.process_report, [str(grandparent.pk)])
 

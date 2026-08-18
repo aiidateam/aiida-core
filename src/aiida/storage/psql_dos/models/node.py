@@ -14,7 +14,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.models.base import Base
 
@@ -43,8 +43,8 @@ class DbNode(Base):
     process_type = Column(String(255), index=True)
     label = Column(String(255), nullable=False, default='', index=True)
     description = Column(Text(), nullable=False, default='')
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False, index=True)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False, index=True)
+    ctime = Column(DateTime(timezone=True), default=_timezone.now, nullable=False, index=True)
+    mtime = Column(DateTime(timezone=True), default=_timezone.now, onupdate=_timezone.now, nullable=False, index=True)
     attributes = Column(JSONB, default=dict)
     extras = Column(JSONB, default=dict)
     repository_metadata = Column(JSONB, nullable=False, default=dict)

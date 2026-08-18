@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.storage.psql_dos.migrations.utils.calc_state import STATE_MAPPING, StateMapping
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
@@ -44,8 +44,8 @@ def test_legacy_jobcalcstate(perform_migrations: PsqlDosMigrator):
                 label='test',
                 description='',
                 user_id=user.id,
-                ctime=timezone.now(),
-                mtime=timezone.now(),
+                ctime=_timezone.now(),
+                mtime=_timezone.now(),
             )
             session.add(node)
             session.commit()

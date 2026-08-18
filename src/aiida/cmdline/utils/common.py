@@ -54,7 +54,7 @@ def is_verbose() -> bool:
 
 def get_env_with_venv_bin() -> MutableMapping:
     """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
-    from aiida.common.warnings import warn_deprecation
+    from aiida.common._warnings import warn_deprecation
     from aiida.manage.configuration import get_config
 
     warn_deprecation(
@@ -93,7 +93,7 @@ def print_last_process_state_change(process_type: Literal['work'] | Literal['cal
         Valid process types are either 'calculation' or 'work'.
     """
     from aiida.cmdline.utils.echo import echo_report
-    from aiida.common import timezone
+    from aiida.common import _timezone
     from aiida.common._utils import str_timedelta
     from aiida.engine.utils import get_process_state_change_timestamp
 
@@ -102,7 +102,7 @@ def print_last_process_state_change(process_type: Literal['work'] | Literal['cal
     if timestamp is None:
         echo_report('Last time an entry changed state: never')
     else:
-        timedelta = timezone.delta(timestamp)
+        timedelta = _timezone.delta(timestamp)
         formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
         relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
         echo_report(f'Last time an entry changed state: {relative} ({formatted})')
@@ -342,7 +342,7 @@ def get_workchain_report(
     import itertools
 
     from aiida import orm
-    from aiida.common.log import LOG_LEVELS
+    from aiida.common.log import _LOG_LEVELS
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""
@@ -350,7 +350,7 @@ def get_workchain_report(
         filters = {'dbnode_id': node_id}
 
         entries = orm.Log.collection.find(filters)
-        entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
+        entries = [entry for entry in entries if _LOG_LEVELS[entry.levelname] >= _LOG_LEVELS[levelname]]
         return [(_, depth) for _ in entries]
 
     def get_subtree(uuid, level=0):

@@ -13,7 +13,7 @@ from collections.abc import Generator, Iterator, Mapping
 from typing import TYPE_CHECKING, NamedTuple, Optional
 
 from aiida.common import exceptions
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 
 if TYPE_CHECKING:
     from aiida.common.links import LinkType

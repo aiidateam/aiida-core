@@ -86,7 +86,7 @@ In the :py:class:`~aiida.orm.Node` subclass:
 * Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.caching.NodeCaching.get_objects_to_hash` method.
   Use the ``super()`` method, and then append to the list of objects to hash.
 
-You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.nodes.caching.NodeCaching.get_hash`, which are forwarded to :meth:`~aiida.common.hashing.make_hash`.
+You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.nodes.caching.NodeCaching.get_hash`, which are forwarded to :meth:`~aiida.common._hashing.make_hash`.
 
 Process nodes
 .............

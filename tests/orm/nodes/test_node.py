@@ -15,7 +15,7 @@ from io import BytesIO
 
 import pytest
 
-from aiida.common import LinkType, exceptions, timezone
+from aiida.common import LinkType, _timezone, exceptions
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Data, Int, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
@@ -844,8 +844,8 @@ class TestNodeDelete:
         calculation.base.links.add_incoming(data_two, LinkType.INPUT_CALC, 'input_two')
         calculation.store()
 
-        log_one = Log(timezone.now(), 'test', 'INFO', data_one.pk).store()
-        log_two = Log(timezone.now(), 'test', 'INFO', data_two.pk).store()
+        log_one = Log(_timezone.now(), 'test', 'INFO', data_one.pk).store()
+        log_two = Log(_timezone.now(), 'test', 'INFO', data_two.pk).store()
 
         assert len(Log.collection.get_logs_for(data_one)) == 1
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
@@ -864,8 +864,8 @@ class TestNodeDelete:
         data_one = Data().store()
         data_two = Data().store()
 
-        log_one = Log(timezone.now(), 'test', 'INFO', data_one.pk).store()
-        log_two = Log(timezone.now(), 'test', 'INFO', data_two.pk).store()
+        log_one = Log(_timezone.now(), 'test', 'INFO', data_one.pk).store()
+        log_two = Log(_timezone.now(), 'test', 'INFO', data_two.pk).store()
 
         assert len(Log.collection.get_logs_for(data_one)) == 1
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk

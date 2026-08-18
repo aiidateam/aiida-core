@@ -21,7 +21,7 @@ from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement, null
 
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
 from aiida.storage.psql_dos.orm.querybuilder.main import (
     BinaryExpression,

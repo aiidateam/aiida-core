@@ -38,7 +38,7 @@ class DiffCalculation(CalcJob):
     def prepare_for_submission(self, folder):
         """Create input files.
 
-        :param folder: an `aiida.common.folders.Folder` where the plugin should temporarily place all files needed by
+        :param folder: an `aiida.common._folders.Folder` where the plugin should temporarily place all files needed by
             the calculation.
         :return: `aiida.common.datastructures.CalcInfo` instance
         """

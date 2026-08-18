@@ -6,11 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.common.escaping`."""
+"""Tests for the :mod:`aiida.common._escaping`."""
 
 import pytest
 
-from aiida.common.escaping import escape_for_bash
+from aiida.common._escaping import escape_for_bash
 
 
 @pytest.mark.parametrize(
@@ -30,6 +30,6 @@ from aiida.common.escaping import escape_for_bash
     ),
 )
 def test_escape_for_bash(to_escape, expected_single_quotes, expected_double_quotes):
-    """Tests various inputs for `aiida.common.escaping.escape_for_bash`."""
+    """Tests various inputs for `aiida.common._escaping.escape_for_bash`."""
     assert escape_for_bash(to_escape, use_double_quotes=False) == expected_single_quotes
     assert escape_for_bash(to_escape, use_double_quotes=True) == expected_double_quotes

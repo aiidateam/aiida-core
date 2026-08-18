@@ -24,7 +24,7 @@ from pathlib import Path
 import psutil
 import pytest
 
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common._warnings import AiidaDeprecationWarning
 from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
 

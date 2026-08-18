@@ -25,7 +25,7 @@ from uuid import UUID
 
 from typing_extensions import Self
 
-from .lang import classproperty
+from ._lang import classproperty
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

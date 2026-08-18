@@ -11,7 +11,7 @@
 from collections import namedtuple
 from enum import Enum
 
-from .lang import isidentifier, type_check
+from ._lang import isidentifier, type_check
 
 __all__ = ('LinkType', 'validate_link_label')
 

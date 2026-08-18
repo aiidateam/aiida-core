@@ -5,9 +5,9 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common import exceptions
-from aiida.common.hashing import make_hash
-from aiida.common.lang import type_check
-from aiida.common.warnings import warn_deprecation
+from aiida.common._hashing import make_hash
+from aiida.common._lang import type_check
+from aiida.common._warnings import warn_deprecation
 
 from ..querybuilder import QueryBuilder
 

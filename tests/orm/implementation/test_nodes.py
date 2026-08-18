@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from aiida.common import exceptions, timezone
+from aiida.common import _timezone, exceptions
 from aiida.orm.implementation.nodes import BackendNode
 
 
@@ -62,7 +62,7 @@ class TestBackendNode:
         assert node.description == self.node_description
 
         # Store the node.ctime before the store as a reference
-        now = timezone.now()
+        now = _timezone.now()
         node_ctime_before_store = node.ctime
         assert now > node.ctime, f'{node.ctime} is not smaller than now {now}'
 
@@ -101,8 +101,8 @@ class TestBackendNode:
         """Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
-        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, timezone.utc)
+        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, _timezone.utc)
+        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, _timezone.utc)
 
         node = self.backend.nodes.create(
             node_type=self.node_type,

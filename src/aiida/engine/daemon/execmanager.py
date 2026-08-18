@@ -26,10 +26,10 @@ from typing import TYPE_CHECKING, Any
 from typing_extensions import assert_never
 
 from aiida.common import AIIDA_LOGGER, exceptions
-from aiida.common.datastructures import CalcInfo, FileCopyOperation
-from aiida.common.folders import Folder, SandboxFolder
+from aiida.common._folders import Folder, SandboxFolder
+from aiida.common._typing import FilePath
+from aiida.common.datastructures import CalcInfo, _FileCopyOperation
 from aiida.common.links import LinkType
-from aiida.common.typing import FilePath
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
@@ -203,20 +203,20 @@ async def upload_calculation(
     provenance_exclude_list = calc_info.provenance_exclude_list or []
 
     file_copy_operation_order = calc_info.file_copy_operation_order or [
-        FileCopyOperation.SANDBOX,
-        FileCopyOperation.LOCAL,
-        FileCopyOperation.REMOTE,
+        _FileCopyOperation.SANDBOX,
+        _FileCopyOperation.LOCAL,
+        _FileCopyOperation.REMOTE,
     ]
 
     for file_copy_operation in file_copy_operation_order:
-        if file_copy_operation is FileCopyOperation.LOCAL:
+        if file_copy_operation is _FileCopyOperation.LOCAL:
             await _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
-        elif file_copy_operation is FileCopyOperation.REMOTE:
+        elif file_copy_operation is _FileCopyOperation.REMOTE:
             if not dry_run:
                 await _copy_remote_files(
                     logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir=workdir
                 )
-        elif file_copy_operation is FileCopyOperation.SANDBOX:
+        elif file_copy_operation is _FileCopyOperation.SANDBOX:
             if not dry_run:
                 await _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
         else:
@@ -522,17 +522,17 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                                 )
                                 continue
                             else:
-                                raise exceptions.StashingError(
+                                raise exceptions._StashingError(
                                     f'File {source_filepath} does not exist. Stashing failed.'
                                 ) from exc
-                        raise exceptions.StashingError(
+                        raise exceptions._StashingError(
                             f'Failed to copy {source_filepath} to {target_filepath}: {exc}'
                         ) from exc
                     EXEC_LOGGER.debug(f'Stashed from {source_filepath} to {target_filepath}')
 
         try:
             await _do_copy()
-        except exceptions.StashingError as exception:
+        except exceptions._StashingError as exception:
             # try to clean up in case of a failure
             await transport.rmtree_async(target_base / uuid[:2])
             raise exception
@@ -568,11 +568,11 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         if fail_on_missing:
             for source_filepath in source_list_abs:
                 if has_magic(str(source_filepath)):
-                    raise exceptions.StashingError(
+                    raise exceptions._StashingError(
                         'Stashing with glob patterns is not supported when fail_on_missing is True. Stashing failed.'
                     )
                 if not await transport.path_exists_async(source_filepath):
-                    raise exceptions.StashingError(
+                    raise exceptions._StashingError(
                         f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
                     )
 

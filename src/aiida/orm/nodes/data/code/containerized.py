@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pathlib
 
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.orm.pydantic import OrmMetadataField
 
 from .installed import InstalledCode

@@ -17,7 +17,7 @@ Create Date: 2022-03-04
 import sqlalchemy as sa
 from alembic import op
 
-from aiida.common import timezone
+from aiida.common import _timezone
 
 # revision identifiers, used by Alembic.
 revision = 'main_0000a'
@@ -64,8 +64,8 @@ def upgrade():
     op.execute(db_dbcomment.delete().where(db_dbcomment.c.user_id.is_(None)))
 
     op.execute(db_dbcomment.update().where(db_dbcomment.c.content.is_(None)).values(content=''))
-    op.execute(db_dbcomment.update().where(db_dbcomment.c.ctime.is_(None)).values(ctime=timezone.now()))
-    op.execute(db_dbcomment.update().where(db_dbcomment.c.mtime.is_(None)).values(mtime=timezone.now()))
+    op.execute(db_dbcomment.update().where(db_dbcomment.c.ctime.is_(None)).values(ctime=_timezone.now()))
+    op.execute(db_dbcomment.update().where(db_dbcomment.c.mtime.is_(None)).values(mtime=_timezone.now()))
 
     db_dbcomputer = sa.sql.table(
         'db_dbcomputer',
@@ -93,7 +93,7 @@ def upgrade():
     )
 
     op.execute(db_dbgroup.update().where(db_dbgroup.c.description.is_(None)).values(description=''))
-    op.execute(db_dbgroup.update().where(db_dbgroup.c.time.is_(None)).values(time=timezone.now()))
+    op.execute(db_dbgroup.update().where(db_dbgroup.c.time.is_(None)).values(time=_timezone.now()))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.type_string.is_(None)).values(type_string='core'))
 
     db_dblog = sa.sql.table(
@@ -110,7 +110,7 @@ def upgrade():
     op.execute(db_dblog.update().where(db_dblog.c.loggername.is_(None)).values(loggername=''))
     op.execute(db_dblog.update().where(db_dblog.c.message.is_(None)).values(message=''))
     op.execute(db_dblog.update().where(db_dblog.c.metadata.is_(None)).values(metadata={}))
-    op.execute(db_dblog.update().where(db_dblog.c.time.is_(None)).values(time=timezone.now()))
+    op.execute(db_dblog.update().where(db_dblog.c.time.is_(None)).values(time=_timezone.now()))
 
     db_dbnode = sa.sql.table(
         'db_dbnode',
@@ -122,10 +122,10 @@ def upgrade():
         sa.Column('uuid', sa.CHAR(32)),
     )
 
-    op.execute(db_dbnode.update().where(db_dbnode.c.ctime.is_(None)).values(ctime=timezone.now()))
+    op.execute(db_dbnode.update().where(db_dbnode.c.ctime.is_(None)).values(ctime=_timezone.now()))
     op.execute(db_dbnode.update().where(db_dbnode.c.description.is_(None)).values(description=''))
     op.execute(db_dbnode.update().where(db_dbnode.c.label.is_(None)).values(label=''))
-    op.execute(db_dbnode.update().where(db_dbnode.c.mtime.is_(None)).values(mtime=timezone.now()))
+    op.execute(db_dbnode.update().where(db_dbnode.c.mtime.is_(None)).values(mtime=_timezone.now()))
 
     db_dbuser = sa.sql.table(
         'db_dbuser',

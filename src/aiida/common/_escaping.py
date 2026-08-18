@@ -143,7 +143,7 @@ def sql_string_match(string: str, pattern: str) -> bool:
     """Check if the string matches the provided pattern,
     specified using SQL syntax.
 
-    See documentation of :py:func:`~aiida.common.escaping.get_regex_pattern_from_sql`
+    See documentation of :py:func:`~aiida.common._escaping.get_regex_pattern_from_sql`
     for an explanation of the syntax.
 
     :param string: the string to check

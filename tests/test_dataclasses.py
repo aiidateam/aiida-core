@@ -748,7 +748,7 @@ _tag   {'a' * 5000}
         tests = [
             ('H2 O', False),  # No unknown species
             ('OsAx', True),  # Ax is an unknown specie
-            ('UX', True),  # X counts as unknown specie despite being defined in aiida.common.constants.elements
+            ('UX', True),  # X counts as unknown specie despite being defined in aiida.common._constants.elements
             ('', None),  # If no chemical formula is defined, None should be returned
         ]
 
@@ -1281,7 +1281,7 @@ class TestStructureData:
         if name is not specified and properties are different).
         This test was failing in, e.g., commit f6a8f4b.
         """
-        from aiida.common.constants import elements
+        from aiida.common._constants import elements
 
         s = StructureData(cell=((6.0, 0.0, 0.0), (0.0, 6.0, 0.0), (0.0, 0.0, 6.0)))
 
@@ -1305,7 +1305,7 @@ class TestStructureData:
         This test was failing in, e.g., commit f6a8f4b. This also includes
         the unknown entry.
         """
-        from aiida.common.constants import elements
+        from aiida.common._constants import elements
 
         s = StructureData(cell=((6.0, 0.0, 0.0), (0.0, 6.0, 0.0), (0.0, 0.0, 6.0)))
 

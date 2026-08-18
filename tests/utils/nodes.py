@@ -11,7 +11,7 @@
 import uuid
 
 from aiida import orm
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.manage import get_manager
 
 
@@ -27,7 +27,7 @@ def create_int_nodes(num_nodes, backend=None):
 
     assert backend.default_user is not None
 
-    current_time = timezone.now()
+    current_time = _timezone.now()
 
     nodes_data = []
     for i in range(num_nodes):

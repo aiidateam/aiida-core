@@ -34,7 +34,7 @@ class EntryPointManager:
         :raises ValueError: If `entry_point_string` is not defined, nor a `group` and `name`.
         :raises ValueError: If `entry_point_string` is not a complete entry point string with group and name.
         """
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
         from aiida.plugins import entry_point
 
         if entry_point_string is not None:

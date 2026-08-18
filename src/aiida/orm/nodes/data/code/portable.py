@@ -25,9 +25,9 @@ import warnings
 from typing import cast
 
 from aiida.common import exceptions
-from aiida.common.folders import Folder
-from aiida.common.lang import type_check
-from aiida.common.typing import FilePath
+from aiida.common._folders import Folder
+from aiida.common._lang import type_check
+from aiida.common._typing import FilePath
 from aiida.orm import Computer
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -160,7 +160,7 @@ class PortableCode(Code):
         """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
 
         This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
-        calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
+        calculation job is launched, passing the :class:`~aiida.common._folders.Folder` that was used by the plugin used
         for the calculation to create the input files for the working directory. This method can be overridden by
         implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
 

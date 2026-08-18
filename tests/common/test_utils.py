@@ -10,7 +10,7 @@
 
 import unittest
 
-from aiida.common import _utils, escaping
+from aiida.common import _escaping, _utils
 
 
 class UniqueTest(unittest.TestCase):
@@ -116,11 +116,11 @@ class SqlStringMatchTest(unittest.TestCase):
         ]:
             for sample in match_true:
                 self.assertTrue(
-                    escaping.sql_string_match(string=sample, pattern=pattern),
+                    _escaping.sql_string_match(string=sample, pattern=pattern),
                     f"String '{sample}' should have matched pattern '{pattern}'",
                 )
             for sample in match_false:
                 self.assertFalse(
-                    escaping.sql_string_match(string=sample, pattern=pattern),
+                    _escaping.sql_string_match(string=sample, pattern=pattern),
                     f"String '{sample}' should not have matched pattern '{pattern}'",
                 )

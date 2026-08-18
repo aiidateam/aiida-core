@@ -13,7 +13,7 @@ from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 
 from .base import Base
@@ -55,7 +55,7 @@ class DbGroup(Base):
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), nullable=False, index=True)
     type_string = Column(String(255), default='', nullable=False, index=True)
-    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    time = Column(DateTime(timezone=True), default=_timezone.now, nullable=False)
     description = Column(Text, default='', nullable=False)
     extras = Column(JSONB, default=dict, nullable=False)
     user_id = Column(

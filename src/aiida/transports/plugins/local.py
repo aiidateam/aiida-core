@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
@@ -243,7 +243,7 @@ class LocalTransport(BlockingTransport):
         """
         localpath = str(localpath)
         remotepath = str(remotepath)
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
 
         if 'ignore_noexisting' in kwargs:
             # Backwards compatibility check for old keyword that was misspelled
@@ -750,7 +750,7 @@ class LocalTransport(BlockingTransport):
         main process, so that it is shielded from signals sent to the parent.
 
         :param  command: the command to execute. The command is assumed to be
-            already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
+            already escaped using :py:func:`aiida.common._escaping.escape_for_bash`.
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
                 if None, the command will be executed in the current working directory,
@@ -761,7 +761,7 @@ class LocalTransport(BlockingTransport):
             proc is the process object as returned by the
             subprocess.Popen() class.
         """
-        from aiida.common.escaping import escape_for_bash
+        from aiida.common._escaping import escape_for_bash
 
         if workdir:
             workdir = str(workdir)

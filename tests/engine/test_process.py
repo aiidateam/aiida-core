@@ -15,7 +15,7 @@ import pytest
 from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
-from aiida.common.lang import override
+from aiida.common._lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
 from aiida.manage.caching import disable_caching, enable_caching

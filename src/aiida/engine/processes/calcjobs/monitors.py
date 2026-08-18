@@ -9,7 +9,7 @@ import inspect
 import typing as t
 from datetime import datetime, timedelta
 
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import CalcJobNode, Dict
 from aiida.plugins import BaseFactory

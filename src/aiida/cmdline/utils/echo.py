@@ -20,9 +20,9 @@ from typing import Any, NoReturn
 
 import click
 
-from aiida.common.log import AiidaLoggerType
+from aiida.common.log import _AiidaLoggerType
 
-CMDLINE_LOGGER: AiidaLoggerType = logging.getLogger('verdi')  # type: ignore[assignment]
+CMDLINE_LOGGER: _AiidaLoggerType = logging.getLogger('verdi')  # type: ignore[assignment]
 
 __all__ = (
     'echo_critical',
@@ -244,10 +244,10 @@ def _format_dictionary_json_date(dictionary: dict | list, sort_keys: bool = True
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""
         import datetime
 
-        from aiida.common import timezone
+        from aiida.common import _timezone
 
         if isinstance(data, datetime.datetime):
-            return timezone.localtime(data).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+            return _timezone.localtime(data).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
         raise TypeError(f'{data!r} is not JSON serializable')
 

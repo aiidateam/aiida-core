@@ -14,7 +14,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.models.base import Base
 
@@ -26,7 +26,7 @@ class DbLog(Base):
 
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
-    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    time = Column(DateTime(timezone=True), default=_timezone.now, nullable=False)
     loggername = Column(String(255), nullable=False, index=True, doc='What process recorded the message')
     levelname = Column(String(50), nullable=False, index=True, doc='How critical the message is')
     dbnode_id = Column(

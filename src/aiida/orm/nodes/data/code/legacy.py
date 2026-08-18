@@ -12,8 +12,8 @@ import os
 import pathlib
 
 from aiida.common import exceptions
+from aiida.common._warnings import warn_deprecation
 from aiida.common.log import _override_log_level
-from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -108,7 +108,7 @@ class Code(AbstractCode):
         :return: ``True`` if the code can run on ``computer``, ``False`` otherwise.
         """
         from aiida import orm
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
 
         if self.is_local():
             return True
@@ -492,7 +492,7 @@ class Code(AbstractCode):
             remote_exec_path is the absolute path of the main executable on remote computer.
         """
         from aiida import orm
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
 
         warn_deprecation('`Code.set_remote_computer_exec` method is deprecated, use `InstalledCode`.', version=3)
 
@@ -577,7 +577,7 @@ class Code(AbstractCode):
         TODO: add filters to mask the remote machines on which a local code can run.
         """
         from aiida import orm
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
 
         warn_deprecation('`Code.can_run_on` method is deprecated, use `can_run_on_computer` instead.', version=3)
 

@@ -16,7 +16,7 @@ import typing as t
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
-from aiida.common.log import LOG_LEVELS, configure_logging
+from aiida.common.log import _LOG_LEVELS, configure_logging
 from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
 
 from ...utils import defaults, echo
@@ -214,10 +214,10 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
     """
     from aiida.common import log
 
-    if log.CLI_ACTIVE:
+    if log._CLI_ACTIVE:
         return value
 
-    log.CLI_ACTIVE = True
+    log._CLI_ACTIVE = True
 
     # If the value is ``None``, it means the option was not specified, but we still configure logging for the CLI
     # However, we skip this when we are in a tab-completion context.
@@ -231,10 +231,10 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
     except AttributeError:
         raise click.BadParameter(f'`{value}` is not a string.')
 
-    if log_level not in LOG_LEVELS:
+    if log_level not in _LOG_LEVELS:
         raise click.BadParameter(f'`{log_level}` is not a valid log level.')
 
-    log.CLI_LOG_LEVEL = log_level
+    log._CLI_LOG_LEVEL = log_level
 
     # Make sure the logging is configured, even if it may be undone in the future by another call to this method.
     configure_logging()
@@ -245,7 +245,7 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
 VERBOSITY = OverridableOption(
     '-v',
     '--verbosity',
-    type=click.Choice(tuple(map(str.lower, LOG_LEVELS.keys())), case_sensitive=False),
+    type=click.Choice(tuple(map(str.lower, _LOG_LEVELS.keys())), case_sensitive=False),
     callback=set_log_level,
     expose_value=False,  # Ensures that the option is not actually passed to the command, because it doesn't need it
     help='Set the verbosity of the output.',

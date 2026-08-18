@@ -13,8 +13,8 @@ import pathlib
 
 import pytest
 
+from aiida.common._warnings import AiidaDeprecationWarning
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.nodes.data.code.portable import PortableCode
 
 

@@ -31,7 +31,7 @@ import click
 import pytest
 
 from aiida import get_profile, orm
-from aiida.common.folders import Folder
+from aiida.common._folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
@@ -276,7 +276,7 @@ def non_interactive_editor(request):
 @pytest.fixture(scope='function')
 def fixture_sandbox():
     """Return a `SandboxFolder`."""
-    from aiida.common.folders import SandboxFolder
+    from aiida.common._folders import SandboxFolder
 
     with SandboxFolder() as folder:
         yield folder
@@ -672,9 +672,9 @@ def override_logging(isolated_config):
 def suppress_internal_deprecations():
     """Suppress all internal deprecations.
 
-    Warnings emmitted of type :class:`aiida.common.warnings.AiidaDeprecationWarning` for the duration of the test.
+    Warnings emmitted of type :class:`aiida.common._warnings.AiidaDeprecationWarning` for the duration of the test.
     """
-    from aiida.common.warnings import AiidaDeprecationWarning
+    from aiida.common._warnings import AiidaDeprecationWarning
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
@@ -850,7 +850,7 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
     if suppress_warnings:
         env['PYTHONWARNINGS'] = 'ignore::Warning'
         # Need to explicitly remove the ``AIIDA_WARN_v3`` variable as this will trigger ``AiidaDeprecationWarning`` to
-        # be emitted by the ``aiida.common.warnings.warn_deprecation`` method and for an unknown reason these are not
+        # be emitted by the ``aiida.common._warnings.warn_deprecation`` method and for an unknown reason these are not
         # affected by the ``ignore::Warning`` setting.
         env.pop('AIIDA_WARN_v3', None)
 
@@ -923,8 +923,8 @@ def reset_log_level():
     try:
         yield
     finally:
-        log.CLI_ACTIVE = None
-        log.CLI_LOG_LEVEL = None
+        log._CLI_ACTIVE = None
+        log._CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)
 
 

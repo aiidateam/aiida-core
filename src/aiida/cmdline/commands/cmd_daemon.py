@@ -26,7 +26,7 @@ def _warn_daemon_functionless_when_no_broker(profile_name: str, has_broker: bool
     if has_broker:
         return True
 
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._docs import URL_NO_BROKER
 
     echo.echo_warning(
         f'Profile `{profile_name}` does not define a broker, so the daemon has no functionality because it '

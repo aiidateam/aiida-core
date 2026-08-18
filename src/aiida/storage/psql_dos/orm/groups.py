@@ -10,8 +10,8 @@
 
 import logging
 
+from aiida.common._lang import type_check
 from aiida.common.exceptions import UniquenessError
-from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
 

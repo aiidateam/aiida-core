@@ -718,7 +718,7 @@ def computer_configure():
 @arguments.COMPUTER()
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
-    from aiida.common.escaping import escape_for_bash
+    from aiida.common._escaping import escape_for_bash
     from aiida.transports import cli as transport_cli
 
     transport_cls = computer.get_transport_class()

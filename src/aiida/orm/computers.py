@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 from aiida.common import exceptions
-from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
+from aiida.common.log import AIIDA_LOGGER, _AiidaLoggerType
 from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
@@ -154,7 +154,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self._backend_entity.uuid
 
     @property
-    def logger(self) -> AiidaLoggerType:
+    def logger(self) -> _AiidaLoggerType:
         return self._logger
 
     @classmethod
@@ -466,7 +466,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         :param use_double_quotes: True if to escape with double quotes, False otherwise.
         """
-        from aiida.common.lang import type_check
+        from aiida.common._lang import type_check
 
         type_check(val, bool)
         self.set_property('use_double_quotes', val)

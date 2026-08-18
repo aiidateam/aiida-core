@@ -48,7 +48,7 @@ class CalcJobState(Enum):
     PARSING = 'parsing'
 
 
-class FileCopyOperation(IntEnum):
+class _FileCopyOperation(IntEnum):
     """Enum to represent the copy operations that are used when creating the working directory of a ``CalcJob``.
 
     There are three different sources of files that are copied to the working directory on the remote computer where a
@@ -124,7 +124,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
     * skip_submit: a flag that, when set to True, orders the engine to skip the submit/update steps (so no code will
         run, it will only upload the files and then retrieve/parse).
     * file_copy_operation_order: Order in which input files are copied to the working directory. Should be a list of
-      :class:`aiida.common.datastructures.FileCopyOperation` instances.
+      :class:`aiida.common.datastructures._FileCopyOperation` instances.
     """
 
     _default_fields = (
@@ -176,7 +176,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         codes_info: None | list[CodeInfo]
         codes_run_mode: None | CodeRunMode
         skip_submit: None | bool
-        file_copy_operation_order: None | list[FileCopyOperation]
+        file_copy_operation_order: None | list[_FileCopyOperation]
 
 
 class CodeInfo(DefaultFieldsAttributeDict):

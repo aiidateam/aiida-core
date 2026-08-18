@@ -24,7 +24,7 @@ import xml.dom.minidom
 import xml.parsers.expat
 
 import aiida.schedulers
-from aiida.common.escaping import escape_for_bash
+from aiida.common._escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, ParEnvJobResource
 

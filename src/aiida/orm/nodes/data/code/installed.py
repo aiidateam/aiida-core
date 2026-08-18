@@ -20,7 +20,7 @@ import pathlib
 from typing import cast
 
 from aiida.common import exceptions
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.common.log import _override_log_level
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity

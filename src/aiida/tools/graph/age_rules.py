@@ -15,7 +15,7 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import TYPE_CHECKING, Literal, cast
 
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.tools.graph.age_entities import Basket
 
 if TYPE_CHECKING:

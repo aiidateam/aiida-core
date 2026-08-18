@@ -365,7 +365,7 @@ class CifData(SinglefileData):
         """
         import os
 
-        from aiida.common.files import md5_file
+        from aiida.common._files import md5_file
 
         if not os.path.abspath(filename):
             raise ValueError('filename must be an absolute path')
@@ -714,14 +714,14 @@ class CifData(SinglefileData):
     def has_unknown_species(self):
         """Returns whether the cif contains atomic species that are not recognized by AiiDA.
 
-        The known species are taken from the elements dictionary in `aiida.common.constants`, with the exception of
+        The known species are taken from the elements dictionary in `aiida.common._constants`, with the exception of
         the "unknown" placeholder element with symbol 'X', as this could not be used to construct a real structure.
         If any of the formula of the cif data contain species that are not in that elements dictionary, the function
         will return True and False in all other cases. If there is no formulae to be found, it will return None
 
         :returns: True when there are unknown species in any of the formulae, False if not, None if no formula found
         """
-        from aiida.common.constants import elements
+        from aiida.common._constants import elements
 
         # Get all the elements known by AiiDA, excluding the "unknown" element with symbol 'X'
         known_species = [element['symbol'] for element in elements.values() if element['symbol'] != 'X']
@@ -738,7 +738,7 @@ class CifData(SinglefileData):
 
     def generate_md5(self):
         """Computes and returns MD5 hash of the CIF file."""
-        from aiida.common.files import md5_from_filelike
+        from aiida.common._files import md5_from_filelike
 
         # Open in binary mode which is required for generating the md5 checksum
         with self.open(mode='rb') as handle:

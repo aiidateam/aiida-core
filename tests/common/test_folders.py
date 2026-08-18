@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.common.folders` module."""
+"""Tests for the :mod:`aiida.common._folders` module."""
 
 import io
 import pathlib
@@ -15,7 +15,7 @@ import tempfile
 
 import pytest
 
-from aiida.common.folders import Folder, SandboxFolder
+from aiida.common._folders import Folder, SandboxFolder
 
 
 def fs_encoding_is_utf8():
@@ -58,7 +58,7 @@ def test_get_abs_path_without_limit():
 
 
 def test_create_file_from_filelike(tmpdir):
-    """Test the :meth:`aiida.common.folders.Folder.create_file_from_filelike` method."""
+    """Test the :meth:`aiida.common._folders.Folder.create_file_from_filelike` method."""
     unicode_string = 'unicode_string'
     byte_string = b'byte_string'
 
@@ -75,7 +75,7 @@ def test_create_file_from_filelike(tmpdir):
 
 
 def test_open(tmpdir):
-    """Test the :meth:`aiida.common.folders.Folder.open` method."""
+    """Test the :meth:`aiida.common._folders.Folder.open` method."""
     filename = 'random.dat'
     folder = Folder(tmpdir)
     folder.create_file_from_filelike(io.StringIO('test'), filename, mode='w', encoding='utf-8')
@@ -85,7 +85,7 @@ def test_open(tmpdir):
 
 
 def test_sandbox():
-    """Test the :class:`aiida.common.folders.SandboxFolder` class."""
+    """Test the :class:`aiida.common._folders.SandboxFolder` class."""
     sandbox = SandboxFolder()
 
     # By default, the created sandbox should be relative to the default temporary directory of the OS.
@@ -93,13 +93,13 @@ def test_sandbox():
 
 
 def test_sandbox_filepath(tmp_path):
-    """Test the :class:`aiida.common.folders.SandboxFolder` class with the ``filepath`` argument."""
+    """Test the :class:`aiida.common._folders.SandboxFolder` class with the ``filepath`` argument."""
     sandbox = SandboxFolder(filepath=tmp_path)
     assert pathlib.Path(sandbox.abspath).relative_to(tmp_path)
 
 
 def test_sandbox_filepath_not_existing(tmp_path):
-    """Test the :class:`aiida.common.folders.SandboxFolder` class with the ``filepath`` argument.
+    """Test the :class:`aiida.common._folders.SandboxFolder` class with the ``filepath`` argument.
 
     Ensure that a non-existing ``filepath`` is created automatically, including parent directories.
     """
@@ -110,7 +110,7 @@ def test_sandbox_filepath_not_existing(tmp_path):
 
 
 def test_sandbox_filepath_multiple(tmp_path):
-    """Test the :class:`aiida.common.folders.SandboxFolder` class with the ``filepath`` argument.
+    """Test the :class:`aiida.common._folders.SandboxFolder` class with the ``filepath`` argument.
 
     Ensure that multiple instances using the same ``filepath`` get individual subfolders.
     """

@@ -13,7 +13,7 @@ from __future__ import annotations
 import typing as t
 from collections.abc import Iterable
 
-from aiida.common.lang import classproperty
+from aiida.common._lang import classproperty
 
 from .mapping import CalculationProjectionMapper, ProjectionMapper
 
@@ -152,7 +152,7 @@ class CalculationQueryBuilder:
         import datetime
 
         from aiida import orm
-        from aiida.common import timezone
+        from aiida.common import _timezone
 
         # Define the list of projections for the QueryBuilder, which are all valid minus the compound projections
         projected_attributes = [
@@ -166,7 +166,7 @@ class CalculationQueryBuilder:
             filters = {}
 
         if past_days is not None:
-            filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
+            filters['ctime'] = {'>': _timezone.now() - datetime.timedelta(days=past_days)}
 
         builder = orm.QueryBuilder()
         builder.append(cls=orm.ProcessNode, filters=filters, project=unique_projections, tag='process')

@@ -198,48 +198,48 @@ Store & deletion
 
 Folders
 +++++++
-AiiDA uses :py:class:`~aiida.common.folders.Folder` and its subclasses to add an abstraction layer between the functions and methods working directly on the file-system and AiiDA.
+AiiDA uses :py:class:`~aiida.common._folders.Folder` and its subclasses to add an abstraction layer between the functions and methods working directly on the file-system and AiiDA.
 This is particularly useful when we want to easily change between different folder options (temporary, permanent etc) and storage options (plain local directories, compressed files, remote files & directories etc).
 
-:py:class:`~aiida.common.folders.Folder`
+:py:class:`~aiida.common._folders.Folder`
 ****************************************
 This is the main class of the available ``Folder`` classes.
 Apart from the abstraction provided to the OS operations needed by AiiDA, one of its main features is that it can restrict all the available operations within a given folder limit.
 The available methods are:
 
-- :py:meth:`~aiida.common.folders.Folder.mode_dir` and :py:meth:`~aiida.common.folders.Folder.mode_file` return the mode with which folders and files should be writable.
+- :py:meth:`~aiida.common._folders.Folder.mode_dir` and :py:meth:`~aiida.common._folders.Folder.mode_file` return the mode with which folders and files should be writable.
 
-- :py:meth:`~aiida.common.folders.Folder.get_subfolder` returns the subfolder matching the given name
+- :py:meth:`~aiida.common._folders.Folder.get_subfolder` returns the subfolder matching the given name
 
-- :py:meth:`~aiida.common.folders.Folder.get_content_list` returns the contents matching a pattern.
+- :py:meth:`~aiida.common._folders.Folder.get_content_list` returns the contents matching a pattern.
 
-- :py:meth:`~aiida.common.folders.Folder.insert_path` adds a file/folder to a specific location and :py:meth:`~aiida.common.folders.Folder.remove_path` removes a file/folder
+- :py:meth:`~aiida.common._folders.Folder.insert_path` adds a file/folder to a specific location and :py:meth:`~aiida.common._folders.Folder.remove_path` removes a file/folder
 
-- :py:meth:`~aiida.common.folders.Folder.get_abs_path` returns the absolute path of a file/folder under a given folder and :py:meth:`~aiida.common.folders.Folder.abspath` returns the absolute path of the folder.
+- :py:meth:`~aiida.common._folders.Folder.get_abs_path` returns the absolute path of a file/folder under a given folder and :py:meth:`~aiida.common._folders.Folder.abspath` returns the absolute path of the folder.
 
-- :py:meth:`~aiida.common.folders.Folder.create_symlink` creates a symlink pointing the given location inside the ``folder``.
+- :py:meth:`~aiida.common._folders.Folder.create_symlink` creates a symlink pointing the given location inside the ``folder``.
 
-- :py:meth:`~aiida.common.folders.Folder.create_file_from_filelike` creates a file from the given contents.
+- :py:meth:`~aiida.common._folders.Folder.create_file_from_filelike` creates a file from the given contents.
 
-- :py:meth:`~aiida.common.folders.Folder.open` opens a file in the ``folder``.
+- :py:meth:`~aiida.common._folders.Folder.open` opens a file in the ``folder``.
 
-- :py:meth:`~aiida.common.folders.Folder.folder_limit` returns the limit under which the creation of files/folders is restrained.
+- :py:meth:`~aiida.common._folders.Folder.folder_limit` returns the limit under which the creation of files/folders is restrained.
 
-- :py:meth:`~aiida.common.folders.Folder.exists` returns true or false depending whether a folder exists or not.
+- :py:meth:`~aiida.common._folders.Folder.exists` returns true or false depending whether a folder exists or not.
 
-- :py:meth:`~aiida.common.folders.Folder.isfile` and py:meth:`~aiida.common.folders.Folder.isdir` return true or false depending on the existence of the given file/folder.
+- :py:meth:`~aiida.common._folders.Folder.isfile` and py:meth:`~aiida.common._folders.Folder.isdir` return true or false depending on the existence of the given file/folder.
 
-- :py:meth:`~aiida.common.folders.Folder.create` creates the ``folder``, :py:meth:`~aiida.common.folders.Folder.erase` deletes the ``folder`` and :py:meth:`~aiida.common.folders.Folder.replace_with_folder` copies/moves a given folder.
+- :py:meth:`~aiida.common._folders.Folder.create` creates the ``folder``, :py:meth:`~aiida.common._folders.Folder.erase` deletes the ``folder`` and :py:meth:`~aiida.common._folders.Folder.replace_with_folder` copies/moves a given folder.
 
 
-:py:class:`~aiida.common.folders.SandboxFolder`
+:py:class:`~aiida.common._folders.SandboxFolder`
 ***********************************************
-:py:class:`~aiida.common.folders.SandboxFolder` objects correspond to temporary ("sandbox") folders.
+:py:class:`~aiida.common._folders.SandboxFolder` objects correspond to temporary ("sandbox") folders.
 The main methods are:
 
-- :py:meth:`~aiida.common.folders.SandboxFolder.__init__` creates a new temporary folder
+- :py:meth:`~aiida.common._folders.SandboxFolder.__init__` creates a new temporary folder
 
-- :py:meth:`~aiida.common.folders.SandboxFolder.__exit__` destroys the folder on exit.
+- :py:meth:`~aiida.common._folders.SandboxFolder.__exit__` destroys the folder on exit.
 
 
 Data
@@ -361,7 +361,7 @@ In case a method is renamed or removed, this is the procedure to follow:
      import warnings
 
      # If we call this DeprecationWarning, pycharm will properly strike out the function
-     from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+     from aiida.common._warnings import AiidaDeprecationWarning as DeprecationWarning
      warnings.warn("<Deprecation warning here - MAKE IT SPECIFIC TO THIS DEPRECATION, as it will be shown only once per different message>", DeprecationWarning)
 
      # <REST OF THE FUNCTION HERE>

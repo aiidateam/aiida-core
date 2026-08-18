@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, cast
 from plumpy.process_states import ProcessState
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty
+from aiida.common._lang import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.orm.utils.mixins import Sealable

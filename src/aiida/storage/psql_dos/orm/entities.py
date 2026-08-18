@@ -10,7 +10,7 @@
 
 from typing import Generic, TypeVar
 
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.storage.psql_dos.models.base import Base
 
 from . import utils

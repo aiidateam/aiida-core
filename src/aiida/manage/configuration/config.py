@@ -33,7 +33,7 @@ from pydantic import (
 )
 
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
-from aiida.common.log import AIIDA_LOGGER, AdvancedLogLevels, LogLevels
+from aiida.common.log import AIIDA_LOGGER, _AdvancedLogLevels, _LogLevels
 
 from .options import Option, get_option, get_option_names, parse_option, resolve_deprecated_option_name
 from .profile import Profile
@@ -142,8 +142,8 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         ':',
         description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.',
     )
-    logging__terminal_handler: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+    logging__terminal_handler: _LogLevels = Field(
+        cast(_LogLevels, 'REPORT'),
         description=(
             'Minimum log level needed for outputting a log into the terminal. '
             'This only filters log messages and does not change the actual emitted log messages. '
@@ -151,31 +151,31 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
             '(e.g. `logging.aiida_loglevel`).'
         ),
     )
-    logging__aiida_loglevel: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+    logging__aiida_loglevel: _LogLevels = Field(
+        cast(_LogLevels, 'REPORT'),
         description=(
             'Minimum level for the AiiDA logging stack. Can be changed for individual aiida packages in the advanced'
             ' options.'
         ),
         json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
-    logging__aiida_core_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+    logging__aiida_core_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the aiida-core logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__verdi_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+    logging__verdi_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `verdi` command logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__disk_objectstore_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+    logging__disk_objectstore_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `disk_objectstore` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__database_handler: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+    logging__database_handler: _LogLevels = Field(
+        cast(_LogLevels, 'REPORT'),
         description=(
             'Minimum log level needed for log messages bound to a stored node to be written to the `DbLog` '
             'table (what `verdi process report` displays). This only filters log messages and does not change '
@@ -184,8 +184,8 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         ),
         json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
-    logging__db_loglevel: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+    logging__db_loglevel: _LogLevels = Field(
+        cast(_LogLevels, 'REPORT'),
         description='Deprecated: use ``logging.database_handler`` instead.',
         json_schema_extra={
             'deprecated_by': 'logging.database_handler',
@@ -193,38 +193,38 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
             'requires_daemon_restart': True,
         },
     )
-    logging__plumpy_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+    logging__plumpy_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `plumpy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__kiwipy_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+    logging__kiwipy_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `kiwipy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__paramiko_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+    logging__paramiko_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `paramiko` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__alembic_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+    logging__alembic_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `alembic` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__sqlalchemy_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+    logging__sqlalchemy_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `sqlalchemy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__circus_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INFO'),
+    logging__circus_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'INFO'),
         description='Minimum level for the `circus` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__aiopika_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+    logging__aiopika_loglevel: _AdvancedLogLevels = Field(
+        cast(_AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `aio_pika` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
@@ -409,13 +409,13 @@ class Config:
         """
         import shutil
 
-        from aiida.common import timezone
+        from aiida.common import _timezone
 
         filepath_backup = None
 
         # Keep generating a new backup filename based on the current time until it does not exist
         while not filepath_backup or os.path.isfile(filepath_backup):
-            filepath_backup = f'{filepath}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
+            filepath_backup = f'{filepath}.{_timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
         shutil.copy(filepath, filepath_backup)
 
@@ -950,7 +950,7 @@ class Config:
         """
         import tempfile
 
-        from aiida.common.files import md5_file, md5_from_filelike
+        from aiida.common._files import md5_file, md5_from_filelike
 
         from .settings import DEFAULT_CONFIG_INDENT_SIZE
 

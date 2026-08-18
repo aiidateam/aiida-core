@@ -212,8 +212,8 @@ def group_delete(
     if not groups and filters_provided:
         import datetime
 
-        from aiida.common import timezone
-        from aiida.common.escaping import escape_for_sql_like
+        from aiida.common import _timezone
+        from aiida.common._escaping import escape_for_sql_like
 
         builder = orm.QueryBuilder()
         filters: dict[str, Any] = {}
@@ -232,7 +232,7 @@ def group_delete(
 
         # Creation time
         if past_days:
-            filters['time'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
+            filters['time'] = {'>': _timezone.now() - datetime.timedelta(days=past_days)}
 
         # Query for specific group labels
         filters['or'] = []
@@ -363,7 +363,7 @@ def group_show(group, raw, limit, uuid):
     """Show information for a given group."""
     from tabulate import tabulate
 
-    from aiida.common import timezone
+    from aiida.common import _timezone
     from aiida.common._utils import str_timedelta
 
     if limit:
@@ -379,7 +379,7 @@ def group_show(group, raw, limit, uuid):
     else:
         type_string = group.type_string
         desc = group.description
-        now = timezone.now()
+        now = _timezone.now()
 
         table = []
         table.append(['Group label', group.label])
@@ -460,8 +460,8 @@ def group_list(
     from tabulate import tabulate
 
     from aiida import orm
-    from aiida.common import timezone
-    from aiida.common.escaping import escape_for_sql_like
+    from aiida.common import _timezone
+    from aiida.common._escaping import escape_for_sql_like
 
     builder = orm.QueryBuilder()
     filters: dict[str, Any] = {}
@@ -474,7 +474,7 @@ def group_list(
 
     # Creation time
     if past_days:
-        filters['time'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
+        filters['time'] = {'>': _timezone.now() - datetime.timedelta(days=past_days)}
 
     # Query for specific group labels
     filters['or'] = []

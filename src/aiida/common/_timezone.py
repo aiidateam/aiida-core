@@ -60,7 +60,7 @@ def delta(from_time: datetime, to_time: datetime | None = None) -> timedelta:
     """Return the datetime object representing the different between two datetime objects.
 
     :param from_time: The starting datetime object.
-    :param to_time: The end datetime object. If not specified :func:`aiida.common.timezone.now` is used.
+    :param to_time: The end datetime object. If not specified :func:`aiida.common._timezone.now` is used.
     :return: The delta datetime object.
     """
     return make_aware(to_time or now()) - make_aware(from_time)

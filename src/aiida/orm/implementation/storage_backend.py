@@ -73,7 +73,7 @@ class StorageBackend(abc.ABC):
     def version_profile(cls, profile: Profile) -> str | None:
         """Return the schema version of the given profile's storage, or None for empty/uninitialised storage.
 
-        :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
+        :raises: `~aiida.common.exceptions._UnreachableStorage` if the storage cannot be accessed
         """
 
     @classmethod
@@ -98,7 +98,7 @@ class StorageBackend(abc.ABC):
         If the schema version is already the latest version, this method does nothing. If the storage is uninitialised,
         this method will raise an exception.
 
-        :raises: :class`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed.
+        :raises: :class`~aiida.common.exceptions._UnreachableStorage` if the storage cannot be accessed.
         :raises: :class:`~aiida.common.exceptions.StorageMigrationError` if the storage is not initialised.
         """
 
@@ -106,7 +106,7 @@ class StorageBackend(abc.ABC):
     def __init__(self, profile: Profile) -> None:
         """Initialize the backend, for this profile.
 
-        :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
+        :raises: `~aiida.common.exceptions._UnreachableStorage` if the storage cannot be accessed
         :raises: `~aiida.common.exceptions.IncompatibleStorageSchema`
             if the profile's storage schema is not at the latest version (and thus should be migrated)
         :raises: :raises: :class:`aiida.common.exceptions.CorruptStorage` if the storage is internally inconsistent

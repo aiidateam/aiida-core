@@ -18,7 +18,7 @@ from pathlib import Path, PurePath
 
 import click
 
-from aiida.common.escaping import escape_for_bash
+from aiida.common._escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
 from aiida.transports.transport import (
     AsyncTransport,
@@ -1302,7 +1302,7 @@ class AsyncSshTransport(AsyncTransport):
         .. note:: the supported keys in kwargs are callback, dereference,
            overwrite and ignore_nonexisting.
         """
-        from aiida.common.folders import SandboxFolder
+        from aiida.common._folders import SandboxFolder
 
         kwargs_get = {
             'callback': None,

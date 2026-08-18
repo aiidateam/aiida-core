@@ -652,8 +652,8 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |Code| replace:: :py:class:`~aiida.orm.nodes.data.code.abstract.AbstractCode`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`
 .. |parse| replace:: :py:class:`~aiida.parsers.parser.Parser.parse`
-.. |folder| replace:: :py:class:`~aiida.common.folders.Folder`
-.. |folder.open| replace:: :py:class:`~aiida.common.folders.Folder.open`
+.. |folder| replace:: :py:class:`~aiida.common._folders.Folder`
+.. |folder.open| replace:: :py:class:`~aiida.common._folders.Folder.open`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
 .. |CalcJobNode| replace:: :py:class:`~aiida.orm.CalcJobNode`
 .. |CalcInfo| replace:: :py:class:`~aiida.common.CalcInfo`

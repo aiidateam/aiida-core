@@ -36,7 +36,7 @@ def storage_version():
     * 4: If the storage schema is compatible with the code schema version and probably needs to be migrated.
     """
     from aiida import get_profile
-    from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
+    from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, _UnreachableStorage
 
     try:
         profile = get_profile()
@@ -51,7 +51,7 @@ def storage_version():
 
     try:
         storage = profile.storage_cls(profile)
-    except (CorruptStorage, UnreachableStorage) as exception:
+    except (CorruptStorage, _UnreachableStorage) as exception:
         echo.echo_error(f'The storage cannot be reached or is corrupt: {exception}')
         sys.exit(3)
     except IncompatibleStorageSchema:

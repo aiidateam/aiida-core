@@ -436,8 +436,8 @@ filterwarnings = [
   'ignore:Creating AiiDA configuration folder.*:UserWarning',
   'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning',
   'ignore:Identity map already had an identity for .* inside of an event handler within the flush?:sqlalchemy.exc.SAWarning',
-  'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
-  'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
+  'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common._warnings.AiidaDeprecationWarning',
+  'ignore:The `Code` class is deprecated.*:aiida.common._warnings.AiidaDeprecationWarning',
   # https://github.com/aiidateam/plumpy/issues/283
   'ignore:There is no current event loop:DeprecationWarning:plumpy',
   "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning:pytest_asyncio",
@@ -447,7 +447,7 @@ filterwarnings = [
   # https://github.com/aiidateam/archive-path/issues/21
   'ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning:archive_path',
   # TODO: Fix these warnings
-  'ignore:.*getcwd.*:aiida.common.warnings.AiidaDeprecationWarning',
+  'ignore:.*getcwd.*:aiida.common._warnings.AiidaDeprecationWarning',
   "ignore:coroutine 'Process.step_until_terminated' was never awaited:RuntimeWarning:asyncio",
   'default::ResourceWarning',
   'ignore:unclosed database:ResourceWarning',

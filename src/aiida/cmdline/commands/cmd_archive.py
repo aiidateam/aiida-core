@@ -23,11 +23,11 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
+from aiida.common._typing import FilePath
 from aiida.common._utils import DEFAULT_BATCH_SIZE
-from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, _UnreachableStorage
 from aiida.common.links import _GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.typing import FilePath
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -52,7 +52,7 @@ def archive_version(path):
     head_version = storage_cls.version_head()
     try:
         profile_version = storage_cls.version_profile(profile)
-    except (UnreachableStorage, CorruptStorage) as exc:
+    except (_UnreachableStorage, CorruptStorage) as exc:
         echo.echo_critical(f'archive file version unreadable: {exc}')
     echo.echo(f'Latest archive schema version: {head_version!r}')
     echo.echo(f'Archive schema version of {Path(path).name!r}: {profile_version!r}')
@@ -69,7 +69,7 @@ def archive_info(path, detailed):
 
     try:
         storage = SqliteZipBackend(SqliteZipBackend.create_profile(path))
-    except (UnreachableStorage, CorruptStorage) as exc:
+    except (_UnreachableStorage, CorruptStorage) as exc:
         echo.echo_critical(f'archive file unreadable: {exc}')
     except IncompatibleStorageSchema as exc:
         echo.echo_critical(f'archive version incompatible: {exc}')
@@ -478,7 +478,7 @@ def _import_archive_and_migrate(
     """
     import urllib.request
 
-    from aiida.common.folders import SandboxFolder
+    from aiida.common._folders import SandboxFolder
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.archive.exceptions import ImportTestRun
     from aiida.tools.archive.imports import import_archive as _import_archive

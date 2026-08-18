@@ -15,7 +15,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.log import LOG_LEVELS, capture_logging
+from aiida.common.log import _LOG_LEVELS, _capture_logging
 
 REPAIR_INSTRUCTIONS = """\
 If one ore more processes are unreachable, you can run the following commands to try and repair them:
@@ -113,7 +113,7 @@ def process_list(
 
     from aiida.cmdline.commands.cmd_daemon import execute_client_command
     from aiida.cmdline.utils.common import print_last_process_state_change
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.orm import ProcessNode, QueryBuilder
@@ -255,7 +255,7 @@ def process_call_root(processes):
 @click.option(
     '-l',
     '--levelname',
-    type=click.Choice(list(LOG_LEVELS)),
+    type=click.Choice(list(_LOG_LEVELS)),
     default='REPORT',
     help='Filter the results by name of the log level.',
 )
@@ -362,7 +362,7 @@ def process_kill(processes, all_entries, timeout, force):
         msg_text = 'Force killed through `verdi process kill`'
     else:
         msg_text = 'Killed through `verdi process kill`'
-    with capture_logging() as stream:
+    with _capture_logging() as stream:
         try:
             control.kill_processes(
                 processes,
@@ -397,7 +397,7 @@ def process_pause(processes, all_entries, timeout):
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    with capture_logging() as stream:
+    with _capture_logging() as stream:
         try:
             control.pause_processes(
                 processes,
@@ -431,7 +431,7 @@ def process_play(processes, all_entries, timeout):
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    with capture_logging() as stream:
+    with _capture_logging() as stream:
         try:
             control.play_processes(processes, all_entries=all_entries, timeout=timeout)
         except control.ProcessTimeoutException as exception:

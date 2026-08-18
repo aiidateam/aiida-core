@@ -217,7 +217,7 @@ class Profile:
         from urllib.parse import urlparse
 
         from aiida.common._utils import url2pathname
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
 
         warn_deprecation('This method has been deprecated', version=3)
 
@@ -240,7 +240,7 @@ class Profile:
 
         :return: a dictionary of filepaths
         """
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._warnings import warn_deprecation
         from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
         warn_deprecation('This method has been deprecated, use `filepaths` method from `Config` obj instead', version=3)

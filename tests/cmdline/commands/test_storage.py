@@ -28,7 +28,7 @@ def tests_storage_version(run_cli_command):
     'exception_cls, exit_code',
     (
         (exceptions.CorruptStorage, 3),
-        (exceptions.UnreachableStorage, 3),
+        (exceptions._UnreachableStorage, 3),
         (exceptions.IncompatibleStorageSchema, 4),
     ),
 )

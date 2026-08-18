@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from aiida import orm
-from aiida.common import exceptions, timezone
+from aiida.common import _timezone, exceptions
 
 
 class TestBackendComment:
@@ -57,7 +57,7 @@ class TestBackendComment:
         assert comment.content == self.comment_content
 
         # Store the comment.ctime before the store as a reference
-        now = timezone.now()
+        now = _timezone.now()
         comment_ctime_before_store = comment.ctime
         assert now > comment.ctime, f'{comment.ctime} is not smaller than now {now}'
 
@@ -92,8 +92,8 @@ class TestBackendComment:
         """Test creation of a BackendComment when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
-        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, timezone.utc)
+        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, _timezone.utc)
+        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, _timezone.utc)
 
         comment = self.backend.comments.create(
             node=self.node, user=self.user, content=self.comment_content, mtime=mtime, ctime=ctime
@@ -215,7 +215,7 @@ class TestBackendComment:
         found_comments_mtime = []
         found_comments_uuid = []
 
-        now = timezone.now()
+        now = _timezone.now()
         two_days_ago = now - timedelta(days=2)
         one_day_ago = now - timedelta(days=1)
         comment_times = [now, one_day_ago, two_days_ago]

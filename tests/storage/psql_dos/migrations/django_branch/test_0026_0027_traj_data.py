@@ -11,7 +11,7 @@
 import numpy
 import pytest
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
@@ -40,15 +40,15 @@ def test_traj_data(perform_migrations: PsqlDosMigrator):
             is_superuser=False,
             is_staff=False,
             is_active=True,
-            last_login=timezone.now(),
-            date_joined=timezone.now(),
+            last_login=_timezone.now(),
+            date_joined=_timezone.now(),
         )
         session.add(user)
         session.commit()
         kwargs = dict(
             user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
+            ctime=_timezone.now(),
+            mtime=_timezone.now(),
             label='test',
             description='',
             nodeversion=1,

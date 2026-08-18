@@ -12,9 +12,9 @@ to access members of other classes via TAB-completable attributes
 """
 
 from aiida.common import AttributeDict
+from aiida.common._warnings import warn_deprecation
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 from aiida.common.links import LinkType
-from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AttributeManager', 'NodeLinksManager')
 

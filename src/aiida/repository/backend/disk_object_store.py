@@ -5,7 +5,7 @@ import dataclasses
 import shutil
 import typing as t
 
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.storage.log import STORAGE_LOGGER
 
 from .abstract import AbstractRepositoryBackend, InfoDictType

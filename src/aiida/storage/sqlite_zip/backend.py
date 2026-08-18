@@ -27,14 +27,14 @@ from pydantic import field_validator
 from sqlalchemy.orm import Session
 
 from aiida import __version__
+from aiida.common._pydantic import AiiDABaseModel, MetadataField
 from aiida.common.exceptions import (
     ClosedStorage,
     CorruptStorage,
-    IncompatibleExternalDependencies,
     StorageMigrationError,
+    _IncompatibleExternalDependencies,
 )
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -71,7 +71,7 @@ def validate_sqlite_version() -> None:
             f'Storage backend requires sqlite {parse(SUPPORTED_VERSION)} or higher.'
             f' But you have {sqlite_installed_version} installed.'
         )
-        raise IncompatibleExternalDependencies(message)
+        raise _IncompatibleExternalDependencies(message)
 
 
 class SqliteZipBackend(StorageBackend):

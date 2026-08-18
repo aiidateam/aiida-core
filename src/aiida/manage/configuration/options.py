@@ -136,15 +136,15 @@ def resolve_deprecated_option_name(option_name: str, stacklevel: int = 4) -> str
     """Resolve a deprecated option name to its replacement.
 
     If the option identified by ``option_name`` carries a ``deprecated_by`` marker, an
-    :class:`aiida.common.warnings.AiidaDeprecationWarning` is emitted through
-    :func:`aiida.common.warnings.warn_deprecation` and the name of the replacement option is
+    :class:`aiida.common._warnings.AiidaDeprecationWarning` is emitted through
+    :func:`aiida.common._warnings.warn_deprecation` and the name of the replacement option is
     returned. Otherwise ``option_name`` is returned unchanged.
 
     :param option_name: the name of the configuration option, possibly deprecated.
-    :param stacklevel: stacklevel forwarded to :func:`aiida.common.warnings.warn_deprecation`.
+    :param stacklevel: stacklevel forwarded to :func:`aiida.common._warnings.warn_deprecation`.
     :return: the name of the option that should actually be used.
     """
-    from aiida.common.warnings import warn_deprecation
+    from aiida.common._warnings import warn_deprecation
 
     option = get_option(option_name)
 

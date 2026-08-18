@@ -25,7 +25,7 @@ import subprocess
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
 
-from aiida.common.escaping import escape_for_bash
+from aiida.common._escaping import escape_for_bash
 from aiida.transports.transport import (
     TransportInternalError,
     has_magic,

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from aiida.common import exceptions
-from aiida.common.lang import override
+from aiida.common._lang import override
 from aiida.common.links import LinkType
 from aiida.orm.entities import from_backend_entity
 from aiida.orm.pydantic import OrmMetadataField

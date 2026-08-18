@@ -22,9 +22,9 @@ from typing import Any
 from tabulate import tabulate
 
 from aiida import orm
+from aiida.common._lang import type_check
 from aiida.common._progress_reporter import get_progress_reporter
 from aiida.common._utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
-from aiida.common.lang import type_check
 from aiida.common.links import _GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager

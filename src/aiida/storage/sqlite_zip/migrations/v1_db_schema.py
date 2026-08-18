@@ -22,7 +22,7 @@ from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import CHAR, Boolean, DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone
 from aiida.common._utils import get_new_uuid
 
 # see https://alembic.sqlalchemy.org/en/latest/naming.html
@@ -74,8 +74,8 @@ class DbComment(ArchiveV1Base):
         nullable=True,
         index=True,
     )
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
+    ctime = Column(DateTime(timezone=True), default=_timezone.now, nullable=True)
+    mtime = Column(DateTime(timezone=True), default=_timezone.now, nullable=True)
     user_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
@@ -125,7 +125,7 @@ class DbGroup(ArchiveV1Base):
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), nullable=False, index=True)
     type_string = Column(String(255), default='', nullable=True, index=True)
-    time = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
+    time = Column(DateTime(timezone=True), default=_timezone.now, nullable=True)
     description = Column(Text, default='', nullable=True)
     extras = Column(JSON, default=dict, nullable=False)
     user_id = Column(
@@ -143,7 +143,7 @@ class DbLog(ArchiveV1Base):
 
     id = Column(Integer, primary_key=True)
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
-    time = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
+    time = Column(DateTime(timezone=True), default=_timezone.now, nullable=True)
     loggername = Column(String(255), default='', nullable=True, index=True)
     levelname = Column(String(50), default='', nullable=True, index=True)
     dbnode_id = Column(
@@ -167,8 +167,8 @@ class DbNode(ArchiveV1Base):
     process_type = Column(String(255), index=True)
     label = Column(String(255), default='', index=True, nullable=True)
     description = Column(Text(), default='', nullable=True)
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=True, index=True)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=True, index=True)
+    ctime = Column(DateTime(timezone=True), default=_timezone.now, nullable=True, index=True)
+    mtime = Column(DateTime(timezone=True), default=_timezone.now, nullable=True, index=True)
     attributes = Column(JSON)
     extras = Column(JSON)
     repository_metadata = Column(JSON, nullable=False, default=dict, server_default='{}')

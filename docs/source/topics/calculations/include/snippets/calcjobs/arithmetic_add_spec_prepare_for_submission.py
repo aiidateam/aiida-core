@@ -16,7 +16,7 @@ class ArithmeticAddCalculation(CalcJob):
     def prepare_for_submission(self, folder):
         """Write the input files that are required for the code to run.
 
-        :param folder: an `~aiida.common.folders.Folder` to temporarily write files on disk
+        :param folder: an `~aiida.common._folders.Folder` to temporarily write files on disk
         :return: `~aiida.common.datastructures.CalcInfo` instance
         """
         input_x = self.inputs.x

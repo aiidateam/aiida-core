@@ -13,9 +13,9 @@ import pathlib
 
 import pytest
 
-from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
-from aiida.common.exceptions import StashingError
-from aiida.common.folders import SandboxFolder
+from aiida.common._folders import SandboxFolder
+from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode, _FileCopyOperation
+from aiida.common.exceptions import _StashingError
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
@@ -265,17 +265,17 @@ async def test_upload_remote_symlink_list(
         (None, 'remote'),  # Default order should have remote last
         (
             [
-                FileCopyOperation.SANDBOX,
-                FileCopyOperation.REMOTE,
-                FileCopyOperation.LOCAL,
+                _FileCopyOperation.SANDBOX,
+                _FileCopyOperation.REMOTE,
+                _FileCopyOperation.LOCAL,
             ],
             'local',
         ),
         (
             [
-                FileCopyOperation.REMOTE,
-                FileCopyOperation.LOCAL,
-                FileCopyOperation.SANDBOX,
+                _FileCopyOperation.REMOTE,
+                _FileCopyOperation.LOCAL,
+                _FileCopyOperation.SANDBOX,
             ],
             'sandbox',
         ),
@@ -784,7 +784,7 @@ async def test_stashing(
             monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
 
             # StashingError should be raised for copy failures
-            with pytest.raises(StashingError, match='Failed to copy'):
+            with pytest.raises(_StashingError, match='Failed to copy'):
                 await execmanager.stash_calculation(node, transport)
         else:
 

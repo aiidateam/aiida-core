@@ -14,7 +14,7 @@ import time
 import typing as t
 
 from aiida.common import InvalidOperation
-from aiida.common.lang import type_check
+from aiida.common._lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import manager
 from aiida.orm import ProcessNode
@@ -106,7 +106,7 @@ def submit(
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
     """
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._docs import URL_NO_BROKER
 
     inputs = prepare_inputs(inputs, **kwargs)
 

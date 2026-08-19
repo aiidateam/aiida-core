@@ -15,6 +15,7 @@
 from .deletions import *
 
 __all__ = (
+    'contract_nodes',
     'delete_group_nodes',
     'delete_nodes',
 )

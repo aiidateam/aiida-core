@@ -59,6 +59,8 @@ class GraphTraversalRules(Enum):
         'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, False),
         'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', True, False),
         'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, False),
+        'contracted_forward': GraphTraversalRule(LinkType.CONTRACTED, 'forward', True, True),
+        'contracted_backward': GraphTraversalRule(LinkType.CONTRACTED, 'backward', True, True),
     }
 
     DELETE = {
@@ -89,6 +91,8 @@ class GraphTraversalRules(Enum):
         'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, True),
         'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', False, True),
         'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, True),
+        'contracted_forward': GraphTraversalRule(LinkType.CONTRACTED, 'forward', False, True),
+        'contracted_backward': GraphTraversalRule(LinkType.CONTRACTED, 'backward', False, True),
     }
 
 

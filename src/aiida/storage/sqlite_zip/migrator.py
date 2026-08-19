@@ -61,7 +61,11 @@ def validate_storage(inpath: Path) -> None:
     """
     schema_version_code = get_schema_version_head()
     schema_version_archive = read_version(inpath)
-    if schema_version_archive != schema_version_code:
+    compatible_versions = {schema_version_code}
+    if schema_version_code == 'main_0002':
+        # ``main_0002`` only versions contracted provenance semantics; the database schema is unchanged.
+        compatible_versions.add('main_0001')
+    if schema_version_archive not in compatible_versions:
         raise IncompatibleStorageSchema(
             f'Archive schema version `{schema_version_archive}` '
             f'is incompatible with the required schema version `{schema_version_code}`. '

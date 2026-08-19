@@ -30,7 +30,6 @@ __all__ = (
     'CifData',
     'Code',
     'ContainerizedCode',
-    'ContractedProcessNode',
     'Data',
     'Dict',
     'EnumData',

@@ -13,7 +13,6 @@
 # fmt: off
 
 from .calculation import *
-from .contracted import *
 from .process import *
 from .workflow import *
 
@@ -21,7 +20,6 @@ __all__ = (
     'CalcFunctionNode',
     'CalcJobNode',
     'CalculationNode',
-    'ContractedProcessNode',
     'ProcessNode',
     'WorkChainNode',
     'WorkFunctionNode',

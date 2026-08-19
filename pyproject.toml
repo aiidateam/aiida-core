@@ -144,12 +144,12 @@ requires-python = '>=3.10'
 'core.upf' = 'aiida.orm.groups:UpfFamily'
 
 [project.entry-points.'aiida.node']
+'contracted' = 'aiida.orm.nodes.contracted:ContractedNode'
 'data' = 'aiida.orm.nodes.data.data:Data'
 'process' = 'aiida.orm.nodes.process.process:ProcessNode'
 'process.calculation' = 'aiida.orm.nodes.process.calculation.calculation:CalculationNode'
 'process.calculation.calcfunction' = 'aiida.orm.nodes.process.calculation.calcfunction:CalcFunctionNode'
 'process.calculation.calcjob' = 'aiida.orm.nodes.process.calculation.calcjob:CalcJobNode'
-'process.contracted' = 'aiida.orm.nodes.process.contracted:ContractedProcessNode'
 'process.workflow' = 'aiida.orm.nodes.process.workflow.workflow:WorkflowNode'
 'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'
 'process.workflow.workfunction' = 'aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode'

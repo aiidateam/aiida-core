@@ -55,6 +55,9 @@ def load_node_class(type_string):
         except exceptions.MissingEntryPointError:
             return Data
 
+    if base_path == 'contracted':
+        return load_entry_point('aiida.node', base_path)
+
     # If the Process plugin is not available we fall back on the base ProcessNode class
     if base_path.startswith('process'):
         try:

@@ -17,15 +17,12 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from plumpy import ProcessState
-
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
 from aiida.orm import (
     CalculationNode,
-    ContractedProcessNode,
     Data,
     Group,
     Node,
@@ -34,16 +31,17 @@ from aiida.orm import (
     WorkflowNode,
 )
 from aiida.orm.implementation import StorageBackend
+from aiida.orm.nodes.contracted import ContractedNode
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
-__all__ = ('delete_group_nodes', 'delete_nodes')
+__all__ = ('contract_nodes', 'delete_group_nodes', 'delete_nodes')
 
 DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
 
 @dataclass(frozen=True)
 class _Link:
-    """A link relevant to a replacement plan."""
+    """A link relevant to a contraction plan."""
 
     source: int
     target: int
@@ -64,8 +62,8 @@ class _Region:
 
 
 @dataclass(frozen=True)
-class _ReplacementPlan:
-    """Immutable description of a replacement deletion."""
+class _ContractionPlan:
+    """Immutable description of a provenance contraction."""
 
     selected: frozenset[int]
     boundary: frozenset[int]
@@ -108,8 +106,8 @@ def _fingerprint(nodes: Iterable[Node]) -> tuple[tuple[object, ...], ...]:
 
 def _classify(node: Node) -> str:
     """Return a deliberately broad node class for audit metadata."""
-    if isinstance(node, ContractedProcessNode):
-        return 'contracted_process'
+    if isinstance(node, ContractedNode):
+        return 'contracted'
     if isinstance(node, CalculationNode):
         return 'calculation'
     if isinstance(node, WorkflowNode):
@@ -121,8 +119,8 @@ def _classify(node: Node) -> str:
     return 'node'
 
 
-def _plan_replacement(pks: Iterable[int], backend: StorageBackend) -> _ReplacementPlan:
-    """Construct and validate a replacement deletion plan."""
+def _plan_contraction(pks: Iterable[int], backend: StorageBackend) -> _ContractionPlan:
+    """Construct and validate a provenance contraction plan."""
     requested = set(pks)
     selected_nodes = _load_nodes(requested, backend)
     for pk in sorted(requested - selected_nodes.keys()):
@@ -137,7 +135,7 @@ def _plan_replacement(pks: Iterable[int], backend: StorageBackend) -> _Replaceme
             assert node.pk is not None
             offending.append(node.pk)
     if offending:
-        msg = f'replacement deletion requires terminated and sealed process nodes; offending PKs: {sorted(offending)}'
+        msg = f'provenance contraction requires terminated and sealed process nodes; offending PKs: {sorted(offending)}'
         raise exceptions.InvalidOperation(msg)
 
     neighbours: dict[int, set[int]] = {pk: set() for pk in selected}
@@ -192,7 +190,7 @@ def _plan_replacement(pks: Iterable[int], backend: StorageBackend) -> _Replaceme
         regions.append(region)
 
     affected_nodes = _load_nodes(selected | boundary, backend)
-    plan = _ReplacementPlan(
+    plan = _ContractionPlan(
         selected=selected,
         boundary=frozenset(boundary),
         regions=tuple(sorted(regions, key=lambda region: min(region.nodes))),
@@ -222,7 +220,7 @@ def _direct_boundary_pairs(region: _Region, selected_links: set[_Link]) -> set[t
     return pairs
 
 
-def _proposed_pairs(plan: _ReplacementPlan) -> set[tuple[int, int]]:
+def _proposed_pairs(plan: _ContractionPlan) -> set[tuple[int, int]]:
     """Return the surviving node pairs between which contraction creates reachability."""
     pairs: set[tuple[int, int]] = set()
     for region in plan.regions:
@@ -235,7 +233,7 @@ def _proposed_pairs(plan: _ReplacementPlan) -> set[tuple[int, int]]:
     return pairs
 
 
-def _validate_no_cycles(plan: _ReplacementPlan, backend: StorageBackend) -> None:
+def _validate_no_cycles(plan: _ContractionPlan, backend: StorageBackend) -> None:
     """Reject a contraction that would create a directed cycle among surviving nodes."""
     builder = QueryBuilder(backend=backend)
     builder.append(Node, tag='source', project='id').append(Node, with_incoming='source', project='id')
@@ -246,14 +244,14 @@ def _validate_no_cycles(plan: _ReplacementPlan, backend: StorageBackend) -> None
 
     for source, target in _proposed_pairs(plan):
         if source == target:
-            msg = f'replacement deletion would create a cycle through node<{source}>'
+            msg = f'provenance contraction would create a cycle through node<{source}>'
             raise exceptions.InvalidOperation(msg)
         pending = [target]
         seen: set[int] = set()
         while pending:
             current = pending.pop()
             if current == source:
-                msg = f'replacement deletion would create a cycle between nodes<{source}> and <{target}>'
+                msg = f'provenance contraction would create a cycle between nodes<{source}> and <{target}>'
                 raise exceptions.InvalidOperation(msg)
             if current not in seen:
                 seen.add(current)
@@ -269,40 +267,40 @@ def _label(direction: str, links: Iterable[_Link]) -> str:
     return f'contracted_{direction}_{digest}'
 
 
-def _log_plan(plan: _ReplacementPlan) -> None:
-    """Report a replacement plan without allocating replacement PKs."""
+def _log_plan(plan: _ContractionPlan) -> None:
+    """Report a contraction plan without allocating marker PKs."""
     DELETE_LOGGER.report('Selected nodes: %s', ' '.join(map(str, sorted(plan.selected))) or 'none')
     DELETE_LOGGER.report('Nodes to delete: %s', ' '.join(map(str, sorted(plan.selected))) or 'none')
     DELETE_LOGGER.report('Surviving boundary nodes: %s', ' '.join(map(str, sorted(plan.boundary))) or 'none')
-    replacements = [region for region in plan.regions if region.has_process]
-    if replacements:
+    markers = [region for region in plan.regions if region.has_process]
+    if markers:
         description = ', '.join(
-            f'R{index} ({len(region.nodes)} selected nodes)' for index, region in enumerate(replacements, 1)
+            f'R{index} ({len(region.nodes)} selected nodes)' for index, region in enumerate(markers, 1)
         )
     else:
         description = 'none'
-    DELETE_LOGGER.report('Replacement processes: %s', description)
+    DELETE_LOGGER.report('Contraction markers: %s', description)
 
     links: list[str] = []
-    replacement_index = 0
+    marker_index = 0
     for region in plan.regions:
         if region.has_process:
-            replacement_index += 1
-            links.extend(f'{link.source} -> R{replacement_index}' for link in region.incoming)
-            links.extend(f'R{replacement_index} -> {link.target}' for link in region.outgoing)
+            marker_index += 1
+            links.extend(f'{link.source} -> R{marker_index}' for link in region.incoming)
+            links.extend(f'R{marker_index} -> {link.target}' for link in region.outgoing)
         else:
             links.extend(f'{source} -> {target}' for source, target in region.direct_pairs)
     DELETE_LOGGER.report('New contracted links: %s', ', '.join(links) or 'none')
 
 
-def _apply_replacement(plan: _ReplacementPlan, backend: StorageBackend) -> None:
-    """Apply a validated replacement plan in the caller's transaction."""
+def _apply_contraction(plan: _ContractionPlan, backend: StorageBackend) -> None:
+    """Apply a validated contraction plan in the caller's transaction."""
     affected = _load_nodes(plan.selected | plan.boundary, backend)
     if _fingerprint(affected.values()) != plan.fingerprint:
-        msg = 'the provenance graph changed after the replacement deletion was planned'
+        msg = 'the provenance graph changed after the contraction was planned'
         raise exceptions.InvalidOperation(msg)
 
-    all_nodes = _load_nodes(plan.selected | plan.boundary, backend)
+    contracted_links: list[tuple[int, int, str]] = []
 
     for region in plan.regions:
         if region.has_process:
@@ -318,28 +316,22 @@ def _apply_replacement(plan: _ReplacementPlan, backend: StorageBackend) -> None:
                 for direction, links in (('incoming', region.incoming), ('outgoing', region.outgoing))
                 for link in links
             ]
-            replacement = ContractedProcessNode(backend=backend)
-            replacement.base.attributes.set_many(
+            marker = ContractedNode(backend=backend)
+            marker.base.attributes.set(
+                'contraction',
                 {
-                    'contraction': {
-                        'deleted_at': datetime.now(tz=timezone.utc).isoformat(),
-                        'policy': 'replacement-deletion-v1',
-                        'initiating_user': replacement.user.pk,
-                        'removed_node_count': len(region.nodes),
-                        'removed_node_types': dict(region.removed_types),
-                        'boundary_links': mappings,
-                    },
-                    ProcessNode.PROCESS_LABEL_KEY: 'Contracted provenance',
-                    ProcessNode.PROCESS_STATE_KEY: ProcessState.FINISHED.value,
-                    ProcessNode.EXIT_STATUS_KEY: 0,
-                }
+                    'deleted_at': datetime.now(tz=timezone.utc).isoformat(),
+                    'policy': 'contraction-v1',
+                    'initiating_user': marker.user.pk,
+                    'removed_node_count': len(region.nodes),
+                    'removed_node_types': dict(region.removed_types),
+                    'boundary_links': mappings,
+                },
             )
-            for link in region.incoming:
-                replacement.base.links.add_incoming(all_nodes[link.source], LinkType.CONTRACTED, _label('in', (link,)))
-            replacement.store()
-            for link in region.outgoing:
-                all_nodes[link.target].base.links.add_incoming(replacement, LinkType.CONTRACTED, _label('out', (link,)))
-            replacement.seal()
+            marker.store()
+            assert marker.pk is not None
+            contracted_links.extend((link.source, marker.pk, _label('in', (link,))) for link in region.incoming)
+            contracted_links.extend((marker.pk, link.target, _label('out', (link,))) for link in region.outgoing)
         else:
             for source, target in region.direct_pairs:
                 related = tuple(
@@ -347,91 +339,182 @@ def _apply_replacement(plan: _ReplacementPlan, backend: StorageBackend) -> None:
                     for link in (*region.incoming, *region.outgoing)
                     if link.source == source or link.target == target
                 )
-                all_nodes[target].base.links.add_incoming(
-                    all_nodes[source], LinkType.CONTRACTED, _label('direct', related)
-                )
+                contracted_links.append((source, target, _label('direct', related)))
 
-    backend.delete_nodes_and_connections(plan.selected)
+    backend.replace_nodes_and_connections(plan.selected, contracted_links)
+
+
+def contract_nodes(
+    pks: Iterable[int],
+    dry_run: bool | Callable[[set[int]], bool] = True,
+    backend: StorageBackend | None = None,
+) -> tuple[set[int], bool]:
+    """Contract an explicitly selected region of the provenance graph.
+
+    The selected nodes are deleted without traversal expansion. Directed
+    reachability across each selected region is preserved with contracted
+    links and, for regions containing processes, an internal marker node.
+
+    :param pks: PKs of the nodes to contract.
+    :param dry_run: preview, apply, or a confirmation callback receiving the
+        selected PKs.
+    :param backend: storage backend, or the current profile storage by default.
+    :returns: selected node PKs and whether contraction was performed.
+    """
+    backend = backend or get_manager().get_profile_storage()
+    plan = _plan_contraction(pks, backend)
+    pks_to_contract = set(plan.selected)
+    _log_plan(plan)
+
+    if dry_run is True or (callable(dry_run) and dry_run(pks_to_contract)):
+        DELETE_LOGGER.report('This was a dry run, exiting without changing anything')
+        return pks_to_contract, False
+
+    if not pks_to_contract:
+        return pks_to_contract, True
+
+    DELETE_LOGGER.report('Starting node contraction...')
+    with backend.transaction():
+        _apply_contraction(plan, backend)
+    DELETE_LOGGER.report('Node contraction completed.')
+    return pks_to_contract, True
 
 
 def delete_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
-    *,
-    replace: bool = False,
     **traversal_rules: bool,
 ) -> tuple[set[int], bool]:
-    """Delete nodes, optionally replacing the selected provenance region.
+    """Delete nodes given a list of "starting" PKs.
 
-    :param pks: PKs of the nodes to delete.
-    :param dry_run: preview, apply, or a confirmation callback receiving the deletion set.
-    :param backend: storage backend, or the current profile storage by default.
-    :param replace: contract the explicitly selected region instead of expanding it with deletion traversal rules.
-    :param traversal_rules: overrides for ordinary traversal deletion. These cannot be combined with ``replace``.
-    :returns: the node PKs selected for deletion and whether deletion was performed.
+    This command will delete not only the specified nodes, but also the ones that are
+    linked to these and should be also deleted in order to keep a consistent provenance
+    according to the rules explained in the Topics - Provenance section of the documentation.
+    In summary:
+
+    1. If a DATA node is deleted, any process nodes linked to it will also be deleted.
+
+    2. If a CALC node is deleted, any incoming WORK node (callers) will be deleted as
+    well whereas any incoming DATA node (inputs) will be kept. Outgoing DATA nodes
+    (outputs) will be deleted by default but this can be disabled.
+
+    3. If a WORK node is deleted, any incoming WORK node (callers) will be deleted as
+    well, but all DATA nodes will be kept. Outgoing WORK or CALC nodes will be kept by
+    default, but deletion of either of both kind of connected nodes can be enabled.
+
+    These rules are 'recursive', so if a CALC node is deleted, then its output DATA
+    nodes will be deleted as well, and then any CALC node that may have those as
+    inputs, and so on.
+
+    :param pks: a list of starting PKs of the nodes to delete
+        (the full set will be based on the traversal rules)
+
+    :param dry_run:
+        If True, return the pks to delete without deleting anything.
+        If False, delete the pks without confirmation
+        If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
+
+    :param traversal_rules: graph traversal rules.
+        See :const:`aiida.common.links.GraphTraversalRules` for what rule names
+        are toggleable and what the defaults are.
+
+    :returns: (pks to delete, whether they were deleted)
+
     """
     backend = backend or get_manager().get_profile_storage()
 
-    if replace and traversal_rules:
-        msg = '`replace=True` cannot be combined with traversal rule overrides'
-        raise ValueError(msg)
+    def _missing_callback(_pks: Iterable[int]) -> None:
+        for _pk in _pks:
+            DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
 
-    plan: _ReplacementPlan | None = None
-    if replace:
-        plan = _plan_replacement(pks, backend)
-        pks_set_to_delete = set(plan.selected)
-        _log_plan(plan)
-    else:
+    pks_set_to_delete = get_nodes_delete(
+        pks, get_links=False, missing_callback=_missing_callback, backend=backend, **traversal_rules
+    )['nodes']
 
-        def _missing_callback(_pks: Iterable[int]) -> None:
-            for _pk in _pks:
-                DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
+    DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
 
-        pks_set_to_delete = get_nodes_delete(
-            pks, get_links=False, missing_callback=_missing_callback, backend=backend, **traversal_rules
-        )['nodes']
-        DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
+    if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
+        builder = QueryBuilder(backend=backend).append(
+            Node, filters={'id': {'in': pks_set_to_delete}}, project=('uuid', 'id', 'node_type', 'label')
+        )
+        DELETE_LOGGER.debug('Node(s) to delete:')
+        for uuid, pk, type_string, label in builder.iterall():
+            try:
+                short_type_string = type_string.split('.')[-2]
+            except IndexError:
+                short_type_string = type_string
+            DELETE_LOGGER.debug(f'   {uuid} {pk} {short_type_string} {label}')
 
-        if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
-            builder = QueryBuilder(backend=backend).append(
-                Node, filters={'id': {'in': pks_set_to_delete}}, project=('uuid', 'id', 'node_type', 'label')
-            )
-            DELETE_LOGGER.debug('Node(s) to delete:')
-            for uuid, pk, type_string, label in builder.iterall():
-                DELETE_LOGGER.debug('   %s %s %s %s', uuid, pk, type_string, label)
-
-    if dry_run is True or (callable(dry_run) and dry_run(pks_set_to_delete)):
+    if dry_run is True:
         DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
-        return pks_set_to_delete, False
+        return (pks_set_to_delete, False)
+
+    # confirm deletion
+    if callable(dry_run) and dry_run(pks_set_to_delete):
+        DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
+        return (pks_set_to_delete, False)
 
     if not pks_set_to_delete:
-        return pks_set_to_delete, True
+        return (pks_set_to_delete, True)
 
     DELETE_LOGGER.report('Starting node deletion...')
     with backend.transaction():
-        if plan is None:
-            backend.delete_nodes_and_connections(pks_set_to_delete)
-        else:
-            _apply_replacement(plan, backend)
+        backend.delete_nodes_and_connections(pks_set_to_delete)
     DELETE_LOGGER.report('Deletion of nodes completed.')
-    return pks_set_to_delete, True
+
+    return (pks_set_to_delete, True)
 
 
 def delete_group_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
-    *,
-    replace: bool = False,
     **traversal_rules: bool,
 ) -> tuple[set[int], bool]:
-    """Delete all nodes contained in the specified groups."""
+    """Delete nodes contained in a list of groups (not the groups themselves!).
+
+    This command will delete not only the nodes, but also the ones that are
+    linked to these and should be also deleted in order to keep a consistent provenance
+    according to the rules explained in the concepts section of the documentation.
+    In summary:
+
+    1. If a DATA node is deleted, any process nodes linked to it will also be deleted.
+
+    2. If a CALC node is deleted, any incoming WORK node (callers) will be deleted as
+    well whereas any incoming DATA node (inputs) will be kept. Outgoing DATA nodes
+    (outputs) will be deleted by default but this can be disabled.
+
+    3. If a WORK node is deleted, any incoming WORK node (callers) will be deleted as
+    well, but all DATA nodes will be kept. Outgoing WORK or CALC nodes will be kept by
+    default, but deletion of either of both kind of connected nodes can be enabled.
+
+    These rules are 'recursive', so if a CALC node is deleted, then its output DATA
+    nodes will be deleted as well, and then any CALC node that may have those as
+    inputs, and so on.
+
+    :param pks: a list of the groups
+
+    :param dry_run:
+        If True, return the pks to delete without deleting anything.
+        If False, delete the pks without confirmation
+        If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
+
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+        are toggleable and what the defaults are.
+
+    :returns: (node pks to delete, whether they were deleted)
+
+    """
     group_node_query = (
         QueryBuilder(backend=backend)
-        .append(Group, filters={'id': {'in': list(pks)}}, tag='groups')
+        .append(
+            Group,
+            filters={'id': {'in': list(pks)}},
+            tag='groups',
+        )
         .append(Node, project='id', with_group='groups')
     )
     group_node_query.distinct()
     node_pks = group_node_query.all(flat=True)
-    return delete_nodes(node_pks, dry_run=dry_run, backend=backend, replace=replace, **traversal_rules)
+    return delete_nodes(node_pks, dry_run=dry_run, backend=backend, **traversal_rules)

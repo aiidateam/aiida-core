@@ -152,6 +152,8 @@ TRAVERSAL_RULE_HELP_STRING = {
     'return_forward': 'RETURN links forwards',
     'create_backward': 'CREATE links backwards',
     'create_forward': 'CREATE links forwards',
+    'contracted_backward': 'CONTRACTED links backwards',
+    'contracted_forward': 'CONTRACTED links forwards',
 }
 
 

@@ -144,6 +144,10 @@ def validate_link(
     type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
     type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
 
+    if link_type is LinkType.CONTRACTED:
+        msg = 'contracted links can only be created by provenance contraction'
+        raise exceptions.ModificationNotAllowed(msg)
+
     if source.backend != target.backend:
         raise ValueError(
             f'source and target nodes must be stored in the same backend, but got {source.backend} and {target.backend}'
@@ -172,7 +176,6 @@ def validate_link(
         LinkType.INPUT_CALC: (Data, CalculationNode, 'unique_triple', 'unique_pair'),
         LinkType.INPUT_WORK: (Data, WorkflowNode, 'unique_triple', 'unique_pair'),
         LinkType.RETURN: (WorkflowNode, Data, 'unique_pair', 'unique_triple'),
-        LinkType.CONTRACTED: (Node, Node, 'unique_triple', 'unique_triple'),
     }
 
     type_source, type_target, outdegree, indegree = link_mapping[link_type]

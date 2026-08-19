@@ -13,7 +13,9 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
-from aiida.tools.archive import create_archive, import_archive
+from aiida.orm.nodes.contracted import ContractedNode
+from aiida.tools import contract_nodes
+from aiida.tools.archive import ImportValidationError, create_archive, import_archive
 from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from tests.tools.archive.utils import get_all_node_links
 
@@ -57,6 +59,65 @@ def test_links_to_unknown_nodes(tmp_path, aiida_profile_clean):
 
     assert orm.QueryBuilder().append(orm.Node).count() == 1
     assert orm.QueryBuilder().append(entity_type='link').count() == 0
+
+
+def test_contracted_links_roundtrip(tmp_path, aiida_profile_clean):
+    """Contracted nodes and links retain their marker semantics in archives."""
+    from plumpy import ProcessState
+
+    input_node = orm.Int(1).store()
+    calculation = orm.CalculationNode()
+    calculation.base.links.add_incoming(input_node, LinkType.INPUT_CALC, 'input')
+    calculation.store()
+    output_node = orm.Int(2).store()
+    output_node.base.links.add_incoming(calculation, LinkType.CREATE, 'output')
+    calculation.set_process_state(ProcessState.FINISHED)
+    calculation.seal()
+    contract_nodes([calculation.pk], dry_run=False)
+
+    marker = orm.QueryBuilder().append(ContractedNode, project='*').one()[0]
+    archive_path = tmp_path / 'contracted.aiida'
+    create_archive([input_node, marker, output_node], filename=archive_path)
+    assert ArchiveFormatSqlZip().read_version(archive_path) == 'main_0002'
+
+    aiida_profile_clean.reset_storage()
+    import_archive(archive_path)
+
+    imported_marker = orm.QueryBuilder().append(ContractedNode, project='*').one()[0]
+    assert not isinstance(imported_marker, orm.ProcessNode)
+    assert {triple.link_type for triple in imported_marker.base.links.get_incoming()} == {LinkType.CONTRACTED}
+    assert {triple.link_type for triple in imported_marker.base.links.get_outgoing()} == {LinkType.CONTRACTED}
+
+
+def test_contracted_link_cycle_rejected(tmp_path, aiida_profile_clean):
+    """Import rejects contracted links that create a directed cycle."""
+    nodes = [orm.Data().store(), orm.Data().store()]
+    archive_path = tmp_path / 'contracted-cycle.aiida'
+    create_archive(nodes, filename=archive_path)
+
+    with ArchiveFormatSqlZip().open(archive_path, 'r') as archive:
+        node_ids = archive.querybuilder().append(orm.Node, project='id').all(flat=True)
+
+    with ArchiveFormatSqlZip().open(archive_path, 'a') as archive:
+        archive.bulk_insert(
+            EntityTypes.LINK,
+            [
+                {
+                    'id': index,
+                    'input_id': source,
+                    'output_id': target,
+                    'label': f'contracted_{index}',
+                    'type': LinkType.CONTRACTED.value,
+                }
+                for index, (source, target) in enumerate(
+                    ((node_ids[0], node_ids[1]), (node_ids[1], node_ids[0])), start=1
+                )
+            ],
+        )
+
+    aiida_profile_clean.reset_storage()
+    with pytest.raises(ImportValidationError, match='would create a cycle'):
+        import_archive(archive_path)
 
 
 def test_input_and_create_links(tmp_path, aiida_profile_clean):

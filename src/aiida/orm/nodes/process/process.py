@@ -118,9 +118,6 @@ class ProcessNodeLinks(NodeLinks):
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        if link_type is LinkType.CONTRACTED:
-            return super().validate_incoming(source, link_type, link_label)
-
         if self._node.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
 
@@ -139,7 +136,7 @@ class ProcessNodeLinks(NodeLinks):
         :param link_label: the link label
         :raise aiida.common.ModificationNotAllowed: if the source node (self) is sealed
         """
-        if self._node.is_sealed and link_type is not LinkType.CONTRACTED:
+        if self._node.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')
 
         super().validate_outgoing(target, link_type=link_type, link_label=link_label)

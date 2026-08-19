@@ -123,7 +123,7 @@ def default_node_styles(node: orm.Node) -> dict:
             'fillcolor': '#de707f77',  # red
             'penwidth': 0,
         },
-        'process.contracted.ContractedProcessNode.': {
+        'contracted.ContractedNode.': {
             'shape': 'octagon',
             'style': 'dashed',
             'color': '#7f3c8d',
@@ -170,7 +170,7 @@ def pstate_node_styles(node: orm.Node) -> dict:
             'penwidth': 0,
             'fillcolor': '#ffffffff',
         },
-        'process.contracted.ContractedProcessNode.': {
+        'contracted.ContractedNode.': {
             'shape': 'octagon',
             'style': 'dashed',
             'color': '#7f3c8d',

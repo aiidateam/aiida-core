@@ -1887,7 +1887,7 @@ wheels = [
 [[package]]
 name = "gsrd"
 version = "0.1.0"
-source = { git = "https://github.com/aiidateam/gsrd.git#f8721a5398e96da048a61e0bb208e87d1dd0bb98" }
+source = { git = "https://github.com/aiidateam/gsrd.git#2b43234ba82c796fd082278f7b0f874c35829d89" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },

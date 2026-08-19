@@ -1,0 +1,5 @@
+# Configuration for the gsrd Code. `filepath_executable` is not set here: it is passed
+# on the command line (`-X`), because it depends on where gsrd is installed.
+label: gsrd
+computer: localhost
+default_calc_job_plugin: core.shell

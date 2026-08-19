@@ -20,7 +20,7 @@ notebooks nicer in plain Jupyter, by post-processing each ``.ipynb`` in
 4. Strip MyST-only inline roles to plain text.
 5. Remove target labels and self-referential download links.
 
-The setup cell's ``%run -i setup_tutorial.py`` is left untouched: the bootstrap at
+The setup cell's ``%run -i tutorial_plumbing.py`` is left untouched: the bootstrap at
 the top of that cell fetches the helpers at runtime, so the notebook is
 self-contained without inlining (and inlining would break on the script's
 ``__file__``).

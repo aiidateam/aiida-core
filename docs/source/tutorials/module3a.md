@@ -39,24 +39,24 @@ If you are following along locally, run that module first.
 :::
 
 ```{code-cell} ipython3
-:tags: [hide-input]
+:tags: [hide-cell]
 :mystnb:
 :    code_prompt_show: 'Show the setup code (same as Module 1)'
 :    code_prompt_hide: 'Hide the setup code (same as Module 1)'
 
-# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
+# Set up the tutorial's sandbox profile (created in Module 1; reused here).
 from pathlib import Path
 
-if not Path('include/setup_tutorial.py').exists():
+if not Path('include/tutorial_plumbing.py').exists():
     import urllib.request
 
     Path('include').mkdir(exist_ok=True)
     urllib.request.urlretrieve(
-        'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include/setup_tutorial.py',
-        'include/setup_tutorial.py',
+        'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include/tutorial_plumbing.py',
+        'include/tutorial_plumbing.py',
     )
 
-%run -i include/setup_tutorial.py
+%run -i include/tutorial_plumbing.py
 %load_ext aiida
 ```
 

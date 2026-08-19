@@ -25,6 +25,7 @@ class LinkType(Enum):
     INPUT_WORK = 'input_work'
     CALL_CALC = 'call_calc'
     CALL_WORK = 'call_work'
+    CONTRACTED = 'contracted'
 
 
 GraphTraversalRule = namedtuple('GraphTraversalRule', ['link_type', 'direction', 'toggleable', 'default'])

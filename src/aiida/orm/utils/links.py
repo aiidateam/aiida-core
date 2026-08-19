@@ -172,6 +172,7 @@ def validate_link(
         LinkType.INPUT_CALC: (Data, CalculationNode, 'unique_triple', 'unique_pair'),
         LinkType.INPUT_WORK: (Data, WorkflowNode, 'unique_triple', 'unique_pair'),
         LinkType.RETURN: (WorkflowNode, Data, 'unique_pair', 'unique_triple'),
+        LinkType.CONTRACTED: (Node, Node, 'unique_triple', 'unique_triple'),
     }
 
     type_source, type_target, outdegree, indegree = link_mapping[link_type]

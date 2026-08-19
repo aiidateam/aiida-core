@@ -372,21 +372,37 @@ def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
 @options.DRY_RUN()
 @options.FORCE()
 @click.option(
+    '--replace/--no-replace',
+    default=False,
+    help='Replace the selected provenance region instead of traversal-expanding the deletion.',
+)
+@click.option(
     '--clean-workdir',
     is_flag=True,
     help='Also clean the remote work directory, if applicable.',
 )
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
+def node_delete(identifier, dry_run, force, replace, clean_workdir, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
+    from click.core import ParameterSource
+
     from aiida.orm.utils.loaders import NodeEntityLoader
     from aiida.tools import delete_nodes
+
+    if replace:
+        context = click.get_current_context()
+        overridden = [
+            name for name in traversal_rules if context.get_parameter_source(name) is ParameterSource.COMMANDLINE
+        ]
+        if overridden:
+            options = ', '.join(f'--{name.replace("_", "-")}' for name in sorted(overridden))
+            raise click.UsageError(f'--replace cannot be combined with traversal options: {options}')
 
     pks = []
 
@@ -405,7 +421,8 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         return not click.confirm('Shall I continue?', abort=True)
 
     def _perform_delete():
-        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        rules = {} if replace else traversal_rules
+        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, replace=replace, **rules)
         if was_deleted:
             echo.echo_success('Finished deletion.')
 
@@ -416,10 +433,14 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         from aiida.tools.graph.graph_traversers import get_nodes_delete
 
         backend = get_manager().get_profile_storage()
-        # Here we ignore missing nodes, because errors about them will be raised in _perform_delete
-        pks_set_to_delete = get_nodes_delete(
-            pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules
-        )['nodes']
+        # Replacement mode only cleans explicitly selected CalcJobNodes.
+        if replace:
+            pks_set_to_delete = set(pks)
+        else:
+            # Here we ignore missing nodes, because errors about them will be raised in _perform_delete
+            pks_set_to_delete = get_nodes_delete(
+                pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules
+            )['nodes']
 
         qb = QueryBuilder()
         qb.append(CalcJobNode, filters={'id': {'in': pks_set_to_delete}}, project='id')

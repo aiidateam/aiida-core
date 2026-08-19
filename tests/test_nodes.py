@@ -1524,6 +1524,77 @@ class TestNodeDeletion:
             orm.load_node(node_pk)
         assert callback_pks == [node_pk]
 
+    @staticmethod
+    def _create_calculation(input_node, label):
+        """Create a finished calculation with one input."""
+        from plumpy import ProcessState
+
+        calculation = orm.CalculationNode()
+        calculation.base.links.add_incoming(input_node, LinkType.INPUT_CALC, 'input')
+        calculation.store()
+        output = orm.Data().store()
+        output.base.links.add_incoming(calculation, LinkType.CREATE, label)
+        calculation.set_process_state(ProcessState.FINISHED)
+        calculation.seal()
+        return calculation, output
+
+    def test_replacement_deletion_data_region(self):
+        """Deleting intermediate data preserves its process boundary with a contracted link."""
+        input_node = orm.Data().store()
+        creator, intermediate = self._create_calculation(input_node, 'intermediate')
+        consumer, output = self._create_calculation(intermediate, 'result')
+        intermediate_pk = intermediate.pk
+        intermediate_uuid = intermediate.uuid
+        replacement_count = orm.QueryBuilder().append(orm.ContractedProcessNode).count()
+
+        deleted_pks, was_deleted = delete_nodes([intermediate_pk], dry_run=False, replace=True)
+
+        assert was_deleted
+        assert deleted_pks == {intermediate_pk}
+        self._check_existence([creator.uuid, consumer.uuid, output.uuid], [intermediate_uuid])
+        link = consumer.base.links.get_incoming(link_type=LinkType.CONTRACTED).one()
+        assert link.node.pk == creator.pk
+        assert orm.QueryBuilder().append(orm.ContractedProcessNode).count() == replacement_count
+
+    def test_replacement_deletion_process_region(self):
+        """A selected process is replaced by one sealed, non-cacheable marker."""
+        input_node = orm.Data().store()
+        calculation, output = self._create_calculation(input_node, 'result')
+        calculation_pk = calculation.pk
+        existing = set(orm.QueryBuilder().append(orm.ContractedProcessNode, project='id').all(flat=True))
+
+        deleted_pks, was_deleted = delete_nodes([calculation_pk], dry_run=False, replace=True)
+
+        assert was_deleted
+        assert deleted_pks == {calculation_pk}
+        replacements = set(orm.QueryBuilder().append(orm.ContractedProcessNode, project='id').all(flat=True))
+        replacement = orm.load_node((replacements - existing).pop())
+        assert replacement.is_sealed
+        assert replacement.is_finished
+        assert not replacement.base.caching.is_valid_cache
+        assert replacement.base.links.get_incoming(link_type=LinkType.CONTRACTED).one().node.pk == input_node.pk
+        assert output.base.links.get_incoming(link_type=LinkType.CONTRACTED).one().node.pk == replacement.pk
+        assert replacement.base.attributes.get('contraction')['removed_node_count'] == 1
+
+    def test_replacement_deletion_dry_run(self):
+        """A replacement dry run neither deletes nodes nor allocates replacement nodes."""
+        input_node = orm.Data().store()
+        calculation, output = self._create_calculation(input_node, 'result')
+        replacement_count = orm.QueryBuilder().append(orm.ContractedProcessNode).count()
+
+        deleted_pks, was_deleted = delete_nodes([calculation.pk], replace=True)
+
+        assert deleted_pks == {calculation.pk}
+        assert not was_deleted
+        self._check_existence([calculation.uuid, output.uuid], [])
+        assert orm.QueryBuilder().append(orm.ContractedProcessNode).count() == replacement_count
+
+    def test_replacement_rejects_traversal_rules(self):
+        """Replacement and traversal deletion semantics cannot be combined."""
+        node = orm.Data().store()
+        with pytest.raises(ValueError, match='cannot be combined'):
+            delete_nodes([node.pk], replace=True, create_forward=False)
+
     #   TEST BASIC CASES
 
     @staticmethod

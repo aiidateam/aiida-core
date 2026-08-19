@@ -33,6 +33,22 @@ def get_result_lines(result):
 
 
 class TestVerdiNode:
+    def test_node_delete_replace_dry_run(self, run_cli_command):
+        """The replacement preview reports the selected region without modifying it."""
+        node = orm.Data().store()
+        result = run_cli_command(cmd_node.node_delete, ['--replace', '--dry-run', str(node.pk)])
+        assert f'Report: Selected nodes: {node.pk}' in result.output
+        assert 'Report: Replacement processes: none' in result.output
+        orm.load_node(node.pk)
+
+    def test_node_delete_replace_rejects_traversal_option(self, run_cli_command):
+        """Explicit traversal options are mutually exclusive with replacement mode."""
+        node = orm.Data().store()
+        result = run_cli_command(
+            cmd_node.node_delete, ['--replace', '--no-create-forward', '--dry-run', str(node.pk)], raises=True
+        )
+        assert '--replace cannot be combined with traversal options' in result.output
+
     """Tests for `verdi node`."""
 
     @pytest.fixture(autouse=True)

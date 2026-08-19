@@ -6,26 +6,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with `Node` sub classes for processes."""
+"""Process node representing provenance that was intentionally removed."""
 
-# AUTO-GENERATED
+from __future__ import annotations
 
-# fmt: off
+from .process import ProcessNode
 
-from .calculation import *
-from .contracted import *
-from .process import *
-from .workflow import *
+__all__ = ('ContractedProcessNode',)
 
-__all__ = (
-    'CalcFunctionNode',
-    'CalcJobNode',
-    'CalculationNode',
-    'ContractedProcessNode',
-    'ProcessNode',
-    'WorkChainNode',
-    'WorkFunctionNode',
-    'WorkflowNode',
-)
 
-# fmt: on
+class ContractedProcessNode(ProcessNode):
+    """An immutable marker for a connected region of deleted provenance.
+
+    This node does not represent an executable process and can never be used as
+    a cache source. Instances are created exclusively by replacement deletion.
+    """
+
+    _storable = True
+    _cachable = False
+    _unstorable_message = 'storing for this node has been disabled'

@@ -859,6 +859,7 @@ def _import_links(
         LinkType.INPUT_CALC: (data_node_types, calculation_node_types),
         LinkType.INPUT_WORK: (data_node_types, workflow_node_types),
         LinkType.RETURN: (workflow_node_types, data_node_types),
+        LinkType.CONTRACTED: ('', ''),
     }
     link_type_uniqueness = {
         LinkType.CALL_CALC: ('out_id',),
@@ -870,6 +871,7 @@ def _import_links(
         LinkType.INPUT_CALC: ('out_id_label',),
         LinkType.INPUT_WORK: ('out_id_label',),
         LinkType.RETURN: ('in_id_label',),
+        LinkType.CONTRACTED: (),
     }
 
     # Batch by type, to reduce memory load

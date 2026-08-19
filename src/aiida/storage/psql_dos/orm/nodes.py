@@ -191,7 +191,10 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             raise exceptions.ModificationNotAllowed('source node has to be stored when adding a link from it')
 
         self._add_link(source, link_type, link_label)
-        session.commit()
+        if session.in_nested_transaction():
+            session.flush()
+        else:
+            session.commit()
 
     def _add_link(self, source, link_type, link_label):
         """Add a single link"""

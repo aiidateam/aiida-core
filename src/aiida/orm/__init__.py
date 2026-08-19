@@ -51,6 +51,7 @@ __all__ = (
     'Computer',
     'ComputerEntityLoader',
     'ContainerizedCode',
+    'ContractedProcessNode',
     'Data',
     'Dict',
     'Entity',

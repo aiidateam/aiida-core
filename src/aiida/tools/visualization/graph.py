@@ -300,7 +300,7 @@ def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierTyp
             f'({get_node_id_label(node, id_type)})'
         )
     else:
-        raise TypeError(f'Unknown type: {type(node)}')
+        label = f'{node.__class__.__name__} ({get_node_id_label(node, id_type)})'
 
     return label
 

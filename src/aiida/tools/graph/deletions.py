@@ -267,6 +267,18 @@ def _label(direction: str, links: Iterable[_Link]) -> str:
     return f'contracted_{direction}_{digest}'
 
 
+def _group_boundary_links(links: Iterable[_Link], *, incoming: bool) -> tuple[tuple[int, tuple[_Link, ...]], ...]:
+    """Group boundary links by the surviving endpoint."""
+    grouped: dict[int, list[_Link]] = {}
+    for link in links:
+        endpoint = link.source if incoming else link.target
+        grouped.setdefault(endpoint, []).append(link)
+    return tuple(
+        (endpoint, tuple(sorted(endpoint_links, key=repr)))
+        for endpoint, endpoint_links in sorted(grouped.items())
+    )
+
+
 def _log_plan(plan: _ContractionPlan) -> None:
     """Report a contraction plan without allocating marker PKs."""
     DELETE_LOGGER.report('Selected nodes: %s', ' '.join(map(str, sorted(plan.selected))) or 'none')
@@ -286,8 +298,12 @@ def _log_plan(plan: _ContractionPlan) -> None:
     for region in plan.regions:
         if region.has_process:
             marker_index += 1
-            links.extend(f'{link.source} -> R{marker_index}' for link in region.incoming)
-            links.extend(f'R{marker_index} -> {link.target}' for link in region.outgoing)
+            links.extend(
+                f'{source} -> R{marker_index}' for source, _ in _group_boundary_links(region.incoming, incoming=True)
+            )
+            links.extend(
+                f'R{marker_index} -> {target}' for target, _ in _group_boundary_links(region.outgoing, incoming=False)
+            )
         else:
             links.extend(f'{source} -> {target}' for source, target in region.direct_pairs)
     DELETE_LOGGER.report('New contracted links: %s', ', '.join(links) or 'none')
@@ -304,6 +320,8 @@ def _apply_contraction(plan: _ContractionPlan, backend: StorageBackend) -> None:
 
     for region in plan.regions:
         if region.has_process:
+            incoming_groups = _group_boundary_links(region.incoming, incoming=True)
+            outgoing_groups = _group_boundary_links(region.outgoing, incoming=False)
             mappings = [
                 {
                     'source': link.source,
@@ -311,10 +329,11 @@ def _apply_contraction(plan: _ContractionPlan, backend: StorageBackend) -> None:
                     'type': link.link_type.value,
                     'label': link.label,
                     'direction': direction,
-                    'contracted_label': _label('in' if direction == 'incoming' else 'out', (link,)),
+                    'contracted_label': _label('in' if direction == 'incoming' else 'out', grouped_links),
                 }
-                for direction, links in (('incoming', region.incoming), ('outgoing', region.outgoing))
-                for link in links
+                for direction, groups in (('incoming', incoming_groups), ('outgoing', outgoing_groups))
+                for _, grouped_links in groups
+                for link in grouped_links
             ]
             marker = ContractedNode(backend=backend)
             marker.base.attributes.set(
@@ -330,8 +349,12 @@ def _apply_contraction(plan: _ContractionPlan, backend: StorageBackend) -> None:
             )
             marker.store()
             assert marker.pk is not None
-            contracted_links.extend((link.source, marker.pk, _label('in', (link,))) for link in region.incoming)
-            contracted_links.extend((marker.pk, link.target, _label('out', (link,))) for link in region.outgoing)
+            contracted_links.extend(
+                (source, marker.pk, _label('in', grouped_links)) for source, grouped_links in incoming_groups
+            )
+            contracted_links.extend(
+                (marker.pk, target, _label('out', grouped_links)) for target, grouped_links in outgoing_groups
+            )
         else:
             for source, target in region.direct_pairs:
                 related = tuple(

@@ -1576,6 +1576,30 @@ class TestNodeDeletion:
         assert output.base.links.get_incoming(link_type=LinkType.CONTRACTED).one().node.pk == marker.pk
         assert marker.base.attributes.get('contraction')['removed_node_count'] == 1
 
+    def test_contract_deduplicates_boundary_nodes(self):
+        """Multiple original links to one boundary node produce one contracted link."""
+        from plumpy import ProcessState
+
+        input_node = orm.Data().store()
+        workflow = orm.WorkflowNode()
+        workflow.base.links.add_incoming(input_node, LinkType.INPUT_WORK, 'input_a')
+        workflow.base.links.add_incoming(input_node, LinkType.INPUT_WORK, 'input_b')
+        workflow.store()
+        output = orm.Data().store()
+        output.base.links.add_incoming(workflow, LinkType.RETURN, 'output_a')
+        output.base.links.add_incoming(workflow, LinkType.RETURN, 'output_b')
+        workflow.set_process_state(ProcessState.FINISHED)
+        workflow.seal()
+
+        contract_nodes([workflow.pk], dry_run=False)
+
+        marker = input_node.base.links.get_outgoing(link_type=LinkType.CONTRACTED).one().node
+        assert len(marker.base.links.get_incoming(link_type=LinkType.CONTRACTED).all()) == 1
+        assert len(marker.base.links.get_outgoing(link_type=LinkType.CONTRACTED).all()) == 1
+        mappings = marker.base.attributes.get('contraction')['boundary_links']
+        assert len(mappings) == 4
+        assert len({mapping['contracted_label'] for mapping in mappings}) == 2
+
     def test_contract_dry_run(self):
         """A contraction dry run neither deletes nodes nor allocates markers."""
         input_node = orm.Data().store()

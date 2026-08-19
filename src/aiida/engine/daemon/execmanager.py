@@ -533,7 +533,6 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         try:
             await _do_copy()
         except exceptions.StashingError as exception:
-            # Only remove this calculation's stash: ``target_base / uuid[:2]`` is a shard shared with other stashes.
             await transport.rmtree_async(target_basepath)
             raise exception
         else:

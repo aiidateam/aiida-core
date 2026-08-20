@@ -1878,8 +1878,7 @@ class AsyncTransport(Transport):
 
     def run_command_blocking(self, func, *args, **kwargs):
         """Run an async transport method synchronously."""
-        from plumpy import run_until_complete
-
+        from aiida.engine.processes.greenback import run_until_complete
         from aiida.manage import get_manager
 
         loop = get_manager().get_runner().loop

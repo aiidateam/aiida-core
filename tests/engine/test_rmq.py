@@ -10,7 +10,6 @@
 
 import asyncio
 
-import plumpy
 import pytest
 
 from aiida.engine import ProcessState
@@ -42,7 +41,7 @@ class TestProcessControl:
             await self.wait_for_process(calc_node)
 
             assert calc_node.is_finished_ok
-            assert calc_node.process_state.value == plumpy.ProcessState.FINISHED.value
+            assert calc_node.process_state.value == ProcessState.FINISHED.value
 
         self.runner.loop.run_until_complete(do_submit())
 
@@ -56,7 +55,7 @@ class TestProcessControl:
             calc_node = self.runner.submit(test_processes.AddProcess, a=term_a, b=term_b)
             await self.wait_for_process(calc_node)
             assert calc_node.is_finished_ok
-            assert calc_node.process_state.value == plumpy.ProcessState.FINISHED.value
+            assert calc_node.process_state.value == ProcessState.FINISHED.value
 
         self.runner.loop.run_until_complete(do_launch())
 
@@ -72,7 +71,7 @@ class TestProcessControl:
             await self.wait_for_process(calc_node)
 
             assert not calc_node.is_finished_ok
-            assert calc_node.process_state.value == plumpy.ProcessState.EXCEPTED.value
+            assert calc_node.process_state.value == ProcessState.EXCEPTED.value
 
         self.runner.loop.run_until_complete(do_exception())
 

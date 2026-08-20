@@ -16,8 +16,7 @@ import traceback
 from collections.abc import AsyncIterator, Awaitable, Hashable
 from typing import TYPE_CHECKING
 
-from plumpy import get_or_create_event_loop
-
+from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
@@ -71,7 +70,7 @@ class TransportQueue:
         :return: A future that can be yielded to give the transport
         """
 
-        from plumpy import ensure_portal
+        from aiida.engine.processes.greenback import ensure_portal
 
         # NOTE: We need to ensure the portal here only because
         # our scheduler has only a sync interface and _get_jobs_from_scheduler is using that

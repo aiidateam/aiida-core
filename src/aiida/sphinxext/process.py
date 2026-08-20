@@ -14,14 +14,13 @@ from collections.abc import Iterable, Mapping
 from docutils import nodes
 from docutils.core import publish_doctree
 from docutils.parsers.rst import directives
-from plumpy.ports import OutputPort
 from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 from sphinx.util.docutils import SphinxDirective
 
 from aiida.common.utils import get_object_from_string
 from aiida.engine import Process
-from aiida.engine.processes.ports import InputPort, PortNamespace
+from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace
 from aiida.manage.configuration import load_profile
 
 

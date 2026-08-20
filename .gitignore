@@ -64,3 +64,6 @@ docker-bake.override.json
 
 # dev files
 .dev
+# pixi environments
+.pixi/*
+!.pixi/config.toml

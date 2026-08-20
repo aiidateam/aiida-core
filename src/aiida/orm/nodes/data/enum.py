@@ -20,9 +20,8 @@ from __future__ import annotations
 import typing as t
 from enum import Enum
 
-from plumpy.loaders import get_object_loader
-
 from aiida.common.lang import type_check
+from aiida.common.loaders import get_object_loader
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel

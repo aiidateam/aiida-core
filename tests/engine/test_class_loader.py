@@ -25,6 +25,13 @@ class TestCalcJob:
         yield
         assert Process.current() is None
 
+    def test_legacy_plumpy_identifier(self):
+        """Test identifiers stored before plumpy was integrated are no longer supported."""
+        loader = aiida.engine.persistence.get_object_loader()
+
+        with pytest.raises(ImportError, match=r"module 'plumpy\.process_states'"):
+            loader.load_object('plumpy.process_states:Running')
+
     def test_class_loader(self):
         """Test that CalculationFactory works."""
         process = CalculationFactory('core.templatereplacer')

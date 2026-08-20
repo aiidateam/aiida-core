@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
+"""AiiDA-specific process ports."""
 
 from __future__ import annotations
 
@@ -15,10 +15,9 @@ import warnings
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from plumpy import ports
-from plumpy.ports import breadcrumbs_to_port
-
 from aiida.common.links import validate_link_label
+from aiida.engine.processes.generic import ports
+from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.orm import Data, Node, to_aiida_type
 
 __all__ = (
@@ -31,9 +30,10 @@ __all__ = (
     'WithSerialize',
 )
 
+OutputPort = ports.OutputPort
+
 PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1
 PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label
-OutputPort = ports.OutputPort
 
 
 class WithNonDb:

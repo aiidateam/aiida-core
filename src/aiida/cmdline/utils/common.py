@@ -26,9 +26,8 @@ if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from datetime import datetime
 
-    import plumpy
-
     from aiida import engine, orm
+    from aiida.engine.processes.ports import PortNamespace
 
 __all__ = ('is_verbose',)
 
@@ -114,8 +113,7 @@ def get_node_summary(node: orm.Node) -> str:
     :param node: a Node instance
     :return: a string summary of the node
     """
-    from plumpy import ProcessState
-
+    from aiida.common.processes import ProcessState
     from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
@@ -432,7 +430,7 @@ def print_process_spec(process_spec: engine.ProcessSpec) -> None:
     :param process_spec: a `ProcessSpec` instance
     """
 
-    def build_entries(ports: plumpy.PortNamespace) -> list[tuple]:
+    def build_entries(ports: PortNamespace) -> list[tuple]:
         """Build a list of entries to be printed for a `PortNamespace.
 
         :param ports: the port namespace

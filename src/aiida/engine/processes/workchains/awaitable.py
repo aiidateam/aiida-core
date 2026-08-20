@@ -10,14 +10,13 @@
 
 from enum import Enum
 
-from plumpy.utils import AttributesDict
-
+from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import ProcessNode
 
 __all__ = ('Awaitable', 'AwaitableAction', 'AwaitableTarget', 'construct_awaitable')
 
 
-class Awaitable(AttributesDict):
+class Awaitable(AttributeDict):
     """An attribute dictionary that represents an action that a Process could be waiting for to finish."""
 
 
@@ -57,7 +56,7 @@ def construct_awaitable(target: Awaitable | ProcessNode) -> Awaitable:
         raise ValueError(f'invalid class for awaitable target: {type(target)}')
 
     awaitable = Awaitable(
-        **{
+        {
             'pk': target.pk,
             'action': AwaitableAction.ASSIGN,
             'target': awaitable_target,

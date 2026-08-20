@@ -42,6 +42,8 @@ dependencies = [
     { name = "disk-objectstore" },
     { name = "docstring-parser" },
     { name = "graphviz" },
+    { name = "greenback" },
+    { name = "greenlet" },
     { name = "importlib-metadata" },
     { name = "ipython", version = "8.39.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ipython", version = "9.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -53,7 +55,6 @@ dependencies = [
     { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "paramiko" },
     { name = "pgsu" },
-    { name = "plumpy" },
     { name = "psutil" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
@@ -231,6 +232,8 @@ requires-dist = [
     { name = "flask-restful", marker = "extra == 'rest'", specifier = "~=0.3.10" },
     { name = "graphviz", specifier = "~=0.19" },
     { name = "gsrd", marker = "extra == 'tutorials'", specifier = ">=0.2.0" },
+    { name = "greenback", specifier = "~=1.0" },
+    { name = "greenlet", specifier = ">=3.2.4" },
     { name = "gssapi", marker = "extra == 'ssh-kerberos'", specifier = "~=1.6" },
     { name = "importlib-metadata", specifier = "~=6.0" },
     { name = "ipykernel", marker = "extra == 'tests'", specifier = "~=6.9" },
@@ -252,7 +255,6 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", specifier = "~=0.26.0" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=7.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.0.2,<4" },
@@ -2402,7 +2404,7 @@ name = "jinxed"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon", marker = "sys_platform == 'win32'" },
+    { name = "ansicon" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/39/d7/6e6d474ec5eaeca6a61acc17766bb19563b3a372b4b9d92910078f5fe49f/jinxed-2.1.0.tar.gz", hash = "sha256:7e755b831faa2443d44fb4ce7c0202eb9c3ed39bd5bf1193365888f4f6092b54", size = 61287, upload-time = "2026-07-03T15:46:48.153Z" }
 wheels = [
@@ -4687,21 +4689,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
-]
-
-[[package]]
-name = "plumpy"
-version = "0.26.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "greenback" },
-    { name = "greenlet" },
-    { name = "kiwipy", extra = ["rmq"] },
-    { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/19/f3719840ec54880e6cf88f3a88c9ecf3aed0468d3e971339a354e95318f3/plumpy-0.26.0.tar.gz", hash = "sha256:5d0bb443c3983f43295be5306aec97d09e8005a27d1d645deacf08da84afb6e1", size = 230207, upload-time = "2026-02-24T14:38:08.475Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1c/44/b6be39f1225b3a741c4e8a2b48039a8e95f514016eb0f5d092722a7c0949/plumpy-0.26.0-py3-none-any.whl", hash = "sha256:07d5558ead4bdc064c6092236e59f4328f70d24b52eb810e913c491841c6336f", size = 75911, upload-time = "2026-02-24T14:38:06.913Z" },
 ]
 
 [[package]]

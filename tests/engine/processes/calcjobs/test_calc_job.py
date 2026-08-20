@@ -23,6 +23,7 @@ import pytest
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common.datastructures import FileCopyOperation
+from aiida.common.processes import ProcessState
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
@@ -1367,8 +1368,6 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
 
     This is a regression test for https://github.com/aiidateam/aiida-core/issues/5882.
     """
-    import plumpy
-
     daemon_client.start_daemon()
 
     # Launch a job with a one second sleep to ensure it doesn't finish before we get the chance to restart the daemon.
@@ -1376,13 +1375,13 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
     builder = get_calcjob_builder()
     builder.metadata.options.sleep = 1
     builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'disabled': True})}
-    node = submit_and_await(builder, plumpy.ProcessState.WAITING)
+    node = submit_and_await(builder, ProcessState.WAITING)
 
     daemon_client.restart_daemon(wait=True)
 
     # The full stop/restart/reload/resume/finish cycle is heavy, so allow more than the fixture default: under CPU
     # contention the post-restart wait alone approaches the 10 seconds this test used to allow.
-    submit_and_await(node, plumpy.ProcessState.FINISHED, timeout=30)
+    submit_and_await(node, ProcessState.FINISHED, timeout=30)
 
     assert node.is_finished_ok, node.exit_status
 

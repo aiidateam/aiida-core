@@ -12,7 +12,6 @@
 import asyncio
 import inspect
 
-import plumpy
 import pytest
 
 from aiida import orm
@@ -21,14 +20,18 @@ from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
+from aiida.engine.processes.exceptions import ClosedError, KilledError
+from aiida.engine.processes.generic.futures import Future
+from aiida.engine.processes.listener import ProcessListener
+from aiida.engine.processes.persistence import Bundle
 from aiida.manage import enable_caching, get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
 
 
 def run_until_paused(proc):
     """Set up a future that will be resolved when process is paused"""
-    listener = plumpy.ProcessListener()
-    paused = plumpy.Future()
+    listener = ProcessListener()
+    paused = Future()
 
     if proc.paused:
         paused.set_result(True)
@@ -48,8 +51,8 @@ def run_until_waiting(proc):
     """Set up a future that will be resolved on entering the WAITING state"""
     from aiida.engine import ProcessState
 
-    listener = plumpy.ProcessListener()
-    in_waiting = plumpy.Future()
+    listener = ProcessListener()
+    in_waiting = Future()
 
     if proc.state == ProcessState.WAITING:
         in_waiting.set_result(True)
@@ -747,7 +750,7 @@ class TestWorkchain:
             assert not workchain.ctx.s2
 
             # Now bundle the workchain
-            bundle = plumpy.Bundle(workchain)
+            bundle = Bundle(workchain)
             # Need to close the process before recreating a new instance
             workchain.close()
 
@@ -757,7 +760,7 @@ class TestWorkchain:
             assert not workchain2.ctx.s2
 
             # check bundling again creates the same saved state
-            bundle2 = plumpy.Bundle(workchain2)
+            bundle2 = Bundle(workchain2)
             assert bundle == bundle2
 
             # run the loaded workchain to completion
@@ -1159,7 +1162,7 @@ class TestWorkChainAbort:
             assert process.paused
             process.kill()
 
-            with pytest.raises(plumpy.ClosedError):
+            with pytest.raises(ClosedError):
                 launch.run(process)
 
         runner.schedule(process)
@@ -1239,7 +1242,7 @@ class TestWorkChainAbortChildren:
             if asyncio.isfuture(result):
                 await result
 
-            with pytest.raises(plumpy.KilledError):
+            with pytest.raises(KilledError):
                 await process.future()
 
         runner.schedule(process)
@@ -1684,7 +1687,7 @@ class TestWorkChainEvents:
             if self.inputs.outcome.value == 'excepted':
                 raise RuntimeError('Intentional exception for testing.')
 
-    class ProcessListenerTester(plumpy.ProcessListener):
+    class ProcessListenerTester(ProcessListener):
         """Record which process listener events have fired."""
 
         def __init__(self):
@@ -1744,7 +1747,7 @@ class TestWorkChainEvents:
                 if asyncio.isfuture(result):
                     await result
 
-                with pytest.raises(plumpy.KilledError):
+                with pytest.raises(KilledError):
                     await workflow.future()
 
             runner.schedule(workflow)

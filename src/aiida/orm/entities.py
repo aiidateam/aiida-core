@@ -27,12 +27,11 @@ from typing import (
 )
 
 import pydantic as pdt
-from plumpy.base.utils import call_with_super_check, super_check
 from typing_extensions import Self
 
 from aiida.common import exceptions, log
 from aiida.common.exceptions import InvalidOperation
-from aiida.common.lang import classproperty, type_check
+from aiida.common.lang import call_with_super_check, classproperty, super_check, type_check
 from aiida.common.pydantic import get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager

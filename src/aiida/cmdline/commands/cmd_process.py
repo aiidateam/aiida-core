@@ -611,9 +611,8 @@ def process_repair(manager, broker, dry_run, force):
             # broker process and the timing issues that come with it.
             import uuid
 
-            from plumpy.process_comms import create_continue_body
-
             from aiida.brokers.zeromq.queue import PersistentQueue
+            from aiida.engine.processes.communications import create_continue_body
 
             queue_path = broker._storage_path / 'tasks'
             queue = PersistentQueue(queue_path)

@@ -38,8 +38,9 @@ dependencies = [
   'disk-objectstore~=1.5.0',
   'docstring-parser',
   'graphviz~=0.19',
+  'greenback~=1.0',
+  'greenlet>=3.2.4',
   'importlib-metadata~=6.0',
-  'plumpy~=0.26.0',
   'ipython>=7.6',
   'jedi<0.19',
   'jinja2~=3.0',
@@ -417,6 +418,7 @@ module = [
   'mayavi.*',
   'pgsu.*',
   'pgtest.*',
+  'tblib.*',
   'trogon.*',
   'wrapt.*'
 ]
@@ -443,8 +445,6 @@ filterwarnings = [
   'ignore:Identity map already had an identity for .* inside of an event handler within the flush?:sqlalchemy.exc.SAWarning',
   'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
-  # https://github.com/aiidateam/plumpy/issues/283
-  'ignore:There is no current event loop:DeprecationWarning:plumpy',
   "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning:pytest_asyncio",
   "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio|kiwipy",
   # spglib deprecation

@@ -6,18 +6,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA specific implementation of plumpy's ProcessSpec."""
-
-import plumpy.process_spec
+"""AiiDA-specific process specifications."""
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
+from aiida.engine.processes.generic import spec
 from aiida.engine.processes.ports import CalcJobOutputPort, InputPort, PortNamespace
 from aiida.orm import Dict
 
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
 
 
-class ProcessSpec(plumpy.process_spec.ProcessSpec):
+class ProcessSpec(spec.ProcessSpec):
     """Default process spec for process classes defined in `aiida-core`.
 
     This sub class defines custom classes for input ports and port namespaces. It also adds support for the definition

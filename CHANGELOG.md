@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Breaking changes
+
+Process checkpoints created with earlier releases cannot be continued after upgrading because process state classes are now provided in-tree instead of by `plumpy`.
+Finish or terminate all active processes before upgrading.
+
 ### New features
 
 ### Behavior changes

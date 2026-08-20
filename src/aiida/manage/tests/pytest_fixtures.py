@@ -33,7 +33,6 @@ import typing as t
 import uuid
 import warnings
 
-import plumpy
 import pytest
 import wrapt
 from importlib_metadata import EntryPoint, EntryPoints
@@ -42,9 +41,11 @@ from aiida import plugins
 from aiida.common.exceptions import NotExistent
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.processes import ProcessState
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
 from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
+from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.manage import Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -409,7 +410,7 @@ def clear_database_before_test_class(aiida_profile):
 @pytest.fixture(scope='function')
 def temporary_event_loop():
     """Create a temporary loop for independent test case"""
-    current = plumpy.get_or_create_event_loop()
+    current = get_or_create_event_loop()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -726,7 +727,7 @@ def submit_and_await(started_daemon_client):
 
     def _factory(
         submittable: Process | ProcessBuilder | ProcessNode,
-        state: plumpy.ProcessState = plumpy.ProcessState.FINISHED,
+        state: ProcessState = ProcessState.FINISHED,
         timeout: int = 20,
         **kwargs,
     ):

@@ -8,11 +8,12 @@
 ###########################################################################
 """Test persisting via the AiiDAPersister."""
 
-import plumpy
 import pytest
 
+from aiida.common.processes import ProcessState
 from aiida.engine import Process, run
 from aiida.engine.persistence import AiiDAPersister
+from aiida.engine.processes.persistence import Bundle
 from tests.utils.processes import DummyProcess
 
 
@@ -30,13 +31,13 @@ class TestProcess:
     def test_save_load(self):
         """Test load saved state."""
         process = DummyProcess()
-        saved_state = plumpy.Bundle(process)
+        saved_state = Bundle(process)
         process.close()
 
         loaded_process = saved_state.unbundle()
         run(loaded_process)
 
-        assert loaded_process.state == plumpy.ProcessState.FINISHED
+        assert loaded_process.state == ProcessState.FINISHED
 
 
 @pytest.mark.requires_broker

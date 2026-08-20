@@ -8,16 +8,15 @@
 ###########################################################################
 """Definition of AiiDA's process persister and the necessary object loaders."""
 
-import importlib
 import logging
 import traceback
 from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-import plumpy.loaders
-import plumpy.persistence
-from plumpy.exceptions import PersistenceError
-
+from aiida.common.loaders import DefaultObjectLoader as ObjectLoader
+from aiida.common.loaders import get_object_loader
+from aiida.engine.processes import persistence as process_persistence
+from aiida.engine.processes.exceptions import PersistenceError
 from aiida.orm.utils import serialize
 
 if TYPE_CHECKING:
@@ -26,47 +25,9 @@ if TYPE_CHECKING:
 __all__ = ('AiiDAPersister', 'ObjectLoader', 'get_object_loader')
 
 LOGGER = logging.getLogger(__name__)
-OBJECT_LOADER = None
 
 
-class ObjectLoader(plumpy.loaders.DefaultObjectLoader):
-    """Custom object loader for `aiida-core`."""
-
-    def load_object(self, identifier: str) -> Any:
-        """Attempt to load the object identified by the given `identifier`.
-
-        .. note:: We override the `plumpy.DefaultObjectLoader` to be able to throw an `ImportError` instead of a
-            `ValueError` which in the context of `aiida-core` is not as apt, since we are loading classes.
-
-        :param identifier: concatenation of module and resource name
-        :return: loaded object
-        :raises ImportError: if the object cannot be loaded
-        """
-        module_name, name = identifier.split(':')
-        try:
-            module = importlib.import_module(module_name)
-        except ImportError:
-            raise ImportError(f"module '{module_name}' from identifier '{identifier}' could not be loaded")
-
-        try:
-            return getattr(module, name)
-        except AttributeError:
-            raise ImportError(f"object '{name}' from identifier '{identifier}' could not be loaded")
-
-
-def get_object_loader() -> ObjectLoader:
-    """Return the global AiiDA object loader.
-
-    :return: The global object loader
-
-    """
-    global OBJECT_LOADER  # noqa: PLW0603
-    if OBJECT_LOADER is None:
-        OBJECT_LOADER = ObjectLoader()
-    return OBJECT_LOADER
-
-
-class AiiDAPersister(plumpy.persistence.Persister):
+class AiiDAPersister(process_persistence.Persister):
     """Persister to take saved process instance states and persisting them to the database."""
 
     def save_checkpoint(self, process: 'Process', tag: str | None = None):  # type: ignore[override]
@@ -82,7 +43,9 @@ class AiiDAPersister(plumpy.persistence.Persister):
             raise NotImplementedError('Checkpoint tags not supported yet')
 
         try:
-            bundle = plumpy.persistence.Bundle(process, plumpy.persistence.LoadSaveContext(loader=get_object_loader()))
+            bundle = process_persistence.Bundle(
+                process, process_persistence.LoadSaveContext(loader=get_object_loader())
+            )
         except ImportError:
             # Couldn't create the bundle
             raise PersistenceError(f"Failed to create a bundle for '{process}': {traceback.format_exc()}")
@@ -94,7 +57,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
 
         return bundle
 
-    def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> plumpy.persistence.Bundle:
+    def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> process_persistence.Bundle:
         """Load a process from a persisted checkpoint by its process id.
 
         :param pid: the process id of the :class:`plumpy.Process`

@@ -10,11 +10,11 @@
 
 import threading
 
-import plumpy
 import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import Process, launch
+from aiida.engine.processes.generic.futures import Future
 from aiida.manage.caching import enable_caching
 from aiida.orm import Int, Str, WorkflowNode
 
@@ -54,7 +54,7 @@ def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
     loop = runner.loop
     proc = Proc(runner=runner, inputs={'a': Str('input')})
-    future = plumpy.Future()
+    future = Future()
     event = threading.Event()
 
     def calc_done():

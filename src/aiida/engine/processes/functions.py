@@ -352,7 +352,7 @@ class FunctionProcess(Process):
 
         def define(cls, spec):
             """Define the spec dynamically"""
-            from plumpy.ports import UNSPECIFIED
+            from aiida.engine.processes.generic.ports import UNSPECIFIED
 
             super().define(spec)
 
@@ -555,7 +555,7 @@ class FunctionProcess(Process):
         # The remaining inputs have to be keyword arguments.
         kwargs.update(**inputs)
 
-        from plumpy import run_with_portal
+        from aiida.engine.processes.greenback import run_with_portal
 
         result = await run_with_portal(self._func, *args, **kwargs)
 

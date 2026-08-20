@@ -12,10 +12,10 @@ import asyncio
 import contextlib
 
 import pytest
-from plumpy import get_or_create_event_loop
 
 from aiida import orm
 from aiida.engine import calcfunction, workfunction
+from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.engine.utils import (
     InterruptableFuture,
     exponential_backoff_retry,

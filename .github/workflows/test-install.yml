@@ -40,8 +40,6 @@ jobs:
 
     - name: Set up uv
       uses: astral-sh/setup-uv@v10.0.1
-      with:
-        version: latest
 
     - name: Install utils/ dependencies
       run: uv pip install --system -r utils/requirements.txt

@@ -100,6 +100,9 @@ jobs:
     - name: Run daemon nightly tests
       run: .github/workflows/daemon_tests.sh
 
+    - name: Force nightly failure
+      run: exit 1
+
   # Run a subset of test suite to ensure compatibility with latest RabbitMQ releases
   rabbitmq-tests:
 
@@ -148,8 +151,7 @@ jobs:
     if: >-
       always() &&
       contains(needs.*.result, 'failure') &&
-      github.repository == 'aiidateam/aiida-core' &&
-      github.event_name != 'pull_request'
+      github.repository == 'aiidateam/aiida-core'
     needs: [mypy, nightly-tests, rabbitmq-tests]
     runs-on: ubuntu-24.04
     permissions:

@@ -16,11 +16,11 @@ if TYPE_CHECKING:
     import asyncio
 
     from kiwipy.rmq import RmqThreadCommunicator
-    from plumpy.process_comms import RemoteProcessThreadController
 
     from aiida.brokers.broker import Broker
     from aiida.engine.daemon.client import DaemonClient
     from aiida.engine.persistence import AiiDAPersister
+    from aiida.engine.processes.communications import RemoteProcessThreadController
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration.profile import Profile
@@ -180,7 +180,7 @@ class Manager:
             if getattr(IPythonKernel, '_aiida_portal_patched', False):
                 return  # Already patched
 
-            from plumpy import ensure_portal
+            from aiida.engine.processes.greenback import ensure_portal
 
             _orig_do_execute = IPythonKernel.do_execute
 
@@ -422,7 +422,7 @@ class Manager:
         :return: the process controller instance
 
         """
-        from plumpy.process_comms import RemoteProcessThreadController
+        from aiida.engine.processes.communications import RemoteProcessThreadController
 
         if self._process_controller is None:
             self._process_controller = RemoteProcessThreadController(self.get_communicator())
@@ -495,10 +495,9 @@ class Manager:
         :return: a runner configured to work in the daemon configuration
 
         """
-        from plumpy.persistence import LoadSaveContext
-
-        from aiida.engine import persistence
+        from aiida.common.loaders import get_object_loader
         from aiida.engine.processes.launcher import ProcessLauncher
+        from aiida.engine.processes.persistence import LoadSaveContext
 
         runner = self.create_runner(broker_submit=True, loop=loop)
         runner_loop = runner.loop
@@ -508,7 +507,7 @@ class Manager:
             loop=runner_loop,
             persister=self.get_persister(),
             load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader(),
+            loader=get_object_loader(),
         )
 
         assert runner.communicator is not None, 'communicator not set for runner'

@@ -12,13 +12,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import inspect
 import logging
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from plumpy import get_or_create_event_loop
+from aiida.engine.processes.events import get_or_create_event_loop
 
 if TYPE_CHECKING:
     from aiida.engine.processes import Process, ProcessBuilder
@@ -157,18 +158,24 @@ def interruptable_task(
 
 
 def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
-    """Ensure that the given function ``fct`` is a coroutine
+    """Return a coroutine function for a callable."""
+    if not callable(fct):
+        # Defensive check: callers can reach this with values loaded from a persisted state
+        msg = 'fct must be callable'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
-    If the passed function is not already a coroutine, it will be made to be a coroutine
-
-    :param fct: the function
-    :returns: the coroutine
-    """
-    if inspect.iscoroutinefunction(fct):
+    # The second check catches instances of a class with an ``async def __call__``
+    if inspect.iscoroutinefunction(fct) or inspect.iscoroutinefunction(fct.__call__):  # type: ignore[operator]
         return fct
 
-    async def wrapper(*args, **kwargs):
-        return fct(*args, **kwargs)
+    if inspect.isclass(fct):
+        fct = fct.__call__
+
+    from aiida.engine.processes.greenback import run_with_portal
+
+    @functools.wraps(fct)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return await run_with_portal(fct, *args, **kwargs)
 
     return wrapper
 

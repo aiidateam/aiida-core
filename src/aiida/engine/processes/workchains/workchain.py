@@ -15,20 +15,19 @@ import functools
 import logging
 import typing as t
 
-from plumpy import run_with_portal
-from plumpy.persistence import auto_persist
-from plumpy.process_states import Continue, Wait
-from plumpy.processes import ProcessStateMachineMeta
-from plumpy.workchains import Stepper, _PropagateReturn, if_, return_, while_
-from plumpy.workchains import WorkChainSpec as PlumpyWorkChainSpec
-
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.generic.process import ProcessStateMachineMeta
+from aiida.engine.processes.greenback import run_with_portal
+from aiida.engine.processes.persistence import auto_persist
 from aiida.engine.processes.process import Process, ProcessState
 from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.states import Continue, Wait
 from aiida.engine.processes.workchains.awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
+from aiida.engine.processes.workchains.outline import Stepper, _PropagateReturn, if_, return_, while_
+from aiida.engine.processes.workchains.outline import WorkChainSpec as ProcessWorkChainSpec
 from aiida.orm import Node, ProcessNode, WorkChainNode
 from aiida.orm.utils import load_node
 
@@ -38,7 +37,7 @@ if t.TYPE_CHECKING:
 __all__ = ('WorkChain', 'if_', 'return_', 'while_')
 
 
-class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):
+class WorkChainSpec(ProcessSpec, ProcessWorkChainSpec):
     pass
 
 
@@ -173,7 +172,7 @@ class WorkChain(Process, metaclass=Protect):
         self._stepper = None
         stepper_state = saved_state.get(self._STEPPER_STATE, None)
         if stepper_state is not None:
-            self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)  # type: ignore[arg-type]
+            self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)
 
         self.set_logger(self.node.logger)
 
@@ -298,7 +297,7 @@ class WorkChain(Process, metaclass=Protect):
     @override
     @Protect.final
     async def run(self) -> t.Any:
-        self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
+        self._stepper = self.spec().get_outline().create_stepper(self)
         return await run_with_portal(self._do_step)
 
     def _do_step(self) -> t.Any:

@@ -22,11 +22,12 @@ from functools import partial
 from typing import Any, Protocol, overload
 
 import yaml
-from plumpy import Bundle, get_object_loader
-from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
 from aiida.common import AttributeDict
+from aiida.common.extendeddicts import AttributesFrozendict
+from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.persistence import Bundle
 from aiida.orm.utils.managers import NodeLinksManager
 
 _ENUM_TAG = '!enum'

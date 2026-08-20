@@ -9,9 +9,10 @@
 """Utilities that extend the basic python language."""
 
 import functools
+import inspect
 import keyword
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 
 def isidentifier(identifier: str) -> bool:
@@ -51,12 +52,60 @@ def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool
 MethodType = TypeVar('MethodType', bound=Callable[..., Any])
 
 
+def super_check(wrapped: MethodType) -> MethodType:
+    """Decorate a method to require invocation through :func:`call_with_super_check`."""
+
+    @functools.wraps(wrapped)
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> None:
+        msg = f"The function '{wrapped.__name__}' was not called through call_with_super_check"
+        assert getattr(self, '_called', 0) >= 1, msg
+        wrapped(self, *args, **kwargs)
+        self._called -= 1
+
+    return wrapper  # type: ignore[return-value]
+
+
+def call_with_super_check(wrapped: MethodType, *args: Any, **kwargs: Any) -> None:
+    """Call a bound method and verify that every override calls ``super()``."""
+    self = wrapped.__self__  # type: ignore[attr-defined]
+    call_count = getattr(self, '_called', 0)
+    self._called = call_count + 1
+    wrapped(*args, **kwargs)
+    msg = f"Base '{wrapped.__name__}' was not called from '{self.__class__}'\nHint: Did you forget to call the super?"
+    assert self._called == call_count, msg
+
+
+def protected(check: bool = False) -> Callable[[MethodType], MethodType]:
+    """Return a decorator that marks a method as protected."""
+
+    def wrap(func: MethodType) -> MethodType:
+        args = inspect.getfullargspec(func)[0]
+        if not args:
+            msg = 'Can only use the protected decorator on member functions'
+            raise RuntimeError(msg)
+
+        if not check:
+            return func
+
+        @functools.wraps(func)
+        def wrapped_fn(self: Any, *args: Any, **kwargs: Any) -> Any:
+            try:
+                calling_instance = inspect.stack()[1][0].f_locals['self']
+                assert self is calling_instance
+            except (KeyError, AssertionError) as exception:
+                msg = f'Cannot access protected function {func.__name__} from outside class hierarchy'
+                raise RuntimeError(msg) from exception
+            return func(self, *args, **kwargs)
+
+        return cast(MethodType, wrapped_fn)
+
+    return wrap
+
+
 def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType]:
     """Decorator to signal that a method from a base class is being overridden completely."""
 
     def wrap(func: MethodType) -> MethodType:
-        import inspect
-
         if isinstance(func, property):
             raise RuntimeError('Override must go after @property decorator')
 

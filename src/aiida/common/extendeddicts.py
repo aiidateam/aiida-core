@@ -10,14 +10,20 @@
 
 from __future__ import annotations
 
-from collections.abc import KeysView, Mapping
+from collections.abc import Iterator, KeysView, Mapping
 from typing import Any
 
 from typing_extensions import Self
 
 from aiida.common import exceptions
 
-__all__ = ('AttributeDict', 'DefaultFieldsAttributeDict', 'FixedFieldsAttributeDict')
+__all__ = (
+    'AttributeDict',
+    'AttributesFrozendict',
+    'DefaultFieldsAttributeDict',
+    'FixedFieldsAttributeDict',
+    'Frozendict',
+)
 
 
 class AttributeDict(dict[str, Any]):
@@ -96,6 +102,52 @@ class AttributeDict(dict[str, Any]):
 
     def __dir__(self) -> KeysView[str]:
         return self.keys()
+
+
+class Frozendict(Mapping[str, Any]):
+    """An immutable mapping backed by a dictionary."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self._dict = dict(*args, **kwargs)
+        self._hash: int | None = None
+
+    def __getitem__(self, key: str) -> Any:
+        return self._dict[key]
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._dict
+
+    def copy(self, **add_or_replace: Any) -> Frozendict:
+        return self.__class__(self, **add_or_replace)
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} {self._dict!r}>'
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._dict)
+
+    def __len__(self) -> int:
+        return len(self._dict)
+
+    def __hash__(self) -> int:
+        if self._hash is None:
+            self._hash = hash(frozenset(self._dict.items()))
+        return self._hash
+
+
+class AttributesFrozendict(Frozendict):
+    """An immutable mapping whose keys can also be accessed as attributes."""
+
+    def __getattr__(self, attr: str) -> Any:
+        if attr == '__setstate__':
+            raise AttributeError()
+        try:
+            return self[attr]
+        except KeyError as exception:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'") from exception
+
+    def __dir__(self) -> list[str]:
+        return list(self.keys())
 
 
 class FixedFieldsAttributeDict(AttributeDict):

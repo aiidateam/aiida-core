@@ -20,16 +20,15 @@ from collections.abc import Callable
 from typing import Any, NamedTuple
 
 import kiwipy
-from plumpy import run_until_complete
-from plumpy.communications import wrap_communicator
-from plumpy.events import get_or_create_event_loop
-from plumpy.persistence import Persister
-from plumpy.process_comms import RemoteProcessThreadController
 
 from aiida.common import exceptions
 from aiida.engine import transports, utils
 from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
 from aiida.engine.processes.calcjobs import manager
+from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
+from aiida.engine.processes.events import get_or_create_event_loop
+from aiida.engine.processes.greenback import run_until_complete
+from aiida.engine.processes.persistence import Persister
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
 

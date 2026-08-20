@@ -9,12 +9,12 @@ import typing as t
 
 import kiwipy
 from kiwipy import communications
-from plumpy.futures import unwrap_kiwi_future
 
 from aiida.brokers import Broker
 from aiida.common.exceptions import AiidaException
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
+from aiida.engine.processes.generic.futures import unwrap_kiwi_future
 from aiida.manage.manager import get_manager
 from aiida.orm import ProcessNode, QueryBuilder
 from aiida.tools.query.calculation import CalculationQueryBuilder

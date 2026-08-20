@@ -7,12 +7,12 @@ import typing as t
 
 import numpy as np
 import pytest
-from plumpy import get_object_loader
 from typing_extensions import NotRequired
 
 from aiida import orm
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import UnsupportedSchemaError
+from aiida.engine.persistence import get_object_loader
 from aiida.orm.pydantic import OrmModel
 
 orm_to_test = (

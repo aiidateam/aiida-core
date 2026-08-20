@@ -5,12 +5,14 @@ import logging
 import traceback
 
 import kiwipy
-import plumpy
+
+from aiida.engine.processes.communications import ProcessLauncher as BaseProcessLauncher
+from aiida.engine.processes.exceptions import KilledError
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ProcessLauncher(plumpy.ProcessLauncher):
+class ProcessLauncher(BaseProcessLauncher):
     """A sub class of :class:`plumpy.ProcessLauncher` to launch a ``Process``.
 
     It overrides the _continue method to make sure the node corresponding to the task can be loaded and
@@ -79,7 +81,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             elif node.is_excepted:
                 future.set_exception(PastException(node.exception))
             elif node.is_killed:
-                future.set_exception(plumpy.KilledError())
+                future.set_exception(KilledError())
 
             return future.result()
 

@@ -6,13 +6,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
+"""Futures for waiting on AiiDA processes."""
 
 import asyncio
 
 import kiwipy
-from plumpy import get_or_create_event_loop
 
+from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.orm import Node, load_node
 
 __all__ = ('ProcessFuture',)

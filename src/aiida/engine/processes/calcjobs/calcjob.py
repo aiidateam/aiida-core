@@ -18,9 +18,6 @@ import shutil
 from collections.abc import Hashable
 from typing import Any
 
-import plumpy.ports
-import plumpy.process_states
-
 from aiida import orm
 from aiida.common import AttributeDict, exceptions
 from aiida.common.datastructures import CalcInfo, FileCopyOperation
@@ -28,6 +25,7 @@ from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
+from aiida.engine.processes import states as process_states
 from aiida.engine.processes.calcjobs.importer import CalcJobImporter
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
 from aiida.engine.processes.calcjobs.tasks import UPLOAD_COMMAND, Waiting
@@ -594,7 +592,7 @@ class CalcJob(Process):
             return AttributeDict()
 
     @classmethod
-    def get_state_classes(cls) -> dict[Hashable, type[plumpy.process_states.State]]:
+    def get_state_classes(cls) -> dict[Hashable, type[process_states.State]]:
         """A mapping of the State constants to the corresponding state class.
 
         Overrides the waiting state with the Calcjob specific version.
@@ -618,7 +616,7 @@ class CalcJob(Process):
         super().on_terminated()
 
     @override
-    async def run(self) -> plumpy.process_states.Stop | int | plumpy.process_states.Wait:
+    async def run(self) -> process_states.Stop | int | process_states.Wait:
         """Run the calculation job.
 
         This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
@@ -630,7 +628,7 @@ class CalcJob(Process):
         """
         if self.inputs.metadata.dry_run:
             await self._perform_dry_run()
-            return plumpy.process_states.Stop(None, True)
+            return process_states.Stop(None, True)
 
         if 'remote_folder' in self.inputs:
             exit_code = await self._perform_import()
@@ -649,7 +647,7 @@ class CalcJob(Process):
             return self.node.exit_status
 
         # Launch the upload operation
-        return plumpy.process_states.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
+        return process_states.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.
@@ -1078,7 +1076,7 @@ class CalcJob(Process):
                 try:
                     with_mpi = self.spec().inputs['metadata']['options']['withmpi'].default  # type: ignore[index]
                 except RuntimeError:
-                    # ``plumpy.InputPort.default`` raises a ``RuntimeError`` if no default has been set. This is bad
+                    # ``InputPort.default`` raises a ``RuntimeError`` if no default has been set. This is bad
                     # design and should be changed, but we have to deal with it like this for now.
                     with_mpi = False
 

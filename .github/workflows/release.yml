@@ -97,7 +97,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: Install flit
-      run: pip install flit~=4.0
+      run: pip install "flit>=4.0.2,<5"
     - name: Build
       run: flit build
     - name: Publish to PyPI
@@ -125,7 +125,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: Install flit
-      run: pip install flit~=4.0
+      run: pip install "flit>=4.0.2,<5"
     - name: Build
       run: flit build
     - name: Publish to TestPyPI

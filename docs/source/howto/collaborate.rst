@@ -237,8 +237,9 @@ A delta travels as an archive, so that format is the only compatibility that mat
 Whichever side would send an archive the other cannot read is refused up front, instead of failing mid-transfer — a pull tells you to upgrade your aiida-core, a push tells you to ask your collaborator to upgrade theirs.
 An older peer is no obstacle in either direction: its archives are migrated forward when they are imported.
 
-On SQLite storage, ``pull`` refuses to import while daemon workers are running, because SQLite allows only one writer at a time; pass ``--pause-my-daemon`` to stop the workers around the import and restart them afterwards.
-PostgreSQL profiles need no pause.
+On SQLite storage, ``pull`` stops the daemon workers around the import and restarts them afterwards, because SQLite allows only one writer at a time; it says so before the first import, and nothing has to be passed for it.
+This is what your daemon already does for every push it receives.
+PostgreSQL profiles need no pause and none is made.
 
 The endpoint serves at most ``collab.max_concurrency`` peers at once (default 2, pulls and pushes combined); peers beyond that are answered busy and simply retry.
 

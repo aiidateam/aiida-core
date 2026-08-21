@@ -1556,17 +1556,14 @@ def stub_environment(monkeypatch):
     monkeypatch.setattr(CollabClient, 'release', lambda self: None)
 
 
-def test_pull_sqlite_running_workers_aborts(run_cli_command, config_with_profile_factory, monkeypatch):
-    """Test that ``verdi collab pull`` on SQLite with running workers aborts, naming ``--pause-my-daemon``."""
-    from aiida.engine.daemon.client import DaemonClient
+def test_pull_rejects_pause_my_daemon(run_cli_command, config_with_profile):
+    """Test that the pause is no longer something to ask for: the option that used to be required is gone."""
+    init_collab(config_with_profile)
 
-    init_collab(config_with_profile_factory(storage_backend='core.sqlite_dos'))
-    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
+    result = run_cli_command(cmd_collab.collab_pull, ['--pause-my-daemon'], use_subprocess=False, raises=True)
 
-    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False, raises=True)
-
-    assert 'please pause your daemon' in result.output
-    assert '--pause-my-daemon' in result.output
+    assert result.exit_code == 2
+    assert 'no such option' in result.output.lower()
 
 
 def test_pull_unknown_peer(run_cli_command, config_with_profile, stub_environment):
@@ -1670,16 +1667,16 @@ def stub_transfer(monkeypatch):
     return calls
 
 
-def test_pull_pause_my_daemon(
+def test_pull_on_sqlite_pauses_the_workers(
     run_cli_command, config_with_profile_factory, stub_environment, stub_transfer, monkeypatch
 ):
-    """Test that ``--pause-my-daemon`` stops the workers, runs the import and restarts them."""
+    """Test that a SQLite pull with a running daemon stops the workers around the import and says so."""
     from aiida.engine.daemon.client import DaemonClient
 
     init_collab(config_with_profile_factory(storage_backend='core.sqlite_dos'))
     monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
 
-    result = run_cli_command(cmd_collab.collab_pull, ['--pause-my-daemon', '--force'], use_subprocess=False)
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
 
     name = f'aiida-{get_profile().name}'
     assert stub_transfer == [
@@ -1689,7 +1686,44 @@ def test_pull_pause_my_daemon(
         ('import', False, OFFER_INSTANT),
         {'command': 'start', 'properties': {'name': name, 'waiting': True}},
     ]
+    assert 'pausing the daemon workers' in result.output
     assert 'pulled 1 node(s)' in result.output
+
+
+def test_pull_on_sqlite_announces_no_pause_it_does_not_make(
+    run_cli_command, config_with_profile_factory, stub_environment, monkeypatch
+):
+    """Test that a SQLite pull whose peer never answers pauses nothing and says nothing about pausing."""
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile_factory(storage_backend='core.sqlite_dos'))
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
+
+    def offline(self, local, **kwargs):
+        raise CollabRequestError('the peer is not there')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', offline)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert 'pausing the daemon workers' not in result.output
+
+
+def test_pull_on_postgresql_pauses_nothing(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a running daemon is left alone on storage that takes a second writer."""
+    from aiida.engine.daemon.client import DaemonClient
+
+    init_collab(config_with_profile)
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert [call for call in stub_transfer if isinstance(call, dict)] == []
+    assert 'pausing the daemon workers' not in result.output
 
 
 def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, stub_environment, stub_transfer):

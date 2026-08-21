@@ -1410,14 +1410,9 @@ def negotiate_pull(client, *, backend, state, cursor, claim, policy, include_del
     is_flag=True,
     help='Import nodes that were deleted from this profile before, and drop their tombstones.',
 )
-@click.option(
-    '--pause-my-daemon',
-    is_flag=True,
-    help='Stop the daemon workers while the delta is imported. Required on SQLite storage while workers run.',
-)
 @requires_loaded_profile()
 @click.pass_context
-def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
+def collab_pull(ctx, peers, force, dry_run, include_deleted):
     """Fetch the new sealed provenance of peers and import it.
 
     PEER is the nickname of a peer of the collab; without any, every peer is pulled from. Each transfer is
@@ -1440,15 +1435,10 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     profile = ctx.obj.profile
     require_collab(profile)
 
-    # Checked before anything is transferred: SQLite is single-writer, so the import and running workers would
-    # starve each other over the database lock.
-    pause = False
-
-    if not dry_run and 'sqlite' in profile.storage_backend and get_daemon_client().is_daemon_running:
-        if not pause_my_daemon:
-            echo.echo_critical('cannot proceed: please pause your daemon, or pass `--pause-my-daemon`.')
-
-        pause = True
+    # SQLite is single-writer, so an import and running workers starve each other over the database lock. Decided
+    # before anything is transferred, and not asked about: the endpoint already pauses the workers around every
+    # push it receives, and a pull is the same write from the other side.
+    pause = not dry_run and 'sqlite' in profile.storage_backend and get_daemon_client().is_daemon_running
 
     selected = select_peers(ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name), peers)
     token = ctx.obj.config.get_option(OPTION_TOKEN, scope=profile.name)
@@ -1473,6 +1463,8 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
 
     workdir.mkdir(parents=True, exist_ok=True)
     hold_the_sync_lock(ctx, profile)
+
+    announce_pause = pause
 
     for peer_uuid, entry in selected.items():
         url, nickname = entry['url'], entry['nickname']
@@ -1575,6 +1567,14 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                 # a moment ago, so it is there to be told, and it is the other members that pay if it is not.
                 client.release()
                 continue
+
+        if announce_pause:
+            # Said here and not before the loop: a pull whose every peer turns out unreachable imports nothing,
+            # and announcing a pause that never happens is worse than saying nothing.
+            announce_pause = False
+            echo.echo_report(
+                f'pausing the daemon workers of `{profile.name}` for the import; they restart when it is done'
+            )
 
         try:
             with import_lock(state.filepath):

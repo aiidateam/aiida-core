@@ -28,6 +28,25 @@ The easiest way to inspect the contents of an archive is to create a profile tha
 !verdi profile setup core.sqlite_zip -n --profile-name archive --filepath process.aiida
 ```
 
+The `--filepath` option also accepts a `http://` or `https://` URL of an archive hosted online:
+
+```{code-block} console
+verdi profile setup core.sqlite_zip -n --profile-name archive --filepath https://example.com/process.aiida
+```
+
+In this case, the archive is not downloaded in full: the profile stores the URL and AiiDA uses [HTTP range requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests) to fetch only the SQLite database (once per Python session, on first query) and to stream individual repository files on demand.
+Note that the server hosting the archive must support range requests, and the archive must already be at the latest archive format version, since a remote archive cannot be migrated in place (download it and run `verdi archive migrate` on the local copy instead).
+The HTTP requests use a timeout of 60 seconds by default, which can be changed via the `storage.remote_archive_timeout` configuration option, e.g. `verdi config set storage.remote_archive_timeout 120`.
+
+Alternatively, if you do not want to create a profile at all, you can pass the location of the archive directly to the `verdi -p/--profile` option, as a `file:///absolute/path` URL of a local archive or an `http(s)://` URL of a remote one:
+
+```{code-block} console
+verdi -p file:///path/to/process.aiida process list -a
+verdi -p https://example.com/process.aiida shell
+```
+
+This creates a temporary profile that mounts the archive for the duration of the command only: nothing is added to the AiiDA configuration file and any temporary files are cleaned up when the command finishes.
+
 You can now inspect the contents of the `process.aiida` archive by using the `archive` profile in the same way you would a standard AiiDA profile.
 For example, you can start an interactive shell using `verdi -p archive shell` or if you are already in a notebook simply load the profile:
 

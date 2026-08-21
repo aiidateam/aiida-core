@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from aiida.manage.configuration import Profile
 
-Direction = Literal['pull', 'push', 'refresh']
+Direction = Literal['pull', 'push', 'refresh', 'served']
 
 # Above this many events the log is folded on save. The trigger is a count, not an age, because what the log
 # costs is the linear scan on every negotiation and the size of the state file — both functions of the count.
@@ -88,7 +88,11 @@ def exclusive_lock(lockpath: Path, *, blocking: bool = True) -> Iterator[bool]:
 
 @dataclass
 class CollabEvent:
-    """A single completed pull, push or extras refresh."""
+    """A single completed pull, push, extras refresh or served download.
+
+    A ``served`` row is the one trace the serving side of a pull keeps of it: the sender holds no sync state by
+    design, but that is a reason to keep no cursor, not a reason to keep no audit row.
+    """
 
     time: datetime
     direction: Direction
@@ -234,9 +238,12 @@ class CollabState:
                 time=horizon,
                 direction=direction,
                 peer=COMPACTED_PEER,
-                # A folded push keeps its row and its byte total for the log but drops its UUIDs: nothing ever
-                # queries them, and keeping them would grow without bound the very file compaction exists to hold.
-                uuids=sorted({uuid for event in events for uuid in event.uuids}) if direction != 'push' else [],
+                # A folded push or served row keeps its row and its byte total for the log but drops its UUIDs:
+                # nothing ever queries them, and keeping them would grow without bound the very file compaction
+                # exists to hold.
+                uuids=sorted({uuid for event in events for uuid in event.uuids})
+                if direction not in ('push', 'served')
+                else [],
                 size=sum(event.size for event in events),
             )
             for direction, events in sorted(by_direction.items())

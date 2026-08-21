@@ -122,7 +122,8 @@ def test_an_extras_edit_that_arrived_inside_a_delta_is_offered_onward(collab):
     b.run('pull', ['alice', '--force'])
 
     assert b.extras(created) == {'note': 'from-alice'}, 'the edit has to reach Bob inside the node, not as a refresh'
-    assert [event.direction for event in b.state().events] == ['pull']
+    # Of Bob's own syncs, that is: a `served` row among them is Carol's pull of a moment ago, not one Bob drove.
+    assert [event.direction for event in b.state().events if event.direction != 'served'] == ['pull']
 
     c.run('pull', ['bob', '--force'])
 
@@ -373,6 +374,49 @@ def test_repeating_a_sync_transfers_nothing_but_is_still_logged(collab, directio
     events = caller.state().events[marks[caller.nickname] :]
 
     assert [(event.direction, event.peer, event.uuids) for event in events] == [(direction, peer.uuid, [])]
+
+
+def test_a_pull_is_logged_on_the_serving_side_too(collab):
+    """Test that a member that was pulled from records what it served, naming the peer that took it.
+
+    The sender keeps no cursor and no claim, by design. That is a reason to hold no sync state for a peer, not a
+    reason for the log to stay silent about the one thing that did happen.
+    """
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    move(a, b, 'pull')
+
+    event = a.state().events[-1]
+
+    assert event.direction == 'served'
+    assert event.peer == b.uuid
+    assert created in event.uuids
+    assert event.size > 0
+
+
+def test_a_push_is_not_logged_as_served(collab):
+    """Test that only a download is served: a push is a pull at the receiver and a push at the sender, as before."""
+    a, b, _ = collab(3)
+    a.seal_calculation()
+
+    move(a, b, 'push')
+
+    assert [event.direction for event in b.state().events] == ['pull']
+    assert [event.direction for event in a.state().events] == ['push']
+
+
+def test_a_resumed_download_is_served_once(collab, faults):
+    """Test that a download that broke and resumed is one served row: the resumption is not a second reading."""
+    a, b, _ = collab(3)
+    a.seal_calculation()
+
+    faults.drop_next_download(after=64)
+
+    move(a, b, 'pull')
+    move(a, b, 'pull')
+
+    assert [event.direction for event in a.state().events] == ['served']
 
 
 @pytest.mark.parametrize('direction', DIRECTIONS)

@@ -111,6 +111,33 @@ def test_compaction(tmp_path, monkeypatch):
     assert len(CollabState.read(tmp_path / 'state.json').events) == 5
 
 
+def test_compaction_folds_served_like_push(tmp_path, monkeypatch):
+    """Test that folding a served row keeps it and its byte total but drops the UUIDs nothing ever queries.
+
+    A served row records what a peer read out of this profile. Its UUIDs are for the eye only -- no negotiation
+    ever unions them -- so keeping them would grow without bound the very file compaction exists to hold.
+    """
+    from aiida.tools.collab import state as state_module
+
+    monkeypatch.setattr(state_module, 'COMPACT_THRESHOLD', 4)
+
+    base = timezone.now()
+    state = CollabState(filepath=tmp_path / 'state.json')
+    state.events = [
+        CollabEvent(
+            time=base + timedelta(seconds=index), direction='served', peer=PEER, uuids=[f'uuid-{index}'], size=10
+        )
+        for index in range(6)
+    ]
+    state.save()
+
+    folded = CollabState.read(tmp_path / 'state.json').events[0]
+
+    assert folded.direction == 'served'
+    assert folded.uuids == []
+    assert folded.size == 40, 'the four folded rows keep their bytes'
+
+
 def test_a_lock_that_cannot_be_taken_raises_in_either_mode(tmp_path, monkeypatch):
     """Test that a filesystem without locking raises, rather than being reported as a lock somebody else holds.
 

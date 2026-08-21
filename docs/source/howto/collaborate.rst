@@ -218,7 +218,7 @@ Day-to-day use
     $ verdi collab pull alice   # ... or of the named peers only
     $ verdi collab push         # send my new sealed provenance to every peer that accepts pushes
     $ verdi collab push alice   # ... or to the named peers only
-    $ verdi collab log          # the history of every pull, push and extras refresh
+    $ verdi collab log          # the history of every sync, the ones peers drove included
     $ verdi collab peer list    # the roster as this profile holds it, dormant entries included
     $ verdi collab link         # the code that admits a newcomer — it carries the key, so hand it over out of band
     $ verdi collab config       # what this profile serves: consent to pushes, and the address it is reached at
@@ -232,6 +232,10 @@ Pass ``--force`` to skip the prompts (for scripts), or ``--dry-run`` to only see
 Both commands announce each step before they take it — which peer they are contacting, that they are negotiating with it, that they are asking for the delta, that they are importing it or waiting for the other side to — and draw a progress bar over the download and the upload.
 The negotiation is where the time goes: against a large profile a first sync legitimately spends minutes there before a single byte moves, so the line that announces it is the one to wait on rather than to interrupt.
 The step lines are ordinary ``verdi`` report output, so ``verdi -v warning collab pull`` silences them.
+
+``verdi collab log`` shows both sides of that.
+Your own pulls, pushes and extras refreshes are rows of their direction; a ``served`` row is one a *peer* drove — it pulled from you and took the delta whole — named after the peer that took it.
+A download that broke and resumed is one ``served`` row and not one per attempt, and a push you receive is a ``pull`` row, because the direction of a row is always relative to this profile.
 A peer that is offline, busy, refuses pushes, declares a different policy or runs an aiida-core whose archives this one cannot read is skipped with a warning, and the remaining peers are synced.
 A delta that arrives but cannot be imported — bytes that are not a readable archive, or provenance linked to a node the receiving profile holds nowhere — is skipped the same way, with a warning naming the peer it came from; nothing lands from it, and the next sync delivers it once whatever diverged has been sorted out.
 The only difference is the exit code: a transfer that started and failed makes the command exit non-zero, so a scheduled sync reports a problem, while peers that were merely skipped without transferring anything leave it at zero.

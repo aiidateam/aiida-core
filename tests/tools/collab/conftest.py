@@ -87,6 +87,7 @@ class Member:
             request_delta=self.endpoint.request_delta,
             resolve_delta=self.endpoint.resolve_delta,
             release=self.endpoint.release,
+            served=self.endpoint.served,
             staging=self.endpoint.staging,
             diff_manifest=self.endpoint.diff_manifest,
             handshake=self.endpoint.handshake,

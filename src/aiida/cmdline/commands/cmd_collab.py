@@ -1336,7 +1336,11 @@ def collab_peer_set(ctx, peer, url, nickname):
 @requires_loaded_profile()
 @click.pass_context
 def collab_log(ctx):
-    """Show the history of the pulls, pushes and extras refreshes of the collab."""
+    """Show the history of the syncs of the collab.
+
+    A ``served`` row is one a peer drove: it pulled from this profile and took the delta whole. The rest are this
+    profile's own — what it pulled, what it pushed and whose extras it refreshed.
+    """
     from aiida.tools.collab.config import OPTION_PEERS
     from aiida.tools.collab.state import CollabState
 

@@ -107,6 +107,9 @@ class CollabServer(ThreadingHTTPServer):
     :param release: frees the serving slots of the requester, at ``DELETE /collab/v1/session`` and when a download
         was served to the end of the file. A peer that abandons a negotiation — a dry run, a declined prompt —
         ends its session that way instead of leaving the endpoint refusing others until the slot expires.
+    :param served: records that the requester took a delta whole, called once the last byte of it went out. Not
+        called for a range that was already satisfied, which is a client re-asking for bytes it holds, so a
+        download that broke and resumed is one record and not one per attempt.
     :param staging: refreshes the serving slot of a peer that is uploading, called on the probe and on every
         chunk request of ``/collab/v1/upload/<sha256>``. The counterpart of what ``resolve_delta`` does for a
         download: a transfer longer than a slot lives is its holder being active, not going silent.
@@ -142,6 +145,7 @@ class CollabServer(ThreadingHTTPServer):
         ],
         resolve_delta: Callable[[str, str], Path | None],
         release: Callable[[str], None],
+        served: Callable[[str, str], None],
         staging: Callable[[str], None],
         diff_manifest: Callable[[list[str], dict[str, datetime], list[GroupMembers]], ManifestDiff],
         handshake: Callable[[str, list[dict[str, Any]]], PushHandshake],
@@ -163,6 +167,7 @@ class CollabServer(ThreadingHTTPServer):
         self.request_delta = request_delta
         self.resolve_delta = resolve_delta
         self.release = release
+        self.served = served
         self.staging = staging
         self.diff_manifest = diff_manifest
         self.handshake = handshake
@@ -436,8 +441,10 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             shutil.copyfileobj(handle, self.wfile, CHUNK_SIZE)
 
         # Reaching here means the response was written to the end of the file, whatever offset it started from:
-        # the client holds the complete delta and the serving slot behind it can be freed.
+        # the client holds the complete delta and the serving slot behind it can be freed. Recorded after the
+        # release, which owes nothing to a state file this may have to wait on.
         self.server.release(self.peer)
+        self.server.served(delta_id, self.peer)
 
     def _head_upload(self, sha256: str) -> None:
         self.server.staging(self.peer)

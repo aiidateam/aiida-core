@@ -92,6 +92,7 @@ class StubSyncCore:
         self.requesters: list[str] = []
         self.offered: set[str] = set()
         self.released: list[str] = []
+        self.serves: list[tuple[str, str]] = []
         self.stagings: list[str] = []
         self.diffed: list[list[str]] = []
         self.handshakes: list[str] = []
@@ -147,6 +148,9 @@ class StubSyncCore:
     def release(self, requester: str) -> None:
         self.released.append(requester)
 
+    def served(self, delta_id: str, requester: str) -> None:
+        self.serves.append((delta_id, requester))
+
     def staging(self, requester: str) -> None:
         self.stagings.append(requester)
 
@@ -201,6 +205,7 @@ def build_server(host: str, port: int, stub: StubSyncCore, staging_dir: Path) ->
         request_delta=stub.request_delta,
         resolve_delta=stub.resolve_delta,
         release=stub.release,
+        served=stub.served,
         staging=stub.staging,
         diff_manifest=stub.diff_manifest,
         handshake=stub.handshake,
@@ -680,13 +685,18 @@ def test_download_resume_stale(transport, tmp_path):
 
 
 def test_download_already_complete(transport, tmp_path):
-    """Re-requesting a finished download transfers zero bytes and leaves the file untouched."""
+    """Re-requesting a finished download transfers zero bytes, leaves the file untouched and reads nothing.
+
+    The range it asks for is one the peer cannot satisfy because the client already holds every byte, so the
+    audit row belongs to the download that fetched them and not to the client saying so.
+    """
     offer = transport.client.request_delta(None, frozenset(), frozenset())
     filepath = tmp_path / 'download.aiida'
     transport.client.download_delta(filepath, offer.delta)
 
     assert transport.client.download_delta(filepath, offer.delta) == 0
     assert filepath.read_bytes() == DELTA
+    assert transport.stub.serves == [(offer.delta, PEER)], 'a range already satisfied is not a second reading'
 
 
 def test_a_completed_download_ends_the_session(transport, tmp_path):

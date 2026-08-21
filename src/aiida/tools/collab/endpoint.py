@@ -21,6 +21,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 from aiida import __version__
+from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.archive.abstract import get_format
 from aiida.tools.collab.config import (
@@ -52,7 +53,7 @@ from aiida.tools.collab.protocol import (
     RenegotiationRequired,
     delta_id,
 )
-from aiida.tools.collab.state import CollabState, import_lock, import_lock_held
+from aiida.tools.collab.state import CollabEvent, CollabState, import_lock, import_lock_held
 from aiida.tools.collab.sync import (
     Delta,
     compute_delta,
@@ -521,6 +522,30 @@ class CollabEndpoint:
 
         return cached.filepath
 
+    def served(self, delta_id: str, requester: str) -> None:
+        """Record that a peer took a delta of this profile whole, which is the one trace serving one leaves.
+
+        The sender keeps no sync state — no cursor, no claim — and that is the design; but "who read what from
+        me, and when" is an audit question, not a sync one, and nothing else here can answer it. Nothing reads
+        these rows back: ``verdi collab log`` shows them and no query filters on the direction.
+
+        :param requester: the profile UUID the peer identified itself with, as ``verdi collab log`` will alias it.
+        """
+        with self._delta_lock:
+            cached = self._deltas.get(delta_id)
+
+            if cached is None:
+                return
+
+            # Measured under the lock, because an export elsewhere unlinks the file of a delta it drops.
+            size = cached.filepath.stat().st_size
+            uuids = cached.uuids
+
+        with CollabState.mutate(self._state_filepath) as state:
+            state.events.append(
+                CollabEvent(time=timezone.now(), direction='served', peer=requester, uuids=uuids, size=size)
+            )
+
     def staging(self, requester: str) -> None:
         """Refresh the serving slot of a peer that is uploading, as a download refreshes that of one pulling.
 
@@ -688,6 +713,7 @@ def serve(profile: Profile, backend: StorageBackend, stop: threading.Event | Non
         request_delta=endpoint.request_delta,
         resolve_delta=endpoint.resolve_delta,
         release=endpoint.release,
+        served=endpoint.served,
         staging=endpoint.staging,
         diff_manifest=endpoint.diff_manifest,
         handshake=endpoint.handshake,

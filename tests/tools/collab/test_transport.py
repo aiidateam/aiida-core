@@ -641,6 +641,26 @@ def test_download_resume(transport, tmp_path):
     assert filepath.read_bytes() == DELTA
 
 
+def test_download_reports_what_it_transfers(transport, tmp_path):
+    """The download callback adds up to the whole delta, and on a resumption to the part that still travelled."""
+    offer = transport.client.request_delta(None, frozenset(), frozenset())
+    filepath = tmp_path / 'download.aiida'
+    chunks: list[int] = []
+
+    transport.client.download_delta(filepath, offer.delta, progress=chunks.append)
+
+    assert sum(chunks) == len(DELTA)
+
+    offset = len(DELTA) // 3
+    with filepath.open('rb+') as handle:
+        handle.truncate(offset)
+
+    resumed: list[int] = []
+    transport.client.download_delta(filepath, offer.delta, progress=resumed.append)
+
+    assert sum(resumed) == len(DELTA) - offset
+
+
 def test_download_resume_stale(transport, tmp_path):
     """A resumption after the peer produced a new delta starts over instead of splicing two files."""
     offer = transport.client.request_delta(None, frozenset(), frozenset())
@@ -869,6 +889,21 @@ def test_upload_resume(transport, tmp_path):
     assert report.sent == len(UPLOAD) - offset
     assert report.staged == len(UPLOAD)
     assert (transport.staging_dir / report.sha256).read_bytes() == UPLOAD
+
+
+def test_upload_reports_what_it_sends(transport, tmp_path):
+    """The upload callback adds up to the bytes that travelled, which on a resumption is not the whole file."""
+    filepath = tmp_path / 'upload.aiida'
+    filepath.write_bytes(UPLOAD)
+
+    offset = len(UPLOAD) // 3
+    (transport.staging_dir / file_sha256(filepath)).write_bytes(UPLOAD[:offset])
+
+    blocks: list[int] = []
+    report = transport.client.upload_delta(filepath, progress=blocks.append)
+
+    assert sum(blocks) == report.sent == len(UPLOAD) - offset
+    assert (transport.staging_dir / report.sha256).read_bytes() == UPLOAD, 'the reporting must not eat a byte'
 
 
 def test_upload_already_staged(transport, tmp_path):

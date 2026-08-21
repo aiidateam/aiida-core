@@ -1419,7 +1419,6 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted):
     confirmed with the node count it asked for and its size before any payload travels.
     """
     from contextlib import nullcontext
-    from functools import partial
     from http import HTTPStatus
 
     from aiida.common.exceptions import ConfigurationError, IntegrityError
@@ -1473,6 +1472,8 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted):
         state = CollabState.load(profile)
 
         with CollabClient(url, token, collab=collab, peer=local_identity(profile)) as client:
+            echo.echo_report(f'contacting {nickname} at {url}')
+
             try:
                 info = client.check_version_skew(local, direction='pull')
             except CollabRequestError as exception:
@@ -1497,19 +1498,26 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted):
             if include_deleted:
                 claim = claim - state.tombstones
 
-            # Bound once, because a renegotiation is the same negotiation over again: what it may not vary is the
-            # cursor and the claim, which the export request presents beside the want they were diffed with.
-            negotiate = partial(
-                negotiate_pull,
-                client,
-                backend=backend,
-                state=state,
-                cursor=cursor,
-                claim=claim,
-                policy=policy,
-                include_deleted=include_deleted,
-                roster=gossip(ctx.obj.config, profile, bump=not dry_run),
-            )
+            # Gossiped once and varied by nothing, because a renegotiation is the same negotiation over again:
+            # what it may not vary is the cursor and the claim, which the export request presents beside the
+            # want they were diffed with.
+            roster = gossip(ctx.obj.config, profile, bump=not dry_run)
+
+            def negotiate():
+                # Announced rather than done silently: a first negotiation against a large profile runs for
+                # minutes, and a terminal that says nothing for minutes is one people interrupt.
+                echo.echo_report(f'negotiating with {nickname} (a first sync of a large profile can take a while)')
+
+                return negotiate_pull(
+                    client,
+                    backend=backend,
+                    state=state,
+                    cursor=cursor,
+                    claim=claim,
+                    policy=policy,
+                    include_deleted=include_deleted,
+                    roster=roster,
+                )
 
             try:
                 manifest, want, refuse, refresh_want, members = negotiate()
@@ -1531,6 +1539,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted):
                     continue
 
                 try:
+                    echo.echo_report('requesting the delta')
                     offer = client.request_delta(cursor, claim, want, refresh_want, refuse, manifest.computed)
                 except CollabRequestError as exception:
                     if exception.status != HTTPStatus.CONFLICT:
@@ -1542,6 +1551,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted):
                     echo.echo_report(f'{nickname} asked to renegotiate: {exception}')
                     manifest, want, refuse, refresh_want, members = negotiate()
                     curated = len(member_pairs(members))
+                    echo.echo_report('requesting the delta')
                     offer = client.request_delta(cursor, claim, want, refresh_want, refuse, manifest.computed)
 
                 if (want or refresh_want or curated) and not force:
@@ -1560,7 +1570,13 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted):
 
                 # A stable per-peer path, so an interrupted download resumes on the next pull.
                 filepath = workdir / f'pull-{peer_uuid}.aiida'
-                client.download_delta(filepath, offer.delta)
+                resumed = filepath.stat().st_size if filepath.exists() else 0
+
+                with click.progressbar(length=offer.size, label=f'downloading from {nickname}') as progress:
+                    # The bar spans the whole delta and starts where the partial file of an interrupted download
+                    # ends, so that a resumption reads as one transfer rather than as a second one from zero.
+                    progress.update(resumed)
+                    client.download_delta(filepath, offer.delta, progress=progress.update)
             except CollabRequestError as exception:
                 echo.echo_warning(f'skipping peer {nickname}: {exception}')
                 # A transfer that failed abandons its slot as surely as one that was declined: the peer answered
@@ -1575,6 +1591,8 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted):
             echo.echo_report(
                 f'pausing the daemon workers of `{profile.name}` for the import; they restart when it is done'
             )
+
+        echo.echo_report(f'importing {len(want)} node(s)')
 
         try:
             with import_lock(state.filepath):
@@ -1704,6 +1722,8 @@ def collab_push(ctx, peers, force, dry_run):
         filepath_meta = workdir / f'push-{peer_uuid}.json'
 
         with CollabClient(url, token, collab=collab, peer=identity) as client:
+            echo.echo_report(f'contacting {nickname} at {url}')
+
             try:
                 info = client.check_version_skew(local, direction='push')
             except CollabRequestError as exception:
@@ -1725,6 +1745,7 @@ def collab_push(ctx, peers, force, dry_run):
             # A peer that dies anywhere between the handshake and the upload is skipped like an offline one:
             # nothing durable was written, the stash (if any) is preserved, and the remaining peers still sync.
             try:
+                echo.echo_report(f'negotiating with {nickname} (a first sync of a large profile can take a while)')
                 handshake = client.push_handshake(identity, gossip(ctx.obj.config, profile, bump=not dry_run))
 
                 if handshake.busy:
@@ -1888,7 +1909,11 @@ def collab_push(ctx, peers, force, dry_run):
                         client.release()
                         continue
 
-                upload = client.upload_delta(filepath)
+                # Spans the whole cut. What the peer already staged of a previous attempt is only learnt when
+                # the client asks it, so a resumed upload fills the bar with the part that still travels.
+                with click.progressbar(length=filepath.stat().st_size, label=f'uploading to {nickname}') as progress:
+                    upload = client.upload_delta(filepath, progress=progress.update)
+
                 echo.echo_report(f'transferred {upload.sent} bytes, {upload.staged} staged on the peer')
             except CollabRequestError as exception:
                 echo.echo_warning(f'skipping peer {nickname}: {exception}')
@@ -1898,6 +1923,7 @@ def collab_push(ctx, peers, force, dry_run):
             # An import that did not land says nothing about the next peer's, so it is skipped like an offline one
             # — but named, and with the exit code of a transfer that failed.
             try:
+                echo.echo_report(f'waiting for {nickname} to import')
                 client.trigger_import(upload.sha256, peer=identity, instant=instant, refresh=refresh, members=members)
             except CollabRequestError as exception:
                 # A refusal that never reached the import — corrupt bytes, a staging file that is gone, a token

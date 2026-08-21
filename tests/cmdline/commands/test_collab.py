@@ -1163,7 +1163,7 @@ def test_a_rotation_during_a_sync_is_not_undone_by_it(
 
     profile = get_profile()
 
-    def download_delta(self, filepath, delta_id):
+    def download_delta(self, filepath, delta_id, progress=None):
         # `verdi collab rotate` in another terminal, landing while the delta is being transferred here.
         terminal = Config.from_file(config_with_profile.filepath)
 
@@ -1648,7 +1648,7 @@ def stub_transfer(monkeypatch):
         # silently never delivered.
         return DeltaOffer(delta='0' * 64, instant=OFFER_INSTANT + timedelta(minutes=1), size=5)
 
-    def download_delta(self, filepath, delta_id):
+    def download_delta(self, filepath, delta_id, progress=None):
         filepath.write_bytes(b'delta')
         return len(b'delta')
 
@@ -1724,6 +1724,50 @@ def test_pull_on_postgresql_pauses_nothing(
 
     assert [call for call in stub_transfer if isinstance(call, dict)] == []
     assert 'pausing the daemon workers' not in result.output
+
+
+def test_pull_announces_every_step(run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch):
+    """Test that a pull names each step *before* it takes it.
+
+    A first negotiation against a large profile legitimately runs for minutes; a terminal that says nothing for
+    minutes is one people interrupt. Interleaved with the calls themselves, so that an announcement moved after
+    the step it describes — which is the silence coming back — fails here.
+    """
+    from aiida.cmdline.utils import echo
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile)
+
+    monkeypatch.setattr(
+        CollabClient,
+        'check_version_skew',
+        lambda self, local, **kwargs: stub_transfer.append('info') or make_peer_info(),
+    )
+
+    def download_delta(self, filepath, delta_id, progress=None):
+        filepath.write_bytes(b'delta')
+        stub_transfer.append(('download', callable(progress)))
+        return len(b'delta')
+
+    monkeypatch.setattr(CollabClient, 'download_delta', download_delta)
+
+    report = echo.echo_report
+    monkeypatch.setattr(echo, 'echo_report', lambda message, **kwargs: stub_transfer.append(message) or report(message))
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert stub_transfer == [
+        f'contacting {PEER} at {PEER_URL}',
+        'info',
+        f'negotiating with {PEER} (a first sync of a large profile can take a while)',
+        ('negotiate', None, set()),
+        'requesting the delta',
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
+        # The bar is handed to the client to report into: without it a real pull draws one that never moves.
+        ('download', True),
+        'importing 1 node(s)',
+        ('import', False, OFFER_INSTANT),
+    ]
 
 
 def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, stub_environment, stub_transfer):
@@ -2224,7 +2268,9 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
         lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=['uuid-one'], refresh=[]),
     )
     monkeypatch.setattr(
-        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
     )
     monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_failing)
 
@@ -2246,7 +2292,9 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
         return {'uuids': ['uuid-one']}
 
     monkeypatch.setattr(
-        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=0, staged=5)
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=0, staged=5),
     )
     monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import)
 
@@ -2268,6 +2316,66 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
     assert [(event.direction, event.peer, event.uuids) for event in state.events] == [
         ('push', PEER_UUID, ['uuid-one'])
     ], 'the event keys the peer by its profile UUID'
+
+
+def test_push_announces_every_step(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a push names each step *before* it takes it, interleaved with the calls themselves."""
+    from aiida.cmdline.utils import echo
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    calls = []
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
+
+    def push_handshake(self, requester, roster=None):
+        calls.append('handshake')
+        return PushHandshake(busy=False, cursor=None, claim=[])
+
+    def upload_delta(self, filepath, progress=None):
+        calls.append(('upload', callable(progress)))
+        return UploadReport(sha256='0' * 64, sent=5, staged=5)
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: calls.append('info') or make_peer_info()
+    )
+    monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'upload_delta', upload_delta)
+    monkeypatch.setattr(CollabClient, 'trigger_import', lambda self, sha256, **kwargs: calls.append('import') or {})
+
+    report = echo.echo_report
+    monkeypatch.setattr(echo, 'echo_report', lambda message, **kwargs: calls.append(message) or report(message))
+
+    run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert calls == [
+        f'contacting {PEER} at {PEER_URL}',
+        'info',
+        f'negotiating with {PEER} (a first sync of a large profile can take a while)',
+        'handshake',
+        # The bar is handed to the client to report into, as on the download.
+        ('upload', True),
+        'transferred 5 bytes, 5 staged on the peer',
+        f'waiting for {PEER} to import',
+        'import',
+    ]
 
 
 def test_push_retry_renegotiates_the_memberships(run_cli_command, config_with_profile, stub_environment, monkeypatch):
@@ -2306,7 +2414,9 @@ def test_push_retry_renegotiates_the_memberships(run_cli_command, config_with_pr
         lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=list(uuids), refresh=[], members=members),
     )
     monkeypatch.setattr(
-        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
     )
     monkeypatch.setattr(
         sync,
@@ -2529,7 +2639,9 @@ def test_push_retry_offers_no_refresh_under_local(run_cli_command, config_with_p
     )
     monkeypatch.setattr(CollabClient, 'diff_manifest', diff_manifest)
     monkeypatch.setattr(
-        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
     )
     monkeypatch.setattr(
         sync,
@@ -2652,7 +2764,9 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
         lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(
-        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
     )
     monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_refused)
 
@@ -2708,7 +2822,9 @@ def test_push_discards_a_stash_it_cannot_read(run_cli_command, config_with_profi
         lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(
-        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
     )
     monkeypatch.setattr(CollabClient, 'trigger_import', lambda self, sha256, **kwargs: {'uuids': ['uuid-one']})
 
@@ -3067,7 +3183,9 @@ def test_push_to_a_peer_without_a_cursor_imports_the_empty_delta(
         lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=[], refresh=[]),
     )
     monkeypatch.setattr(
-        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=0, staged=0)
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=0, staged=0),
     )
     monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import)
 

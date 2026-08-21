@@ -228,6 +228,10 @@ Day-to-day use
 
 Before any payload travels, ``pull`` and ``push`` negotiate with the peer and ask for confirmation with the node count and size they negotiated; the question defaults to no, so a bare Enter leaves both profiles untouched.
 Pass ``--force`` to skip the prompts (for scripts), or ``--dry-run`` to only see what a sync would transfer, per peer, without transferring anything.
+
+Both commands announce each step before they take it — which peer they are contacting, that they are negotiating with it, that they are asking for the delta, that they are importing it or waiting for the other side to — and draw a progress bar over the download and the upload.
+The negotiation is where the time goes: against a large profile a first sync legitimately spends minutes there before a single byte moves, so the line that announces it is the one to wait on rather than to interrupt.
+The step lines are ordinary ``verdi`` report output, so ``verdi -v warning collab pull`` silences them.
 A peer that is offline, busy, refuses pushes, declares a different policy or runs an aiida-core whose archives this one cannot read is skipped with a warning, and the remaining peers are synced.
 A delta that arrives but cannot be imported — bytes that are not a readable archive, or provenance linked to a node the receiving profile holds nowhere — is skipped the same way, with a warning naming the peer it came from; nothing lands from it, and the next sync delivers it once whatever diverged has been sorted out.
 The only difference is the exit code: a transfer that started and failed makes the command exit non-zero, so a scheduled sync reports a problem, while peers that were merely skipped without transferring anything leave it at zero.

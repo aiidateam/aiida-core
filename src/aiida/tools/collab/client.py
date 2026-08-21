@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import datetime
     from pathlib import Path
+    from typing import IO
 
     from aiida.tools.collab.protocol import ExtrasSnapshot, GroupMembers
 
@@ -78,6 +79,27 @@ class UploadReport:
     sha256: str
     sent: int
     staged: int
+
+
+class _ReportingReader:
+    """A file handle that tells a callback the size of every block read out of it.
+
+    Everything but ``read`` is the handle's own, ``fileno`` and ``tell`` included, so ``requests`` measures the
+    body and sets the ``Content-Length`` the peer requires exactly as it does for the bare handle.
+    """
+
+    def __init__(self, handle: IO[bytes], progress: Callable[[int], None]):
+        self._handle = handle
+        self._progress = progress
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._handle, name)
+
+    def read(self, size: int = -1) -> bytes:
+        chunk = self._handle.read(size)
+        self._progress(len(chunk))
+
+        return chunk
 
 
 class CollabClient:
@@ -264,7 +286,7 @@ class CollabClient:
 
         return self._answer(PushHandshake.from_dict, 'POST', ROUTE_HANDSHAKE, json=body)
 
-    def download_delta(self, filepath: Path, delta_id: str) -> int:
+    def download_delta(self, filepath: Path, delta_id: str, progress: Callable[[int], None] | None = None) -> int:
         """Download a negotiated delta of the peer, resuming a partial file at ``filepath`` where it was interrupted.
 
         The ``ETag`` served with the first attempt is kept next to the file; when the peer produced a new delta
@@ -272,6 +294,8 @@ class CollabClient:
 
         :param filepath: the path to download to.
         :param delta_id: the identifier under which the delta is on offer, from ``negotiate_delta``.
+        :param progress: called with the length of every chunk as it lands, for a caller drawing a progress bar.
+            A resumed download reports only the bytes this call fetches, which is what it transfers.
         :return: the number of bytes transferred by this call.
         """
         filepath_etag = filepath.with_name(f'{filepath.name}.etag')
@@ -319,6 +343,9 @@ class CollabClient:
                 for chunk in response.iter_content(CHUNK_SIZE):
                     handle.write(chunk)
                     transferred += len(chunk)
+
+                    if progress is not None:
+                        progress(len(chunk))
             except requests.RequestException as exception:
                 msg = f'downloading the delta was interrupted after {offset + transferred} bytes: {exception}'
                 raise CollabRequestError(msg) from exception
@@ -337,10 +364,12 @@ class CollabClient:
 
         return transferred
 
-    def upload_delta(self, filepath: Path) -> UploadReport:
+    def upload_delta(self, filepath: Path, progress: Callable[[int], None] | None = None) -> UploadReport:
         """Stage a delta on the peer, sending only the bytes it does not already hold.
 
         :param filepath: the path of the archive to upload.
+        :param progress: called with the length of every block as it goes out, for a caller drawing a progress
+            bar. What it adds up to is what this call sends: the bytes the peer already holds never travel.
         :return: the checksum under which the upload is staged, the bytes sent by this call and the total staged.
         """
         sha256 = file_sha256(filepath)
@@ -359,8 +388,11 @@ class CollabClient:
         with filepath.open('rb') as handle:
             handle.seek(staged)
             headers = {'Content-Range': f'bytes {staged}-{size - 1}/{size}'}
+            # A reader and not a generator: the peer refuses a body with no `Content-Length` to read to, and
+            # `requests` can only measure one it can `fstat` and `tell`, which a generator is not.
+            body = handle if progress is None else _ReportingReader(handle, progress)
             total = self._answer(
-                lambda data: int(data['staged']), 'PUT', route_upload(sha256), data=handle, headers=headers
+                lambda data: int(data['staged']), 'PUT', route_upload(sha256), data=body, headers=headers
             )
 
         return UploadReport(sha256=sha256, sent=size - staged, staged=total)

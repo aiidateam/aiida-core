@@ -55,6 +55,7 @@ def with_broker(wrapped, _, args, kwargs):
     from aiida.manage import get_manager
 
     manager = get_manager()
+    broker_was_loaded = manager.broker_loaded
     broker = manager.get_broker()
     profile = manager.get_profile()
     assert profile is not None
@@ -73,13 +74,13 @@ def with_broker(wrapped, _, args, kwargs):
         with suppress(RuntimeError):
             manager.reset_broker()
 
-    if context is not None:
+    if not broker_was_loaded and context is not None:
         context.call_on_close(reset_broker)
 
     try:
         return wrapped(*args, **kwargs)
     finally:
-        if context is None:
+        if not broker_was_loaded and context is None:
             reset_broker()
 
 

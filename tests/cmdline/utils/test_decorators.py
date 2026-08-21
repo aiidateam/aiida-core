@@ -57,6 +57,7 @@ def test_with_broker_resets_after_group_closes(config, manager, monkeypatch):
     manager.load_profile()
     expected_broker = mock.Mock()
     reset_broker = mock.Mock()
+    monkeypatch.setattr(manager, '_broker', None)
     monkeypatch.setattr(manager, 'get_broker', lambda: expected_broker)
     monkeypatch.setattr(manager, 'reset_broker', reset_broker)
 
@@ -74,6 +75,26 @@ def test_with_broker_resets_after_group_closes(config, manager, monkeypatch):
 
     assert result.exception is None
     reset_broker.assert_called_once_with()
+
+
+def test_with_broker_preserves_loaded_broker(config, manager, monkeypatch):
+    """Test ``with_broker`` does not close a broker that was already loaded."""
+    manager.load_profile()
+    expected_broker = mock.Mock()
+    reset_broker = mock.Mock()
+    monkeypatch.setattr(manager, '_broker', expected_broker)
+    monkeypatch.setattr(manager, 'get_broker', lambda: expected_broker)
+    monkeypatch.setattr(manager, 'reset_broker', reset_broker)
+
+    @click.command()
+    @with_broker
+    def command(broker):
+        assert broker is expected_broker
+
+    result = CliRunner().invoke(command)
+
+    assert result.exception is None
+    reset_broker.assert_not_called()
 
 
 def test_with_dbenv_preserves_loaded_storage(config, manager):

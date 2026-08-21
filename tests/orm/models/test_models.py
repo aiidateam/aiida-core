@@ -518,6 +518,12 @@ def test_minimal_model_idempotency():
     assert RepeatedDynamicModel is DynamicModel
 
 
+def test_minimal_model_idempotency_with_submodels():
+    ParentMinimalModel = orm.Node.ReadModel._as_minimal_model()  # noqa: N806
+    ChildMinimalModel = orm.Data.ReadModel._as_minimal_model()  # noqa: N806
+    assert ChildMinimalModel is not ParentMinimalModel
+
+
 def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
     """Test generated ORM models are not rebuilt eagerly during class setup."""
     rebuilt: list[type[OrmModel]] = []

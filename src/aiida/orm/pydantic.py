@@ -65,7 +65,7 @@ class OrmModel(AiiDABaseModel):
         if cls.__name__.startswith('Minimal'):
             return cls
 
-        cached = cls._AIIDA_MINIMAL_MODEL
+        cached = vars(cls).get('_AIIDA_MINIMAL_MODEL')
         if isinstance(cached, type) and issubclass(cached, OrmModel):
             return cached
 

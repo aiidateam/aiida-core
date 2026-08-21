@@ -61,8 +61,7 @@ jobs:
       uses: docker/bake-action@v7.3.0
       with:
         push: true
-        workdir: .docker/
-        source: .
+        source: .docker/
         # Using provenance to disable default attestation so it will build only desired images:
         # https://github.com/orgs/community/discussions/45969
         provenance: false

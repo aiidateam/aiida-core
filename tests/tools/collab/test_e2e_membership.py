@@ -18,10 +18,13 @@ import pytest
 
 from tests.tools.collab.conftest import move
 
+# What every member of these scenarios is set up with: a loopback address and a port of the kernel's choosing.
+SETUP = ('--bind', '127.0.0.1', '--port', '0', '--non-interactive')
+
 
 @pytest.fixture
 def joining(monkeypatch):
-    """Let ``verdi collab init --join`` adopt a profile the harness already built.
+    """Let ``verdi collab join`` adopt a profile the harness already built.
 
     Joining creates a fresh profile through ``verdi presto``, which has its own tests and would dominate the
     runtime here. Everything the collab owns — the code, the announcement, the roster the issuer answers with and
@@ -61,13 +64,13 @@ def test_the_printed_link_is_what_a_newcomer_joins_with(collab, joining):
     """
     a, b = collab(2, bare=True)
 
-    a.run('init', ['--bind', '127.0.0.1', '--port', '0', '--non-interactive'])
+    a.run('init', [*SETUP])
     a.serve()
 
     printed = a.run('link').output.strip()
 
     joining.append(b)
-    b.run('init', ['--join', printed, '--bind', '127.0.0.1', '--port', '0', '--non-interactive'])
+    b.run('join', [printed, *SETUP])
 
     assert set(b.peers()) == {a.uuid}
     assert set(a.peers()) == {b.uuid}, 'the join announced the newcomer to the member whose code it used'
@@ -81,15 +84,15 @@ def test_joining_a_collab_three_members_deep(collab, joining):
     """
     a, b, c = collab(3, bare=True)
 
-    a.run('init', ['--bind', '127.0.0.1', '--port', '0', '--non-interactive'])
+    a.run('init', [*SETUP])
     a.serve()
 
     joining.append(b)
-    b.run('init', ['--join', code_of(a), '--bind', '127.0.0.1', '--port', '0', '--non-interactive'])
+    b.run('join', [code_of(a), *SETUP])
     b.serve()
 
     joining.append(c)
-    c.run('init', ['--join', code_of(b), '--bind', '127.0.0.1', '--port', '0', '--non-interactive'])
+    c.run('join', [code_of(b), *SETUP])
     c.serve()
 
     # Carol holds Alice because Bob vouched for her in the roster it answered the join with; Alice has not heard
@@ -105,6 +108,66 @@ def test_joining_a_collab_three_members_deep(collab, joining):
 
     assert created in c.uuids()
     assert set(a.peers()) == {b.uuid, c.uuid}, 'the gossip of the pull did not carry Carol to Alice'
+
+
+def test_a_join_that_cannot_reach_its_issuer_leaves_nothing_behind(collab, joining):
+    """Test that a join whose issuer went offline deletes the profile it created, storage and all.
+
+    The profile has to exist before the announcement, since the announcement carries its UUID. What a failure used
+    to leave was a profile set up for a collab it never entered, which the retry then refused to reuse the name of.
+    """
+    from pathlib import Path
+
+    from aiida.manage.configuration.config import Config
+
+    a, b = collab(2, bare=True)
+
+    a.run('init', [*SETUP])
+    a.serve()
+    code = code_of(a)
+    a.stop()
+
+    joining.append(b)
+    result = b.run('join', [code, *SETUP], raises=True)
+
+    assert 'nothing was left behind' in result.output
+    assert b.profile.name not in Config.from_file(b.config.filepath).profile_names
+    assert not Path(b.profile.storage_config['filepath']).exists(), 'the storage of the profile went with it'
+
+
+def test_a_failed_join_keeps_what_another_writer_put_in_the_file(collab, joining, monkeypatch):
+    """Test that deleting the profile of a failed join does not revert a collab write made meanwhile.
+
+    `Config.store` writes the whole dictionary its holder loaded, and the announcement a join waits on is a network
+    round trip — all the while the endpoint of another profile on this machine is merging gossip into the same
+    file. Deleting off the copy this process started with silently puts the file back as it was.
+    """
+    from aiida.cmdline.commands import cmd_collab
+    from aiida.manage.configuration.config import Config
+    from aiida.tools.collab.config import OPTION_STAMP, mutate_config
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    a, b = collab(2, bare=True)
+
+    a.run('init', [*SETUP])
+    code = code_of(a)
+
+    def announce(config, profile, code):
+        """Raise this profile's stamp the way its own endpoint does, then fail the way a dead issuer does."""
+        with mutate_config(config) as stored:
+            stored.set_option(OPTION_STAMP, 7, scope=a.profile.name)
+
+        raise CollabRequestError('connection refused')
+
+    monkeypatch.setattr(cmd_collab, 'announce', announce)
+
+    joining.append(b)
+    b.run('join', [code, *SETUP], raises=True)
+
+    stored = Config.from_file(b.config.filepath)
+
+    assert b.profile.name not in stored.profile_names
+    assert stored.get_option(OPTION_STAMP, scope=a.profile.name) == 7
 
 
 def test_a_moved_endpoint_heals_by_its_own_announcement(collab):

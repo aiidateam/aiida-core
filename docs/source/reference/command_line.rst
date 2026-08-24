@@ -121,7 +121,8 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      init          Set up a profile as part of a collab.
+      init          Create a collab on the loaded profile.
+      join          Join the collab a code was minted for, in a new profile.
       link          Print the code that admits a newcomer to this collab.
       log           Show the history of the pulls, pushes and extras refreshes of the...
       map-computer  Treat calculations that ran on a peer computer as if they ran on a...

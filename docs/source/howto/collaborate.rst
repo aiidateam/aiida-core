@@ -72,16 +72,20 @@ Joining creates a new profile:
 
 .. code-block:: console
 
-    $ verdi collab init --join eyJjb2xsYWIiOiAiNGRhO...
+    $ verdi collab join eyJjb2xsYWIiOiAiNGRhO...
+    name of the profile to create [collab]: fusion
     Report: this collab shares extras `local` and groups `grow`.
     This machine's address on the private network of the collab: 100.64.0.2
-    Set up profile `collab` quickly, with SQLite storage and no external services? [Y/n]: y
+    set up profile `fusion` quickly, with SQLite storage and no external services? [Y/n]: y
     Report: learned about peer `bob` at http://100.64.0.1:9137
-    Success: profile `collab` serves the collab at http://100.64.0.2:9137.
+    Success: profile `fusion` serves the collab at http://100.64.0.2:9137.
+    Report: Run `verdi daemon start` to serve it, and `verdi collab link` for the code that lets others join.
 
-A collab is one logical provenance graph, so joining always sets up a fresh profile (named by ``--profile-name``) rather than folding the work you already have into someone else's.
+A collab is one logical provenance graph, so joining always sets up a fresh profile rather than folding the work you already have into someone else's.
+You are asked what to call it (``--profile-name`` scripts the answer, and ``--non-interactive`` takes ``collab``).
 The terms and the address are asked for before anything is created, since neither a declined policy nor a mistyped address must leave a half-made profile behind; the quick setup then runs ``verdi presto``, which makes the new profile your default one — ``verdi profile set-default`` puts that back if you would rather keep working in the profile you had.
 The join announces you to the member whose code you used and brings back its whole roster, so a single contact is enough to know everybody.
+That announcement is the one step that can still fail after the profile exists, because it carries the profile's UUID: if the member whose code you used cannot be reached, the new profile is deleted again — storage and all — so that a retry with a code from somebody who is online starts from nothing.
 
 After changing a ``collab.*`` option, restart the daemon — except ``collab.token`` and ``collab.accept_push``, which the endpoint re-reads on every request, so that a rotation and a withdrawal of consent to be pushed to both take effect at once.
 

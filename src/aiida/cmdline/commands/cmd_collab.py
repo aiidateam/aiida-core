@@ -31,7 +31,10 @@ def require_collab(profile):
     from aiida.tools.collab.config import is_enabled
 
     if not is_enabled():
-        echo.echo_critical(f'profile `{profile.name}` is not part of a collab: run `verdi collab init` first.')
+        echo.echo_critical(
+            f'profile `{profile.name}` is not part of a collab: create one with `verdi collab init`, or enter '
+            'an existing one with `verdi collab join`.'
+        )
 
 
 def hold_the_sync_lock(ctx, profile):
@@ -126,7 +129,7 @@ def select_peers(configured, names):
     from aiida.tools.collab.config import find_peer
 
     if not configured:
-        echo.echo_critical('this collab has no peers yet: hand out a join code, or join with `verdi collab init`.')
+        echo.echo_critical('this collab has no peers yet: hand out a join code, or join with `verdi collab join`.')
 
     active = {uuid: entry for uuid, entry in configured.items() if entry['active']}
 
@@ -442,102 +445,41 @@ def create_profile(ctx, profile_name, non_interactive):
     return get_profile()
 
 
-@verdi_collab.command('init')
-@click.option(
-    '--join',
-    'code',
-    metavar='CODE',
-    help='The code of a collab to join, as `verdi collab link` prints it on any of its members. A new profile is '
-    'created for the collab. Without it, a new collab is set up on the current profile.',
-)
-@click.option(
-    '-p',
-    '--profile-name',
-    default='collab',
-    show_default=True,
-    help='Name of the profile to create when joining a collab.',
-)
-@click.option(
+BIND = options.OverridableOption(
     '--bind',
     metavar='ADDRESS',
     help="This machine's address on the private network of the collab, on which its endpoint listens. Prompted for "
     'when not given.',
 )
-@click.option(
+
+PORT = options.OverridableOption(
     '--port',
     type=int,
     help='Port on which the endpoint of this profile listens. A free one is picked when not given.',
 )
-@click.option(
-    '--extras-mode',
-    type=click.Choice(['local', 'sync']),
-    help='Whether the extras of shared nodes keep being replicated (`sync`) or stop travelling once the node has '
-    '(`local`, the default). Chosen once when the collab is created and permanent; prompted for when not given.',
-)
-@click.option(
-    '--groups-mode',
-    type=click.Choice(['local', 'grow']),
-    help='Whether curated group membership travels (`grow`) or groups stay home (`local`, the default). Chosen '
-    'once when the collab is created and permanent; prompted for when not given.',
-)
-@options.NON_INTERACTIVE()
-@click.pass_context
-def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, non_interactive):
-    """Set up a profile as part of a collab.
 
-    Peers of a collab share one logical provenance graph: each of them can pull the sealed provenance of the others and
-    push their own. Both are additive, deletions are never propagated.
+
+def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, non_interactive):
+    """Reserve an address and write the collab options: what `init` and `join` do alike.
+
+    Everything `init` and `join` do alike, in the order they do it -- with the profile a join creates, and the
+    announcement that enters it into the collab, threaded through in the two places they belong.
+
+    :param profile: the profile the collab is founded on, or ``None`` for a join, which creates ``profile_name``
+        here -- after the address, so that a refusal or a typo never leaves a half-made profile behind.
+    :param joining: the decoded join code, or ``None`` when a collab is being founded rather than joined.
     """
     import secrets
     import uuid
 
     from aiida.tools.collab import config as collab_config
-    from aiida.tools.collab.protocol import JoinCode
 
     config = ctx.obj.config
-    joining = None
-
-    if code:
-        try:
-            joining = JoinCode.decode(code)
-        except ValueError as exception:
-            echo.echo_critical(str(exception))
-
-        if extras_mode or groups_mode:
-            echo.echo_critical(
-                'a collab is joined on its own terms: its policy is fixed when it is created and travels in the '
-                'join code, so `--extras-mode` and `--groups-mode` are for creating one.'
-            )
-
-        if profile_name in config.profile_names:
-            echo.echo_critical(f'profile `{profile_name}` already exists: joining a collab creates a new profile.')
-    else:
-        profile = ctx.obj.profile
-
-        if profile is None:
-            echo.echo_critical('no profile loaded: create one with `verdi presto`, or join a collab with `--join`.')
-
-        # Guarded on the collab's identity rather than on `collab.enabled`, because leaving a collab is defined as
-        # turning that option off: the member keeps its uuid, token, roster and cursors and comes back by turning
-        # it on again. Founding over them would overwrite all four, and nothing prints the old token a second
-        # time — the membership would be gone with no way back, since `--join` only ever creates a new profile.
-        if config.get_option(collab_config.OPTION_UUID, scope=profile.name):
-            echo.echo_critical(
-                f'profile `{profile.name}` already belongs to a collab. Each profile can only take part in one: '
-                f'rejoin this one with `verdi config set {collab_config.OPTION_ENABLED} True` and a daemon '
-                'restart, or found a new collab on a fresh profile.'
-            )
 
     # Everything that can still be refused happens before the profile exists: an address that is not this
     # machine's, or a mistyped one, would otherwise abort with a fresh profile left behind and the retry
-    # refusing to reuse its name. The policy belongs to that list — the joiner's consent to it, and the
-    # creator's choice of it, both precede the profile they would govern.
-    policy = (
-        accept_policy(joining.policy, non_interactive)
-        if joining
-        else choose_policy(extras_mode, groups_mode, non_interactive)
-    )
-    scope = None if joining else profile.name
+    # refusing to reuse its name.
+    scope = profile.name if profile else None
     bind = resolve_bind(bind, non_interactive)
     port = reserve_port(bind, port, config.get_option(collab_config.OPTION_PORT, scope=scope))
     url = collab_config.endpoint_url(bind, port)
@@ -565,12 +507,117 @@ def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, n
             for target in (stored, config):
                 target.set_option(option_name, value, scope=profile.name)
 
+    # Before the daemon rather than after it: a join that cannot reach its issuer deletes the profile it made,
+    # and deleting a profile stops a daemon this command would otherwise have started a moment earlier.
     if joining:
         join_collab(config, profile, joining)
 
     echo.echo_success(f'profile `{profile.name}` serves the collab at {url}.')
     echo.echo_report(
         'Run `verdi daemon start` to serve it, and `verdi collab link` for the code that lets others join.'
+    )
+
+
+@verdi_collab.command('init')
+@BIND()
+@PORT()
+@click.option(
+    '--extras-mode',
+    type=click.Choice(['local', 'sync']),
+    help='Whether the extras of shared nodes keep being replicated (`sync`) or stop travelling once the node has '
+    '(`local`, the default). Chosen once when the collab is created and permanent; prompted for when not given.',
+)
+@click.option(
+    '--groups-mode',
+    type=click.Choice(['local', 'grow']),
+    help='Whether curated group membership travels (`grow`) or groups stay home (`local`, the default). Chosen '
+    'once when the collab is created and permanent; prompted for when not given.',
+)
+@options.NON_INTERACTIVE()
+@click.pass_context
+def collab_init(ctx, bind, port, extras_mode, groups_mode, non_interactive):
+    """Create a collab on the loaded profile.
+
+    Peers of a collab share one logical provenance graph: each of them can pull the sealed provenance of the others and
+    push their own. Both are additive, deletions are never propagated.
+    """
+    from aiida.tools.collab import config as collab_config
+
+    config = ctx.obj.config
+    profile = ctx.obj.profile
+
+    if profile is None:
+        echo.echo_critical(
+            'no profile loaded: create one with `verdi presto`, or join a collab with `verdi collab join`.'
+        )
+
+    # Guarded on the collab's identity rather than on `collab.enabled`, because leaving a collab is defined as
+    # turning that option off: the member keeps its uuid, token, roster and cursors and comes back by turning
+    # it on again. Founding over them would overwrite all four, and nothing prints the old token a second
+    # time — the membership would be gone with no way back, since a join only ever creates a new profile.
+    if config.get_option(collab_config.OPTION_UUID, scope=profile.name):
+        echo.echo_critical(
+            f'profile `{profile.name}` already belongs to a collab. Each profile can only take part in one: '
+            f'rejoin this one with `verdi config set {collab_config.OPTION_ENABLED} True` and a daemon '
+            'restart, or found a new collab on a fresh profile.'
+        )
+
+    set_up_collab(
+        ctx,
+        profile=profile,
+        profile_name=None,
+        policy=choose_policy(extras_mode, groups_mode, non_interactive),
+        joining=None,
+        bind=bind,
+        port=port,
+        non_interactive=non_interactive,
+    )
+
+
+@verdi_collab.command('join')
+@click.argument('code', metavar='CODE')
+@click.option(
+    '-p',
+    '--profile-name',
+    help='Name of the profile to create for the collab. Prompted for when not given, and `collab` under '
+    '`--non-interactive`.',
+)
+@BIND()
+@PORT()
+@options.NON_INTERACTIVE()
+@click.pass_context
+def collab_join(ctx, code, profile_name, bind, port, non_interactive):
+    """Join the collab a code was minted for, in a new profile.
+
+    The code is what `verdi collab link` prints on any member, and it carries the terms the collab runs on: what
+    it shares beyond provenance nodes was fixed when the collab was created and cannot be chosen here. Joining
+    always creates a fresh profile: a collab shares one logical provenance graph, and folding the work you already
+    have into someone else's is not what anyone asks for by pasting a join code.
+    """
+    from aiida.tools.collab.protocol import JoinCode
+
+    config = ctx.obj.config
+
+    try:
+        joining = JoinCode.decode(code)
+    except ValueError as exception:
+        echo.echo_critical(str(exception))
+
+    if not profile_name:
+        profile_name = 'collab' if non_interactive else click.prompt('name of the profile to create', default='collab')
+
+    if profile_name in config.profile_names:
+        echo.echo_critical(f'profile `{profile_name}` already exists: joining a collab creates a new profile.')
+
+    set_up_collab(
+        ctx,
+        profile=None,
+        profile_name=profile_name,
+        policy=accept_policy(joining.policy, non_interactive),
+        joining=joining,
+        bind=bind,
+        port=port,
+        non_interactive=non_interactive,
     )
 
 
@@ -615,16 +662,26 @@ def announce(config, profile, code):
 
 
 def join_collab(config, profile, code):
-    """Announce this profile to the member that issued the join code and adopt the roster it answers with."""
+    """Announce this profile to the member that issued the join code and adopt the roster it answers with.
+
+    An announcement that never arrives takes the profile with it, storage and collab state included. The alternative
+    is what this used to leave behind: a profile that is set up for a collab it is not in, which the retry then
+    refuses to reuse the name of, so that recovering from an issuer being briefly offline is a manual deletion.
+    """
+    from aiida.tools.collab.config import mutate_config
     from aiida.tools.collab.protocol import CollabRequestError
 
     try:
         announce(config, profile, code)
     except CollabRequestError as exception:
+        # Deleted against the file as it is now, not against the copy this process loaded before the announcement:
+        # `Config.store` writes its holder's whole dictionary, so a delete off the stale copy silently reverts
+        # whatever another collab writer on this machine put in the file while the issuer was answering.
+        with mutate_config(config) as stored:
+            stored.delete_profile(profile.name, delete_storage=True)
         echo.echo_critical(
-            f'could not join through {code.url}: {exception}\nProfile `{profile.name}` was created and is set '
-            f'up; delete it with `verdi profile delete {profile.name}`, then run `verdi collab init --join` '
-            'again with a code from a member that is online.'
+            f'could not join through {code.url}: {exception}\nProfile `{profile.name}` was deleted again and '
+            'nothing was left behind; run `verdi collab join` again with a code from a member that is online.'
         )
 
 

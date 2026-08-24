@@ -127,7 +127,7 @@ def test_init_rejects_a_foreign_address(run_cli_command, config_with_profile):
     assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is False
 
 
-def test_init_join(run_cli_command, config_with_profile, monkeypatch):
+def test_join(run_cli_command, config_with_profile, monkeypatch):
     """Test that joining with a code leaves this profile with the collab, its key and the issuer's whole roster.
 
     One code is all a newcomer needs: the collab it names, the member to ask and the key to ask with.
@@ -152,7 +152,7 @@ def test_init_join(run_cli_command, config_with_profile, monkeypatch):
     monkeypatch.setattr(CollabClient, 'join', join)
 
     code = JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
-    result = run_cli_command(cmd_collab.collab_init, ['--join', code, '--bind', '127.0.0.1'], use_subprocess=False)
+    result = run_cli_command(cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '-n'], use_subprocess=False)
 
     profile = get_profile()
     get = config_with_profile.get_option
@@ -170,9 +170,7 @@ def test_init_join(run_cli_command, config_with_profile, monkeypatch):
     assert f'learned about peer `{PEER}`' in result.output
 
 
-def test_init_join_shows_the_policy_and_asks_before_creating_anything(
-    run_cli_command, config_with_profile, monkeypatch
-):
+def test_join_shows_the_policy_and_asks_before_creating_anything(run_cli_command, config_with_profile, monkeypatch):
     """Test that joining an extras-syncing collab warns, defaults to no, and creates nothing when declined.
 
     The consent has to precede the profile it would govern, which is why the policy travels in the code: there is
@@ -189,8 +187,8 @@ def test_init_join_shows_the_policy_and_asks_before_creating_anything(
     ).encode()
     # A bare Enter, which is the answer a script or an inattentive user gives.
     result = run_cli_command(
-        cmd_collab.collab_init,
-        ['--join', code, '--bind', '127.0.0.1'],
+        cmd_collab.collab_join,
+        [code, '--profile-name', 'collab', '--bind', '127.0.0.1'],
         use_subprocess=False,
         user_input='\n',
         raises=True,
@@ -203,19 +201,23 @@ def test_init_join_shows_the_policy_and_asks_before_creating_anything(
     assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is False
 
 
-def test_init_join_refuses_to_choose_a_policy(run_cli_command, config_with_profile):
-    """Test that a joiner cannot pick its own terms: the collab's policy is the only one there is."""
+def test_join_cannot_choose_its_own_policy(run_cli_command, config_with_profile):
+    """Test that a joiner cannot pick its own terms: the collab's policy is the only one there is.
+
+    It is the command that draws the line — the options that fix a policy belong to the one that creates a collab —
+    so there is no join that reaches the code with terms of its own.
+    """
     from aiida.tools.collab.protocol import JoinCode
 
     code = JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
     result = run_cli_command(
-        cmd_collab.collab_init,
-        ['--join', code, '--extras-mode', 'sync', '--bind', '127.0.0.1'],
+        cmd_collab.collab_join,
+        [code, '--extras-mode', 'sync', '--bind', '127.0.0.1'],
         use_subprocess=False,
         raises=True,
     )
 
-    assert 'joined on its own terms' in result.output
+    assert 'no such option' in result.output.lower()
 
 
 def test_join_copies_the_policy_along_the_chain(run_cli_command, config_with_profile, profile_factory, monkeypatch):
@@ -257,8 +259,8 @@ def test_join_copies_the_policy_along_the_chain(run_cli_command, config_with_pro
     for name, issuer in (('joiner-b', get_profile()), ('joiner-c', None)):
         code = join_code(config_with_profile, issuer or created[-1])
         run_cli_command(
-            cmd_collab.collab_init,
-            ['--join', code, '--profile-name', name, '--bind', '127.0.0.1', '-n'],
+            cmd_collab.collab_join,
+            [code, '--profile-name', name, '--bind', '127.0.0.1', '-n'],
             use_subprocess=False,
         )
 
@@ -269,14 +271,14 @@ def test_join_copies_the_policy_along_the_chain(run_cli_command, config_with_pro
     assert asked == ['http://127.0.0.1:9200', 'http://127.0.0.1:9201'], 'C joined through B and never asked A'
 
 
-def test_init_join_refuses_an_existing_profile(run_cli_command, config_with_profile):
+def test_join_refuses_an_existing_profile(run_cli_command, config_with_profile):
     """Test that a join does not fold an existing profile into someone else's provenance graph."""
     from aiida.tools.collab.protocol import JoinCode
 
     code = JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
     result = run_cli_command(
-        cmd_collab.collab_init,
-        ['--join', code, '--profile-name', get_profile().name],
+        cmd_collab.collab_join,
+        [code, '--profile-name', get_profile().name],
         use_subprocess=False,
         raises=True,
     )
@@ -301,7 +303,8 @@ def test_init_on_a_profile_that_left_a_collab(run_cli_command, config_with_profi
 
     Leaving is ``collab.enabled = False`` and nothing else: uuid, token, roster and cursors all stay, and turning
     the option back on is how a member returns. Founding over that overwrites all four — nothing ever prints the
-    old token again, and `--join` only creates fresh profiles, so the membership would be unrecoverable.
+    old token again, and `verdi collab join` only creates fresh profiles, so the membership would be
+    unrecoverable.
     """
     init_collab(config_with_profile, **{OPTION_ENABLED: False})
 
@@ -314,6 +317,51 @@ def test_init_on_a_profile_that_left_a_collab(run_cli_command, config_with_profi
     assert config_with_profile.get_option(OPTION_UUID, scope=scope) == COLLAB_UUID
     assert config_with_profile.get_option(OPTION_TOKEN, scope=scope) == TOKEN
     assert config_with_profile.get_option(OPTION_PEERS, scope=scope) == {PEER_UUID: peer_entry()}
+
+
+def stub_issuer(monkeypatch, roster=()):
+    """Let a join reach a member that answers with ``roster``, and return the code it issued."""
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import JoinCode, JoinResponse
+
+    monkeypatch.setattr(CollabClient, 'join', lambda self, entry: JoinResponse(collab=COLLAB_UUID, roster=list(roster)))
+
+    return JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
+
+
+def test_init_no_longer_joins(run_cli_command, config_with_profile):
+    """Test that ``verdi collab init`` refuses the options a join is made of: joining is its own command, no alias.
+
+    Founding a collab and entering one are different acts on different profiles, and the flag that used to switch
+    between them is what made `init` two commands wearing one name.
+    """
+    for option in ('--join', '--profile-name'):
+        result = run_cli_command(cmd_collab.collab_init, [option, 'whatever', '-n'], use_subprocess=False, raises=True)
+
+        assert 'no such option' in result.output.lower()
+
+
+def test_join_names_the_profile_it_creates(run_cli_command, config_with_profile, monkeypatch):
+    """Test that a join asks what to call the profile it creates, and falls back to `collab` when it cannot ask.
+
+    The name used to be a silent default, so the second collab joined on one machine collided with the first and
+    the only sign of it was the refusal to reuse the name.
+    """
+    created = []
+
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(
+        cmd_collab, 'create_profile', lambda ctx, name, non_interactive: created.append(name) or get_profile()
+    )
+    code = stub_issuer(monkeypatch)
+
+    result = run_cli_command(
+        cmd_collab.collab_join, [code, '--bind', '127.0.0.1'], use_subprocess=False, user_input='fusion\n'
+    )
+    run_cli_command(cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert 'name of the profile to create [collab]' in result.output
+    assert created == ['fusion', 'collab']
 
 
 def test_peer_set_url(run_cli_command, config_with_profile):

@@ -589,6 +589,169 @@ def test_peer_set_refuses_a_used_nickname(run_cli_command, config_with_profile):
     assert config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)['uuid-of-bob']['nickname'] == 'bob'
 
 
+@pytest.fixture
+def stub_daemon(monkeypatch):
+    """Return the circus commands a command sends, and the state of the daemon it sends them to.
+
+    ``running`` makes the client answer as a started daemon rather than a stopped one, and ``answer`` is what
+    circus replies with — a dictionary even when it is a refusal, since circus answers a command naming a
+    watcher it does not have rather than raising. An exception there is raised instead, which is what the
+    transport does when the daemon behind a still-present PID file is gone.
+    """
+    from aiida.engine.daemon.client import DaemonClient
+
+    commands: list = []
+    state: dict = {'running': False, 'answer': {'status': 'ok'}}
+
+    def call_client(self, command, timeout=None):
+        commands.append(command)
+
+        if isinstance(state['answer'], Exception):
+            raise state['answer']
+
+        return state['answer']
+
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: state['running']))
+    monkeypatch.setattr(DaemonClient, 'call_client', call_client)
+
+    return state, commands
+
+
+def free_port():
+    """Return a port nothing is listening on, so that a test can move an endpoint onto it."""
+    import socket
+
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+
+        return probe.getsockname()[1]
+
+
+def test_config_prompts_with_what_is_configured_now(run_cli_command, config_with_profile):
+    """Test that a bare ``verdi collab config`` offers each current value as the default and writes what is typed.
+
+    It is the one place the serving settings are changed after ``init``, so it has to show what they are: the
+    alternative is a user reading them out of ``verdi config`` first and typing them back in.
+    """
+    init_collab(config_with_profile, peers={})
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, use_subprocess=False, user_input=f'y\n\n{port}\n')
+
+    get = config_with_profile.get_option
+    scope = get_profile().name
+
+    assert '[127.0.0.1]' in result.output, 'the address configured now is offered as the default'
+    assert '[9137]' in result.output
+    assert get(OPTION_ACCEPT_PUSH, scope=scope) is True
+    assert get(OPTION_BIND, scope=scope) == '127.0.0.1'
+    assert get(OPTION_PORT, scope=scope) == port
+
+
+def test_config_sets_consent_without_prompting(run_cli_command, config_with_profile):
+    """Test that an option given is an answer: ``--accept-push`` writes it and asks nothing.
+
+    Nothing feeds this run a prompt answer, so a command that asked anything would abort — which is the assertion.
+    """
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_config, ['--accept-push'], use_subprocess=False)
+
+    assert config_with_profile.get_option(OPTION_ACCEPT_PUSH, scope=get_profile().name) is True
+    assert 'accepted from their next request' in result.output
+    assert 'the address is unchanged: this profile is configured for http://127.0.0.1:9137' in result.output, (
+        'nothing moved, so nothing may be claimed about a restart that did not happen'
+    )
+
+
+def test_config_without_options_writes_nothing_when_there_is_nobody_to_ask(run_cli_command, config_with_profile):
+    """Test that a scripted ``config`` with nothing to set reports the settings and leaves every one of them.
+
+    Prompting is what a bare call does; with `--non-interactive` there is nobody to ask, and writing the option
+    defaults instead of saying what is configured would be the one answer nothing can undo.
+    """
+    init_collab(config_with_profile)
+
+    before = Config.from_file(config_with_profile.filepath).dictionary
+    result = run_cli_command(cmd_collab.collab_config, ['-n'], use_subprocess=False)
+
+    assert 'pushes from peers: refused' in result.output, 'consent is off, and this is where it is read off'
+    assert 'address: http://127.0.0.1:9137' in result.output
+    assert Config.from_file(config_with_profile.filepath).dictionary == before
+
+
+def test_config_announces_even_when_the_endpoint_could_not_be_restarted(
+    run_cli_command, config_with_profile, stub_daemon, monkeypatch
+):
+    """Test that a daemon that cannot be reached costs a warning and not the announcement.
+
+    `is_daemon_running` is a PID-file check, so a daemon that was killed passes it and the circus call raises.
+    Aborting there would write the new address, tell nobody, and leave nothing for a re-run to announce: the
+    address it would carry is by then the one this profile is already configured for, so the second run finds
+    nothing to do and the peers are never told at all.
+    """
+    from aiida.engine.daemon.client import DaemonStalePidException
+
+    state, _ = stub_daemon
+    state['running'] = True
+    state['answer'] = DaemonStalePidException('the daemon could not be reached')
+
+    # The dormant entry is here for the second assertion: an announcement carries the current token, and a
+    # dormant peer is most often the member a rotation deliberately excluded.
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', active=False)},
+    )
+
+    announced = []
+    monkeypatch.setattr(cmd_collab, 'announce', lambda config, profile, **keywords: announced.append(keywords['url']))
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, ['--port', str(port)], use_subprocess=False)
+
+    assert config_with_profile.get_option(OPTION_PORT, scope=get_profile().name) == port
+    assert 'could not restart the collab endpoint' in result.output
+    assert 'once its daemon starts it there' in result.output, 'the endpoint is not on the new address yet'
+    assert announced == [PEER_URL], 'the active peers have to be told, and the dormant one must not be'
+
+
+def test_config_refuses_an_address_that_is_not_this_machines(run_cli_command, config_with_profile):
+    """Test that an address this machine does not hold is refused by the test-bind, and nothing at all is written.
+
+    An endpoint that cannot bind is restarted by circus forever; the refusal has to precede the write, or the
+    profile is left configured for an address it can never serve.
+    """
+    init_collab(config_with_profile)
+
+    # TEST-NET-1 (RFC 5737), reserved for documentation and therefore never an address of the machine running this.
+    result = run_cli_command(cmd_collab.collab_config, ['--bind', '192.0.2.1'], use_subprocess=False, raises=True)
+
+    stored = Config.from_file(config_with_profile.filepath)
+
+    assert 'is not an address of this machine' in result.output
+    assert stored.get_option(OPTION_BIND, scope=get_profile().name) == '127.0.0.1'
+
+
+def test_config_restarts_the_endpoint_of_a_running_daemon(run_cli_command, config_with_profile, stub_daemon):
+    """Test that a moved address restarts the endpoint watcher alone: the workers of the daemon keep running.
+
+    The endpoint reads the address it binds once, at start, so nothing short of restarting it moves it; doing
+    that with ``verdi daemon restart`` would stop the workers of a profile that merely changed address.
+    """
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile, peers={})
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, ['--port', str(port)], use_subprocess=False)
+
+    assert [command['command'] for command in commands] == ['restart']
+    assert commands[0]['properties']['name'].endswith('-collab-endpoint')
+    assert config_with_profile.get_option(OPTION_PORT, scope=get_profile().name) == port
+    assert f'http://127.0.0.1:{port}' in result.output
+
+
 def printed_code(result):
     """Return the join code a command printed: the last thing it writes, so it can be copied off the screen."""
     from aiida.tools.collab.protocol import JoinCode
@@ -921,7 +1084,7 @@ def test_rekey_announces_without_reverting_what_the_daemon_merged(
     bob = peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False)
     announcing = cmd_collab.announce
 
-    def announce(config, profile, code):
+    def announce(config, profile, **keywords):
         # The endpoint merges a peer somebody gossiped to it, in the window between the new key being written
         # and this profile announcing itself under it.
         daemon = Config.from_file(config_with_profile.filepath)
@@ -929,7 +1092,7 @@ def test_rekey_announces_without_reverting_what_the_daemon_merged(
         daemon.set_option(OPTION_PEERS, peers, scope=scope)
         daemon.store()
 
-        return announcing(config, profile, code)
+        return announcing(config, profile, **keywords)
 
     monkeypatch.setattr(cmd_collab, 'announce', announce)
 

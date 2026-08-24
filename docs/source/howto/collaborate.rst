@@ -22,7 +22,7 @@ The peers of a collab must already be inside one trusted private network, such a
 That network provides the encryption and the peer identity; the collab endpoint itself speaks plain HTTP bound to the private address, refuses to listen on all interfaces, and authenticates every request with the shared token of the collab as a bearer token.
 AiiDA assumes exactly one thing about that network: that peers are reachable at the addresses they gave. How that reachability exists is invisible to it, and IPv4 and IPv6 addresses work equally well.
 Joining the collab is the consent: any peer holding the code can pull from you.
-Pushing *into* your profile is opt-in — set ``collab.accept_push`` to ``True`` if you want to allow it; peers that are refused are told so and simply skip you.
+Pushing *into* your profile is opt-in — ``verdi collab config --accept-push`` allows it (see :ref:`serving <how-to:collaborate:serving>`); peers that are refused are told so and simply skip you.
 
 **Credentials are never transferred.**
 Computers travel as plain entities (hostname, transport and scheduler configuration), but the credentials to access them live in ``AuthInfo`` entries, which never leave your profile.
@@ -94,7 +94,8 @@ The terms and the address are asked for before anything is created, since neithe
 The join announces you to the member whose code you used and brings back its whole roster, so a single contact is enough to know everybody.
 That announcement is the one step that can still fail after the profile exists, because it carries the profile's UUID: if the member whose code you used cannot be reached, the new profile is deleted again — storage and all — so that a retry with a code from somebody who is online starts from nothing.
 
-After changing a ``collab.*`` option, restart the daemon — except ``collab.token`` and ``collab.accept_push``, which the endpoint re-reads on every request, so that a rotation and a withdrawal of consent to be pushed to both take effect at once.
+After changing a ``collab.*`` option by hand, restart the daemon — except ``collab.token`` and ``collab.accept_push``, which the endpoint re-reads on every request, so that a rotation and a withdrawal of consent to be pushed to both take effect at once.
+The commands in :ref:`serving <how-to:collaborate:serving>` write these options and restart the endpoint for you, so a hand-edit is not the way to change any of them.
 
 .. _how-to:collaborate:members:
 
@@ -113,9 +114,9 @@ Two peers may not share one, so a member whose announced name is already taken o
 Membership spreads by itself: every pull and push carries your own entry and the peers you know, so a member who joined through someone else reaches you at the next sync.
 Whatever a contact adds or corrects is reported in the command output and appears in ``verdi status``.
 
-If your address changes, correct ``collab.bind`` (or ``collab.port``), restart your daemon and sync once with any peer that is online — syncing outwards never depends on your own address.
-That announcement corrects the peer you contacted, and gossip carries the correction on to the others.
-Until you make that one contact you are unreachable: nobody can discover an address nobody knows.
+If your address changes, ``verdi collab config --bind`` (or ``--port``) is the whole of it: it validates the new address, moves the endpoint onto it and announces it to your peers right there — see :ref:`serving <how-to:collaborate:serving>`.
+The announcement corrects the peers that answer, and gossip carries the correction on to the others.
+Until one contact happens you are unreachable: nobody can discover an address nobody knows.
 The other way round, a peer you know to have moved can be corrected by hand:
 
 .. code-block:: console
@@ -125,6 +126,26 @@ The other way round, a peer you know to have moved can be corrected by hand:
 
 A hand-corrected URL is a local guess, and the owner's own announcement supersedes it at the first contact that carries one.
 A peer that has never answered at the address it announced is flagged as such in ``verdi status`` and in sync output; that flag is the only way a wrong address given at join can come to light, since nothing can call back at join time.
+
+.. _how-to:collaborate:serving:
+
+Serving: the address and consent to pushes
+=========================================
+
+What your profile serves is changed in one place:
+
+.. code-block:: console
+
+    $ verdi collab config
+
+Called bare it asks for all three settings, offering what is configured now as the default of each; ``--accept-push``/``--no-accept-push``, ``--bind`` and ``--port`` set them without asking anything.
+With ``--non-interactive`` and no option there is nobody to ask, so it prints the settings — consent to pushes and the address — and changes nothing.
+
+Consent to being pushed to is re-read by the endpoint on every request, so granting or withdrawing it holds from the next request on, with no restart.
+
+A changed address is validated by binding it, so one that is not this machine's is refused before anything is written.
+It is then written, the collab endpoint of a running daemon is restarted onto it — the workers keep running — and it is announced to every peer that answers, so that nobody has to wait for a sync to find you again.
+A peer that does not answer learns it from gossip at its next sync, as every address change did before.
 
 .. _how-to:collaborate:rotation:
 
@@ -178,6 +199,7 @@ Day-to-day use
     $ verdi collab push alice   # ... or to the named peers only
     $ verdi collab log          # the history of every pull, push and extras refresh
     $ verdi collab link         # the code that admits a newcomer — it carries the key, so hand it over out of band
+    $ verdi collab config       # what this profile serves: consent to pushes, and the address it is reached at
     $ verdi collab rotate       # replace the key of the collab (see above)
     $ verdi collab rekey <code> # adopt a replaced key
 

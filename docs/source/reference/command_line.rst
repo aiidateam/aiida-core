@@ -121,6 +121,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      config        Change what this profile serves to its peers: consent to pushes, and...
       init          Create a collab on the loaded profile.
       join          Join the collab a code was minted for, in a new profile.
       link          Print the code that admits a newcomer to this collab.

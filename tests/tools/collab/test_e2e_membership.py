@@ -154,7 +154,7 @@ def test_a_failed_join_keeps_what_another_writer_put_in_the_file(collab, joining
     a.run('init', [*SETUP])
     code = code_of(a)
 
-    def announce(config, profile, code):
+    def announce(config, profile, *, url, token, collab, timeout=None):
         """Raise this profile's stamp the way its own endpoint does, then fail the way a dead issuer does."""
         with mutate_config(config) as stored:
             stored.set_option(OPTION_STAMP, 7, scope=a.profile.name)
@@ -195,6 +195,39 @@ def test_a_moved_endpoint_heals_by_its_own_announcement(collab):
     assert a.peers()[b.uuid]['url'] != stale
     assert a.peers()[b.uuid]['url'] == b.url
     assert created in a.uuids()
+
+
+def test_config_announces_a_new_address_without_a_sync(collab):
+    """Test that changing the served address tells the peers at once, rather than waiting for the next sync.
+
+    A member that only ever pulls announces nothing until it pulls, and a member nobody can reach cannot be
+    pulled from either — so the address it just moved to has to travel on the command that moved it, to every
+    peer and not just to whoever happens to be first in the roster.
+    """
+    import socket
+
+    from aiida.tools.collab.config import endpoint_url
+
+    a, b, c = collab(3)
+
+    stale = a.peers()[b.uuid]['url']
+    stamp = a.peers()[b.uuid]['stamp']
+
+    b.stop()
+
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        port = probe.getsockname()[1]
+
+    b.run('config', ['--port', str(port)])
+    b.serve(port=port)
+
+    entry = a.peers()[b.uuid]
+
+    assert entry['url'] == endpoint_url('127.0.0.1', port) != stale
+    assert entry['stamp'] > stamp, 'only a raised stamp makes a peer take the new address over the one it holds'
+    assert not entry['seen'], 'nothing has answered at the new address yet: the announcement is outbound'
+    assert c.peers()[b.uuid]['url'] == entry['url'], 'a peer that was not told cannot reach the member at all'
 
 
 def test_stale_gossip_loses_to_a_fresher_stamp(collab):

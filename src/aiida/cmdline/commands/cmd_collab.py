@@ -354,6 +354,46 @@ def reserve_port(bind, port, default):
             return port
 
 
+def restart_endpoint(profile):
+    """Restart the collab endpoint of a running daemon, and report whether it now runs what was just written.
+
+    The endpoint reads the address it binds and whether it serves at all once, at start, so a change to either
+    only reaches the process this way. Only that watcher is touched: the workers of the daemon keep running,
+    which is the whole difference between this and `verdi daemon restart`.
+
+    Every way of failing is a warning and ``False``, never an abort. What the caller has already written stands
+    either way, and a caller that also announces has to go on and announce: a restart that failed is repaired by
+    the next daemon start, while an announcement that was skipped is never made again — the address it would
+    have carried is by then the address this profile is already configured for, so a re-run finds nothing to do.
+    """
+    from aiida.engine.daemon.client import DaemonClient, DaemonException
+
+    client = DaemonClient(profile)
+
+    # A PID file and nothing more, so a daemon that was killed passes this and fails in the call below.
+    if not client.is_daemon_running:
+        return False
+
+    watcher = f'{client.daemon_name}-collab-endpoint'
+
+    try:
+        response = client.call_client({'command': 'restart', 'properties': {'name': watcher, 'waiting': True}})
+    except DaemonException as exception:
+        echo.echo_warning(f'could not restart the collab endpoint: {exception}')
+        return False
+
+    # circus answers a command naming a watcher it does not have rather than raising, and the daemon of a
+    # profile whose `collab.enabled` was off when it started has no endpoint watcher at all.
+    if response.get('status') != 'ok':
+        echo.echo_warning(
+            f'could not restart the collab endpoint: {response.get("reason", response)}. The watcher list is '
+            'built when the daemon starts, so `verdi daemon restart` is what puts an endpoint in it.'
+        )
+        return False
+
+    return True
+
+
 EXTRAS_SYNC_TERMS = (
     "On nodes you share, the extras of whoever edited them last replace everyone else's: your values are "
     'overwritten, your deletions propagate, and "last" is decided by the clocks of the machines. Extras whose key '
@@ -708,17 +748,20 @@ def collab_join(ctx, code, profile_name, bind, port, accept_push, non_interactiv
     )
 
 
-def announce(config, profile, code):
-    """Announce this profile to the member that issued a code and merge the roster it answers with.
+def announce(config, profile, *, url, token, collab, timeout=None):
+    """Announce this profile to the member serving ``url`` and merge the roster it answers with.
 
-    The one contact a code buys: it tells the issuer that this profile holds the token — which is what admits a
-    newcomer and what recognizes a member returning after a rotation — and brings back the membership the issuer
-    vouches for. Merged into the roster as it is on the file, so a returning member keeps its nicknames and the
-    standing of everyone else.
+    The one contact a join code buys — it tells the issuer that this profile holds the token, which is what
+    admits a newcomer and what recognizes a member returning after a rotation — and equally what a profile that
+    just moved sends to every peer it holds, so that the new address does not wait for the next sync. Merged into
+    the roster as it is on the file, so a returning member keeps its nicknames and the standing of everyone else.
 
-    :raises CollabRequestError: when the issuer cannot be reached or refuses the token.
+    :param url: the endpoint to announce to, of a code's issuer or of a peer already in the roster.
+    :param timeout: how long to wait for that peer, defaulting to the client's own. A loop over every peer passes
+        the short one: nothing depends on the announcement arriving, since gossip carries it anyway.
+    :raises CollabRequestError: when the peer cannot be reached or refuses the token.
     """
-    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.client import TIMEOUT, CollabClient
     from aiida.tools.collab.config import OPTION_PEERS, merge_roster, mutate_config, self_entry
 
     # Stamped like any outbound contact: a member that moved while it was dormant announces the address it is at
@@ -728,7 +771,7 @@ def announce(config, profile, code):
     with mutate_config(config) as stored:
         announcement = self_entry(stored, profile, bump=True)
 
-    with CollabClient(code.url, code.token, collab=code.collab) as client:
+    with CollabClient(url, token, collab=collab, timeout=TIMEOUT if timeout is None else timeout) as client:
         response = client.join(announcement)
 
     with mutate_config(config) as stored:
@@ -736,9 +779,9 @@ def announce(config, profile, code):
             stored.get_option(OPTION_PEERS, scope=profile.name), response.roster, profile.uuid
         )
 
-        # The issuer just answered at that URL, so it is the one entry of the roster this profile has proof of.
+        # The peer just answered at that URL, so it is the one entry of the roster this profile has proof of.
         for entry in merged.values():
-            if entry['url'] == code.url:
+            if entry['url'] == url:
                 entry['seen'] = True
 
         for target in (stored, config):
@@ -759,7 +802,7 @@ def join_collab(config, profile, code):
     from aiida.tools.collab.protocol import CollabRequestError
 
     try:
-        announce(config, profile, code)
+        announce(config, profile, url=code.url, token=code.token, collab=code.collab)
     except CollabRequestError as exception:
         # Deleted against the file as it is now, not against the copy this process loaded before the announcement:
         # `Config.store` writes its holder's whole dictionary, so a delete off the stale copy silently reverts
@@ -917,7 +960,7 @@ def collab_rekey(ctx, code):
     # The contact the code buys: the issuer learns this profile is back under the current token — nothing else
     # would tell it, since nobody polls a dormant peer — and vouches for the members it has seen in return.
     try:
-        announce(ctx.obj.config, profile, rekeyed)
+        announce(ctx.obj.config, profile, url=rekeyed.url, token=rekeyed.token, collab=rekeyed.collab)
     except CollabRequestError as exception:
         if exception.status == HTTPStatus.UNAUTHORIZED:
             # The code was minted before its issuer rotated again, so this profile now holds a key nobody has:
@@ -981,6 +1024,127 @@ def collab_map_computer(ctx, mappings):
             f'mapped {mapped}; no calculation here ran on those computers, so nothing was rewritten — the mapping '
             'applies to whatever arrives from now on.'
         )
+
+
+@verdi_collab.command('config')
+@click.option(
+    '--accept-push/--no-accept-push',
+    default=None,
+    help='Whether the peers of the collab may push their provenance into this profile. The endpoint reads this '
+    'per request, so it holds from the next one on.',
+)
+@click.option(
+    '--bind',
+    metavar='ADDRESS',
+    help="This machine's address on the private network of the collab, on which its endpoint listens.",
+)
+@click.option(
+    '--port',
+    type=click.IntRange(0, 65535),
+    help='Port on which the endpoint of this profile listens.',
+)
+@options.NON_INTERACTIVE()
+@requires_loaded_profile()
+@click.pass_context
+def collab_config(ctx, accept_push, bind, port, non_interactive):
+    """Change what this profile serves to its peers: consent to pushes, and the address it is reached at.
+
+    Called with no option it asks for all three, offering what is configured now; with options it sets those and
+    asks nothing. A changed address is validated by binding it, so one that is not this machine's is refused
+    before anything is written; the endpoint of a running daemon is then restarted onto it and every peer that
+    answers is told at once, so that nobody has to wait for a sync to find this profile again.
+    """
+    from aiida.tools.collab.config import (
+        OPTION_ACCEPT_PUSH,
+        OPTION_BIND,
+        OPTION_PEERS,
+        OPTION_PORT,
+        OPTION_TOKEN,
+        OPTION_UUID,
+        endpoint_url,
+        mutate_config,
+    )
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    config = ctx.obj.config
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    scope = profile.name
+    served = config.get_option(OPTION_BIND, scope=scope), config.get_option(OPTION_PORT, scope=scope)
+    accepts = config.get_option(OPTION_ACCEPT_PUSH, scope=scope)
+
+    if accept_push is None and bind is None and port is None:
+        if non_interactive:
+            echo.echo(f'pushes from peers: {"accepted" if accepts else "refused"}')
+            # The address is reported apart from the consent, each being a setting of its own.
+            echo.echo(f'address: {endpoint_url(*served)}')
+            return
+
+        accept_push = click.confirm('accept pushes from the peers of this collab?', default=accepts)
+        bind = click.prompt("this machine's address on the private network of the collab", default=served[0])
+        port = click.prompt(
+            'port on which the endpoint of this profile listens', default=served[1], type=click.IntRange(0, 65535)
+        )
+
+    address = (served[0] if bind is None else bind, served[1] if port is None else port)
+    moved = address != served
+
+    # Skipped when nothing moved, because the endpoint of this very profile is holding that socket: the test-bind
+    # that validates a new address would refuse the one already in use by the thing being reconfigured.
+    if moved:
+        address = (address[0], reserve_port(address[0], address[1], address[1]))
+
+    # Written only when it moved: these were read before the lock, so a consent-only run that wrote them back
+    # would revert an address change another terminal made in between.
+    values = {OPTION_BIND: address[0], OPTION_PORT: address[1]} if moved else {}
+
+    if accept_push is not None:
+        values[OPTION_ACCEPT_PUSH] = accept_push
+
+    with mutate_config(config) as stored:
+        for option_name, value in values.items():
+            for target in (stored, config):
+                target.set_option(option_name, value, scope=scope)
+
+        active = [entry for entry in stored.get_option(OPTION_PEERS, scope=scope).values() if entry['active']]
+        token = stored.get_option(OPTION_TOKEN, scope=scope)
+        collab = stored.get_option(OPTION_UUID, scope=scope)
+
+    if accept_push is not None:
+        consent = 'accepted' if accept_push else 'refused'
+        echo.echo_success(f'pushes from peers are {consent} from their next request on.')
+
+    url = endpoint_url(*address)
+
+    if not moved:
+        echo.echo_report(f'the address is unchanged: this profile is configured for {url}.')
+        return
+
+    # The restart precedes the line that says what happened, so that a failure to restart reads as its reason.
+    if restart_endpoint(profile):
+        echo.echo_success(f'profile `{profile.name}` serves the collab at {url}.')
+    else:
+        echo.echo_success(f'profile `{profile.name}` serves the collab at {url} once its daemon starts it there.')
+
+    # Announced now rather than at the next sync, because until a peer holds the new address it cannot reach this
+    # profile at all, and a member that only ever pulls would never announce. Short-timeout like the advisory
+    # signal of a rotation: whoever does not answer learns it from gossip, as every address change did before.
+    reached = []
+
+    for entry in active:
+        try:
+            announce(config, profile, url=entry['url'], token=token, collab=collab, timeout=SIGNAL_TIMEOUT)
+        except CollabRequestError as exception:
+            echo.echo_warning(f'could not tell {entry["nickname"]} about the new address: {exception}')
+        else:
+            reached.append(entry['nickname'])
+
+    if reached:
+        echo.echo_report(f'announced to {", ".join(reached)}.')
+
+    if len(reached) != len(active):
+        echo.echo_report('the peers that did not answer learn the new address from gossip at their next sync.')
 
 
 @verdi_collab.group('peer')

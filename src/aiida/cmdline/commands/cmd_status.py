@@ -252,7 +252,7 @@ def print_collab_status(profile: Profile, backend: StorageBackend | None) -> Non
     from aiida.manage.configuration import get_config_option
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN
+    from aiida.tools.collab.config import OPTION_ONLINE, OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN
     from aiida.tools.collab.protocol import REKEY_HINT, CollabRequestError, PeerInfo
     from aiida.tools.collab.state import CollabState
     from aiida.tools.collab.sync import withheld_seeds
@@ -310,6 +310,15 @@ def print_collab_status(profile: Profile, backend: StorageBackend | None) -> Non
     status = ServiceStatus.UP if online == len(peers) else ServiceStatus.WARNING
 
     print_status(status, 'collab', f'{online}/{len(peers)} peer(s) reachable, {last_sync}')
+
+    # The probes above are outbound and say nothing about being reachable oneself, so a profile that was taken
+    # out of service has no other symptom here: to its peers it is simply a member that is down.
+    if not get_config_option(OPTION_ONLINE):
+        print_status(
+            ServiceStatus.WARNING,
+            'collab offline',
+            'peers cannot reach this profile; run `verdi collab online` to serve again',
+        )
 
     # A sealed process whose provenance reaches one that is still running is held out of every delta until that
     # child seals, and nothing else says so. When the child never seals — a killed daemon, a stuck process — its

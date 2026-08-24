@@ -343,6 +343,13 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Whether peers of the collab are allowed to push provenance into this profile. Read by the '
         'endpoint per request, so revoking it takes effect at once, without a daemon restart.',
     )
+    collab__online: bool = Field(
+        True,
+        description='Whether the collab endpoint of this profile serves its peers. Set to `False` by `verdi collab '
+        'offline`, which leaves the daemon workers and every collab hook running, and back to `True` by `verdi '
+        'collab online`. An offline endpoint binds no socket and its peers see a member that is simply down.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
     collab__policy: CollabPolicy = Field(
         {'extras_mode': 'local', 'groups_mode': 'local'},
         description='What the collab shares beyond provenance nodes, chosen once by whoever created it and never '

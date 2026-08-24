@@ -1006,6 +1006,44 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
     assert peers['uuid-of-alice']['url'] == 'http://100.64.0.9:9137'
 
 
+def test_serve_offline_binds_nothing(make_profile, empty_config, monkeypatch):
+    """Test that an endpoint told to be offline idles instead of listening, and says in the log how to serve again.
+
+    Idling rather than being dropped from the daemon's watcher list is what makes the standing survive a restart:
+    the watcher exists for as long as ``collab.enabled`` does, and the process decides for itself whether to bind.
+    """
+    from aiida.tools.collab import server as server_module
+    from aiida.tools.collab.endpoint import serve
+
+    profile = make_profile()
+    empty_config.set_option('collab.online', False, scope=profile.name)
+    empty_config.store()
+
+    built = []
+    reported = []
+    monkeypatch.setattr(server_module, 'CollabServer', lambda *args, **kwargs: built.append(args))
+    monkeypatch.setattr(endpoint_module.LOGGER, 'report', lambda message, *args: reported.append(message % args))
+
+    stop = threading.Event()
+    thread = threading.Thread(target=serve, args=(profile, MagicMock()), kwargs={'stop': stop}, daemon=True)
+    thread.start()
+
+    try:
+        deadline = time.time() + 10
+
+        while not reported and time.time() < deadline:
+            time.sleep(0.01)
+
+        assert reported and 'verdi collab online' in reported[0]
+        assert not built, 'an offline endpoint binds no socket'
+        assert thread.is_alive(), 'an endpoint process that returned would be restarted by circus in a hot loop'
+    finally:
+        stop.set()
+        thread.join(timeout=10)
+
+    assert not thread.is_alive(), 'the idle ends when the process is told to stop'
+
+
 def test_handshake(make_profile):
     """Test that the handshake serves the cursor of the requester and claims the held nodes, but no tombstone.
 

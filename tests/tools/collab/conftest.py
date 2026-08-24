@@ -59,7 +59,11 @@ class Member:
         return f'http://{host}:{port}'
 
     def serve(self, port: int | None = None) -> int:
-        """Start this member's endpoint, exactly as :func:`aiida.tools.collab.endpoint.serve` starts it.
+        """Start this member's endpoint, wired as :func:`aiida.tools.collab.endpoint.serve` wires it.
+
+        Everything a request travels through is the real thing; what is left out is the ``collab.online`` check
+        `serve` makes before binding, which decides whether there is an endpoint at all rather than how one
+        behaves — `test_endpoint.py` covers it against the real `serve`.
 
         :param port: the port to listen on; ``None`` takes the one the profile has configured, which is what a
             daemon started after ``verdi collab init`` would do.

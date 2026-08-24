@@ -21,6 +21,7 @@ from aiida.tools.collab.config import (
     OPTION_ANNOUNCED,
     OPTION_BIND,
     OPTION_ENABLED,
+    OPTION_ONLINE,
     OPTION_PEERS,
     OPTION_POLICY,
     OPTION_PORT,
@@ -589,6 +590,15 @@ def test_peer_set_refuses_a_used_nickname(run_cli_command, config_with_profile):
     assert config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)['uuid-of-bob']['nickname'] == 'bob'
 
 
+def stored_option(config, name):
+    """Return an option as it is on the configuration file, which is what survives a daemon restart.
+
+    Read from the file and not from the configuration the command holds: a command writes both, and only the
+    file is what the endpoint process reads when circus starts it again.
+    """
+    return Config.from_file(config.filepath).get_option(name, scope=get_profile().name)
+
+
 @pytest.fixture
 def stub_daemon(monkeypatch):
     """Return the circus commands a command sends, and the state of the daemon it sends them to.
@@ -659,9 +669,9 @@ def test_config_sets_consent_without_prompting(run_cli_command, config_with_prof
 
     assert config_with_profile.get_option(OPTION_ACCEPT_PUSH, scope=get_profile().name) is True
     assert 'accepted from their next request' in result.output
-    assert 'the address is unchanged: this profile is configured for http://127.0.0.1:9137' in result.output, (
-        'nothing moved, so nothing may be claimed about a restart that did not happen'
-    )
+    assert 'the address is unchanged: this profile is configured for http://127.0.0.1:9137, in service' in (
+        result.output
+    ), 'nothing moved, so nothing may be claimed about a restart that did not happen'
 
 
 def test_config_without_options_writes_nothing_when_there_is_nobody_to_ask(run_cli_command, config_with_profile):
@@ -677,6 +687,7 @@ def test_config_without_options_writes_nothing_when_there_is_nobody_to_ask(run_c
 
     assert 'pushes from peers: refused' in result.output, 'consent is off, and this is where it is read off'
     assert 'address: http://127.0.0.1:9137' in result.output
+    assert 'standing: in service' in result.output
     assert Config.from_file(config_with_profile.filepath).dictionary == before
 
 
@@ -713,6 +724,39 @@ def test_config_announces_even_when_the_endpoint_could_not_be_restarted(
     assert 'could not restart the collab endpoint' in result.output
     assert 'once its daemon starts it there' in result.output, 'the endpoint is not on the new address yet'
     assert announced == [PEER_URL], 'the active peers have to be told, and the dormant one must not be'
+
+
+def test_config_on_an_offline_profile_does_not_claim_to_serve(
+    run_cli_command, config_with_profile, stub_daemon, monkeypatch
+):
+    """Test that moving the address of an offline profile reports the standing it is actually left in.
+
+    An idling endpoint has no address to re-read, so circus is not called at all and nothing binds the new
+    address. Reporting "serves the collab at" there asserts the opposite of what happened, on the very sequence
+    the two commands were built for together — go offline, move the machine, change the address. The
+    announcement stays: a peer holding the new address is what makes coming back online work.
+    """
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile, **{OPTION_ONLINE: False})
+
+    announced = []
+    monkeypatch.setattr(cmd_collab, 'announce', lambda config, profile, **keywords: announced.append(keywords['url']))
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, ['--port', str(port)], use_subprocess=False)
+
+    assert f'serves the collab at http://127.0.0.1:{port}.' not in result.output, 'it is not serving anything'
+    assert 'verdi collab online' in result.output
+    assert announced == [PEER_URL], 'the peers still have to learn where this profile will be'
+    assert commands == [], 'an idling endpoint has no address to re-read, so restarting it buys nothing'
+
+    # The same claim, from the one report site whose whole job is to say what this profile serves.
+    listed = run_cli_command(cmd_collab.collab_config, ['-n'], use_subprocess=False)
+
+    assert f'address: http://127.0.0.1:{port}' in listed.output
+    assert 'standing: offline' in listed.output
 
 
 def test_config_refuses_an_address_that_is_not_this_machines(run_cli_command, config_with_profile):
@@ -864,6 +908,80 @@ def test_rotate_does_not_stop_a_peer_that_has_not_rotated(
 
     assert 'pulled 1 node(s)' in result.output
     assert config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name) == TOKEN
+
+
+def test_offline_stops_serving_without_touching_the_workers(run_cli_command, config_with_profile, stub_daemon):
+    """Test that going offline writes the option and restarts the endpoint watcher, and nothing else.
+
+    Stopping the daemon would stop the workers with it, and switching `collab.enabled` off would silence the
+    tombstone and membership hooks — so a member "offline" that way stops recording what its next sync needs.
+    """
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_offline, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is False
+    assert [command['properties']['name'] for command in commands] == [f'aiida-{get_profile().name}-collab-endpoint']
+    assert [command['properties']['waiting'] for command in commands] == [True], (
+        'the announcement that follows an address change must not overtake the endpoint re-binding'
+    )
+    assert 'does not serve the collab from now on' in result.output
+
+
+def test_offline_with_a_stopped_daemon_is_a_report(run_cli_command, config_with_profile, stub_daemon):
+    """Test that going offline while the daemon is down writes the option and says when it takes effect.
+
+    Refusing it would be refusing to arrange something for later, and the option is exactly what carries the
+    standing across a daemon that is not running yet.
+    """
+    _, commands = stub_daemon
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_offline, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is False
+    assert commands == []
+    assert 'from the next daemon start' in result.output
+
+
+def test_offline_says_when_the_daemon_has_no_endpoint_watcher(run_cli_command, config_with_profile, stub_daemon):
+    """Test that circus refusing a watcher it does not have is a warning, not a restart reported as done.
+
+    The watcher list is built when the daemon starts and only carries an endpoint when `collab.enabled` was
+    already set, so the daemon of a profile that joined a collab while it was running has none. circus answers
+    such a command rather than raising, which is how discarding the answer turned "nothing happened" into
+    "Success".
+    """
+    state, _ = stub_daemon
+    state['running'] = True
+    state['answer'] = {'status': 'error', 'reason': 'program not found'}
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_offline, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is False
+    assert 'could not restart the collab endpoint' in result.output
+    assert 'verdi daemon restart' in result.output
+    assert 'from the next daemon start' in result.output
+
+
+def test_online_serves_again(run_cli_command, config_with_profile, stub_daemon):
+    """Test that ``verdi collab online`` writes the option back and restarts the endpoint onto it."""
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile, **{OPTION_ONLINE: False})
+
+    result = run_cli_command(cmd_collab.collab_online, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is True
+    assert [command['command'] for command in commands] == ['restart']
+    assert 'serves the collab from now on' in result.output
 
 
 def rekey_code(token='the-new-token', collab=COLLAB_UUID, url=PEER_URL):

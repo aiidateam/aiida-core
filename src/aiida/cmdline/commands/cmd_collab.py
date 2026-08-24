@@ -1057,6 +1057,7 @@ def collab_config(ctx, accept_push, bind, port, non_interactive):
     from aiida.tools.collab.config import (
         OPTION_ACCEPT_PUSH,
         OPTION_BIND,
+        OPTION_ONLINE,
         OPTION_PEERS,
         OPTION_PORT,
         OPTION_TOKEN,
@@ -1073,12 +1074,22 @@ def collab_config(ctx, accept_push, bind, port, non_interactive):
     scope = profile.name
     served = config.get_option(OPTION_BIND, scope=scope), config.get_option(OPTION_PORT, scope=scope)
     accepts = config.get_option(OPTION_ACCEPT_PUSH, scope=scope)
+    # `verdi collab offline` is the standing in which a restarted endpoint still binds nothing: circus restarts
+    # the watcher and the process reads this option and idles. It therefore decides what this command may claim
+    # about the address as much as the restart does — and it is set from this very command surface.
+    online = config.get_option(OPTION_ONLINE, scope=scope)
 
     if accept_push is None and bind is None and port is None:
         if non_interactive:
             echo.echo(f'pushes from peers: {"accepted" if accepts else "refused"}')
-            # The address is reported apart from the consent, each being a setting of its own.
+            # The address and whether this profile is in service are two facts; the one report site that ran
+            # them together is the one that went on saying `served at` after `verdi collab offline`. Reported as
+            # the standing it is and not as "serving", which would be a claim about a process: this command
+            # knows what is configured, and whether anything is up is `verdi status`'s business.
             echo.echo(f'address: {endpoint_url(*served)}')
+            echo.echo(
+                f'standing: {"in service" if online else "offline — `verdi collab online` puts it back in service"}'
+            )
             return
 
         accept_push = click.confirm('accept pushes from the peers of this collab?', default=accepts)
@@ -1113,16 +1124,25 @@ def collab_config(ctx, accept_push, bind, port, non_interactive):
 
     if accept_push is not None:
         consent = 'accepted' if accept_push else 'refused'
-        echo.echo_success(f'pushes from peers are {consent} from their next request on.')
+        arrives = 'from their next request on' if online else 'once `verdi collab online` lets a request arrive'
+        echo.echo_success(f'pushes from peers are {consent} {arrives}.')
 
     url = endpoint_url(*address)
 
     if not moved:
-        echo.echo_report(f'the address is unchanged: this profile is configured for {url}.')
+        in_service = 'in service' if online else 'offline'
+        echo.echo_report(f'the address is unchanged: this profile is configured for {url}, {in_service}.')
         return
 
-    # The restart precedes the line that says what happened, so that a failure to restart reads as its reason.
-    if restart_endpoint(profile):
+    # An offline endpoint is not restarted at all: it would read the option, idle again, and cost a circus round
+    # trip to do it. `verdi collab online` is what restarts it, and it picks the new address up there.
+    # Otherwise the restart precedes the line that says what happened, so a failure to restart reads as its reason.
+    if not online:
+        echo.echo_success(
+            f'profile `{profile.name}` is configured for {url}. It is offline, so nothing is serving that '
+            'address: `verdi collab online` puts it back in service.'
+        )
+    elif restart_endpoint(profile):
         echo.echo_success(f'profile `{profile.name}` serves the collab at {url}.')
     else:
         echo.echo_success(f'profile `{profile.name}` serves the collab at {url} once its daemon starts it there.')
@@ -1145,6 +1165,54 @@ def collab_config(ctx, accept_push, bind, port, non_interactive):
 
     if len(reached) != len(active):
         echo.echo_report('the peers that did not answer learn the new address from gossip at their next sync.')
+
+
+def set_serving(ctx, online):
+    """Write whether this profile serves its endpoint, and restart the endpoint of a running daemon onto it.
+
+    Persisted rather than done by stopping a process, so that it survives a daemon restart, and written to the
+    one option that no other behaviour hangs off: switching `collab.enabled` off instead would also silence the
+    tombstone and membership hooks, and a member "offline" that way stops recording what its next sync needs.
+    """
+    from aiida.tools.collab.config import OPTION_ONLINE, mutate_config
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    with mutate_config(ctx.obj.config) as stored:
+        for target in (stored, ctx.obj.config):
+            target.set_option(OPTION_ONLINE, online, scope=profile.name)
+
+    serves = 'serves the collab' if online else 'does not serve the collab'
+    when = 'from now on' if restart_endpoint(profile) else 'from the next daemon start'
+
+    echo.echo_success(f'profile `{profile.name}` {serves} {when}.')
+
+    if not online:
+        echo.echo_report(
+            'Pulling from peers and pushing to them are unaffected: neither needs this endpoint. Serve again '
+            'with `verdi collab online`.'
+        )
+
+
+@verdi_collab.command('offline')
+@requires_loaded_profile()
+@click.pass_context
+def collab_offline(ctx):
+    """Stop serving this profile to the peers of the collab, without stopping the daemon workers.
+
+    The peers see an offline member and skip it; nothing else about the membership changes, and the tombstones
+    and group memberships a later sync needs go on being recorded. It survives a daemon restart.
+    """
+    set_serving(ctx, online=False)
+
+
+@verdi_collab.command('online')
+@requires_loaded_profile()
+@click.pass_context
+def collab_online(ctx):
+    """Serve this profile to the peers of the collab again, after `verdi collab offline`."""
+    set_serving(ctx, online=True)
 
 
 @verdi_collab.group('peer')

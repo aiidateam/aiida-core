@@ -456,6 +456,42 @@ def test_status_collab(run_cli_command, brokerless_profile, monkeypatch):
     assert 'fixed at creation' in policy
 
 
+def test_status_collab_warns_when_offline(run_cli_command, brokerless_profile, monkeypatch):
+    """Test that a profile taken out of service says so, and names the command that puts it back.
+
+    The peer probes are outbound and prove nothing about being reachable oneself, so without this line an
+    endpoint that is not serving looks exactly like one that is: the peers simply see a member that is down.
+    """
+    from pathlib import Path
+
+    from aiida.tools.collab.state import CollabState
+
+    monkeypatch.setitem(brokerless_profile.options, 'collab.enabled', True)
+    monkeypatch.setitem(brokerless_profile.options, 'collab.online', False)
+    monkeypatch.setattr(CollabState, 'load', classmethod(lambda cls, profile: cls(filepath=Path('unused'))))
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+
+    offline = next(line for line in result.output_lines if 'collab offline' in line)
+
+    assert 'peers cannot reach this profile' in offline
+    assert 'verdi collab online' in offline
+
+
+def test_status_collab_says_nothing_when_online(run_cli_command, brokerless_profile, monkeypatch):
+    """Test that serving is the normal state and gets no line of its own: the warning is about the exception."""
+    from pathlib import Path
+
+    from aiida.tools.collab.state import CollabState
+
+    monkeypatch.setitem(brokerless_profile.options, 'collab.enabled', True)
+    monkeypatch.setattr(CollabState, 'load', classmethod(lambda cls, profile: cls(filepath=Path('unused'))))
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+
+    assert 'collab offline' not in result.output
+
+
 def test_status_collab_reports_a_signalled_rotation(run_cli_command, brokerless_profile, monkeypatch):
     """Test that a peer's rotation signal surfaces as the one thing it may do: tell the user to rekey.
 
@@ -545,7 +581,8 @@ def test_status_collab_probe_timeout(run_cli_command, brokerless_profile, monkey
         result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
         elapsed = time.monotonic() - start
 
-        assert sum('offline' in line for line in result.output_lines) == 6
+        # Matched at the end of the line, because the `collab offline` warning contains `peer` and `offline` too.
+        assert sum(line.strip().endswith('offline') for line in result.output_lines) == 6
         assert '0/6 peer(s) reachable' in result.output
         # Six serialized probes would take at least 3 s; concurrency bounds the whole command well below that.
         assert elapsed < 2.5, f'probes did not run concurrently or ignored the timeout: {elapsed:.1f}s'

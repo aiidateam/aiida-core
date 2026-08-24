@@ -129,8 +129,8 @@ A peer that has never answered at the address it announced is flagged as such in
 
 .. _how-to:collaborate:serving:
 
-Serving: the address and consent to pushes
-=========================================
+Serving: the address, consent to pushes, going offline
+======================================================
 
 What your profile serves is changed in one place:
 
@@ -139,13 +139,26 @@ What your profile serves is changed in one place:
     $ verdi collab config
 
 Called bare it asks for all three settings, offering what is configured now as the default of each; ``--accept-push``/``--no-accept-push``, ``--bind`` and ``--port`` set them without asking anything.
-With ``--non-interactive`` and no option there is nobody to ask, so it prints the settings — consent to pushes and the address — and changes nothing.
+With ``--non-interactive`` and no option there is nobody to ask, so it prints the three settings — consent to pushes, the address, and whether this profile is in service — and changes nothing.
 
 Consent to being pushed to is re-read by the endpoint on every request, so granting or withdrawing it holds from the next request on, with no restart.
 
 A changed address is validated by binding it, so one that is not this machine's is refused before anything is written.
 It is then written, the collab endpoint of a running daemon is restarted onto it — the workers keep running — and it is announced to every peer that answers, so that nobody has to wait for a sync to find you again.
+An offline profile skips the restart, its endpoint having no address to re-read while it idles; the announcement still goes out, and ``verdi collab online`` is what puts it on the new address.
 A peer that does not answer learns it from gossip at its next sync, as every address change did before.
+
+To stop serving without stopping the daemon:
+
+.. code-block:: console
+
+    $ verdi collab offline
+    $ verdi collab online
+
+Being offline is persisted in ``collab.online`` and survives a daemon restart: the endpoint process starts, reads it and idles instead of binding a socket.
+Everything else keeps running — the workers, and the hooks that record the tombstones and the group memberships a later sync needs — which is the difference between this and switching ``collab.enabled`` off.
+Your own ``verdi collab pull`` and ``push`` are unaffected: neither has ever needed your endpoint.
+To your peers you look like a member that is simply down, and ``verdi status`` warns you that they cannot reach you.
 
 .. _how-to:collaborate:rotation:
 
@@ -200,6 +213,7 @@ Day-to-day use
     $ verdi collab log          # the history of every pull, push and extras refresh
     $ verdi collab link         # the code that admits a newcomer — it carries the key, so hand it over out of band
     $ verdi collab config       # what this profile serves: consent to pushes, and the address it is reached at
+    $ verdi collab offline      # stop serving, without stopping the daemon workers (`online` serves again)
     $ verdi collab rotate       # replace the key of the collab (see above)
     $ verdi collab rekey <code> # adopt a replaced key
 

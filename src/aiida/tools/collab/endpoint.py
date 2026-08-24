@@ -28,6 +28,7 @@ from aiida.tools.collab.config import (
     OPTION_BIND,
     OPTION_COMPUTER_MAP,
     OPTION_MAX_CONCURRENCY,
+    OPTION_ONLINE,
     OPTION_PEERS,
     OPTION_POLICY,
     OPTION_PORT,
@@ -645,13 +646,29 @@ class CollabEndpoint:
         return dataclasses.asdict(report)
 
 
-def serve(profile: Profile, backend: StorageBackend) -> None:
-    """Run the collab endpoint of the profile until the process is terminated."""
+def serve(profile: Profile, backend: StorageBackend, stop: threading.Event | None = None) -> None:
+    """Run the collab endpoint of the profile until the process is terminated.
+
+    :param stop: what ends the idle of an offline endpoint. In production nothing sets it: the process is ended
+        by the ``SIGTERM`` circus sends, which is what ends ``serve_forever`` too. A test that runs this in a
+        thread of its own needs the handle.
+    """
     from aiida.manage.configuration import get_config
     from aiida.manage.configuration.config import Config
     from aiida.tools.collab.server import CollabServer
 
     config = get_config()
+
+    # Idling rather than never being started, because the watcher exists for as long as `collab.enabled` does:
+    # this is what makes going offline survive a daemon restart without the daemon knowing anything about it.
+    if not config.get_option(OPTION_ONLINE, scope=profile.name):
+        LOGGER.report(
+            'profile `%s` is offline by `verdi collab offline`; run `verdi collab online` to serve it again',
+            profile.name,
+        )
+        (stop or threading.Event()).wait()
+        return
+
     endpoint = CollabEndpoint(profile, backend)
 
     server = CollabServer(

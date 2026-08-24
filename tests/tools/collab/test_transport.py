@@ -248,7 +248,7 @@ def test_bind_refused(tmp_path, host):
     """
     stub = StubSyncCore(tmp_path / 'delta.aiida')
 
-    with pytest.raises(ConfigurationError, match='collab.bind'):
+    with pytest.raises(ConfigurationError, match=r'collab\.bind'):
         build_server(host, 0, stub, tmp_path)
 
 
@@ -264,7 +264,7 @@ def test_bind_port_in_use(tmp_path):
         occupant.bind(('127.0.0.1', 0))
         occupant.listen()
 
-        with pytest.raises(ConfigurationError, match='collab.port'):
+        with pytest.raises(ConfigurationError, match=r'collab\.port'):
             build_server('127.0.0.1', occupant.getsockname()[1], stub, tmp_path)
 
 

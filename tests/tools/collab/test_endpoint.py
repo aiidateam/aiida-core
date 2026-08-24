@@ -134,7 +134,7 @@ def test_import_staged_refused_unless_accepted(make_profile, empty_config, recor
 
     endpoint = CollabEndpoint(profile, backend=MagicMock())
 
-    with pytest.raises(PushRefused, match='collab.accept_push'):
+    with pytest.raises(PushRefused, match=r'collab\.accept_push'):
         endpoint.import_staged(tmp_path / 'staged', 'http://pusher:9137', timezone.now())
 
     assert calls == []
@@ -164,10 +164,10 @@ def test_accept_push_is_read_per_request(make_profile, empty_config, record_call
     assert empty_config.get_option('collab.accept_push', scope=profile.name) is True, 'the staging is stale'
     assert local_info(profile, MagicMock()).accept_push is False, 'the handshake must stop inviting pushes'
 
-    with pytest.raises(PushRefused, match='collab.accept_push'):
+    with pytest.raises(PushRefused, match=r'collab\.accept_push'):
         endpoint.handshake('http://pusher:9137')
 
-    with pytest.raises(PushRefused, match='collab.accept_push'):
+    with pytest.raises(PushRefused, match=r'collab\.accept_push'):
         endpoint.import_staged(tmp_path / 'staged', 'http://pusher:9137', timezone.now())
 
 

@@ -305,7 +305,10 @@ def print_collab_status(profile: Profile, backend: StorageBackend | None) -> Non
             print_status(ServiceStatus.UP, f'peer {nickname}', f'{entry["url"]} online (aiida-core {info.version})')
 
     state = CollabState.load(profile)
-    last_sync = f'last sync {state.events[-1].time.isoformat(timespec="seconds")}' if state.events else 'no syncs yet'
+    # A `served` row is a peer's sync, not this profile's: counting it would let a peer pulling from here keep the
+    # line fresh while this profile has not synced in a week, which is the one thing it is read for.
+    own = [event for event in state.events if event.direction != 'served']
+    last_sync = f'last sync {own[-1].time.isoformat(timespec="seconds")}' if own else 'no syncs yet'
     online = sum(1 for info in infos if isinstance(info, PeerInfo))
     status = ServiceStatus.UP if online == len(peers) else ServiceStatus.WARNING
 

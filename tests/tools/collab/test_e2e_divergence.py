@@ -124,7 +124,7 @@ def test_a_deletion_during_a_pull_is_not_undone(collab, faults):
     for and cut into the delta, and the import's tombstone filter would read the same stale set. Pull-only: only
     the pull carries a state object across a network round trip; the endpoint re-reads its own inside the lock.
     """
-    a, b, c = collab(3)
+    a, b, _c = collab(3)
     created = b.seal_calculation()
 
     # Carol's copy comes through Alice, so Carol's first contact with Bob is unbounded and offers everything she

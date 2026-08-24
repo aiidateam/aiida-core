@@ -753,7 +753,7 @@ def test_thin_export_ships_only_missing(tmp_path, peers):
     """
     backend_one, state_one = peers('one')
     backend_two, state_two = peers('two')
-    heavy, first, output = heavy_calculation(backend_one)
+    heavy, _first, output = heavy_calculation(backend_one)
 
     # First sync: everything travels, including the heavy repository object.
     export = export_full(tmp_path / 'first.aiida', state=state_one, backend=backend_one, cursor=None)
@@ -809,7 +809,7 @@ def test_thin_import_graph_equality(tmp_path, peers):
     backend_one, state_one = peers('one')
     backend_thin, state_thin = peers('thin')
     backend_full, state_full = peers('full')
-    heavy, first, output = heavy_calculation(backend_one)
+    heavy, _first, output = heavy_calculation(backend_one)
 
     # The thin receiver syncs twice, the second time receiving only what it lacks plus boundary links.
     export = export_full(tmp_path / 'one.aiida', state=state_one, backend=backend_one, cursor=None)
@@ -859,7 +859,7 @@ def test_thin_import_missing_endpoint_aborts_and_recovers(tmp_path, peers):
 
     backend_one, state_one = peers('one')
     backend_two, state_two = peers('two')
-    heavy, first, output = heavy_calculation(backend_one)
+    heavy, _first, output = heavy_calculation(backend_one)
     second = restart(backend_one, heavy, output)
 
     # A thin delta cut as if the receiver held the first calculation, imported into a profile that does not.
@@ -963,7 +963,7 @@ def test_pending_boundary_links_heal_on_next_import(tmp_path, peers, monkeypatch
 
     backend_one, state_one = peers('one')
     backend_two, state_two = peers('two')
-    heavy, first, output = heavy_calculation(backend_one)
+    heavy, _first, output = heavy_calculation(backend_one)
 
     export = export_full(tmp_path / 'one.aiida', state=state_one, backend=backend_one, cursor=None)
     import_delta(
@@ -1021,7 +1021,7 @@ def test_thin_import_sibling_boundary_links_abort(tmp_path, peers):
     from aiida.common.exceptions import IntegrityError
     from aiida.tools.collab.sync import _write_thin_archive
 
-    backend_one, state_one = peers('one')
+    backend_one, _state_one = peers('one')
     backend_two, state_two = peers('two')
 
     orphan = orm.Int(1, backend=backend_two).store()
@@ -1110,7 +1110,7 @@ def test_thin_import_self_link_aborts(tmp_path, peers):
     from aiida.common.exceptions import IntegrityError
     from aiida.tools.collab.sync import _write_thin_archive
 
-    backend_one, state_one = peers('one')
+    backend_one, _state_one = peers('one')
     backend_two, state_two = peers('two')
 
     held = orm.Int(1, backend=backend_two).store()
@@ -1417,7 +1417,7 @@ def test_remap_unknown_local_computer(tmp_path, peers):
     filepath = tmp_path / 'delta.aiida'
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None, claim=held)
 
-    with pytest.raises(ConfigurationError, match='collab.computer_map'):
+    with pytest.raises(ConfigurationError, match=r'collab\.computer_map'):
         import_delta(
             filepath,
             state=state_two,

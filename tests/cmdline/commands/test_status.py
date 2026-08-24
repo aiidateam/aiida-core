@@ -454,6 +454,43 @@ def test_status_collab(run_cli_command, brokerless_profile, monkeypatch):
     assert 'fixed at creation' in policy
 
 
+@pytest.mark.parametrize('own_event, expected', ((True, 'last sync 2026-08-01T12:00:00'), (False, 'no syncs yet')))
+def test_status_collab_last_sync_ignores_what_peers_drove(
+    run_cli_command, brokerless_profile, monkeypatch, own_event, expected
+):
+    """Test that a peer pulling from this profile does not pass for this profile having synced.
+
+    The line is read to find out whether one is behind, and a `served` row answers a different question: it says a
+    peer came and took, which says nothing about what this profile has taken since.
+    """
+    from datetime import datetime
+    from pathlib import Path
+
+    from aiida.tools.collab.state import CollabEvent, CollabState
+
+    monkeypatch.setitem(brokerless_profile.options, 'collab.enabled', True)
+    monkeypatch.setitem(brokerless_profile.options, 'collab.token', 'the-token')
+
+    events = [
+        CollabEvent(time=datetime(2026, 8, 5, 12, 0, 0), direction='served', peer='uuid-of-alice', uuids=[], size=0)
+    ]
+
+    if own_event:
+        events.insert(
+            0,
+            CollabEvent(time=datetime(2026, 8, 1, 12, 0, 0), direction='pull', peer='uuid-of-alice', uuids=[], size=0),
+        )
+
+    monkeypatch.setattr(
+        CollabState, 'load', classmethod(lambda cls, profile: cls(filepath=Path('unused'), events=events))
+    )
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+
+    assert expected in result.output
+    assert '2026-08-05' not in result.output
+
+
 def test_status_collab_warns_when_offline(run_cli_command, brokerless_profile, monkeypatch):
     """Test that a profile taken out of service says so, and names the command that puts it back.
 

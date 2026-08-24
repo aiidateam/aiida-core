@@ -1019,7 +1019,7 @@ def _write_boundary_links(backend: StorageBackend, pending: list[list[str]], tom
     writable = []
 
     for link in pending:
-        input_uuid, output_uuid, link_type, label = link
+        input_uuid, output_uuid, _link_type, _label = link
 
         # A journalled self-link predates the pre-check that now refuses them; dropped, never written.
         if input_uuid == output_uuid:

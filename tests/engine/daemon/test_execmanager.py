@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for the :mod:`aiida.engine.daemon.execmanager` module."""
 
+import contextlib
 import io
 import pathlib
 
@@ -755,6 +756,15 @@ async def test_stashing(
     dest_path_error = tmp_path / 'stash_path_error'
     dest_path_error.mkdir()
 
+    # A failed stash must leave pre-existing content in the destination untouched, for all modes.
+    if stash_mode == StashMode.COPY.value:
+        other_stash = dest_path_error / uuid[:2] / 'ab' / 'other-calculation'
+        other_stash.mkdir(parents=True)
+        (other_stash / 'aiida.out').write_text('other')
+    else:
+        other_stash = dest_path_error / ('other-calculation.' + stash_mode)
+        other_stash.write_text('other')
+
     if stash_mode == StashMode.COPY.value:
         node.set_option(
             'stash',
@@ -797,39 +807,31 @@ async def test_stashing(
                 await execmanager.stash_calculation(node, transport)
                 assert any('Failed to stash' in message for message in caplog.messages)
 
-    # Ensure no files were created in the destination path after the error
+    # The failed stash must not have created its own target, nor touched the sibling stash
     if stash_mode == StashMode.COPY.value:
         assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
+        assert (other_stash / 'aiida.out').read_text() == 'other'
     else:
-        assert not any(dest_path_error.iterdir())
+        assert list(dest_path_error.iterdir()) == [other_stash]
+        assert other_stash.read_text() == 'other'
 
+    ## 3) test that an existing stash target is never overwritten (see #7564)
+    if stash_mode != StashMode.COPY.value:
+        existing_archive = pathlib.Path(str(dest_path / uuid) + '.' + stash_mode)
+        existing_archive.write_text('tampered')
 
-@pytest.mark.asyncio
-async def test_stashing_copy_failure_keeps_other_stashes(generate_calcjob_node, tmp_path, monkeypatch):
-    """A failed ``COPY`` stash must only remove its own directory, not the whole ``uuid[:2]`` shard."""
-    node = generate_calcjob_node()
-    uuid = node.uuid
-    workdir = tmp_path / 'workdir'
-    workdir.mkdir()
-    (workdir / 'aiida.out').write_text('out')
-    node.set_remote_workdir(str(workdir))
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path),
+                'stash_mode': stash_mode,
+                'dereference': True,
+            },
+        )
 
-    target_base = tmp_path / 'stash'
-    node.set_option(
-        'stash', {'source_list': ['*'], 'target_base': str(target_base), 'stash_mode': StashMode.COPY.value}
-    )
+        with LocalTransport() as transport:
+            with contextlib.suppress(StashingError):
+                await execmanager.stash_calculation(node, transport)
 
-    other_stash = target_base / uuid[:2] / 'ab' / 'other-calculation'
-    other_stash.mkdir(parents=True)
-    (other_stash / 'aiida.out').write_text('other')
-
-    async def mock_copy_async(*args, **kwargs):
-        raise OSError('copy mocked error')
-
-    with LocalTransport() as transport:
-        monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
-        with pytest.raises(StashingError, match='Failed to copy'):
-            await execmanager.stash_calculation(node, transport)
-
-    assert not (target_base / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
-    assert (other_stash / 'aiida.out').read_text() == 'other'
+        assert existing_archive.read_text() == 'tampered'

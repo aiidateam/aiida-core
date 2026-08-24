@@ -15,9 +15,15 @@ answered what the test wanted to hear.
 
 import pytest
 
+from aiida.tools.collab.config import COLLAB_PEER_KEY
 from tests.tools.collab.conftest import move
 
 DIRECTIONS = ('pull', 'push')
+
+
+def origin(member, uuid):
+    """Return the peer a member recorded as the origin of a node, or ``None`` for one it produced itself."""
+    return member.node(uuid).base.extras.get(COLLAB_PEER_KEY, None)
 
 
 def transferred(member, since):
@@ -546,3 +552,44 @@ def test_a_mapped_peer_computer_makes_an_arrived_calculation_a_cache_hit(collab,
     twin = b.seal_cached_calculation('leonardo')
 
     assert arrived in {node.uuid for node in b.node(twin).base.caching.get_all_same_nodes()}
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_an_imported_node_records_the_peer_it_came_from(collab, direction):
+    """Test that an arrived node names the peer that handed it over — the relay rather than the author."""
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+    stamped = a.mtime(created)
+
+    move(a, b, direction)
+    move(b, c, direction)
+
+    assert origin(a, created) is None, 'the node was produced here, not taken from anyone'
+    assert origin(b, created) == a.uuid
+    assert origin(c, created) == b.uuid, 'a relayed node names the relay it came from'
+
+    # The write has to leave the clock alone: a freshly stamped node re-enters the next delta this profile serves,
+    # and the subgraph would echo back and forth forever.
+    assert b.mtime(created) == stamped
+
+
+def test_the_process_list_shows_the_peer_a_node_came_from(collab):
+    """Test that the columns of a collab profile name the origin of a pulled process and show a short UUID."""
+    from aiida.cmdline.commands.cmd_process import process_list
+
+    a, b = collab(2)
+    calculation = a.creator(a.seal_calculation())
+
+    move(a, b, 'pull')
+
+    output = b.run_verdi(process_list, ['--all']).output
+
+    assert 'UUID' in output
+    assert 'Peer' in output
+    assert calculation[:8] in output
+    assert calculation not in output, 'the default column is the short UUID'
+    assert a.nickname in output, 'the roster turns the profile UUID of the origin back into a nickname'
+
+    projected = b.run_verdi(process_list, ['--all', '--raw', '--project', 'pk', 'uuid']).output
+
+    assert calculation in projected

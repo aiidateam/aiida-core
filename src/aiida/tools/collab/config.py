@@ -44,6 +44,11 @@ OPTION_MAX_CONCURRENCY = 'collab.max_concurrency'
 # describe the history of the profile that made them and would mean nothing in another one, so they stay home.
 GENERATED_GROUP_TYPES = ('core.import', 'core.auto')
 
+# Extra in which an import records the profile UUID of the peer it took the node from -- "who I got it from", so a
+# relayed node names the relay and not the author. Underscore-prefixed, hence private to this profile and never
+# travelling on.
+COLLAB_PEER_KEY = '_collab_peer'
+
 
 def is_enabled() -> bool:
     """Return whether the loaded profile takes part in a collab."""

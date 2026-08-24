@@ -53,6 +53,8 @@ class CalculationQueryBuilder:
         'exception',
         'cached',
         'cached_from',
+        'short_uuid',
+        'peer',
     )
 
     def __init__(self, mapper: ProjectionMapper | None = None):

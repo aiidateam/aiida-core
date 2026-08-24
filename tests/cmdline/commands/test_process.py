@@ -782,6 +782,23 @@ class TestVerdiProcess:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_list_collab_projections_without_a_collab(run_cli_command):
+    """Test that the collab columns are projectable off a collab, where they are not shown by default."""
+    node = WorkFunctionNode()
+    node.set_process_state(ProcessState.RUNNING)
+    node.store()
+
+    result = run_cli_command(cmd_process.process_list)
+
+    assert 'UUID' not in result.output
+    assert 'Peer' not in result.output
+
+    result = run_cli_command(cmd_process.process_list, ['-r', '-P', 'short_uuid', 'peer'])
+
+    assert [line.split() for line in result.output_lines] == [[node.uuid[:8]]], 'no collab, so no origin to name'
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))
 @pytest.mark.requires_broker
 def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, percentage):

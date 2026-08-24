@@ -97,6 +97,7 @@ class CalculationProjectionMapper(ProjectionMapper):
         from aiida.orm import ProcessNode
         from aiida.orm.nodes.caching import NodeCaching
         from aiida.orm.utils.mixins import Sealable
+        from aiida.tools.collab.config import COLLAB_PEER_KEY
 
         self._valid_projections = projections
 
@@ -111,6 +112,7 @@ class CalculationProjectionMapper(ProjectionMapper):
         exit_message_key = f'attributes.{ProcessNode.EXIT_MESSAGE_KEY}'
         exception_key = f'attributes.{ProcessNode.EXCEPTION_KEY}'
         cached_from_key = f'extras.{NodeCaching.CACHED_FROM_KEY}'
+        collab_peer_key = f'extras.{COLLAB_PEER_KEY}'
 
         default_labels = {
             'pk': 'PK',
@@ -119,6 +121,8 @@ class CalculationProjectionMapper(ProjectionMapper):
             'mtime': 'Modified',
             'state': 'Process State',
             'cached': '\u267b',
+            'short_uuid': 'UUID',
+            'peer': 'Peer',
         }
 
         default_attributes = {
@@ -135,6 +139,8 @@ class CalculationProjectionMapper(ProjectionMapper):
             'exception': exception_key,
             'cached': cached_from_key,
             'cached_from': cached_from_key,
+            'short_uuid': 'uuid',
+            'peer': collab_peer_key,
         }
 
         default_formatters = {
@@ -144,6 +150,8 @@ class CalculationProjectionMapper(ProjectionMapper):
             'process_state': lambda value: formatting.format_process_state(value[process_state_key]),
             'sealed': lambda value: formatting.format_sealed(value[sealed_key]),
             'cached': lambda value: '\u2714' if value[cached_from_key] else '',
+            'short_uuid': lambda value: value['uuid'][:8],
+            'peer': lambda value: value[collab_peer_key][:8] if value[collab_peer_key] else '',
         }
 
         if projection_labels is not None:

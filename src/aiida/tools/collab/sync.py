@@ -26,7 +26,7 @@ from aiida.orm.utils.mixins import Sealable
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.abstract import get_format
 from aiida.tools.archive.imports import MergeExtrasType
-from aiida.tools.collab.config import GENERATED_GROUP_TYPES
+from aiida.tools.collab.config import COLLAB_PEER_KEY, GENERATED_GROUP_TYPES
 from aiida.tools.collab.protocol import ExtrasSnapshot, GroupMembers
 from aiida.tools.collab.state import CollabEvent, CollabState, Membership
 from aiida.tools.graph.graph_traversers import get_nodes_export, traverse_graph, validate_traversal_rules
@@ -841,6 +841,10 @@ def import_delta(
 
     refreshed = _apply_refresh(backend, refresh or []) if extras_mode == 'sync' else []
 
+    # Last of the extras writes of this import, so that none of the others has to carry the key through its own
+    # read-modify-write of the same dict.
+    _set_peer_extra(backend, uuids, peer)
+
     # Both ways a membership arrives go through the same apply, which is what lets a pair whose group the archive
     # lost still create it here. A tombstone speaks for what this import leaves deleted and nothing more: a node
     # the delta brings back anyway — because provenance of it depends on the node, or because `--include-deleted`
@@ -1297,6 +1301,32 @@ def _remap_hashes(backend: StorageBackend, uuids: list[str] | None, computer_uui
         backend.bulk_update(EntityTypes.NODE, rows)
 
     return len(rows)
+
+
+def _set_peer_extra(backend: StorageBackend, uuids: list[str], peer: str) -> None:
+    """Record on each node of the delta which peer this profile took it from.
+
+    A relayed node names the relay rather than the author: this answers "who did I get it from", which is the
+    question the node's own provenance cannot answer and the only one this profile has evidence for.
+
+    Written through a bulk update with the mtime passed explicitly, for the reason ``_remap_hashes`` gives: an
+    ordinary extras write fires the ``mtime`` ``onupdate``, and every node just imported would re-enter the next
+    delta this profile serves — the peer would be echoed the subgraph it just sent, on every sync, forever.
+    """
+    from aiida.orm.entities import EntityTypes
+
+    if not uuids:
+        return
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Node, filters={'uuid': {'in': uuids}}, project=['id', 'extras', 'mtime']
+    )
+
+    rows = [
+        {'id': pk, 'extras': {**extras, COLLAB_PEER_KEY: peer}, 'mtime': mtime} for pk, extras, mtime in query.iterall()
+    ]
+
+    backend.bulk_update(EntityTypes.NODE, rows)
 
 
 def _get_caching_extras(backend: StorageBackend, uuids: list[str]) -> dict[str, dict[str, Any]]:

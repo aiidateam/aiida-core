@@ -403,6 +403,13 @@ A node's primary key is assigned by the database of the profile it lands in, so 
 When you talk to a collaborator about a specific node, use its UUID — or a unique prefix of it, which ``verdi node show 3f4a1b2c`` resolves like the full one.
 Preserving PKs across profiles is not on the table: it would mean partitioning a 4-byte id space between the members, which survives neither their number nor SQLite's ``max(rowid) + 1`` allocator.
 
+So on a collab profile ``verdi process list`` shows two columns it does not show elsewhere: ``UUID``, the first eight characters of the identity you and your collaborators share, and ``Peer``, the member you got the node from — blank for a process this profile ran itself.
+Both are ordinary projections, available anywhere with ``-P short_uuid peer``, and ``-P pk uuid`` still prints the full UUID.
+The ``Peer`` column reads the extra ``_collab_peer``, which every import writes on the nodes it brings in.
+It names *whoever handed the node over*, not whoever produced it: a node that reached you through a relay names the relay, since that is the only hop your profile has evidence of.
+That write is unconditional, so whatever the sender's own import had left there cannot survive here; and being underscore-prefixed, the extra is exempt from the extras replication of the ``sync`` policy, so it cannot come back later either.
+Writing it leaves the node's ``mtime`` untouched, so it is not mistaken for an edit at the next sync.
+
 Import preserves timestamps, so ``ctime`` and ``mtime`` mean "when it happened on the peer's side", never "when it arrived here".
 Two consequences:
 

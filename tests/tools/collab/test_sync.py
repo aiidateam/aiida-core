@@ -17,6 +17,7 @@ from aiida import orm
 from aiida.common import timezone
 from aiida.common.links import LinkType
 from aiida.storage.sqlite_temp import SqliteTempBackend
+from aiida.tools.collab.config import COLLAB_PEER_KEY
 from aiida.tools.collab.protocol import GroupMembers, member_pairs
 from aiida.tools.collab.state import CollabEvent, CollabState, Membership
 from aiida.tools.collab.sync import (
@@ -241,7 +242,7 @@ def test_import_strips_private_extras(tmp_path, peers):
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
     import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
 
-    assert load_node(backend_two, calculation.uuid).base.extras.all == {}
+    assert load_node(backend_two, calculation.uuid).base.extras.all == {COLLAB_PEER_KEY: PEER}
 
 
 @pytest.mark.parametrize('extras_mode', ('local', 'sync'))
@@ -1386,7 +1387,7 @@ def test_remap_leaves_node_unchanged(tmp_path, peers):
     assert imported.uuid == calculation.uuid
     assert imported.base.attributes.all == calculation.base.attributes.all
     assert imported.base.repository.hash() == calculation.base.repository.hash()
-    assert set(imported.base.extras.keys()) == {NodeCaching._HASH_EXTRA_KEY}
+    assert set(imported.base.extras.keys()) == {NodeCaching._HASH_EXTRA_KEY, COLLAB_PEER_KEY}
     # A bumped mtime would re-enter the node into the delta of the next export, echoing it back to the peer.
     assert imported.mtime == calculation.mtime
 
@@ -1669,7 +1670,11 @@ def test_refresh_keeps_the_private_namespace(tmp_path, peers):
     sync_pull(one, two, tmp_path / 'edit.aiida', peer='one')
 
     assert [snapshot.extras for snapshot in snapshots] == [{'note': 'from one'}], 'the private keys must not be sent'
-    assert load_node(two[0], calculation.uuid).base.extras.all == {'note': 'from one', '_mine': 'kept'}
+    assert load_node(two[0], calculation.uuid).base.extras.all == {
+        'note': 'from one',
+        '_mine': 'kept',
+        COLLAB_PEER_KEY: 'one',
+    }
 
 
 def test_refresh_survives_compaction(tmp_path, peers, monkeypatch):

@@ -1217,7 +1217,62 @@ def collab_online(ctx):
 
 @verdi_collab.group('peer')
 def verdi_collab_peer():
-    """Correct the entries of the peers of the collab."""
+    """Show and correct the roster of the collab, as this profile holds it.
+
+    Membership maintains itself: every sync carries the entry of whoever makes contact and the peers it knows, so
+    a newcomer and a changed address both arrive on their own. These commands are for looking at what that left
+    behind, and for the two things it cannot do — rename a peer for this machine alone, and reach a peer that
+    moved without being able to announce it.
+    """
+
+
+@verdi_collab_peer.command('list')
+@requires_loaded_profile()
+@click.pass_context
+def collab_peer_list(ctx):
+    """Show every peer of the collab as this profile holds it, dormant ones included.
+
+    This is the roster itself, where `verdi status` is the working view of it: the profile UUID each peer is
+    keyed by, the address it announced, whether anything has ever answered there, and the members that are
+    dormant because they have not been seen under the current token.
+    """
+    from aiida.tools.collab.config import OPTION_PEERS
+    from aiida.tools.collab.state import CollabState
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    peers = ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name)
+
+    if not peers:
+        echo.echo_report('this collab has no peers yet: hand out a join code with `verdi collab link`.')
+        return
+
+    events = CollabState.load(profile).events
+    rows = []
+
+    for uuid, entry in sorted(peers.items(), key=lambda item: item[1]['nickname']):
+        seen = [event.time for event in events if event.peer == uuid]
+        standing = 'active' if entry['active'] else 'dormant'
+        rows.append(
+            [
+                entry['nickname'],
+                entry.get('name') or '',
+                entry['url'],
+                uuid,
+                standing if entry['seen'] else f'{standing}, never answered',
+                max(seen).isoformat(timespec='seconds') if seen else '—',
+            ]
+        )
+
+    echo.echo_tabulate(rows, headers=['Nickname', 'Announced as', 'URL', 'Profile UUID', 'Standing', 'Last event'])
+
+    if any(not entry['active'] for entry in peers.values()):
+        echo.echo_report(
+            'Dormant peers have not been seen under the current token, and are left out of `verdi status` and of '
+            'every sync until they are: they come back on their own, by contacting this profile after rekeying '
+            'or by being vouched for by a peer that has seen them.'
+        )
 
 
 @verdi_collab_peer.command('set')
@@ -1227,10 +1282,13 @@ def verdi_collab_peer():
 @requires_loaded_profile()
 @click.pass_context
 def collab_peer_set(ctx, peer, url, nickname):
-    """Correct the entry of a peer of the collab.
+    """Correct the entry of a peer of the collab, for the two things a sync cannot do by itself.
 
-    PEER is the nickname or the profile UUID of the peer. A corrected address is provisional: only the owner of an
-    entry stamps it, so the first contact that carries the owner's own announcement reconciles it.
+    PEER is the nickname or the profile UUID of the peer. `--nickname` renames it on this machine alone, which is
+    what nicknames are: a local alias that travels nowhere. `--url` is the escape hatch for a peer that moved and
+    cannot announce it — because nobody can reach it to be announced to — and is provisional: only the owner of
+    an entry stamps it, so the first contact carrying the owner's own announcement reconciles it, and until the
+    peer answers there `verdi collab peer list` shows the address as never answered.
     """
     from aiida.tools.collab.config import OPTION_PEERS, find_peer, mutate_config
 

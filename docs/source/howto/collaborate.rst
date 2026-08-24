@@ -160,6 +160,14 @@ Everything else keeps running — the workers, and the hooks that record the tom
 Your own ``verdi collab pull`` and ``push`` are unaffected: neither has ever needed your endpoint.
 To your peers you look like a member that is simply down, and ``verdi status`` warns you that they cannot reach you.
 
+To see the roster as your profile holds it, dormant entries and all:
+
+.. code-block:: console
+
+    $ verdi collab peer list
+
+``verdi status`` is the working view — the active peers, probed right now — while this is the record: the profile UUID each peer is keyed by, the address it announced, whether anything has ever answered there, when you last synced with it, and the members resting dormant since the last rotation.
+
 .. _how-to:collaborate:rotation:
 
 Rotating the key, leaving, splitting
@@ -211,6 +219,7 @@ Day-to-day use
     $ verdi collab push         # send my new sealed provenance to every peer that accepts pushes
     $ verdi collab push alice   # ... or to the named peers only
     $ verdi collab log          # the history of every pull, push and extras refresh
+    $ verdi collab peer list    # the roster as this profile holds it, dormant entries included
     $ verdi collab link         # the code that admits a newcomer — it carries the key, so hand it over out of band
     $ verdi collab config       # what this profile serves: consent to pushes, and the address it is reached at
     $ verdi collab offline      # stop serving, without stopping the daemon workers (`online` serves again)

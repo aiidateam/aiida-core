@@ -533,6 +533,60 @@ def test_a_daemon_that_will_not_start_does_not_fail_the_setup(
     assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is True
 
 
+def test_peer_list(run_cli_command, config_with_profile):
+    """Test that the roster is shown as it is held: dormant entries included, with when each was last synced with.
+
+    ``verdi status`` is the working view — active peers, probed now — and hides exactly what this shows: the
+    profile UUID a peer is keyed by, and the members resting dormant since the last rotation.
+    """
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob', active=False),
+        },
+    )
+
+    profile = get_profile()
+    state = CollabState.load(profile)
+    newest = timezone.now()
+    # Oldest last, so that only the newest of the two satisfies the assertion below.
+    state.events.append(CollabEvent(time=newest, direction='pull', peer=PEER_UUID, uuids=[], size=0))
+    state.events.append(
+        CollabEvent(time=newest - timedelta(days=1), direction='push', peer=PEER_UUID, uuids=[], size=0)
+    )
+    state.save()
+
+    result = run_cli_command(cmd_collab.collab_peer_list, use_subprocess=False)
+
+    alice = next(line for line in result.output_lines if line.startswith(PEER))
+    bob = next(line for line in result.output_lines if line.startswith('bob'))
+
+    assert PEER_UUID in alice
+    assert 'active' in alice
+    assert newest.isoformat(timespec='seconds') in alice, 'the last event is the newest, not merely one of them'
+    assert 'dormant' in bob
+    assert '—' in bob, 'a peer never synced with has no last event'
+    assert 'left out of `verdi status`' in result.output
+
+
+def test_peer_list_flags_a_corrected_address_as_unproven(run_cli_command, config_with_profile):
+    """Test that a hand-corrected address reads as never answered until the peer answers there.
+
+    That flag is the whole feedback a manual correction gets: nothing probes a peer when it is written, so a typo
+    in it is indistinguishable from a peer that is down until something contacts it.
+    """
+    init_collab(config_with_profile)
+
+    run_cli_command(cmd_collab.collab_peer_set, [PEER, '--url', 'http://100.64.0.9:9137'], use_subprocess=False)
+    result = run_cli_command(cmd_collab.collab_peer_list, use_subprocess=False)
+
+    alice = next(line for line in result.output_lines if line.startswith(PEER))
+
+    assert 'never answered' in alice
+    assert 'http://100.64.0.9:9137' in alice
+
+
 def test_peer_set_url(run_cli_command, config_with_profile):
     """Test that a corrected address is stored as the provisional guess it is.
 

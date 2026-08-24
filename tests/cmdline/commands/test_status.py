@@ -443,9 +443,7 @@ def test_status_collab(run_cli_command, brokerless_profile, monkeypatch):
     assert 'dave' not in result.output, 'a dormant member leaves no trace: neither a line nor a count'
     assert 'last sync 2026-08-01T12:00:00' in result.output
 
-    join = next(line for line in result.output_lines if 'join code' in line)
-
-    assert 'verdi collab link' in join, 'the line stays: a code exists, and this is where a member obtains it'
+    assert 'join code' not in result.output, 'obtaining a code is an act of its own; `init` and the docs say so'
     assert not decodable_codes(result.output), (
         'the code embeds the token of the collab, and this output is what users paste into bug reports'
     )

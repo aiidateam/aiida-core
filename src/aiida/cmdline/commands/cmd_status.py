@@ -234,7 +234,7 @@ COLLAB_PROBE_TIMEOUT = 2.0
 
 
 def print_collab_status(profile: Profile, backend: StorageBackend | None) -> None:
-    """Print one line per active peer — reachable or not — the last sync, and where the join code is obtained.
+    """Print one line per active peer — reachable or not — the last sync, and what this profile itself serves.
 
     Dormant peers are left out entirely: they have not been seen under the current token, and a collab that
     rotated away from a member, or split in two, should carry no trace of the branch it left behind.
@@ -348,11 +348,6 @@ def print_collab_status(profile: Profile, backend: StorageBackend | None) -> Non
 
     if signalled:
         print_status(ServiceStatus.WARNING, 'collab rotation', f'signalled by {", ".join(signalled)} — {REKEY_HINT}')
-
-    # The code embeds the token every request of the collab is authenticated with, and this is the command users
-    # are routinely asked to paste into bug reports and chat threads. The line stays, so that a member can see a
-    # code exists and where to get it; obtaining it is an act of its own.
-    print_status(ServiceStatus.UP, 'collab join code', 'withheld — `verdi collab link` prints it')
 
 
 def print_status(

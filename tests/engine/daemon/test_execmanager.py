@@ -788,12 +788,17 @@ async def test_stashing(
     async def mock_raise_oserror(*args, **kwargs):
         raise OSError('mocked error')
 
+    async def mock_compress_partial(*args, **kwargs):
+        # Leave a partial archive behind, as an interrupted ``tar`` would
+        pathlib.Path(kwargs['remotedestination']).write_text('partial')
+        raise OSError('mocked error')
+
     with LocalTransport() as transport:
         if stash_mode == StashMode.COPY.value:
             monkeypatch.setattr(transport, 'copy_async', mock_raise_oserror)
             match = 'Failed to copy'
         else:
-            monkeypatch.setattr(transport, 'compress_async', mock_raise_oserror)
+            monkeypatch.setattr(transport, 'compress_async', mock_compress_partial)
             match = 'Failed to stash'
 
         with pytest.raises(StashingError, match=match):
@@ -803,9 +808,11 @@ async def test_stashing(
     removed = existing_paths - set(tmp_path.rglob('*'))
     assert not removed, f'failed stash removed pre-existing paths: {sorted(str(path) for path in removed)}'
 
-    # COPY also cleans up its own half-written target; the compress modes will do that in #7564
+    # Both modes also clean up their own half-written target
     if stash_mode == StashMode.COPY.value:
         assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
+    else:
+        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:] / f'{uuid}.{stash_mode}').exists()
 
 
 @pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])

@@ -624,6 +624,9 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 dereference=dereference,
             )
         except (OSError, ValueError) as exception:
+            # remove our own partial leftover so a retry starts clean
+            if await transport.path_exists_async(target_destination):
+                await transport.remove_async(target_destination)
             msg = f'Failed to stash {stashed_source_list} to {target_destination}: {exception}'
             raise exceptions.StashingError(msg) from exception
         else:

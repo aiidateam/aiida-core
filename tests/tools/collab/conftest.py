@@ -470,6 +470,9 @@ def collab(empty_config, tmp_path, monkeypatch):
 
     monkeypatch.setattr(collab_endpoint, 'workers_stopped', lambda profile: contextlib.nullcontext())
     monkeypatch.setattr('aiida.engine.daemon.client.DaemonClient.is_daemon_running', property(lambda self: False))
+    # `init` and `join` end by starting the daemon, which here would supervise an endpoint that ``Member.serve``
+    # already runs in a thread of its own. Its restart branch is unreachable: no member's daemon is ever running.
+    monkeypatch.setattr('aiida.engine.daemon.client.DaemonClient.start_daemon', lambda self, *args, **kwargs: None)
 
     members: list[Member] = []
 

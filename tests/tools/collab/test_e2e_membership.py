@@ -132,6 +132,7 @@ def test_a_join_that_cannot_reach_its_issuer_leaves_nothing_behind(collab, joini
     result = b.run('join', [code, *SETUP], raises=True)
 
     assert 'nothing was left behind' in result.output
+    assert 'started the daemon' not in result.output, 'a join that failed has nothing to serve'
     assert b.profile.name not in Config.from_file(b.config.filepath).profile_names
     assert not Path(b.profile.storage_config['filepath']).exists(), 'the storage of the profile went with it'
 

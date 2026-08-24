@@ -49,8 +49,9 @@ The first peer creates the collab on the profile they already work in:
       100.64.0.1 (tailscale0)
       192.168.1.24 (wlan0)
     This machine's address on the private network of the collab: 100.64.0.1
+    Report: started the daemon of profile `main`, which serves http://100.64.0.1:9137.
     Success: profile `main` serves the collab at http://100.64.0.1:9137.
-    Report: Run `verdi daemon start` to serve it, `verdi collab link` for the code that lets others join, and `verdi -p main config set collab.accept_push <bool>` to change whether peers may push into this profile.
+    Report: Run `verdi collab link` for the code that lets others join, and `verdi -p main config set collab.accept_push <bool>` to change whether peers may push into this profile.
 
 What the collab shares beyond provenance nodes is settled here and never again — see :ref:`choosing the policy <how-to:collaborate:policy>`; ``--extras-mode`` and ``--groups-mode`` script both answers.
 The address is the other thing you have to supply (``--bind`` scripts it).
@@ -59,7 +60,9 @@ It is validated by binding it, so an address that is not this machine's fails ri
 A free port is picked and persisted (``--port`` chooses one), so the URL your peers were given keeps working across restarts.
 Whether peers may push *into* your profile is asked here too, defaulting to refusing them (``--accept-push``/``--no-accept-push`` script the answer, and ``verdi config set collab.accept_push`` changes it later).
 
-The endpoint that serves your provenance is supervised by the daemon; after ``verdi daemon start``, ask for the code that lets others join:
+The endpoint that serves your provenance is supervised by the daemon, which the setup starts for you — or restarts, if one was already running, since a daemon fixes the list of what it supervises when it starts and would otherwise serve everything except the collab.
+A daemon that cannot be started is reported as a warning rather than failing the setup: the profile is a member of the collab either way.
+Ask for the code that lets others join:
 
 .. code-block:: console
 
@@ -81,8 +84,9 @@ Joining creates a new profile:
     This machine's address on the private network of the collab: 100.64.0.2
     set up profile `fusion` quickly, with SQLite storage and no external services? [Y/n]: y
     Report: learned about peer `bob` at http://100.64.0.1:9137
+    Report: started the daemon of profile `fusion`, which serves http://100.64.0.2:9137.
     Success: profile `fusion` serves the collab at http://100.64.0.2:9137.
-    Report: Run `verdi daemon start` to serve it, `verdi collab link` for the code that lets others join, and `verdi -p fusion config set collab.accept_push <bool>` to change whether peers may push into this profile.
+    Report: Run `verdi collab link` for the code that lets others join, and `verdi -p fusion config set collab.accept_push <bool>` to change whether peers may push into this profile.
 
 A collab is one logical provenance graph, so joining always sets up a fresh profile rather than folding the work you already have into someone else's.
 You are asked what to call it (``--profile-name`` scripts the answer, and ``--non-interactive`` takes ``collab``).

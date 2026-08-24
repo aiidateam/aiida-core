@@ -484,8 +484,57 @@ def choose_accept_push(accept_push, non_interactive):
     return accept_push
 
 
+def start_serving(config, profile, url):
+    """Start the daemon that serves this profile's collab endpoint, and return whether it is being served.
+
+    A daemon that is already running is stopped and started rather than left alone.
+
+    The endpoint is a circus watcher, and the list of watchers is built once — by ``_create_watchers``, from
+    ``collab.enabled``, when the arbiter starts. A daemon that was already up when the collab was created
+    therefore supervises everything except the endpoint, and circus's own `restart` cannot add it: it restarts the
+    watchers the arbiter already has. Stopping and starting is what rebuilds the list, which is why
+    `verdi daemon restart` is a stop and a start too.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException, get_daemon_client
+
+    client = get_daemon_client(profile.name)
+    restarted = False
+
+    try:
+        if client.is_daemon_running:
+            try:
+                client.stop_daemon(wait=True)
+                restarted = True
+            except DaemonNotRunningException:
+                # `is_daemon_running` reads the pid file, which outlives a daemon that a reboot or the OOM killer
+                # took: stopping one that is already down is the work this asked for, done. Stopping it is also
+                # what deleted the stale file, so the start below is now the start of a daemon, not a restart.
+                pass
+
+        client.start_daemon(number_workers=config.get_option('daemon.default_workers', scope=profile.name))
+    except (DaemonException, ConfigurationError) as exception:
+        # The profile is a member of the collab either way, and a daemon is one command away. Aborting here would
+        # report a failure for a setup that succeeded, and invite a retry that the collab it just joined refuses.
+        # The command named is the one that works from where this leaves the daemon -- `verdi daemon restart`
+        # refuses to run on a daemon that is down, which is what a stop followed by a failed start leaves.
+        command = 'restart' if client.is_daemon_running else 'start'
+        echo.echo_warning(
+            f'the collab is set up, but the daemon of profile `{profile.name}` could not be brought up: '
+            f'{exception}\nNothing serves {url} until `verdi -p {profile.name} daemon {command}` succeeds.'
+        )
+
+        return False
+
+    echo.echo_report(
+        f'{"restarted" if restarted else "started"} the daemon of profile `{profile.name}`, which serves {url}.'
+    )
+
+    return True
+
+
 def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, accept_push, non_interactive):
-    """Take the consent to be pushed to, reserve an address and write the collab options.
+    """Take the consent to be pushed to, reserve an address, write the collab options and serve them.
 
     Everything `init` and `join` do alike, in the order they do it -- with the profile a join creates, and the
     announcement that enters it into the collab, threaded through in the two places they belong.
@@ -539,11 +588,16 @@ def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, ac
     if joining:
         join_collab(config, profile, joining)
 
-    echo.echo_success(f'profile `{profile.name}` serves the collab at {url}.')
+    served = start_serving(config, profile, url)
+
+    echo.echo_success(
+        f'profile `{profile.name}` serves the collab at {url}.'
+        if served
+        else f'profile `{profile.name}` is part of the collab, to be served at {url}.'
+    )
     echo.echo_report(
-        f'Run `verdi daemon start` to serve it, `verdi collab link` for the code that lets others join, and '
-        f'`verdi -p {profile.name} config set {collab_config.OPTION_ACCEPT_PUSH} <bool>` to change whether peers '
-        'may push into this profile.'
+        f'Run `verdi collab link` for the code that lets others join, and `verdi -p {profile.name} config set '
+        f'{collab_config.OPTION_ACCEPT_PUSH} <bool>` to change whether peers may push into this profile.'
     )
 
 

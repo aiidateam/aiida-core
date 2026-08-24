@@ -75,7 +75,34 @@ def init_collab(config, peers=None, **options):
     config.store()
 
 
-def test_init(run_cli_command, config_with_profile, monkeypatch):
+@pytest.fixture
+def daemon(monkeypatch):
+    """Record what a setup asks of the daemon instead of letting it spawn circus.
+
+    Starting one for real costs a subprocess per test and is covered where the daemon is the subject. What these
+    tests are about is which of the two calls a setup makes, and that a daemon refusing to start is survivable.
+    """
+    from aiida.engine.daemon.client import DaemonClient
+
+    recorded: dict = {'running': False, 'calls': [], 'workers': None}
+
+    def start_daemon(self, number_workers=1, **kwargs):
+        recorded['calls'].append('start')
+        recorded['workers'] = number_workers
+
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: recorded['running']))
+    monkeypatch.setattr(DaemonClient, 'start_daemon', start_daemon)
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', lambda self, *args, **kwargs: recorded['calls'].append('stop'))
+    # Recorded although nothing calls it any more, so that a return to circus's `restart` -- which restarts the
+    # watchers the arbiter already has, and so never creates the endpoint one -- fails here and not on a socket.
+    monkeypatch.setattr(
+        DaemonClient, 'restart_daemon', lambda self, *args, **kwargs: recorded['calls'].append('restart')
+    )
+
+    return recorded
+
+
+def test_init(run_cli_command, config_with_profile, monkeypatch, daemon):
     """Test that ``verdi collab init`` asks for the policy and the address, and persists what it announces.
 
     The policy is chosen once and never again, so the prompt says so before asking; the port is persisted rather
@@ -128,7 +155,7 @@ def test_init_rejects_a_foreign_address(run_cli_command, config_with_profile):
     assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is False
 
 
-def test_join(run_cli_command, config_with_profile, monkeypatch):
+def test_join(run_cli_command, config_with_profile, monkeypatch, daemon):
     """Test that joining with a code leaves this profile with the collab, its key and the issuer's whole roster.
 
     One code is all a newcomer needs: the collab it names, the member to ask and the key to ask with.
@@ -224,7 +251,9 @@ def test_join_cannot_choose_its_own_policy(run_cli_command, config_with_profile)
     assert 'no such option' in result.output.lower()
 
 
-def test_join_copies_the_policy_along_the_chain(run_cli_command, config_with_profile, profile_factory, monkeypatch):
+def test_join_copies_the_policy_along_the_chain(
+    run_cli_command, config_with_profile, profile_factory, monkeypatch, daemon
+):
     """Test that the policy reaches a member that never contacted the creator.
 
     A creates the collab, B joins through A, C joins through B — and C, which never spoke to A, ends up holding
@@ -345,7 +374,7 @@ def test_init_no_longer_joins(run_cli_command, config_with_profile):
         assert 'no such option' in result.output.lower()
 
 
-def test_join_names_the_profile_it_creates(run_cli_command, config_with_profile, monkeypatch):
+def test_join_names_the_profile_it_creates(run_cli_command, config_with_profile, monkeypatch, daemon):
     """Test that a join asks what to call the profile it creates, and falls back to `collab` when it cannot ask.
 
     The name used to be a silent default, so the second collab joined on one machine collided with the first and
@@ -368,7 +397,7 @@ def test_join_names_the_profile_it_creates(run_cli_command, config_with_profile,
     assert created == ['fusion', 'collab']
 
 
-def test_init_asks_whether_peers_may_push(run_cli_command, config_with_profile, monkeypatch):
+def test_init_asks_whether_peers_may_push(run_cli_command, config_with_profile, monkeypatch, daemon):
     """Test that consent to being pushed to is asked with the other consents and written where the endpoint reads it.
 
     Until it was asked here it was reachable only through `verdi config set`, and nothing in the setup mentioned
@@ -387,7 +416,7 @@ def test_init_asks_whether_peers_may_push(run_cli_command, config_with_profile, 
 
 @pytest.mark.parametrize('flags, accepted', (((), False), (('--accept-push',), True)))
 def test_init_reports_the_push_consent_it_did_not_ask_for(
-    run_cli_command, config_with_profile, monkeypatch, flags, accepted
+    run_cli_command, config_with_profile, monkeypatch, daemon, flags, accepted
 ):
     """Test that a scripted setup says who may push into the profile instead of settling it in silence.
 
@@ -403,6 +432,104 @@ def test_init_reports_the_push_consent_it_did_not_ask_for(
 
     assert stored is accepted
     assert ('accepted' if accepted else 'refused') in result.output
+
+
+def test_init_starts_the_daemon(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a collab is served the moment it is set up, with as many workers as the profile asks for.
+
+    The endpoint is a circus watcher the daemon builds at start iff `collab.enabled`, so a setup that ends without
+    a daemon leaves a member that is in the collab and reachable by nobody.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    config_with_profile.set_option('daemon.default_workers', 3, scope=get_profile().name)
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['start']
+    assert daemon['workers'] == 3, 'a daemon started here is the daemon the profile is configured for'
+    # The report's own prefix, since `started the daemon` is a substring of `restarted the daemon`.
+    assert 'Report: started the daemon' in result.output
+
+
+def test_init_restarts_a_daemon_that_was_already_running(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a daemon which predates the collab is stopped and started, not asked to restart.
+
+    Its watcher list has no endpoint in it, and circus restarts the watchers an arbiter already has rather than
+    rebuilding the list: only a stop and a start make the daemon serve the collab it is now part of.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    daemon['running'] = True
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['stop', 'start']
+    assert 'restarted the daemon' in result.output
+
+
+def test_init_starts_a_daemon_whose_pid_file_is_stale(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a daemon a reboot took, leaving its pid file, is started rather than reported unstartable.
+
+    `is_daemon_running` reads that file, so the stop branch is entered for a daemon that is already down. The stop
+    is what deletes the stale file; refusing to go on from there would leave the collab unserved for want of a
+    daemon that starts perfectly well.
+    """
+    from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException
+
+    def stop_daemon(self, *args, **kwargs):
+        daemon['calls'].append('stop')
+        raise DaemonNotRunningException('The daemon is not running.')
+
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon)
+    daemon['running'] = True
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['stop', 'start']
+    assert 'Report: started the daemon' in result.output, 'the stop found nothing to stop, so nothing restarted'
+    assert 'could not be brought up' not in result.output
+
+
+def test_join_starts_the_daemon(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a joined profile serves the collab too, and not only the profile that founded one."""
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(cmd_collab, 'create_profile', lambda ctx, name, non_interactive: get_profile())
+    code = stub_issuer(monkeypatch)
+
+    run_cli_command(cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['start']
+
+
+@pytest.mark.parametrize('failure', ('DaemonException', 'ConfigurationError'))
+def test_a_daemon_that_will_not_start_does_not_fail_the_setup(
+    run_cli_command, config_with_profile, monkeypatch, daemon, failure
+):
+    """Test that a daemon that will not come up warns and names a command that runs, rather than failing the setup.
+
+    The profile is a member of the collab either way, and the retry that an abort invites is refused: a profile
+    that already belongs to a collab is never founded over. Both ways the start can fail are covered — circus
+    saying no, and `verdi` not being on the `PATH`, which is what a cron or systemd invocation looks like and
+    which raises from outside the daemon's own exception tree.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.engine.daemon.client import DaemonClient, DaemonException
+
+    exception = DaemonException if failure == 'DaemonException' else ConfigurationError
+
+    def start_daemon(self, *args, **kwargs):
+        raise exception('circus is unwell')
+
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(DaemonClient, 'start_daemon', start_daemon)
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert 'circus is unwell' in result.output
+    # `verdi daemon restart` refuses to run on a daemon that is down, which is the state this leaves.
+    assert 'daemon start` succeeds' in result.output, 'the warning has to carry a command that runs'
+    assert 'serves the collab' not in result.output, 'nothing may claim a service the warning just denied'
+    assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is True
 
 
 def test_peer_set_url(run_cli_command, config_with_profile):

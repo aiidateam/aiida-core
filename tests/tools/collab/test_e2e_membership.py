@@ -18,8 +18,9 @@ import pytest
 
 from tests.tools.collab.conftest import move
 
-# What every member of these scenarios is set up with: a loopback address and a port of the kernel's choosing.
-SETUP = ('--bind', '127.0.0.1', '--port', '0', '--non-interactive')
+# What every member of these scenarios is set up with: a loopback address, a port of the kernel's choosing, and
+# the consent to be pushed to that the harness writes by hand for the members it wires up itself.
+SETUP = ('--bind', '127.0.0.1', '--port', '0', '--accept-push', '--non-interactive')
 
 
 @pytest.fixture

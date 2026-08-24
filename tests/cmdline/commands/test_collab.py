@@ -17,6 +17,7 @@ from aiida.cmdline.commands import cmd_collab
 from aiida.common import timezone
 from aiida.manage.configuration.config import Config
 from aiida.tools.collab.config import (
+    OPTION_ACCEPT_PUSH,
     OPTION_ANNOUNCED,
     OPTION_BIND,
     OPTION_ENABLED,
@@ -82,8 +83,8 @@ def test_init(run_cli_command, config_with_profile, monkeypatch):
     """
     monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
 
-    # The policy is asked for first, then the address: extras, groups, bind.
-    result = run_cli_command(cmd_collab.collab_init, use_subprocess=False, user_input='sync\ngrow\n127.0.0.1\n')
+    # The consents are asked for first, then the address: extras, groups, pushes, bind.
+    result = run_cli_command(cmd_collab.collab_init, use_subprocess=False, user_input='sync\ngrow\nn\n127.0.0.1\n')
 
     scope = get_profile().name
     get = config_with_profile.get_option
@@ -152,13 +153,16 @@ def test_join(run_cli_command, config_with_profile, monkeypatch):
     monkeypatch.setattr(CollabClient, 'join', join)
 
     code = JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
-    result = run_cli_command(cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '-n'], use_subprocess=False)
+    result = run_cli_command(
+        cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '--accept-push', '-n'], use_subprocess=False
+    )
 
     profile = get_profile()
     get = config_with_profile.get_option
 
     assert get(OPTION_UUID, scope=profile.name) == COLLAB_UUID
     assert get(OPTION_TOKEN, scope=profile.name) == TOKEN
+    assert get(OPTION_ACCEPT_PUSH, scope=profile.name, default=False) is True, 'a join takes its consents too'
     assert get(OPTION_PEERS, scope=profile.name) == {
         # The issuer just answered, so its address is proven; the members it told us about are not.
         PEER_UUID: peer_entry(),
@@ -356,12 +360,49 @@ def test_join_names_the_profile_it_creates(run_cli_command, config_with_profile,
     code = stub_issuer(monkeypatch)
 
     result = run_cli_command(
-        cmd_collab.collab_join, [code, '--bind', '127.0.0.1'], use_subprocess=False, user_input='fusion\n'
+        cmd_collab.collab_join, [code, '--bind', '127.0.0.1'], use_subprocess=False, user_input='fusion\nn\n'
     )
     run_cli_command(cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '-n'], use_subprocess=False)
 
     assert 'name of the profile to create [collab]' in result.output
     assert created == ['fusion', 'collab']
+
+
+def test_init_asks_whether_peers_may_push(run_cli_command, config_with_profile, monkeypatch):
+    """Test that consent to being pushed to is asked with the other consents and written where the endpoint reads it.
+
+    Until it was asked here it was reachable only through `verdi config set`, and nothing in the setup mentioned
+    it: a member that wanted to be pushed to learned of it from a peer reporting that it had been refused.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+
+    result = run_cli_command(
+        cmd_collab.collab_init, ['--bind', '127.0.0.1'], use_subprocess=False, user_input='local\nlocal\ny\n'
+    )
+
+    assert 'accept pushes from peers' in result.output
+    assert '[y/N]' in result.output, 'consent to being written to has to default to refusing'
+    assert config_with_profile.get_option(OPTION_ACCEPT_PUSH, scope=get_profile().name) is True
+
+
+@pytest.mark.parametrize('flags, accepted', (((), False), (('--accept-push',), True)))
+def test_init_reports_the_push_consent_it_did_not_ask_for(
+    run_cli_command, config_with_profile, monkeypatch, flags, accepted
+):
+    """Test that a scripted setup says who may push into the profile instead of settling it in silence.
+
+    The default is refusal, as it is in the schema; `--non-interactive` with no flag would otherwise decide who
+    may write into this profile without a word, the way it would have decided the policy.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n', *flags], use_subprocess=False)
+
+    # Read without the schema default, so that a refusal this command wrote is not confused with an unwritten one.
+    stored = config_with_profile.get_option(OPTION_ACCEPT_PUSH, scope=get_profile().name, default=False)
+
+    assert stored is accepted
+    assert ('accepted' if accepted else 'refused') in result.output
 
 
 def test_peer_set_url(run_cli_command, config_with_profile):

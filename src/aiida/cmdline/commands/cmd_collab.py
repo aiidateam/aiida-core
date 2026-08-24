@@ -445,6 +445,13 @@ def create_profile(ctx, profile_name, non_interactive):
     return get_profile()
 
 
+ACCEPT_PUSH = options.OverridableOption(
+    '--accept-push/--no-accept-push',
+    default=None,
+    help='Whether peers of the collab may push provenance into this profile. Asked for when neither is given, and '
+    'refused under `--non-interactive`.',
+)
+
 BIND = options.OverridableOption(
     '--bind',
     metavar='ADDRESS',
@@ -459,8 +466,26 @@ PORT = options.OverridableOption(
 )
 
 
-def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, non_interactive):
-    """Reserve an address and write the collab options: what `init` and `join` do alike.
+def choose_accept_push(accept_push, non_interactive):
+    """Return whether peers of the collab may push into this profile, asked for unless an option settles it.
+
+    Consent to being written to belongs beside the other consents of the setup. Until it was asked here it was
+    reachable only through `verdi config set`, so a member that wanted to be pushed to learned of it from the
+    documentation or from a peer's report that it had been refused.
+    """
+    if accept_push is None and not non_interactive:
+        return click.confirm('accept pushes from peers into this profile?', default=False)
+
+    accept_push = bool(accept_push)
+    # Reported whenever it was not asked for, so that a flag -- or `--non-interactive` with neither flag -- does
+    # not settle in silence who may write into this profile.
+    echo.echo_report(f'pushes from peers into this profile are {"accepted" if accept_push else "refused"}.')
+
+    return accept_push
+
+
+def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, accept_push, non_interactive):
+    """Take the consent to be pushed to, reserve an address and write the collab options.
 
     Everything `init` and `join` do alike, in the order they do it -- with the profile a join creates, and the
     announcement that enters it into the collab, threaded through in the two places they belong.
@@ -475,6 +500,7 @@ def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, no
     from aiida.tools.collab import config as collab_config
 
     config = ctx.obj.config
+    accept_push = choose_accept_push(accept_push, non_interactive)
 
     # Everything that can still be refused happens before the profile exists: an address that is not this
     # machine's, or a mistyped one, would otherwise abort with a fresh profile left behind and the retry
@@ -497,6 +523,7 @@ def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, no
         collab_config.OPTION_STAMP: 1,
         collab_config.OPTION_ANNOUNCED: url,
         collab_config.OPTION_POLICY: policy,
+        collab_config.OPTION_ACCEPT_PUSH: accept_push,
     }
 
     # The configuration file is shared by every profile, so any collab endpoint running on this machine is a
@@ -514,7 +541,9 @@ def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, no
 
     echo.echo_success(f'profile `{profile.name}` serves the collab at {url}.')
     echo.echo_report(
-        'Run `verdi daemon start` to serve it, and `verdi collab link` for the code that lets others join.'
+        f'Run `verdi daemon start` to serve it, `verdi collab link` for the code that lets others join, and '
+        f'`verdi -p {profile.name} config set {collab_config.OPTION_ACCEPT_PUSH} <bool>` to change whether peers '
+        'may push into this profile.'
     )
 
 
@@ -533,9 +562,10 @@ def set_up_collab(ctx, *, profile, profile_name, policy, joining, bind, port, no
     help='Whether curated group membership travels (`grow`) or groups stay home (`local`, the default). Chosen '
     'once when the collab is created and permanent; prompted for when not given.',
 )
+@ACCEPT_PUSH()
 @options.NON_INTERACTIVE()
 @click.pass_context
-def collab_init(ctx, bind, port, extras_mode, groups_mode, non_interactive):
+def collab_init(ctx, bind, port, extras_mode, groups_mode, accept_push, non_interactive):
     """Create a collab on the loaded profile.
 
     Peers of a collab share one logical provenance graph: each of them can pull the sealed provenance of the others and
@@ -570,6 +600,7 @@ def collab_init(ctx, bind, port, extras_mode, groups_mode, non_interactive):
         joining=None,
         bind=bind,
         port=port,
+        accept_push=accept_push,
         non_interactive=non_interactive,
     )
 
@@ -584,9 +615,10 @@ def collab_init(ctx, bind, port, extras_mode, groups_mode, non_interactive):
 )
 @BIND()
 @PORT()
+@ACCEPT_PUSH()
 @options.NON_INTERACTIVE()
 @click.pass_context
-def collab_join(ctx, code, profile_name, bind, port, non_interactive):
+def collab_join(ctx, code, profile_name, bind, port, accept_push, non_interactive):
     """Join the collab a code was minted for, in a new profile.
 
     The code is what `verdi collab link` prints on any member, and it carries the terms the collab runs on: what
@@ -617,6 +649,7 @@ def collab_join(ctx, code, profile_name, bind, port, non_interactive):
         joining=joining,
         bind=bind,
         port=port,
+        accept_push=accept_push,
         non_interactive=non_interactive,
     )
 

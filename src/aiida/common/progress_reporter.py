@@ -172,7 +172,12 @@ def set_progress_reporter(
         PROGRESS_REPORTER = reporter
 
 
-def set_progress_bar_tqdm(bar_format: str | None = TQDM_BAR_FORMAT, leave: bool | None = False, **kwargs: Any) -> None:
+def set_progress_bar_tqdm(
+    bar_format: str | None = TQDM_BAR_FORMAT,
+    leave: bool | None = False,
+    disable: bool | None = None,
+    **kwargs: Any,
+) -> None:
     """Set a `tqdm <https://github.com/tqdm/tqdm>`__ implementation of the progress reporter interface.
 
     See :func:`~aiida.common.progress_reporter.set_progress_reporter` for details.
@@ -181,12 +186,15 @@ def set_progress_bar_tqdm(bar_format: str | None = TQDM_BAR_FORMAT, leave: bool 
         bar with ``total=None``, since this format's percentage would sit frozen at 0%.
     :param leave: If True, keeps all traces of the progressbar upon termination of iteration.
             If `None`, will leave only if `position` is `0`.
+    :param disable: If True, hide the bar entirely. The default `None` hides it whenever the output
+            stream is not a terminal, so redirecting to a log file does not fill it with the
+            redraw frames a bar emits.
     :param kwargs: pass to the tqdm init
 
     """
     from tqdm import tqdm
 
-    set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
+    set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, disable=disable, **kwargs)
 
 
 def create_callback(progress_reporter: ProgressReporterAbstract | tqdm[Any]) -> Callable[[str, Any], None]:

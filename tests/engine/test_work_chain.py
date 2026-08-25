@@ -1647,9 +1647,117 @@ class TestDefaultUniqueness:
         assert len(uuids) == len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes'
 
 
+class TestWorkChainEvents:
+    """Test that plumpy process listener events fire for every ``ProcessState`` reachable between two steps."""
+
+    class ChildWorkChain(WorkChain):
+        """Trivial work chain submitted as a child to force the parent through the ``WAITING`` state."""
+
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('pause', valid_type=Bool, default=lambda: Bool(False))
+            spec.outline(cls.run_step)
+
+        def run_step(self):
+            """Pause so the parent remains in ``WAITING`` long enough to be killed from the test."""
+            if self.inputs.pause:
+                self.pause()
+
+    class WorkChainWithOutcome(WorkChain):
+        """Work chain that submits a child in its first step and reacts to ``outcome`` in its second."""
+
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('outcome', valid_type=Str)
+            spec.input('pause_child', valid_type=Bool, default=lambda: Bool(False))
+            spec.outline(cls.step_one, cls.step_two)
+
+        def step_one(self):
+            self.report('In step one, submitting child to force a WAITING state.')
+            child = self.submit(TestWorkChainEvents.ChildWorkChain, pause=self.inputs.pause_child)
+            return ToContext(child=child)
+
+        def step_two(self):
+            self.report('In step two.')
+            if self.inputs.outcome.value == 'excepted':
+                raise RuntimeError('Intentional exception for testing.')
+
+    class ProcessListenerTester(plumpy.ProcessListener):
+        """Record which process listener events have fired."""
+
+        def __init__(self):
+            super().__init__()
+            self.called = set()
+
+        def on_process_running(self, process):
+            self.called.add('running')
+
+        def on_process_waiting(self, process):
+            self.called.add('waiting')
+
+        def on_process_finished(self, process, outputs):
+            self.called.add('finished')
+
+        def on_process_excepted(self, process, reason):
+            self.called.add('excepted')
+
+        def on_process_killed(self, process, msg):
+            self.called.add('killed')
+
+    def test_workchain_events_on_finished(self):
+        """Every step transitions through RUNNING and WAITING before ending in the parametrized terminal state."""
+        workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs={'outcome': Str('finished')})
+        listener = TestWorkChainEvents.ProcessListenerTester()
+        workflow.add_process_listener(listener)
+
+        launch.run(workflow)
+
+        assert listener.called == {'running', 'waiting', 'finished'}
+
+    def test_workchain_events_on_excepted(self):
+        """Every step transitions through RUNNING and WAITING before ending in the parametrized terminal state."""
+        workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs={'outcome': Str('excepted')})
+        listener = TestWorkChainEvents.ProcessListenerTester()
+        workflow.add_process_listener(listener)
+
+        with pytest.raises(RuntimeError):
+            launch.run(workflow)
+
+        assert listener.called == {'running', 'waiting', 'excepted'}
+
+    def test_workchain_events_on_killed(self, manager):
+        """Killing a work chain while it is in the ``WAITING`` state should still fire the ``killed`` event."""
+        # Requires only database
+        runner = manager.create_runner(with_persistence=False, communicator=None)
+        try:
+            inputs = {'outcome': Str('finished'), 'pause_child': Bool(True)}
+            workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs=inputs, runner=runner)
+            listener = TestWorkChainEvents.ProcessListenerTester()
+            workflow.add_process_listener(listener)
+
+            async def run_async():
+                await run_until_waiting(workflow)
+
+                result = workflow.kill()
+                if asyncio.isfuture(result):
+                    await result
+
+                with pytest.raises(plumpy.KilledError):
+                    await workflow.future()
+
+            runner.schedule(workflow)
+            runner.run_until_complete(asyncio.wait_for(run_async(), 10.0))
+        finally:
+            manager.reset_runner()
+
+        assert listener.called == {'running', 'waiting', 'killed'}
+
+
 def test_illegal_override_run():
     """Test that overriding a protected workchain method raises a ``RuntimeError``."""
-    with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden.'):
+    with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden'):
 
         class IllegalWorkChain(WorkChain):
             """Work chain that illegally overrides the ``run`` method."""

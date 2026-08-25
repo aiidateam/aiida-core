@@ -1311,7 +1311,7 @@ def setup_multiply_add_group(generate_workchain_multiply_add) -> orm.Group:
 @pytest.fixture()
 def setup_duplicate_group():
     def _setup_duplicate_group(source_group: orm.Group, dest_group_label: str):
-        dupl_group, created = orm.Group.collection.get_or_create(label=dest_group_label)
+        dupl_group, _created = orm.Group.collection.get_or_create(label=dest_group_label)
         dupl_group.add_nodes(list(source_group.nodes))
         return dupl_group
 

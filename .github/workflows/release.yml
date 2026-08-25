@@ -28,10 +28,10 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
 
@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core and pre-commit
       uses: ./.github/actions/install-aiida-core
@@ -66,7 +66,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
@@ -91,13 +91,13 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
     - name: Install flit
-      run: pip install flit~=3.4
+      run: pip install "flit>=4.0.2,<5"
     - name: Build
       run: flit build
     - name: Publish to PyPI
@@ -119,13 +119,13 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
     - name: Install flit
-      run: pip install flit~=3.4
+      run: pip install "flit>=4.0.2,<5"
     - name: Build
       run: flit build
     - name: Publish to TestPyPI

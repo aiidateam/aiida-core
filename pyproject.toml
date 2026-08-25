@@ -1,6 +1,6 @@
 [build-system]
 build-backend = 'flit_core.buildapi'
-requires = ['flit_core >=3.4,<4']
+requires = ["flit_core >=4.0.2,<5"]
 
 # The "dev" dependency group is automatically synced by uv
 # and should thus contain all necessary deps for local development.
@@ -321,8 +321,26 @@ name = 'aiida'
 
 [tool.flit.sdist]
 exclude = [
+  '**/.mypy_cache/',
+  '.claude/',
+  '.devcontainer/',
+  '.docker/',
+  '.git-blame-ignore-revs',
+  '.github/',
+  '.gitignore',
+  '.molecule/',
+  '.pre-commit-config.yaml',
+  '.readthedocs.yml',
+  'AGENTS.md',
+  'AI_POLICY.md',
+  'CLAUDE.md',
+  'CODE_OF_CONDUCT.md',
+  'codecov.yml',
   'docs/',
-  'tests/'
+  'environment.yml',
+  'tests/',
+  'utils/',
+  'uv.lock'
 ]
 
 [tool.mypy]
@@ -476,9 +494,7 @@ ignore = [
   'PLR2004',  # Magic value used in comparison
   'PLW1641',  # Checks for classes that implement `__eq__` but not `__hash__`
   'RUF005',  # Consider iterable unpacking instead of concatenation
-  'RUF012',  # Mutable class attributes should be annotated with `typing.ClassVar`
-  'RUF043',  # Pattern passed to `match=` contains metacharacters but is neither escaped nor raw
-  'RUF059'  # Unpacked variable is never used
+  'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]
 select = [
   'E',  # pydocstyle

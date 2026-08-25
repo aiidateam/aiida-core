@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 import typing as t
+import weakref
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -25,6 +26,26 @@ if t.TYPE_CHECKING:
 __all__ = ('ZeromqBroker',)
 
 LOGGER = AIIDA_LOGGER.getChild('broker.zeromq')
+
+
+class _BrokerResources:
+    """Resources owned by a :class:`ZeromqBroker`."""
+
+    def __init__(self) -> None:
+        self.communicator: ZeromqCommunicator | None = None
+
+    def release(self) -> None:
+        """Release the resources."""
+        if self.communicator is not None:
+            self.communicator.close()
+            self.communicator = None
+
+
+def _finalize_broker(resources: _BrokerResources, broker_repr: str) -> None:
+    """Cleanup resources held by a broker that was not closed explicitly."""
+    if resources.communicator is not None:
+        LOGGER.info(f'ZeromqBroker {broker_repr} was not closed explicitly.')
+        resources.release()
 
 
 class ZeromqBroker(Broker):
@@ -61,7 +82,8 @@ class ZeromqBroker(Broker):
             )
             raise ConfigurationError(msg)
 
-        self._communicator: ZeromqCommunicator | None = None
+        self._resources = _BrokerResources()
+        self._finalizer = weakref.finalize(self, _finalize_broker, self._resources, repr(self))
 
         from aiida.manage.configuration import get_config
 
@@ -159,7 +181,7 @@ class ZeromqBroker(Broker):
 
     def get_communicator(self) -> ZeromqCommunicator:
         """Get or create a communicator connected to the broker."""
-        if self._communicator is None:
+        if self._resources.communicator is None:
             router_endpoint = self._router_endpoint
 
             if router_endpoint is None:
@@ -181,13 +203,14 @@ class ZeromqBroker(Broker):
 
             from aiida.manage.configuration import get_config_option
 
-            self._communicator = ZeromqCommunicator(
+            self._resources.communicator = ZeromqCommunicator(
                 router_endpoint=router_endpoint,
                 task_timeout=get_config_option('broker.task_timeout'),
+                task_prefetch_count=get_config_option('daemon.worker_process_slots'),
             )
-            self._communicator.start()
+            self._resources.communicator.start()
 
-        return self._communicator
+        return self._resources.communicator
 
     def iterate_tasks(self) -> t.Iterator[t.Any]:
         queue_path = self._storage_path / 'tasks'
@@ -199,9 +222,7 @@ class ZeromqBroker(Broker):
             yield ZeromqIncomingTask(task_id, task_data, queue)
 
     def close(self) -> None:
-        if self._communicator is not None:
-            self._communicator.close()
-            self._communicator = None
+        self._resources.release()
 
     def __enter__(self) -> ZeromqBroker:
         return self

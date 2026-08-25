@@ -346,7 +346,7 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['daemon']['pid']
 
     @property
-    def daemon_env_info_file(self) -> str:
+    def _daemon_env_info_file(self) -> str:
         try:
             return self._config.filepaths(self.profile)['daemon']['daemon_env_info']
         except KeyError as exc:
@@ -659,7 +659,7 @@ class DaemonClient:
         return self.call_client(command, timeout=timeout)
 
     @staticmethod
-    def get_package_version_snapshot() -> PackageVersionSnapshot:
+    def _get_package_version_snapshot() -> PackageVersionSnapshot:
         """Return version information for installed packages that provide ``aiida.*`` entry points.
 
         For packages installed from a git repository through a VCS URL, the
@@ -718,20 +718,20 @@ class DaemonClient:
     def _write_version_file(self) -> None:
         """Write the current package version snapshot to the daemon version file."""
         env_info: DaemonEnvInfo = {
-            'packages': self.get_package_version_snapshot(),
+            'packages': self._get_package_version_snapshot(),
             'python_binary': sys.executable,
         }
         try:
-            pathlib.Path(self.daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
+            pathlib.Path(self._daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
         except ConfigurationError:
             LOGGER.debug('Cannot write daemon version file: version file path is not configured.')
         except OSError as exc:
             LOGGER.warning('Failed to write daemon version file: %s', exc)
 
-    def get_daemon_env_info(self) -> DaemonEnvInfo | None:
+    def _get_daemon_env_info(self) -> DaemonEnvInfo | None:
         """Read and validate the daemon version file, or return None if unavailable or invalid."""
         try:
-            data = json.loads(pathlib.Path(self.daemon_env_info_file).read_text(encoding='utf8'))
+            data = json.loads(pathlib.Path(self._daemon_env_info_file).read_text(encoding='utf8'))
         except (ConfigurationError, OSError, json.JSONDecodeError):
             return None
 
@@ -856,7 +856,7 @@ class DaemonClient:
 
         # Best-effort cleanup of version file
         try:
-            pathlib.Path(self.daemon_env_info_file).unlink(missing_ok=True)
+            pathlib.Path(self._daemon_env_info_file).unlink(missing_ok=True)
         except ConfigurationError:
             LOGGER.debug('Cannot remove daemon version file: version file path is not configured.')
         except OSError as exc:

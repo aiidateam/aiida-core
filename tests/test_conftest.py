@@ -11,7 +11,7 @@ ENTRY_POINT_GROUP = 'aiida.calculations.importers'
 
 def test_entry_points_add_invalid(entry_points):
     """Test the :meth:`EntryPointManager.add` method."""
-    with pytest.raises(TypeError, match='`entry_point_string` should be a string when defined.'):
+    with pytest.raises(TypeError, match='`entry_point_string` should be a string when defined'):
         entry_points.add('some.module:SomeClass', [])
 
     with pytest.raises(ValueError, match='invalid `entry_point_string` format, should `group:name`'):
@@ -35,7 +35,7 @@ def test_entry_points_add_group_and_name(entry_points):
 
 def test_entry_points_remove_invalid(entry_points):
     """Test the :meth:`EntryPointManager.remove` method."""
-    with pytest.raises(TypeError, match='`entry_point_string` should be a string when defined.'):
+    with pytest.raises(TypeError, match='`entry_point_string` should be a string when defined'):
         entry_points.remove([])
 
     with pytest.raises(ValueError, match='invalid `entry_point_string` format, should `group:name`'):

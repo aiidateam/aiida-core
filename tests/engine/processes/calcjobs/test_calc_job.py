@@ -825,15 +825,17 @@ class TestCalcJob:
 
 
 @pytest.fixture
-def generate_process(aiida_code_installed):
+def generate_process(aiida_code_installed, aiida_localhost):
     """Instantiate a process with default inputs and return the `Process` instance."""
     from aiida.engine.utils import instantiate_process
     from aiida.manage import get_manager
 
-    def _generate_process(inputs=None):
+    def _generate_process(inputs=None, computer=None):
         base_inputs = {
             'code': aiida_code_installed(
-                default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'
+                default_calc_job_plugin='core.arithmetic.add',
+                filepath_executable='/bin/bash',
+                computer=computer or aiida_localhost,
             ),
             'x': orm.Int(1),
             'y': orm.Int(2),
@@ -857,12 +859,29 @@ def generate_process(aiida_code_installed):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('override_logging')
-def test_parse_insufficient_data(generate_process):
+@pytest.mark.parametrize(
+    'scheduler_type, expected_log',
+    (
+        # The `core.direct` scheduler does not implement detailed job info parsing, so the missing
+        # `detailed_job_info` attribute is expected and is logged at `info` level instead of `warning`.
+        (
+            'core.direct',
+            'could not parse scheduler output: scheduler `DirectScheduler` does not parse detailed job info',
+        ),
+        # The `core.slurm` scheduler does implement it, so a missing attribute means the retrieval or parsing of the
+        # detailed job info failed, which is logged at `warning` level.
+        ('core.slurm', 'could not parse scheduler output: raised exception during parsing'),
+    ),
+)
+def test_parse_insufficient_data(generate_process, aiida_computer, scheduler_type, expected_log):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly that the parsing does not except even if the required information is not available.
     """
-    process = generate_process()
+    computer = aiida_computer(label=f'computer-{scheduler_type}', scheduler_type=scheduler_type)
+    computer.configure()
+
+    process = generate_process(computer=computer)
 
     retrieved = orm.FolderData().store()
     retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
@@ -877,7 +896,7 @@ def test_parse_insufficient_data(generate_process):
     # process but should log a warning, so here we check that those expected warnings are attached to the node
     logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
     expected_logs = [
-        'could not parse scheduler output: the `detailed_job_info` attribute is missing',
+        expected_log,
         f'could not parse scheduler output: the `{filename_stderr}` file is missing',
         f'could not parse scheduler output: the `{filename_stdout}` file is missing',
     ]
@@ -1348,8 +1367,6 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
 
     This is a regression test for https://github.com/aiidateam/aiida-core/issues/5882.
     """
-    import time
-
     import plumpy
 
     daemon_client.start_daemon()
@@ -1363,19 +1380,10 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
 
     daemon_client.restart_daemon(wait=True)
 
-    start_time = time.time()
-    timeout = 10
+    # The full stop/restart/reload/resume/finish cycle is heavy, so allow more than the fixture default: under CPU
+    # contention the post-restart wait alone approaches the 10 seconds this test used to allow.
+    submit_and_await(node, plumpy.ProcessState.FINISHED, timeout=30)
 
-    while node.process_state not in [plumpy.ProcessState.FINISHED, plumpy.ProcessState.EXCEPTED]:
-        if node.is_excepted:
-            raise AssertionError(f'The process excepted: {node.exception}')
-
-        if time.time() - start_time >= timeout:
-            raise AssertionError(f'process failed to terminate within timeout, current state: {node.process_state}')
-
-        time.sleep(0.1)
-
-    assert node.is_finished, node.process_state
     assert node.is_finished_ok, node.exit_status
 
 

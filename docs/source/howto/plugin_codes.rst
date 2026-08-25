@@ -344,7 +344,7 @@ You have just created an ``aiida_diff_tutorial`` Python *package*!
 
     [build-system]
     # build the package with [flit](https://flit.readthedocs.io)
-    requires = ["flit_core >=3.4,<4"]
+    requires = ["flit_core >=4.0.2,<5"]
     build-backend = "flit_core.buildapi"
 
     [project]

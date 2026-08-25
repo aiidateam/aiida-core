@@ -19,11 +19,11 @@ node_type: QbStrField('node_type', dtype=typing.Literal['data.core.array.kpoints
   doc='The type of the node.')
 offset: QbArrayField('attributes.offset', dtype=list[float] | None, doc='Offset of
   kpoints')
-pbc1: QbAnyField('attributes.pbc1', dtype=bool | None, doc='Periodicity in the first
+pbc1: QbBoolField('attributes.pbc1', dtype=bool | None, doc='Periodicity in the first
   lattice vector direction')
-pbc2: QbAnyField('attributes.pbc2', dtype=bool | None, doc='Periodicity in the second
+pbc2: QbBoolField('attributes.pbc2', dtype=bool | None, doc='Periodicity in the second
   lattice vector direction')
-pbc3: QbAnyField('attributes.pbc3', dtype=bool | None, doc='Periodicity in the third
+pbc3: QbBoolField('attributes.pbc3', dtype=bool | None, doc='Periodicity in the third
   lattice vector direction')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 process_type: QbStrField('process_type', dtype=str | None, doc='The process type of
@@ -33,4 +33,4 @@ repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.A
 source: QbDictField('attributes.source', dtype=dict | None, doc='Source of the data')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

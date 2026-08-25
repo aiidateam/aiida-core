@@ -80,7 +80,7 @@ def test_submit(runner):
     """Test that inputs can be specified either as a positional dictionary or through keyword arguments."""
     inputs = {'a': Str('input')}
 
-    with pytest.raises(ValueError, match='Cannot specify both `inputs` and `kwargs`.'):
+    with pytest.raises(ValueError, match='Cannot specify both `inputs` and `kwargs`'):
         runner.submit(Proc, inputs, **inputs)
 
     runner.submit(Proc, inputs)

@@ -19,7 +19,7 @@ from aiida.common.lang import type_check
 from aiida.tools.graph.age_entities import Basket
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from aiida.orm import QueryBuilder
     from aiida.orm.implementation.querybuilder import QueryDictType
@@ -361,13 +361,25 @@ class RuleSequence(Operation):
     the first (see RuleSetWalkers and RuleSaveWalkers).
     """
 
-    def __init__(self, rules: Iterable[Operation], max_iterations: int = 1):
+    def __init__(
+        self,
+        rules: Iterable[Operation],
+        max_iterations: int = 1,
+        *,
+        iteration_callback: Callable[[int, int], None] | None = None,
+    ):
+        """:param rules: the rules to apply in order on each iteration.
+        :param max_iterations: maximum number of iterations to perform.
+        :param iteration_callback: called after each iteration with the number of iterations done so
+            far and the number of nodes visited so far, e.g. to report progress of long traversals.
+        """
         for rule in rules:
             if not isinstance(rule, Operation):
                 raise TypeError('rule has to be an instance of Operation-subclass')
         self._rules = rules
         self._accumulator_set: Basket | None = None
         self._visits_set: Basket | None = None
+        self._iteration_callback = iteration_callback
         super().__init__(max_iterations, track_edges=False)
 
     def run(self, operational_set: Basket) -> Basket:
@@ -401,6 +413,9 @@ class RuleSequence(Operation):
             # I set the operational set to all results that have not been visited yet.
             operational_set = new_results - self._accumulator_set
             self._accumulator_set += new_results
+
+            if self._iteration_callback is not None:
+                self._iteration_callback(self._iterations_done, len(self._visits_set.nodes.keyset))
 
         return self._visits_set.copy()
 

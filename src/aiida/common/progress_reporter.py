@@ -52,10 +52,10 @@ class ProgressReporterAbstract:
 
     """
 
-    def __init__(self, *, total: int, desc: str | None = None, **kwargs: Any):
+    def __init__(self, *, total: int | None, desc: str | None = None, **kwargs: Any):
         """Initialise the progress reporting contextmanager.
 
-        :param total: The number of expected iterations.
+        :param total: The number of expected iterations, or None if unknown in advance.
         :param desc: A description of the process
 
         """
@@ -64,8 +64,8 @@ class ProgressReporterAbstract:
         self._increment: int = 0
 
     @property
-    def total(self) -> int:
-        """Return the total iterations expected."""
+    def total(self) -> int | None:
+        """Return the total iterations expected, or None if not known in advance."""
         return self._total
 
     @property
@@ -177,7 +177,8 @@ def set_progress_bar_tqdm(bar_format: str | None = TQDM_BAR_FORMAT, leave: bool 
 
     See :func:`~aiida.common.progress_reporter.set_progress_reporter` for details.
 
-    :param bar_format: Specify a custom bar string format.
+    :param bar_format: Specify a custom bar string format. Pass ``bar_format=None`` when creating a
+        bar with ``total=None``, since this format's percentage would sit frozen at 0%.
     :param leave: If True, keeps all traces of the progressbar upon termination of iteration.
             If `None`, will leave only if `position` is `0`.
     :param kwargs: pass to the tqdm init

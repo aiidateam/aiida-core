@@ -755,6 +755,18 @@ async def test_stashing(
     dest_path_error = tmp_path / 'stash_path_error'
     dest_path_error.mkdir()
 
+    # a calculation already stashed in the same shard, i.e. its UUID shares the first four characters
+    if stash_mode == StashMode.COPY.value:
+        other_uuid = uuid[:4] + 'beef-0000-0000-0000-000000000000'
+        other_stash = dest_path_error / other_uuid[:2] / other_uuid[2:4] / other_uuid[4:]
+        other_stash.mkdir(parents=True)
+        (other_stash / 'aiida.out').write_text('other')
+    else:
+        other_stash = dest_path_error / ('other-calculation.' + stash_mode)
+        other_stash.write_text('other')
+
+    existing_paths = set(tmp_path.rglob('*'))
+
     if stash_mode == StashMode.COPY.value:
         node.set_option(
             'stash',
@@ -797,5 +809,31 @@ async def test_stashing(
                 await execmanager.stash_calculation(node, transport)
                 assert any('Failed to stash' in message for message in caplog.messages)
 
-    # Ensure no files were created in the destination path after the error
-    assert not any(dest_path_error.iterdir())
+    # A failed stash must not remove anything that was already on disk, in any mode
+    removed = existing_paths - set(tmp_path.rglob('*'))
+    assert not removed, f'failed stash removed pre-existing paths: {sorted(str(path) for path in removed)}'
+
+    # COPY also cleans up its own half-written target; the compress modes will do that in #7564
+    if stash_mode == StashMode.COPY.value:
+        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
+
+    ## 3) test that an existing stash target is never overwritten (see #7564)
+    if stash_mode != StashMode.COPY.value:
+        existing_archive = pathlib.Path(str(dest_path / uuid) + '.' + stash_mode)
+        existing_archive.write_text('tampered')
+
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path),
+                'stash_mode': stash_mode,
+                'dereference': True,
+            },
+        )
+
+        with LocalTransport() as transport, caplog.at_level(logging.WARNING):
+            await execmanager.stash_calculation(node, transport)
+
+        assert existing_archive.read_text() == 'tampered'
+        assert any('already exists' in message for message in caplog.messages)

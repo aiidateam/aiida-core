@@ -32,20 +32,34 @@ class UserParamType(click.ParamType):
         """:param create: If the user does not exist, create a new instance (unstored)."""
         self._create = create
 
-    @with_dbenv()
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> orm.User:
-        from aiida import orm
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        """Validate the email and return it unchanged.
 
-        results = orm.User.collection.find({'email': value})
+        Looking the user up requires a storage backend, which parsing a command line must not need. Commands resolve
+        the email in their body through :mod:`aiida.cmdline.utils.loaders`, which calls :meth:`resolve`.
+        """
+        return t.cast(str, super().convert(value, param, ctx))
+
+    def resolve(self, identifier: str) -> orm.User:
+        """Return the user with the given email address.
+
+        :param identifier: email address of the user.
+        :raises aiida.common.NotExistent: if no user has this email and the parameter does not create one.
+        :raises aiida.common.MultipleObjectsError: if more than one user has this email.
+        """
+        from aiida import orm
+        from aiida.common import exceptions
+
+        results = orm.User.collection.find({'email': identifier})
 
         if not results:
             if self._create:
-                return orm.User(email=value)
+                return orm.User(email=identifier)
 
-            self.fail(f"User '{value}' not found", param, ctx)
+            raise exceptions.NotExistent(f"User '{identifier}' not found")
 
         if len(results) > 1:
-            self.fail(f"Multiple users found with email '{value}': {results}")
+            raise exceptions.MultipleObjectsError(f"Multiple users found with email '{identifier}': {results}")
 
         return results[0]
 

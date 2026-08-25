@@ -10,6 +10,8 @@
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, options, types
+from aiida.cmdline.utils import decorators
+from aiida.cmdline.utils.loaders import load_data
 
 
 @verdi_data.group('core.dict')
@@ -20,9 +22,10 @@ def dictionary():
 @dictionary.command('show')
 @arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.dict',)))
 @options.DICT_FORMAT()
+@decorators.with_dbenv()
 def dictionary_show(data, fmt):
     """Show contents of Dict nodes."""
     from aiida.cmdline.utils.echo import echo_dictionary
 
-    for node in data:
+    for node in load_data(data):
         echo_dictionary(node.get_dict(), fmt)

@@ -58,8 +58,8 @@ class CodeParamType(IdentifierParamType):
         """
         return [CompletionItem(option) for (option,) in self.orm_class_loader.get_options(incomplete, project='label')]  # type: ignore[no-untyped-call]
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        code = super().convert(value, param, ctx)
+    def resolve(self, identifier: str) -> t.Any:
+        code = super().resolve(identifier)
 
         if code and self._entry_point is not None:
             entry_point = code.default_calc_job_plugin

@@ -15,6 +15,7 @@ from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_data, load_datum
 from aiida.common.utils import Prettifier
 
 LIST_PROJECT_HEADERS = ['ID', 'Formula', 'Ctime', 'Label']
@@ -91,6 +92,8 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
 @decorators.with_dbenv()
 def bands_show(data, fmt):
     """Visualize BandsData objects."""
+    data = load_data(data)
+
     try:
         show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
@@ -133,6 +136,7 @@ def bands_show(data, fmt):
 @decorators.with_dbenv()
 def bands_export(fmt, y_min_lim, y_max_lim, output, force, prettify_format, datum):
     """Export BandsData objects."""
+    datum = load_datum(datum)
     args = {}
     if y_min_lim is not None:
         args['y_min_lim'] = y_min_lim

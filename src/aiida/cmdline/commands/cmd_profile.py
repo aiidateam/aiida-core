@@ -19,6 +19,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.loaders import load_codes, load_computers, load_groups, load_user
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
 
@@ -516,6 +517,11 @@ def profile_dump(
 
     import traceback
     from pathlib import Path
+
+    codes = load_codes(codes) if codes else codes
+    computers = load_computers(computers) if computers else computers
+    groups = load_groups(groups) if groups else groups
+    user = load_user(user) if user is not None else None
 
     from aiida.cmdline.utils import echo
     from aiida.tools._dumping.utils import DumpPaths

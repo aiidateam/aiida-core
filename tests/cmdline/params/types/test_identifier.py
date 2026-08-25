@@ -8,10 +8,10 @@
 ###########################################################################
 """Tests for the `IdentifierParamType`."""
 
-import click
 import pytest
 
 from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
+from aiida.common import exceptions
 from aiida.orm import Bool, Float, Int
 
 
@@ -54,14 +54,14 @@ class TestIdentifierParamType:
         param_type_scoped = NodeParamType(sub_classes=('aiida.data:core.bool', 'aiida.data:core.float'))
 
         # For the base NodeParamType all node types should be matched
-        assert param_type_normal.convert(str(node_bool.pk), None, None).uuid == node_bool.uuid
-        assert param_type_normal.convert(str(node_float.pk), None, None).uuid == node_float.uuid
-        assert param_type_normal.convert(str(node_int.pk), None, None).uuid == node_int.uuid
+        assert param_type_normal.resolve(str(node_bool.pk)).uuid == node_bool.uuid
+        assert param_type_normal.resolve(str(node_float.pk)).uuid == node_float.uuid
+        assert param_type_normal.resolve(str(node_int.pk)).uuid == node_int.uuid
 
         # The scoped NodeParamType should only match Bool and Float
-        assert param_type_scoped.convert(str(node_bool.pk), None, None).uuid == node_bool.uuid
-        assert param_type_scoped.convert(str(node_float.pk), None, None).uuid == node_float.uuid
+        assert param_type_scoped.resolve(str(node_bool.pk)).uuid == node_bool.uuid
+        assert param_type_scoped.resolve(str(node_float.pk)).uuid == node_float.uuid
 
         # The Int should not be found and raise
-        with pytest.raises(click.BadParameter):
-            param_type_scoped.convert(str(node_int.pk), None, None)
+        with pytest.raises(exceptions.NotExistent):
+            param_type_scoped.resolve(str(node_int.pk))

@@ -15,6 +15,7 @@ from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_optio
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_data, load_datum, load_group
 from aiida.cmdline.utils.pluginable import Pluginable
 
 LIST_PROJECT_HEADERS = ['Id', 'Label', 'Formula']
@@ -127,6 +128,8 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
 @decorators.with_dbenv()
 def structure_show(data, fmt):
     """Visualize StructureData objects."""
+    data = load_data(data)
+
     try:
         show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
@@ -145,7 +148,7 @@ def structure_show(data, fmt):
 @decorators.with_dbenv()
 def structure_export(**kwargs):
     """Export StructureData object to file."""
-    node = kwargs.pop('datum')
+    node = load_datum(kwargs.pop('datum'))
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')
     force = kwargs.pop('force')
@@ -218,7 +221,7 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
     _store_structure(new_structure, dry_run)
 
     if group:
-        group.add_nodes(new_structure)
+        load_group(group).add_nodes(new_structure)
 
 
 @structure_import.command('ase')
@@ -248,4 +251,4 @@ def import_ase(filename, label, group, dry_run):
     _store_structure(new_structure, dry_run)
 
     if group:
-        group.add_nodes(new_structure)
+        load_group(group).add_nodes(new_structure)

@@ -16,7 +16,6 @@ from functools import cached_property
 
 import click
 
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
 
 if t.TYPE_CHECKING:
@@ -76,7 +75,6 @@ class IdentifierParamType(click.ParamType, ABC):
 
     @property
     @abstractmethod
-    @with_dbenv()
     def orm_class_loader(self) -> OrmEntityLoader:
         """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
@@ -84,32 +82,18 @@ class IdentifierParamType(click.ParamType, ABC):
         :return: the orm entity loader class for this ParamType
         """
 
-    @with_dbenv()
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context) -> t.Any:
-        """Attempt to convert the given value to an instance of the orm class using the orm class loader.
+    @property
+    def sub_classes(self) -> tuple[t.Any, ...] | None:
+        """Return the orm classes that an identifier for this parameter is allowed to map onto.
 
-        :return: the loaded orm entity
-        :raises click.BadParameter: if the value is ambiguous and leads to multiple entities
-        :raises click.BadParameter: if the value cannot be mapped onto any existing instance
-        :raises RuntimeError: if the defined orm class loader is not a subclass of the OrmEntityLoader class
+        The entry points given to the constructor are resolved on first access. Resolving them only imports the classes
+        they point to, so this does not require a storage backend.
+
+        :return: the allowed sub classes, or ``None`` if the parameter does not restrict them.
+        :raises RuntimeError: if an entry point cannot be loaded or does not point to a valid sub class.
         """
-        from aiida.common import exceptions
-        from aiida.orm.utils.loaders import OrmEntityLoader
-
-        value = super().convert(value, param, ctx)
-
-        if not value:
-            raise click.BadParameter('the value for the identifier cannot be empty')
-
-        loader = self.orm_class_loader
-
-        if not issubclass(loader, OrmEntityLoader):
-            raise RuntimeError('the orm class loader should be a subclass of OrmEntityLoader')
-
-        # If entry points were in the constructor, we load their corresponding classes, validate that they are valid
-        # sub classes of the orm class loader and then pass it as the sub_class parameter to the load_entity call.
-        # We store the loaded entry points in an instance variable, such that the loading only has to be done once.
-        if self._entry_points and self._sub_classes is None:
+        if self._sub_classes is None and self._entry_points:
+            loader = self.orm_class_loader
             sub_classes = []
 
             for entry_point in self._entry_points:
@@ -128,9 +112,40 @@ class IdentifierParamType(click.ParamType, ABC):
 
             self._sub_classes = tuple(sub_classes)
 
-        try:
-            entity = loader.load_entity(value, sub_classes=self._sub_classes)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent, ValueError) as exception:
-            raise click.BadParameter(str(exception))
+        return self._sub_classes
 
-        return entity
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        """Validate the identifier and return it unchanged.
+
+        Resolving the identifier into an orm entity requires a storage backend, which parsing a command line must not
+        need. Commands therefore resolve the identifier in their body through
+        :mod:`aiida.cmdline.utils.loaders`, which calls :meth:`resolve`.
+
+        :return: the identifier
+        :raises click.BadParameter: if the value is empty
+        """
+        value = super().convert(value, param, ctx)
+
+        if not value:
+            raise click.BadParameter('the value for the identifier cannot be empty', ctx=ctx, param=param)
+
+        return t.cast(str, value)
+
+    def resolve(self, identifier: str) -> t.Any:
+        """Return the orm entity that the identifier maps onto.
+
+        Requires a loaded storage backend. Subclasses override this to apply checks that need the loaded entity.
+
+        :param identifier: PK, UUID or label of the entity.
+        :raises aiida.common.NotExistent: if the identifier maps onto no entity.
+        :raises aiida.common.MultipleObjectsError: if the identifier is ambiguous.
+        :raises RuntimeError: if the defined orm class loader is not a subclass of the OrmEntityLoader class.
+        """
+        from aiida.orm.utils.loaders import OrmEntityLoader
+
+        loader = self.orm_class_loader
+
+        if not issubclass(loader, OrmEntityLoader):
+            raise RuntimeError('the orm class loader should be a subclass of OrmEntityLoader')
+
+        return loader.load_entity(identifier, sub_classes=self.sub_classes)

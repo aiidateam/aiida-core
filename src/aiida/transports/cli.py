@@ -15,14 +15,22 @@ import click
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.decorators import load_backend_if_not_loaded, with_dbenv
+from aiida.cmdline.utils.loaders import load_entity, load_user
 from aiida.common.exceptions import NotExistent
 
 TRANSPORT_PARAMS = []
 
 
-def match_comp_transport(ctx, param, computer, transport_type):
-    """Check the computer argument against the transport type."""
+def match_comp_transport(ctx, param, identifier, transport_type):
+    """Check the computer argument against the transport type.
+
+    The interactive defaults of the following options are derived from the computer, so unlike a command body this
+    callback has to resolve the identifier while the command line is still being parsed, and loads the backend itself.
+    """
+    load_backend_if_not_loaded()
+    computer = load_entity(identifier, param_name=param.name)
+
     if computer.transport_type != transport_type:
         echo.echo_critical(
             f'Computer {computer.label} has transport of type "{computer.transport_type}", not {transport_type}!'
@@ -41,6 +49,7 @@ def configure_computer_main(computer, user, **kwargs):
     """Configure a computer via the CLI."""
     from aiida import orm
 
+    user = load_user(user) if isinstance(user, str) else user
     user = user or orm.User.collection.get_default()
 
     echo.echo_report(f'Configuring computer {computer.label} for user {user.email}.')
@@ -91,7 +100,8 @@ def interactive_default(key, also_non_interactive=False):
         if not also_non_interactive and ctx.params['non_interactive']:
             raise click.MissingParameter()
 
-        user = ctx.params.get('user', None) or orm.User.collection.get_default()
+        user = ctx.params.get('user', None)
+        user = load_user(user) if user is not None else orm.User.collection.get_default()
         computer = ctx.params.get('computer', None)
 
         if computer is None:

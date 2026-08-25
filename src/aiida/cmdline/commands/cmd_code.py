@@ -26,6 +26,7 @@ from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.loaders import load_code, load_codes, load_computer, load_entity
 from aiida.common import exceptions
 
 if TYPE_CHECKING:
@@ -90,13 +91,21 @@ def get_on_computer(ctx: click.Context) -> bool:
 
 
 def set_code_builder(ctx: click.Context, _param: Any, value: Any) -> Any:
-    """Set the code spec for defaults of following options."""
+    """Set the code spec for defaults of following options.
+
+    This callback seeds the defaults that the following options prompt with, so unlike a command body it has to
+    resolve the identifier while the command line is still being parsed, and loads the backend itself.
+    """
+    from aiida.cmdline.utils.decorators import load_backend_if_not_loaded
     from aiida.orm.utils.builders.code import CodeBuilder
+
+    load_backend_if_not_loaded()
+    code = load_entity(value, param_name=_param.name)
 
     # TODO(danielhollas): CodeBuilder is deprecated, rewrite this somehow?
     with warnings.catch_warnings(record=True):
-        ctx.code_builder = CodeBuilder.from_code(value)  # type: ignore[attr-defined]
-    return value
+        ctx.code_builder = CodeBuilder.from_code(code)  # type: ignore[attr-defined]
+    return code
 
 
 # Defining the ``COMPUTER`` option first guarantees that the user is prompted for the computer first. This is necessary
@@ -233,6 +242,7 @@ def show(code: Code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
 
+    code = load_code(code)
     table = []
 
     # These are excluded from the CLI, so we add them manually
@@ -265,6 +275,7 @@ def show(code: Code):
 @with_dbenv()
 def export(code, output_file, overwrite, sort):
     """Export code to a yaml file. If no output file is given, default name is created based on the code label."""
+    code = load_code(code)
     other_args = {'sort': sort}
     fileformat = 'yaml'
 
@@ -309,6 +320,7 @@ def delete(codes, dry_run, force):
     """
     from aiida.tools import delete_nodes
 
+    codes = load_codes(codes)
     node_pks_to_delete = [code.pk for code in codes]
 
     def _dry_run_callback(pks):
@@ -328,7 +340,7 @@ def delete(codes, dry_run, force):
 @with_dbenv()
 def hide(codes):
     """Hide one or more codes from `verdi code list`."""
-    for code in codes:
+    for code in load_codes(codes):
         code.is_hidden = True
         echo.echo_success(f'Code<{code.pk}> {code.full_label} hidden')
 
@@ -338,7 +350,7 @@ def hide(codes):
 @with_dbenv()
 def reveal(codes):
     """Reveal one or more hidden codes in `verdi code list`."""
-    for code in codes:
+    for code in load_codes(codes):
         code.is_hidden = False
         echo.echo_success(f'Code<{code.pk}> {code.full_label} revealed')
 
@@ -349,6 +361,7 @@ def reveal(codes):
 @with_dbenv()
 def relabel(code, label):
     """Relabel a code."""
+    code = load_code(code)
     old_label = code.full_label
 
     try:
@@ -389,6 +402,8 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
     """List the available codes."""
     from aiida import orm
     from aiida.orm.utils.node import load_node_class
+
+    computer = load_computer(computer) if computer is not None else None
 
     if show_owner:
         echo.echo_deprecated(

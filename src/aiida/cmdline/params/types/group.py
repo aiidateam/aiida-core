@@ -79,16 +79,17 @@ class GroupParamType(IdentifierParamType):
             for (option,) in self.orm_class_loader.get_options(incomplete, project='label')  # type: ignore[no-untyped-call]
         ]
 
-    @decorators.with_dbenv()
-    def convert(self, value: t.Any, param: click.Parameter, ctx: click.Context) -> t.Any:
+    def resolve(self, identifier: str) -> t.Any:
+        from aiida.common import exceptions
+
         try:
-            group = super().convert(value, param, ctx)
-        except click.BadParameter:
-            if self._create_if_not_exist:
-                # The particular subclass to load will be stored in `_sub_classes` as loaded by `convert` of the super.
-                cls = self._sub_classes[0]  # type: ignore[index]
-                group = cls(label=value).store()
-            else:
+            group = super().resolve(identifier)
+        except (exceptions.NotExistent, exceptions.MultipleObjectsError, ValueError):
+            if not self._create_if_not_exist:
                 raise
+
+            # ``sub_classes`` declares the particular subclass to create.
+            cls = self.sub_classes[0]  # type: ignore[index]
+            group = cls(label=identifier).store()
 
         return group

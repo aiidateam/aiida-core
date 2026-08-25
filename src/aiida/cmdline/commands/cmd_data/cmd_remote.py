@@ -16,6 +16,8 @@ import click
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.loaders import load_datum, load_node
 
 
 @verdi_data.group('core.remote')
@@ -34,9 +36,12 @@ def remote():
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.remote',)))
 @click.option('-l', '--long', 'ls_long', is_flag=True, default=False, help='Display also file metadata.')
 @click.option('-p', '--path', type=click.STRING, default='.', help='The folder to list.')
+@with_dbenv()
 def remote_ls(ls_long, path, datum):
     """List content of a (sub)directory in a RemoteData object."""
     import datetime
+
+    datum = load_datum(datum)
 
     try:
         content = datum.listdir_withattributes(path=path)
@@ -60,11 +65,14 @@ def remote_ls(ls_long, path, datum):
 @remote.command('cat')
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.remote',)))
 @click.argument('path', type=click.STRING)
+@with_dbenv()
 def remote_cat(datum, path):
     """Show content of a file in a RemoteData object."""
     import os
     import sys
     import tempfile
+
+    datum = load_datum(datum)
 
     try:
         with tempfile.NamedTemporaryFile(delete=False) as tmpf:
@@ -84,8 +92,10 @@ def remote_cat(datum, path):
 
 @remote.command('show')
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.remote',)))
+@with_dbenv()
 def remote_show(datum):
     """Show information for a RemoteData object."""
+    datum = load_datum(datum)
     echo.echo(f'- Remote computer name: {datum.computer.label}')
     echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')
 
@@ -115,8 +125,11 @@ def remote_show(datum):
     default=False,
     help='Return the size in bytes or human-readable format?',
 )
+@with_dbenv()
 def remote_size(node, method, path, return_bytes):
     """Obtain the total size of a file or directory at a given path that is stored via a ``RemoteData`` object."""
+    node = load_node(node)
+
     try:
         # `method` might change, if `du` fails, so assigning to new variable here
         total_size, used_method = node.get_size_on_disk(relpath=path, method=method, return_bytes=return_bytes)

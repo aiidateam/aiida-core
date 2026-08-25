@@ -10,6 +10,8 @@
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, options, types
+from aiida.cmdline.utils import decorators
+from aiida.cmdline.utils.loaders import load_data
 
 
 @verdi_data.group('core.array')
@@ -20,11 +22,12 @@ def array():
 @array.command('show')
 @arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.array',)))
 @options.DICT_FORMAT()
+@decorators.with_dbenv()
 def array_show(data, fmt):
     """Visualize ArrayData objects."""
     from aiida.cmdline.utils.echo import echo_dictionary
 
-    for node in data:
+    for node in load_data(data):
         the_dict = {}
         for arrayname in node.get_arraynames():
             the_dict[arrayname] = node.get_array(arrayname).tolist()

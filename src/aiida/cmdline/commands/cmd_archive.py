@@ -23,6 +23,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_codes, load_computers, load_group, load_groups, load_nodes
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
@@ -192,16 +193,16 @@ def create(
         entities = []
 
         if codes:
-            entities.extend(codes)
+            entities.extend(load_codes(codes))
 
         if computers:
-            entities.extend(computers)
+            entities.extend(load_computers(computers))
 
         if groups:
-            entities.extend(groups)
+            entities.extend(load_groups(groups))
 
         if nodes:
-            entities.extend(nodes)
+            entities.extend(load_nodes(nodes))
 
     kwargs = {
         'input_calc_forward': input_calc_forward,
@@ -396,6 +397,7 @@ def import_archive(
     else:
         set_progress_reporter(None)
 
+    group = load_group(group) if group is not None else None
     all_archives = _gather_imports(archives, webpages)
 
     # Preliminary sanity check

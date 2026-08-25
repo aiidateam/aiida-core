@@ -14,6 +14,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.commands import setup as options_setup
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_user, resolve_callback
 
 
 @verdi.group('user')
@@ -53,6 +54,8 @@ def user_list():
     help='Email address that serves as the user name and a way to identify data created by it.',
     type=types.UserParamType(create=True),
     cls=options.interactive.InteractiveOption,
+    # The contextual defaults below read attributes off the user, so it has to be resolved while parsing.
+    callback=resolve_callback,
 )
 @options_setup.SETUP_USER_FIRST_NAME(contextual_default=lambda ctx: ctx.params['user'].first_name)
 @options_setup.SETUP_USER_LAST_NAME(contextual_default=lambda ctx: ctx.params['user'].last_name)
@@ -91,6 +94,8 @@ def user_configure(ctx, user, first_name, last_name, institution, set_default):
 def user_set_default(ctx, user):
     """Set a user as the default user for the profile."""
     from aiida.manage import get_manager
+
+    user = load_user(user) if isinstance(user, str) else user
 
     get_manager().set_default_user_email(ctx.obj.profile, user.email)
     echo.echo_success(f'Set `{user.email}` as the default user for profile `{ctx.obj.profile.name}.`')

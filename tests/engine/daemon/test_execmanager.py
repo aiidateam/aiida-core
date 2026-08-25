@@ -756,7 +756,7 @@ async def test_stashing(
     # a calculation already stashed in the same shard, i.e. its UUID shares the first four characters
     if stash_mode == StashMode.COPY.value:
         other_uuid = uuid[:4] + 'beef-0000-0000-0000-000000000000'
-        other_stash = dest_path_error / other_uuid[:2] / other_uuid[2:4] / other_uuid[4:]
+        other_stash = dest_path_error / other_uuid[:2] / other_uuid[2:4] / other_uuid[4:] / other_uuid
         other_stash.mkdir(parents=True)
         (other_stash / 'aiida.out').write_text('other')
     else:
@@ -810,7 +810,7 @@ async def test_stashing(
 
     # Both modes also clean up their own half-written target
     if stash_mode == StashMode.COPY.value:
-        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
+        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:] / uuid).exists()
     else:
         assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:] / f'{uuid}.{stash_mode}').exists()
 
@@ -880,7 +880,7 @@ async def test_stashing_fail_on_missing_rejects_glob(generate_calcjob_node, stas
         await execmanager.stash_calculation(node, transport)
 
 
-@pytest.mark.parametrize('stash_mode', [StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
 @pytest.mark.asyncio
 async def test_stashing_same_source_twice(generate_calcjob_node, aiida_localhost, stash_mode, tmp_path, monkeypatch):
     """Stash jobs of the same source node write distinct targets, each replacing only its own leftover."""
@@ -913,17 +913,25 @@ async def test_stashing_same_source_twice(generate_calcjob_node, aiida_localhost
         node.store()
 
         # leftover of a previous attempt of this very job
-        target = target_base / remote.uuid[:2] / remote.uuid[2:4] / remote.uuid[4:] / f'{node.uuid}.{stash_mode}'
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text('stale')
+        if stash_mode == StashMode.COPY.value:
+            target = target_base / remote.uuid[:2] / remote.uuid[2:4] / remote.uuid[4:] / node.uuid
+            target.mkdir(parents=True)
+            (target / source_list[0]).write_text('stale')
+        else:
+            target = target_base / remote.uuid[:2] / remote.uuid[2:4] / remote.uuid[4:] / f'{node.uuid}.{stash_mode}'
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text('stale')
 
         with LocalTransport() as transport:
             await execmanager.stash_calculation(node, transport)
         targets.append(target)
 
     for target, filename, content in zip(targets, ('aiida.out', 'aiida.in'), ('out', 'in')):
-        extracted = tmp_path / f'extracted-{filename}'
-        with LocalTransport() as transport:
-            transport.extract(target, extracted)
+        if stash_mode == StashMode.COPY.value:
+            extracted = target
+        else:
+            extracted = tmp_path / f'extracted-{filename}'
+            with LocalTransport() as transport:
+                transport.extract(target, extracted)
         assert [path.name for path in extracted.iterdir()] == [filename]
         assert (extracted / filename).read_text() == content

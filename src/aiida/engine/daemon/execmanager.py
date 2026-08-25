@@ -495,7 +495,8 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     ###
 
     if stash_mode == StashMode.COPY.value:
-        target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
+        # sharded by the source node, one directory per stash job
+        target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:] / calculation.uuid
 
         async def _do_copy() -> list[str]:
             stashed_source_list: list[str] = []

@@ -6,6 +6,13 @@
 
 ### Behavior changes
 
+#### Progress bars: hidden when the output stream is not a terminal ([#7577](https://github.com/aiidateam/aiida-core/pull/7577))
+
+Progress bars animate by rewriting a single line, so a stream that cannot be rewritten collects every redraw instead, burying the real output of a command such as `verdi archive create` under hundreds of frames.
+They are now hidden whenever `stderr`, the stream they are written to, is not a terminal, so `verdi archive create 2> log.txt` no longer fills the log with frames while `verdi archive create > out.txt` still shows them.
+A Jupyter kernel is treated as a terminal, since it renders the redraws as an animation.
+Pass `disable=False` to `set_progress_bar_tqdm` to show a bar regardless.
+
 ### Fixes
 
 ### Deprecations

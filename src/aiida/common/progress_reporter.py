@@ -18,6 +18,7 @@ and indeed a valid implementation is::
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from functools import partial
 from types import TracebackType
@@ -172,9 +173,18 @@ def set_progress_reporter(
         PROGRESS_REPORTER = reporter
 
 
+def _in_jupyter_kernel() -> bool:
+    """Return whether this process is an IPython kernel, as used by Jupyter."""
+    ipython = sys.modules.get('IPython')
+    if ipython is None:
+        return False
+    return hasattr(ipython.get_ipython(), 'kernel')
+
+
 def set_progress_bar_tqdm(
     bar_format: str | None = TQDM_BAR_FORMAT,
     leave: bool | None = False,
+    *,
     disable: bool | None = None,
     **kwargs: Any,
 ) -> None:
@@ -186,13 +196,18 @@ def set_progress_bar_tqdm(
         bar with ``total=None``, since this format's percentage would sit frozen at 0%.
     :param leave: If True, keeps all traces of the progressbar upon termination of iteration.
             If `None`, will leave only if `position` is `0`.
-    :param disable: If True, hide the bar entirely. The default `None` hides it whenever the output
-            stream is not a terminal, so redirecting to a log file does not fill it with the
-            redraw frames a bar emits.
+    :param disable: If ``True``, hide the bar entirely; if ``False``, always show it. The default
+            ``None`` hides it whenever the output stream is not a terminal, so redirecting to a
+            log file does not fill it with the redraw frames a bar emits. A Jupyter kernel is treated
+            as a terminal, since it renders those redraws as an animation.
     :param kwargs: pass to the tqdm init
 
     """
     from tqdm import tqdm
+
+    # A kernel's stderr is not a terminal, so tqdm's own check would hide the bar there.
+    if disable is None and _in_jupyter_kernel():
+        disable = False
 
     set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, disable=disable, **kwargs)
 

@@ -620,13 +620,8 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 dereference=dereference,
             )
         except (OSError, ValueError) as exception:
-            EXEC_LOGGER.warning(f'Failed to stash {source_list} to {target_destination}: {exception}')
-            return
-            # note: if you raise here, you trigger the exponential backoff
-            # and if you don't raise, it appears as successful in verdi process list: Finished [0]
-            # An issue opened to investigate and fix this https://github.com/aiidateam/aiida-core/issues/6789
-            # raise exceptions.RemoteOperationError(f'failed '
-            # 'to compress {source_list} to {target_destination}: {exception}')
+            msg = f'Failed to stash {stashed_source_list} to {target_destination}: {exception}'
+            raise exceptions.StashingError(msg) from exception
         else:
             EXEC_LOGGER.debug(f'Stashed {source_list} to {target_destination}')
 

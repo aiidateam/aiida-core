@@ -682,12 +682,8 @@ async def test_stashing(
     serialize_file_hierarchy,
     tmp_path,
     monkeypatch,
-    caplog,
 ):
     """Test `stash_calculation`"""
-
-    import logging
-
     computer_wdir = tmp_path / 'aiida'
     computer_wdir.mkdir()
     dest_path = tmp_path / 'stash_path'
@@ -787,27 +783,19 @@ async def test_stashing(
             },
         )
 
+    async def mock_raise_oserror(*args, **kwargs):
+        raise OSError('mocked error')
+
     with LocalTransport() as transport:
         if stash_mode == StashMode.COPY.value:
-
-            async def mock_copy_async(*args, **kwargs):
-                raise OSError('copy mocked error')
-
-            monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
-
-            # StashingError should be raised for copy failures
-            with pytest.raises(StashingError, match='Failed to copy'):
-                await execmanager.stash_calculation(node, transport)
+            monkeypatch.setattr(transport, 'copy_async', mock_raise_oserror)
+            match = 'Failed to copy'
         else:
+            monkeypatch.setattr(transport, 'compress_async', mock_raise_oserror)
+            match = 'Failed to stash'
 
-            async def mock_compress_async(*args, **kwargs):
-                raise OSError('compress mocked error')
-
-            monkeypatch.setattr(transport, 'compress_async', mock_compress_async)
-
-            with caplog.at_level(logging.WARNING):
-                await execmanager.stash_calculation(node, transport)
-                assert any('Failed to stash' in message for message in caplog.messages)
+        with pytest.raises(StashingError, match=match):
+            await execmanager.stash_calculation(node, transport)
 
     # A failed stash must not remove anything that was already on disk, in any mode
     removed = existing_paths - set(tmp_path.rglob('*'))
@@ -832,11 +820,10 @@ async def test_stashing(
             },
         )
 
-        with LocalTransport() as transport, caplog.at_level(logging.WARNING):
+        with LocalTransport() as transport, pytest.raises(StashingError, match='already exists'):
             await execmanager.stash_calculation(node, transport)
 
         assert existing_archive.read_text() == 'tampered'
-        assert any('already exists' in message for message in caplog.messages)
 
 
 @pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])

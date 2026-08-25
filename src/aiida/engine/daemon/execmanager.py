@@ -497,9 +497,16 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     if stash_mode == StashMode.COPY.value:
         target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
 
-        async def _do_copy():
+        async def _do_copy() -> list[str]:
+            stashed_source_list: list[str] = []
             for source_filename in source_list:
                 if has_magic(source_filename):
+                    if fail_on_missing:
+                        msg = (
+                            'Stashing with glob patterns is not supported when fail_on_missing is True. '
+                            'Stashing failed.'
+                        )
+                        raise exceptions.StashingError(msg)
                     copy_instructions = []
                     for globbed_filename in await transport.glob_async(source_basepath / source_filename):
                         target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
@@ -507,6 +514,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 else:
                     copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
 
+                stashed = False
                 for source_filepath, target_filepath in copy_instructions:
                     # If source is in a (nested) directory, create those directories first
                     target_dirname = target_filepath.parent
@@ -529,9 +537,13 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                             f'Failed to copy {source_filepath} to {target_filepath}: {exc}'
                         ) from exc
                     EXEC_LOGGER.debug(f'Stashed from {source_filepath} to {target_filepath}')
+                    stashed = True
+                if stashed:
+                    stashed_source_list.append(source_filename)
+            return stashed_source_list
 
         try:
-            await _do_copy()
+            stashed_source_list = await _do_copy()
         except exceptions.StashingError as exception:
             await transport.rmtree_async(target_basepath)
             raise exception
@@ -542,7 +554,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
             computer=calculation.computer,
             target_basepath=str(target_basepath),
             stash_mode=StashMode(stash_mode),
-            source_list=source_list,
+            source_list=stashed_source_list,
             fail_on_missing=fail_on_missing,
         ).store()
 
@@ -561,25 +573,39 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
         target_destination = str(target_base / file_name) + '.' + compression_format
 
-        source_list_abs = [source_basepath / source for source in source_list]
+        # ``compress_async`` raises on any missing source, so resolve them here to honour ``fail_on_missing``.
+        # Only the entries that resolve are stashed and recorded on the node.
+        stashed_source_list: list[str] = []
+        source_list_abs: list[Path] = []
+        for source in source_list:
+            source_filepath = source_basepath / source
+            if has_magic(str(source_filepath)):
+                if fail_on_missing:
+                    msg = 'Stashing with glob patterns is not supported when fail_on_missing is True. Stashing failed.'
+                    raise exceptions.StashingError(msg)
+                if await transport.glob_async(source_filepath):
+                    stashed_source_list.append(source)
+                    source_list_abs.append(source_filepath)
+                else:
+                    EXEC_LOGGER.warning(f'No match for {source_filepath}. Skipping, because fail_on_missing=False')
+            elif await transport.path_exists_async(source_filepath):
+                stashed_source_list.append(source)
+                source_list_abs.append(source_filepath)
+            elif fail_on_missing:
+                msg = f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
+                raise exceptions.StashingError(msg)
+            else:
+                EXEC_LOGGER.warning(f'File not found {source_filepath}. Skipping, because fail_on_missing=False')
 
-        # When fail_on_missing is True, check that all files exist before compressing
-        if fail_on_missing:
-            for source_filepath in source_list_abs:
-                if has_magic(str(source_filepath)):
-                    raise exceptions.StashingError(
-                        'Stashing with glob patterns is not supported when fail_on_missing is True. Stashing failed.'
-                    )
-                if not await transport.path_exists_async(source_filepath):
-                    raise exceptions.StashingError(
-                        f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
-                    )
+        if not source_list_abs:
+            EXEC_LOGGER.warning(f'None of {source_list} exist in {source_basepath}. Nothing to stash.')
+            return
 
         remote_stash = RemoteStashCompressedData(
             computer=calculation.computer,
             target_basepath=target_destination,
             stash_mode=StashMode(stash_mode),
-            source_list=source_list,
+            source_list=stashed_source_list,
             dereference=dereference,
             fail_on_missing=fail_on_missing,
         )

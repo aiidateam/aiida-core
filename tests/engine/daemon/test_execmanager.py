@@ -837,3 +837,68 @@ async def test_stashing(
 
         assert existing_archive.read_text() == 'tampered'
         assert any('already exists' in message for message in caplog.messages)
+
+
+@pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.asyncio
+async def test_stashing_skips_missing(generate_calcjob_node, stash_mode, tmp_path, monkeypatch):
+    """With ``fail_on_missing=False`` missing sources are skipped and the stash node records only what was stashed."""
+    node = generate_calcjob_node()
+    workdir = tmp_path / 'workdir'
+    workdir.mkdir()
+    (workdir / 'present.out').write_text('present')
+    node.set_remote_workdir(str(workdir))
+    target_base = tmp_path / 'stash'
+    node.set_option(
+        'stash',
+        {
+            'source_list': ['present.out', 'missing.out', 'nomatch*'],
+            'target_base': str(target_base),
+            'stash_mode': stash_mode,
+            'fail_on_missing': False,
+        },
+    )
+
+    class MockAuthInfo:
+        def get_workdir(self, *args, **kwargs):
+            return str(workdir)
+
+    monkeypatch.setattr(node, 'get_authinfo', MockAuthInfo)
+    node.store()
+
+    with LocalTransport() as transport:
+        await execmanager.stash_calculation(node, transport)
+        remote_stash = node.base.links.get_outgoing(link_label_filter='remote_stash').one().node
+        if stash_mode == StashMode.COPY.value:
+            stashed = pathlib.Path(remote_stash.target_basepath)
+        else:
+            stashed = tmp_path / 'extracted'
+            transport.extract(remote_stash.target_basepath, stashed)
+
+    assert [path.name for path in stashed.iterdir()] == ['present.out']
+    assert list(remote_stash.source_list) == ['present.out']
+
+
+@pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.asyncio
+async def test_stashing_fail_on_missing_rejects_glob(generate_calcjob_node, stash_mode, tmp_path, monkeypatch):
+    """With ``fail_on_missing=True`` glob patterns are rejected, since a non-matching one cannot be told apart."""
+    node = generate_calcjob_node(workdir=tmp_path)
+    node.set_option(
+        'stash',
+        {
+            'source_list': ['*.out'],
+            'target_base': str(tmp_path / 'stash'),
+            'stash_mode': stash_mode,
+            'fail_on_missing': True,
+        },
+    )
+
+    class MockAuthInfo:
+        def get_workdir(self, *args, **kwargs):
+            return str(tmp_path)
+
+    monkeypatch.setattr(node, 'get_authinfo', MockAuthInfo)
+
+    with LocalTransport() as transport, pytest.raises(StashingError, match='glob patterns'):
+        await execmanager.stash_calculation(node, transport)

@@ -534,11 +534,10 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         try:
             await _do_copy()
         except exceptions.StashingError as exception:
-            # try to clean up in case of a failure
-            await transport.rmtree_async(target_base / uuid[:2])
+            await transport.rmtree_async(target_basepath)
             raise exception
         else:
-            EXEC_LOGGER.debug(f'All files succesfully {source_list} stashed to {target_base / uuid[:2]}')
+            EXEC_LOGGER.debug(f'All files succesfully {source_list} stashed to {target_basepath}')
 
         remote_stash = RemoteStashFolderData(
             computer=calculation.computer,

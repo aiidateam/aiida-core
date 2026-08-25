@@ -18,6 +18,7 @@ from typing_extensions import TypedDict
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import GraphTraversalRules, LinkType
+from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
@@ -281,9 +282,24 @@ def traverse_graph(
         rule_incoming = UpdateRule(query_incoming, max_iterations=1, track_edges=get_links)
         rules += [rule_incoming]
 
-    rulesequence = RuleSequence(rules, max_iterations=max_iterations)
+    # Without a total the project bar format's percentage sits frozen at 0%, so `bar_format=None`
+    # falls back to tqdm's plain counter. `unit` is set because tqdm's default renders the count as
+    # `251000it`, which beside a description ending in "(iteration 3)" reads as a count of iterations.
+    description = 'Traversing provenance graph'
+    with get_progress_reporter()(total=None, desc=description, unit=' nodes', bar_format=None) as progress:
+        # The starting nodes already count as visited. `update` alone is throttled and the next
+        # tick is the long first query itself, so the description write is what forces the redraw.
+        progress.update(len(basket.nodes.keyset))
+        progress.set_description_str(description, refresh=True)
 
-    results = rulesequence.run(basket)
+        def update_progress(iterations_done: int, nodes_visited: int) -> None:
+            # refresh=False: the throttled `update` below redraws anyway, and refreshing here on
+            # every level would flood non-TTY output such as CI logs.
+            progress.set_description_str(f'{description} (iteration {iterations_done})', refresh=False)
+            progress.update(nodes_visited - progress.n)
+
+        rulesequence = RuleSequence(rules, max_iterations=max_iterations, iteration_callback=update_progress)
+        results = rulesequence.run(basket)
 
     return TraverseGraphOutput(
         nodes=results.nodes.keyset,

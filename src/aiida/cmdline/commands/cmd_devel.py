@@ -15,7 +15,7 @@ import click
 from aiida import get_profile
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, types
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators, echo, loaders
 from aiida.common import exceptions
 
 
@@ -162,7 +162,9 @@ def devel_launch_arithmetic_add(code, daemon, sleep):
 
     default_calc_job_plugin = 'core.arithmetic.add'
 
-    if not code:
+    if code:
+        code = loaders.load_code(code)
+    else:
         try:
             code = load_code('bash@localhost')
         except exceptions.NotExistent:
@@ -214,7 +216,9 @@ def devel_launch_multiply_add(code, daemon):
 
     default_calc_job_plugin = 'core.arithmetic.add'
 
-    if not code:
+    if code:
+        code = loaders.load_code(code)
+    else:
         try:
             code = load_code('bash@localhost')
         except exceptions.NotExistent:

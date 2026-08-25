@@ -15,7 +15,7 @@ from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.loaders import load_data, load_datum
+from aiida.cmdline.utils.loaders import load_data, load_datum, load_groups
 from aiida.common.utils import Prettifier
 
 LIST_PROJECT_HEADERS = ['ID', 'Formula', 'Ctime', 'Label']
@@ -60,7 +60,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
     args.past_days = past_days
     args.group_name = None
     if groups is not None:
-        args.group_pk = [group.pk for group in groups]
+        args.group_pk = [group.pk for group in load_groups(groups)]
     else:
         args.group_pk = None
     args.all_users = all_users

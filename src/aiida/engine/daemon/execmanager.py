@@ -567,11 +567,13 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         # stash_mode values are identical with compression_format in transport plugin:
         # 'tar', 'tar.gz', 'tar.bz2', or 'tar.xz'
         compression_format = stash_mode
-        file_name = uuid
         authinfo = calculation.get_authinfo()
         aiida_remote_base = authinfo.get_workdir().format(username=transport.whoami())
 
-        target_destination = str(target_base / file_name) + '.' + compression_format
+        # sharded by the source node, one archive per stash job
+        target_destination = str(
+            target_base / uuid[:2] / uuid[2:4] / uuid[4:] / f'{calculation.uuid}.{compression_format}'
+        )
 
         # ``compress_async`` raises on any missing source, so resolve them here to honour ``fail_on_missing``.
         # Only the entries that resolve are stashed and recorded on the node.
@@ -610,13 +612,15 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
             fail_on_missing=fail_on_missing,
         )
 
+        # The path is unique to this job, so anything already there is a leftover of an earlier attempt, which
+        # no cleanup is guaranteed to have removed (the daemon may have died mid-stash): a retry must replace it.
         try:
             await transport.compress_async(
                 format=compression_format,
                 remotesources=source_list_abs,
                 remotedestination=target_destination,
                 root_dir=aiida_remote_base,
-                overwrite=False,
+                overwrite=True,
                 dereference=dereference,
             )
         except (OSError, ValueError) as exception:

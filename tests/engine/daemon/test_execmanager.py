@@ -16,6 +16,7 @@ import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
 from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
+from aiida.common.links import LinkType
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
@@ -735,10 +736,11 @@ async def test_stashing(
 
     if stash_mode != StashMode.COPY.value:
         # more detailed test on integrity of the zip file is in `test_all_plugins.py`
-        assert pathlib.Path(str(dest_path / node.uuid) + '.' + stash_mode).is_file()
+        archive = dest_path / uuid[:2] / uuid[2:4] / uuid[4:] / f'{uuid}.{stash_mode}'
+        assert archive.is_file()
 
         with LocalTransport() as transport:
-            transport.extract(str(dest_path / node.uuid) + '.' + stash_mode, dest_path / 'extracted')
+            transport.extract(archive, dest_path / 'extracted')
         base_path = dest_path / 'extracted'
 
     else:
@@ -805,26 +807,6 @@ async def test_stashing(
     if stash_mode == StashMode.COPY.value:
         assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
 
-    ## 3) test that an existing stash target is never overwritten (see #7564)
-    if stash_mode != StashMode.COPY.value:
-        existing_archive = pathlib.Path(str(dest_path / uuid) + '.' + stash_mode)
-        existing_archive.write_text('tampered')
-
-        node.set_option(
-            'stash',
-            {
-                'source_list': ['*'],
-                'target_base': str(dest_path),
-                'stash_mode': stash_mode,
-                'dereference': True,
-            },
-        )
-
-        with LocalTransport() as transport, pytest.raises(StashingError, match='already exists'):
-            await execmanager.stash_calculation(node, transport)
-
-        assert existing_archive.read_text() == 'tampered'
-
 
 @pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
 @pytest.mark.asyncio
@@ -889,3 +871,52 @@ async def test_stashing_fail_on_missing_rejects_glob(generate_calcjob_node, stas
 
     with LocalTransport() as transport, pytest.raises(StashingError, match='glob patterns'):
         await execmanager.stash_calculation(node, transport)
+
+
+@pytest.mark.parametrize('stash_mode', [StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.asyncio
+async def test_stashing_same_source_twice(generate_calcjob_node, aiida_localhost, stash_mode, tmp_path, monkeypatch):
+    """Stash jobs of the same source node write distinct targets, each replacing only its own leftover."""
+    source_dir = tmp_path / 'source'
+    source_dir.mkdir()
+    (source_dir / 'aiida.out').write_text('out')
+    (source_dir / 'aiida.in').write_text('in')
+    remote = RemoteData(remote_path=str(source_dir), computer=aiida_localhost).store()
+
+    target_base = tmp_path / 'stash'
+    target_base.mkdir()
+
+    class MockAuthInfo:
+        def get_workdir(self, *args, **kwargs):
+            return str(source_dir)
+
+    targets = []
+    for source_list in (['aiida.out'], ['aiida.in']):
+        node = generate_calcjob_node(entry_point='aiida.calculations:core.stash')
+        node.set_option(
+            'stash',
+            {
+                'source_list': source_list,
+                'target_base': str(target_base),
+                'stash_mode': stash_mode,
+            },
+        )
+        node.base.links.add_incoming(remote, link_type=LinkType.INPUT_CALC, link_label='source_node')
+        monkeypatch.setattr(node, 'get_authinfo', MockAuthInfo)
+        node.store()
+
+        # leftover of a previous attempt of this very job
+        target = target_base / remote.uuid[:2] / remote.uuid[2:4] / remote.uuid[4:] / f'{node.uuid}.{stash_mode}'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('stale')
+
+        with LocalTransport() as transport:
+            await execmanager.stash_calculation(node, transport)
+        targets.append(target)
+
+    for target, filename, content in zip(targets, ('aiida.out', 'aiida.in'), ('out', 'in')):
+        extracted = tmp_path / f'extracted-{filename}'
+        with LocalTransport() as transport:
+            transport.extract(target, extracted)
+        assert [path.name for path in extracted.iterdir()] == [filename]
+        assert (extracted / filename).read_text() == content

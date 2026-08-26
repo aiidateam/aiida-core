@@ -280,7 +280,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def create_launch_body(
-    process_class: str,
+    process_class: type[Process],
     init_args: Sequence[Any] | None = None,
     init_kwargs: dict[str, Any] | None = None,
     persist: bool = False,
@@ -329,7 +329,7 @@ def create_continue_body(pid: PID_TYPE, tag: str | None = None, nowait: bool = F
 
 
 def create_create_body(
-    process_class: str,
+    process_class: type[Process],
     init_args: Sequence[Any] | None = None,
     init_kwargs: dict[str, Any] | None = None,
     persist: bool = False,
@@ -449,7 +449,7 @@ class RemoteProcessController:
 
     async def launch_process(
         self,
-        process_class: str,
+        process_class: type[Process],
         init_args: Sequence[Any] | None = None,
         init_kwargs: dict[str, Any] | None = None,
         persist: bool = False,
@@ -482,7 +482,7 @@ class RemoteProcessController:
 
     async def execute_process(
         self,
-        process_class: str,
+        process_class: type[Process],
         init_args: Sequence[Any] | None = None,
         init_kwargs: dict[str, Any] | None = None,
         loader: loaders.ObjectLoader | None = None,
@@ -609,7 +609,7 @@ class RemoteProcessThreadController:
 
     def launch_process(
         self,
-        process_class: str,
+        process_class: type[Process],
         init_args: Sequence[Any] | None = None,
         init_kwargs: dict[str, Any] | None = None,
         persist: bool = False,
@@ -634,7 +634,7 @@ class RemoteProcessThreadController:
 
     def execute_process(
         self,
-        process_class: str,
+        process_class: type[Process],
         init_args: Sequence[Any] | None = None,
         init_kwargs: dict[str, Any] | None = None,
         loader: loaders.ObjectLoader | None = None,

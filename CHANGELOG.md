@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.7.5 - 2026-08-27
+
+This patch ensures that process dumps include repository files from all output data types, instead of silently omitting outputs that do not have a `SinglefileData` or `FolderData` sibling.
+It also prevents a failed `COPY` stash from deleting sibling stashes that happen to share the same UUID shard.
+
+### Fixes
+
+- `process dump`: dump all repo-backed outputs ([#7525](https://github.com/aiidateam/aiida-core/pull/7525)) [[c7cdcf470]](https://github.com/aiidateam/aiida-core/commit/c7cdcf4704d4c75eaabc7fe3b038e9243aafabd4)
+- Failed `COPY` stash deletes sibling stashes ([#7563](https://github.com/aiidateam/aiida-core/pull/7563)) [[6d1060549]](https://github.com/aiidateam/aiida-core/commit/6d106054926ff3c1649f2e518e33dd4e5e085169)
+
+
 ## v2.7.4 - 2026-07-25
 
 This patch fixes a SQLite QueryBuilder regression where plugin code using filters such as `{'ctime': {'in': [...]}}` or `{'ctime': {'!in': [...]}}` with Python `datetime` values could fail.

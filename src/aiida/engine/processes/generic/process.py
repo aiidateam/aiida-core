@@ -1029,35 +1029,16 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
             with kiwipy.capture_exceptions(kiwi_future):
                 try:
                     result = await run_with_portal(callback, *args, **kwargs)
-                except Exception as exc:
-                    import inspect
-                    import traceback
+                except Exception:
+                    self.logger.exception(
+                        "Process<%s>: error invoking callback '%s'", self.pid, getattr(callback, '__name__', callback)
+                    )
+                    raise
 
-                    # Get traceback as a string
-                    tb_str = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+                while asyncio.isfuture(result):
+                    result = await result
 
-                    # Attempt to get file and line number where the callback is defined
-                    # Note: This might fail for certain built-in or dynamically generated functions.
-                    # If it fails, just skip that part.
-                    try:
-                        source_file = inspect.getfile(callback)
-                        # getsourcelines returns a tuple (list_of_source_lines, starting_line_number)
-                        _, start_line = inspect.getsourcelines(callback)
-                        callback_location = f'{source_file}:{start_line}'
-                    except Exception:
-                        callback_location = '<unknown location>'
-
-                    # Include the callback name, file/line info, and the full traceback in the message
-                    raise RuntimeError(
-                        f"Error invoking callback '{callback.__name__}' at {callback_location}.\n"
-                        f'Exception: {type(exc).__name__}: {exc}\n\n'
-                        f'Full Traceback:\n{tb_str}'
-                    ) from exc
-                else:
-                    while asyncio.isfuture(result):
-                        result = await result
-
-                    kiwi_future.set_result(result)
+                kiwi_future.set_result(result)
 
         # Schedule the task and give back a kiwi future
         asyncio.run_coroutine_threadsafe(run_callback(), self.loop)

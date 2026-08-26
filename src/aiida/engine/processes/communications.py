@@ -96,8 +96,8 @@ def convert_to_comm(
         # of setting up async tasks and callbacks
 
         def _passthrough(*args: Any, **kwargs: Any) -> bool:
-            sender = kwargs.get('sender', args[1])
-            subject = kwargs.get('subject', args[2])
+            sender = kwargs['sender'] if 'sender' in kwargs else args[1]
+            subject = kwargs['subject'] if 'subject' in kwargs else args[2]
             return callback.is_filtered(sender, subject)
     else:
 

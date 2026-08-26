@@ -325,7 +325,8 @@ class Waiting(State):
 
     def interrupt(self, reason: Any) -> None:
         # This will cause the future in execute() to raise the exception
-        self._waiting_future.set_exception(reason)
+        if not self._waiting_future.done():
+            self._waiting_future.set_exception(reason)
 
     async def execute(self) -> State:  # type: ignore[override]
         try:

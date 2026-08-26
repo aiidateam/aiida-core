@@ -375,7 +375,8 @@ class RemoteProcessController:
         :param pid: the process id
         :return: the status response from the process
         """
-        future = self._communicator.rpc_send(pid, MessageBuilder.status())
+        status_future = self._communicator.rpc_send(pid, MessageBuilder.status())
+        future = await asyncio.wrap_future(status_future)
         result = await asyncio.wrap_future(future)
         return result
 

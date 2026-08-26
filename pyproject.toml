@@ -418,7 +418,6 @@ module = [
   'mayavi.*',
   'pgsu.*',
   'pgtest.*',
-  'tblib.*',
   'trogon.*',
   'wrapt.*'
 ]

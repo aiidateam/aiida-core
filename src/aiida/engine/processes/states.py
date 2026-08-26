@@ -29,16 +29,8 @@ from yaml.loader import Loader
 
 from aiida.common.loaders import load_function
 from aiida.common.processes import ProcessState
-from aiida.engine.processes.communications import MessageBuilder, MessageType
-
-try:
-    import tblib
-
-    _HAS_TBLIB: bool = True
-except ImportError:
-    _HAS_TBLIB = False
-
 from aiida.engine.processes import exceptions, persistence, state_machine
+from aiida.engine.processes.communications import MessageBuilder, MessageType
 from aiida.engine.processes.generic import futures
 from aiida.engine.processes.persistence import SAVED_STATE_TYPE, auto_persist
 from aiida.engine.utils import ensure_coroutine
@@ -388,6 +380,7 @@ class Excepted(State):
         super().__init__(process)
         self.exception = exception
         self.traceback = trace_back
+        self.traceback_string = ''.join(traceback.format_tb(trace_back)) if trace_back is not None else None
 
     def __str__(self) -> str:
         exception = traceback.format_exception_only(type(self.exception) if self.exception else None, self.exception)[0]
@@ -396,19 +389,15 @@ class Excepted(State):
     def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
         super().save_instance_state(out_state, save_context)
         out_state[self.EXC_VALUE] = yaml.dump(self.exception)
-        if self.traceback is not None:
-            out_state[self.TRACEBACK] = ''.join(traceback.format_tb(self.traceback))
+        if self.traceback_string is not None:
+            out_state[self.TRACEBACK] = self.traceback_string
 
     def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
         super().load_instance_state(saved_state, load_context)
+        # Process checkpoints are trusted input; restoring arbitrary exception classes requires the unsafe loader.
         self.exception = yaml.load(saved_state[self.EXC_VALUE], Loader=Loader)
-        if _HAS_TBLIB:
-            try:
-                self.traceback = tblib.Traceback.from_string(saved_state[self.TRACEBACK], strict=False)
-            except KeyError:
-                self.traceback = None
-        else:
-            self.traceback = None
+        self.traceback = None
+        self.traceback_string = saved_state.get(self.TRACEBACK)
 
     def get_exc_info(
         self,

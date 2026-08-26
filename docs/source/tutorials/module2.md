@@ -254,7 +254,7 @@ That is already the payoff: instead of opening the output files, `variance(V)` a
 
 :::{note}
 `launch_shell_job` is `aiida-shell`'s convenience wrapper: it builds a **ShellJob** (a `CalcJob`) from your command and inputs, runs it, and returns `(outputs, node)`.
-So the `gsrd` step is an AiiDA process just like the two calcfunctions around it..
+So the `gsrd` step is an AiiDA process just like the two calcfunctions around it.
 :::
 
 `parse_output` is now itself a first-class process node: the calcjob's `stdout` node is its input, and the `Float` nodes are its outputs:

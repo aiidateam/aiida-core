@@ -65,8 +65,8 @@ pip install git+https://github.com/aiidateam/gsrd.git
 Now, there are three ways to work through this tutorial, and which of its files you need to fetch, if any, depends on which you follow:
 
 - **Reading on the web**: what you are doing right now. The code and its output are already rendered on this page, so there is nothing to install, download, or run; just read on.
-- **The downloaded notebook**: the fetch is already included, so just run the cells in order, as you would any notebook.
-- **Your own notebook** (copy-pasting cells from this page): run the cell below once to fetch `input.yaml` and the other helper files the tutorial uses.
+- **The downloaded notebook** (download it from the link at the top of each module page): the fetch is already included, so just run the cells in order, as you would any notebook.
+- **Your own notebook** (copy-pasting cells from this page): run the cell below once to fetch all helper files the tutorial uses.
 
 ```{code-cell} ipython3
 :tags: [hide-cell]

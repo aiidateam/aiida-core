@@ -191,7 +191,3 @@ Where to go next
    module2
    module3a
    module3b
-   basic
-   Quantum ESPRESSO with AiiDA <https://aiida-quantumespresso.readthedocs.io/>
-   AiiDA plugin registry <https://aiida.net/plugin-registry/>
-   Past AiiDA tutorials <https://aiida-tutorials.readthedocs.io/en/latest/>

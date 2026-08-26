@@ -63,9 +63,15 @@ Before running any calculations, you need one.
 AiiDA comes with a command-line interface, `verdi`, which you will use throughout the tutorial to inspect and manage your data.
 We recommend running this tutorial in its own **isolated sandbox profile**, kept separate from any profile you may already have, so the data you create here never mixes with your real work and every module reproduces exactly.
 
-The cell below runs `tutorial_plumbing.py`: tutorial-specific machinery that creates the profile in an isolated `.aiida-tutorial/` sandbox (so it never touches your real `~/.aiida`), registers the `gsrd` code, starts the daemon, and loads the `%verdi` magic. You do not need to run it yourself, or even read it; the handful of commands it comes down to, the ones you would actually run to set AiiDA up for your own work, are shown right after.
-If you are running outside the tutorial repository (for example, cells pasted into your own notebook), it first downloads that script, which in turn pulls the `include/` helper files it needs; inside the repo, as in these rendered docs, that step is skipped.
-Module 1 creates the profile; the later modules reconnect to it, so the data you create now stays available throughout:
+For the documentation build, we use the setup cell below, which is also included in the downloaded notebooks.
+
+:::{dropdown} What the setup cell does
+The cell below runs tutorial-specific machinery that creates the profile in an isolated `.aiida-tutorial/` sandbox (so it never touches your real `~/.aiida`), registers the `gsrd` code, starts the daemon, and loads the `%verdi` magic (contained in `include/tutorial_plumbing.py`). You do not need to run it yourself, or even read it; the handful of commands it comes down to, the ones you would actually run yourself, are shown right after.
+
+If you are running outside the tutorial repository (for example, cells pasted into your own notebook), it first downloads that script; inside the repo, or once Module 0's fetch cell has run, that step is skipped.
+
+Module 1 creates the profile; the later modules reconnect to it, so the data you create now stays available throughout.
+:::
 
 ```{code-cell} ipython3
 :tags: [hide-cell]
@@ -73,7 +79,7 @@ Module 1 creates the profile; the later modules reconnect to it, so the data you
 :    code_prompt_show: 'Show the setup cell (tutorial plumbing you can ignore)'
 :    code_prompt_hide: 'Hide the setup cell'
 
-# Set up the tutorial's isolated sandbox profile.
+# Fetch tutorial_plumbing.py if it is not already present, then run it to set up the profile.
 from pathlib import Path
 
 if not Path('include/tutorial_plumbing.py').exists():
@@ -89,27 +95,22 @@ if not Path('include/tutorial_plumbing.py').exists():
 %load_ext aiida
 ```
 
-For your own work, outside the tutorial's sandbox, setting AiiDA up is just three commands:
+For your own work, outside the tutorial's sandbox, setting up your AiiDA profile for the tutorial is just three commands:
 
 ```console
-$ verdi presto --use-zeromq
-$ verdi code create core.code.installed --config gsrd_code.yaml -X $(which gsrd)
+$ verdi presto --profile-name tutorial --use-zeromq
 $ verdi daemon start
+$ verdi code create core.code.installed --config include/gsrd_code.yaml -X $(which gsrd)
 ```
 
-`verdi presto` creates a profile with sensible defaults for all three components above: SQLite for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZeroMQ broker** (`--use-zeromq` keeps it dependency-free; without it, `verdi presto` uses RabbitMQ whenever it detects one running). `verdi code create` then registers the `gsrd` CLI as a Code from a small `gsrd_code.yaml`, setting just its `label`, `computer`, and default calculation plugin (`-X` gives the executable path, which depends on where `gsrd` is installed; everything else stays at its defaults):
+`verdi presto` creates a profile with sensible defaults for all three components above: **SQLite** for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZeroMQ broker** (`--use-zeromq` keeps it dependency-free; without it, `verdi presto` uses RabbitMQ whenever it detects it running).
 
-```{literalinclude} include/gsrd_code.yaml
-:language: yaml
-:caption: gsrd_code.yaml
-```
-
-Finally, `verdi daemon start` brings up the daemon that runs your calculations. For more advanced, high-throughput production setups, see the {ref}`installation guide <installation>`.
+`verdi daemon start` then brings up the daemon that runs your calculations. For more advanced, high-throughput production setups, see the {ref}`installation guide <installation>`.
 
 :::{note}
-AiiDA keeps all of its configuration, your profiles, their databases, and the daemon's state, in a single **configuration directory**, which defaults to `~/.aiida`.
+AiiDA keeps all of its configuration, your profiles, their databases, and the daemon's state, in its **configuration directory**, which defaults to `~/.aiida`.
 Where AiiDA looks for (and creates) that directory is controlled by the `AIIDA_PATH` environment variable.
-To keep the tutorial self-contained, the hidden setup cell (`tutorial_plumbing.py`) points `AIIDA_PATH` at a local `.aiida-tutorial/` directory in your working directory, so this profile, its database, and its daemon live there instead of in your usual `~/.aiida`.
+To keep the tutorial self-contained, the hidden setup cell above points `AIIDA_PATH` at a local `.aiida-tutorial/` directory in your working directory, so this profile, its database, and its daemon live there instead of in your usual `~/.aiida`.
 Nothing here touches any AiiDA profile you already have, and deleting `.aiida-tutorial/` removes every trace of the tutorial.
 :::
 
@@ -125,18 +126,14 @@ We use IPython magic commands like `%verdi <cmd>` in Code cells (`%verdi` runs a
 To execute in a terminal, drop the `%` prefix.
 :::
 
-## Running the simulation with `aiida-shell`
+With the profile up and verified, the last step is registering the code you will run. `verdi code create` registers the `gsrd` CLI as an AiiDA `Code` object from a small config file, `include/gsrd_code.yaml`, setting just its `label`, `computer`, and default calculation plugin (`-X` gives the executable path, which depends on where `gsrd` is installed; everything else stays at its defaults):
 
-In {ref}`Module 0 <tutorial:module0>`, we ran `gsrd` directly from the command line.
-Now let's run it through AiiDA, so the inputs, outputs, and execution metadata get captured in the provenance graph.
-
-AiiDA uses the **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** class to manage external executables by preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and parsing the results.
-
-The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command without requiring additional plugin code.
-Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `gsrd_code` object: an `InstalledCode` pointing at the `gsrd` CLI binary, set up by the setup cell above and registered under the AiiDA label `gsrd@localhost` (which is what you will see in `verdi` output later on; the Python variable `gsrd_code` is just a local handle for the same Code object).
+```{literalinclude} include/gsrd_code.yaml
+:language: yaml
+```
 
 :::{dropdown} Inspecting the&nbsp;`gsrd@localhost`&nbsp;Code
-The setup cell registered this Code for you, but there is nothing magic about it: a Code is a normal, portable AiiDA object. You can export its configuration to YAML with `verdi code export <label>`. Where the `gsrd_code.yaml` above set only the few fields that differ from the defaults, the export lists them all, filling in the implicit ones (`append_text`, `use_double_quotes`, and the rest):
+The setup cell registered this Code for you, but there is nothing magic about it: a Code is a normal, portable AiiDA object. You can export its configuration to YAML with `verdi code export <label>`. Where the `gsrd_code.yaml` above set only the few fields that differ from the defaults, the export lists them all:
 
 ```console
 $ verdi code export gsrd@localhost
@@ -160,6 +157,16 @@ The `filepath_executable` points wherever `gsrd` is installed in your environmen
 $ verdi code create core.code.installed --config gsrd.yml
 ```
 :::
+
+## Running the simulation with `aiida-shell`
+
+In {ref}`Module 0 <tutorial:module0>`, we ran `gsrd` directly from the command line.
+Now let's run it through AiiDA, so the inputs, outputs, and execution metadata get captured in the provenance graph.
+
+AiiDA uses the **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** class to manage external executables by preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and parsing the results.
+
+The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command without requiring additional plugin code.
+Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `gsrd_code` object: an `InstalledCode` pointing at the `gsrd` CLI binary, set up by the setup cell above and registered under the AiiDA label `gsrd@localhost` (which is what you will see in `verdi` output later on; the Python variable `gsrd_code` is just a local handle for the same Code object).
 
 ```{code-cell} ipython3
 # Run the simulation through AiiDA using aiida-shell's launch_shell_job.
@@ -339,16 +346,16 @@ with node.outputs.results_npz.open(mode='rb') as fh:
     arrays = np.load(io.BytesIO(fh.read()))
     v_field = arrays['V_final']
 
-print(f"V field shape: {v_field.shape}")
+print(f"{'V field shape':<13} = {v_field.shape}")
 
 stdout_text = node.outputs.stdout.get_content()
 var_v = float(VARIANCE_RE.search(stdout_text).group(1))
 mean_v = float(MEAN_RE.search(stdout_text).group(1))
-print(f"variance(V) = {var_v:.4e}")
-print(f"mean(V)     = {mean_v:.4e}")
+print(f"{'variance(V)':<13} = {var_v:.4e}")
+print(f"{'mean(V)':<13} = {mean_v:.4e}")
 ```
 
-The regex above is the price of admission for a code that reports its summary scalars as free-form text rather than a structured format we could load directly. In {ref}`Module 0 <tutorial:module0>` we read these same two numbers off the log by eye; here we pull them out programmatically. The difference now is that the stdout text and the input file that produced it are tracked nodes in the provenance graph, so we can re-run this extraction against any past run, at any point, without re-running the simulation.
+In the folded parsing code above, we use regex to extract the relevant values. This is the price of admission for a code that reports its summary scalars as free-form text rather than a structured format we could load directly. In {ref}`Module 0 <tutorial:module0>` we read these same two numbers off the log by eye; here we pull them out programmatically. The difference now is that the stdout text and the input file that produced it are tracked nodes in the provenance graph, so we can re-run this extraction against any past run, at any point, without re-running the simulation.
 
 The `stdout` node the two floats came from *is* a tracked `SinglefileData` in the provenance graph, but the two numbers we just pulled out of it are *not*: they are transient Python locals. To capture them as proper queryable nodes, {ref}`Module 2 <tutorial:module2>` turns this hand-written extraction into a {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` that becomes a first-class step in the pipeline.
 
@@ -365,10 +372,10 @@ verdi shell
 >>> node = load_node(<PK>)            # load any node by PK or UUID
 >>> node.outputs.stdout.get_content() # read the content of an output node
 >>> node.inputs                       # inspect inputs
->>> QueryBuilder().append(...).all()  # query the provenance graph
+>>> load_code('gsrd@localhost')       # load a Code by its label
 ```
 
-Common helpers like `load_node`, `Dict`, `QueryBuilder`, etc. are pre-imported, so you do not need `from aiida import ...` boilerplate.
+Common helpers like `load_node`, `load_code`, `Dict`, etc. are pre-imported, so you do not need `from aiida import ...` boilerplate.
 It is the same Python environment as `%load_ext aiida` gives you inside Jupyter; pick whichever feels right.
 :::
 
@@ -380,8 +387,7 @@ AiiDA stores everything in its internal database and file repository (efficient 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-# Export the full calculation (inputs, outputs, logs) into a `/tmp/aiida-tutorial/` folder.
-!mkdir -p /tmp/aiida-tutorial
+# Export the full calculation (inputs, outputs, logs) into a `/tmp/aiida-tutorial/dump/` folder.
 %verdi process dump {node.pk} --path /tmp/aiida-tutorial/dump -o
 ```
 
@@ -406,7 +412,7 @@ This is useful for debugging or sharing calculation data outside of AiiDA.
 ## Next steps
 
 You can now run external codes through AiiDA with full provenance tracking.
-In {ref}`Module 2 <tutorial:module2>`, both preparing the inputs and parsing the outputs (the regex we just wrote by hand) become tracked steps, so each run's results turn into queryable database entries, searchable across runs without opening an output file.
+In {ref}`Module 2 <tutorial:module2>`, both preparing the inputs and parsing the outputs (the regex we just wrote by hand) become tracked steps, so each run's input parameters and results turn into queryable database entries, searchable across runs without opening any file.
 
 ## Further reading
 

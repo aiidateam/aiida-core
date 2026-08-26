@@ -301,4 +301,5 @@ class ProcessSpec:
             port_namespace = destination
 
         absorbed_ports = port_namespace.absorb(source, exclude, include, namespace_options)
-        expose_memory[namespace][process_class] = absorbed_ports
+        exposed_ports = expose_memory[namespace][process_class]
+        expose_memory[namespace][process_class] = list(dict.fromkeys((*exposed_ports, *absorbed_ports)))

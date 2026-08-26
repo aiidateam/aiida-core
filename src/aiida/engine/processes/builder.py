@@ -14,10 +14,9 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.utils import prune_mapping
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
-
-from .utils import prune_mapping
 
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process

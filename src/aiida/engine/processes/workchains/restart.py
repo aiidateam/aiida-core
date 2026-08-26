@@ -20,10 +20,9 @@ from aiida import orm
 from aiida.common import AttributeDict
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
-
-from .context import ToContext, append_
-from .utils import ProcessHandlerReport, process_handler
-from .workchain import WorkChain
+from aiida.engine.processes.workchains.context import ToContext, append_
+from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler
+from aiida.engine.processes.workchains.workchain import WorkChain
 
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec
@@ -149,7 +148,7 @@ class BaseRestartWorkChain(WorkChain):
     @property
     def process_class(self) -> type[Process]:
         """Return the process class to run in the loop."""
-        from ..process import Process
+        from aiida.engine.processes.process import Process
 
         if self._process_class is None or not issubclass(self._process_class, Process):
             raise ValueError('no valid Process class defined for `_process_class` attribute')

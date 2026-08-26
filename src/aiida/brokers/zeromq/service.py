@@ -16,10 +16,9 @@ import time
 import typing as t
 from pathlib import Path
 
+from aiida.brokers.zeromq.defaults import POLL_TIMEOUT, STATUS_INTERVAL
+from aiida.brokers.zeromq.server import ZeromqBrokerServer
 from aiida.common.log import configure_logging
-
-from .defaults import POLL_TIMEOUT, STATUS_INTERVAL
-from .server import ZeromqBrokerServer
 
 _LOGGER = logging.getLogger(__name__)
 

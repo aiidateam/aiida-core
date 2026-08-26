@@ -8,11 +8,10 @@ from aiida.common import exceptions
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
 from aiida.common.warnings import warn_deprecation
-
-from ..querybuilder import QueryBuilder
+from aiida.orm.querybuilder import QueryBuilder
 
 if t.TYPE_CHECKING:
-    from .node import Node
+    from aiida.orm.nodes.node import Node
 
 
 class NodeCaching:

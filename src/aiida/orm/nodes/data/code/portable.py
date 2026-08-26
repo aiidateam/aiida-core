@@ -29,10 +29,9 @@ from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.common.typing import FilePath
 from aiida.orm import Computer
+from aiida.orm.nodes.data.code.abstract import AbstractCode
+from aiida.orm.nodes.data.code.legacy import Code
 from aiida.orm.pydantic import OrmMetadataField
-
-from .abstract import AbstractCode
-from .legacy import Code
 
 __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)

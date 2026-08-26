@@ -8,9 +8,8 @@ import typing
 
 from pydantic import ConfigDict, WithJsonSchema
 
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
-
-from .data import Data
 
 __all__ = ('JsonableData',)
 

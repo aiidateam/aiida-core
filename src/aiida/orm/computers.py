@@ -17,10 +17,9 @@ from uuid import UUID
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
 from aiida.manage import get_manager
+from aiida.orm import entities, users
+from aiida.orm.pydantic import OrmMetadataField
 from aiida.plugins import SchedulerFactory, TransportFactory
-
-from . import entities, users
-from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
@@ -573,7 +572,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :raise aiida.common.NotExistent: if the computer is not configured for the given
             user.
         """
-        from . import authinfos
+        from aiida.orm import authinfos
 
         try:
             authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
@@ -638,7 +637,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             parameters to the supercomputer, as configured with ``verdi computer configure``
             for the user specified as a parameter ``user``.
         """
-        from . import authinfos
+        from aiida.orm import authinfos
 
         user = user or users.User.get_collection(self.backend).get_default()
         assert user is not None
@@ -672,7 +671,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :kwargs: the configuration keywords with corresponding values
         :return: the authinfo object for the configured user
         """
-        from . import authinfos
+        from aiida.orm import authinfos
 
         transport_cls = self.get_transport_class()
         user = user or users.User.get_collection(self.backend).get_default()

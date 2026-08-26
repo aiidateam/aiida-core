@@ -25,9 +25,9 @@ from typing import Any
 
 import zmq
 
-from .defaults import HEARTBEAT_IVL, HEARTBEAT_TIMEOUT, POLL_TIMEOUT
-from .protocol import MessageType, decode_message, encode_message
-from .queue import PersistentQueue
+from aiida.brokers.zeromq.defaults import HEARTBEAT_IVL, HEARTBEAT_TIMEOUT, POLL_TIMEOUT
+from aiida.brokers.zeromq.protocol import MessageType, decode_message, encode_message
+from aiida.brokers.zeromq.queue import PersistentQueue
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -594,7 +594,7 @@ class ZeromqBrokerServer:
         if not self._task_worker_assignments:
             return
 
-        from .protocol import make_ping
+        from aiida.brokers.zeromq.protocol import make_ping
 
         # Get unique worker identities with assigned tasks
         worker_identities = set(self._task_worker_assignments.values())

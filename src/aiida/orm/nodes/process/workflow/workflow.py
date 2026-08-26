@@ -11,9 +11,8 @@
 from typing import TYPE_CHECKING
 
 from aiida.common.links import LinkType
+from aiida.orm.nodes.process.process import ProcessNode, ProcessNodeLinks
 from aiida.orm.utils.managers import NodeLinksManager
-
-from ..process import ProcessNode, ProcessNodeLinks
 
 if TYPE_CHECKING:
     from aiida.orm import Node

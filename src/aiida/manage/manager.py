@@ -88,7 +88,7 @@ class Manager:
         :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
 
         """
-        from .configuration import get_config
+        from aiida.manage.configuration import get_config
 
         return get_config(create=create)
 

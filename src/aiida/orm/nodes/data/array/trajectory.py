@@ -13,9 +13,8 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.nodes.data.array.array import ArrayData
 from aiida.orm.pydantic import OrmMetadataField
-
-from .array import ArrayData
 
 if t.TYPE_CHECKING:
     import numpy as np

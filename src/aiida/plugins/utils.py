@@ -17,8 +17,7 @@ from types import FunctionType
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.exceptions import EntryPointError
-
-from .entry_point import load_entry_point_from_string
+from aiida.plugins.entry_point import load_entry_point_from_string
 
 __all__ = ('PluginVersionProvider',)
 

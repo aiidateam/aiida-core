@@ -15,6 +15,8 @@ import typing as t
 
 import click
 
+from aiida.cmdline.params._shims import shim_add_ctx
+from aiida.cmdline.params.types.strings import EntryPointType
 from aiida.common import exceptions
 from aiida.plugins import factories
 from aiida.plugins.entry_point import (
@@ -27,9 +29,6 @@ from aiida.plugins.entry_point import (
     get_entry_point_string_format,
     get_entry_points,
 )
-
-from .._shims import shim_add_ctx
-from .strings import EntryPointType
 
 if t.TYPE_CHECKING:
     from importlib_metadata import EntryPoint

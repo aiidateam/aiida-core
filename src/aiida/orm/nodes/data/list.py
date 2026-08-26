@@ -14,10 +14,9 @@ from typing import Any
 
 import pydantic as pdt
 
+from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
-
-from .base import to_aiida_type
-from .data import Data
 
 __all__ = ('List',)
 

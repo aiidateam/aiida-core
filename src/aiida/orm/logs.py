@@ -17,9 +17,8 @@ from uuid import UUID
 
 from aiida.common import timezone
 from aiida.manage import get_manager
-
-from . import entities
-from .pydantic import OrmMetadataField
+from aiida.orm import entities
+from aiida.orm.pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -94,7 +93,7 @@ class LogCollection(entities.Collection['Log']):
 
         :return: the list of log entries
         """
-        from . import nodes
+        from aiida.orm import nodes
 
         if not isinstance(entity, nodes.Node):
             raise Exception('Only node logs are stored')
@@ -259,7 +258,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def node(self) -> Node:
-        from .utils.loaders import load_node
+        from aiida.orm.utils.loaders import load_node
 
         return load_node(self.dbnode_id)
 

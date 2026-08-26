@@ -31,9 +31,8 @@ from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.log import STORAGE_LOGGER
 from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
+from aiida.storage.psql_dos.orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from aiida.storage.utils import _create_smarter_in_clause
-
-from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 
 if TYPE_CHECKING:
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend

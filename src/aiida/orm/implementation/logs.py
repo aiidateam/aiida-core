@@ -12,7 +12,7 @@ import abc
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from .entities import BackendCollection, BackendEntity
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendLog', 'BackendLogCollection')
 

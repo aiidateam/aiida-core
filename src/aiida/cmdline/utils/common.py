@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from click import style
 
-from . import echo
+from aiida.cmdline.utils import echo
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping

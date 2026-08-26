@@ -14,7 +14,7 @@ import typing as t
 
 import click
 
-from .._shims import shim_add_ctx
+from aiida.cmdline.params._shims import shim_add_ctx
 
 if t.TYPE_CHECKING:
     from collections.abc import Sequence

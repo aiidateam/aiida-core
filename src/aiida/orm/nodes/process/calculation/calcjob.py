@@ -19,10 +19,9 @@ from pydantic import field_validator
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
+from aiida.orm.nodes.process.calculation.calculation import CalculationNode
+from aiida.orm.nodes.process.process import ProcessNodeCaching
 from aiida.orm.pydantic import OrmMetadataField
-
-from ..process import ProcessNodeCaching
-from .calculation import CalculationNode
 
 if TYPE_CHECKING:
     from aiida.orm import FolderData

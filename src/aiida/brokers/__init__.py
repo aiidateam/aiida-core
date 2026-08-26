@@ -4,9 +4,9 @@
 
 # fmt: off
 
-from .broker import *
-from .rabbitmq import *
-from .zeromq import *
+from aiida.brokers.broker import *
+from aiida.brokers.rabbitmq import *
+from aiida.brokers.zeromq import *
 
 __all__ = (
     'Broker',

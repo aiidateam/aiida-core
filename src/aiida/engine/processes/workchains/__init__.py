@@ -12,11 +12,11 @@
 
 # fmt: off
 
-from .awaitable import *
-from .context import *
-from .restart import *
-from .utils import *
-from .workchain import *
+from aiida.engine.processes.workchains.awaitable import *
+from aiida.engine.processes.workchains.context import *
+from aiida.engine.processes.workchains.restart import *
+from aiida.engine.processes.workchains.utils import *
+from aiida.engine.processes.workchains.workchain import *
 
 __all__ = (
     'Awaitable',

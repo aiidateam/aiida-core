@@ -6,9 +6,8 @@ import shutil
 import typing as t
 
 from aiida.common.lang import type_check
+from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 from aiida.storage.log import STORAGE_LOGGER
-
-from .abstract import AbstractRepositoryBackend, InfoDictType
 
 if t.TYPE_CHECKING:
     from disk_objectstore import Container

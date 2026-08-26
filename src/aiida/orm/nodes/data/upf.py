@@ -14,8 +14,7 @@ import re
 from upf_to_json import upf_to_json
 
 from aiida.common.warnings import warn_deprecation
-
-from .singlefile import SinglefileData
+from aiida.orm.nodes.data.singlefile import SinglefileData
 
 __all__ = ('UpfData',)
 

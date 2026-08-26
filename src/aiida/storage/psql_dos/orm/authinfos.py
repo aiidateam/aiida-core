@@ -12,8 +12,7 @@ from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from aiida.storage.psql_dos.models.authinfo import DbAuthInfo
-
-from . import computers, entities, users, utils
+from aiida.storage.psql_dos.orm import computers, entities, users, utils
 
 
 class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):

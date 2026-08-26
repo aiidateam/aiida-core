@@ -448,7 +448,7 @@ class NodeTranslator(BaseTranslator):
         # logic is cleaned where the correct translator sub class is instantiated based on the node type that is
         # referenced, this hack can be removed.
         if isinstance(node, Data):
-            from .data import DataTranslator
+            from aiida.restapi.translator.nodes.data import DataTranslator
 
             downloadable_data = DataTranslator.get_downloadable_data(node, download_format=download_format)
             return downloadable_data

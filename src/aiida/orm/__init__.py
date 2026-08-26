@@ -12,19 +12,19 @@
 
 # fmt: off
 
-from .authinfos import *
-from .comments import *
-from .computers import *
-from .entities import *
-from .extras import *
-from .fields import *
-from .groups import *
-from .logs import *
-from .nodes import *
-from .pydantic import *
-from .querybuilder import *
-from .users import *
-from .utils import *
+from aiida.orm.authinfos import *
+from aiida.orm.comments import *
+from aiida.orm.computers import *
+from aiida.orm.entities import *
+from aiida.orm.extras import *
+from aiida.orm.fields import *
+from aiida.orm.groups import *
+from aiida.orm.logs import *
+from aiida.orm.nodes import *
+from aiida.orm.pydantic import *
+from aiida.orm.querybuilder import *
+from aiida.orm.users import *
+from aiida.orm.utils import *
 
 __all__ = (
     'ASCENDING',

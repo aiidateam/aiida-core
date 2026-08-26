@@ -38,33 +38,31 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+from aiida.orm.computers import Computer
+from aiida.orm.entities import Collection as EntityCollection
+from aiida.orm.entities import Entity, from_backend_entity
+from aiida.orm.extras import EntityExtras
 from aiida.orm.fields import QbAttributesField, QbFields, add_field
+from aiida.orm.nodes.attributes import NodeAttributes
+from aiida.orm.nodes.caching import NodeCaching
+from aiida.orm.nodes.comments import NodeComments
+from aiida.orm.nodes.links import NodeLinks
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
+from aiida.orm.querybuilder import QueryBuilder
+from aiida.orm.users import User
 from aiida.orm.utils.node import (
     AbstractNodeMeta,
     get_query_type_from_type_string,
     get_type_string_from_class,
 )
 
-from ..computers import Computer
-from ..entities import Collection as EntityCollection
-from ..entities import Entity, from_backend_entity
-from ..extras import EntityExtras
-from ..pydantic import OrmMetadataField, OrmModel
-from ..querybuilder import QueryBuilder
-from ..users import User
-from .attributes import NodeAttributes
-from .caching import NodeCaching
-from .comments import NodeComments
-from .links import NodeLinks
-
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from aiida.common.log import AiidaLoggerType
-
-    from ..implementation import StorageBackend
-    from ..implementation.nodes import BackendNode
-    from .repository import NodeRepository
+    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation.nodes import BackendNode
+    from aiida.orm.nodes.repository import NodeRepository
 
 __all__ = ('Node',)
 
@@ -129,7 +127,7 @@ class NodeBase:
     @cached_property
     def repository(self) -> NodeRepository:
         """Return the repository for this node."""
-        from .repository import NodeRepository
+        from aiida.orm.nodes.repository import NodeRepository
 
         return NodeRepository(self._node)
 

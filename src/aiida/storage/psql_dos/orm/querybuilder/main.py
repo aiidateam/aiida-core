@@ -31,9 +31,8 @@ from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 from aiida.common.exceptions import NotExistent
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
+from aiida.storage.psql_dos.orm.querybuilder.joiner import JoinReturn, SqlaJoiner
 from aiida.storage.utils import _create_smarter_in_clause
-
-from .joiner import JoinReturn, SqlaJoiner
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

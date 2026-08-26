@@ -17,10 +17,9 @@ from typing import cast
 
 from aiida.orm import AuthInfo
 from aiida.orm.computers import Computer
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.transports import Transport
-
-from ..data import Data
 
 _logger = logging.getLogger(__name__)
 

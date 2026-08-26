@@ -8,9 +8,8 @@
 ###########################################################################
 """Convenience functions to add awaitables to the Context of a WorkChain."""
 
+from aiida.engine.processes.workchains.awaitable import Awaitable, AwaitableAction, construct_awaitable
 from aiida.orm import ProcessNode
-
-from .awaitable import Awaitable, AwaitableAction, construct_awaitable
 
 __all__ = ('ToContext', 'append_', 'assign_')
 

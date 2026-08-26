@@ -27,8 +27,7 @@ import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, ParEnvJobResource
-
-from .bash import BashCliScheduler
+from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode

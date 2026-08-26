@@ -9,12 +9,11 @@ from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
-
-from ..querybuilder import QueryBuilder
-from ..utils.links import LinkManager, LinkTriple
+from aiida.orm.querybuilder import QueryBuilder
+from aiida.orm.utils.links import LinkManager, LinkTriple
 
 if t.TYPE_CHECKING:
-    from .node import Node
+    from aiida.orm.nodes.node import Node
 
 
 class NodeLinks:
@@ -77,9 +76,8 @@ class NodeLinks:
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
+        from aiida.orm.nodes.node import Node
         from aiida.orm.utils.links import validate_link
-
-        from .node import Node
 
         validate_link(source, self._node, link_type, link_label, backend=self._node.backend)
 
@@ -106,7 +104,7 @@ class NodeLinks:
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        from .node import Node
+        from aiida.orm.nodes.node import Node
 
         type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
         type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
@@ -130,7 +128,7 @@ class NodeLinks:
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
-        from .node import Node
+        from aiida.orm.nodes.node import Node
 
         if not isinstance(link_type, (tuple, list)):
             link_type = cast(t.Sequence[LinkType], (link_type,))

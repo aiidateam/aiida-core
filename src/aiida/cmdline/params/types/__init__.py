@@ -12,23 +12,23 @@
 
 # fmt: off
 
-from .calculation import *
-from .choice import *
-from .code import *
-from .computer import *
-from .config import *
-from .data import *
-from .group import *
-from .identifier import *
-from .multiple import *
-from .node import *
-from .path import *
-from .plugin import *
-from .process import *
-from .profile import *
-from .strings import *
-from .user import *
-from .workflow import *
+from aiida.cmdline.params.types.calculation import *
+from aiida.cmdline.params.types.choice import *
+from aiida.cmdline.params.types.code import *
+from aiida.cmdline.params.types.computer import *
+from aiida.cmdline.params.types.config import *
+from aiida.cmdline.params.types.data import *
+from aiida.cmdline.params.types.group import *
+from aiida.cmdline.params.types.identifier import *
+from aiida.cmdline.params.types.multiple import *
+from aiida.cmdline.params.types.node import *
+from aiida.cmdline.params.types.path import *
+from aiida.cmdline.params.types.plugin import *
+from aiida.cmdline.params.types.process import *
+from aiida.cmdline.params.types.profile import *
+from aiida.cmdline.params.types.strings import *
+from aiida.cmdline.params.types.user import *
+from aiida.cmdline.params.types.workflow import *
 
 __all__ = (
     'AbsolutePathParamType',

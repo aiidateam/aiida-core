@@ -14,9 +14,8 @@ import re
 from typing import Literal
 
 from aiida.common.utils import Capturing
+from aiida.orm.nodes.data.singlefile import SinglefileData
 from aiida.orm.pydantic import OrmMetadataField
-
-from .singlefile import SinglefileData
 
 __all__ = ('CifData', 'cif_from_ase', 'has_pycifrw', 'pycifrw_from_cif')
 

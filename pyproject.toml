@@ -514,8 +514,12 @@ select = [
   'PLW',  # pylint-warning
   'RUF',  # ruff
   'FLY',  # flynt
-  'NPY201'  # numpy compatibility
+  'NPY201',  # numpy compatibility
+  'TID'  # flake8-tidy-imports
 ]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 # Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
 # Needed due to https://github.com/astral-sh/ruff/issues/9298

@@ -25,8 +25,7 @@ from aiida.common.exceptions import ConfigurationError, FeatureNotAvailable
 from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobState, JobTemplate
-
-from .bash import BashCliScheduler
+from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode

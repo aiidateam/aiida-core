@@ -12,11 +12,11 @@ import abc
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from .entities import BackendCollection, BackendEntity
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
 if TYPE_CHECKING:
-    from .nodes import BackendNode
-    from .users import BackendUser
+    from aiida.orm.implementation.nodes import BackendNode
+    from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendComment', 'BackendCommentCollection')
 

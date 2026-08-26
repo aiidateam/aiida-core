@@ -23,9 +23,8 @@ from operator import itemgetter
 
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
+from aiida.common.folders import Folder
 from aiida.common.utils import DatetimePrecision
-
-from .folders import Folder
 
 
 def get_random_string(length: int = 12) -> str:

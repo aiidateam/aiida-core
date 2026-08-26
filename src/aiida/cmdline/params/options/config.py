@@ -23,7 +23,7 @@ import typing as t
 
 import click
 
-from .overridable import OverridableOption
+from aiida.cmdline.params.options.overridable import OverridableOption
 
 if t.TYPE_CHECKING:
     from click.decorators import FC

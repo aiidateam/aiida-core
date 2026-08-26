@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
-
-from .workflow import WorkflowNode
+from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
 
 if TYPE_CHECKING:
     from aiida.tools.workflows import WorkflowTools

@@ -34,10 +34,9 @@ from aiida.storage.psql_dos.orm.querybuilder.main import (
     String,
     get_column,
 )
+from aiida.storage.sqlite_zip import models
+from aiida.storage.sqlite_zip.utils import ReadOnlyError
 from aiida.storage.utils import _create_smarter_in_clause
-
-from . import models
-from .utils import ReadOnlyError
 
 
 class SqliteEntityOverride:

@@ -16,8 +16,20 @@ from .ascii_vis import *
 from .common import *
 from .decorators import *
 from .echo import *
+from .registry_helpers import *
 
 __all__ = (
+    'CodeRegistryFetcher',
+    'ComputerSearchService',
+    'ComputerSelector',
+    'ComputerSetupHandler',
+    'ComputerSource',
+    'ConfigFileManager',
+    'RegistryConfig',
+    'RegistryDataFetcher',
+    'ResourceRegistryFetcher',
+    'SSHConfigParser',
+    'TemplateProcessor',
     'dbenv',
     'echo_critical',
     'echo_dictionary',

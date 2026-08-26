@@ -317,6 +317,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         self._event_helper = EventHelper(ProcessListener)
         self._logger = logger
         self._communicator = communicator
+        self._tasks: set[asyncio.Task[Any]] = set()
 
     @super_check
     def init(self) -> None:
@@ -463,7 +464,9 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
             loop=self.loop,
             communicator=self._communicator,
         )
-        self.loop.create_task(process.step_until_terminated())
+        task = self.loop.create_task(process.step_until_terminated())
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
         return process
 
     # region State introspection methods
@@ -562,7 +565,9 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         """
         args = (callback,) + args
         handle = events.ProcessCallback(self, self._run_task, args, kwargs)
-        self.loop.create_task(handle.run())
+        task = self.loop.create_task(handle.run())
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
         return handle
 
     def callback_excepted(
@@ -663,6 +668,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         self._event_helper = EventHelper(ProcessListener)
         self._logger = None
         self._communicator = None
+        self._tasks = set()
 
         self._state: process_states.State = self.recreate_state(saved_state['_state'])
 

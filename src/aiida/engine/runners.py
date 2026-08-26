@@ -88,6 +88,7 @@ class Runner:
         self._job_manager = manager.JobManager(self._transport)
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
+        self._process_tasks: set[asyncio.Task[Any]] = set()
 
         if communicator is not None:
             self._communicator = wrap_communicator(communicator, self._loop)
@@ -200,7 +201,9 @@ class Runner:
             process_inited.close()
             self.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
         else:
-            self.loop.create_task(process_inited.step_until_terminated())
+            task = self.loop.create_task(process_inited.step_until_terminated())
+            self._process_tasks.add(task)
+            task.add_done_callback(self._process_tasks.discard)
 
         return process_inited.node
 
@@ -218,7 +221,9 @@ class Runner:
 
         inputs = utils.prepare_inputs(inputs, **kwargs)
         process_inited = self.instantiate_process(process, **inputs)
-        self.loop.create_task(process_inited.step_until_terminated())
+        task = self.loop.create_task(process_inited.step_until_terminated())
+        self._process_tasks.add(task)
+        task.add_done_callback(self._process_tasks.discard)
         return process_inited.node
 
     def _run(

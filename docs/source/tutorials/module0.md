@@ -50,38 +50,23 @@ The interplay of these processes, controlled primarily by the feed rate F and ki
 Identical starting conditions (same initial grid) can produce wildly different patterns just by tweaking F and k.
 :::
 
-:::{note}
-This first module uses only the `gsrd` simulator, no AiiDA yet.
-Install it with:
+## Setup
+
+This first module uses only the `gsrd` simulator, no AiiDA yet. We recommend [`uv`](https://docs.astral.sh/uv/), but plain `pip` works just as well:
 
 ```bash
 uv pip install git+https://github.com/aiidateam/gsrd.git
+
+# or, without uv:
+
+pip install git+https://github.com/aiidateam/gsrd.git
 ```
-:::
 
-## Running the simulation
+Now, there are three ways to work through this tutorial, and which of its files you need to fetch, if any, depends on which you follow:
 
-We invoke `gsrd` from the command line, passing the parameters via an `input.yaml` file:
-
-:::{dropdown} `input.yaml`&nbsp;contents
-
-```yaml
-F: 0.04          # feed rate
-k: 0.060         # kill rate
-du: 0.16         # diffusion coefficient of U
-dv: 0.08         # diffusion coefficient of V
-dt: 1.0          # time step
-grid_size: 128   # grid is grid_size x grid_size
-n_steps: 10000   # number of integration steps
-seed: 42         # RNG seed for the initial perturbation
-```
-:::
-
-How you get these input files depends on how you are working through the tutorial:
-
-- **In your own local Jupyter notebook** (copy-pasting cells from this page): expand and run the cell below to fetch them.
-- **From the downloaded notebook** (the link at the top of the page): the fetch is already included, nothing to do.
-- **Just reading in the browser**: this cell does not apply to you.
+- **Reading on the web**: what you are doing right now. The code and its output are already rendered on this page, so there is nothing to install, download, or run; just read on.
+- **The downloaded notebook**: the fetch is already included, so just run the cells in order, as you would any notebook.
+- **Your own notebook** (copy-pasting cells from this page): run the cell below once to fetch `input.yaml` and the other helper files the tutorial uses.
 
 ```{code-cell} ipython3
 :tags: [hide-cell]
@@ -103,7 +88,25 @@ if not (Path('include') / 'input.yaml').exists():
             urllib.request.urlretrieve(entry['download_url'], Path('include') / entry['name'])
 ```
 
-Now run `gsrd` with the input file (as we run in a Jupyter notebook here, we prepend the shell command with `!` to execute it from within the notebook):
+## Running the simulation
+
+We invoke `gsrd` from the command line, passing the parameters via an `input.yaml` file:
+
+:::{dropdown} `input.yaml`&nbsp;contents
+
+```yaml
+F: 0.04          # feed rate
+k: 0.060         # kill rate
+du: 0.16         # diffusion coefficient of U
+dv: 0.08         # diffusion coefficient of V
+dt: 1.0          # time step
+grid_size: 128   # grid is grid_size x grid_size
+n_steps: 10000   # number of integration steps
+seed: 42         # RNG seed for the initial perturbation
+```
+:::
+
+Now run `gsrd` with the input file:
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
@@ -113,9 +116,13 @@ Now run `gsrd` with the input file (as we run in a Jupyter notebook here, we pre
 !gsrd include/input.yaml
 ```
 
+:::{note}
+As we run in a Jupyter notebook here, we prepend the shell command with `!` to execute it from within the notebook. When running directly in a terminal, drop the `!`.
+:::
+
 Expand the output above. The run's two key results, **variance(V)** (how sharply contrasted the final pattern is across the grid) and **mean(V)** (the average V concentration), are printed in a diagnostics box at the very end. That box is surrounded by much more, though: a banner, a citation block, and per-iteration progress, all on stdout.
 
-Now, let's see what `gsrd` wrote to disk. Besides everything on stdout, it also produced `results.npz` in the current directory, a binary NumPy archive. Let's load it and list what it holds:
+Now, let's see what `gsrd` wrote to disk. Besides most of the output being on stdout, it also produced `results.npz` in the current directory, a binary NumPy archive. Let's load it and list what it holds:
 
 ```{code-cell} ipython3
 import numpy as np
@@ -163,7 +170,7 @@ With `F=0.050`, the pattern looks completely different:
 
 &nbsp;
 
-Tweaking a parameter and re-running like this is how the exploratory phase of a project often looks, and done casually it quietly costs you:
+Tweaking a parameter and re-running like this is how the exploratory phase of a scientific project often looks, and done casually it can quietly cost you in three ways:
 
 **The previous output is gone.** The re-run reused the fixed `results.npz` filename, silently overwriting the first run's results.
 
@@ -175,6 +182,20 @@ Tweaking a parameter and re-running like this is how the exploratory phase of a 
 
 Now, let's see what happens when things actually go wrong with our simulation.
 We run it with an oversized timestep (`dt=100`), from a prepared `input_bad.yaml`:
+
+:::{dropdown} `input_bad.yaml`&nbsp;contents
+
+```yaml
+F: 0.04          # feed rate
+k: 0.060         # kill rate
+du: 0.16         # diffusion coefficient of U
+dv: 0.08         # diffusion coefficient of V
+dt: 100.0        # time step (oversized, makes the integration blow up)
+grid_size: 128   # grid is grid_size x grid_size
+n_steps: 10000   # number of integration steps
+seed: 42         # RNG seed for the initial perturbation
+```
+:::
 
 ```{code-cell} ipython3
 # Run an input with an oversized timestep (dt=100), which makes the
@@ -233,14 +254,14 @@ Those approaches are fragile, and the resulting data (and the workflow that prod
 
 ## How AiiDA solves these problems
 
-Now, this is where AiiDA comes in, built to remove exactly this friction.
+This is where AiiDA comes in, built to remove exactly this friction.
 Every calculation you run through AiiDA is recorded automatically in a **provenance graph**, including its inputs, outputs, relevant metadata, and the links between them.
 And the same machinery that runs one simulation can help you run thousands: AiiDA was created for high-throughput workloads from the start.
 In practice, that means:
 
 - **Provenance tracking**: every result can be traced back to the exact inputs, code, and machine that produced it. No overwriting, no orphaned files, no need to keep input files around by hand.
-- **Plugins and community knowledge**: AiiDA plugins for popular codes ship with workflows, parsers, and error handlers, encoding years of domain expertise. You benefit from best practices without having to painfully discover them yourself.
 - **Workflow orchestration**: multi-step pipelines run as managed workflows, handling execution, file transfer, data passing, and error recovery. If some steps fail, AiiDA knows which ones, why, and can help you restart just those. And because every run is recorded, identical calculations can be served from a cache instead of being recomputed.
+- **Plugins and community knowledge**: AiiDA plugins for popular codes ship with workflows, parsers, and error handlers, encoding years of domain expertise. You benefit from best practices without having to painfully discover them yourself.
 - **Reliable failure detection**: parsers shipped with AiiDA plugins look for the markers that actually indicate success or failure, so a run with a spurious zero exit code still gets flagged as failed and the downstream workflow does not blindly carry on.
 - **Structured output parsing**: AiiDA plugins provide parsers that extract structured results from a code's output channels, storing them as SQL database entries with a well-defined schema.
 - **Querying**: because every calculation and its results live in a database, you can search and filter across all of them without ever manually opening a single output file.

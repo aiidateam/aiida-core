@@ -26,7 +26,11 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib git+https://github.com/aiidateam/gsrd.git
+uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib git+https://github.com/aiidateam/gsrd.git
+
+# or, without uv:
+
+pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib git+https://github.com/aiidateam/gsrd.git
 ```
 :::
 
@@ -371,6 +375,8 @@ The heatmap shows the **pattern-forming band** of the classic Gray-Scott phase d
 You now have the core building blocks: tracked external codes, structured data, calcfunctions, and reusable workflows.
 Further modules build on these fundamentals and will follow: running on remote HPC clusters, querying provenance at scale with the `QueryBuilder`, advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition), and recovering from failures with error handlers.
 
+To apply these skills to real materials-science calculations, [aiida-quantumespresso](https://aiida-quantumespresso.readthedocs.io/) provides AiiDA workflows for [Quantum ESPRESSO](https://www.quantum-espresso.org/), from single self-consistent-field runs to automated band structures, if you want to drive DFT codes with AiiDA. For other codes, the [AiiDA plugin registry](https://aiida.net/plugin-registry/) lists plugins that connect AiiDA to a range of other simulation tools.
+
 ## Further reading
 
 - AiiDA's workflow concepts in depth: {ref}`topics:workflows`
@@ -379,3 +385,4 @@ Further modules build on these fundamentals and will follow: running on remote H
 - Alternative workflow construction APIs WorkGraph offers (beyond the `@task.graph()` decorator used here, including `If`/`While` control flow): [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io)
 - Running versus submitting processes: {ref}`topics:processes:usage:launching`
 - The AiiDA daemon (architecture and management): {ref}`topics:daemon`, {ref}`how-to:manage-daemon`
+- Tips for running real-world production calculations on HPC resources: {ref}`how-to:real-world-tricks`

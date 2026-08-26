@@ -10,7 +10,7 @@ example that progressively grows in complexity.
 
 .. note::
 
-   These tutorials are actively being iterated on and may still change. If you
+   These tutorials are actively being developed and may still change. If you
    run into any problems or have suggestions for improvement, please open an
    issue on `GitHub <https://github.com/aiidateam/aiida-core/issues>`__; your
    feedback is very welcome.
@@ -64,7 +64,7 @@ Introductory modules
       :text-align: center
       :shadow: md
 
-      Data types, calcfunctions, and parameter sweeps with full provenance tracking.
+      Turn opaque outputs into structured, queryable data with calcfunctions and full provenance tracking.
 
       +++
 
@@ -143,6 +143,45 @@ More tutorials
 
          Browse the material
 
+Where to go next
+================
+
+.. grid:: 1 2 2 2
+   :gutter: 3
+
+   .. grid-item-card:: :fa:`atom;mr-1` Quantum ESPRESSO with AiiDA
+      :text-align: center
+      :shadow: md
+
+      AiiDA workflows for running Quantum ESPRESSO, from single SCF calculations to automated band structures.
+
+      +++
+
+      .. button-link:: https://aiida-quantumespresso.readthedocs.io/
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         Go to aiida-quantumespresso
+
+   .. grid-item-card:: :fa:`plug;mr-1` AiiDA plugin registry
+      :text-align: center
+      :shadow: md
+
+      A directory of plugins that connect AiiDA to other simulation codes and tools.
+
+      +++
+
+      .. button-link:: https://aiida.net/plugin-registry/
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         Browse the registry
+
+
 .. toctree::
    :maxdepth: 1
    :hidden:
@@ -153,4 +192,6 @@ More tutorials
    module3a
    module3b
    basic
+   Quantum ESPRESSO with AiiDA <https://aiida-quantumespresso.readthedocs.io/>
+   AiiDA plugin registry <https://aiida.net/plugin-registry/>
    Past AiiDA tutorials <https://aiida-tutorials.readthedocs.io/en/latest/>

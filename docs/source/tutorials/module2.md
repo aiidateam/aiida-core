@@ -26,7 +26,11 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 If you have not already installed these in an earlier module, run:
 
 ```bash
-uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/aiidateam/gsrd.git
+uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib git+https://github.com/aiidateam/gsrd.git
+
+# or, without uv:
+
+pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib git+https://github.com/aiidateam/gsrd.git
 ```
 :::
 

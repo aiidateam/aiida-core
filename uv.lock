@@ -212,7 +212,7 @@ requires-dist = [
     { name = "aiida-core", extras = ["atomic-tools", "rest"], marker = "extra == 'tests'" },
     { name = "aiida-core", extras = ["tests"], marker = "extra == 'pre-commit'" },
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
-    { name = "aiida-shell", marker = "extra == 'tutorials'", git = "https://github.com/aiidateam/aiida-shell.git?rev=master" },
+    { name = "aiida-shell", marker = "extra == 'tutorials'", specifier = ">=0.9.0" },
     { name = "aiida-workgraph", marker = "extra == 'tutorials'", git = "https://github.com/GeigerJ2/aiida-workgraph.git?rev=fix%2Fmap-zone-output-retrieval" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
@@ -335,10 +335,14 @@ wheels = [
 [[package]]
 name = "aiida-shell"
 version = "0.9.0"
-source = { git = "https://github.com/aiidateam/aiida-shell.git?rev=master#5311c8e07202c51386e29a4e3c1f183e5557ec49" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "dill" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/92/71/2979c0d74dba6c90e0c8527b336036de8d7f891378664c673891e3fb50e0/aiida_shell-0.9.0.tar.gz", hash = "sha256:f26cebd8504d9154a121d3065d4ce7271ca74e6b8172e677c1a25f0c2714d986", size = 1474993, upload-time = "2026-08-26T11:37:07.891Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/f7/454c6df5fbb5dfd476b360de4f7cd6f8b630290a7da1fb54bb27eda58da5/aiida_shell-0.9.0-py3-none-any.whl", hash = "sha256:41813332cbd37f55b04a715943b943b51d1292a4a3e04a85d4bbe1ed8ef08f8b", size = 20310, upload-time = "2026-08-26T11:37:06.198Z" },
 ]
 
 [[package]]

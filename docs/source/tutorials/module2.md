@@ -35,8 +35,8 @@ pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib git+https://github
 :::
 
 :::{note}
-This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
-If you are following along locally, run that module first.
+This module reuses the tutorial profile and the `gsrd_code` object from {ref}`Module 1 <tutorial:module1>`, and assumes both are already up and running.
+If not, or you are starting here, work through the {ref}`setup section of Module 1 <tutorial:module1:setup>` first.
 :::
 
 ```{code-cell} ipython3
@@ -68,7 +68,7 @@ After this module, you will be able to:
 - Recognize why file-based outputs are hard to query, and what structured data buys you
 - Use AiiDA's structured data types (`Dict`, `Float`, ...) to store queryable results
 - Add input preparation and output parsing as tracked `@calcfunction` steps in the provenance
-- Organize and search results with extras, groups, and QueryBuilder
+- Organize and search results with extras, groups, and the QueryBuilder
 
 ## Why structured data?
 
@@ -83,33 +83,12 @@ Let's run one again here to work with, holding the Gray-Scott parameters fixed:
 :    code_prompt_hide: 'Hide the run code (same as Module 1)'
 
 # Run a single tracked gsrd calculation (as in Module 1).
-from pathlib import Path
-
-import yaml
-
 from aiida_shell import launch_shell_job
-
-# The Gray-Scott parameters for this run.
-BASE_PARAMS = {
-    'grid_size': 128,
-    'du': 0.16,
-    'dv': 0.08,
-    'F': 0.04,
-    'k': 0.060,
-    'dt': 1.0,
-    'n_steps': 10000,
-    'seed': 42,
-}
-
-input_dir = Path('/tmp/aiida-tutorial')
-input_dir.mkdir(parents=True, exist_ok=True)
-input_path = input_dir / 'input.yaml'
-input_path.write_text(yaml.dump(BASE_PARAMS))
 
 results, calc_node = launch_shell_job(
     gsrd_code,
     arguments='{input}',
-    nodes={'input': str(input_path)},
+    nodes={'input': 'include/input.yaml'},
     outputs=['results.npz'],
 )
 ```
@@ -118,7 +97,7 @@ As in {ref}`Module 1 <tutorial:module1>`, getting the `variance_V` value back ou
 The provenance records **file in → ShellJob → stdout/file out**, so AiiDA knows *that* a stdout log and a `results.npz` were produced, but not *what's inside* them.
 A query like "all runs where `variance_V > 0.001`" would therefore mean opening every stdout node and re-running that regex ourselves.
 
-Looking at the provenance graph of the run (essentially the same shape as the one we saw in {ref}`Module 1 <tutorial:module1>`) makes this visible:
+Looking at the provenance graph of the run (exactly the same shape as the one we saw in {ref}`Module 1 <tutorial:module1>`) makes this visible:
 
 ```{code-cell} ipython3
 ---
@@ -132,7 +111,7 @@ from include.plotting import plot_provenance
 plot_provenance(calc_node)
 ```
 
-Every input and every output is a `SinglefileData` blob: the YAML on the left, `results.npz` and `stdout` on the right.
+Every file here is a `SinglefileData` blob: the input YAML at the top, `results.npz`, `stdout`, and `stderr` at the bottom.
 The simulation ran with full provenance, but as far as the database is concerned, the values that we actually care about are buried inside opaque files.
 
 Instead, we can register the simulation's inputs and outputs as **structured AiiDA data nodes**:
@@ -155,19 +134,21 @@ It's a regular Python function with a decorator that makes AiiDA automatically:
 3. Store all output nodes
 4. Link everything in the provenance graph
 
-Because a `calcfunction` records its inputs and outputs as AiiDA nodes, inside the body you work with AiiDA data objects rather than plain Python: `parameters` arrives as an `orm.Dict` node (not a plain `dict`), whose contents you read with `.value`, the same `.value` every data node exposes, including the `orm.Float` outputs later.
-At the *call* site you can still pass a plain `dict`; AiiDA auto-wraps it into that `orm.Dict` node for you.
+Because a `calcfunction` records its inputs and outputs as AiiDA nodes, inside the body you work with AiiDA data objects rather than plain Python, as you will see below.
 
 Let's write two: one for input preparation, and one for output parsing.
 
 ### Preparing the input
 
+In {ref}`Module 1 <tutorial:module1>`, we handed `gsrd` a ready-made `input.yaml`. To capture the parameters themselves as queryable data, we now build that file from a `Dict` inside a calcfunction instead.
 `prepare_input` bridges the two natural representations of a simulation's parameters: the dictionary of typed values we want to *think* in (floats, ints, strings) and the YAML input file the binary actually *reads*.
 Most scientific codes take an input file on disk, but the values that drive them are often set programmatically (e.g., from Python), as typed variables.
 Doing the conversion inside a `calcfunction` keeps both representations in the provenance graph: the `Dict` is queryable, the rendered file is what `gsrd` consumes:
 
 ```{code-cell} ipython3
 # Define prepare_input: a calcfunction that converts a Dict to a YAML file.
+import yaml
+
 from aiida import engine, orm
 
 
@@ -178,6 +159,9 @@ def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
     return orm.SinglefileData.from_string(content, filename='input.yaml')
 ```
 
+Inside `prepare_input`, `parameters` arrives as an `orm.Dict` node (not a plain `dict`), whose contents you read with `.value`, the same `.value` every data node exposes, including the `orm.Float` outputs later.
+At the *call* site you can still pass a plain `dict`; AiiDA auto-wraps it into that `orm.Dict` node for you.
+
 This also starts to address one of {ref}`Module 0 <tutorial:module0>`'s pain points: the parameters now live in a single `Dict` node, stored with full provenance and reviewable in one place, rather than a hand-edited YAML file whose mistyped keys vanish silently.
 
 :::{tip}
@@ -187,7 +171,7 @@ A `Dict` on its own still doesn't *validate* the keys, but real {ref}`CalcJob <t
 ### Parsing the output
 
 `parse_output` takes the captured stdout of a `gsrd` run and extracts the two scalar diagnostics as `Float` nodes.
-We declare the two return keys as a {class}`~typing.TypedDict` so the function's return type is self-documenting (and so that {ref}`Module 3 <tutorial:module3>` can reuse the same annotation):
+We declare the two return keys as a {class}`~typing.TypedDict` so the function's return type is self-documenting (and, pedagogically, so that {ref}`Module 3 <tutorial:module3>` can reuse the same annotation):
 
 ```{code-cell} ipython3
 # Define parse_output: a calcfunction that reads the scalars from gsrd stdout.
@@ -223,7 +207,7 @@ What is new here is that the parsing step itself becomes a tracked AiiDA process
 :::
 
 :::{note}
-A calcfunction can return either a single data node or a plain `dict` mapping string labels to data nodes.
+A calcfunction can return either a single data node or a `dict` mapping string labels to data nodes.
 When returning a single node, AiiDA registers it under the default link label `result`, accessible via `node.outputs.result`.
 When returning a dict, each value is registered as a named output instead, accessible via `node.outputs.<label>`.
 :::
@@ -231,11 +215,24 @@ When returning a dict, each value is registered as a named output instead, acces
 ### Chaining the steps into a pipeline
 
 Now, we can chain them: `prepare_input` → `launch_shell_job` → `parse_output`.
+We pass the input parameters as a `dict` (`BASE_PARAMS`, the same values as the opening run's `include/input.yaml`, now in the queryable form we motivated above).
+`engine.run_get_node` runs each calcfunction and returns its `(outputs, node)`, the same shape `launch_shell_job` returns; we keep the nodes we inspect later.
 Each step is tracked, and the inputs and outputs are stored as structured, queryable nodes:
 
 ```{code-cell} ipython3
-# Run the pipeline. engine.run_get_node runs a process and returns (outputs, process node),
-# the same shape launch_shell_job returns just below; we keep the nodes we inspect later.
+# The Gray-Scott parameters, as a dict.
+BASE_PARAMS = {
+    'grid_size': 128,
+    'du': 0.16,
+    'dv': 0.08,
+    'F': 0.04,
+    'k': 0.060,
+    'dt': 1.0,
+    'n_steps': 10000,
+    'seed': 42,
+}
+
+# Run the pipeline.
 input_file, _ = engine.run_get_node(prepare_input, parameters=BASE_PARAMS)
 
 results, node = launch_shell_job(
@@ -250,7 +247,7 @@ print(f"variance(V) = {parsed['variance_V'].value:.4e}")
 print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 ```
 
-That is already the payoff: instead of opening the output files, `variance(V)` and `mean(V)` come straight off the run's `Float` output nodes via `.value`.
+Reading `variance(V)` and `mean(V)` straight off the run's `Float` output nodes via `.value`, instead of opening the output files, is one of the advantages of structured data.
 
 :::{note}
 `launch_shell_job` is `aiida-shell`'s convenience wrapper: it builds a **ShellJob** (a `CalcJob`) from your command and inputs, runs it, and returns `(outputs, node)`.
@@ -283,48 +280,22 @@ Compare this to the opaque run at the start of the module: the provenance now sh
 What changed is not the simulation but *how* we get the numbers back: the `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
 
 We've now chained these three steps by hand.
-Packaging them as a function makes the pipeline repeatable, and it returns a small `GsrdRun` record so each run's nodes are reachable by name:
+Packaging them into a function, `run_pipeline`, makes the sweep below repeatable. It returns the run's final `parse_output` node, which carries the `variance_V` and `mean_V` outputs and links back through the full provenance:
 
 ```{code-cell} ipython3
-:tags: [hide-input]
-:mystnb:
-:    code_prompt_show: 'Show the GsrdRun dataclass'
-:    code_prompt_hide: 'Hide the GsrdRun dataclass'
+def run_pipeline(params: dict) -> orm.CalcFunctionNode:
+    """Run prepare_input → ShellJob → parse_output; return the parse_output node."""
+    input_file, _ = engine.run_get_node(prepare_input, parameters=params)
 
-from dataclasses import dataclass
-
-
-@dataclass
-class GsrdRun:
-    """One Gray-Scott run: its feed rate and the three process nodes that produced it."""
-
-    F: float
-    prepare: orm.ProcessNode
-    shelljob: orm.ProcessNode
-    parse: orm.ProcessNode
-```
-
-```{code-cell} ipython3
-def run_pipeline(f_val: float) -> GsrdRun:
-    """Run prepare_input → ShellJob → parse_output for one feed rate, returning a GsrdRun."""
-    params = BASE_PARAMS | {'F': f_val}
-    input_file, prepare_node = engine.run_get_node(prepare_input, parameters=params)
-
-    results, shelljob_node = launch_shell_job(
+    results, _ = launch_shell_job(
         gsrd_code,
         arguments='{input}',
         nodes={'input': input_file},
         outputs=['results.npz'],
     )
 
-    parsed, parse_node = engine.run_get_node(parse_output, stdout=results['stdout'])
-
-    return GsrdRun(
-        F=f_val,
-        prepare=prepare_node,
-        shelljob=shelljob_node,
-        parse=parse_node,
-    )
+    _, parse_node = engine.run_get_node(parse_output, stdout=results['stdout'])
+    return parse_node
 ```
 
 :::{note}
@@ -334,14 +305,15 @@ def run_pipeline(f_val: float) -> GsrdRun:
 
 ## Organizing and querying your results
 
-The tools below only earn their keep once you have more than one run, so let's call `run_pipeline` over a few feed rates:
+The tools below only earn their keep once you have more than one run, so let's call `run_pipeline` over a few feed rates, keyed by `F`:
 
 ```{code-cell} ipython3
-runs = [run_pipeline(f_val) for f_val in [0.040, 0.045, 0.048, 0.050]]
+F_VALUES = [0.040, 0.045, 0.048, 0.050]
+runs = {f_val: run_pipeline(BASE_PARAMS | {'F': f_val}) for f_val in F_VALUES}
 ```
 
 With a handful of tracked runs in the database, the payoff we are building toward is **searching** them, which is what the `QueryBuilder` does.
-Queries get far more useful once each run carries additional metadata to filter on, so we take it in three steps:
+Queries also get far more useful once each run carries additional metadata to filter on, so we take it in three steps:
 
 - **Tag** nodes with ad-hoc metadata: **extras**.
 - **Bundle** related runs as a single named unit you can retrieve or share: **groups**.
@@ -349,15 +321,15 @@ Queries get far more useful once each run carries additional metadata to filter 
 
 ### Extras
 
-There are often properties you want to attach to a node *after* it was created: a quality flag, a review status, "this is the run I used in the paper".
+There are often properties you want to attach to a node *after* it was created: a quality flag, a review status, e.g., "this is the run I used in the paper", etc.
 The **extras** dictionary on every AiiDA node is AiiDA's mechanism for exactly that: unlike node attributes (immutable once stored), extras can be set and changed freely, long after the node was created, without touching the provenance graph.
 
 Having run the sweep, say you want to mark the run at the **pattern transition**, a judgement about the results that the provenance itself does not record.
-From the transition curve in {ref}`Module 3b <tutorial:module3b>`, the pattern dissolves around `F=0.050`, so we select that run and flag its `parse_output` node:
+From the transition curve in {ref}`Module 3b <tutorial:module3b>`, the pattern dissolves around `F=0.050`, so we take that run's `parse_output` node from the sweep and flag it:
 
 ```{code-cell} ipython3
-transition_run = next(run for run in runs if run.F == 0.050)
-transition_run.parse.base.extras.set('note', 'pattern transition')
+transition_node = runs[0.050]
+transition_node.base.extras.set('note', 'pattern transition')
 ```
 
 ### Groups
@@ -368,14 +340,14 @@ A {py:class}`~aiida.orm.Group` is AiiDA's named collection for that:
 ```{code-cell} ipython3
 sweep_group, _ = orm.Group.collection.get_or_create('tutorial/F-sweep')
 sweep_group.clear()  # start empty so re-running this cell doesn't accumulate nodes
-sweep_group.add_nodes([run.parse for run in runs])
+sweep_group.add_nodes(list(runs.values()))
 
 print(f"Group '{sweep_group.label}' contains {sweep_group.count()} nodes")
 ```
 
-```{code-cell} ipython3
-:tags: ["hide-output"]
+We can see the group we just created via the `verdi` CLI:
 
+```{code-cell} ipython3
 %verdi group list -C
 ```
 
@@ -392,7 +364,7 @@ Extras and groups are how you *organize* nodes; {class}`~aiida.orm.QueryBuilder`
 It is AiiDA's structured-search API over the provenance graph: filter by node type, by attribute value, by extras, by which group they belong to, by their relationships to other nodes, etc.
 
 You build a query by **appending** the entity type you're after, optionally with `filters` (which nodes to keep) and a `project` (which fields to return), then run it with `.count()`, `.all()`, or `.first()`.
-Filters are written against the entity's typed `fields`, which gives tab-completion and type checking instead of hand-typed string keys, as the examples below show.
+Filters can be written against the entity's typed `fields`, which gives tab-completion and type checking instead of hand-typed string keys, as the examples below show.
 
 Start by counting every `parse_output` run in the database:
 
@@ -430,19 +402,21 @@ qb = (
 print(f'parse_output runs in the tutorial/F-sweep group: {qb.count()}')
 ```
 
-Then use the extra we just set to pull the transition run straight back out, however many runs sit in between:
+Then use the extra we just set to pull the transition run straight back out, however many runs sit in between. That gives us the `parse_output` node; because it is wired into the graph, we can hop one link further to the `gsrd` simulation that produced its `stdout`, no second query needed:
 
 ```{code-cell} ipython3
-# Filter the same node type by an extras key.
+# Find the tagged parse_output node, then hop to the ShellJob behind its stdout.
 qb = orm.QueryBuilder().append(
     orm.CalcFunctionNode,
     filters=orm.CalcFunctionNode.fields.extras['note'] == 'pattern transition',
-    project='pk',
 )
-print(f'Transition run: parse_output PK {qb.first(flat=True)}')
+transition_parse = qb.first(flat=True)
+simulation = transition_parse.inputs.stdout.creator
+print(f'Transition run: parse_output PK {transition_parse.pk}')
+print(f'gsrd simulation behind it: ShellJob PK {simulation.pk}')
 ```
 
-That last query already chains two appends (Group → its members). QueryBuilder can go much further: *projecting* single fields instead of loading whole nodes, and following the links between nodes, a run to its `Float` outputs, back to its inputs, across entire workflows. We'll cover those patterns properly in a later module.
+The examples above already chain multiple `append` calls and follow a link through the provenance graph by hand. QueryBuilder and node navigation go much further: *projecting* single fields instead of loading whole nodes, and chaining hops across entire workflows. We'll cover those patterns properly in a later module.
 
 With all this activity, our profile is filling up, so let's list every process we have run so far across all modules:
 
@@ -456,8 +430,8 @@ With all this activity, our profile is filling up, so let's list every process w
 ## Next steps
 
 We now have a tracked pipeline with structured data, but two things are still plain Python.
-The pipeline, `prepare_input → ShellJob → parse_output`, is a bare sequence of calls: there's no single object that *is* the workflow, so if one step fails you handle it yourself, and there's nothing to hand around or query as one unit.
-And, the sweep is a `for` loop that runs each parameter set one after another, with no way to run independent runs in parallel.
+`run_pipeline` packages `prepare_input → ShellJob → parse_output` into one function, but that function just runs the three steps in order when you call it. The provenance records them as three individual processes with no parent **workflow** node tying them together, so there's no single object that *is* a run to hand around, restart, or query as one unit, and if a step fails you handle it yourself.
+And the sweep runs each parameter set one after another, with no way to run independent runs in parallel.
 
 In {ref}`Module 3a <tutorial:module3a>`, you'll wrap that pipeline into a single **WorkGraph workflow**.
 Then in {ref}`Module 3b <tutorial:module3b>`, you'll map it over the whole sweep in parallel with WorkGraph's `Map`, replacing the `for` loop.

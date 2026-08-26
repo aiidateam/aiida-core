@@ -50,6 +50,7 @@ It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:m
 The provenance-graph plots need the Graphviz `dot` binary, a system package (not a Python one). Install it through your operating system's package manager if the graph cells report it as missing.
 :::
 
+(tutorial:module1:setup)=
 ## Setting up your AiiDA profile
 
 An AiiDA **profile** defines the configuration for an AiiDA instance:
@@ -79,7 +80,7 @@ Module 1 creates the profile; the later modules reconnect to it, so the data you
 :    code_prompt_show: 'Show the setup cell (tutorial plumbing you can ignore)'
 :    code_prompt_hide: 'Hide the setup cell'
 
-# Fetch tutorial_plumbing.py if it is not already present, then run it to set up the profile.
+# Fetch tutorial_plumbing.py if missing, then run it to set up the profile.
 from pathlib import Path
 
 if not Path('include/tutorial_plumbing.py').exists():
@@ -387,7 +388,7 @@ AiiDA stores everything in its internal database and file repository (efficient 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-# Export the full calculation (inputs, outputs, logs) into a `/tmp/aiida-tutorial/dump/` folder.
+# Export the full calculation (inputs, outputs, logs) to `/tmp/aiida-tutorial/dump/`.
 %verdi process dump {node.pk} --path /tmp/aiida-tutorial/dump -o
 ```
 

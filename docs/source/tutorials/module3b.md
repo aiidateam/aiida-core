@@ -249,7 +249,10 @@ variances = results['variance_V']
 means = results['mean_V']
 
 for key in sorted(variances):
-    print(f"{key}: variance(V) = {float(variances[key].value):.4e}, mean(V) = {float(means[key].value):.4e}")
+    print(
+        f"{key}: variance(V) = {float(variances[key].value):.4e}, "
+        f"mean(V) = {float(means[key].value):.4e}"
+    )
 ```
 
 The numbers are the same as Module 2's sweep (same simulation, same parameters).

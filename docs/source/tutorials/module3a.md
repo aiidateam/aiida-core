@@ -38,8 +38,8 @@ pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/Geiger
 :::
 
 :::{note}
-This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
-If you are following along locally, run that module first.
+This module reuses the tutorial profile and the `gsrd_code` object from {ref}`Module 1 <tutorial:module1>`, and assumes both are already up and running.
+If not, or you are starting here, work through the {ref}`setup section of Module 1 <tutorial:module1:setup>` first.
 :::
 
 ```{code-cell} ipython3
@@ -294,11 +294,15 @@ For example, the inner `ShellJob`:
 
 ```{code-cell} ipython3
 # Pick the ShellJob child of the workflow.
-shelljob_node = next(child for child in wg.process.called if isinstance(child, orm.CalcJobNode))
+shelljob_node = next(
+    child for child in wg.process.called if isinstance(child, orm.CalcJobNode)
+)
 
 print(f'ShellJob PK:    {shelljob_node.pk}')
 print(f'process_label:  {shelljob_node.process_label}')
-print(f'caller PK:      {shelljob_node.caller.pk}  ({shelljob_node.caller.process_label})')
+print(
+    f'caller PK:      {shelljob_node.caller.pk}  ({shelljob_node.caller.process_label})'
+)
 ```
 
 ```{code-cell} ipython3

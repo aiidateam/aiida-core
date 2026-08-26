@@ -85,7 +85,9 @@ if not (Path('include') / 'input.yaml').exists():
     Path('include').mkdir(exist_ok=True)
     for entry in json.load(urllib.request.urlopen(api)):
         if entry['type'] == 'file':
-            urllib.request.urlretrieve(entry['download_url'], Path('include') / entry['name'])
+            urllib.request.urlretrieve(
+                entry['download_url'], Path('include') / entry['name']
+            )
 ```
 
 ## Running the simulation

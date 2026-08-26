@@ -1150,7 +1150,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         """
         if isinstance(exception, process_states.PauseInterruption):
             do_pause = functools.partial(self._do_pause, exception.msg)
-            return futures.CancellableAction(do_pause, cookie=exception)
+            return futures.CancellableAction(do_pause, cookie=exception, loop=self.loop)
 
         if isinstance(exception, process_states.KillInterruption):
 
@@ -1162,7 +1162,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
                 finally:
                     self._killing = None
 
-            return futures.CancellableAction(do_kill, cookie=exception)
+            return futures.CancellableAction(do_kill, cookie=exception, loop=self.loop)
 
         raise ValueError(f"Got unknown interruption type '{type(exception)}'")
 

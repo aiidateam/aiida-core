@@ -37,6 +37,7 @@ import yaml
 from aiida.common import loaders
 from aiida.common.lang import call_with_super_check, super_check, type_check
 from aiida.engine.processes import events
+from aiida.engine.processes.exceptions import PersistenceError
 from aiida.engine.processes.generic import futures
 
 __all__: tuple[str, ...] = ()
@@ -660,8 +661,7 @@ class SavableFuture(futures.Future, Savable):
 
         if state == asyncio.futures._PENDING:  # type: ignore[attr-defined]
             obj = cls(loop=loop)
-
-        if state == asyncio.futures._FINISHED:  # type: ignore[attr-defined]
+        elif state == asyncio.futures._FINISHED:  # type: ignore[attr-defined]
             obj = cls(loop=loop)
             result = saved_state['_result']
 
@@ -670,10 +670,12 @@ class SavableFuture(futures.Future, Savable):
                 obj.set_exception(exception)
             except KeyError:
                 obj.set_result(result)
-
-        if state == asyncio.futures._CANCELLED:  # type: ignore[attr-defined]
+        elif state == asyncio.futures._CANCELLED:  # type: ignore[attr-defined]
             obj = cls(loop=loop)
             obj.cancel()
+        else:
+            msg = f'Unsupported future state: {state}'
+            raise PersistenceError(msg)
 
         return obj
 

@@ -653,16 +653,16 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
 
         self._setup_event_hooks()
 
-        # Runtime variables, set initial states
-        self._future = persistence.SavableFuture()
-        self._event_helper = EventHelper(ProcessListener)
-        self._logger = None
-        self._communicator = None
-
         if 'loop' in load_context:
             self._loop = load_context.loop
         else:
             self._loop = events.get_or_create_event_loop()
+
+        # Runtime variables, set initial states
+        self._future = persistence.SavableFuture(loop=self._loop)
+        self._event_helper = EventHelper(ProcessListener)
+        self._logger = None
+        self._communicator = None
 
         self._state: process_states.State = self.recreate_state(saved_state['_state'])
 
@@ -842,7 +842,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         self._pausing = None
 
         # Create a future to represent the duration of the paused state
-        self._paused = persistence.SavableFuture()
+        self._paused = persistence.SavableFuture(loop=self._loop)
 
         # Save the current status and potentially overwrite it with the passed message
         self._pre_paused_status = self.status

@@ -1064,3 +1064,67 @@ def test_computer_goto(run_cli_command, aiida_localhost):
         with pytest.raises(AssertionError) as exc_info:
             run_cli_command(computer_goto, options, use_subprocess=False)
         assert 'something-BBB' in str(exc_info.value)
+
+
+class TestComputerSetupTemplateConfig:
+    """Tests for ``verdi computer setup --config`` with Jinja2-templated YAML files."""
+
+    TEMPLATE_YAML = textwrap.dedent("""\
+        label: '{{ label }}'
+        hostname: localhost
+        description: Test computer from template
+        transport: core.local
+        scheduler: core.direct
+        shebang: '#!/bin/bash'
+        work_dir: /tmp/aiida_run/
+        mpirun_command: mpirun -np {tot_num_mpiprocs}
+        mpiprocs_per_machine: 2
+        prepend_text: ''
+        append_text: ''
+        metadata:
+            tooltip: A test computer
+            template_variables:
+                label:
+                    default: test-computer
+                    description: A short name for the computer
+                    type: text
+                    key_display: Computer Label
+    """)
+
+    @pytest.fixture
+    def template_config(self, tmp_path):
+        """Write a registry-style templated computer-setup YAML and return the path."""
+        filepath = tmp_path / 'computer-setup.yml'
+        filepath.write_text(self.TEMPLATE_YAML)
+        return filepath
+
+    def test_setup_from_template_non_interactive(self, run_cli_command, template_config):
+        """Test ``verdi computer setup --config`` with ``--template-vars`` in non-interactive mode."""
+        filepath = template_config
+        result = run_cli_command(
+            computer_setup,
+            [
+                '--non-interactive',
+                '--template-vars',
+                '{"label": "template-computer"}',
+                '--config',
+                str(filepath),
+            ],
+        )
+        assert 'template-computer' in result.output
+
+        new_computer = orm.Computer.collection.get(label='template-computer')
+        assert new_computer.hostname == 'localhost'
+        assert new_computer.transport_type == 'core.local'
+        assert new_computer.scheduler_type == 'core.direct'
+        assert new_computer.description == 'Test computer from template'
+
+    def test_setup_template_missing_vars_raises(self, run_cli_command, template_config):
+        """Non-interactive mode without ``--template-vars`` raises when template variables are present."""
+        filepath = template_config
+        result = run_cli_command(
+            computer_setup,
+            ['--non-interactive', '--config', str(filepath)],
+            raises=True,
+        )
+        assert 'Template variables detected' in result.output or 'Template variables detected' in result.stderr

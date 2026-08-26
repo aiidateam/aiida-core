@@ -287,6 +287,7 @@ def set_computer_builder(ctx, param, value):
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@options.TEMPLATE_VARS()
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
@@ -294,15 +295,18 @@ def computer_setup(ctx, non_interactive, **kwargs):
     """Create a new computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
-    if kwargs['label'] in get_computer_names():
+    if kwargs.get('label') and kwargs['label'] in get_computer_names():
         echo.echo_critical(
             'A computer called {c} already exists. '
             'Use "verdi computer duplicate {c}" to set up a new '
             'computer starting from the settings of {c}.'.format(c=kwargs['label'])
         )
 
-    kwargs['transport'] = kwargs['transport'].name
-    kwargs['scheduler'] = kwargs['scheduler'].name
+    # When loaded from a template config, transport/scheduler may already be strings
+    if kwargs.get('transport') and hasattr(kwargs['transport'], 'name'):
+        kwargs['transport'] = kwargs['transport'].name
+    if kwargs.get('scheduler') and hasattr(kwargs['scheduler'], 'name'):
+        kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ComputerBuilder(**kwargs)
     try:

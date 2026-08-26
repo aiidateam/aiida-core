@@ -154,6 +154,7 @@ def transport_options(transport_type):
         for option in options_list:
             func = option(func)
         func = options.USER()(func)
+        func = options.TEMPLATE_VARS()(func)
         func = options.CONFIG_FILE()(func)
         return func
 

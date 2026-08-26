@@ -14,7 +14,7 @@ import textwrap
 import click
 import pytest
 
-from aiida.cmdline.params.options import CONFIG_FILE
+from aiida.cmdline.params.options import CONFIG_FILE, TEMPLATE_VARS
 
 
 @pytest.fixture
@@ -31,6 +31,17 @@ def cmd(integer, boolean):
     """Test command for :class:`aiida.cmdline.params.options.config.ConfigOption`."""
     click.echo(f'Integer: {integer}')
     click.echo(f'Boolean: {boolean}')
+
+
+@click.command()
+@click.option('--label', type=str)
+@click.option('--hostname', type=str)
+@TEMPLATE_VARS()
+@CONFIG_FILE()
+def cmd_with_template(label, hostname):
+    """Test command that supports template-aware config files."""
+    click.echo(f'Label: {label}')
+    click.echo(f'Hostname: {hostname}')
 
 
 def test_valid(run_cli_command, tmp_path):
@@ -70,3 +81,94 @@ def test_invalid_unknown_keys(run_cli_command, tmp_path):
     result = run_cli_command(cmd, ['--config', str(filepath)], raises=True)
     assert "Error: Invalid value for '--config': Invalid configuration file" in result.stderr
     assert "the following keys are not supported: {'unknown'}" in result.stderr
+
+
+@pytest.mark.parametrize(
+    'template_vars_arg',
+    [
+        '{"label": "my-computer"}',
+        pytest.param('vars_file', id='yaml_file'),
+    ],
+)
+def test_template_config_with_template_vars(run_cli_command, tmp_path, template_vars_arg):
+    """Test that a templated config file is resolved via ``--template-vars`` (JSON or file)."""
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """\
+            label: '{{ label }}'
+            hostname: localhost
+            metadata:
+                template_variables:
+                    label:
+                        default: test
+                        description: A label
+            """
+        )
+    )
+
+    if template_vars_arg == 'vars_file':
+        vars_file = tmp_path / 'vars.yaml'
+        vars_file.write_text('label: my-computer\n')
+        template_vars_arg = str(vars_file)
+
+    for args in [
+        ['--template-vars', template_vars_arg, '--config', str(filepath)],
+        ['--config', str(filepath), '--template-vars', template_vars_arg],
+    ]:
+        result = run_cli_command(cmd_with_template, args)
+        assert 'Label: my-computer' in result.output
+        assert 'Hostname: localhost' in result.output
+
+
+@pytest.mark.parametrize(
+    ('user_input', 'expected_label'),
+    [
+        pytest.param('my-prompted-label\n', 'my-prompted-label', id='typed_value'),
+        pytest.param('\n', 'default-label', id='accept_default'),
+    ],
+)
+def test_template_config_interactive_prompting(run_cli_command, tmp_path, user_input, expected_label):
+    """Interactive mode prompts for template variables; Enter accepts the default."""
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """\
+            label: '{{ label }}'
+            hostname: localhost
+            metadata:
+                template_variables:
+                    label:
+                        key_display: Computer Label
+                        description: A short name
+                        default: default-label
+            """
+        )
+    )
+
+    result = run_cli_command(cmd_with_template, ['--config', str(filepath)], user_input=user_input)
+    assert f'Label: {expected_label}' in result.output
+    assert 'Hostname: localhost' in result.output
+
+
+def test_template_config_interactive_choice(run_cli_command, tmp_path):
+    """Interactive mode with ``type: list`` constrains input to the given options."""
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """\
+            label: '{{ binary }}'
+            hostname: localhost
+            metadata:
+                template_variables:
+                    binary:
+                        type: list
+                        options:
+                            - pw
+                            - ph
+            """
+        )
+    )
+
+    result = run_cli_command(cmd_with_template, ['--config', str(filepath)], user_input='pw\n')
+    assert 'Label: pw' in result.output

@@ -150,6 +150,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         def apply_options(func: FC) -> FC:
             """Decorate the command function with the appropriate options for the given entry point."""
             func = options.NON_INTERACTIVE()(func)
+            func = options.TEMPLATE_VARS()(func)
             func = options.CONFIG_FILE()(func)
 
             options_list = self.list_options(entry_point)

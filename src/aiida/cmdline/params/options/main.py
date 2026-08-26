@@ -22,7 +22,7 @@ from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-d
 from ...utils import defaults, echo
 from .. import types
 from .callable import CallableDefaultOption
-from .config import ConfigFileOption
+from .config import TemplateAwareConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
 
@@ -119,6 +119,7 @@ __all__ = (
     'SORT',
     'START_DATE',
     'SYMLINK_CALCS',
+    'TEMPLATE_VARS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -732,10 +733,31 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
     help='Only select objects containing only these and no other elements.',
 )
 
-CONFIG_FILE = ConfigFileOption(
+
+def _set_template_vars_callback(ctx: click.Context, _param: click.Parameter, value: str | None) -> str | None:
+    """Store parsed ``--template-vars`` on the context for the config provider."""
+    if value is not None:
+        from aiida.cmdline.utils.template_config import parse_template_vars
+
+        ctx.meta['template_vars'] = parse_template_vars(value)
+    return value
+
+
+TEMPLATE_VARS = OverridableOption(
+    '--template-vars',
+    type=click.STRING,
+    is_eager=True,
+    callback=_set_template_vars_callback,
+    expose_value=False,
+    help='Template variable values: inline JSON string, local YAML/JSON file path, or URL. '
+    'Example: \'{"account": "my_account"}\' or path/to/vars.yaml.',
+)
+
+CONFIG_FILE = TemplateAwareConfigFileOption(
     '--config',
     type=types.FileOrUrl(),
-    help='Load option values from configuration file in yaml format (local path or URL).',
+    help='Load option values from configuration file in YAML format (local path or URL). '
+    'Supports Jinja2 templates with interactive prompting for placeholders.',
 )
 
 IDENTIFIER = OverridableOption(

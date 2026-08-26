@@ -25,7 +25,9 @@ import fnmatch
 import inspect
 import os
 import pickle
+import stat
 import uuid
+import warnings
 from collections.abc import Callable, Generator, Hashable, Iterable, MutableMapping
 from types import MethodType
 from typing import TYPE_CHECKING, Any, Optional, TypeVar, Union
@@ -177,10 +179,7 @@ _PICKLE_SUFFIX = 'pickle'
 
 
 class PicklePersister(Persister):
-    """
-    Implementation of the abstract Persister class that stores Process states
-    in pickles on a filesystem.
-    """
+    """Persist process states as pickles in a trusted, private directory."""
 
     def __init__(self, pickle_directory: str):
         """
@@ -192,24 +191,32 @@ class PicklePersister(Persister):
         """
         super().__init__()
 
-        try:
-            PicklePersister.ensure_pickle_directory(pickle_directory)
-        except OSError:
-            raise ValueError(f'failed to create the pickle directory at {pickle_directory}')
+        PicklePersister.ensure_pickle_directory(pickle_directory)
 
         self._pickle_directory = pickle_directory
 
     @staticmethod
     def ensure_pickle_directory(dirpath: str) -> None:
-        """
-        Will attempt to create the directory at dirpath and raise if it fails, except
-        if the exception arose because the directory already existed
+        """Ensure that the pickle directory exists with owner-only permissions.
+
+        If the directory already exists with more permissive permissions, they
+        are changed to ``rwx------`` and a warning is raised.
         """
         try:
-            os.makedirs(dirpath)
+            os.makedirs(dirpath, mode=stat.S_IRWXU)
         except OSError as exception:
             if exception.errno != errno.EEXIST:
-                raise
+                msg = f'failed to create the pickle directory at {dirpath}'
+                raise ValueError(msg) from exception
+
+            if stat.S_IMODE(os.stat(dirpath).st_mode) != stat.S_IRWXU:
+                msg = f'Changing permissions of the pickle directory {dirpath} to rwx------.'
+                warnings.warn(msg, UserWarning, stacklevel=2)
+                try:
+                    os.chmod(dirpath, stat.S_IRWXU)
+                except OSError as exception:
+                    msg = f'failed to change permissions of the pickle directory at {dirpath}'
+                    raise ValueError(msg) from exception
 
     @staticmethod
     def load_pickle(filepath: str) -> 'PersistedPickle':

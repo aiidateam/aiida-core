@@ -382,8 +382,10 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
         )
     except plumpy.process_states.Interruption:
         raise
-    except StashingError:
-        # Re-raise StashingError so it can be handled in the Waiting state with an exit code
+    except StashingError as exception:
+        # Log to the node so the failure shows up in ``verdi process report``, then re-raise so the ``Waiting`` state
+        # terminates the process with an exit code
+        node.logger.error(f'stashing calculation<{node.pk}> failed: {exception}')
         raise
     except Exception as exception:
         logger.warning(f'stashing calculation<{node.pk}> failed')

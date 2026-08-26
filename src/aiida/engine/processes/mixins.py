@@ -55,4 +55,4 @@ class ContextMixin(persistence.Savable):
         try:
             self._context = AttributeDict(saved_state[self.CONTEXT])
         except KeyError:
-            pass
+            self._context = None

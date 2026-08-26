@@ -37,6 +37,7 @@ __all__: tuple[str, ...] = ()
 PREDICATE_TYPE = Callable[['WorkChain'], bool]
 WC_COMMAND_TYPE = Callable[['WorkChain'], Any]
 EXIT_CODE_TYPE = int
+STEPPER_STATE = 'stepper_state'
 
 
 class WorkChainSpec(ProcessSpec):
@@ -161,9 +162,6 @@ class _FunctionCall(_Instruction):
             desc += f'({doc})'
 
         return desc
-
-
-STEPPER_STATE = 'stepper_state'
 
 
 @persistence.auto_persist('_pos')

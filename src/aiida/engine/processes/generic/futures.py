@@ -42,8 +42,13 @@ class CancellableAction(Future):
     An action that can be launched and potentially cancelled
     """
 
-    def __init__(self, action: Callable[..., Any], cookie: Any = None):
-        super().__init__()
+    def __init__(
+        self,
+        action: Callable[..., Any],
+        cookie: Any = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ):
+        super().__init__(loop=loop)
         self._action = action
         self._cookie = cookie
 

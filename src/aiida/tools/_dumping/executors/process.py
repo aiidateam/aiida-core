@@ -515,13 +515,8 @@ class NodeRepoIoDumper:
         if self.config.include_outputs:
             output_links = calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE).all()
             output_links_filtered = [link for link in output_links if link.link_label != 'retrieved']
-            # NOTE: Expand this here for additional types in the future
-            has_dumpable_output = any(
-                isinstance(link.node, (orm.SinglefileData, orm.FolderData)) for link in output_links_filtered
-            )
-            if output_links_filtered and has_dumpable_output:
+            if output_links_filtered:
                 output_path_target = output_path / io_dump_mapping.outputs
-                output_path_target.mkdir(parents=True, exist_ok=True)
                 self._dump_calculation_io_files(
                     parent_path=output_path_target,
                     link_triples=output_links_filtered,

@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import abc
-import sys
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -140,18 +139,6 @@ class StorageBackend(abc.ABC):
     @abc.abstractmethod
     def close(self) -> None:
         """Close the storage access."""
-
-    def __del__(self) -> None:
-        try:
-            closed = self.is_closed
-        except AttributeError:
-            # covers cases where the backend implementation is not yet initialized but object is deleted
-            return
-
-        if not closed:
-            LOGGER.warning(f'StorageBackend {self!r} was not closed explicitly.')
-            if not sys.is_finalizing():
-                self.close()
 
     @property
     @abc.abstractmethod

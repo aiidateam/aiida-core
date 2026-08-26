@@ -36,7 +36,7 @@ jobs:
         working-directory: .docker
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Login to GitHub Container Registry 🔑
       uses: docker/login-action@v4
@@ -87,7 +87,7 @@ jobs:
 
     - name: Docker meta
       id: meta
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@v6
       env: ${{ fromJSON(steps.build_vars.outputs.vars) }}
       with:
         images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ matrix.target }}
@@ -108,7 +108,7 @@ jobs:
         echo "src=$src" | tee -a "${GITHUB_OUTPUT}"
 
     - name: Push image
-      uses: akhilerm/tag-push-action@v2.2.0
+      uses: akhilerm/tag-push-action@v2.3.0
       with:
         src: ${{ steps.images.outputs.src }}
         dst: ${{ steps.meta.outputs.tags }}

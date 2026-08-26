@@ -276,7 +276,7 @@ class Running(State):
         elif isinstance(command, Wait):
             state = self.create_state(ProcessState.WAITING, command.continue_fn, command.msg, command.data)
         elif isinstance(command, Continue):
-            state = self.create_state(ProcessState.RUNNING, command.continue_fn, *command.args)
+            state = self.create_state(ProcessState.RUNNING, command.continue_fn, *command.args, **command.kwargs)
         else:
             raise ValueError('Unrecognised command')
 

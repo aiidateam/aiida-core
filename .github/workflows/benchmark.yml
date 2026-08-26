@@ -73,9 +73,10 @@ jobs:
         commit-msg-append: '[ci skip]'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
-        # Show alert with commit comment on detecting possible performance regression
+        # Timings on shared CI runners are too noisy for commit-to-commit alerts to be
+        # meaningful, so only record the data. Trends are tracked via the rendered charts
+        # published to the `gh-pages` branch.
         alert-threshold: 200%
-        comment-on-alert: true
+        comment-on-alert: false
         fail-on-alert: false
-        alert-comment-cc-users: '@giovannipizzi,@agoscinski,@GeigerJ2,@khsrali,@unkcpz'
       if: github.event_name == 'push' && github.ref_name == 'main'

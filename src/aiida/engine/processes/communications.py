@@ -665,7 +665,10 @@ class RemoteProcessThreadController:
             with kiwipy.capture_exceptions(execute_future):
                 pid: PID_TYPE = create_future.result()
                 continue_future = self.continue_process(pid, nowait=nowait, no_reply=no_reply)
-                kiwipy.chain(continue_future, execute_future)
+                if no_reply:
+                    execute_future.set_result(None)
+                else:
+                    kiwipy.chain(continue_future, execute_future)
 
         create_future.add_done_callback(on_created)
         return execute_future

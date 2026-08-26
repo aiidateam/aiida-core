@@ -66,10 +66,17 @@ def start_daemon_worker(foreground: bool = False, profile_name: str | None = Non
         LOGGER.info('Setting maximum recursion limit of daemon worker to %s', rlimit)
         sys.setrecursionlimit(rlimit)
 
+    shutdown_tasks: set[asyncio.Task[None]] = set()
+
+    def schedule_shutdown() -> None:
+        task = asyncio.create_task(shutdown_worker(runner))
+        shutdown_tasks.add(task)
+        task.add_done_callback(shutdown_tasks.discard)
+
     signals = (signal.SIGTERM, signal.SIGINT)
     for s in signals:
         # https://github.com/python/mypy/issues/12557
-        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
+        runner.loop.add_signal_handler(s, schedule_shutdown)
 
     try:
         LOGGER.info('Starting a daemon worker')

@@ -719,6 +719,7 @@ class ProcessLauncher:
         self._loop = loop
         self._persister = persister
         self._load_context = load_context if load_context is not None else persistence.LoadSaveContext()
+        self._step_tasks: set[asyncio.Task[Any]] = set()
 
         if loader is not None:
             self._loader = loader
@@ -776,7 +777,9 @@ class ProcessLauncher:
 
         if nowait:
             # XXX: can return a reference and gracefully use task to cancel itself when the upper call stack fails
-            asyncio.ensure_future(proc.step_until_terminated())  # noqa: RUF006
+            task = asyncio.create_task(proc.step_until_terminated())
+            self._step_tasks.add(task)
+            task.add_done_callback(self._step_tasks.discard)
             return proc.pid
 
         await proc.step_until_terminated()
@@ -804,7 +807,9 @@ class ProcessLauncher:
 
         if nowait:
             # XXX: can return a reference and gracefully use task to cancel itself when the upper call stack fails
-            asyncio.ensure_future(proc.step_until_terminated())  # noqa: RUF006
+            task = asyncio.create_task(proc.step_until_terminated())
+            self._step_tasks.add(task)
+            task.add_done_callback(self._step_tasks.discard)
             return proc.pid
 
         await proc.step_until_terminated()

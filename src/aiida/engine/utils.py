@@ -92,6 +92,18 @@ def instantiate_process(runner: Runner, process: Process | type[Process] | Proce
 class InterruptableFuture(asyncio.Future):
     """A future that can be interrupted by calling `interrupt`."""
 
+    _task: asyncio.Task[Any] | None = None
+
+    def _retain_task(self, task: asyncio.Task[Any]) -> None:
+        """Retain the task until it completes."""
+        self._task = task
+        task.add_done_callback(self._release_task)
+
+    def _release_task(self, task: asyncio.Task[Any]) -> None:
+        """Release the completed task."""
+        if self._task is task:
+            self._task = None
+
     def interrupt(self, reason: Exception) -> None:
         """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
         self.set_exception(reason)
@@ -112,12 +124,17 @@ class InterruptableFuture(asyncio.Future):
         :return: The result of the coroutine
         """
         task = asyncio.ensure_future(coro)
-        wait_iter = asyncio.as_completed({self, task})
-        result = await next(wait_iter)
-        if self.done():
-            raise RuntimeError(f"This interruptible future had it's result set unexpectedly to '{result}'")
+        try:
+            wait_iter = asyncio.as_completed({self, task})
+            result = await next(wait_iter)
+            if self.done():
+                raise RuntimeError(f"This interruptible future had it's result set unexpectedly to '{result}'")
 
-        return result
+            return result
+        finally:
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
 
 
 def interruptable_task(
@@ -152,7 +169,7 @@ def interruptable_task(
             if not future.done():
                 future.set_result(result)
 
-    loop.create_task(execute_coroutine())
+    future._retain_task(loop.create_task(execute_coroutine()))
 
     return future
 

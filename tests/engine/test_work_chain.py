@@ -1625,8 +1625,9 @@ class TestDefaultUniqueness:
         def define(cls, spec):
             super().define(spec)
             spec.input('a', valid_type=Bool, default=lambda: Bool(True))
+            spec.outline(cls.execute)
 
-        def step(self):
+        def execute(self):
             pass
 
     def test_unique_default_inputs(self):
@@ -1758,17 +1759,12 @@ class TestWorkChainEvents:
         assert listener.called == {'running', 'waiting', 'killed'}
 
 
-def test_illegal_override_run():
-    """Test that overriding a protected workchain method raises a ``RuntimeError``."""
-    with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden'):
+@pytest.mark.parametrize('method_name', ('run', 'step'))
+def test_illegal_override_protected_method(method_name):
+    """Test that overriding an inherited protected workchain method raises a ``RuntimeError``."""
 
-        class IllegalWorkChain(WorkChain):
-            """Work chain that illegally overrides the ``run`` method."""
+    class IntermediateWorkChain(WorkChain):
+        pass
 
-            @classmethod
-            def define(cls, spec):
-                super().define(spec)
-                spec.outline(cls.run)
-
-            async def run(self):
-                pass
+    with pytest.raises(RuntimeError, match=rf'the method `{method_name}` is protected cannot be overridden'):
+        type('IllegalWorkChain', (IntermediateWorkChain,), {method_name: lambda _: None})

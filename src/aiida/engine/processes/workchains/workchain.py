@@ -66,7 +66,11 @@ class Protect(ProcessStateMachineMeta):
         :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.
         """
         private = {
-            key for base in bases for key, value in vars(base).items() if callable(value) and mcs.__is_final(value)
+            key
+            for base in bases
+            for parent in base.__mro__
+            for key, value in vars(parent).items()
+            if callable(value) and mcs.__is_final(value)
         }
         for key in namespace:
             if key in private:
@@ -293,6 +297,12 @@ class WorkChain(Process, metaclass=Protect):
             self._pre_paused_status = status
         else:
             self.set_status(status)
+
+    @override
+    @Protect.final
+    async def step(self) -> None:
+        """Advance the process state machine by one step."""
+        await super().step()
 
     @override
     @Protect.final

@@ -1,11 +1,27 @@
 """Tests for process states and commands."""
 
+import asyncio
 from unittest.mock import Mock
 
 import yaml
 
 from aiida.engine.processes import persistence
-from aiida.engine.processes.states import Continue, Excepted, ProcessState, Running
+from aiida.engine.processes.states import NULL, Continue, Excepted, ProcessState, Running, Waiting
+
+
+def test_interrupt_completed_waiting_future():
+    """Test interrupting an already resumed waiting state does not raise."""
+    loop = asyncio.new_event_loop()
+    waiting = Waiting.__new__(Waiting)
+    waiting._waiting_future = loop.create_future()
+
+    try:
+        waiting.resume()
+        waiting.interrupt(RuntimeError('interrupt'))
+
+        assert waiting._waiting_future.result() is NULL
+    finally:
+        loop.close()
 
 
 def test_excepted_state_restores_formatted_traceback():

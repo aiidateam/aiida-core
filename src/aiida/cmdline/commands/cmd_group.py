@@ -16,6 +16,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.loaders import load_group, load_groups, load_node, load_nodes, load_user
 from aiida.common.exceptions import UniquenessError
 from aiida.common.links import GraphTraversalRules
 
@@ -32,6 +33,9 @@ def verdi_group():
 @with_dbenv()
 def group_add_nodes(group, force, nodes):
     """Add nodes to a group."""
+    group = load_group(group)
+    nodes = load_nodes(nodes)
+
     if not force:
         click.confirm(f'Do you really want to add {len(nodes)} nodes to {group}?', abort=True)
 
@@ -47,6 +51,9 @@ def group_add_nodes(group, force, nodes):
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
     from aiida.orm import Group, Node, QueryBuilder
+
+    group = load_group(group)
+    nodes = load_nodes(nodes)
 
     if nodes and clear:
         echo.echo_critical(
@@ -97,6 +104,10 @@ def group_remove_nodes(group, nodes, clear, force):
 def group_move_nodes(source_group, target_group, force, nodes, all_entries):
     """Move the specified NODES from one group to another."""
     from aiida.orm import Group, Node, QueryBuilder
+
+    source_group = load_group(source_group, param_name='source_group')
+    target_group = load_group(target_group, param_name='target_group')
+    nodes = load_nodes(nodes)
 
     if source_group.pk == target_group.pk:
         echo.echo_critical(f'Source and target group are the same: {source_group}.')
@@ -201,6 +212,10 @@ def group_delete(
 
     from aiida import orm
     from aiida.tools import delete_group_nodes
+
+    groups = load_groups(groups)
+    user = load_user(user) if user is not None else None
+    node = load_node(node) if node is not None else None
 
     filters_provided = any(
         [all_users or user or past_days or startswith or endswith or contains or node or type_string]
@@ -323,6 +338,8 @@ def group_delete(
 @with_dbenv()
 def group_relabel(group, label):
     """Change the label of a group."""
+    group = load_group(group)
+
     try:
         group.label = label
     except UniquenessError as exception:
@@ -340,6 +357,8 @@ def group_description(group, description):
 
     If no description is defined, the current description will simply be echoed.
     """
+    group = load_group(group)
+
     if description:
         group.description = description
         echo.echo_success(f'Changed the description of {group}.')
@@ -365,6 +384,8 @@ def group_show(group, raw, limit, uuid):
 
     from aiida.common import timezone
     from aiida.common.utils import str_timedelta
+
+    group = load_group(group)
 
     if limit:
         node_iterator = group.nodes[:limit]
@@ -456,6 +477,9 @@ def group_list(
 ):
     """Show a list of existing groups."""
     import datetime
+
+    user = load_user(user) if user is not None else None
+    node = load_node(node) if node is not None else None
 
     from tabulate import tabulate
 
@@ -566,6 +590,7 @@ def group_copy(source_group, destination_group):
     """
     from aiida import orm
 
+    source_group = load_group(source_group, param_name='source_group')
     dest_group, created = orm.Group.collection.get_or_create(label=destination_group)
 
     # Issue warning if destination group is not empty and get user confirmation to continue
@@ -686,6 +711,8 @@ def group_dump(
 
     import traceback
     from pathlib import Path
+
+    group = load_group(group)
 
     from aiida.cmdline.utils import echo
     from aiida.tools._dumping.utils import DumpPaths

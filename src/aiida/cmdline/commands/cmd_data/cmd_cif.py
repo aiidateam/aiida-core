@@ -15,6 +15,7 @@ from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_optio
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_data, load_datum
 
 LIST_PROJECT_HEADERS = ['Id', 'Formulae', 'Source.URI']
 EXPORT_FORMATS = ['cif']
@@ -75,6 +76,8 @@ def cif_list(raw, formula_mode, past_days, groups, all_users):
 @decorators.with_dbenv()
 def cif_show(data, fmt):
     """Visualize CifData objects."""
+    data = load_data(data)
+
     try:
         show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
@@ -88,7 +91,7 @@ def cif_show(data, fmt):
 @decorators.with_dbenv()
 def cif_content(data):
     """Show the content of the CIF file."""
-    for node in data:
+    for node in load_data(data):
         try:
             echo.echo(node.get_content())
         except OSError as exception:
@@ -102,7 +105,7 @@ def cif_content(data):
 @decorators.with_dbenv()
 def cif_export(**kwargs):
     """Export CifData object."""
-    node = kwargs.pop('datum')
+    node = load_datum(kwargs.pop('datum'))
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')
     force = kwargs.pop('force')

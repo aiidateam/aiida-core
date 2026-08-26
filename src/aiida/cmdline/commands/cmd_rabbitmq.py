@@ -20,6 +20,7 @@ import wrapt
 from aiida.cmdline.commands.cmd_devel import verdi_devel
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo, echo_tabulate
+from aiida.cmdline.utils.loaders import load_processes
 
 if t.TYPE_CHECKING:
     import requests
@@ -264,6 +265,8 @@ def cmd_tasks_revive(processes, force):
     multiple instances of the task being executed and should thus be used with caution.
     """
     from aiida.engine.processes.control import revive_processes
+
+    processes = load_processes(processes)
 
     if not force:
         echo.echo_warning('This command should only be used if you are absolutely sure the process task was lost.')

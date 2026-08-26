@@ -15,6 +15,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.loaders import load_group, load_process, load_processes
 from aiida.common.log import LOG_LEVELS, capture_logging
 
 REPAIR_INSTRUCTIONS = """\
@@ -122,7 +123,7 @@ def process_list(
     relationships = {}
 
     if group:
-        relationships['with_node'] = group
+        relationships['with_node'] = load_group(group)
 
     builder = CalculationQueryBuilder()
     filters = builder.get_filters(all_entries, process_state, process_label, paused, exit_status, failed)
@@ -203,6 +204,8 @@ def process_show(processes, most_recent_node):
     Show details for one or multiple processes."""
     from aiida.cmdline.utils.common import get_node_info
 
+    processes = load_processes(processes)
+
     if not processes and not most_recent_node:
         raise click.UsageError(
             'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
@@ -228,6 +231,8 @@ def process_call_root(processes):
     """Show root process of processes.
 
     Show root process(es) of the call stack for one or multiple processes."""
+    processes = load_processes(processes)
+
     if not processes:
         raise click.UsageError('Please specify one or multiple processes by their identifier (PK, UUID or label).')
     for process in processes:
@@ -270,6 +275,8 @@ def process_report(processes, most_recent_node, levelname, indent_size, max_dept
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
 
+    processes = load_processes(processes)
+
     if not processes and not most_recent_node:
         raise click.UsageError(
             'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
@@ -308,6 +315,8 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
     Show the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
+    processes = load_processes(processes)
+
     if not processes and not most_recent_node:
         raise click.UsageError(
             'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
@@ -345,6 +354,8 @@ def process_kill(processes, all_entries, timeout, force):
 
     Kill one or multiple running processes."""
     from aiida.engine.processes import control
+
+    processes = load_processes(processes)
 
     if not processes and not all_entries:
         raise click.UsageError(
@@ -389,6 +400,8 @@ def process_pause(processes, all_entries, timeout):
     Pause one or multiple running processes."""
     from aiida.engine.processes import control
 
+    processes = load_processes(processes)
+
     if not processes and not all_entries:
         raise click.UsageError(
             'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
@@ -422,6 +435,8 @@ def process_play(processes, all_entries, timeout):
 
     Play (unpause) one or multiple paused processes."""
     from aiida.engine.processes import control
+
+    processes = load_processes(processes)
 
     if not processes and not all_entries:
         raise click.UsageError(
@@ -482,6 +497,8 @@ def process_watch(broker, processes, most_recent_node):
 
     if most_recent_node:
         processes = [get_most_recent_node()]
+    else:
+        processes = load_processes(processes)
 
     for process in processes:
         if process.is_terminated:
@@ -497,10 +514,6 @@ def process_watch(broker, processes, most_recent_node):
     except (SystemExit, KeyboardInterrupt):
         echo.echo('')  # add a new line after the interrupt character
         echo.echo_report('received interrupt, exiting...')
-        try:
-            communicator.close()
-        except RuntimeError:
-            pass
 
         # Reraise to trigger clicks builtin abort sequence
         raise
@@ -672,6 +685,8 @@ def process_dump(
     """
     import traceback
     from pathlib import Path
+
+    process = load_process(process)
 
     from aiida.cmdline.utils import echo
     from aiida.tools._dumping.utils import DumpPaths

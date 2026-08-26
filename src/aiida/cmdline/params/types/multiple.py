@@ -34,6 +34,11 @@ class MultipleValueParamType(click.ParamType):
         else:
             self.name = ''
 
+    @property
+    def param_type(self) -> click.ParamType:
+        """Return the parameter type that each of the values is parsed with."""
+        return self._param_type
+
     @shim_add_ctx
     def get_metavar(self, param: click.Parameter, ctx: click.Context | None) -> str | None:
         try:

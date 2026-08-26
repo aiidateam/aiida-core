@@ -10,10 +10,10 @@
 
 import uuid
 
-import click
 import pytest
 
 from aiida.cmdline.params.types import GroupParamType
+from aiida.common import exceptions
 from aiida.orm import AutoGroup, Group, ImportGroup
 from aiida.orm.utils.loaders import OrmEntityLoader
 
@@ -42,7 +42,7 @@ def test_get_by_id(setup_groups, parameter_type):
     """Verify that using the ID will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = setup_groups
     identifier = f'{entity_01.pk}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -50,7 +50,7 @@ def test_get_by_uuid(setup_groups, parameter_type):
     """Verify that using the UUID will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = setup_groups
     identifier = f'{entity_01.uuid}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -58,7 +58,7 @@ def test_get_by_label(setup_groups, parameter_type):
     """Verify that using the LABEL will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = setup_groups
     identifier = f'{entity_01.label}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -70,11 +70,11 @@ def test_ambiguous_label_pk(setup_groups, parameter_type):
     """
     entity_01, entity_02, _entity_03 = setup_groups
     identifier = f'{entity_02.label}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
     identifier = f'{entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_02.uuid
 
 
@@ -86,11 +86,11 @@ def test_ambiguous_label_uuid(setup_groups, parameter_type):
     """
     entity_01, _entity_02, entity_03 = setup_groups
     identifier = f'{entity_03.label}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
     identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_03.uuid
 
 
@@ -98,13 +98,13 @@ def test_create_if_not_exist():
     """Test the `create_if_not_exist` constructor argument."""
     label = 'non-existing-label-01'
     parameter_type = GroupParamType(create_if_not_exist=True)
-    result = parameter_type.convert(label, None, None)
+    result = parameter_type.resolve(label)
     assert isinstance(result, Group)
     assert result.is_stored
 
     label = 'non-existing-label-02'
     parameter_type = GroupParamType(create_if_not_exist=True, sub_classes=('aiida.groups:core.auto',))
-    result = parameter_type.convert(label, None, None)
+    result = parameter_type.resolve(label)
     assert isinstance(result, AutoGroup)
 
     # Specifying more than one subclass when `create_if_not_exist=True` is not allowed.
@@ -129,8 +129,8 @@ def test_sub_classes(setup_groups, sub_classes, expected):
 
     for group in [entity_01, entity_02, entity_03]:
         try:
-            parameter_type.convert(str(group.pk), None, None)
-        except click.BadParameter:
+            parameter_type.resolve(str(group.pk))
+        except exceptions.NotExistent:
             results.append(False)
         else:
             results.append(True)

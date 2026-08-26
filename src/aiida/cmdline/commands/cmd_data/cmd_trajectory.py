@@ -15,6 +15,7 @@ from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_optio
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_data, load_datum
 
 LIST_PROJECT_HEADERS = ['Id', 'Label']
 EXPORT_FORMATS = ['cif', 'xsf']
@@ -90,6 +91,8 @@ def trajectory_list(raw, past_days, groups, all_users):
 @decorators.with_dbenv()
 def trajectory_show(data, fmt, **kwargs):
     """Visualize a trajectory."""
+    data = load_data(data)
+
     try:
         show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
@@ -106,7 +109,7 @@ def trajectory_show(data, fmt, **kwargs):
 @decorators.with_dbenv()
 def trajectory_export(**kwargs):
     """Export trajectory to file."""
-    node = kwargs.pop('datum')
+    node = load_datum(kwargs.pop('datum'))
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')
     force = kwargs.pop('force')

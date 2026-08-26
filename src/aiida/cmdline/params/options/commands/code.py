@@ -13,6 +13,7 @@ import click
 from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
+from aiida.cmdline.utils.loaders import resolve_callback
 
 
 def is_on_computer(ctx: click.Context) -> bool:
@@ -144,6 +145,8 @@ COMPUTER = options.COMPUTER.clone(
     cls=InteractiveOption,
     required_fn=is_on_computer,
     prompt_fn=is_on_computer,
+    # ``validate_label_uniqueness`` reads the computer while parsing, so it has to be resolved by then.
+    callback=resolve_callback,
     help='Name of the computer, on which the code is installed.',
 )
 

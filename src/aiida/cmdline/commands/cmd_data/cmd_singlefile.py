@@ -11,6 +11,7 @@
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_datum
 
 
 @verdi_data.group('core.singlefile')
@@ -23,6 +24,8 @@ def singlefile():
 @decorators.with_dbenv()
 def singlefile_content(datum):
     """Show the content of the file."""
+    datum = load_datum(datum)
+
     try:
         echo.echo(datum.get_content())
     except OSError as exception:

@@ -257,6 +257,14 @@ class Manager:
         """
         return self._profile_storage is not None
 
+    @property
+    def broker_loaded(self) -> bool:
+        """Return whether a broker has been loaded.
+
+        :return: boolean, True if a broker is currently loaded, False otherwise
+        """
+        return self._broker is not None
+
     def get_option(self, option_name: str) -> Any:
         """Return the value of a configuration option.
 

@@ -9,6 +9,7 @@
 """This module provides list functionality to all data types."""
 
 from aiida.cmdline.params import options
+from aiida.cmdline.utils.loaders import load_groups
 
 LIST_OPTIONS = [
     options.GROUPS,
@@ -95,5 +96,5 @@ def data_list(datatype, columns, elements, elements_only, formula_mode, past_day
     project = [columns_dict[k] for k in columns]
     group_pks = None
     if groups is not None:
-        group_pks = [g.pk for g in groups]
+        group_pks = [g.pk for g in load_groups(groups)]
     return query(datatype, project, past_days, group_pks, all_users)

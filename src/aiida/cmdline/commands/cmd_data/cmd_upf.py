@@ -16,6 +16,7 @@ from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_datum, load_group
 
 
 @verdi_data.group('core.upf')
@@ -107,6 +108,8 @@ def upf_exportfamily(folder, group):
     """Export a pseudopotential family into a folder.
     Call without parameters to get some help.
     """
+    group = load_group(group)
+
     if group.is_empty:
         echo.echo_critical(f'Group<{group.label}> contains no pseudos')
 
@@ -146,7 +149,7 @@ def upf_import(filename):
 @decorators.with_dbenv()
 def upf_export(**kwargs):
     """Export `UpfData` object to file."""
-    node = kwargs.pop('datum')
+    node = load_datum(kwargs.pop('datum'))
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')
     force = kwargs.pop('force')

@@ -24,6 +24,7 @@ from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.loaders import load_computer, load_entity, load_user
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
 
@@ -265,11 +266,18 @@ def get_parameter_default(parameter, ctx):
 
 
 def set_computer_builder(ctx, param, value):
-    """Set the computer spec for defaults of following options."""
+    """Set the computer spec for defaults of following options.
+
+    This callback seeds the defaults that the following options prompt with, so unlike a command body it has to
+    resolve the identifier while the command line is still being parsed. It therefore loads the backend itself.
+    """
+    from aiida.cmdline.utils.decorators import load_backend_if_not_loaded
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
-    ctx.computer_builder = ComputerBuilder.from_computer(value)
-    return value
+    load_backend_if_not_loaded()
+    computer = load_entity(value, param_name=param.name)
+    ctx.computer_builder = ComputerBuilder.from_computer(computer)
+    return computer
 
 
 @verdi_computer.command('setup')
@@ -386,6 +394,9 @@ def computer_enable(computer, user):
     """Enable the computer for the given user."""
     from aiida.common.exceptions import NotExistent
 
+    computer = load_computer(computer)
+    user = load_user(user)
+
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
@@ -410,6 +421,9 @@ def computer_disable(computer, user):
     Thi can be useful, for example, when a computer is under maintenance.
     """
     from aiida.common.exceptions import NotExistent
+
+    computer = load_computer(computer)
+    user = load_user(user)
 
     try:
         authinfo = computer.get_authinfo(user)
@@ -451,6 +465,7 @@ def computer_list(all_entries, raw):
 
 @verdi_computer.command('goto')
 @arguments.COMPUTER()
+@with_dbenv()
 def computer_goto(computer):
     """Open a shell connecting to the remote computer.
 
@@ -458,6 +473,8 @@ def computer_goto(computer):
     computer specified on the command line.
     """
     from aiida.common.exceptions import NotExistent
+
+    computer = load_computer(computer)
 
     try:
         transport = computer.get_transport()
@@ -477,6 +494,7 @@ def computer_goto(computer):
 @with_dbenv()
 def computer_show(computer):
     """Show detailed information for a computer."""
+    computer = load_computer(computer)
     table = [
         ['Label', computer.label],
         ['PK', computer.pk],
@@ -504,6 +522,7 @@ def computer_relabel(computer, label):
     """Relabel a computer."""
     from aiida.common.exceptions import UniquenessError
 
+    computer = load_computer(computer)
     old_label = computer.label
 
     if old_label == label:
@@ -542,9 +561,13 @@ def computer_test(user, print_traceback, computer):
     from aiida import orm
     from aiida.common.exceptions import NotExistent
 
+    computer = load_computer(computer)
+
     # Set a user automatically if one is not specified in the command line
     if user is None:
         user = orm.User.collection.get_default()
+    else:
+        user = load_user(user)
 
     echo.echo_report(f'Testing computer<{computer.label}> for user<{user.email}>...')
 
@@ -647,6 +670,7 @@ def computer_delete(computer, dry_run):
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.tools import delete_nodes
 
+    computer = load_computer(computer)
     label = computer.label
 
     # Sofar, we can only get this info with QueryBuilder
@@ -716,10 +740,14 @@ def computer_configure():
     help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
 )
 @arguments.COMPUTER()
+@with_dbenv()
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
     from aiida.transports import cli as transport_cli
+
+    computer = load_computer(computer)
+    user = load_user(user) if user is not None else None
 
     transport_cls = computer.get_transport_class()
     option_list = [
@@ -778,6 +806,7 @@ def computer_export_setup(computer, output_file, overwrite, sort):
     """Export computer setup to a YAML file."""
     import yaml
 
+    computer = load_computer(computer)
     computer_setup = {
         'label': computer.label,
         'hostname': computer.hostname,
@@ -825,6 +854,9 @@ def computer_export_setup(computer, output_file, overwrite, sort):
 def computer_export_config(computer, output_file, user, overwrite, sort):
     """Export computer transport configuration for a user to a YAML file."""
     import yaml
+
+    computer = load_computer(computer)
+    user = load_user(user) if user is not None else None
 
     if not computer.is_configured:
         echo.echo_critical(

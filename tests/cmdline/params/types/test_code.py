@@ -51,7 +51,7 @@ def test_get_by_id(setup_codes, parameter_type):
     """Verify that using the ID will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = setup_codes
     identifier = f'{entity_01.pk}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -59,7 +59,7 @@ def test_get_by_uuid(setup_codes, parameter_type):
     """Verify that using the UUID will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = setup_codes
     identifier = f'{entity_01.uuid}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -67,7 +67,7 @@ def test_get_by_label(setup_codes, parameter_type):
     """Verify that using the LABEL will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = setup_codes
     identifier = f'{entity_01.label}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -75,7 +75,7 @@ def test_get_by_fullname(setup_codes, parameter_type):
     """Verify that using the LABEL@machinename will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = setup_codes
     identifier = f'{entity_01.label}@{entity_01.computer.label}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -87,11 +87,11 @@ def test_ambiguous_label_pk(setup_codes, parameter_type):
     """
     entity_01, entity_02, _entity_03 = setup_codes
     identifier = f'{entity_02.label}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
     identifier = f'{entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_02.uuid
 
 
@@ -103,11 +103,11 @@ def test_ambiguous_label_uuid(setup_codes, parameter_type):
     """
     entity_01, _entity_02, entity_03 = setup_codes
     identifier = f'{entity_03.label}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_01.uuid
 
     identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_03.uuid
 
 
@@ -116,12 +116,12 @@ def test_entry_point_validation(setup_codes):
     _entity_01, entity_02, entity_03 = setup_codes
     parameter_type = CodeParamType(entry_point='core.arithmetic.add')
     identifier = f'{entity_02.pk}'
-    result = parameter_type.convert(identifier, None, None)
+    result = parameter_type.resolve(identifier)
     assert result.uuid == entity_02.uuid
 
     with pytest.raises(click.BadParameter):
         identifier = f'{entity_03.pk}'
-        result = parameter_type.convert(identifier, None, None)
+        result = parameter_type.resolve(identifier)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

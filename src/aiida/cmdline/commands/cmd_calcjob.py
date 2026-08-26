@@ -19,6 +19,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.loaders import load_calculation, load_calculations, load_computers
 
 if t.TYPE_CHECKING:
     from aiida import orm
@@ -31,6 +32,7 @@ def verdi_calcjob():
 
 @verdi_calcjob.command('gotocomputer')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
+@decorators.with_dbenv()
 def calcjob_gotocomputer(calcjob):
     """Open a shell in the remote folder on the calcjob.
 
@@ -38,6 +40,8 @@ def calcjob_gotocomputer(calcjob):
     computer on which the calcjob is being/has been executed.
     """
     from aiida.common.exceptions import NotExistent
+
+    calcjob = load_calculation(calcjob, param_name='calcjob')
 
     try:
         transport = calcjob.get_transport()
@@ -66,6 +70,8 @@ def calcjob_gotocomputer(calcjob):
 def calcjob_res(calcjob, fmt, keys):
     """Print data from the result output Dict node of a calcjob."""
     from aiida.cmdline.utils.echo import echo_dictionary
+
+    calcjob = load_calculation(calcjob, param_name='calcjob')
 
     try:
         results = calcjob.res.get_results()
@@ -97,6 +103,8 @@ def calcjob_inputcat(calcjob, path):
     import errno
     import sys
     from shutil import copyfileobj
+
+    calcjob = load_calculation(calcjob, param_name='calcjob')
 
     # Get path from the given CalcJobNode if not defined by user
     if path is None:
@@ -143,6 +151,8 @@ def calcjob_remotecat(calcjob: orm.CalcJobNode, path: str | None):
     import sys
     import tempfile
 
+    calcjob = load_calculation(calcjob, param_name='calcjob')
+
     remote_folder, path = get_remote_and_path(calcjob, path)
 
     with tempfile.NamedTemporaryFile() as tmp_path:
@@ -168,6 +178,8 @@ def calcjob_outputcat(calcjob, path):
     """
     import errno
     import sys
+
+    calcjob = load_calculation(calcjob, param_name='calcjob')
     from shutil import copyfileobj
 
     try:
@@ -220,6 +232,8 @@ def calcjob_inputls(calcjob, path, color):
     """
     from aiida.cmdline.utils.repository import list_repository_contents
 
+    calcjob = load_calculation(calcjob, param_name='calcjob')
+
     try:
         list_repository_contents(calcjob, path, color)
     except FileNotFoundError:
@@ -240,6 +254,8 @@ def calcjob_outputls(calcjob, path, color):
     Content can only be shown after the daemon has retrieved the remote files.
     """
     from aiida.cmdline.utils.repository import list_repository_contents
+
+    calcjob = load_calculation(calcjob, param_name='calcjob')
 
     try:
         retrieved = calcjob.outputs.retrieved
@@ -267,6 +283,8 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
     If both are specified, a logical AND is done between the two, i.e. the calcjobs that will be cleaned have been
     modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
     """
+    calcjobs = load_calculations(calcjobs, param_name='calcjobs')
+    computers = load_computers(computers) if computers else computers
     from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
 
     if calcjobs:

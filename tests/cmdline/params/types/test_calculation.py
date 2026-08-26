@@ -35,7 +35,7 @@ def test_get_by_id(entities):
     """Verify that using the ID will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = entities
     identifier = str(entity_01.pk)
-    result = CalculationParamType().convert(identifier, None, None)
+    result = CalculationParamType().resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -43,7 +43,7 @@ def test_get_by_uuid(entities):
     """Verify that using the UUID will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = entities
     identifier = str(entity_01.uuid)
-    result = CalculationParamType().convert(identifier, None, None)
+    result = CalculationParamType().resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -51,7 +51,7 @@ def test_get_by_label(entities):
     """Verify that using the LABEL will retrieve the correct entity."""
     entity_01, _entity_02, _entity_03 = entities
     identifier = str(entity_01.label)
-    result = CalculationParamType().convert(identifier, None, None)
+    result = CalculationParamType().resolve(identifier)
     assert result.uuid == entity_01.uuid
 
 
@@ -63,11 +63,11 @@ def test_ambiguous_label_pk(entities):
     """
     entity_01, entity_02, _entity_03 = entities
     identifier = str(entity_02.label)
-    result = CalculationParamType().convert(identifier, None, None)
+    result = CalculationParamType().resolve(identifier)
     assert result.uuid == entity_01.uuid
 
     identifier = f'{entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
-    result = CalculationParamType().convert(identifier, None, None)
+    result = CalculationParamType().resolve(identifier)
     assert result.uuid == entity_02.uuid
 
 
@@ -79,9 +79,9 @@ def test_ambiguous_label_uuid(entities):
     """
     entity_01, _entity_02, entity_03 = entities
     identifier = str(entity_03.label)
-    result = CalculationParamType().convert(identifier, None, None)
+    result = CalculationParamType().resolve(identifier)
     assert result.uuid == entity_01.uuid
 
     identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
-    result = CalculationParamType().convert(identifier, None, None)
+    result = CalculationParamType().resolve(identifier)
     assert result.uuid == entity_03.uuid

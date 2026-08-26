@@ -22,6 +22,7 @@ from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.loaders import load_node, load_nodes, load_user
 from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
 
@@ -94,6 +95,8 @@ def repo_cat(node, relative_path):
 
     from aiida.orm import SinglefileData
 
+    node = load_node(node)
+
     if not relative_path:
         if not isinstance(node, SinglefileData):
             raise click.BadArgumentUsage("Missing argument 'RELATIVE_PATH'.")
@@ -119,6 +122,8 @@ def repo_ls(node, relative_path, color):
     """List files in the node repository folder."""
     from aiida.cmdline.utils.repository import list_repository_contents
 
+    node = load_node(node)
+
     try:
         list_repository_contents(node, relative_path, color)
     except FileNotFoundError:
@@ -143,6 +148,7 @@ def repo_dump(node, output_directory):
 
     from aiida.repository import FileType
 
+    node = load_node(node)
     output_directory = pathlib.Path(output_directory)
 
     try:
@@ -183,6 +189,7 @@ def repo_dump(node, output_directory):
 @with_dbenv()
 def node_label(nodes, label, raw, force):
     """View or set the label of one or more nodes."""
+    nodes = load_nodes(nodes)
     table = []
 
     if label is None:
@@ -216,6 +223,7 @@ def node_label(nodes, label, raw, force):
 @with_dbenv()
 def node_description(nodes, description, force, raw):
     """View or set the description of one or more nodes."""
+    nodes = load_nodes(nodes)
     table = []
 
     if description is None:
@@ -248,6 +256,8 @@ def node_description(nodes, description, force, raw):
 def node_show(nodes, print_groups):
     """Show generic information on one or more nodes."""
     from aiida.cmdline.utils.common import get_node_info
+
+    nodes = load_nodes(nodes)
 
     for node in nodes:
         # TODO: Add a check here on the node type, otherwise it might try to access
@@ -315,7 +325,7 @@ def echo_node_dict(nodes: list[Node], keys: list, fmt: str, identifier: str, raw
 @with_dbenv()
 def attributes(nodes, keys, fmt, identifier, raw):
     """Show the attributes of one or more nodes."""
-    echo_node_dict(nodes, keys, fmt, identifier, raw)
+    echo_node_dict(load_nodes(nodes), keys, fmt, identifier, raw)
 
 
 @verdi_node.command('extras')
@@ -327,7 +337,7 @@ def attributes(nodes, keys, fmt, identifier, raw):
 @with_dbenv()
 def extras(nodes, keys, fmt, identifier, raw):
     """Show the extras of one or more nodes."""
-    echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=False)
+    echo_node_dict(load_nodes(nodes), keys, fmt, identifier, raw, use_attrs=False)
 
 
 def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
@@ -482,6 +492,8 @@ def rehash(nodes, entry_point, force):
     """
     from aiida.orm import Data, ProcessNode, QueryBuilder
 
+    nodes = load_nodes(nodes)
+
     # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
     if entry_point is None:
         classes: tuple = (Data, ProcessNode)
@@ -606,6 +618,8 @@ def graph_generate(
     if not root_nodes:
         echo.echo_critical('No root node(s) specified.')
 
+    root_nodes = load_nodes(root_nodes, param_name='root_nodes')
+
     if not output_file:
         pks = '.'.join(str(n.pk) for n in root_nodes)
         output_file = pathlib.Path(f'{pks}.{engine}.{output_format}')
@@ -650,6 +664,8 @@ def verdi_comment():
 @decorators.with_dbenv()
 def comment_add(nodes, content):
     """Add a comment to one or more nodes."""
+    nodes = load_nodes(nodes)
+
     if not content:
         content = multi_line_input.edit_comment()
 
@@ -686,7 +702,9 @@ def comment_update(comment_id, content):
 @decorators.with_dbenv()
 def comment_show(user, nodes):
     """Show the comments of one or multiple nodes."""
-    for node in nodes:
+    user = load_user(user) if user is not None else None
+
+    for node in load_nodes(nodes):
         msg = f'* Comments for Node<{node.pk}>'
         echo.echo('*' * len(msg))
         echo.echo(msg)

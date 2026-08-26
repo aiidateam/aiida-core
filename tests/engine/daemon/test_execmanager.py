@@ -742,6 +742,14 @@ async def test_stashing(
     ## 2) test Error handling
     dest_path_error = tmp_path / 'stash_path_error'
     dest_path_error.mkdir()
+
+    # A failed COPY stash must not remove a sibling stash in the same shard.
+    if stash_mode == StashMode.COPY.value:
+        other_uuid = uuid[:4] + 'beef-0000-0000-0000-000000000000'
+        other_stash = dest_path_error / other_uuid[:2] / other_uuid[2:4] / other_uuid[4:]
+        other_stash.mkdir(parents=True)
+        (other_stash / 'aiida.out').write_text('other')
+
     node.set_option(
         'stash',
         {
@@ -772,5 +780,9 @@ async def test_stashing(
             await execmanager.stash_calculation(node, transport)
             assert any('failed to stash' in message for message in caplog.messages)
 
-    # Ensure no files were created in the destination path after the error
-    assert not any(dest_path_error.iterdir())
+    # Ensure no files were created in the destination path after the error, except pre-existing stashes.
+    if stash_mode == StashMode.COPY.value:
+        assert (other_stash / 'aiida.out').read_text() == 'other'
+        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
+    else:
+        assert not any(dest_path_error.iterdir())

@@ -27,11 +27,10 @@ from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
-
-from .abstract import ArchiveFormatAbstract
-from .common import entity_type_to_orm
-from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
-from .implementations.sqlite_zip.main import ArchiveFormatSqlZip
+from aiida.tools.archive.abstract import ArchiveFormatAbstract
+from aiida.tools.archive.common import entity_type_to_orm
+from aiida.tools.archive.exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
+from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
 __all__ = ('import_archive',)
 

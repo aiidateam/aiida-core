@@ -238,7 +238,7 @@ def cmd_tasks_analyze(ctx, fix):
 
     Use ``-v INFO`` to be more verbose and print more information.
     """
-    from .cmd_process import process_repair
+    from aiida.cmdline.commands.cmd_process import process_repair
 
     ctx.invoke(process_repair, dry_run=not fix)
 

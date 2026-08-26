@@ -15,7 +15,7 @@ from typing import NamedTuple
 
 from wrapt import decorator
 
-from ..exit_code import ExitCode
+from aiida.engine.processes.exit_code import ExitCode
 
 __all__ = ('ProcessHandlerReport', 'process_handler')
 

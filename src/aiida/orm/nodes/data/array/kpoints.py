@@ -17,9 +17,8 @@ import typing as t
 
 import numpy
 
+from aiida.orm.nodes.data.array.array import ArrayData
 from aiida.orm.pydantic import OrmMetadataField
-
-from .array import ArrayData
 
 __all__ = ('KpointsData',)
 

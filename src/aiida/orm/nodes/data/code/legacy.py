@@ -15,9 +15,8 @@ from aiida.common import exceptions
 from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
+from aiida.orm.nodes.data.code.abstract import AbstractCode
 from aiida.orm.pydantic import OrmMetadataField
-
-from .abstract import AbstractCode
 
 __all__ = ('Code',)
 

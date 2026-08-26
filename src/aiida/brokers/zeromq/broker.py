@@ -12,13 +12,12 @@ from pathlib import Path
 import psutil
 
 from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus
+from aiida.brokers.zeromq.communicator import ZeromqCommunicator
+from aiida.brokers.zeromq.defaults import BROKER_READY_TIMEOUT
+from aiida.brokers.zeromq.queue import PersistentQueue
+from aiida.brokers.zeromq.service import PID_SENTINEL, ZeromqBrokerService
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.log import AIIDA_LOGGER
-
-from .communicator import ZeromqCommunicator
-from .defaults import BROKER_READY_TIMEOUT
-from .queue import PersistentQueue
-from .service import PID_SENTINEL, ZeromqBrokerService
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile

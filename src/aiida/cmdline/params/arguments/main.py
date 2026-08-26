@@ -11,8 +11,8 @@
 
 import click
 
-from .. import types
-from .overridable import OverridableArgument
+from aiida.cmdline.params import types
+from aiida.cmdline.params.arguments.overridable import OverridableArgument
 
 __all__ = (
     'CALCULATION',

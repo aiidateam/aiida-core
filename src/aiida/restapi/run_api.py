@@ -14,8 +14,8 @@ import os
 
 from flask_cors import CORS
 
-from . import api as api_classes
-from .common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
+from aiida.restapi import api as api_classes
+from aiida.restapi.common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
 
 __all__ = ('configure_api', 'run_api')
 

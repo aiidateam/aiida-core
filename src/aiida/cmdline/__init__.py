@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .groups import *
-from .params import *
-from .utils import *
+from aiida.cmdline.groups import *
+from aiida.cmdline.params import *
+from aiida.cmdline.utils import *
 
 __all__ = (
     'AbsolutePathParamType',

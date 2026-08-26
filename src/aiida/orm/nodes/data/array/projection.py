@@ -13,11 +13,10 @@ import copy
 import numpy as np
 
 from aiida.common import exceptions
+from aiida.orm.nodes.data.array.array import ArrayData
+from aiida.orm.nodes.data.array.bands import BandsData
+from aiida.orm.nodes.data.orbital import OrbitalData
 from aiida.plugins import OrbitalFactory
-
-from ..orbital import OrbitalData
-from .array import ArrayData
-from .bands import BandsData
 
 __all__ = ('ProjectionData',)
 

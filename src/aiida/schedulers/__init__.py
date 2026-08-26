@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .datastructures import *
-from .plugins import *
-from .scheduler import *
+from aiida.schedulers.datastructures import *
+from aiida.schedulers.plugins import *
+from aiida.schedulers.scheduler import *
 
 __all__ = (
     'BashCliScheduler',

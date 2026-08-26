@@ -13,11 +13,11 @@ import datetime
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Protocol
 
-from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
-from .nodes import BackendNode
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
+from aiida.orm.implementation.nodes import BackendNode
 
 if TYPE_CHECKING:
-    from .users import BackendUser
+    from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendGroup', 'BackendGroupCollection')
 

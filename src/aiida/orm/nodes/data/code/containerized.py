@@ -17,9 +17,8 @@ from __future__ import annotations
 import pathlib
 
 from aiida.common.lang import type_check
+from aiida.orm.nodes.data.code.installed import InstalledCode
 from aiida.orm.pydantic import OrmMetadataField
-
-from .installed import InstalledCode
 
 __all__ = ('ContainerizedCode',)
 

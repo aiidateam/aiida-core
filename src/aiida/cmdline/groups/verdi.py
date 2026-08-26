@@ -9,12 +9,11 @@ import typing as t
 
 import click
 
+from aiida.cmdline.params import options
 from aiida.cmdline.utils.echo import echo_deprecated
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.extendeddicts import AttributeDict
 from aiida.manage.configuration import get_config
-
-from ..params import options
 
 __all__ = ('VerdiCommandGroup',)
 

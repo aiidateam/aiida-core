@@ -11,9 +11,8 @@
 from typing import TYPE_CHECKING
 
 from aiida.common.links import LinkType
+from aiida.orm.nodes.process.workflow.workflow import WorkflowNode, WorkflowNodeLinks
 from aiida.orm.utils.mixins import FunctionCalculationMixin
-
-from .workflow import WorkflowNode, WorkflowNodeLinks
 
 if TYPE_CHECKING:
     from aiida.orm import Node

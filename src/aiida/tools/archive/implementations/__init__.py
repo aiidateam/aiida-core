@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .sqlite_zip import *
+from aiida.tools.archive.implementations.sqlite_zip import *
 
 __all__ = ()
 

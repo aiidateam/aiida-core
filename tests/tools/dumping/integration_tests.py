@@ -17,8 +17,7 @@ import pytest
 from aiida import load_profile, orm
 from aiida.common import AIIDA_LOGGER, LinkType
 from aiida.tools._dumping.utils import DumpPaths
-
-from .utils import compare_tree
+from tests.tools.dumping.utils import compare_tree
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.tests')
 

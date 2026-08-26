@@ -34,9 +34,14 @@ from pydantic import (
 
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
 from aiida.common.log import AIIDA_LOGGER, AdvancedLogLevels, LogLevels
-
-from .options import Option, get_option, get_option_names, parse_option, resolve_deprecated_option_name
-from .profile import Profile
+from aiida.manage.configuration.options import (
+    Option,
+    get_option,
+    get_option_names,
+    parse_option,
+    resolve_deprecated_option_name,
+)
+from aiida.manage.configuration.profile import Profile
 
 LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
 
@@ -370,8 +375,7 @@ class Config:
         :return: `Config` instance
         """
         from aiida.cmdline.utils import echo
-
-        from .migrations import check_and_migrate_config, config_needs_migrating
+        from aiida.manage.configuration.migrations import check_and_migrate_config, config_needs_migrating
 
         try:
             with open(filepath, 'rb') as handle:
@@ -438,7 +442,7 @@ class Config:
         :param config: the content of the configuration file in dictionary form
         :param validate: validate the dictionary against the schema
         """
-        from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
+        from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 
         if validate:
             self.validate(config, filepath)
@@ -951,8 +955,7 @@ class Config:
         import tempfile
 
         from aiida.common.files import md5_file, md5_from_filelike
-
-        from .settings import DEFAULT_CONFIG_INDENT_SIZE
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.
         if not os.path.isfile(self.filepath):
@@ -984,7 +987,7 @@ class Config:
         """
         import tempfile
 
-        from .settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
 
         umask = os.umask(DEFAULT_UMASK)
 

@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .backend import *
+from aiida.storage.psql_dos.backend import *
 
 __all__ = (
     'PsqlDosBackend',

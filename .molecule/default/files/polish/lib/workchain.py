@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 from string import Template
 
-from .expression import OPERATORS
+from .expression import OPERATORS  # noqa: TID252
 
 INDENTATION_WIDTH = 4
 

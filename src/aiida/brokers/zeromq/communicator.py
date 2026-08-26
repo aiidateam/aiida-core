@@ -29,8 +29,8 @@ import kiwipy
 import zmq
 import zmq.asyncio
 
-from .defaults import LOOP_JOIN_TIMEOUT, LOOP_TIMEOUT
-from .protocol import (
+from aiida.brokers.zeromq.defaults import LOOP_JOIN_TIMEOUT, LOOP_TIMEOUT
+from aiida.brokers.zeromq.protocol import (
     MessageType,
     decode_message,
     encode_message,

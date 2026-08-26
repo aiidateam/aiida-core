@@ -11,9 +11,8 @@
 import copy
 
 from aiida.common.exceptions import ValidationError
+from aiida.orm.nodes.data.data import Data
 from aiida.plugins import OrbitalFactory
-
-from .data import Data
 
 __all__ = ('OrbitalData',)
 

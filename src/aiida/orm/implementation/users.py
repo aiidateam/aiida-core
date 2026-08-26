@@ -10,7 +10,7 @@
 
 import abc
 
-from .entities import BackendCollection, BackendEntity
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendUser', 'BackendUserCollection')
 

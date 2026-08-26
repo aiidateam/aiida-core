@@ -13,8 +13,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.common import exceptions
 from aiida.orm.implementation import BackendLog, BackendLogCollection
 from aiida.storage.psql_dos.models import log as models
-
-from . import entities, utils
+from aiida.storage.psql_dos.orm import entities, utils
 
 
 class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):

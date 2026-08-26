@@ -12,11 +12,11 @@
 
 # fmt: off
 
-from .callable import *
-from .config import *
-from .main import *
-from .multivalue import *
-from .overridable import *
+from aiida.cmdline.params.options.callable import *
+from aiida.cmdline.params.options.config import *
+from aiida.cmdline.params.options.main import *
+from aiida.cmdline.params.options.multivalue import *
+from aiida.cmdline.params.options.overridable import *
 
 __all__ = (
     'ALL',

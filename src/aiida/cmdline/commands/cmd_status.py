@@ -18,11 +18,10 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
-
-from ..utils.echo import ExitCode
 
 
 class ServiceStatus(enum.IntEnum):

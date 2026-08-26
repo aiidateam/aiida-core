@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .migrations import *
+from aiida.manage.configuration.migrations.migrations import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',

@@ -11,10 +11,9 @@
 from typing import TYPE_CHECKING
 
 from aiida.common.links import LinkType
+from aiida.orm.nodes.process.calculation.calculation import CalculationNode
+from aiida.orm.nodes.process.process import ProcessNodeLinks
 from aiida.orm.utils.mixins import FunctionCalculationMixin
-
-from ..process import ProcessNodeLinks
-from .calculation import CalculationNode
 
 if TYPE_CHECKING:
     from aiida.orm import Node

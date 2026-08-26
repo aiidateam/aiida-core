@@ -22,13 +22,13 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 # fmt: off
 
-from .archive import *
-from .calculations import *
-from .data import *
-from .graph import *
-from .groups import *
-from .visualization import *
-from .workflows import *
+from aiida.tools.archive import *
+from aiida.tools.calculations import *
+from aiida.tools.data import *
+from aiida.tools.graph import *
+from aiida.tools.groups import *
+from aiida.tools.visualization import *
+from aiida.tools.workflows import *
 
 __all__ = (
     'ArchiveExportError',

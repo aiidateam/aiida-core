@@ -14,15 +14,15 @@ These migrations simply manipulate the metadata and data in-place.
 
 from collections.abc import Callable
 
-from .v04_to_v05 import migrate_v4_to_v5
-from .v05_to_v06 import migrate_v5_to_v6
-from .v06_to_v07 import migrate_v6_to_v7
-from .v07_to_v08 import migrate_v7_to_v8
-from .v08_to_v09 import migrate_v8_to_v9
-from .v09_to_v10 import migrate_v9_to_v10
-from .v10_to_v11 import migrate_v10_to_v11
-from .v11_to_v12 import migrate_v11_to_v12
-from .v12_to_v13 import migrate_v12_to_v13
+from aiida.storage.sqlite_zip.migrations.legacy.v04_to_v05 import migrate_v4_to_v5
+from aiida.storage.sqlite_zip.migrations.legacy.v05_to_v06 import migrate_v5_to_v6
+from aiida.storage.sqlite_zip.migrations.legacy.v06_to_v07 import migrate_v6_to_v7
+from aiida.storage.sqlite_zip.migrations.legacy.v07_to_v08 import migrate_v7_to_v8
+from aiida.storage.sqlite_zip.migrations.legacy.v08_to_v09 import migrate_v8_to_v9
+from aiida.storage.sqlite_zip.migrations.legacy.v09_to_v10 import migrate_v9_to_v10
+from aiida.storage.sqlite_zip.migrations.legacy.v10_to_v11 import migrate_v10_to_v11
+from aiida.storage.sqlite_zip.migrations.legacy.v11_to_v12 import migrate_v11_to_v12
+from aiida.storage.sqlite_zip.migrations.legacy.v12_to_v13 import migrate_v12_to_v13
 
 # version from -> version to, function which modifies metadata, data in-place
 LEGACY_MIGRATE_FUNCTIONS: dict[str, tuple[str, Callable[[dict, dict], None]]] = {

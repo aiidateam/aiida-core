@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 
-from .pbsbaseclasses import PbsBaseClass
+from aiida.schedulers.plugins.pbsbaseclasses import PbsBaseClass
 
 _LOGGER = logging.getLogger(__name__)
 

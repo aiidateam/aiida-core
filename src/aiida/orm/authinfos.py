@@ -14,12 +14,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
+from aiida.orm import entities, users
+from aiida.orm.computers import Computer
+from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm.users import User
 from aiida.plugins import TransportFactory
-
-from . import entities, users
-from .computers import Computer
-from .pydantic import OrmMetadataField
-from .users import User
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
@@ -138,7 +137,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     @property
     def computer(self) -> Computer:
         """Return the computer associated with this instance."""
-        from . import computers
+        from aiida.orm import computers
 
         return entities.from_backend_entity(computers.Computer, self._backend_entity.computer)
 

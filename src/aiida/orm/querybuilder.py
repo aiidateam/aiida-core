@@ -36,6 +36,7 @@ from typing import (
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+from aiida.orm import authinfos, comments, computers, convert, entities, fields, groups, logs, nodes, users
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
     GROUP_ENTITY_TYPE_PREFIX,
@@ -44,8 +45,6 @@ from aiida.orm.implementation.querybuilder import (
     PathItemType,
     QueryDictType,
 )
-
-from . import authinfos, comments, computers, convert, entities, fields, groups, logs, nodes, users
 
 if TYPE_CHECKING:
     from aiida.engine import Process

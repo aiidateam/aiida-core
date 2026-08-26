@@ -14,8 +14,7 @@ import typing as t
 from collections.abc import Iterable
 
 from aiida.common.lang import classproperty
-
-from .mapping import CalculationProjectionMapper, ProjectionMapper
+from aiida.tools.query.mapping import CalculationProjectionMapper, ProjectionMapper
 
 if t.TYPE_CHECKING:
     from aiida.orm import Node

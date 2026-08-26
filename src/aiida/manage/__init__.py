@@ -22,9 +22,9 @@
 
 # fmt: off
 
-from .caching import *
-from .configuration import *
-from .manager import *
+from aiida.manage.caching import *
+from aiida.manage.configuration import *
+from aiida.manage.manager import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',

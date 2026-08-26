@@ -24,11 +24,10 @@ from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity
+from aiida.orm.nodes.data.code.abstract import AbstractCode
+from aiida.orm.nodes.data.code.legacy import Code
 from aiida.orm.pydantic import OrmMetadataField
-
-from ....utils.loaders import load_computer
-from .abstract import AbstractCode
-from .legacy import Code
+from aiida.orm.utils.loaders import load_computer
 
 __all__ = ('InstalledCode',)
 

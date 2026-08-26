@@ -28,14 +28,13 @@ from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
-
-from ..exit_code import ExitCode
-from ..ports import PortNamespace
-from ..process import Process, ProcessState
-from ..process_spec import CalcJobProcessSpec
-from .importer import CalcJobImporter
-from .monitors import CalcJobMonitor
-from .tasks import UPLOAD_COMMAND, Waiting
+from aiida.engine.processes.calcjobs.importer import CalcJobImporter
+from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
+from aiida.engine.processes.calcjobs.tasks import UPLOAD_COMMAND, Waiting
+from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.process import Process, ProcessState
+from aiida.engine.processes.process_spec import CalcJobProcessSpec
 
 __all__ = ('CalcJob',)
 

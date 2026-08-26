@@ -70,7 +70,7 @@ def BaseFactory(group: str, name: str, load: bool = True) -> EntryPoint | Any:
     :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
     :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
-    from .entry_point import get_entry_point, load_entry_point
+    from aiida.plugins.entry_point import get_entry_point, load_entry_point
 
     if load is True:
         return load_entry_point(group, name)

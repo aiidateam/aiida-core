@@ -23,10 +23,9 @@ from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.orm import Computer
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
 from aiida.plugins import CalculationFactory
-
-from ..data import Data
 
 if t.TYPE_CHECKING:
     from aiida.engine import ProcessBuilder

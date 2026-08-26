@@ -20,12 +20,11 @@ from aiida.common.lang import type_check
 from aiida.orm.implementation import BackendNode, BackendNodeCollection
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 from aiida.storage.psql_dos.models import node as models
-
-from . import entities
-from . import utils as sqla_utils
-from .computers import SqlaComputer
-from .extras_mixin import ExtrasMixin
-from .users import SqlaUser
+from aiida.storage.psql_dos.orm import entities
+from aiida.storage.psql_dos.orm import utils as sqla_utils
+from aiida.storage.psql_dos.orm.computers import SqlaComputer
+from aiida.storage.psql_dos.orm.extras_mixin import ExtrasMixin
+from aiida.storage.psql_dos.orm.users import SqlaUser
 
 
 class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode):

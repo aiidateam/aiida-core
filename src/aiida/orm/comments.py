@@ -15,15 +15,13 @@ from typing import TYPE_CHECKING, ClassVar, cast
 from uuid import UUID
 
 from aiida.manage import get_manager
-
-from . import entities
-from .pydantic import OrmMetadataField
+from aiida.orm import entities
+from aiida.orm.pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
-
-    from .nodes.node import Node
-    from .users import User
+    from aiida.orm.nodes.node import Node
+    from aiida.orm.users import User
 
 __all__ = ('Comment',)
 

@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .node import Node
+    from aiida.orm.nodes.node import Node
 
 __all__ = ('NodeAttributes',)
 

@@ -14,10 +14,9 @@ from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
-
-from . import entities, users, utils
-from .extras_mixin import ExtrasMixin
-from .nodes import SqlaNode
+from aiida.storage.psql_dos.orm import entities, users, utils
+from aiida.storage.psql_dos.orm.extras_mixin import ExtrasMixin
+from aiida.storage.psql_dos.orm.nodes import SqlaNode
 
 _LOGGER = logging.getLogger(__name__)
 

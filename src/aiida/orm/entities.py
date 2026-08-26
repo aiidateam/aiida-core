@@ -36,9 +36,8 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-
-from .fields import QbFields, add_field
-from .pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
+from aiida.orm.fields import QbFields, add_field
+from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -134,7 +133,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         :param offset: number of initial results to be skipped
         :param subclassing: whether to match subclasses of the type as well.
         """
-        from . import querybuilder
+        from aiida.orm import querybuilder
 
         filters = filters or {}
         order_by = {self.entity_type: order_by} if order_by else {}
@@ -721,7 +720,7 @@ def from_backend_entity(cls: type[EntityType], backend_entity: BackendEntity) ->
 
     :return: an AiiDA entity instance
     """
-    from .implementation.entities import BackendEntity
+    from aiida.orm.implementation.entities import BackendEntity
 
     type_check(backend_entity, BackendEntity)
     entity = cls.__new__(cls)

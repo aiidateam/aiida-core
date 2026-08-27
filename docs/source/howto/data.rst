@@ -181,13 +181,13 @@ The two are independent; here they are used together:
 
 .. code-block:: shell
 
-    $ verdi process dump 5 --include-outputs --include-workflow-outputs --include-data-json
+    $ verdi process dump 29 --include-outputs --include-workflow-outputs --include-data-json
 
 .. code-block:: shell
 
-    $ tree -a MultiplyAddWorkChain-5
-    MultiplyAddWorkChain-5
-    ├── 01-multiply-6
+    $ tree -a MultiplyAddWorkChain-29
+    MultiplyAddWorkChain-29
+    ├── 01-multiply-30
     │   ├── .aiida_dump_safeguard
     │   ├── aiida_node_metadata.yaml
     │   ├── inputs
@@ -197,7 +197,7 @@ The two are independent; here they are used together:
     │   │   └── y.json
     │   └── node_outputs
     │       └── result.json
-    ├── 02-ArithmeticAddCalculation-8
+    ├── 02-ArithmeticAddCalculation-32
     │   ├── .aiida_dump_safeguard
     │   ├── aiida_node_metadata.yaml
     │   ├── inputs
@@ -225,10 +225,13 @@ The two are independent; here they are used together:
     └── README.md
 
 Every linked ``Data`` node without repository content becomes ``<link-label>.json``.
-A ``Dict`` writes its dictionary and an ``Int``, ``Float``, ``Str`` or ``Bool`` its bare value, while anything else
-writes its attributes: ``remote_folder.json`` above holds the ``remote_path`` of the calculation's working directory.
-A namespaced link label such as ``pseudos__Si`` is written into a single ``pseudos.json`` holding the whole namespace,
-rather than one file per port.
+A ``Dict`` writes its dictionary, a ``List`` its list, and an ``Int``, ``Float``, ``Str`` or ``Bool`` its bare value,
+while anything else writes its attributes: ``remote_folder.json`` above holds the ``remote_path`` of the calculation's
+working directory.
+Labels of one namespace share a file: ``alphas__filled`` and ``alphas__empty`` are written into a single
+``alphas.json``, rather than one file per port.
+A node that does carry repository content keeps its directory, so a namespace holding both kinds is split between
+``<namespace>/`` and ``<namespace>.json``.
 
 ``--include-workflow-outputs`` gives each ``WorkflowNode`` a ``node_outputs`` directory of the nodes it returned, with
 repository-backed ones copied out just as they are for a calculation.

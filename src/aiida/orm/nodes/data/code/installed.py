@@ -28,17 +28,14 @@ from aiida.orm.pydantic import OrmMetadataField
 
 from ....utils.loaders import load_computer
 from .abstract import AbstractCode
-from .legacy import Code
 
 __all__ = ('InstalledCode',)
 
 
-class InstalledCode(Code):
+class InstalledCode(AbstractCode):
     """Data plugin representing an executable code on a remote computer."""
 
-    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
-    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class CommonField(AbstractCode.CommonFields):
         filepath_executable: str = OrmMetadataField(
@@ -87,7 +84,7 @@ class InstalledCode(Code):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
+        super()._validate()
 
         if not self.computer:  # type: ignore[truthy-bool]
             raise exceptions.ValidationError('The `computer` is undefined.')

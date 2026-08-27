@@ -4,10 +4,6 @@
 
 ### New features
 
-**`verdi process dump`: write `Data` nodes as JSON, and workflows' returned outputs** ([#7588](https://github.com/aiidateam/aiida-core/issues/7588))
-
-Dumping copies the repository of each linked `Data` node, which reaches nothing for the nodes that keep their content in the database, such as the `Dict` of results of a calculation, and reaches nothing at all for the nodes a workflow returns. Two independent flags address the two gaps, both off by default, so an existing dump is unchanged. `--include-data-json` writes every linked `Data` node without repository content as `<link-label>.json` beside the repository-backed ones. `--include-workflow-outputs` gives each `WorkflowNode` a `node_outputs` directory of the nodes it returned. Both are also keywords (`include_data_json`, `include_workflow_outputs`) on `ProcessNode.dump()`, `Group.dump()` and `Profile.dump()`, and the JSON of a `Dict` a workflow returns needs the two together.
-
 ### Behavior changes
 
 ### Fixes

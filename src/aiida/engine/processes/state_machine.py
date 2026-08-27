@@ -214,6 +214,7 @@ class StateMachineMeta(type):
 class StateMachine(metaclass=StateMachineMeta):
     STATES: Sequence[type[State]] | None = None
     _STATES_MAP: dict[Hashable, type[State]] | None = None
+    _states_built = False
 
     _transitioning = False
     _transition_failing = False
@@ -245,12 +246,8 @@ class StateMachine(metaclass=StateMachineMeta):
 
     @classmethod
     def __ensure_built(cls) -> None:
-        try:
-            # Check if the state map has already been built
-            if cls.__getattribute__(cls, '_states_built'):
-                return
-        except AttributeError:
-            pass
+        if cls.__dict__.get('_states_built', False):
+            return
 
         cls.STATES = cls.get_states()
         assert isinstance(cls.STATES, Iterable)
@@ -263,7 +260,7 @@ class StateMachine(metaclass=StateMachineMeta):
             assert label not in cls._STATES_MAP, f"Duplicate label '{label}'"
             cls._STATES_MAP[label] = state_cls
 
-        cls._states_built = True  # type: ignore[attr-defined]
+        cls._states_built = True
 
     def __init__(self) -> None:
         super().__init__()

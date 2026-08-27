@@ -9,7 +9,6 @@
 """Basic tests for all migrations"""
 
 import pytest
-from sqlalchemy import inspect
 
 from aiida.storage.sqlite_dos.backend import SqliteDosMigrator
 from aiida.storage.sqlite_zip.models import SqliteBase
@@ -69,12 +68,9 @@ def test_main_0003_with_db_setting(uninitialised_profile, reflect_schema, data_r
 
 
 def test_main_0003_downgrade(uninitialised_profile):
-    """Test downgrading from ``main_0003`` to ``main_0002``."""
+    """Test that downgrading from ``main_0003`` is explicitly not supported."""
     with SqliteDosMigrator(uninitialised_profile) as migrator:
         migrator.migrate_up('main@main_0003')
-        migrator.migrate_down('main_0002')
-        migrator.connection.commit()
 
-    with SqliteDosMigrator(uninitialised_profile) as migrator:
-        assert migrator.get_schema_version_profile() == 'main_0002'
-        assert inspect(migrator.connection).has_table('db_dbsetting')
+        with pytest.raises(NotImplementedError, match=r'Downgrade of main_0003\.'):
+            migrator.migrate_down('main_0002')

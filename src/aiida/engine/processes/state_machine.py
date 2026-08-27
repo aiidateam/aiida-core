@@ -246,8 +246,8 @@ class StateMachine(metaclass=StateMachineMeta):
     @classmethod
     def __ensure_built(cls) -> None:
         try:
-            # Check if it's already been built (and therefore sealed)
-            if cls.__getattribute__(cls, 'sealed'):
+            # Check if the state map has already been built
+            if cls.__getattribute__(cls, '_states_built'):
                 return
         except AttributeError:
             pass
@@ -263,8 +263,7 @@ class StateMachine(metaclass=StateMachineMeta):
             assert label not in cls._STATES_MAP, f"Duplicate label '{label}'"
             cls._STATES_MAP[label] = state_cls
 
-        # should class initialise sealed = False?
-        cls.sealed = True  # type: ignore[attr-defined]
+        cls._states_built = True  # type: ignore[attr-defined]
 
     def __init__(self) -> None:
         super().__init__()

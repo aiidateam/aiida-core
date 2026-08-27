@@ -824,8 +824,9 @@ INCLUDE_DATA_JSON = OverridableOption(
     '--include-data-json/--exclude-data-json',
     default=False,
     show_default=True,
-    help='Write linked `Data` nodes that carry no repository content, such as `Dict` results, as JSON files, and give '
-    'every `WorkflowNode` a `node_outputs` directory holding the nodes it returned.',
+    help='Write linked `Data` nodes that carry no repository content, such as `Dict` results, as JSON files. With '
+    "`--include-outputs`/`include_outputs=True`, also writes a workflow's returned outputs to its own "
+    '`node_outputs` directory.',
 )
 
 INCLUDE_ATTRIBUTES = OverridableOption(

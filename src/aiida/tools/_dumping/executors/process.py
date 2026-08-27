@@ -586,15 +586,16 @@ class NodeRepoIoDumper:
     def _dump_workflow_content(self, workflow_node: orm.WorkflowNode, output_path: Path) -> None:
         """Dump the ``RETURN``-linked Data nodes of a ``WorkflowNode``.
 
-        These are the workflow's own results, the values it selected out of everything its steps produced. Without
-        ``include_data_json`` nothing is written: a workflow directory then holds its called steps alone, as it did
-        before the option existed.
+        These are the workflow's own results, the values it selected out of everything its steps produced. Requires
+        ``include_workflow_outputs``; without it a workflow directory holds its called steps alone.
+
+        ``include_outputs`` governs a calculation's ``CREATE`` outputs and does not apply here.
 
         :param workflow_node: The ``orm.WorkflowNode`` whose returned nodes should be dumped
         :param output_path: The dumping output path
         """
 
-        if not (self.config.include_outputs and self.config.include_data_json):
+        if not self.config.include_workflow_outputs:
             return
 
         return_links = workflow_node.base.links.get_outgoing(link_type=LinkType.RETURN).all()
@@ -617,7 +618,7 @@ class NodeRepoIoDumper:
 
         A node that carries repository content has it copied out. A node that does not is written as JSON, but only
         with ``include_data_json`` set: it is the ``Dict`` and ``Int`` results that no dump reached before the option
-        existed.
+        existed. Without it such a node is passed over, as it was before.
 
         :param parent_path: Dumping parent path of the process node
         :param link_triples: List of ``LinkTriples`` (incoming, outgoing)

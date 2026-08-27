@@ -639,6 +639,7 @@ class ProcessNode(Sealable, Node):
         # Process dump options
         include_inputs: bool = True,
         include_outputs: bool = False,
+        include_workflow_outputs: bool = False,
         include_data_json: bool = False,
         include_attributes: bool = True,
         include_extras: bool = False,
@@ -652,9 +653,10 @@ class ProcessNode(Sealable, Node):
         :param overwrite: Overwrite existing dump directories, defaults to False
         :param include_inputs: Include input files in the dump, defaults to True
         :param include_outputs: Include output files in the dump, defaults to False
-        :param include_data_json: Write linked `Data` nodes without repository content as JSON. With
-            `--include-outputs`/`include_outputs=True`, also writes a workflow's returned outputs to its own
+        :param include_workflow_outputs: Include the outputs returned by `WorkflowNode`(s), in their own
             `node_outputs`, defaults to False
+        :param include_data_json: Write linked `Data` nodes without repository content as JSON, wherever nodes are
+            dumped, defaults to False
         :param include_attributes: Include node attributes in metadata, defaults to True
         :param include_extras: Include node extras in metadata, defaults to False
         :param flat: Use flat directory structure, defaults to False
@@ -671,6 +673,7 @@ class ProcessNode(Sealable, Node):
             'overwrite': overwrite,
             'include_inputs': include_inputs,
             'include_outputs': include_outputs,
+            'include_workflow_outputs': include_workflow_outputs,
             'include_data_json': include_data_json,
             'include_attributes': include_attributes,
             'include_extras': include_extras,

@@ -18,8 +18,6 @@ Stored nodes are migrated automatically: `verdi storage migrate` rewrites `data.
 The migration invalidates the hashes of the migrated nodes, so run `verdi node rehash` afterwards if you rely on caching.
 Loading a node whose storage has not been migrated now raises `IncompatibleStorageSchema` instead of silently falling back to the `Data` class.
 
-The archive format version is bumped to `main_0002` accordingly; older archives are migrated on import as usual.
-
 ### Fixes
 
 ### Deprecations

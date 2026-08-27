@@ -89,11 +89,11 @@ class Bundle(dict):
         return Savable.load(self, load_context)
 
 
-_BUNDLE_TAG = '!plumpy:Bundle'
+BUNDLE_TAG = '!aiida:bundle'
 
 
 def _bundle_representer(dumper: yaml.Dumper, node: Any) -> Any:
-    return dumper.represent_mapping(_BUNDLE_TAG, node)
+    return dumper.represent_mapping(BUNDLE_TAG, node)
 
 
 def _bundle_constructor(loader: yaml.Loader, data: Any) -> Generator[Bundle, None, None]:
@@ -104,7 +104,7 @@ def _bundle_constructor(loader: yaml.Loader, data: Any) -> Generator[Bundle, Non
 
 
 yaml.add_representer(Bundle, _bundle_representer)
-yaml.add_constructor(_BUNDLE_TAG, _bundle_constructor)  # type: ignore[arg-type]
+yaml.add_constructor(BUNDLE_TAG, _bundle_constructor)  # type: ignore[arg-type]
 
 
 class Persister(metaclass=abc.ABCMeta):
@@ -113,7 +113,7 @@ class Persister(metaclass=abc.ABCMeta):
         """
         Persist a Process instance
 
-        :param process: :class:`plumpy.Process`
+        :param process: :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow distinguishing
             multiple checkpoints for the same process
         :raises: :class:`aiida.engine.processes.exceptions.PersistenceError` Raised if saving the checkpoint fails
@@ -124,7 +124,7 @@ class Persister(metaclass=abc.ABCMeta):
         """
         Load a process from a persisted checkpoint by its process id
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving
             a specific sub checkpoint for the corresponding process
         :return: a bundle with the process state
@@ -158,7 +158,7 @@ class Persister(metaclass=abc.ABCMeta):
         Delete a persisted process checkpoint. No error will be raised if
         the checkpoint does not exist
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving
             a specific sub checkpoint for the corresponding process
         """
@@ -168,7 +168,7 @@ class Persister(metaclass=abc.ABCMeta):
         """
         Delete all persisted checkpoints related to the given process id
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         """
 
 
@@ -249,7 +249,7 @@ class PicklePersister(Persister):
         """
         Persist a process to a pickle on disk
 
-        :param process: :class:`plumpy.Process`
+        :param process: :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow distinguishing
             multiple checkpoints for the same process
         """
@@ -264,7 +264,7 @@ class PicklePersister(Persister):
         """
         Load a process from a persisted checkpoint by its process id
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving
             a specific sub checkpoint for the corresponding process
         :return: a bundle with the process state
@@ -309,7 +309,7 @@ class PicklePersister(Persister):
         Delete a persisted process checkpoint. No error will be raised if
         the checkpoint does not exist
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving
             a specific sub checkpoint for the corresponding process
         """
@@ -324,7 +324,7 @@ class PicklePersister(Persister):
         """
         Delete all persisted checkpoints related to the given process id
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         """
         for checkpoint in self.get_process_checkpoints(pid):
             self.delete_checkpoint(checkpoint.pid, checkpoint.tag)

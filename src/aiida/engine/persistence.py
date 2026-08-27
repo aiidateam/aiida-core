@@ -60,10 +60,10 @@ class AiiDAPersister(process_persistence.Persister):
     def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> process_persistence.Bundle:
         """Load a process from a persisted checkpoint by its process id.
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
         :return: a bundle with the process state
-        :rtype: :class:`plumpy.Bundle`
+        :rtype: :class:`aiida.engine.processes.persistence.Bundle`
         :raises: :class:`PersistenceError` Raised if there was a problem loading the checkpoint
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -105,7 +105,7 @@ class AiiDAPersister(process_persistence.Persister):
     def delete_checkpoint(self, pid: Hashable, tag: str | None = None) -> None:
         """Delete a persisted process checkpoint, where no error will be raised if the checkpoint does not exist.
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
         """
         from aiida.orm import load_node

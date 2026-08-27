@@ -135,8 +135,9 @@ class WithSerialize:
 
 
 class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
-    """Sub class of plumpy.InputPort which mixes in the WithSerialize and WithNonDb mixins to support automatic
-    value serialization to database storable types and support non database storable input types as well.
+    """Subclass of :class:`aiida.engine.processes.generic.ports.InputPort` with serialization and non-database support.
+
+    Values can be serialized automatically to database-storable types, while inputs can also be marked as non-storable.
 
     The mixins have to go before the main port class in the superclass order to make sure they have the chance to
     process their specific keywords.
@@ -180,7 +181,7 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
 
 
 class CalcJobOutputPort(ports.OutputPort):
-    """Sub class of plumpy.OutputPort which adds the `_pass_to_parser` attribute."""
+    """Output port for calcjobs that adds the ``_pass_to_parser`` attribute."""
 
     def __init__(self, *args, **kwargs) -> None:
         pass_to_parser = kwargs.pop('pass_to_parser', False)
@@ -193,7 +194,7 @@ class CalcJobOutputPort(ports.OutputPort):
 
 
 class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
-    """Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
+    """Subclass of :class:`aiida.engine.processes.generic.ports.PortNamespace` supporting automatic recursive
     serialization of a given mapping onto the ports of the PortNamespace.
     """
 

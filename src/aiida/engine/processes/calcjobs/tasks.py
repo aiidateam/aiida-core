@@ -523,7 +523,7 @@ class Waiting(states.Waiting):
 
     async def execute(self) -> states.State | state_machine.State:  # type: ignore[override]
         """Override the execute coroutine of the base `Waiting` state.
-        Using the plumpy state machine the waiting state is repeatedly re-entered with different commands.
+        The process state machine repeatedly re-enters the waiting state with different commands.
         The waiting state is not always the same instance, it could be re-instantiated when re-entering this method,
         therefor any newly created attribute in each command block
         (e.g. `SUBMIT_COMMAND`, `UPLOAD_COMMAND`, etc.) will be lost, and is not usable in other blocks.

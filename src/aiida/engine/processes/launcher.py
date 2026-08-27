@@ -1,4 +1,4 @@
-"""A sub class of ``plumpy.ProcessLauncher`` to launch a ``Process``."""
+"""Process launcher with AiiDA-specific process-node handling."""
 
 import asyncio
 import logging
@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ProcessLauncher(BaseProcessLauncher):
-    """A sub class of :class:`plumpy.ProcessLauncher` to launch a ``Process``.
+    """Subclass of :class:`aiida.engine.processes.communications.ProcessLauncher` for AiiDA processes.
 
     It overrides the _continue method to make sure the node corresponding to the task can be loaded and
     that if it is already marked as terminated, it is not continued but the future is reconstructed and returned

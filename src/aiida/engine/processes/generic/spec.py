@@ -36,7 +36,7 @@ EXPOSED_TYPE = dict[str | None, dict[type['Process'], Sequence[str]]]
 
 class ProcessSpec:
     """
-    A class that defines the specifications of a :class:`plumpy.Process`,
+    A class that defines the specifications of a :class:`aiida.engine.processes.generic.process.Process`,
     this includes what its inputs, outputs, etc are.
 
     All methods to modify the spec should have declarative names describe the

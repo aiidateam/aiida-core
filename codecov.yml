@@ -18,3 +18,4 @@ coverage:
 
 ignore:
 - src/aiida/tools/_dumping/**/*
+- src/aiida/restapi/**/*

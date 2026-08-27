@@ -80,7 +80,7 @@ In order to get a quick overview of an archive file *without* importing it into 
 
     $ verdi archive info --detailed test.aiida
     metadata:
-        export_version: main_0001
+        export_version: main_0002
         aiida_version: 2.0.0
         key_format: sha256
         compression: 6
@@ -120,7 +120,7 @@ In order to get a quick overview of an archive file *without* importing it into 
             node_types:
             - data.core.array.trajectory.TrajectoryData.
             - data.core.cif.CifData.
-            - data.core.code.Code.
+            - data.core.code.installed.InstalledCode.
             - data.core.dict.Dict.
             - data.core.folder.FolderData.
             - data.core.remote.RemoteData.

@@ -423,7 +423,8 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         :param only_top_level_workflows: Only dump top-level workflows, defaults to True
         :param include_inputs: Include input files in the dump, defaults to True
         :param include_outputs: Include output files in the dump, defaults to False
-        :param include_data_json: Write linked `Data` nodes without repository content as JSON, defaults to False
+        :param include_data_json: Write linked `Data` nodes without repository content as JSON, and give every
+            `WorkflowNode` a `node_outputs` directory of the nodes it returned, defaults to False
         :param include_attributes: Include node attributes in metadata, defaults to True
         :param include_extras: Include node extras in metadata, defaults to False
         :param flat: Use flat directory structure, defaults to False

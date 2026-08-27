@@ -220,12 +220,13 @@ def test_data_json_flat_does_not_overwrite(generate_calculation_node, tmp_path, 
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_workflow_returns_dumped(generate_workflow_node_returning, tmp_path):
-    """A ``WorkflowNode`` gets a ``node_outputs`` directory holding the nodes it returned.
+def test_workflow_outputs_dumped_without_data_json(generate_workflow_node_returning, tmp_path):
+    """``include_workflow_outputs`` gives a ``WorkflowNode`` a ``node_outputs`` directory of the nodes it returned.
 
     A workflow's ``RETURN`` links reached no file before: the dumper recursed into its children and stopped there.
-    The ``SinglefileData`` return is what shows the directory is not JSON-only — it is copied out like a
-    calculation's repository-backed output.
+    The flag stands on its own, so the ``SinglefileData`` return is copied out here with neither ``include_outputs``
+    (which governs a calculation's ``CREATE`` outputs) nor ``include_data_json`` set, and the ``Dict`` return is
+    passed over for want of the latter.
     """
     node = generate_workflow_node_returning(
         {
@@ -234,27 +235,38 @@ def test_workflow_returns_dumped(generate_workflow_node_returning, tmp_path):
         }
     )
 
-    dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True, include_data_json=True)
+    dump_path = node.dump(output_path=tmp_path / 'dump', include_workflow_outputs=True)
 
     assert dumped_node_outputs(dump_path) == [
         'node_outputs',
         'node_outputs/report',
         'node_outputs/report/file.txt',
-        'node_outputs/result.json',
     ]
-    assert json.loads((dump_path / 'node_outputs' / 'result.json').read_text()) == {'answer': 42}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('include_outputs, include_data_json', ((True, False), (False, True)))
-def test_workflow_returns_need_both_options(
-    generate_workflow_node_returning, tmp_path, include_outputs, include_data_json
+@pytest.mark.parametrize(
+    'include_workflow_outputs, include_data_json, expected',
+    (
+        (False, False, []),
+        (True, False, []),
+        (False, True, []),
+        (True, True, ['node_outputs', 'node_outputs/result.json']),
+    ),
+)
+def test_workflow_dict_output_needs_both_options(
+    generate_workflow_node_returning, tmp_path, include_workflow_outputs, include_data_json, expected
 ):
-    """Neither option alone gives a workflow a ``node_outputs`` directory."""
+    """A returned ``Dict`` is written only with both options: one opens the directory, the other fills it."""
     node = generate_workflow_node_returning({'result': orm.Dict({'answer': 42})})
 
     dump_path = node.dump(
-        output_path=tmp_path / 'dump', include_outputs=include_outputs, include_data_json=include_data_json
+        output_path=tmp_path / 'dump',
+        include_workflow_outputs=include_workflow_outputs,
+        include_data_json=include_data_json,
     )
 
-    assert dumped_node_outputs(dump_path) == []
+    assert dumped_node_outputs(dump_path) == expected
+
+    if expected:
+        assert json.loads((dump_path / 'node_outputs' / 'result.json').read_text()) == {'answer': 42}

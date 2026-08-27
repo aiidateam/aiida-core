@@ -156,6 +156,22 @@ def test_data_json_written_for_non_repository_outputs(generate_calculation_node,
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_data_json_written_for_empty_repository(generate_calculation_node, tmp_path):
+    """An output with an empty repository is written too, as the empty JSON it serializes to.
+
+    The rule is "no repository content, so JSON": a ``FolderData`` that happens to be empty is still an output the
+    dump would otherwise pass over in silence.
+    """
+    node = generate_calculation_node(outputs={'folderdata': orm.FolderData()})
+    node.seal()
+
+    dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True, include_data_json=True)
+
+    assert dumped_node_outputs(dump_path) == ['node_outputs', 'node_outputs/folderdata.json']
+    assert json.loads((dump_path / 'node_outputs' / 'folderdata.json').read_text()) == {}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_data_json_written_for_inputs(generate_calculation_node, tmp_path):
     """Inputs are written under ``node_inputs`` on the same terms, and only with ``include_inputs``."""
     node = generate_calculation_node(inputs={'parameters': orm.Dict({'cutoff': 30})})

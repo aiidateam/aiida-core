@@ -244,6 +244,31 @@ def test_data_json_flat_does_not_overwrite(generate_calculation_node, tmp_path, 
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_data_json_flat_does_not_overwrite_repository_content(generate_calculation_node, tmp_path, caplog):
+    """Under ``flat``, a repository-backed node's own file always wins over a colliding JSON file.
+
+    An input ``Dict`` labelled ``params`` would write ``params.json``, and an output ``FolderData`` carries a file
+    of that same name. The repository content is copied in before any JSON is written, so the collision is caught
+    the same way as two JSON files competing for one name: the JSON is skipped with a warning, and the file this
+    dump copied out is never overwritten by it.
+    """
+    paramsfile = orm.FolderData()
+    paramsfile.put_object_from_bytes(b'{"from": "folderdata"}\n', 'params.json')
+
+    node = generate_calculation_node(
+        inputs={'params': orm.Dict({'answer': 42})},
+        outputs={'paramsfile': paramsfile},
+    )
+    node.seal()
+
+    with caplog.at_level(logging.WARNING):
+        dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True, include_data_json=True, flat=True)
+
+    assert (dump_path / 'params.json').read_bytes() == b'{"from": "folderdata"}\n'
+    assert 'Not writing the JSON of `params` over it' in caplog.text
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_workflow_outputs_dumped_without_data_json(generate_workflow_node_returning, tmp_path):
     """``include_workflow_outputs`` gives a ``WorkflowNode`` a ``node_outputs`` directory of the nodes it returned.
 

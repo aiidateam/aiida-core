@@ -570,26 +570,28 @@ class NodeRepoIoDumper:
                 retrieved_target.mkdir(parents=True, exist_ok=True)
                 calculation_node.outputs.retrieved.base.repository.copy_tree(retrieved_target)
 
-        # Dump the node_inputs (linked Data nodes)
+        # Copy the repository content of node_inputs and node_outputs before writing either's JSON: under
+        # `flat` the two share a directory, so a `<label>.json` file must not collide with a repository-backed
+        # node's own file copied in by the other side.
+        input_path = output_path / io_dump_mapping.inputs
+        input_json_values: dict[str, Any] = {}
         if self.config.include_inputs:
             input_links = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC).all()
             if input_links:
-                input_path = output_path / io_dump_mapping.inputs
-                self._dump_io_files(
-                    parent_path=input_path,
-                    link_triples=input_links,
-                )
+                input_json_values = self._copy_io_repository_content(parent_path=input_path, link_triples=input_links)
 
-        # Dump the node_outputs (created Data nodes, excluding 'retrieved')
+        output_path_target = output_path / io_dump_mapping.outputs
+        output_json_values: dict[str, Any] = {}
         if self.config.include_outputs:
             output_links = calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE).all()
             output_links_filtered = [link for link in output_links if link.link_label != 'retrieved']
             if output_links_filtered:
-                output_path_target = output_path / io_dump_mapping.outputs
-                self._dump_io_files(
-                    parent_path=output_path_target,
-                    link_triples=output_links_filtered,
+                output_json_values = self._copy_io_repository_content(
+                    parent_path=output_path_target, link_triples=output_links_filtered
                 )
+
+        self._dump_io_json(parent_path=input_path, json_values=input_json_values)
+        self._dump_io_json(parent_path=output_path_target, json_values=output_json_values)
 
     def _dump_workflow_content(self, workflow_node: orm.WorkflowNode, output_path: Path) -> None:
         """Dump the ``RETURN``-linked Data nodes of a ``WorkflowNode``.
@@ -612,24 +614,26 @@ class NodeRepoIoDumper:
             return
 
         io_dump_mapping = self._generate_calculation_io_mapping(flat=self.config.flat)
-        self._dump_io_files(
-            parent_path=output_path / io_dump_mapping.outputs,
-            link_triples=return_links,
-        )
+        parent_path = output_path / io_dump_mapping.outputs
+        json_values = self._copy_io_repository_content(parent_path=parent_path, link_triples=return_links)
+        self._dump_io_json(parent_path=parent_path, json_values=json_values)
 
-    def _dump_io_files(
+    def _copy_io_repository_content(
         self,
         parent_path: Path,
         link_triples: list[LinkTriple],
-    ):
-        """Helper to dump linked input/output Data nodes.
+    ) -> dict[str, Any]:
+        """Copy the repository content of linked Data nodes, and collect the rest for JSON.
 
-        A node that carries repository content has it copied out. A node that does not is written as JSON, but only
-        with ``include_data_json`` set: it is the ``Dict`` and ``Int`` results that no dump reached before the option
-        existed. Without it such a node is passed over, as it was before.
+        A node that carries repository content has it copied out here. A node that does not is collected instead of
+        written: the caller writes its JSON only once every repository-backed node destined for the same directory
+        has been copied, so the "already exists" guard in ``_dump_io_json`` sees every file the JSON could collide
+        with. Collecting happens only with ``include_data_json`` set: it is the ``Dict`` and ``Int`` results that no
+        dump reached before the option existed. Without it such a node is passed over, as it was before.
 
         :param parent_path: Dumping parent path of the process node
         :param link_triples: List of ``LinkTriples`` (incoming, outgoing)
+        :return: The serialized value of each link label whose node carries no repository content
         """
 
         json_values: dict[str, Any] = {}
@@ -651,7 +655,7 @@ class NodeRepoIoDumper:
             elif self.config.include_data_json:
                 json_values[link_label] = _serialize_data_node(node)
 
-        self._dump_io_json(parent_path=parent_path, json_values=json_values)
+        return json_values
 
     def _dump_io_json(self, parent_path: Path, json_values: dict[str, Any]) -> None:
         """Helper to write the serialized content of linked Data nodes as JSON files.

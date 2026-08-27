@@ -8,13 +8,31 @@
 ###########################################################################
 """Test persisting via the AiiDAPersister."""
 
+import asyncio
+
 import pytest
 
 from aiida.common.processes import ProcessState
 from aiida.engine import Process, run
 from aiida.engine.persistence import AiiDAPersister
-from aiida.engine.processes.persistence import Bundle
+from aiida.engine.processes.persistence import Bundle, LoadSaveContext, SavableFuture
 from tests.utils.processes import DummyProcess
+
+
+def test_cancelled_savable_future():
+    """Test a cancelled savable future can be saved and recreated."""
+    loop = asyncio.new_event_loop()
+
+    try:
+        future = SavableFuture(loop=loop)
+        future.cancel()
+
+        restored = Bundle(future).unbundle(LoadSaveContext(loop=loop))
+
+        assert isinstance(restored, SavableFuture)
+        assert restored.cancelled()
+    finally:
+        loop.close()
 
 
 @pytest.mark.requires_broker

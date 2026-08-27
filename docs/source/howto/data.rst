@@ -169,6 +169,69 @@ though), and the ``--include-inputs/--exclude-inputs`` (``--include-outputs/--ex
 used to also dump additional node inputs (outputs) of each ``CalculationNode`` of the workflow into ``node_inputs``
 (``node_outputs``) subdirectories.
 
+.. versionadded:: 2.10
+
+Those node inputs and outputs are dumped by copying the repository of each linked ``Data`` node, which reaches nothing
+for the nodes that keep their content in the database instead, such as the ``Dict`` of results of a calculation, and
+reaches nothing at all for the nodes a workflow itself returns.
+The ``--include-data-json/--exclude-data-json`` flag writes those as JSON files:
+
+.. code-block:: shell
+
+    $ verdi process dump 5 --include-outputs --include-data-json
+
+.. code-block:: shell
+
+    $ tree -a MultiplyAddWorkChain-5
+    MultiplyAddWorkChain-5
+    ├── 01-multiply-6
+    │   ├── .aiida_dump_safeguard
+    │   ├── aiida_node_metadata.yaml
+    │   ├── inputs
+    │   │   └── source_file
+    │   ├── node_inputs
+    │   │   ├── x.json
+    │   │   └── y.json
+    │   └── node_outputs
+    │       └── result.json
+    ├── 02-ArithmeticAddCalculation-8
+    │   ├── .aiida_dump_safeguard
+    │   ├── aiida_node_metadata.yaml
+    │   ├── inputs
+    │   │   ├── .aiida
+    │   │   │   ├── calcinfo.json
+    │   │   │   └── job_tmpl.json
+    │   │   ├── aiida.in
+    │   │   └── _aiidasubmit.sh
+    │   ├── node_inputs
+    │   │   ├── code.json
+    │   │   ├── x.json
+    │   │   └── y.json
+    │   ├── node_outputs
+    │   │   ├── remote_folder.json
+    │   │   └── sum.json
+    │   └── outputs
+    │       ├── aiida.out
+    │       ├── _scheduler-stderr.txt
+    │       └── _scheduler-stdout.txt
+    ├── aiida_dump_log.json
+    ├── .aiida_dump_safeguard
+    ├── aiida_node_metadata.yaml
+    ├── node_outputs
+    │   └── result.json
+    └── README.md
+
+Every linked ``Data`` node without repository content becomes ``<link-label>.json``.
+A ``Dict`` writes its dictionary and an ``Int``, ``Float``, ``Str`` or ``Bool`` its bare value, while anything else
+writes its attributes: ``remote_folder.json`` above holds the ``remote_path`` of the calculation's working directory.
+A namespaced link label such as ``pseudos__Si`` is written into a single ``pseudos.json`` holding the whole namespace,
+rather than one file per port.
+
+In addition, each ``WorkflowNode`` gains a ``node_outputs`` directory of the nodes it returned, with repository-backed
+ones copied out just as they are for a calculation.
+The ``node_outputs/result.json`` at the top of the tree above is the ``MultiplyAddWorkChain``'s own result, which no
+dump reached before: the dumper recursed into the called steps and stopped there.
+
 
 Group Dumping
 -------------

@@ -88,9 +88,6 @@ Process dumping
 
 .. versionadded:: 2.6
 
-.. versionadded:: 2.10
-    The ``--include-data-json`` and ``--include-workflow-outputs`` flags.
-
 It is now possible to dump your executed workflows to disk in a hierarchical directory tree structure. This can be
 particularly useful if one is not yet familiar with AiiDA's CLI endpoints and Python API to explore the data (such as
 the ``QueryBuilder``) or one just wants to quickly explore input/output files
@@ -171,6 +168,9 @@ directory structure (the internal hierarchy of files stored in ``FolderData`` or
 though), and the ``--include-inputs/--exclude-inputs`` (``--include-outputs/--exclude-outputs``) flags can be
 used to also dump additional node inputs (outputs) of each ``CalculationNode`` of the workflow into ``node_inputs``
 (``node_outputs``) subdirectories.
+
+.. versionadded:: 2.10
+    The ``--include-data-json`` and ``--include-workflow-outputs`` flags.
 
 Those node inputs and outputs are dumped by copying the repository of each linked ``Data`` node, which reaches nothing
 for the nodes that keep their content in the database instead, such as the ``Dict`` of results of a calculation.

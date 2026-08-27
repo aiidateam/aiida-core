@@ -17,6 +17,7 @@ import pytest
 
 from aiida import orm
 from aiida.common import LinkType
+from aiida.tools._dumping.executors.process import _nest_by_link_label
 
 
 def dumped_node_outputs(dump_path: Path) -> list[str]:
@@ -200,6 +201,29 @@ def test_data_json_nests_namespaced_link_labels(generate_calculation_node, tmp_p
 
     assert dumped_node_outputs(dump_path) == ['node_outputs', 'node_outputs/alphas.json']
     assert json.loads((dump_path / 'node_outputs' / 'alphas.json').read_text()) == {'filled': 1, 'empty': 2}
+
+
+@pytest.mark.parametrize(
+    'values, expected, warned',
+    (
+        ({'alphas__filled': 1, 'alphas__empty': 2}, {'alphas': {'filled': 1, 'empty': 2}}, False),
+        ({'a': 1, 'a__b': 2}, {'a': 1}, True),
+        ({'a': [1, 2], 'a__b': 3}, {'a': [1, 2]}, True),
+        ({'a': {'b': 111, 'keep': 1}, 'a__b': 222}, {'a': {'b': 111, 'keep': 1}}, True),
+        ({'a__b': {'c': 9}, 'a__b__c': 5}, {'a': {'b': {'c': 9}}}, True),
+        ({'deep__a__b__c': 3}, {'deep': {'a': {'b': {'c': 3}}}}, False),
+    ),
+)
+def test_nest_by_link_label_keeps_the_value_that_is_there(values, expected, warned, caplog):
+    """A label nested inside another label's value is dropped, whatever that value is.
+
+    The ``Dict``-valued parent is the case that discriminates: merging into it would overwrite the node's own ``b``
+    with an unrelated sibling link's value and report nothing. Siblings of one namespace still merge.
+    """
+    with caplog.at_level(logging.WARNING):
+        assert _nest_by_link_label(values) == expected
+
+    assert ('Not writing it' in caplog.text) is warned
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

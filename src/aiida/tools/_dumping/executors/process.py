@@ -69,34 +69,42 @@ def _serialize_data_node(node: orm.Node) -> Any:
 def _nest_by_link_label(values: dict[str, Any]) -> dict[str, Any]:
     """Group ``{link_label: value}`` into nested dictionaries, splitting each label on ``__``.
 
-    A namespaced label like ``pseudos__Si`` denotes a nested input port, which the repository-backed dump turns into
-    the directory ``pseudos/Si``. Here the whole namespace becomes a single ``pseudos.json`` instead, so a namespace
-    is read as one document rather than as a file per port.
+    A namespaced label like ``alphas__filled`` denotes a nested port, which the repository-backed dump turns into the
+    directory ``alphas/filled``. Here the labels of one namespace become a single ``alphas.json`` instead, so a
+    namespace is read as one document rather than as a file per port.
 
-    A label whose namespace is already occupied by a value of its own is dropped with a warning: writing it would
-    have to discard the value that is there.
+    A label that would have to be written inside another label's value, or on top of it, is dropped with a warning:
+    writing it would discard the value that is there. Two labels of one namespace, such as ``alphas__filled`` and
+    ``alphas__empty``, do not clash and are merged into one document.
 
     :param values: The serialized value of each link label
     :return: The values nested by namespace
     """
 
     nested: dict[str, Any] = {}
+    # The path of each label placed so far. A path holds one node's value, so no other label may nest inside it.
+    placed: set[tuple[str, ...]] = set()
 
     # Sorting puts a label before any label nested inside it, so a clash is always detected on the longer one.
     for label in sorted(values):
-        *namespace, name = label.split(PORT_NAMESPACE_SEPARATOR)
-        # Anything but the outermost level may turn out to hold a value rather than a nested namespace.
-        cursor: Any = nested
+        path = tuple(label.split(PORT_NAMESPACE_SEPARATOR))
+        *namespace, name = path
+
+        if any(path[:depth] in placed for depth in range(1, len(path))):
+            logger.warning(f"Link label `{label}` is nested inside another label's value. Not writing it.")
+            continue
+
+        cursor = nested
 
         for part in namespace:
-            if not isinstance(cursor, dict):
-                break
             cursor = cursor.setdefault(part, {})
 
-        if isinstance(cursor, dict) and not isinstance(cursor.get(name), dict):
-            cursor[name] = values[label]
-        else:
+        if name in cursor:
             logger.warning(f'Link label `{label}` clashes with another label of the same namespace. Not writing it.')
+            continue
+
+        cursor[name] = values[label]
+        placed.add(path)
 
     return nested
 

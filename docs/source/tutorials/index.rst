@@ -81,7 +81,7 @@ Introductory modules
       :text-align: center
       :shadow: md
 
-      Chain calculations into an automated workflow with WorkGraph (3a), then run it over many inputs in parallel with ``Map``, no hand-written ``for``-loop (3b).
+      Chain calculations into an automated workflow with WorkGraph (3a), then run it over many inputs in parallel with ``Map`` (3b).
 
       +++
 

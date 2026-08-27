@@ -283,12 +283,12 @@ We've now chained these three steps by hand.
 Packaging them into a function, `run_pipeline`, makes the sweep below repeatable. It returns the run's final `parse_output` node, which carries the `variance_V` and `mean_V` outputs and links back through the full provenance:
 
 ```{code-cell} ipython3
-def run_pipeline(params: dict) -> orm.CalcFunctionNode:
+def run_pipeline(params: dict, command: orm.InstalledCode) -> orm.CalcFunctionNode:
     """Run prepare_input → ShellJob → parse_output; return the parse_output node."""
     input_file, _ = engine.run_get_node(prepare_input, parameters=params)
 
     results, _ = launch_shell_job(
-        gsrd_code,
+        command,
         arguments='{input}',
         nodes={'input': input_file},
         outputs=['results.npz'],
@@ -309,7 +309,9 @@ The tools below only earn their keep once you have more than one run, so let's c
 
 ```{code-cell} ipython3
 F_VALUES = [0.040, 0.045, 0.048, 0.050]
-runs = {f_val: run_pipeline(BASE_PARAMS | {'F': f_val}) for f_val in F_VALUES}
+runs = {
+    f_val: run_pipeline(BASE_PARAMS | {'F': f_val}, gsrd_code) for f_val in F_VALUES
+}
 ```
 
 With a handful of tracked runs in the database, the payoff we are building toward is **searching** them, which is what the `QueryBuilder` does.

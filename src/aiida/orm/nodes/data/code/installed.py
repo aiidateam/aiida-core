@@ -25,19 +25,16 @@ from aiida.common.log import override_log_level
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity
 from aiida.orm.nodes.data.code.abstract import AbstractCode
-from aiida.orm.nodes.data.code.legacy import Code
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.orm.utils.loaders import load_computer
 
 __all__ = ('InstalledCode',)
 
 
-class InstalledCode(Code):
+class InstalledCode(AbstractCode):
     """Data plugin representing an executable code on a remote computer."""
 
-    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
-    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class CommonField(AbstractCode.CommonFields):
         filepath_executable: str = OrmMetadataField(
@@ -86,7 +83,7 @@ class InstalledCode(Code):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
+        super()._validate()
 
         if not self.computer:  # type: ignore[truthy-bool]
             raise exceptions.ValidationError('The `computer` is undefined.')

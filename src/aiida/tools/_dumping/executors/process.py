@@ -46,7 +46,8 @@ DumpProcessorType = Callable[[orm.ProcessNode, Path], None]
 def _serialize_data_node(node: orm.Node) -> Any:
     """Return the JSON-native content of a ``Data`` node.
 
-    ``Dict``, ``List`` and the ``BaseType`` scalars answer their own value, any other node its attributes. Attributes
+    ``Dict``, ``List`` and the ``BaseType`` scalars answer their ``value``, any other node its attributes
+    (``EnumData`` deliberately falls in the second group: its ``value`` is the enum member, not JSON). Attributes
     pass through ``clean_value`` on storage, which refuses anything that is not JSON-serializable, so the result can
     always be handed to ``json.dumps``.
 
@@ -54,13 +55,7 @@ def _serialize_data_node(node: orm.Node) -> Any:
     :return: A JSON-native object
     """
 
-    if isinstance(node, orm.Dict):
-        return node.get_dict()
-
-    if isinstance(node, orm.List):
-        return node.get_list()
-
-    if isinstance(node, orm.BaseType):
+    if isinstance(node, (orm.Dict, orm.List, orm.BaseType)):
         return node.value
 
     return node.base.attributes.all

@@ -23,7 +23,7 @@ from aiida.common import exceptions
 from aiida.manage.configuration.options import parse_option
 
 if TYPE_CHECKING:
-    from aiida.orm import Code, Computer, Group, User
+    from aiida.orm import AbstractCode, Computer, Group, User
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Profile',)
@@ -276,7 +276,7 @@ class Profile:
         groups: list[str] | list[Group] | None = None,
         user: list[str] | list[User] | None = None,
         computers: list[str] | list[Computer] | None = None,
-        codes: list[str] | list[Code] | None = None,
+        codes: list[str] | list[AbstractCode] | None = None,
         # Time filtering options
         past_days: int | None = None,
         start_date: datetime | None = None,

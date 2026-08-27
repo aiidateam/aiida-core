@@ -58,7 +58,6 @@ class TestConfigurationOptions:
             'logging.aiida_core_loglevel',
             'logging.verdi_loglevel',
             'logging.disk_objectstore_loglevel',
-            'logging.plumpy_loglevel',
             'logging.kiwipy_loglevel',
             'logging.paramiko_loglevel',
             'logging.alembic_loglevel',

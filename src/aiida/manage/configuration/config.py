@@ -198,11 +198,6 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
             'requires_daemon_restart': True,
         },
     )
-    logging__plumpy_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
-        description='Minimum level for the `plumpy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
-    )
     logging__kiwipy_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `kiwipy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',

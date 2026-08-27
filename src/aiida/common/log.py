@@ -137,11 +137,6 @@ def get_logging_config() -> dict[str, t.Any]:
                 'level': lambda: get_config_option('logging.disk_objectstore_loglevel'),
                 'propagate': False,
             },
-            'plumpy': {
-                'handlers': ['console'],
-                'level': lambda: get_config_option('logging.plumpy_loglevel'),
-                'propagate': False,
-            },
             'kiwipy': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.kiwipy_loglevel'),
@@ -182,7 +177,6 @@ _HANDLER_TO_LOGGER: dict[str, tuple[str, ...]] = {
         'logging.verdi_loglevel',
         'logging.aiida_core_loglevel',
         'logging.disk_objectstore_loglevel',
-        'logging.plumpy_loglevel',
         'logging.kiwipy_loglevel',
         'logging.paramiko_loglevel',
         'logging.alembic_loglevel',

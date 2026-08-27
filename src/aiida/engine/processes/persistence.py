@@ -636,7 +636,7 @@ class SavableFuture(futures.Future, Savable):
 
     def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: LoadSaveContext) -> None:
         super().save_instance_state(out_state, save_context)
-        if self.done() and self.exception() is not None:
+        if self.done() and not self.cancelled() and self.exception() is not None:
             out_state['exception'] = self.exception()
 
     @classmethod

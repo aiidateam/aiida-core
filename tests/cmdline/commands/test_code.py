@@ -21,7 +21,7 @@ import pytest
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
-from aiida.orm import Code, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
+from aiida.orm import AbstractCode, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
 from aiida.plugins import DataFactory
 
 
@@ -745,5 +745,5 @@ def test_code_create(run_cli_command, command_options, non_interactive_editor):
     cls = DataFactory(entry_point)
     result = run_cli_command(cmd_code.code_create, options)
     assert f'Success: Created {cls.__name__}' in result.output
-    code = QueryBuilder().append(Code).one()[0]
+    code = QueryBuilder().append(AbstractCode).one()[0]
     assert code.entry_point.name == entry_point

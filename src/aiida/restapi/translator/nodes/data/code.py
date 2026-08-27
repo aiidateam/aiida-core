@@ -17,11 +17,11 @@ class CodeTranslator(DataTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'codes'
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm import Code
+    from aiida.orm import AbstractCode
 
-    _aiida_class = Code
+    _aiida_class = AbstractCode
     # The string name of the AiiDA class
-    _aiida_type = 'data.core.code.Code'
+    _aiida_type = 'data.core.code.abstract.AbstractCode'
 
     _result_type = __label__
 

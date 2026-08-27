@@ -115,10 +115,6 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             instance = data_class(label='test_abstract_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
             return instance
 
-        if data_class is orm.Code:
-            instance = data_class(label='test_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
-            return instance
-
         if data_class is orm.InstalledCode:
             instance = data_class(
                 label='test_installed_code',

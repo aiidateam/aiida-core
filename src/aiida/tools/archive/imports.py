@@ -539,8 +539,6 @@ class NodeTransform:
         if self.import_new_extras:
             # Remove node hashing and other aiida "private" extras
             data['extras'] = {k: v for k, v in data['extras'].items() if not k.startswith('_aiida_')}
-            if data.get('node_type', '').endswith('code.Code.'):
-                data['extras'].pop('hidden', None)
         else:
             data['extras'] = {}
         if data.get('node_type', '').startswith('process.'):

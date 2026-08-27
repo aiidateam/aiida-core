@@ -11,6 +11,24 @@
 ### Deprecations
 
 
+## v2.9.1 - 2026-08-27
+
+This patch ensures that process dumps include repository files from all output data types, instead of silently omitting outputs that do not have a `SinglefileData` or `FolderData` sibling.
+It also makes stashing safer and easier to diagnose: a failed `COPY` stash no longer deletes sibling stashes in the same UUID shard, and stash failures are now recorded in the process report.
+Finally, it prevents spurious errors when `verdi` commands shut down while releasing unclosed broker and storage backend resources.
+
+### Fixes
+
+- Stash failures are not logged to the process node ([#7572](https://github.com/aiidateam/aiida-core/pull/7572)) [[a87ecb11e]](https://github.com/aiidateam/aiida-core/commit/a87ecb11edb40507af818417b4db23ed93e623fd)
+- Failed `COPY` stash deletes sibling stashes ([#7563](https://github.com/aiidateam/aiida-core/pull/7563)) [[599969e87]](https://github.com/aiidateam/aiida-core/commit/599969e874b17922a9242aa62ace43182f52cc47)
+- Finalizer for unclosed brokers and storage backend ([#7551](https://github.com/aiidateam/aiida-core/pull/7551)) [[c527d346e]](https://github.com/aiidateam/aiida-core/commit/c527d346e3333d76607c4846306cecc2a4507a13)
+- Lower finalizer messages to info ([#7551](https://github.com/aiidateam/aiida-core/pull/7551)) [[bde53899f]](https://github.com/aiidateam/aiida-core/commit/bde53899fe421075cff64b21655247bfac71c399)
+- Revert hardening against interpreter shutdown ([#7551](https://github.com/aiidateam/aiida-core/pull/7551)) [[a2c08d717]](https://github.com/aiidateam/aiida-core/commit/a2c08d717e7aea5501d4f97e443e01dbc133bf6c)
+- Cache derived minimal model on specific class ([#7539](https://github.com/aiidateam/aiida-core/pull/7539)) [[8b33114c0]](https://github.com/aiidateam/aiida-core/commit/8b33114c0f62ae5a7618323437b44509df050259)
+- `process dump`: dump all repo-backed outputs ([#7525](https://github.com/aiidateam/aiida-core/pull/7525)) [[4463c477b]](https://github.com/aiidateam/aiida-core/commit/4463c477b2249611b802ea8a0ec18f6f35f2262d)
+- `test_calc_job`: fix daemon-restart flake ([#7452](https://github.com/aiidateam/aiida-core/pull/7452)) [[385ef293d]](https://github.com/aiidateam/aiida-core/commit/385ef293d9eb900085dbe67fe56c3b7605458850)
+
+
 ## v2.9.0 - 2026-08-06
 
 The big feature of this release is the new built-in **ZeroMQ broker**, which allows submitting calculations and workflows to the daemon workers without installing and running an external message broker service such as RabbitMQ.

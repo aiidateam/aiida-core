@@ -37,7 +37,7 @@ _NODE_LINKS_MANAGER_TAG = '!aiida_node_links_manager'
 _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
-_PLUMPY_ATTRIBUTES_FROZENDICT_TAG = '!plumpy:attributes_frozendict'
+_ATTRIBUTES_FROZENDICT_TAG = '!aiida:attributes_frozendict'
 
 
 def represent_enum(dumper: yaml.Dumper, enum: Enum) -> yaml.ScalarNode:
@@ -198,12 +198,8 @@ yaml.add_representer(Enum, represent_enum, Dumper=AiiDADumper)
 yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
 yaml.add_representer(AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
 yaml.add_constructor(_ATTRIBUTE_DICT_TAG, partial(mapping_constructor, AttributeDict), Loader=AiiDALoader)
-yaml.add_representer(
-    AttributesFrozendict, partial(represent_mapping, _PLUMPY_ATTRIBUTES_FROZENDICT_TAG), Dumper=AiiDADumper
-)
-yaml.add_constructor(
-    _PLUMPY_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader
-)
+yaml.add_representer(AttributesFrozendict, partial(represent_mapping, _ATTRIBUTES_FROZENDICT_TAG), Dumper=AiiDADumper)
+yaml.add_constructor(_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader)
 yaml.add_constructor(BUNDLE_TAG, bundle_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor, Loader=AiiDALoader)

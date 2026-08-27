@@ -14,11 +14,12 @@
 #                                                                         #
 # The Plumpy license is reproduced in open_source_licenses.txt.         #
 ###########################################################################
-"""Async/sync bridge for plumpy, built on greenback.
+# mypy: ignore-errors
+"""Async/sync bridge for the process engine, built on greenback.
 
-This module is the sole interface to greenback within the plumpy/aiida ecosystem.
+This module is the sole interface to greenback within AiiDA.
 All greenback usage should go through these wrappers so that the underlying
-library remains an implementation detail of plumpy.
+library remains an implementation detail of the process engine.
 """
 
 import asyncio

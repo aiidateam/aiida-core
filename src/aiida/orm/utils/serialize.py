@@ -27,7 +27,7 @@ from aiida import orm
 from aiida.common import AttributeDict
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.loaders import get_object_loader
-from aiida.engine.processes.persistence import Bundle
+from aiida.engine.processes.persistence import BUNDLE_TAG, Bundle
 from aiida.orm.utils.managers import NodeLinksManager
 
 _ENUM_TAG = '!enum'
@@ -38,7 +38,6 @@ _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
 _PLUMPY_ATTRIBUTES_FROZENDICT_TAG = '!plumpy:attributes_frozendict'
-_PLUMPY_BUNDLE = '!plumpy:bundle'
 
 
 def represent_enum(dumper: yaml.Dumper, enum: Enum) -> yaml.ScalarNode:
@@ -153,13 +152,13 @@ def mapping_constructor(
 
 
 def represent_bundle(dumper: yaml.Dumper, bundle: Bundle) -> yaml.MappingNode:
-    """Represent an `plumpy.Bundle` in yaml."""
+    """Represent a :class:`aiida.engine.processes.persistence.Bundle` in YAML."""
     as_dict = dict(bundle)
-    return dumper.represent_mapping(_PLUMPY_BUNDLE, as_dict)
+    return dumper.represent_mapping(BUNDLE_TAG, as_dict)
 
 
 def bundle_constructor(loader: yaml.Loader, bundle: yaml.Node) -> Bundle:
-    """Construct an `plumpy.Bundle` from the representation."""
+    """Construct an :class:`aiida.engine.processes.persistence.Bundle` from the representation."""
     yaml_node = loader.construct_mapping(bundle)  # type: ignore[arg-type]
     bundle_inst = Bundle.__new__(Bundle)
     bundle_inst.update(yaml_node)
@@ -205,7 +204,7 @@ yaml.add_representer(
 yaml.add_constructor(
     _PLUMPY_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader
 )
-yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
+yaml.add_constructor(BUNDLE_TAG, bundle_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)

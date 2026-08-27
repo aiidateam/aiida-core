@@ -118,7 +118,7 @@ def ensure_not_closed(func: Callable[..., Any]) -> Callable[..., Any]:
 )
 class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMeta):
     """
-    The Process class is the base for any unit of work in plumpy.
+    The Process class is the base for any unit of work in the process engine.
 
     A process can be in one of the following states:
 

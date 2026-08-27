@@ -151,7 +151,7 @@ class WorkChain(Process, metaclass=Protect):
         :param out_state: state to save in
 
         :param save_context:
-        :type save_context: :class:`!plumpy.persistence.LoadSaveContext`
+        :type save_context: :class:`!aiida.engine.processes.persistence.LoadSaveContext`
 
         """
         super().save_instance_state(out_state, save_context)

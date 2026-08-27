@@ -307,7 +307,7 @@ class Waiting(State):
         self.done_callback = done_callback
         self.msg = msg
         self.data = data
-        self._waiting_future: futures.Future = futures.Future()
+        self._waiting_future: futures.Future = process.loop.create_future()
 
     def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
         super().save_instance_state(out_state, save_context)
@@ -321,7 +321,7 @@ class Waiting(State):
             self.done_callback = getattr(self.process, callback_name)
         else:
             self.done_callback = None
-        self._waiting_future = futures.Future()
+        self._waiting_future = load_context.process.loop.create_future()
 
     def interrupt(self, reason: Any) -> None:
         # This will cause the future in execute() to raise the exception
@@ -335,7 +335,8 @@ class Waiting(State):
             # Deal with the interruption (by raising) but make sure our internal
             # state is back to how it was before the interruption so that we can be
             # re-executed
-            self._waiting_future = futures.Future()
+            # Recreate on the same loop the original future was created on, i.e. the process loop
+            self._waiting_future = self._waiting_future.get_loop().create_future()
             raise
 
         if result == NULL:

@@ -6,6 +6,8 @@
 
 Process checkpoints created with earlier releases cannot be continued after upgrading because process state classes are now provided in-tree instead of by `plumpy`.
 Finish or terminate all active processes before upgrading.
+The `logging.plumpy_loglevel` configuration option is removed because the Plumpy implementation is now part of aiida-core.
+Explicit values are migrated to `logging.aiida_core_loglevel` unless that option is already set, and all loggers under `aiida.engine` are governed by the aiida-core log level.
 
 ### New features
 

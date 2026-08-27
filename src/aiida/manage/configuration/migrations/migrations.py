@@ -33,10 +33,10 @@ ConfigType = dict[str, Any]
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
 
-CURRENT_CONFIG_VERSION = 10
-OLDEST_COMPATIBLE_CONFIG_VERSION = 10
+CURRENT_CONFIG_VERSION = 11
+OLDEST_COMPATIBLE_CONFIG_VERSION = 11
 # Highest configuration version for which this code can run downgrade migrations, even if it cannot load it.
-MAXIMUM_DOWNGRADE_CONFIG_VERSION = 10
+MAXIMUM_DOWNGRADE_CONFIG_VERSION = 11
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -470,6 +470,35 @@ class RenameRmqAndLogging(SingleMigration):
             self._remove_v10_only_options(options)
 
 
+class MergePlumpyLogLevel(SingleMigration):
+    """Merge the plumpy log-level option into the aiida-core log level."""
+
+    down_revision = 10
+    down_compatible = 10
+    up_revision = 11
+    up_compatible = 11
+
+    @staticmethod
+    def _upgrade_options(options: dict[str, Any]) -> None:
+        if (value := options.pop('logging.plumpy_loglevel', None)) is not None:
+            options.setdefault('logging.aiida_core_loglevel', value)
+
+    @staticmethod
+    def _downgrade_options(options: dict[str, Any]) -> None:
+        if (value := options.get('logging.aiida_core_loglevel')) is not None:
+            options.setdefault('logging.plumpy_loglevel', value)
+
+    def upgrade(self, config: ConfigType) -> None:
+        self._upgrade_options(config.get('options', {}))
+        for profile in config.get('profiles', {}).values():
+            self._upgrade_options(profile.get('options', {}))
+
+    def downgrade(self, config: ConfigType) -> None:
+        self._downgrade_options(config.get('options', {}))
+        for profile in config.get('profiles', {}).values():
+            self._downgrade_options(profile.get('options', {}))
+
+
 MIGRATIONS = (
     Initial,
     AddProfileUuid,
@@ -481,6 +510,7 @@ MIGRATIONS = (
     AddTestProfileKey,
     AddPrefixToStorageBackendTypes,
     RenameRmqAndLogging,
+    MergePlumpyLogLevel,
 )
 
 

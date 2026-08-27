@@ -112,7 +112,7 @@ def test_migrate_full(load_config_sample, monkeypatch):
     """Test the full config migration."""
     config_initial = load_config_sample('input/0.json')
     # this should be always the most recent version
-    config_target = load_config_sample('reference/10.json')
+    config_target = load_config_sample('reference/11.json')
 
     # This change is necessary for the migration to version 2.
     monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(hex='0' * 32))
@@ -132,8 +132,8 @@ def test_migrate_full_downgrade(load_config_sample, monkeypatch):
     """
     monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(hex='0' * 32))
 
-    upgraded = upgrade_config(load_config_sample('input/0.json'), 10, migrations=(m for m in MIGRATIONS))
-    assert upgraded['CONFIG_VERSION']['CURRENT'] == 10
+    upgraded = upgrade_config(load_config_sample('input/0.json'), 11, migrations=(m for m in MIGRATIONS))
+    assert upgraded['CONFIG_VERSION']['CURRENT'] == 11
 
     downgraded = downgrade_config(upgraded, 0, migrations=(m for m in MIGRATIONS))
     assert downgraded['CONFIG_VERSION']['CURRENT'] == 0
@@ -320,6 +320,50 @@ def test_rename_rmq_and_logging_downgrade_resolves_inherit_levels():
 
     other_options = migrated['profiles']['other']['options']
     assert other_options['logging.circus_loglevel'] == 'ERROR'
+
+
+def test_merge_plumpy_log_level_round_trip():
+    """Upgrade should merge plumpy levels into aiida-core and downgrade should copy them back."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 10, 'OLDEST_COMPATIBLE': 10},
+        'profiles': {
+            'default': {
+                'options': {'logging.plumpy_loglevel': 'DEBUG'},
+            }
+        },
+        'options': {'logging.plumpy_loglevel': 'ERROR'},
+    }
+
+    migrated = upgrade_config(config, 11)
+
+    assert migrated['options'] == {'logging.aiida_core_loglevel': 'ERROR'}
+    assert migrated['profiles']['default']['options'] == {'logging.aiida_core_loglevel': 'DEBUG'}
+
+    downgraded = downgrade_config(migrated, 10)
+
+    assert downgraded['options'] == {
+        'logging.aiida_core_loglevel': 'ERROR',
+        'logging.plumpy_loglevel': 'ERROR',
+    }
+    assert downgraded['profiles']['default']['options'] == {
+        'logging.aiida_core_loglevel': 'DEBUG',
+        'logging.plumpy_loglevel': 'DEBUG',
+    }
+
+
+def test_merge_plumpy_log_level_preserves_explicit_aiida_core_level():
+    """An existing aiida-core level should take precedence over the removed plumpy level."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 10, 'OLDEST_COMPATIBLE': 10},
+        'options': {
+            'logging.aiida_core_loglevel': 'CRITICAL',
+            'logging.plumpy_loglevel': 'DEBUG',
+        },
+    }
+
+    migrated = upgrade_config(config, 11)
+
+    assert migrated['options'] == {'logging.aiida_core_loglevel': 'CRITICAL'}
 
 
 def test_merge_storage_backends_downgrade_profile(empty_config, profile_factory, caplog):

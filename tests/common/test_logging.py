@@ -64,7 +64,6 @@ class TestValidateHandler:
             'logging.aiida_loglevel': 'INFO',
             'logging.aiida_core_loglevel': 'INHERIT',
             'logging.disk_objectstore_loglevel': 'INHERIT',
-            'logging.plumpy_loglevel': 'INHERIT',
             'logging.kiwipy_loglevel': 'INHERIT',
         }
         config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
@@ -111,7 +110,6 @@ def test_configure_logging_inherits_aiida_loglevel_for_inherited_loggers(monkeyp
     assert captured_config['loggers']['aiida']['level'] == 'ERROR'
     assert captured_config['loggers']['verdi']['level'] == 'ERROR'
     assert captured_config['loggers']['disk_objectstore']['level'] == 'ERROR'
-    assert captured_config['loggers']['plumpy']['level'] == 'ERROR'
     assert captured_config['loggers']['kiwipy']['level'] == 'ERROR'
 
 
@@ -120,7 +118,6 @@ def test_configure_logging_respects_explicit_inherited_logger_levels(monkeypatch
     """Explicit logger levels should override the inherited ``logging.aiida_loglevel``."""
     isolated_config.set_option('logging.aiida_loglevel', 'ERROR')
     isolated_config.set_option('logging.aiida_core_loglevel', 'CRITICAL')
-    isolated_config.set_option('logging.plumpy_loglevel', 'WARNING')
 
     captured_config = {}
     monkeypatch.setattr(logging.config, 'dictConfig', captured_config.update)
@@ -128,7 +125,6 @@ def test_configure_logging_respects_explicit_inherited_logger_levels(monkeypatch
     log.configure_logging()
 
     assert captured_config['loggers']['aiida']['level'] == 'CRITICAL'
-    assert captured_config['loggers']['plumpy']['level'] == 'WARNING'
     assert captured_config['loggers']['disk_objectstore']['level'] == 'ERROR'
 
 
@@ -159,8 +155,8 @@ class TestVerbosityOverridesCliHandler:
             log.CLI_ACTIVE = original_cli_active
             log.CLI_LOG_LEVEL = original_cli_log_level
 
-        # The cli handler level should be overridden to DEBUG
         assert captured_config['handlers']['cli']['level'] == 'DEBUG'
+        assert captured_config['loggers']['aiida']['level'] == 'DEBUG'
 
     def test_cli_log_level_none_keeps_default(self):
         """When ``CLI_LOG_LEVEL`` is None, the ``cli`` handler level should remain the default."""

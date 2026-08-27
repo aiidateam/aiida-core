@@ -8,12 +8,15 @@
 ###########################################################################
 """Tests for :mod:`aiida.tools._dumping.executors.process`."""
 
+import json
+import logging
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from aiida import orm
+from aiida.common import LinkType
 
 
 def dumped_node_outputs(dump_path: Path) -> list[str]:
@@ -30,6 +33,27 @@ def dumped_node_outputs(dump_path: Path) -> list[str]:
     paths = [node_outputs, *node_outputs.rglob('*')]
 
     return sorted(path.relative_to(dump_path).as_posix() for path in paths)
+
+
+@pytest.fixture
+def generate_workflow_node_returning():
+    """Return a factory for a sealed ``WorkflowNode`` with a ``RETURN`` link to each of the given nodes."""
+
+    def _generate_workflow_node_returning(returns: dict[str, orm.Data]) -> orm.WorkflowNode:
+        workflow_node = orm.WorkflowNode()
+        workflow_node.set_process_state('finished')
+        workflow_node.store()
+
+        for link_label, returned_node in returns.items():
+            # A workflow may only return already stored nodes: it selects results, it does not create them.
+            returned_node.store()
+            returned_node.base.links.add_incoming(workflow_node, link_type=LinkType.RETURN, link_label=link_label)
+
+        workflow_node.seal()
+
+        return workflow_node
+
+    return _generate_workflow_node_returning
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -86,3 +110,135 @@ def test_dumped_array_round_trips(generate_calculation_node, tmp_path):
     dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True)
 
     np.testing.assert_array_equal(np.load(dump_path / 'node_outputs' / 'arraydata' / 'default.npy'), np.ones(3))
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_data_json_off_by_default(generate_calculation_node, tmp_path):
+    """No JSON is written without ``include_data_json``, whatever the outputs are.
+
+    Pins the default behavior the option has to leave untouched: a ``Dict`` result still reaches no file.
+    """
+    node = generate_calculation_node(outputs={'result': orm.Dict({'answer': 42}), 'count': orm.Int(1)})
+    node.seal()
+
+    dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True)
+
+    assert dumped_node_outputs(dump_path) == []
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_data_json_written_for_non_repository_outputs(generate_calculation_node, tmp_path):
+    """``include_data_json`` writes one JSON file per output that carries no repository content.
+
+    The ``ArrayData`` sibling is what discriminates: it has repository content, so it must still be dumped as a
+    directory and must not gain a JSON file of its own.
+    """
+    node = generate_calculation_node(
+        outputs={
+            'result': orm.Dict({'answer': 42}),
+            'count': orm.Int(1),
+            'arraydata': orm.ArrayData(arrays=np.ones(3)),
+        }
+    )
+    node.seal()
+
+    dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True, include_data_json=True)
+
+    assert dumped_node_outputs(dump_path) == [
+        'node_outputs',
+        'node_outputs/arraydata',
+        'node_outputs/arraydata/default.npy',
+        'node_outputs/count.json',
+        'node_outputs/result.json',
+    ]
+    assert json.loads((dump_path / 'node_outputs' / 'result.json').read_text()) == {'answer': 42}
+    assert json.loads((dump_path / 'node_outputs' / 'count.json').read_text()) == 1
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_data_json_written_for_inputs(generate_calculation_node, tmp_path):
+    """Inputs are written under ``node_inputs`` on the same terms, and only with ``include_inputs``."""
+    node = generate_calculation_node(inputs={'parameters': orm.Dict({'cutoff': 30})})
+    # The factory only stores a node that has outputs; an inputs-only node is returned unstored.
+    node.store()
+    node.seal()
+
+    with_inputs = node.dump(output_path=tmp_path / 'with-inputs', include_data_json=True)
+    without_inputs = node.dump(output_path=tmp_path / 'without-inputs', include_inputs=False, include_data_json=True)
+
+    assert json.loads((with_inputs / 'node_inputs' / 'parameters.json').read_text()) == {'cutoff': 30}
+    assert not (without_inputs / 'node_inputs').exists()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_data_json_nests_namespaced_link_labels(generate_calculation_node, tmp_path):
+    """A namespaced link label is written into one JSON file for the whole namespace.
+
+    ``alphas__filled`` and ``alphas__empty`` come from a single nested output port, so they merge into ``alphas.json``
+    rather than becoming two files.
+    """
+    node = generate_calculation_node(outputs={'alphas__filled': orm.Int(1), 'alphas__empty': orm.Int(2)})
+    node.seal()
+
+    dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True, include_data_json=True)
+
+    assert dumped_node_outputs(dump_path) == ['node_outputs', 'node_outputs/alphas.json']
+    assert json.loads((dump_path / 'node_outputs' / 'alphas.json').read_text()) == {'filled': 1, 'empty': 2}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_data_json_flat_does_not_overwrite(generate_calculation_node, tmp_path, caplog):
+    """Under ``flat`` an input and an output of the same link label compete for one filename; the first one wins.
+
+    ``flat`` puts inputs and outputs in the node directory itself, so ``x`` on both sides names the same file. The
+    input is written first, and the output is skipped with a warning rather than overwriting it.
+    """
+    node = generate_calculation_node(inputs={'x': orm.Int(1)}, outputs={'x': orm.Int(2)})
+    node.seal()
+
+    with caplog.at_level(logging.WARNING):
+        dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True, include_data_json=True, flat=True)
+
+    assert json.loads((dump_path / 'x.json').read_text()) == 1
+    assert 'Not writing the JSON of `x` over it' in caplog.text
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_workflow_returns_dumped(generate_workflow_node_returning, tmp_path):
+    """A ``WorkflowNode`` gets a ``node_outputs`` directory holding the nodes it returned.
+
+    A workflow's ``RETURN`` links reached no file before: the dumper recursed into its children and stopped there.
+    The ``SinglefileData`` return is what shows the directory is not JSON-only — it is copied out like a
+    calculation's repository-backed output.
+    """
+    node = generate_workflow_node_returning(
+        {
+            'result': orm.Dict({'answer': 42}),
+            'report': orm.SinglefileData.from_string(content='a', filename='file.txt'),
+        }
+    )
+
+    dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True, include_data_json=True)
+
+    assert dumped_node_outputs(dump_path) == [
+        'node_outputs',
+        'node_outputs/report',
+        'node_outputs/report/file.txt',
+        'node_outputs/result.json',
+    ]
+    assert json.loads((dump_path / 'node_outputs' / 'result.json').read_text()) == {'answer': 42}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('include_outputs, include_data_json', ((True, False), (False, True)))
+def test_workflow_returns_need_both_options(
+    generate_workflow_node_returning, tmp_path, include_outputs, include_data_json
+):
+    """Neither option alone gives a workflow a ``node_outputs`` directory."""
+    node = generate_workflow_node_returning({'result': orm.Dict({'answer': 42})})
+
+    dump_path = node.dump(
+        output_path=tmp_path / 'dump', include_outputs=include_outputs, include_data_json=include_data_json
+    )
+
+    assert dumped_node_outputs(dump_path) == []

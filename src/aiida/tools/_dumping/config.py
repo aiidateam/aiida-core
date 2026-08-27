@@ -127,6 +127,7 @@ class BaseDumpConfig(BaseModel):
     # Process dump options - common to all dump types
     include_inputs: bool = True
     include_outputs: bool = False
+    include_data_json: bool = False
     include_attributes: bool = True
     include_extras: bool = False
     flat: bool = False

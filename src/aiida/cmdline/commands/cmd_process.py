@@ -636,6 +636,7 @@ def process_repair(manager, broker, dry_run, force):
 @options.OVERWRITE()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
+@options.INCLUDE_DATA_JSON()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.FLAT()
@@ -650,6 +651,7 @@ def process_dump(
     overwrite,
     include_inputs,
     include_outputs,
+    include_data_json,
     include_attributes,
     include_extras,
     flat,
@@ -712,6 +714,7 @@ def process_dump(
             overwrite=overwrite,
             include_inputs=include_inputs,
             include_outputs=include_outputs,
+            include_data_json=include_data_json,
             include_attributes=include_attributes,
             include_extras=include_extras,
             flat=flat,

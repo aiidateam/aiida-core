@@ -81,6 +81,7 @@ __all__ = (
     'HOSTNAME',
     'IDENTIFIER',
     'INCLUDE_ATTRIBUTES',
+    'INCLUDE_DATA_JSON',
     'INCLUDE_EXTRAS',
     'INCLUDE_INPUTS',
     'INCLUDE_OUTPUTS',
@@ -817,6 +818,14 @@ INCLUDE_OUTPUTS = OverridableOption(
     default=False,
     show_default=True,
     help='Include linked output nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_DATA_JSON = OverridableOption(
+    '--include-data-json/--exclude-data-json',
+    default=False,
+    show_default=True,
+    help='Write linked `Data` nodes that carry no repository content, such as `Dict` results, as JSON files, and give '
+    'every `WorkflowNode` a `node_outputs` directory holding the nodes it returned.',
 )
 
 INCLUDE_ATTRIBUTES = OverridableOption(

@@ -403,6 +403,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         # Process dump options
         include_inputs: bool = True,
         include_outputs: bool = False,
+        include_data_json: bool = False,
         include_attributes: bool = True,
         include_extras: bool = False,
         flat: bool = False,
@@ -422,6 +423,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         :param only_top_level_workflows: Only dump top-level workflows, defaults to True
         :param include_inputs: Include input files in the dump, defaults to True
         :param include_outputs: Include output files in the dump, defaults to False
+        :param include_data_json: Write linked `Data` nodes without repository content as JSON, defaults to False
         :param include_attributes: Include node attributes in metadata, defaults to True
         :param include_extras: Include node extras in metadata, defaults to False
         :param flat: Use flat directory structure, defaults to False
@@ -446,6 +448,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             'only_top_level_workflows': only_top_level_workflows,
             'include_inputs': include_inputs,
             'include_outputs': include_outputs,
+            'include_data_json': include_data_json,
             'include_attributes': include_attributes,
             'include_extras': include_extras,
             'flat': flat,

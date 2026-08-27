@@ -715,6 +715,7 @@ class TestVerdiProcess:
             str(test_path),
             '--include-inputs',
             '--include-outputs',
+            '--include-data-json',
             '--include-attributes',
             '--include-extras',
             '--flat',
@@ -729,11 +730,23 @@ class TestVerdiProcess:
             overwrite=False,
             include_inputs=True,
             include_outputs=True,
+            include_data_json=True,
             include_attributes=True,
             include_extras=True,
             flat=True,
             dump_unsealed=True,
         )
+
+    @patch('aiida.orm.nodes.process.process.ProcessNode.dump')
+    def test_dump_data_json_off_unless_asked_for(
+        self, mock_dump, run_cli_command, tmp_path, generate_calculation_node_add
+    ):
+        """`--include-data-json` is opt-in: the command asks for it only when the flag is given."""
+        node = generate_calculation_node_add()
+
+        _ = run_cli_command(cmd_process.process_dump, [str(node.pk), '--path', str(tmp_path / 'default')])
+
+        assert node.dump.call_args.kwargs['include_data_json'] is False
 
     @patch('aiida.orm.nodes.process.process.ProcessNode.dump')
     def test_dump_export_validation_error_handling(

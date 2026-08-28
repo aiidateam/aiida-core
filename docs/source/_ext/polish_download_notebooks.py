@@ -94,6 +94,19 @@ def _render_image(rel_path: str, options: dict[str, str], source_dir: Path) -> s
     return img
 
 
+def _collect_options(lines: list[str], start: int) -> tuple[dict[str, str], int]:
+    """Parse consecutive ``:key: value`` directive-option lines starting at *start*.
+
+    :return: the parsed options, and the index of the first line that is not an option.
+    """
+    options: dict[str, str] = {}
+    i = start
+    while i < len(lines) and (match := _DIRECTIVE_OPT.match(lines[i])) is not None:
+        options[match.group(1)] = match.group(2)
+        i += 1
+    return options, i
+
+
 def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
     """Process a markdown cell's lines, converting MyST block directives."""
     output: list[str] = []
@@ -106,11 +119,7 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
             bm = _BACKTICK_DIRECTIVE.match(line)
             if bm is not None and bm.group(1) in ('image', 'figure'):
                 rel_path = bm.group(2).strip()
-                i += 1
-                options = {}
-                while i < len(lines) and (om := _DIRECTIVE_OPT.match(lines[i])) is not None:
-                    options[om.group(1)] = om.group(2)
-                    i += 1
+                options, i = _collect_options(lines, i + 1)
                 # Drop any remaining content (e.g. a figure caption) up to the
                 # closing backtick fence.
                 while i < len(lines) and not lines[i].strip().startswith('```'):
@@ -129,14 +138,7 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
         arg = m.group(3).strip()
 
         # Collect options and content
-        i += 1
-        options: dict[str, str] = {}
-        while i < len(lines):
-            om = _DIRECTIVE_OPT.match(lines[i])
-            if om is None:
-                break
-            options[om.group(1)] = om.group(2)
-            i += 1
+        options, i = _collect_options(lines, i + 1)
 
         # Skip blank line after options
         if i < len(lines) and lines[i].strip() == '':
@@ -155,9 +157,9 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
 
         # --- Convert directive ---
 
-        # Recurse so directives nested inside a container (an ``{image}`` or
-        # ``{literalinclude}`` in a dropdown, images inside a ``{grid}``, ...) are
-        # converted too, not left as raw MyST.
+        # Recurse so directives nested inside a container (an ``{image}`` in a
+        # dropdown, images inside a ``{grid}``, ...) are converted too, not left
+        # as raw MyST.
         inner = _convert_myst_block(content.split('\n'), source_dir)
 
         if directive in _ALERT_MAP:
@@ -208,43 +210,50 @@ def _clean_markdown(text: str) -> str:
     # Remove target labels like (tutorial:module1)=
     text = _TARGET_LABEL.sub('', text)
     # Remove empty alert divs (e.g. the tip that only contained a {nb-download} link,
-    # whose line is stripped earlier in _process_markdown_cells).
+    # whose line is stripped earlier in _polish_source).
     text = _EMPTY_ALERT.sub('', text)
     # Clean up multiple blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
 
-def _process_markdown_cells(cells: list[dict[str, Any]], source_dir: Path) -> bool:
-    """Convert MyST syntax in markdown cells to Jupyter-compatible markdown."""
-    modified = False
+def _has_myst(text: str) -> bool:
+    """True if *text* contains a MyST construct worth converting."""
+    return ':::' in text or '{' in text or ')=' in text
 
+
+def _polish_source(source: str, source_dir: Path) -> str:
+    """Convert every MyST construct in one markdown cell's source to plain-Jupyter markdown."""
+    text = '\n'.join(_convert_myst_block(source.split('\n'), source_dir))
+    # Drop the self-referential ``{nb-download}`` line before roles are stripped to plain
+    # text: role conversion erases the ``{nb-download}`` marker this match relies on, which
+    # would otherwise leave the "download as a notebook" tip (and its now-empty alert div)
+    # stranded in the downloaded notebook.
+    text = _NB_DOWNLOAD_LINE.sub('', text)
+    text = _convert_inline_roles(text)
+    return _clean_markdown(text)
+
+
+def _polish_markdown_cells(cells: list[dict[str, Any]], source_dir: Path) -> bool:
+    """Convert MyST syntax to plain-Jupyter markdown in each markdown cell, in place.
+
+    The cells belong to a notebook just loaded from disk and about to be written back,
+    so mutating them in place is deliberate.
+
+    :return: ``True`` if any cell changed, so the caller only rewrites when needed.
+    """
+    changed = False
     for cell in cells:
         if cell.get('cell_type') != 'markdown':
             continue
-
         original = ''.join(cell.get('source', []))
-
-        # Skip cells that don't contain any MyST constructs
-        if ':::' not in original and '{' not in original and ')=' not in original:
+        if not _has_myst(original):
             continue
-
-        lines = original.split('\n')
-        converted = _convert_myst_block(lines, source_dir)
-        text = '\n'.join(converted)
-        # Drop the self-referential ``{nb-download}`` line before roles are stripped
-        # to plain text: role conversion erases the ``{nb-download}`` marker this match
-        # relies on, which would otherwise leave the "download as a notebook" tip (and
-        # its no-longer-empty alert div) stranded inside the downloaded notebook.
-        text = _NB_DOWNLOAD_LINE.sub('', text)
-        text = _convert_inline_roles(text)
-        text = _clean_markdown(text)
-
-        if text != original.strip():
-            cell['source'] = [text]
-            modified = True
-
-    return modified
+        polished = _polish_source(original, source_dir)
+        if polished != original.strip():
+            cell['source'] = [polished]
+            changed = True
+    return changed
 
 
 def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
@@ -266,9 +275,9 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
     for notebook_path in downloads_dir.rglob('*.ipynb'):
         if notebook_path.stem not in module_stems:
             continue
-        nb = json.loads(notebook_path.read_text(encoding='utf-8'))
+        nb: dict[str, Any] = json.loads(notebook_path.read_text(encoding='utf-8'))
 
-        if _process_markdown_cells(nb.get('cells', []), source_dir):
+        if _polish_markdown_cells(nb.get('cells', []), source_dir):
             notebook_path.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + '\n', encoding='utf-8')
             count += 1
             logger.info('polish_download_notebooks: processed %s', notebook_path.name)

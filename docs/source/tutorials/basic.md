@@ -20,7 +20,7 @@ execution:
 
 (tutorial)=
 (tutorial:basic)=
-# Basic tutorial
+# A provenance deep dive
 
 The goal of this tutorial is to give you an idea of how AiiDA helps you in executing data-driven workflows.
 At the end of this tutorial, you will know how to:

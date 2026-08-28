@@ -33,14 +33,10 @@ After this module, you will be able to:
 - Dump calculation data to disk with `verdi process dump`
 
 :::{note}
-This module needs AiiDA and `aiida-shell`:
+This module needs AiiDA and `aiida-shell`. The tutorial uses [`uv`](https://docs.astral.sh/uv/); if you prefer plain `pip`, drop the `uv` prefix (`pip install ...`):
 
 ```bash
 uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
-
-# or, without uv:
-
-pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
 
 It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.

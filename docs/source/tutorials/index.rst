@@ -12,7 +12,8 @@ example that progressively grows in complexity.
 
    These tutorials are actively being developed and may still change. If you
    run into any problems or have suggestions for improvement, please open an
-   issue on `GitHub <https://github.com/aiidateam/aiida-core/issues>`__; your
+   issue on `GitHub <https://github.com/aiidateam/aiida-core/issues>`__ or
+   start a thread on `Discourse <https://aiida.discourse.group/>`__; your
    feedback is very welcome.
 
 Introductory modules
@@ -129,7 +130,7 @@ Advanced modules
       :text-align: center
       :shadow: md
 
-      Conditional logic and loops with ``If``/``While`` (6a), then workflows whose shape emerges at runtime (6b).
+      Branch and loop on results with ``If``/``While`` (6a); then build a workflow that adapts its own later steps from earlier outputs (6b).
 
       +++
 
@@ -151,11 +152,11 @@ More tutorials
 .. grid:: 1 2 2 2
    :gutter: 3
 
-   .. grid-item-card:: :fa:`graduation-cap;mr-1` Basic tutorial
+   .. grid-item-card:: :fa:`graduation-cap;mr-1` A provenance deep dive
       :text-align: center
       :shadow: md
 
-      A self-contained introduction to core AiiDA concepts using simple arithmetic examples.
+      An in-depth, hands-on tour of AiiDA's provenance model and core concepts (data nodes, calcfunctions, CalcJobs, workflows), using simple arithmetic examples.
 
       +++
 
@@ -166,7 +167,7 @@ More tutorials
          :color: primary
          :outline:
 
-         Go to the basic tutorial
+         Go to the deep dive
 
    .. grid-item-card:: :fa:`chalkboard-user;mr-1` Past AiiDA tutorials
       :text-align: center

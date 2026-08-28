@@ -15,15 +15,14 @@ notebooks nicer in plain Jupyter, by post-processing each ``.ipynb`` in
 
 1. Convert MyST admonitions to HTML ``<div class="alert ...">`` blocks.
 2. Convert MyST dropdowns to ``<details>`` elements and flatten grids, recursing
-   into nested directives (images, literalincludes) inside them.
+   into nested directives (images) inside them.
 3. Inline ``{image}``/``{figure}`` directives as self-contained ``<img>`` tags.
 4. Strip MyST-only inline roles to plain text.
 5. Remove target labels and self-referential download links.
 
-The setup cell's ``%run -i tutorial_plumbing.py`` is left untouched: the bootstrap at
-the top of that cell fetches the helpers at runtime, so the notebook is
-self-contained without inlining (and inlining would break on the script's
-``__file__``).
+Only markdown cells are touched. The notebooks are already self-contained: their
+setup cells create the profile inline and read the gsrd inputs from the installed
+package, so the code cells need no post-processing.
 """
 
 from __future__ import annotations
@@ -68,20 +67,12 @@ _ALERT_MAP: dict[str, tuple[str, str]] = {
 }
 
 
-def _read_include(rel_path: str, source_dir: Path) -> str | None:
-    """Read an include file, returning its contents or None."""
-    path = source_dir / rel_path
-    if path.is_file():
-        return path.read_text(encoding='utf-8')
-    return None
-
-
 def _render_image(rel_path: str, options: dict[str, str], source_dir: Path) -> str:
     """Render an ``{image}``/``{figure}`` target as a self-contained ``<img>`` tag.
 
-    The image bytes are embedded as a base64 data URI so the downloaded notebook
-    displays them without depending on the working directory or the runtime fetch
-    of ``include/``. Falls back to the relative path if the file is missing.
+    A local image's bytes are embedded as a base64 data URI so the downloaded
+    notebook displays it without depending on the working directory; a remote URL
+    is kept as-is (the fallback for a path that is not a local file).
     """
     path = source_dir / rel_path
     attrs = ''
@@ -113,8 +104,7 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
         m = _FENCE_OPEN.match(line)
         if m is None:
             bm = _BACKTICK_DIRECTIVE.match(line)
-            if bm is not None and bm.group(1) in ('image', 'figure', 'literalinclude'):
-                directive = bm.group(1)
+            if bm is not None and bm.group(1) in ('image', 'figure'):
                 rel_path = bm.group(2).strip()
                 i += 1
                 options = {}
@@ -128,15 +118,7 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
                 if i < len(lines):
                     i += 1  # consume the closing fence
 
-                if directive == 'literalinclude':
-                    content = _read_include(rel_path, source_dir)
-                    lang = options.get('language', 'python')
-                    if content is not None:
-                        output.extend([f'```{lang}', content.rstrip(), '```'])
-                    else:
-                        output.append(f'*File not found: {rel_path}*')
-                else:
-                    output.append(_render_image(rel_path, options, source_dir))
+                output.append(_render_image(rel_path, options, source_dir))
                 continue
             output.append(line)
             i += 1

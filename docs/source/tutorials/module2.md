@@ -27,10 +27,6 @@ If you have not already installed these in an earlier module, run:
 
 ```bash
 uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
-
-# or, without uv:
-
-pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
 :::
 

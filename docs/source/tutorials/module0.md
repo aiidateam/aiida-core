@@ -52,14 +52,10 @@ Identical starting conditions (same initial grid) can produce wildly different p
 
 ## Setup
 
-This first module uses only the `gsrd` simulator, no AiiDA yet. We recommend [`uv`](https://docs.astral.sh/uv/), but plain `pip` works just as well:
+This first module uses only the `gsrd` simulator, no AiiDA yet. The tutorial uses [`uv`](https://docs.astral.sh/uv/) throughout; if you prefer plain `pip`, drop the `uv` prefix (`pip install ...`).
 
 ```bash
 uv pip install "gsrd>=0.2.0"
-
-# or, without uv:
-
-pip install "gsrd>=0.2.0"
 ```
 
 `gsrd` ships the tutorial's example input file as package data, so once it is installed there is nothing else to download: the cells below run as they are, whether you are reading on the web, running the downloaded notebook, or copying cells into your own.

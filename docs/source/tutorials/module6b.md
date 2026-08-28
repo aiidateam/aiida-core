@@ -1,5 +1,5 @@
 (tutorial:module6b)=
-# Module 6b: Workflows that build themselves
+# Module 6b: Workflows that adapt at runtime
 
 :::{admonition} Under development
 :class: seealso

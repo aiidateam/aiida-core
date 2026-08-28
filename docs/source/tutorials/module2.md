@@ -26,11 +26,11 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 If you have not already installed these in an earlier module, run:
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib git+https://github.com/aiidateam/gsrd.git
+uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
 
 # or, without uv:
 
-pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib git+https://github.com/aiidateam/gsrd.git
+pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
 :::
 
@@ -42,23 +42,74 @@ If not, or you are starting here, work through the {ref}`setup section of Module
 ```{code-cell} ipython3
 :tags: [hide-cell]
 :mystnb:
-:    code_prompt_show: 'Show the setup code (same as Module 1)'
-:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+:    code_prompt_show: 'Show the profile-setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the profile-setup code'
 
-# Set up the tutorial's sandbox profile (created in Module 1; reused here).
+# Point AiiDA at a local .aiida-tutorial/ sandbox (via AIIDA_PATH, so nothing touches
+# your real ~/.aiida), then create the `tutorial` profile and register the gsrd code
+# if they do not exist yet. Module 1 creates them; later modules find and reuse them.
+import os
+import shutil
+import sys
+import warnings
+from importlib.resources import files
 from pathlib import Path
 
-if not Path('include/tutorial_plumbing.py').exists():
-    import urllib.request
+from aiida.manage.configuration import get_config, reset_config
+from aiida.manage.configuration.settings import AiiDAConfigDir
 
-    Path('include').mkdir(exist_ok=True)
-    urllib.request.urlretrieve(
-        'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include/tutorial_plumbing.py',
-        'include/tutorial_plumbing.py',
-    )
+PROFILE_NAME = 'tutorial'
+os.environ['AIIDA_PATH'] = str(
+    Path(os.environ.get('AIIDA_TUTORIAL_SANDBOX', '.aiida-tutorial')).resolve()
+)
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', message='Creating AiiDA configuration folder')
+    AiiDAConfigDir.set()
+    reset_config()
+    config = get_config(create=True)
 
-%run -i include/tutorial_plumbing.py
+if PROFILE_NAME not in config.profile_names:
+    # gsrd ships the Code config (label, computer, plugin); -X sets the executable path.
+    gsrd = shutil.which('gsrd') or str(Path(sys.executable).parent / 'gsrd')
+    code_config = files('gsrd') / 'data' / 'gsrd_code.yaml'
+    !verdi presto --profile-name {PROFILE_NAME} --use-zeromq
+    !verdi -p {PROFILE_NAME} config set warnings.development_version False
+    !verdi -p {PROFILE_NAME} code create core.code.installed -n --config {code_config} -X {gsrd}
+    reset_config()
+```
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the connect-and-daemon code (same as Module 1)'
+:    code_prompt_hide: 'Hide the connect-and-daemon code'
+
+# Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
+from aiida import load_profile
+from aiida.orm import load_code
+
+load_profile(PROFILE_NAME, allow_switch=True)
+!verdi -p {PROFILE_NAME} daemon start
+gsrd_code = load_code('gsrd@localhost')
+
 %load_ext aiida
+```
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the plot_provenance helper (same as Module 1)'
+:    code_prompt_hide: 'Hide the plot_provenance helper'
+
+# A thin provenance-graph helper used throughout the tutorial (plotting is not the focus).
+def plot_provenance(node):
+    """Return a Graphviz digraph of *node* and its connected provenance (rendered inline)."""
+    from aiida.tools.visualization import Graph
+
+    graph = Graph()
+    graph.recurse_ancestors(node, annotate_links='both', include_process_outputs=True)
+    graph.recurse_descendants(node, annotate_links='both', include_process_inputs=True)
+    return graph.graphviz
 ```
 
 ## What you will learn
@@ -83,12 +134,14 @@ Let's run one again here to work with, holding the Gray-Scott parameters fixed:
 :    code_prompt_hide: 'Hide the run code (same as Module 1)'
 
 # Run a single tracked gsrd calculation (as in Module 1).
+from importlib.resources import files
+
 from aiida_shell import launch_shell_job
 
 results, calc_node = launch_shell_job(
     gsrd_code,
     arguments='{input}',
-    nodes={'input': 'include/input.yaml'},
+    nodes={'input': str(files('gsrd') / 'data' / 'input.yaml')},
     outputs=['results.npz'],
 )
 ```
@@ -105,9 +158,8 @@ mystnb:
     image:
         width: 100%
 ---
-# Provenance graph of the run: opaque files in, opaque files out.
-from include.plotting import plot_provenance
-
+# Provenance graph of the run: opaque files in, opaque files out
+# (plot_provenance is defined in the setup cell above).
 plot_provenance(calc_node)
 ```
 
@@ -212,10 +264,14 @@ When returning a single node, AiiDA registers it under the default link label `r
 When returning a dict, each value is registered as a named output instead, accessible via `node.outputs.<label>`.
 :::
 
+:::{note}
+`prepare_input` and `parse_output` are kept deliberately small here to keep the AiiDA concepts in focus; in real workflows any of these steps can carry substantial work, such as expensive input preparation, data analysis, or downstream simulation stages.
+:::
+
 ### Chaining the steps into a pipeline
 
 Now, we can chain them: `prepare_input` → `launch_shell_job` → `parse_output`.
-We pass the input parameters as a `dict` (`BASE_PARAMS`, the same values as the opening run's `include/input.yaml`, now in the queryable form we motivated above).
+We pass the input parameters as a `dict` (`BASE_PARAMS`, the same values as the opening run's `input.yaml`, now in the queryable form we motivated above).
 `engine.run_get_node` runs each calcfunction and returns its `(outputs, node)`, the same shape `launch_shell_job` returns; we keep the nodes we inspect later.
 Each step is tracked, and the inputs and outputs are stored as structured, queryable nodes:
 
@@ -271,8 +327,6 @@ mystnb:
         width: 100%
 ---
 # Provenance graph now shows Dict in and Float out, not just files.
-from include.plotting import plot_provenance
-
 plot_provenance(node)
 ```
 

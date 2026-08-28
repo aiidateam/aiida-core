@@ -97,12 +97,53 @@ Introductory modules
 Advanced modules
 ================
 
-.. admonition:: Under development
-   :class: seealso
+.. note::
 
-   The running example continues beyond the basics, onto remote HPC resources,
-   querying at scale, adaptive workflows, and robust error handling. These
-   modules are being finalized and will land here soon.
+   The running example continues beyond the basics. These modules are being
+   finalized and will be added soon.
+
+.. grid:: 2 2 2 2
+   :gutter: 3
+
+   .. grid-item-card:: :fa:`server;mr-1` Module 4: Remote submission
+      :text-align: center
+      :shadow: md
+
+      Run calculations on remote HPC clusters with schedulers, transports, and queue management.
+
+      +++
+
+      :bdg-secondary:`Coming soon`
+
+   .. grid-item-card:: :fa:`magnifying-glass-chart;mr-1` Module 5: Querying and analysis
+      :text-align: center
+      :shadow: md
+
+      Use the QueryBuilder to search, filter, and analyze your provenance graph at scale.
+
+      +++
+
+      :bdg-secondary:`Coming soon`
+
+   .. grid-item-card:: :fa:`code-branch;mr-1` Module 6: Complex workflows
+      :text-align: center
+      :shadow: md
+
+      Conditional logic and loops with ``If``/``While`` (6a), then workflows whose shape emerges at runtime (6b).
+
+      +++
+
+      :bdg-secondary:`Coming soon`
+
+   .. grid-item-card:: :fa:`compass;mr-1` Module 7: Where to go next
+      :text-align: center
+      :shadow: md
+
+      Error handlers, CalcJob plugins, WorkChains, caching, and a map of the wider plugin ecosystem.
+
+      +++
+
+      :bdg-secondary:`Coming soon`
 
 More tutorials
 ==============
@@ -191,3 +232,8 @@ Where to go next
    module2
    module3a
    module3b
+   module4
+   module5
+   module6a
+   module6b
+   module7

@@ -36,11 +36,11 @@ After this module, you will be able to:
 This module needs AiiDA and `aiida-shell`:
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib git+https://github.com/aiidateam/gsrd.git
+uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
 
 # or, without uv:
 
-pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib git+https://github.com/aiidateam/gsrd.git
+pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
 
 It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.
@@ -67,9 +67,7 @@ We recommend running this tutorial in its own **isolated sandbox profile**, kept
 For the documentation build, we use the setup cell below, which is also included in the downloaded notebooks.
 
 :::{dropdown} What the setup cell does
-The cell below runs tutorial-specific machinery that creates the profile in an isolated `.aiida-tutorial/` sandbox (so it never touches your real `~/.aiida`), registers the `gsrd` code, starts the daemon, and loads the `%verdi` magic (contained in `include/tutorial_plumbing.py`). You do not need to run it yourself, or even read it; the handful of commands it comes down to, the ones you would actually run yourself, are shown right after.
-
-If you are running outside the tutorial repository (for example, cells pasted into your own notebook), it first downloads that script; inside the repo, or once Module 0's fetch cell has run, that step is skipped.
+The cell below creates the profile in an isolated `.aiida-tutorial/` sandbox (so it never touches your real `~/.aiida`), registers the `gsrd` code, starts the daemon, loads the `%verdi` magic, and defines a small `plot_provenance` helper. You do not need to run it yourself, or even read it; the handful of commands it comes down to, the ones you would actually run yourself, are shown right after.
 
 Module 1 creates the profile; the later modules reconnect to it, so the data you create now stays available throughout.
 :::
@@ -77,23 +75,74 @@ Module 1 creates the profile; the later modules reconnect to it, so the data you
 ```{code-cell} ipython3
 :tags: [hide-cell]
 :mystnb:
-:    code_prompt_show: 'Show the setup cell (tutorial plumbing you can ignore)'
-:    code_prompt_hide: 'Hide the setup cell'
+:    code_prompt_show: 'Show the profile-setup code (you can ignore this)'
+:    code_prompt_hide: 'Hide the profile-setup code'
 
-# Fetch tutorial_plumbing.py if missing, then run it to set up the profile.
+# Point AiiDA at a local .aiida-tutorial/ sandbox (via AIIDA_PATH, so nothing touches
+# your real ~/.aiida), then create the `tutorial` profile and register the gsrd code
+# if they do not exist yet. Module 1 creates them; later modules find and reuse them.
+import os
+import shutil
+import sys
+import warnings
+from importlib.resources import files
 from pathlib import Path
 
-if not Path('include/tutorial_plumbing.py').exists():
-    import urllib.request
+from aiida.manage.configuration import get_config, reset_config
+from aiida.manage.configuration.settings import AiiDAConfigDir
 
-    Path('include').mkdir(exist_ok=True)
-    urllib.request.urlretrieve(
-        'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include/tutorial_plumbing.py',
-        'include/tutorial_plumbing.py',
-    )
+PROFILE_NAME = 'tutorial'
+os.environ['AIIDA_PATH'] = str(
+    Path(os.environ.get('AIIDA_TUTORIAL_SANDBOX', '.aiida-tutorial')).resolve()
+)
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', message='Creating AiiDA configuration folder')
+    AiiDAConfigDir.set()
+    reset_config()
+    config = get_config(create=True)
 
-%run -i include/tutorial_plumbing.py
+if PROFILE_NAME not in config.profile_names:
+    # gsrd ships the Code config (label, computer, plugin); -X sets the executable path.
+    gsrd = shutil.which('gsrd') or str(Path(sys.executable).parent / 'gsrd')
+    code_config = files('gsrd') / 'data' / 'gsrd_code.yaml'
+    !verdi presto --profile-name {PROFILE_NAME} --use-zeromq
+    !verdi -p {PROFILE_NAME} config set warnings.development_version False
+    !verdi -p {PROFILE_NAME} code create core.code.installed -n --config {code_config} -X {gsrd}
+    reset_config()
+```
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the connect-and-daemon code'
+:    code_prompt_hide: 'Hide the connect-and-daemon code'
+
+# Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
+from aiida import load_profile
+from aiida.orm import load_code
+
+load_profile(PROFILE_NAME, allow_switch=True)
+!verdi -p {PROFILE_NAME} daemon start
+gsrd_code = load_code('gsrd@localhost')
+
 %load_ext aiida
+```
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the plot_provenance helper'
+:    code_prompt_hide: 'Hide the plot_provenance helper'
+
+# A thin provenance-graph helper used throughout the tutorial (plotting is not the focus).
+def plot_provenance(node):
+    """Return a Graphviz digraph of *node* and its connected provenance (rendered inline)."""
+    from aiida.tools.visualization import Graph
+
+    graph = Graph()
+    graph.recurse_ancestors(node, annotate_links='both', include_process_outputs=True)
+    graph.recurse_descendants(node, annotate_links='both', include_process_inputs=True)
+    return graph.graphviz
 ```
 
 For your own work, outside the tutorial's sandbox, setting up your AiiDA profile for the tutorial is just three commands:
@@ -101,7 +150,7 @@ For your own work, outside the tutorial's sandbox, setting up your AiiDA profile
 ```console
 $ verdi presto --profile-name tutorial --use-zeromq
 $ verdi daemon start
-$ verdi code create core.code.installed --config include/gsrd_code.yaml -X $(which gsrd)
+$ verdi code create core.code.installed --config gsrd_code.yaml -X $(which gsrd)
 ```
 
 `verdi presto` creates a profile with sensible defaults for all three components above: **SQLite** for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZeroMQ broker** (`--use-zeromq` keeps it dependency-free; without it, `verdi presto` uses RabbitMQ whenever it detects it running).
@@ -127,10 +176,18 @@ We use IPython magic commands like `%verdi <cmd>` in Code cells (`%verdi` runs a
 To execute in a terminal, drop the `%` prefix.
 :::
 
-With the profile up and verified, the last step is registering the code you will run. `verdi code create` registers the `gsrd` CLI as an AiiDA `Code` object from a small config file, `include/gsrd_code.yaml`, setting just its `label`, `computer`, and default calculation plugin (`-X` gives the executable path, which depends on where `gsrd` is installed; everything else stays at its defaults):
+With the profile up and verified, the last step is registering the code you will run. `verdi code create` registers the `gsrd` CLI as an AiiDA `Code` object from a small config file, `gsrd_code.yaml`, which `gsrd` ships as package data, setting just its `label`, `computer`, and default calculation plugin (`-X` gives the executable path, which depends on where `gsrd` is installed; everything else stays at its defaults):
 
-```{literalinclude} include/gsrd_code.yaml
-:language: yaml
+```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show gsrd_code.yaml'
+:    code_prompt_hide: 'Hide gsrd_code.yaml'
+
+# The Code config file gsrd ships, used by the setup cell's `verdi code create`.
+from importlib.resources import files
+
+print((files('gsrd') / 'data' / 'gsrd_code.yaml').read_text())
 ```
 
 :::{dropdown} Inspecting the&nbsp;`gsrd@localhost`&nbsp;Code
@@ -171,10 +228,12 @@ Below, we use its `launch_shell_job` helper with the same input file as in {ref}
 
 ```{code-cell} ipython3
 # Run the simulation through AiiDA using aiida-shell's launch_shell_job.
+from importlib.resources import files
+
 from aiida_shell import launch_shell_job
 
-# aiida-shell accepts a path to the input file, relative to this notebook.
-input_path = 'include/input.yaml'
+# The same example input.yaml as in Module 0, shipped with the gsrd package.
+input_path = str(files('gsrd') / 'data' / 'input.yaml')
 
 results, node = launch_shell_job(
     gsrd_code,
@@ -225,9 +284,8 @@ mystnb:
     image:
         width: 100%
 ---
-# Generate and display the provenance graph for this calculation.
-from include.plotting import plot_provenance
-
+# Generate and display the provenance graph for this calculation
+# (plot_provenance is defined in the setup cell above).
 plot_provenance(node)
 ```
 
@@ -244,7 +302,7 @@ You can also generate provenance graphs from the command line with `verdi node g
 :::
 
 :::{dropdown} About the&nbsp;`plot_provenance`&nbsp;helper
-`plot_provenance` is a thin wrapper we ship in {download}`include/plotting.py`, where all of the tutorial's `plot_*` helpers live. Plotting is not the focus here, so we keep that boilerplate out of the way; open the file if you are curious.
+`plot_provenance` is a thin wrapper around AiiDA's {py:class}`~aiida.tools.visualization.Graph`, defined in the hidden setup cell above. Plotting is not the focus here, so we keep that boilerplate folded away; expand the setup cell if you are curious.
 :::
 
 ## Inspecting the calculation

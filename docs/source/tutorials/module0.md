@@ -30,7 +30,7 @@ It models the concentration of particles diffusing and reacting on a 2D grid, pr
 Depending on the feed rate, F, and kill rate, k, it forms strikingly different structures:
 
 :::{dropdown} A gallery of Gray-Scott patterns
-```{image} https://raw.githubusercontent.com/aiidateam/gsrd/2b43234ba82c796fd082278f7b0f874c35829d89/gallery/showcase.png
+```{image} https://raw.githubusercontent.com/aiidateam/gsrd/v0.2.0/gallery/showcase.png
 :width: 100%
 :align: center
 ```
@@ -55,40 +55,14 @@ Identical starting conditions (same initial grid) can produce wildly different p
 This first module uses only the `gsrd` simulator, no AiiDA yet. We recommend [`uv`](https://docs.astral.sh/uv/), but plain `pip` works just as well:
 
 ```bash
-uv pip install git+https://github.com/aiidateam/gsrd.git
+uv pip install "gsrd>=0.2.0"
 
 # or, without uv:
 
-pip install git+https://github.com/aiidateam/gsrd.git
+pip install "gsrd>=0.2.0"
 ```
 
-Now, there are three ways to work through this tutorial, and which of its files you need to fetch, if any, depends on which you follow:
-
-- **Reading on the web**: what you are doing right now. The code and its output are already rendered on this page, so there is nothing to install, download, or run; just read on.
-- **The downloaded notebook** (download it from the link at the top of each module page): the fetch is already included, so just run the cells in order, as you would any notebook.
-- **Your own notebook** (copy-pasting cells from this page): run the cell below once to fetch all helper files the tutorial uses.
-
-```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the fetch cell (local-notebook users)'
-:    code_prompt_hide: 'Hide the fetch cell'
-
-# Fetch the tutorial's include/ helpers if they are not already present.
-from pathlib import Path
-
-if not (Path('include') / 'input.yaml').exists():
-    import json
-    import urllib.request
-
-    api = 'https://api.github.com/repos/GeigerJ2/aiida-core/contents/docs/source/tutorials/include?ref=docs/integrate-tutorials'
-    Path('include').mkdir(exist_ok=True)
-    for entry in json.load(urllib.request.urlopen(api)):
-        if entry['type'] == 'file':
-            urllib.request.urlretrieve(
-                entry['download_url'], Path('include') / entry['name']
-            )
-```
+`gsrd` ships the tutorial's example input file as package data, so once it is installed there is nothing else to download: the cells below run as they are, whether you are reading on the web, running the downloaded notebook, or copying cells into your own.
 
 ## Running the simulation
 
@@ -108,14 +82,21 @@ seed: 42         # RNG seed for the initial perturbation
 ```
 :::
 
-Now run `gsrd` with the input file:
+Now run `gsrd` with the input file. `gsrd` ships this example `input.yaml`, so we locate it via `importlib.resources` rather than keeping a copy in the tutorial:
+
+```{code-cell} ipython3
+from importlib.resources import files
+
+# The example input.yaml bundled with the gsrd package.
+input_yaml = files('gsrd') / 'data' / 'input.yaml'
+```
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
 # gsrd reads the input file and writes its results into the current directory.
 # Expand the output to see what it prints.
-!gsrd include/input.yaml
+!gsrd {input_yaml}
 ```
 
 :::{note}
@@ -152,7 +133,7 @@ The natural thing to do is to make a copy of the input, open it in a text editor
 ```{code-cell} ipython3
 # Change the feed rate F from 0.04 to 0.050, saved as our own editable input
 # (in practice you might open input.yaml in a text editor).
-!sed 's/F: 0.04/F: 0.050/' include/input.yaml > input.yaml
+!sed 's/F: 0.04/F: 0.050/' {input_yaml} > input.yaml
 ```
 
 Then run the simulation with the modified input file:
@@ -165,7 +146,7 @@ Then run the simulation with the modified input file:
 
 With `F=0.050`, the pattern looks completely different:
 
-```{image} https://raw.githubusercontent.com/aiidateam/gsrd/2b43234ba82c796fd082278f7b0f874c35829d89/gallery/dissolved.png
+```{image} https://raw.githubusercontent.com/aiidateam/gsrd/v0.2.0/gallery/dissolved.png
 :width: 60%
 :align: center
 ```
@@ -183,7 +164,7 @@ Tweaking a parameter and re-running like this is how the exploratory phase of a 
 ## Running into errors
 
 Now, let's see what happens when things actually go wrong with our simulation.
-We run it with an oversized timestep (`dt=100`), from a prepared `input_bad.yaml`:
+We give it an oversized timestep (`dt=100`) by editing the input, then run that `input_bad.yaml`:
 
 :::{dropdown} `input_bad.yaml`&nbsp;contents
 
@@ -200,13 +181,16 @@ seed: 42         # RNG seed for the initial perturbation
 :::
 
 ```{code-cell} ipython3
-# Run an input with an oversized timestep (dt=100), which makes the
-# integration blow up. We use subprocess (rather than the shell `!`) so we
-# can capture the exit code, which is the telling part below.
+# Make a bad input by oversizing the timestep (dt=100), which blows up the
+# integration. We run it via subprocess (rather than the shell `!`) so we can
+# capture the exit code, which is the telling part below.
 import subprocess
+from pathlib import Path
+
+Path('input_bad.yaml').write_text(input_yaml.read_text().replace('dt: 1.0', 'dt: 100.0'))
 
 result = subprocess.run(
-    ['gsrd', 'include/input_bad.yaml'],
+    ['gsrd', 'input_bad.yaml'],
     capture_output=True,
     text=True,
 )

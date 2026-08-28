@@ -27,11 +27,11 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 This module uses `aiida-core`, `aiida-shell`, and `aiida-workgraph`. Install them with:
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib git+https://github.com/aiidateam/gsrd.git
+uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib "gsrd>=0.2.0"
 
 # or, without uv:
 
-pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib git+https://github.com/aiidateam/gsrd.git
+pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib "gsrd>=0.2.0"
 ```
 
 `aiida-workgraph` is currently a separate package; it is planned to become part of `aiida-core` with the v3.0 release.
@@ -45,23 +45,74 @@ If not, or you are starting here, work through the {ref}`setup section of Module
 ```{code-cell} ipython3
 :tags: [hide-cell]
 :mystnb:
-:    code_prompt_show: 'Show the setup code (same as Module 1)'
-:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+:    code_prompt_show: 'Show the profile-setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the profile-setup code'
 
-# Set up the tutorial's sandbox profile (created in Module 1; reused here).
+# Point AiiDA at a local .aiida-tutorial/ sandbox (via AIIDA_PATH, so nothing touches
+# your real ~/.aiida), then create the `tutorial` profile and register the gsrd code
+# if they do not exist yet. Module 1 creates them; later modules find and reuse them.
+import os
+import shutil
+import sys
+import warnings
+from importlib.resources import files
 from pathlib import Path
 
-if not Path('include/tutorial_plumbing.py').exists():
-    import urllib.request
+from aiida.manage.configuration import get_config, reset_config
+from aiida.manage.configuration.settings import AiiDAConfigDir
 
-    Path('include').mkdir(exist_ok=True)
-    urllib.request.urlretrieve(
-        'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include/tutorial_plumbing.py',
-        'include/tutorial_plumbing.py',
-    )
+PROFILE_NAME = 'tutorial'
+os.environ['AIIDA_PATH'] = str(
+    Path(os.environ.get('AIIDA_TUTORIAL_SANDBOX', '.aiida-tutorial')).resolve()
+)
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', message='Creating AiiDA configuration folder')
+    AiiDAConfigDir.set()
+    reset_config()
+    config = get_config(create=True)
 
-%run -i include/tutorial_plumbing.py
+if PROFILE_NAME not in config.profile_names:
+    # gsrd ships the Code config (label, computer, plugin); -X sets the executable path.
+    gsrd = shutil.which('gsrd') or str(Path(sys.executable).parent / 'gsrd')
+    code_config = files('gsrd') / 'data' / 'gsrd_code.yaml'
+    !verdi presto --profile-name {PROFILE_NAME} --use-zeromq
+    !verdi -p {PROFILE_NAME} config set warnings.development_version False
+    !verdi -p {PROFILE_NAME} code create core.code.installed -n --config {code_config} -X {gsrd}
+    reset_config()
+```
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the connect-and-daemon code (same as Module 1)'
+:    code_prompt_hide: 'Hide the connect-and-daemon code'
+
+# Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
+from aiida import load_profile
+from aiida.orm import load_code
+
+load_profile(PROFILE_NAME, allow_switch=True)
+!verdi -p {PROFILE_NAME} daemon start
+gsrd_code = load_code('gsrd@localhost')
+
 %load_ext aiida
+```
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the plot_provenance helper (same as Module 1)'
+:    code_prompt_hide: 'Hide the plot_provenance helper'
+
+# A thin provenance-graph helper used throughout the tutorial (plotting is not the focus).
+def plot_provenance(node):
+    """Return a Graphviz digraph of *node* and its connected provenance (rendered inline)."""
+    from aiida.tools.visualization import Graph
+
+    graph = Graph()
+    graph.recurse_ancestors(node, annotate_links='both', include_process_outputs=True)
+    graph.recurse_descendants(node, annotate_links='both', include_process_inputs=True)
+    return graph.graphviz
 ```
 
 ## What you will learn
@@ -119,8 +170,6 @@ from aiida import orm
 
 from aiida_workgraph import WorkGraph, task, shelljob
 
-from include.tasks import prepare_input, parse_output
-
 # The fixed Gray-Scott parameters we run the pipeline with.
 BASE_PARAMS = {
     'grid_size': 128,
@@ -134,7 +183,57 @@ BASE_PARAMS = {
 }
 ```
 
-We reuse the `prepare_input` and `parse_output` calcfunctions from {ref}`Module 2 <tutorial:module2>` ({download}`include/tasks.py`).
+We reuse the `prepare_input` and `parse_output` calcfunctions from {ref}`Module 2 <tutorial:module2>`. Each notebook runs in its own kernel, so we redefine them here (the same code as Module 2):
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the Module 2 calcfunctions'
+:    code_prompt_hide: 'Hide the Module 2 calcfunctions'
+
+# The prepare_input and parse_output calcfunctions from Module 2, redefined here
+# so this notebook's kernel has them (each module runs in its own kernel).
+import re
+from typing import TypedDict
+
+import yaml
+
+from aiida import engine
+
+
+class ParseOutputs(TypedDict):
+    """Named outputs produced by parse_output."""
+
+    variance_V: orm.Float
+    mean_V: orm.Float
+
+
+VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+MEAN_RE = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
+
+
+@engine.calcfunction
+def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
+    """Convert a Dict of parameters into a SinglefileData YAML file."""
+    content = yaml.dump(parameters.value)
+    return orm.SinglefileData.from_string(content, filename='input.yaml')
+
+
+@engine.calcfunction
+def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
+    """Extract variance_V and mean_V scalars from the gsrd stdout log."""
+    text = stdout.get_content(mode='r')
+    variance_match = VARIANCE_RE.search(text)
+    mean_match = MEAN_RE.search(text)
+    if variance_match is None or mean_match is None:
+        msg = "gsrd stdout did not contain 'Variance of V field' / 'Mean of V field' diagnostics"
+        raise ValueError(msg)
+    return {
+        'variance_V': orm.Float(float(variance_match.group(1))),
+        'mean_V': orm.Float(float(mean_match.group(1))),
+    }
+```
+
 A calcfunction is already an AiiDA process, but to compose it inside a graph we wrap it with `task()`.
 The wrapped version adds a task to the current graph when called and returns that task's output sockets, which you can then pass to downstream tasks.
 
@@ -171,12 +270,42 @@ The `@task.graph()` decorator is what assembles these calls into a workflow. Cal
 The assembled steps become a single, named workflow you can `.build()` (see below), run, or submit.
 :::
 
-The canonical definition lives in `include/workflows.py` so later modules (and other notebooks) can import the same pipeline rather than redefining it.
-It is inlined verbatim in the snippet below:
+We define the workflow as a `@task.graph()`-decorated function. {ref}`Module 3b <tutorial:module3b>` needs the same pipeline; since each notebook has its own kernel, it redefines it there rather than importing.
 
-```{literalinclude} include/workflows.py
-:language: python
-:pyobject: gray_scott_pipeline
+```{code-cell} ipython3
+from typing import TypedDict
+
+
+class GrayScottOutputs(TypedDict):
+    """Outputs of gray_scott_pipeline: the two scalars plus the full results.npz file."""
+
+    variance_V: orm.Float
+    mean_V: orm.Float
+    results_npz: orm.SinglefileData
+
+
+@task.graph()
+def gray_scott_pipeline(
+    parameters: orm.Dict,
+    command: orm.InstalledCode,
+) -> GrayScottOutputs:
+    """Run one gsrd simulation and parse its results (variance_V, mean_V, results_npz)."""
+    prepared = prepare_input_task(parameters=parameters)
+
+    simulation = shelljob(
+        command=command,
+        arguments=['{input}'],
+        nodes={'input': prepared.result},
+        outputs=['results.npz'],
+    )
+
+    parsed = parse_output_task(stdout=simulation.stdout)
+
+    return {
+        'variance_V': parsed.variance_V,
+        'mean_V': parsed.mean_V,
+        'results_npz': simulation.results_npz,
+    }
 ```
 
 Let's walk through it line by line:
@@ -222,8 +351,6 @@ A `@task.graph()`'s `return` instead declares the workflow's **output sockets**,
 `gray_scott_pipeline`, until now, is a reusable graph *blueprint*, not a concrete `WorkGraph` object yet. Passing it an actual set of inputs through its `.build()` method produces an actual `WorkGraph` object:
 
 ```{code-cell} ipython3
-from include.workflows import gray_scott_pipeline
-
 wg = gray_scott_pipeline.build(
     parameters=BASE_PARAMS,
     command=gsrd_code,
@@ -321,8 +448,6 @@ mystnb:
         width: 100%
 ---
 # Visualize the hierarchical provenance graph of the workflow.
-from include.plotting import plot_provenance
-
 plot_provenance(wg.process)
 ```
 
@@ -354,12 +479,27 @@ for name, params in morphologies.items():
 ```
 
 Each entry in `runs` is one workflow's **process node**, so `runs['spots'].outputs.results_npz` is that run's `results.npz`, with provenance back to the parameters that produced it.
-Plotting the `V` field of each with `plot_pattern_gallery`, another `plot_*` helper from {download}`include/plotting.py`, reproduces the Module 0 gallery, computed live:
+Plotting the `V` field of each (unwrapping each run's `results.npz` node into its array, then handing them to `gsrd`'s `plot_field_gallery`) reproduces the Module 0 gallery, computed live:
 
 ```{code-cell} ipython3
-from include.plotting import plot_pattern_gallery
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the plotting code'
+:    code_prompt_hide: 'Hide the plotting code'
 
-plot_pattern_gallery({name: node.outputs.results_npz for name, node in runs.items()})
+import matplotlib.pyplot as plt
+import numpy as np
+
+from gsrd.plotting import plot_field_gallery
+
+# Unwrap each run's results.npz node into its final V field, then plot the gallery.
+fields = {}
+for name, node in runs.items():
+    with node.outputs.results_npz.open(mode='rb') as fh:
+        fields[name] = np.load(fh, allow_pickle=True)['V_final']
+
+plot_field_gallery(fields)
+plt.show()
 ```
 
 These are no longer static images: each is a node you can query, inspect, and trace back to its inputs.

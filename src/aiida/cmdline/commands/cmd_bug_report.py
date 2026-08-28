@@ -226,6 +226,7 @@ def _get_log_files() -> dict[str, pathlib.Path]:
         'circus': filepaths['circus']['log'],
         'daemon': filepaths['daemon']['log'],
         'broker_service': filepaths['broker_service']['log'],
+        'collab': filepaths['collab']['log'],
     }
 
     for log_type, log_filepath in log_filepaths.items():

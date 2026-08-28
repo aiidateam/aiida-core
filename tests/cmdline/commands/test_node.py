@@ -499,6 +499,40 @@ class TestVerdiRehash:
         result = run_cli_command(cmd_node.rehash, options)
         assert f'{expected_node_count} nodes re-hashed' in result.output
 
+    def test_rehash_writes_the_hash_without_modifying_the_node(self, run_cli_command):
+        """Test that rehashing writes the hash and leaves the mtime alone.
+
+        The hash describes the node, so recomputing it modifies nothing: a bumped mtime would make every node in
+        the profile look modified today to everything that selects by time, and under a collab that replicates
+        extras it would make this profile the most recently modified side of every node it shares.
+        """
+        node = orm.QueryBuilder().append(orm.Float).first(flat=True)
+        node.base.extras.set('_aiida_hash', 'stale')
+        mtime = orm.load_node(node.pk).mtime
+
+        run_cli_command(cmd_node.rehash, ['-f', str(node.pk)])
+
+        reloaded = orm.load_node(node.pk)
+
+        assert reloaded.base.caching.get_hash() == reloaded.base.caching.compute_hash()
+        assert reloaded.mtime == mtime
+
+    def test_rehash_batched(self, run_cli_command, monkeypatch):
+        """Test that a sweep longer than one batch writes every node, flushing while the query cursor is open."""
+        from aiida.common import utils
+
+        monkeypatch.setattr(utils, 'DEFAULT_BATCH_SIZE', 1)
+        nodes = orm.QueryBuilder().append(orm.Bool, project=['id', 'mtime']).all()
+
+        for pk, _ in nodes:
+            orm.load_node(pk).base.extras.set('_aiida_hash', 'stale')
+
+        run_cli_command(cmd_node.rehash, ['-f', '-e', 'aiida.data:core.bool'])
+
+        for pk, _ in nodes:
+            node = orm.load_node(pk)
+            assert node.base.caching.get_hash() == node.base.caching.compute_hash()
+
     def test_rehash_bool(self, run_cli_command):
         """Limiting the queryset by defining an entry point, in this case bool, should limit nodes to 2."""
         expected_node_count = 2

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import enum
 import sys
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -23,6 +24,10 @@ from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 
 from ..utils.echo import ExitCode
+
+if TYPE_CHECKING:
+    from aiida.manage.configuration import Profile
+    from aiida.orm.implementation import StorageBackend
 
 
 class ServiceStatus(enum.IntEnum):
@@ -94,6 +99,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 
     # Check the backend storage
     storage_head_version = None
+    storage_backend = None
     try:
         with override_log_level():  # temporarily suppress noisy logging
             storage_cls = profile.storage_cls
@@ -121,7 +127,6 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     else:
         message = str(storage_backend)
         print_status(ServiceStatus.UP, 'storage', message)
-        storage_backend.close()
 
     if no_rmq:
         warn_deprecation(
@@ -209,9 +214,143 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 
             print_status(daemon_status, 'daemon', '\n'.join(daemon_lines))
 
+    # Getting the collab status
+    from aiida.tools.collab.config import is_enabled
+
+    if is_enabled():
+        print_collab_status(profile, storage_backend)
+
+    if storage_backend is not None:
+        storage_backend.close()
+
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     if exit_code != ExitCode.SUCCESS:
         sys.exit(exit_code)
+
+
+# One probe may take this long before its peer counts as offline; the probes run concurrently, so this is also
+# roughly the total time the collab section adds to `verdi status`, however many peers there are.
+COLLAB_PROBE_TIMEOUT = 2.0
+
+
+def print_collab_status(profile: Profile, backend: StorageBackend | None) -> None:
+    """Print one line per active peer — reachable or not — the last sync, and what this profile itself serves.
+
+    Dormant peers are left out entirely: they have not been seen under the current token, and a collab that
+    rotated away from a member, or split in two, should carry no trace of the branch it left behind.
+
+    The probes run concurrently and write nothing anywhere.
+
+    :param backend: the storage opened for the storage row, or ``None`` when it could not be opened, in which case
+        the section reports on the collab alone.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from http import HTTPStatus
+
+    from aiida.common import timezone
+    from aiida.common.utils import str_timedelta
+    from aiida.manage.configuration import get_config_option
+    from aiida.tools.archive.abstract import get_format
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_ONLINE, OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN
+    from aiida.tools.collab.protocol import REKEY_HINT, CollabRequestError, PeerInfo
+    from aiida.tools.collab.state import CollabState
+    from aiida.tools.collab.sync import withheld_seeds
+
+    peers = {uuid: entry for uuid, entry in get_config_option(OPTION_PEERS).items() if entry['active']}
+    token = get_config_option(OPTION_TOKEN)
+    policy = get_config_option(OPTION_POLICY)
+
+    def probe(entry: dict[str, Any]) -> PeerInfo | CollabRequestError:
+        with CollabClient(entry['url'], token, timeout=COLLAB_PROBE_TIMEOUT) as client:
+            try:
+                return client.info()
+            except CollabRequestError as exception:
+                # Kept rather than folded into "offline": a peer that answered said why, and after a rotation
+                # what it says — 401, rekey — is the whole point of looking here.
+                return exception
+
+    infos: list[PeerInfo | CollabRequestError] = []
+
+    if peers:
+        with ThreadPoolExecutor(max_workers=len(peers)) as pool:
+            infos = list(pool.map(probe, peers.values()))
+
+    archive_schema = get_format().latest_version
+
+    for entry, info in zip(peers.values(), infos):
+        nickname = entry['nickname']
+
+        if isinstance(info, CollabRequestError) and info.status == HTTPStatus.UNAUTHORIZED:
+            # The steady state for a member that has not rekeyed since the collab rotated. It is up, it answered,
+            # and this is the only place that says so before the user tries to sync.
+            print_status(
+                ServiceStatus.DOWN, f'peer {nickname}', f'{entry["url"]} refuses the current key — {REKEY_HINT}'
+            )
+        elif isinstance(info, CollabRequestError):
+            # A peer that has never answered is called out apart from one that is merely down: it is the only
+            # way a wrong address announced at join can surface, since nothing can probe back at join time.
+            reachability = 'has never answered' if not entry.get('seen') else 'offline'
+            print_status(ServiceStatus.DOWN, f'peer {nickname}', f'{entry["url"]} {reachability}')
+        # The archive format is what a delta travels as, so it alone decides compatibility; the storage schema of
+        # either side is its own concern. Zero-padded versions (`main_0002`), so string comparison orders them.
+        elif info.archive_schema > archive_schema:
+            print_status(
+                ServiceStatus.WARNING,
+                f'peer {nickname}',
+                f'{entry["url"]} online, writes a newer archive format than this profile can read '
+                f'(aiida-core {info.version})',
+            )
+        else:
+            print_status(ServiceStatus.UP, f'peer {nickname}', f'{entry["url"]} online (aiida-core {info.version})')
+
+    state = CollabState.load(profile)
+    # A `served` row is a peer's sync, not this profile's: counting it would let a peer pulling from here keep the
+    # line fresh while this profile has not synced in a week, which is the one thing it is read for.
+    own = [event for event in state.events if event.direction != 'served']
+    last_sync = f'last sync {own[-1].time.isoformat(timespec="seconds")}' if own else 'no syncs yet'
+    online = sum(1 for info in infos if isinstance(info, PeerInfo))
+    status = ServiceStatus.UP if online == len(peers) else ServiceStatus.WARNING
+
+    print_status(status, 'collab', f'{online}/{len(peers)} peer(s) reachable, {last_sync}')
+
+    # The probes above are outbound and say nothing about being reachable oneself, so a profile that was taken
+    # out of service has no other symptom here: to its peers it is simply a member that is down.
+    if not get_config_option(OPTION_ONLINE):
+        print_status(
+            ServiceStatus.WARNING,
+            'collab offline',
+            'peers cannot reach this profile; run `verdi collab online` to serve again',
+        )
+
+    # A sealed process whose provenance reaches one that is still running is held out of every delta until that
+    # child seals, and nothing else says so. When the child never seals — a killed daemon, a stuck process — its
+    # whole subgraph stops travelling for good, and the only other symptom is a peer that never receives it.
+    held = withheld_seeds(backend) if backend is not None else []
+
+    if held:
+        age = str_timedelta(timezone.delta(min(held)), short=True, negative_to_zero=True)
+        print_status(
+            ServiceStatus.WARNING,
+            'collab held',
+            f'{len(held)} sealed process(es) no delta can carry, each waiting on a process that has not sealed '
+            f'(oldest {age})',
+        )
+
+    # Shown here because it is shown nowhere else: the policy is fixed when the collab is created, so it is stored
+    # as one dictionary, and `verdi config set` cannot write dict options.
+    print_status(
+        ServiceStatus.UP,
+        'collab policy',
+        f'extras `{policy["extras_mode"]}`, groups `{policy["groups_mode"]}` (fixed at creation)',
+    )
+
+    # Advisory and nothing else: whoever signalled it holds the token being retired, and so does anyone that was
+    # just excluded, so the only thing it may do is tell the user where to look.
+    signalled = [entry['nickname'] for entry in peers.values() if entry['signalled']]
+
+    if signalled:
+        print_status(ServiceStatus.WARNING, 'collab rotation', f'signalled by {", ".join(signalled)} — {REKEY_HINT}')
 
 
 def print_status(

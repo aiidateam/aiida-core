@@ -49,6 +49,19 @@ def test_import_archive(run_cli_command, newest_archive):
     run_cli_command(cmd_archive.import_archive, options)
 
 
+def test_import_refuses_collab_thin_delta(run_cli_command, tmp_path):
+    """Test that a thin collab delta is refused: only ``verdi collab pull`` can attach its boundary links."""
+    filepath = tmp_path / 'thin.aiida'
+
+    with ArchiveFormatSqlZip().open(filepath, mode='w') as writer:
+        writer.update_metadata({'creation_parameters': {'collab_thin_delta': True}, 'collab_boundary_links': []})
+
+    result = run_cli_command(cmd_archive.import_archive, [str(filepath)], raises=True)
+
+    assert 'collab transfer delta' in result.output
+    assert 'verdi collab pull' in result.output
+
+
 @pytest.mark.parametrize(
     'archive',
     (

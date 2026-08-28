@@ -64,3 +64,4 @@ docker-bake.override.json
 
 # dev files
 .dev
+.aep/

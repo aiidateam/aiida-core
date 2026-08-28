@@ -1,0 +1,472 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""The client with which a profile talks to the collab endpoint of a peer."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from http import HTTPStatus
+from typing import TYPE_CHECKING, Any, Literal
+
+import requests
+
+from aiida.common.log import AIIDA_LOGGER
+from aiida.tools.collab.protocol import (
+    CHUNK_SIZE,
+    HEADER_COLLAB,
+    HEADER_PEER,
+    HEADER_STAGED,
+    ROUTE_DELTA,
+    ROUTE_HANDSHAKE,
+    ROUTE_INFO,
+    ROUTE_JOIN,
+    ROUTE_MISSING,
+    ROUTE_RETIRED,
+    ROUTE_SESSION,
+    SLOT_IDLE_SECONDS,
+    CollabRequestError,
+    DeltaManifest,
+    DeltaOffer,
+    JoinResponse,
+    ManifestDiff,
+    PeerInfo,
+    PushHandshake,
+    VersionSkew,
+    file_sha256,
+    members_as_dict,
+    refresh_as_dict,
+    route_delta,
+    route_import,
+    route_upload,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from datetime import datetime
+    from pathlib import Path
+    from typing import IO
+
+    from aiida.tools.collab.protocol import ExtrasSnapshot, GroupMembers
+
+LOGGER = AIIDA_LOGGER.getChild('collab')
+
+TIMEOUT = 60.0
+
+# Ending a session is one round trip to a peer that just answered one, and is only ever a courtesy: a peer that
+# does not answer it at once is one whose slot the expiry has to reclaim anyway, and waiting out the full timeout
+# for it would add a second stall to a command that is already reporting a failure.
+RELEASE_TIMEOUT = 5.0
+
+# What the three delta requests wait for an answer, as against the handshake, the info and the release. The endpoint
+# computes the delta and exports its archive while they are open, and holds one lock across both, so a first pull
+# of a large profile times out systematically under the plain timeout — the orphaned handler finishes and caches,
+# so only the retry ever succeeds — and a second peer queued behind it starves into a connection error instead of
+# the busy answer the slot machinery promises. Misattributed to the network in every message it produces.
+DELTA_TIMEOUT = float(SLOT_IDLE_SECONDS)
+
+
+@dataclass
+class UploadReport:
+    """The outcome of staging a delta on a peer."""
+
+    sha256: str
+    sent: int
+    staged: int
+
+
+class _ReportingReader:
+    """A file handle that tells a callback the size of every block read out of it.
+
+    Everything but ``read`` is the handle's own, ``fileno`` and ``tell`` included, so ``requests`` measures the
+    body and sets the ``Content-Length`` the peer requires exactly as it does for the bare handle.
+    """
+
+    def __init__(self, handle: IO[bytes], progress: Callable[[int], None]):
+        self._handle = handle
+        self._progress = progress
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._handle, name)
+
+    def read(self, size: int = -1) -> bytes:
+        chunk = self._handle.read(size)
+        self._progress(len(chunk))
+
+        return chunk
+
+
+class CollabClient:
+    """Talks to the collab endpoint of a single peer.
+
+    Interrupted transfers resume from the bytes that already arrived: downloads through ``Range`` requests
+    guarded by the served ``ETag``, uploads by first asking the peer how much of the file it already staged.
+    """
+
+    def __init__(self, base_url: str, token: str, *, collab: str = '', peer: str = '', timeout: float = TIMEOUT):
+        """:param peer: the profile UUID of this profile, naming the session its requests to this peer belong to."""
+        self._base_url = base_url.rstrip('/')
+        self._timeout = timeout
+        self._session = requests.Session()
+        self._session.headers['Authorization'] = f'Bearer {token}'
+        self._session.headers[HEADER_COLLAB] = collab
+        self._session.headers[HEADER_PEER] = peer
+
+    def close(self) -> None:
+        self._session.close()
+
+    def __enter__(self) -> CollabClient:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def info(self, cursor: datetime | None = None) -> PeerInfo:
+        """Fetch the handshake of the peer.
+
+        :param cursor: the cursor this profile holds for the peer; the peer's pending count is relative to it.
+        """
+        params = {'cursor': cursor.isoformat()} if cursor is not None else None
+
+        return self._answer(PeerInfo.from_dict, 'GET', ROUTE_INFO, params=params)
+
+    def join(self, entry: dict[str, Any]) -> JoinResponse:
+        """Present the join code to the member that issued it, announce this profile and receive the roster.
+
+        :param entry: the roster entry of this profile: its UUID, endpoint URL, announced name and version stamp.
+        """
+        return self._answer(JoinResponse.from_dict, 'POST', ROUTE_JOIN, json={'entry': entry})
+
+    def signal_retired(self, peer: str) -> None:
+        """Tell the peer that this profile retired the token both were using, so it can ask its user to rekey.
+
+        Sent with the token being retired, which is the only one the peer still knows. It is advisory and nothing
+        more: an excluded member holds that same token, so any automatic reaction to this would hand it the power
+        to freeze the collab.
+
+        :param peer: the profile UUID of this profile, under which the receiver knows it.
+        """
+        self._request('POST', ROUTE_RETIRED, json={'peer': peer})
+
+    def check_version_skew(self, local: PeerInfo, *, direction: Literal['pull', 'push']) -> PeerInfo:
+        """Fetch the handshake of the peer and refuse the transfer when it could not read what the sender writes.
+
+        The delta travels as an archive, so the archive format is the interchange contract of a collab; the storage
+        schema of either side is its own concern, which is what makes a collab of mixed PostgreSQL and SQLite
+        profiles first-class. Since a profile reads its own archive format and every older one, only the sending
+        side can be too new, so exactly one direction is refused and the message names whoever has to act on it.
+
+        :param local: the handshake of this side, to compare against.
+        :param direction: which way the delta would travel, since that decides who has to upgrade.
+        :return: the handshake of the peer, so that callers can display both sides.
+        :raises VersionSkew: when the receiving side of the transfer cannot read the sender's archive format.
+        """
+        peer = self.info()
+
+        # Archive format versions are zero-padded (`main_0002`), so string comparison orders them.
+        if direction == 'pull' and peer.archive_schema > local.archive_schema:
+            msg = (
+                f'cannot pull from the peer at {self._base_url}: it writes archive format '
+                f'`{peer.archive_schema}`, this profile reads up to `{local.archive_schema}`. Its deltas are not '
+                f'compatible with your aiida-core; please upgrade it to the latest stable release (your '
+                f'collaborator runs {peer.version}).'
+            )
+        elif direction == 'push' and local.archive_schema > peer.archive_schema:
+            msg = (
+                f'cannot push to the peer at {self._base_url}: this profile writes archive format '
+                f'`{local.archive_schema}`, the peer reads up to `{peer.archive_schema}`. Please ask your '
+                f'collaborator to upgrade their aiida-core to the latest stable release (they run {peer.version}).'
+            )
+        else:
+            return peer
+
+        raise VersionSkew(msg)
+
+    def negotiate_delta(
+        self, cursor: datetime | None, claim: frozenset[str] | set[str], roster: list[dict[str, Any]] | None = None
+    ) -> DeltaManifest:
+        """Present a cursor and a claim to the peer and receive the manifest of the delta they negotiate.
+
+        :param cursor: the export instant of the last delta imported from this peer, or ``None`` for everything.
+        :param claim: UUIDs this profile already holds and does not want re-delivered.
+        :param roster: this profile's own entry and the peers it knows, gossiped with the negotiation; the answer
+            carries the peer's own in return.
+        """
+        body = {
+            'cursor': cursor.isoformat() if cursor is not None else None,
+            'claim': sorted(claim),
+            'roster': roster or [],
+        }
+
+        return self._answer(
+            DeltaManifest.from_dict, 'POST', ROUTE_DELTA, json=body, timeout=(self._timeout, DELTA_TIMEOUT)
+        )
+
+    def request_delta(
+        self,
+        cursor: datetime | None,
+        claim: frozenset[str] | set[str],
+        want: frozenset[str] | set[str],
+        refresh_want: frozenset[str] | set[str] | list[str] = frozenset(),
+        refuse: frozenset[str] | set[str] = frozenset(),
+        computed: datetime | None = None,
+    ) -> DeltaOffer:
+        """Ask the peer to export the subset of the negotiated delta this profile lacks, and receive its offer.
+
+        :param cursor: the cursor the manifest was negotiated with.
+        :param claim: the claim the manifest was negotiated with.
+        :param want: the UUIDs of the manifest this profile is missing.
+        :param refresh_want: the nodes of the manifest's refresh offer whose extras this profile holds an older
+            version of; their snapshots come with the offer.
+        :param refuse: the UUIDs of the manifest this profile is missing because it deleted them, and which it
+            therefore does not ask for.
+        :param computed: when the peer took the computation the ``want`` above was diffed against, as its
+            manifest reported. Naming it is what keeps the two round trips of a negotiation one negotiation: a
+            peer that recomputed in between answers 409 rather than cutting an archive against a manifest this
+            profile never saw. The manifest's export instant would not do — a withheld seed pins that one.
+        :raises CollabRequestError: with status 409 when the peer can no longer serve that computation.
+        """
+        body = {
+            'cursor': cursor.isoformat() if cursor is not None else None,
+            'claim': sorted(claim),
+            'want': sorted(want),
+            'refresh_want': sorted(refresh_want),
+            'refuse': sorted(refuse),
+            'computed': computed.isoformat() if computed is not None else None,
+        }
+
+        return self._answer(
+            DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body, timeout=(self._timeout, DELTA_TIMEOUT)
+        )
+
+    def release(self) -> None:
+        """Tell the peer that this profile is done with it, so the serving slot it granted is freed at once.
+
+        Owed by every path that leaves a peer having asked it for something — a dry run, a declined confirmation,
+        a transfer that failed, an import it refused — and by no path that completed, since a finished download or
+        import is already the end of a session and needs no announcement. Best effort and briefly so: the peer
+        expires the slot of a holder that went silent anyway, so being unable to say this costs the collab a delay
+        and must never cost the user their command, nor a second stall waiting to say it.
+        """
+        try:
+            self._request('DELETE', ROUTE_SESSION, timeout=RELEASE_TIMEOUT)
+        except CollabRequestError as exception:
+            LOGGER.debug('could not tell the peer at %s that the session ended: %s', self._base_url, exception)
+
+    def diff_manifest(
+        self,
+        uuids: list[str],
+        refresh: dict[str, datetime] | None = None,
+        members: list[GroupMembers] | None = None,
+    ) -> ManifestDiff:
+        """Offer the peer a manifest of nodes, of edited extras and of memberships, and receive what it lacks.
+
+        :param uuids: the manifest of the delta this profile would push.
+        :param refresh: the mtimes this profile holds for the shared nodes whose extras it may have edited.
+        :param members: the group memberships this profile gained since the peer's cursor, offered under ``grow``.
+        """
+        body = {'uuids': uuids, 'refresh': refresh_as_dict(refresh or {}), 'members': members_as_dict(members or [])}
+
+        return self._answer(ManifestDiff.from_dict, 'POST', ROUTE_MISSING, json=body)
+
+    def push_handshake(self, requester: str, roster: list[dict[str, Any]] | None = None) -> PushHandshake:
+        """Ask the peer what it already holds of this profile, in preparation of a push.
+
+        :param requester: the identity under which the peer tracks this profile: its profile UUID.
+        :param roster: this profile's own entry and the peers it knows, gossiped with the handshake; the answer
+            carries the peer's own in return.
+        """
+        body = {'requester': requester, 'roster': roster or []}
+
+        return self._answer(PushHandshake.from_dict, 'POST', ROUTE_HANDSHAKE, json=body)
+
+    def download_delta(self, filepath: Path, delta_id: str, progress: Callable[[int], None] | None = None) -> int:
+        """Download a negotiated delta of the peer, resuming a partial file at ``filepath`` where it was interrupted.
+
+        The ``ETag`` served with the first attempt is kept next to the file; when the peer produced a new delta
+        in the meantime, the resumption starts over instead of splicing two different deltas.
+
+        :param filepath: the path to download to.
+        :param delta_id: the identifier under which the delta is on offer, from ``negotiate_delta``.
+        :param progress: called with the length of every chunk as it lands, for a caller drawing a progress bar.
+            A resumed download reports only the bytes this call fetches, which is what it transfers.
+        :return: the number of bytes transferred by this call.
+        """
+        filepath_etag = filepath.with_name(f'{filepath.name}.etag')
+        offset = filepath.stat().st_size if filepath.exists() else 0
+        headers = {}
+
+        if offset:
+            headers['Range'] = f'bytes={offset}-'
+
+            if filepath_etag.exists():
+                headers['If-Range'] = filepath_etag.read_text(encoding='utf-8')
+
+        response = self._request(
+            'GET',
+            route_delta(delta_id),
+            headers=headers,
+            stream=True,
+            # Resolving a delta waits on the lock an export holds, so a peer queued behind one would otherwise
+            # see a read timeout and report the peer unreachable.
+            timeout=(self._timeout, DELTA_TIMEOUT),
+            allowed=(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE,),
+        )
+
+        if response.status_code == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
+            # The only range the client asks for starts at the end of its partial file, so an unsatisfiable one
+            # of the same size means the download is already complete.
+            match = re.fullmatch(r'bytes \*/(\d+)', response.headers.get('Content-Range', ''))
+
+            if match is not None and int(match[1]) == offset:
+                return 0
+
+            msg = f'the peer cannot serve the delta from offset {offset}'
+            raise CollabRequestError(msg, status=response.status_code)
+
+        transferred = 0
+
+        with filepath.open('ab' if response.status_code == HTTPStatus.PARTIAL_CONTENT else 'wb') as handle:
+            # Recorded after the mode above truncated a stale file and before the body is consumed: an interrupted
+            # transfer has to leave the validator for the resumption, but a crash between writing it and
+            # truncating would leave the old bytes under the new validator and splice two deltas on the retry.
+            if etag := response.headers.get('ETag'):
+                filepath_etag.write_text(etag, encoding='utf-8')
+
+            try:
+                for chunk in response.iter_content(CHUNK_SIZE):
+                    handle.write(chunk)
+                    transferred += len(chunk)
+
+                    if progress is not None:
+                        progress(len(chunk))
+            except requests.RequestException as exception:
+                msg = f'downloading the delta was interrupted after {offset + transferred} bytes: {exception}'
+                raise CollabRequestError(msg) from exception
+
+        # Whether a body that stops early raises is a property of the HTTP stack, not of the transfer: urllib3
+        # enforces `Content-Length` only from 2.0 on, and below it a dropped connection yields a short read that
+        # `iter_content` returns as if it were the whole delta. The archive would then be imported truncated.
+        declared = response.headers.get('Content-Length')
+
+        if declared is not None and transferred != int(declared):
+            msg = (
+                f'downloading the delta was interrupted after {offset + transferred} bytes: '
+                f'the peer declared {declared} byte(s) and served {transferred}'
+            )
+            raise CollabRequestError(msg)
+
+        return transferred
+
+    def upload_delta(self, filepath: Path, progress: Callable[[int], None] | None = None) -> UploadReport:
+        """Stage a delta on the peer, sending only the bytes it does not already hold.
+
+        :param filepath: the path of the archive to upload.
+        :param progress: called with the length of every block as it goes out, for a caller drawing a progress
+            bar. What it adds up to is what this call sends: the bytes the peer already holds never travel.
+        :return: the checksum under which the upload is staged, the bytes sent by this call and the total staged.
+        """
+        sha256 = file_sha256(filepath)
+        size = filepath.stat().st_size
+        response = self._request('HEAD', route_upload(sha256))
+
+        try:
+            staged = int(response.headers[HEADER_STAGED])
+        except (KeyError, ValueError) as exception:
+            msg = f'the peer at {self._base_url} did not answer the upload probe like a collab endpoint: {exception}'
+            raise CollabRequestError(msg) from exception
+
+        if staged == size:
+            return UploadReport(sha256=sha256, sent=0, staged=staged)
+
+        with filepath.open('rb') as handle:
+            handle.seek(staged)
+            headers = {'Content-Range': f'bytes {staged}-{size - 1}/{size}'}
+            # A reader and not a generator: the peer refuses a body with no `Content-Length` to read to, and
+            # `requests` can only measure one it can `fstat` and `tell`, which a generator is not.
+            body = handle if progress is None else _ReportingReader(handle, progress)
+            total = self._answer(
+                lambda data: int(data['staged']), 'PUT', route_upload(sha256), data=body, headers=headers
+            )
+
+        return UploadReport(sha256=sha256, sent=size - staged, staged=total)
+
+    def trigger_import(
+        self,
+        sha256: str,
+        *,
+        peer: str,
+        instant: datetime,
+        refresh: list[ExtrasSnapshot] | None = None,
+        members: list[GroupMembers] | None = None,
+    ) -> dict[str, Any]:
+        """Ask the peer to import the staged upload with the given checksum.
+
+        The peer imports synchronously, so the response may take as long as the import; only the connection
+        itself is subject to the timeout.
+
+        :param sha256: the checksum under which the upload was staged.
+        :param peer: the identity under which the receiver tracks this profile.
+        :param instant: the export instant of the staged delta, which the receiver's cursor advances to.
+        :param refresh: the extras snapshots the receiver asked for when it diffed the manifest.
+        :param members: the group memberships the receiver asked for when it diffed the manifest.
+        :return: the import report of the peer.
+        :raises CollabRequestError: when the import fails, with the reason of the peer. The peer keeps the staged
+            upload in that case, so a retry only repeats the import, not the transfer — unless the upload failed
+            its checksum verification (409) or can never land because it links to a node the peer no longer holds
+            (422), in which cases the peer discards it and the push has to be negotiated afresh.
+        """
+        body = {
+            'peer': peer,
+            'instant': instant.isoformat(),
+            'refresh': [snapshot.as_dict() for snapshot in refresh or []],
+            'members': members_as_dict(members or []),
+        }
+
+        return self._answer(dict, 'POST', route_import(sha256), json=body, timeout=(self._timeout, None))
+
+    def _answer(self, parser: Callable[[Any], Any], method: str, route: str, **kwargs: Any) -> Any:
+        """Request and parse the answer; a body that does not parse as the expected answer is a request error.
+
+        A peer URL can reach a service that is not a collab endpoint — a reverse-proxy default, a machine that
+        was reprovisioned — whose 200 with an arbitrary body must fail like an unreachable peer, not crash the
+        caller.
+        """
+        response = self._request(method, route, **kwargs)
+
+        try:
+            return parser(response.json())
+        except (AttributeError, KeyError, TypeError, ValueError) as exception:
+            msg = f'the peer at {self._base_url} did not answer `{method} {route}` like a collab endpoint: {exception}'
+            raise CollabRequestError(msg) from exception
+
+    def _request(
+        self, method: str, route: str, *, allowed: tuple[HTTPStatus, ...] = (), **kwargs: Any
+    ) -> requests.Response:
+        kwargs.setdefault('timeout', self._timeout)
+
+        try:
+            response = self._session.request(method, f'{self._base_url}{route}', **kwargs)
+        except requests.RequestException as exception:
+            msg = f'request to the peer at {self._base_url} failed: {exception}'
+            raise CollabRequestError(msg) from exception
+
+        if response.status_code >= HTTPStatus.BAD_REQUEST and response.status_code not in allowed:
+            try:
+                detail = response.json()['detail']
+            except (KeyError, TypeError, ValueError):
+                # A service that is not a collab endpoint answers an error status with whatever body it likes; a
+                # JSON list among them, which subscripting by a string raises `TypeError` on. It has to fail like
+                # an unreachable peer, as `_answer` above catches the same three for the same reason.
+                detail = response.reason
+
+            msg = f'the peer at {self._base_url} responded {response.status_code} to {method} {route}: {detail}'
+            raise CollabRequestError(msg, status=response.status_code)
+
+        return response

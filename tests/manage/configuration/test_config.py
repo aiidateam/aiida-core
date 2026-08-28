@@ -476,6 +476,48 @@ def test_delete_profile(config_with_profile, profile_factory, monkeypatch, caplo
     assert profile_name not in config_on_disk.profile_names
 
 
+def test_delete_profile_deletes_collab_state(config_with_profile, profile_factory, monkeypatch):
+    """Test that the collab state of a profile dies with it, and is not inherited by a namesake.
+
+    The state records what this profile holds of its peers. A recreated profile holds nothing of them, so
+    inheriting the cursors would make its first pull skip nodes with no visible reason.
+    """
+    from aiida.common import timezone
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.tools.collab.state import CollabState, import_lock
+
+    config = config_with_profile
+    profile = profile_factory(name='to-be-deleted-with-its-collab')
+
+    config.add_profile(profile)
+    config.store()
+
+    state = CollabState.load(profile)
+    state.cursors['uuid-of-alice'] = timezone.now()
+    state.save()
+
+    with import_lock(state.filepath):
+        pass
+
+    workdir = CollabState.get_workdir(profile)
+    workdir.mkdir(parents=True)
+    (workdir / 'pull-uuid-of-alice.aiida').write_bytes(b'an interrupted download')
+
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', lambda self, **kwargs: {'status': 'ok'})
+
+    config.delete_profile(profile.name, delete_storage=False)
+
+    assert not state.filepath.exists()
+    assert not any(state.filepath.parent.glob(f'{state.filepath.name}*')), 'the lock files should go as well'
+    assert not workdir.exists()
+
+    # A profile recreated under the same name is a different profile, and starts with nothing of the old one.
+    recreated = profile_factory(name=profile.name)
+    config.add_profile(recreated)
+
+    assert CollabState.load(recreated).cursors == {}
+
+
 @pytest.mark.parametrize(
     ('profile_name', 'exception_cls', 'message'),
     [

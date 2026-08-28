@@ -21,7 +21,7 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Literal, TypeAlias, TypedDict, cast
+from typing import Any, Literal, TypeAlias, cast
 
 from pydantic import (
     BaseModel,
@@ -31,6 +31,10 @@ from pydantic import (
     field_serializer,
     field_validator,
 )
+
+# `CollabPolicy` annotates a field of `ProfileOptionsSchema`, and pydantic cannot build a schema for a
+# `typing.TypedDict` on Python < 3.12.
+from typing_extensions import TypedDict
 
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
 from aiida.common.log import AIIDA_LOGGER, AdvancedLogLevels, LogLevels
@@ -42,6 +46,19 @@ LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
 
 
 CircusEndpointName: TypeAlias = Literal['controller', 'pubsub', 'stats']
+CollabExtrasMode: TypeAlias = Literal['local', 'sync']
+CollabGroupsMode: TypeAlias = Literal['local', 'grow']
+
+
+class CollabPolicy(TypedDict):
+    """What a collab shares beyond provenance nodes, fixed when the collab is created.
+
+    The two modes live in one option because they are one decision, taken once: `verdi config set` cannot write a
+    dictionary, so storing them this way is also what keeps the policy out of reach of the command line.
+    """
+
+    extras_mode: CollabExtrasMode
+    groups_mode: CollabGroupsMode
 
 
 class CircusEndpointFilepaths(TypedDict):
@@ -88,6 +105,12 @@ class ZeromqBrokerServiceFilepaths(TypedDict):
     log: str
 
 
+class CollabFilepaths(TypedDict):
+    """Typed dictionary for collab endpoint file paths."""
+
+    log: str
+
+
 class ConfigFilepaths(TypedDict):
     """Typed dictionary for profile-related file paths."""
 
@@ -95,6 +118,7 @@ class ConfigFilepaths(TypedDict):
     circus: CircusFilepaths
     daemon: DaemonFilepaths
     broker_service: ZeromqBrokerServiceFilepaths
+    collab: CollabFilepaths
 
 
 class ConfigVersionSchema(BaseModel, defer_build=True):
@@ -266,6 +290,85 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
     caching__disabled_for: list[str] = Field(
         [],
         description='Calculation entry points to disable caching on.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__enabled: bool = Field(
+        False,
+        description='Whether this profile takes part in a collab, sharing provenance with peer profiles.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__uuid: str = Field(
+        '',
+        description='The permanent identity of the collab this profile takes part in. Minted when the collab is '
+        'created, carried by every join code and handshake, and never changed.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__token: str = Field(
+        '',
+        description='Shared secret with which peers of the collab authenticate against this profile. Read by the '
+        'endpoint per request, so a rotation retires the old one for serving at once, without a daemon restart.',
+    )
+    collab__peers: dict[str, dict[str, str | int | bool | None]] = Field(
+        {},
+        description='The collab peers of this profile, keyed by the UUID of their profile. Each entry holds the '
+        '`url` of the peer (e.g. `http://100.64.0.2:9137`), the local `nickname` under which it is shown and '
+        'addressed, the `name` its owner announces, the owner `stamp` that versions its address, whether it has '
+        'ever answered (`seen`), whether it has been seen under the current token (`active`, false for a member '
+        'that has not rekeyed since the last rotation) and whether it signalled a rotation (`signalled`).',
+    )
+    collab__bind: str = Field(
+        '',
+        description='Address of this machine on the private network of the collab, on which the collab endpoint '
+        'listens. The endpoint speaks plain HTTP and refuses to listen on all interfaces (`0.0.0.0` or `::`).',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__port: int = Field(
+        9137,
+        description='Port on which the collab endpoint of this profile listens.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__stamp: int = Field(
+        0,
+        description='Version of the address this profile announces to its peers. Raised by the first sync after '
+        '`collab.bind` or `collab.port` changed, so that the correction supersedes the old address wherever it '
+        'spread.',
+    )
+    collab__announced: str = Field(
+        '',
+        description='The endpoint URL this profile last announced to its peers, against which a change of '
+        '`collab.bind` or `collab.port` is detected.',
+    )
+    collab__accept_push: bool = Field(
+        False,
+        description='Whether peers of the collab are allowed to push provenance into this profile. Read by the '
+        'endpoint per request, so revoking it takes effect at once, without a daemon restart.',
+    )
+    collab__online: bool = Field(
+        True,
+        description='Whether the collab endpoint of this profile serves its peers. Set to `False` by `verdi collab '
+        'offline`, which leaves the daemon workers and every collab hook running, and back to `True` by `verdi '
+        'collab online`. An offline endpoint binds no socket and its peers see a member that is simply down.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__policy: CollabPolicy = Field(
+        {'extras_mode': 'local', 'groups_mode': 'local'},
+        description='What the collab shares beyond provenance nodes, chosen once by whoever created it and never '
+        'changed: `extras_mode` is `local` (extras stop travelling once the node has) or `sync` (the whole extras '
+        'dict of the most recently edited side replaces the others, so deletions propagate, with keys starting with '
+        '`_` exempt in both directions), and `groups_mode` is `local` (groups stay home) or `grow` (curated group '
+        'membership travels, additions only). It is carried by the join code and adopted by whoever joins; changing '
+        'it means re-founding the collab.',
+    )
+    collab__computer_map: dict[str, str] = Field(
+        {},
+        description='Map of peer computer label to local computer label, used to remap hashes of pulled calculations '
+        'so they can be reused by the caching mechanism.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__max_concurrency: int = Field(
+        2,
+        description='How many peers the collab endpoint serves at once — pull negotiations and push sessions '
+        'combined. Peers beyond it are answered busy and retry later.',
         json_schema_extra={'requires_daemon_restart': True},
     )
 
@@ -728,6 +831,7 @@ class Config:
             get_daemon_client,
         )
         from aiida.plugins import StorageFactory
+        from aiida.tools.collab.state import delete_state
 
         profile = self.get_profile(name)
         is_default_profile: bool = profile.name == self.default_profile_name
@@ -805,6 +909,7 @@ class Config:
         else:
             LOGGER.report(f'Data storage not deleted, configuration is: {profile.storage_config}')
 
+        delete_state(profile)
         self.remove_profile(name)
 
         if is_default_profile and not self.profile_names:
@@ -1040,5 +1145,8 @@ class Config:
             'broker_service': {
                 'dir': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}'),
                 'log': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}' / 'broker.log'),
+            },
+            'collab': {
+                'log': str(daemon_log_dir / f'collab-{profile.name}.log'),
             },
         }

@@ -1,0 +1,3253 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Tests for ``verdi collab``."""
+
+from datetime import timedelta
+
+import pytest
+
+from aiida import get_profile, orm
+from aiida.cmdline.commands import cmd_collab
+from aiida.common import timezone
+from aiida.manage.configuration.config import Config
+from aiida.tools.collab.config import (
+    OPTION_ACCEPT_PUSH,
+    OPTION_ANNOUNCED,
+    OPTION_BIND,
+    OPTION_ENABLED,
+    OPTION_ONLINE,
+    OPTION_PEERS,
+    OPTION_POLICY,
+    OPTION_PORT,
+    OPTION_STAMP,
+    OPTION_TOKEN,
+    OPTION_UUID,
+    mutate_config,
+)
+from aiida.tools.collab.state import CollabEvent, CollabState
+
+PEER_URL = 'http://100.64.0.2:9137'
+PEER = 'alice'
+PEER_UUID = 'uuid-of-alice'
+COLLAB_UUID = 'uuid-of-the-collab'
+TOKEN = 'the-token'
+POLICY = {'extras_mode': 'local', 'groups_mode': 'local'}
+
+
+def peer_entry(url=PEER_URL, nickname=PEER, **overrides):
+    """Return a roster entry as a completed contact leaves it."""
+    return {
+        'url': url,
+        'nickname': nickname,
+        'name': nickname,
+        'stamp': 1,
+        'seen': True,
+        'active': True,
+        'signalled': False,
+        **overrides,
+    }
+
+
+def init_collab(config, peers=None, **options):
+    """Set the loaded profile up as part of a collab, as ``verdi collab init`` and a join leave it."""
+    scope = get_profile().name
+    values = {
+        OPTION_ENABLED: True,
+        OPTION_UUID: COLLAB_UUID,
+        OPTION_TOKEN: TOKEN,
+        OPTION_BIND: '127.0.0.1',
+        OPTION_PORT: 9137,
+        OPTION_STAMP: 1,
+        OPTION_ANNOUNCED: 'http://127.0.0.1:9137',
+        OPTION_PEERS: {PEER_UUID: peer_entry()} if peers is None else peers,
+        OPTION_POLICY: POLICY,
+        **options,
+    }
+
+    for name, value in values.items():
+        config.set_option(name, value, scope=scope)
+
+    config.store()
+
+
+@pytest.fixture
+def daemon(monkeypatch):
+    """Record what a setup asks of the daemon instead of letting it spawn circus.
+
+    Starting one for real costs a subprocess per test and is covered where the daemon is the subject. What these
+    tests are about is which of the two calls a setup makes, and that a daemon refusing to start is survivable.
+    """
+    from aiida.engine.daemon.client import DaemonClient
+
+    recorded: dict = {'running': False, 'calls': [], 'workers': None}
+
+    def start_daemon(self, number_workers=1, **kwargs):
+        recorded['calls'].append('start')
+        recorded['workers'] = number_workers
+
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: recorded['running']))
+    monkeypatch.setattr(DaemonClient, 'start_daemon', start_daemon)
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', lambda self, *args, **kwargs: recorded['calls'].append('stop'))
+    # Recorded although nothing calls it any more, so that a return to circus's `restart` -- which restarts the
+    # watchers the arbiter already has, and so never creates the endpoint one -- fails here and not on a socket.
+    monkeypatch.setattr(
+        DaemonClient, 'restart_daemon', lambda self, *args, **kwargs: recorded['calls'].append('restart')
+    )
+
+    return recorded
+
+
+def test_init(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that ``verdi collab init`` asks for the policy and the address, and persists what it announces.
+
+    The policy is chosen once and never again, so the prompt says so before asking; the port is persisted rather
+    than picked per start, so the URL peers were handed keeps working across restarts.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+
+    # The consents are asked for first, then the address: extras, groups, pushes, bind.
+    result = run_cli_command(cmd_collab.collab_init, use_subprocess=False, user_input='sync\ngrow\nn\n127.0.0.1\n')
+
+    scope = get_profile().name
+    get = config_with_profile.get_option
+
+    assert get(OPTION_ENABLED, scope=scope) is True
+    assert get(OPTION_POLICY, scope=scope) == {'extras_mode': 'sync', 'groups_mode': 'grow'}
+    assert 'no way to change it afterwards' in result.output, 'the permanence has to be stated before it is chosen'
+    assert get(OPTION_PEERS, scope=scope) == {}
+    assert get(OPTION_BIND, scope=scope) == '127.0.0.1'
+    assert get(OPTION_PORT, scope=scope) == 9200
+    assert get(OPTION_ANNOUNCED, scope=scope) == 'http://127.0.0.1:9200'
+    assert get(OPTION_UUID, scope=scope)
+    assert get(OPTION_TOKEN, scope=scope)
+    assert 'http://127.0.0.1:9200' in result.output
+
+
+def test_init_requires_a_bind_address(run_cli_command, config_with_profile):
+    """Test that a non-interactive ``verdi collab init`` without an address fails naming the option.
+
+    The enabled-but-unbound profile, whose endpoint circus restarts forever, is what this makes impossible.
+    """
+    result = run_cli_command(cmd_collab.collab_init, ['-n'], use_subprocess=False, raises=True)
+
+    assert '--bind' in result.output
+    assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is False
+
+
+def test_init_refuses_all_interfaces(run_cli_command, config_with_profile):
+    """Test that binding every interface stays refused: the token travels in cleartext over plain HTTP."""
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '0.0.0.0', '-n'], use_subprocess=False, raises=True)
+
+    assert 'refusing to bind' in result.output
+
+
+def test_init_rejects_a_foreign_address(run_cli_command, config_with_profile):
+    """Test that an address that is not this machine's is rejected by the test-bind, not served later."""
+    # TEST-NET-1 (RFC 5737), reserved for documentation and therefore never an address of the machine running this.
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '192.0.2.1', '-n'], use_subprocess=False, raises=True)
+
+    assert 'is not an address of this machine' in result.output
+    assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is False
+
+
+def test_join(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that joining with a code leaves this profile with the collab, its key and the issuer's whole roster.
+
+    One code is all a newcomer needs: the collab it names, the member to ask and the key to ask with.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import JoinCode, JoinResponse
+
+    announced = []
+
+    def join(self, entry):
+        announced.append((self._base_url, entry))
+        return JoinResponse(
+            collab=COLLAB_UUID,
+            roster=[
+                {'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1},
+                {'uuid': 'uuid-of-bob', 'url': 'http://100.64.0.3:9137', 'name': 'bob', 'stamp': 4},
+            ],
+        )
+
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(cmd_collab, 'create_profile', lambda ctx, profile_name, non_interactive: get_profile())
+    monkeypatch.setattr(CollabClient, 'join', join)
+
+    code = JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
+    result = run_cli_command(
+        cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '--accept-push', '-n'], use_subprocess=False
+    )
+
+    profile = get_profile()
+    get = config_with_profile.get_option
+
+    assert get(OPTION_UUID, scope=profile.name) == COLLAB_UUID
+    assert get(OPTION_TOKEN, scope=profile.name) == TOKEN
+    assert get(OPTION_ACCEPT_PUSH, scope=profile.name, default=False) is True, 'a join takes its consents too'
+    assert get(OPTION_PEERS, scope=profile.name) == {
+        # The issuer just answered, so its address is proven; the members it told us about are not.
+        PEER_UUID: peer_entry(),
+        'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob', stamp=4, seen=False),
+    }
+    assert announced == [
+        (PEER_URL, {'uuid': profile.uuid, 'url': 'http://127.0.0.1:9200', 'name': profile.name, 'stamp': 1})
+    ], 'the joiner announces itself to the issuer of the code'
+    assert f'learned about peer `{PEER}`' in result.output
+
+
+def test_join_shows_the_policy_and_asks_before_creating_anything(run_cli_command, config_with_profile, monkeypatch):
+    """Test that joining an extras-syncing collab warns, defaults to no, and creates nothing when declined.
+
+    The consent has to precede the profile it would govern, which is why the policy travels in the code: there is
+    nothing to undo when the answer is no.
+    """
+    from aiida.tools.collab.protocol import JoinCode
+
+    created = []
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(cmd_collab, 'create_profile', lambda *args: created.append(args) or get_profile())
+
+    code = JoinCode(
+        collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy={'extras_mode': 'sync', 'groups_mode': 'local'}
+    ).encode()
+    # A bare Enter, which is the answer a script or an inattentive user gives.
+    result = run_cli_command(
+        cmd_collab.collab_join,
+        [code, '--profile-name', 'collab', '--bind', '127.0.0.1'],
+        use_subprocess=False,
+        user_input='\n',
+        raises=True,
+    )
+
+    assert 'This collab syncs extras' in result.output
+    assert '[y/N]' in result.output, 'the consent prompt has to default to no'
+    assert 'no profile was created' in result.output
+    assert created == [], 'nothing may be created before the terms are accepted'
+    assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is False
+
+
+def test_join_cannot_choose_its_own_policy(run_cli_command, config_with_profile):
+    """Test that a joiner cannot pick its own terms: the collab's policy is the only one there is.
+
+    It is the command that draws the line — the options that fix a policy belong to the one that creates a collab —
+    so there is no join that reaches the code with terms of its own.
+    """
+    from aiida.tools.collab.protocol import JoinCode
+
+    code = JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
+    result = run_cli_command(
+        cmd_collab.collab_join,
+        [code, '--extras-mode', 'sync', '--bind', '127.0.0.1'],
+        use_subprocess=False,
+        raises=True,
+    )
+
+    assert 'no such option' in result.output.lower()
+
+
+def test_join_copies_the_policy_along_the_chain(
+    run_cli_command, config_with_profile, profile_factory, monkeypatch, daemon
+):
+    """Test that the policy reaches a member that never contacted the creator.
+
+    A creates the collab, B joins through A, C joins through B — and C, which never spoke to A, ends up holding
+    exactly the policy A chose. Any member mints a code from its own stored copy, which is what makes that work.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import join_code
+    from aiida.tools.collab.protocol import JoinResponse
+
+    created = []
+    asked = []
+    ports = iter([9200, 9201, 9202])
+
+    def create_profile(ctx, profile_name, non_interactive):
+        profile = profile_factory(profile_name)
+        config_with_profile.add_profile(profile)
+        config_with_profile.store()
+        created.append(profile)
+        return profile
+
+    def join(self, entry):
+        asked.append(self._base_url)
+        return JoinResponse(collab=COLLAB_UUID, roster=[])
+
+    # A port of its own per member, so that whom each of them asked is visible in the URL it contacted.
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: next(ports))
+    monkeypatch.setattr(cmd_collab, 'create_profile', create_profile)
+    monkeypatch.setattr(CollabClient, 'join', join)
+
+    run_cli_command(
+        cmd_collab.collab_init,
+        ['--bind', '127.0.0.1', '--extras-mode', 'sync', '--groups-mode', 'grow', '-n'],
+        use_subprocess=False,
+    )
+
+    for name, issuer in (('joiner-b', get_profile()), ('joiner-c', None)):
+        code = join_code(config_with_profile, issuer or created[-1])
+        run_cli_command(
+            cmd_collab.collab_join,
+            [code, '--profile-name', name, '--bind', '127.0.0.1', '-n'],
+            use_subprocess=False,
+        )
+
+    policies = [config_with_profile.get_option(OPTION_POLICY, scope=profile.name) for profile in created]
+
+    assert [profile.name for profile in created] == ['joiner-b', 'joiner-c']
+    assert policies == [{'extras_mode': 'sync', 'groups_mode': 'grow'}] * 2
+    assert asked == ['http://127.0.0.1:9200', 'http://127.0.0.1:9201'], 'C joined through B and never asked A'
+
+
+def test_join_refuses_an_existing_profile(run_cli_command, config_with_profile):
+    """Test that a join does not fold an existing profile into someone else's provenance graph."""
+    from aiida.tools.collab.protocol import JoinCode
+
+    code = JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
+    result = run_cli_command(
+        cmd_collab.collab_join,
+        [code, '--profile-name', get_profile().name],
+        use_subprocess=False,
+        raises=True,
+    )
+
+    assert 'already exists' in result.output
+
+
+def test_init_already_initialized(run_cli_command, config_with_profile):
+    """Test that ``verdi collab init`` on a profile that is already part of a collab aborts, keeping the token."""
+    init_collab(config_with_profile)
+
+    scope = get_profile().name
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False, raises=True)
+
+    assert 'already belongs to a collab' in result.output
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=scope) == TOKEN
+
+
+def test_init_on_a_profile_that_left_a_collab(run_cli_command, config_with_profile):
+    """Test that a profile which left its collab is refused too, and told the two ways back rather than founded over.
+
+    Leaving is ``collab.enabled = False`` and nothing else: uuid, token, roster and cursors all stay, and turning
+    the option back on is how a member returns. Founding over that overwrites all four — nothing ever prints the
+    old token again, and `verdi collab join` only creates fresh profiles, so the membership would be
+    unrecoverable.
+    """
+    init_collab(config_with_profile, **{OPTION_ENABLED: False})
+
+    scope = get_profile().name
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False, raises=True)
+
+    assert 'already belongs to a collab' in result.output
+    assert OPTION_ENABLED in result.output, 'the refusal has to name the way back into the collab it left'
+    assert config_with_profile.get_option(OPTION_UUID, scope=scope) == COLLAB_UUID
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=scope) == TOKEN
+    assert config_with_profile.get_option(OPTION_PEERS, scope=scope) == {PEER_UUID: peer_entry()}
+
+
+def stub_issuer(monkeypatch, roster=()):
+    """Let a join reach a member that answers with ``roster``, and return the code it issued."""
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import JoinCode, JoinResponse
+
+    monkeypatch.setattr(CollabClient, 'join', lambda self, entry: JoinResponse(collab=COLLAB_UUID, roster=list(roster)))
+
+    return JoinCode(collab=COLLAB_UUID, url=PEER_URL, token=TOKEN, policy=POLICY).encode()
+
+
+def test_init_no_longer_joins(run_cli_command, config_with_profile):
+    """Test that ``verdi collab init`` refuses the options a join is made of: joining is its own command, no alias.
+
+    Founding a collab and entering one are different acts on different profiles, and the flag that used to switch
+    between them is what made `init` two commands wearing one name.
+    """
+    for option in ('--join', '--profile-name'):
+        result = run_cli_command(cmd_collab.collab_init, [option, 'whatever', '-n'], use_subprocess=False, raises=True)
+
+        assert 'no such option' in result.output.lower()
+
+
+def test_join_names_the_profile_it_creates(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a join asks what to call the profile it creates, and falls back to `collab` when it cannot ask.
+
+    The name used to be a silent default, so the second collab joined on one machine collided with the first and
+    the only sign of it was the refusal to reuse the name.
+    """
+    created = []
+
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(
+        cmd_collab, 'create_profile', lambda ctx, name, non_interactive: created.append(name) or get_profile()
+    )
+    code = stub_issuer(monkeypatch)
+
+    result = run_cli_command(
+        cmd_collab.collab_join, [code, '--bind', '127.0.0.1'], use_subprocess=False, user_input='fusion\nn\n'
+    )
+    run_cli_command(cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert 'name of the profile to create [collab]' in result.output
+    assert created == ['fusion', 'collab']
+
+
+def test_init_asks_whether_peers_may_push(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that consent to being pushed to is asked with the other consents and written where the endpoint reads it.
+
+    Until it was asked here it was reachable only through `verdi config set`, and nothing in the setup mentioned
+    it: a member that wanted to be pushed to learned of it from a peer reporting that it had been refused.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+
+    result = run_cli_command(
+        cmd_collab.collab_init, ['--bind', '127.0.0.1'], use_subprocess=False, user_input='local\nlocal\ny\n'
+    )
+
+    assert 'accept pushes from peers' in result.output
+    assert '[y/N]' in result.output, 'consent to being written to has to default to refusing'
+    assert config_with_profile.get_option(OPTION_ACCEPT_PUSH, scope=get_profile().name) is True
+
+
+@pytest.mark.parametrize('flags, accepted', (((), False), (('--accept-push',), True)))
+def test_init_reports_the_push_consent_it_did_not_ask_for(
+    run_cli_command, config_with_profile, monkeypatch, daemon, flags, accepted
+):
+    """Test that a scripted setup says who may push into the profile instead of settling it in silence.
+
+    The default is refusal, as it is in the schema; `--non-interactive` with no flag would otherwise decide who
+    may write into this profile without a word, the way it would have decided the policy.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n', *flags], use_subprocess=False)
+
+    # Read without the schema default, so that a refusal this command wrote is not confused with an unwritten one.
+    stored = config_with_profile.get_option(OPTION_ACCEPT_PUSH, scope=get_profile().name, default=False)
+
+    assert stored is accepted
+    assert ('accepted' if accepted else 'refused') in result.output
+
+
+def test_init_starts_the_daemon(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a collab is served the moment it is set up, with as many workers as the profile asks for.
+
+    The endpoint is a circus watcher the daemon builds at start iff `collab.enabled`, so a setup that ends without
+    a daemon leaves a member that is in the collab and reachable by nobody.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    config_with_profile.set_option('daemon.default_workers', 3, scope=get_profile().name)
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['start']
+    assert daemon['workers'] == 3, 'a daemon started here is the daemon the profile is configured for'
+    # The report's own prefix, since `started the daemon` is a substring of `restarted the daemon`.
+    assert 'Report: started the daemon' in result.output
+
+
+def test_init_restarts_a_daemon_that_was_already_running(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a daemon which predates the collab is stopped and started, not asked to restart.
+
+    Its watcher list has no endpoint in it, and circus restarts the watchers an arbiter already has rather than
+    rebuilding the list: only a stop and a start make the daemon serve the collab it is now part of.
+    """
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    daemon['running'] = True
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['stop', 'start']
+    assert 'restarted the daemon' in result.output
+
+
+def test_init_starts_a_daemon_whose_pid_file_is_stale(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a daemon a reboot took, leaving its pid file, is started rather than reported unstartable.
+
+    `is_daemon_running` reads that file, so the stop branch is entered for a daemon that is already down. The stop
+    is what deletes the stale file; refusing to go on from there would leave the collab unserved for want of a
+    daemon that starts perfectly well.
+    """
+    from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException
+
+    def stop_daemon(self, *args, **kwargs):
+        daemon['calls'].append('stop')
+        raise DaemonNotRunningException('The daemon is not running.')
+
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon)
+    daemon['running'] = True
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['stop', 'start']
+    assert 'Report: started the daemon' in result.output, 'the stop found nothing to stop, so nothing restarted'
+    assert 'could not be brought up' not in result.output
+
+
+def test_join_starts_the_daemon(run_cli_command, config_with_profile, monkeypatch, daemon):
+    """Test that a joined profile serves the collab too, and not only the profile that founded one."""
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(cmd_collab, 'create_profile', lambda ctx, name, non_interactive: get_profile())
+    code = stub_issuer(monkeypatch)
+
+    run_cli_command(cmd_collab.collab_join, [code, '--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert daemon['calls'] == ['start']
+
+
+@pytest.mark.parametrize('failure', ('DaemonException', 'ConfigurationError'))
+def test_a_daemon_that_will_not_start_does_not_fail_the_setup(
+    run_cli_command, config_with_profile, monkeypatch, daemon, failure
+):
+    """Test that a daemon that will not come up warns and names a command that runs, rather than failing the setup.
+
+    The profile is a member of the collab either way, and the retry that an abort invites is refused: a profile
+    that already belongs to a collab is never founded over. Both ways the start can fail are covered — circus
+    saying no, and `verdi` not being on the `PATH`, which is what a cron or systemd invocation looks like and
+    which raises from outside the daemon's own exception tree.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.engine.daemon.client import DaemonClient, DaemonException
+
+    exception = DaemonException if failure == 'DaemonException' else ConfigurationError
+
+    def start_daemon(self, *args, **kwargs):
+        raise exception('circus is unwell')
+
+    monkeypatch.setattr(cmd_collab, 'reserve_port', lambda bind, port, default: 9200)
+    monkeypatch.setattr(DaemonClient, 'start_daemon', start_daemon)
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False)
+
+    assert 'circus is unwell' in result.output
+    # `verdi daemon restart` refuses to run on a daemon that is down, which is the state this leaves.
+    assert 'daemon start` succeeds' in result.output, 'the warning has to carry a command that runs'
+    assert 'serves the collab' not in result.output, 'nothing may claim a service the warning just denied'
+    assert config_with_profile.get_option(OPTION_ENABLED, scope=get_profile().name) is True
+
+
+def test_peer_list(run_cli_command, config_with_profile):
+    """Test that the roster is shown as it is held: dormant entries included, with when each was last synced with.
+
+    ``verdi status`` is the working view — active peers, probed now — and hides exactly what this shows: the
+    profile UUID a peer is keyed by, and the members resting dormant since the last rotation.
+    """
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob', active=False),
+        },
+    )
+
+    profile = get_profile()
+    state = CollabState.load(profile)
+    newest = timezone.now()
+    # Oldest last, so that only the newest of the two satisfies the assertion below.
+    state.events.append(CollabEvent(time=newest, direction='pull', peer=PEER_UUID, uuids=[], size=0))
+    state.events.append(
+        CollabEvent(time=newest - timedelta(days=1), direction='push', peer=PEER_UUID, uuids=[], size=0)
+    )
+    state.save()
+
+    result = run_cli_command(cmd_collab.collab_peer_list, use_subprocess=False)
+
+    alice = next(line for line in result.output_lines if line.startswith(PEER))
+    bob = next(line for line in result.output_lines if line.startswith('bob'))
+
+    assert PEER_UUID in alice
+    assert 'active' in alice
+    assert newest.isoformat(timespec='seconds') in alice, 'the last event is the newest, not merely one of them'
+    assert 'dormant' in bob
+    assert '—' in bob, 'a peer never synced with has no last event'
+    assert 'left out of `verdi status`' in result.output
+
+
+def test_peer_list_flags_a_corrected_address_as_unproven(run_cli_command, config_with_profile):
+    """Test that a hand-corrected address reads as never answered until the peer answers there.
+
+    That flag is the whole feedback a manual correction gets: nothing probes a peer when it is written, so a typo
+    in it is indistinguishable from a peer that is down until something contacts it.
+    """
+    init_collab(config_with_profile)
+
+    run_cli_command(cmd_collab.collab_peer_set, [PEER, '--url', 'http://100.64.0.9:9137'], use_subprocess=False)
+    result = run_cli_command(cmd_collab.collab_peer_list, use_subprocess=False)
+
+    alice = next(line for line in result.output_lines if line.startswith(PEER))
+
+    assert 'never answered' in alice
+    assert 'http://100.64.0.9:9137' in alice
+
+
+def test_peer_set_url(run_cli_command, config_with_profile):
+    """Test that a corrected address is stored as the provisional guess it is.
+
+    Only the owner of an entry stamps it, so the stamp is left where it is and the owner's next announcement
+    supersedes the correction; and the peer is unproven at the new address until it answers there.
+    """
+    init_collab(config_with_profile)
+
+    result = run_cli_command(
+        cmd_collab.collab_peer_set, [PEER, '--url', 'http://100.64.0.9:9137'], use_subprocess=False
+    )
+
+    entry = config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)[PEER_UUID]
+
+    assert entry == peer_entry(url='http://100.64.0.9:9137', seen=False)
+    assert 'http://100.64.0.9:9137' in result.output
+
+
+def test_peer_set_keeps_what_the_daemon_merged(run_cli_command, config_with_profile):
+    """Test that a command does not revert what the endpoint wrote to the configuration while it ran.
+
+    ``Config.store`` writes the whole dictionary its holder loaded, and since this phase the daemon's endpoint is
+    a second writer of that file: a command that stored its start-time copy would drop every entry gossiped in
+    between — including a corrected address, which is the one write nothing ever re-applies.
+    """
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    bob = peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False)
+
+    # The endpoint merges a newly gossiped peer into the file, as it does while a command is running.
+    daemon = Config.from_file(config_with_profile.filepath)
+    merged = {**daemon.get_option(OPTION_PEERS, scope=profile.name), 'uuid-of-bob': bob}
+    daemon.set_option(OPTION_PEERS, merged, scope=profile.name)
+    daemon.store()
+
+    run_cli_command(cmd_collab.collab_peer_set, [PEER, '--nickname', 'ali'], use_subprocess=False)
+
+    stored = Config.from_file(config_with_profile.filepath).get_option(OPTION_PEERS, scope=profile.name)
+
+    assert stored['uuid-of-bob'] == bob, 'the entry the endpoint merged must survive the command'
+    assert stored[PEER_UUID]['nickname'] == 'ali'
+
+
+def test_peer_set_refuses_a_used_nickname(run_cli_command, config_with_profile):
+    """Test that two peers may not share a nickname: it is how a peer is named on the command line."""
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob')},
+    )
+
+    result = run_cli_command(cmd_collab.collab_peer_set, ['bob', '--nickname', PEER], use_subprocess=False, raises=True)
+
+    assert 'already in use' in result.output
+    assert config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)['uuid-of-bob']['nickname'] == 'bob'
+
+
+def stored_option(config, name):
+    """Return an option as it is on the configuration file, which is what survives a daemon restart.
+
+    Read from the file and not from the configuration the command holds: a command writes both, and only the
+    file is what the endpoint process reads when circus starts it again.
+    """
+    return Config.from_file(config.filepath).get_option(name, scope=get_profile().name)
+
+
+@pytest.fixture
+def stub_daemon(monkeypatch):
+    """Return the circus commands a command sends, and the state of the daemon it sends them to.
+
+    ``running`` makes the client answer as a started daemon rather than a stopped one, and ``answer`` is what
+    circus replies with — a dictionary even when it is a refusal, since circus answers a command naming a
+    watcher it does not have rather than raising. An exception there is raised instead, which is what the
+    transport does when the daemon behind a still-present PID file is gone.
+    """
+    from aiida.engine.daemon.client import DaemonClient
+
+    commands: list = []
+    state: dict = {'running': False, 'answer': {'status': 'ok'}}
+
+    def call_client(self, command, timeout=None):
+        commands.append(command)
+
+        if isinstance(state['answer'], Exception):
+            raise state['answer']
+
+        return state['answer']
+
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: state['running']))
+    monkeypatch.setattr(DaemonClient, 'call_client', call_client)
+
+    return state, commands
+
+
+def free_port():
+    """Return a port nothing is listening on, so that a test can move an endpoint onto it."""
+    import socket
+
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+
+        return probe.getsockname()[1]
+
+
+def test_config_prompts_with_what_is_configured_now(run_cli_command, config_with_profile):
+    """Test that a bare ``verdi collab config`` offers each current value as the default and writes what is typed.
+
+    It is the one place the serving settings are changed after ``init``, so it has to show what they are: the
+    alternative is a user reading them out of ``verdi config`` first and typing them back in.
+    """
+    init_collab(config_with_profile, peers={})
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, use_subprocess=False, user_input=f'y\n\n{port}\n')
+
+    get = config_with_profile.get_option
+    scope = get_profile().name
+
+    assert '[127.0.0.1]' in result.output, 'the address configured now is offered as the default'
+    assert '[9137]' in result.output
+    assert get(OPTION_ACCEPT_PUSH, scope=scope) is True
+    assert get(OPTION_BIND, scope=scope) == '127.0.0.1'
+    assert get(OPTION_PORT, scope=scope) == port
+
+
+def test_config_sets_consent_without_prompting(run_cli_command, config_with_profile):
+    """Test that an option given is an answer: ``--accept-push`` writes it and asks nothing.
+
+    Nothing feeds this run a prompt answer, so a command that asked anything would abort — which is the assertion.
+    """
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_config, ['--accept-push'], use_subprocess=False)
+
+    assert config_with_profile.get_option(OPTION_ACCEPT_PUSH, scope=get_profile().name) is True
+    assert 'accepted from their next request' in result.output
+    assert 'the address is unchanged: this profile is configured for http://127.0.0.1:9137, in service' in (
+        result.output
+    ), 'nothing moved, so nothing may be claimed about a restart that did not happen'
+
+
+def test_config_without_options_writes_nothing_when_there_is_nobody_to_ask(run_cli_command, config_with_profile):
+    """Test that a scripted ``config`` with nothing to set reports the settings and leaves every one of them.
+
+    Prompting is what a bare call does; with `--non-interactive` there is nobody to ask, and writing the option
+    defaults instead of saying what is configured would be the one answer nothing can undo.
+    """
+    init_collab(config_with_profile)
+
+    before = Config.from_file(config_with_profile.filepath).dictionary
+    result = run_cli_command(cmd_collab.collab_config, ['-n'], use_subprocess=False)
+
+    assert 'pushes from peers: refused' in result.output, 'consent is off, and this is where it is read off'
+    assert 'address: http://127.0.0.1:9137' in result.output
+    assert 'standing: in service' in result.output
+    assert Config.from_file(config_with_profile.filepath).dictionary == before
+
+
+def test_config_announces_even_when_the_endpoint_could_not_be_restarted(
+    run_cli_command, config_with_profile, stub_daemon, monkeypatch
+):
+    """Test that a daemon that cannot be reached costs a warning and not the announcement.
+
+    `is_daemon_running` is a PID-file check, so a daemon that was killed passes it and the circus call raises.
+    Aborting there would write the new address, tell nobody, and leave nothing for a re-run to announce: the
+    address it would carry is by then the one this profile is already configured for, so the second run finds
+    nothing to do and the peers are never told at all.
+    """
+    from aiida.engine.daemon.client import DaemonStalePidException
+
+    state, _ = stub_daemon
+    state['running'] = True
+    state['answer'] = DaemonStalePidException('the daemon could not be reached')
+
+    # The dormant entry is here for the second assertion: an announcement carries the current token, and a
+    # dormant peer is most often the member a rotation deliberately excluded.
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', active=False)},
+    )
+
+    announced = []
+    monkeypatch.setattr(cmd_collab, 'announce', lambda config, profile, **keywords: announced.append(keywords['url']))
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, ['--port', str(port)], use_subprocess=False)
+
+    assert config_with_profile.get_option(OPTION_PORT, scope=get_profile().name) == port
+    assert 'could not restart the collab endpoint' in result.output
+    assert 'once its daemon starts it there' in result.output, 'the endpoint is not on the new address yet'
+    assert announced == [PEER_URL], 'the active peers have to be told, and the dormant one must not be'
+
+
+def test_config_on_an_offline_profile_does_not_claim_to_serve(
+    run_cli_command, config_with_profile, stub_daemon, monkeypatch
+):
+    """Test that moving the address of an offline profile reports the standing it is actually left in.
+
+    An idling endpoint has no address to re-read, so circus is not called at all and nothing binds the new
+    address. Reporting "serves the collab at" there asserts the opposite of what happened, on the very sequence
+    the two commands were built for together — go offline, move the machine, change the address. The
+    announcement stays: a peer holding the new address is what makes coming back online work.
+    """
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile, **{OPTION_ONLINE: False})
+
+    announced = []
+    monkeypatch.setattr(cmd_collab, 'announce', lambda config, profile, **keywords: announced.append(keywords['url']))
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, ['--port', str(port)], use_subprocess=False)
+
+    assert f'serves the collab at http://127.0.0.1:{port}.' not in result.output, 'it is not serving anything'
+    assert 'verdi collab online' in result.output
+    assert announced == [PEER_URL], 'the peers still have to learn where this profile will be'
+    assert commands == [], 'an idling endpoint has no address to re-read, so restarting it buys nothing'
+
+    # The same claim, from the one report site whose whole job is to say what this profile serves.
+    listed = run_cli_command(cmd_collab.collab_config, ['-n'], use_subprocess=False)
+
+    assert f'address: http://127.0.0.1:{port}' in listed.output
+    assert 'standing: offline' in listed.output
+
+
+def test_config_refuses_an_address_that_is_not_this_machines(run_cli_command, config_with_profile):
+    """Test that an address this machine does not hold is refused by the test-bind, and nothing at all is written.
+
+    An endpoint that cannot bind is restarted by circus forever; the refusal has to precede the write, or the
+    profile is left configured for an address it can never serve.
+    """
+    init_collab(config_with_profile)
+
+    # TEST-NET-1 (RFC 5737), reserved for documentation and therefore never an address of the machine running this.
+    result = run_cli_command(cmd_collab.collab_config, ['--bind', '192.0.2.1'], use_subprocess=False, raises=True)
+
+    stored = Config.from_file(config_with_profile.filepath)
+
+    assert 'is not an address of this machine' in result.output
+    assert stored.get_option(OPTION_BIND, scope=get_profile().name) == '127.0.0.1'
+
+
+def test_config_restarts_the_endpoint_of_a_running_daemon(run_cli_command, config_with_profile, stub_daemon):
+    """Test that a moved address restarts the endpoint watcher alone: the workers of the daemon keep running.
+
+    The endpoint reads the address it binds once, at start, so nothing short of restarting it moves it; doing
+    that with ``verdi daemon restart`` would stop the workers of a profile that merely changed address.
+    """
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile, peers={})
+
+    port = free_port()
+    result = run_cli_command(cmd_collab.collab_config, ['--port', str(port)], use_subprocess=False)
+
+    assert [command['command'] for command in commands] == ['restart']
+    assert commands[0]['properties']['name'].endswith('-collab-endpoint')
+    assert config_with_profile.get_option(OPTION_PORT, scope=get_profile().name) == port
+    assert f'http://127.0.0.1:{port}' in result.output
+
+
+def printed_code(result):
+    """Return the join code a command printed: the last thing it writes, so it can be copied off the screen."""
+    from aiida.tools.collab.protocol import JoinCode
+
+    return JoinCode.decode(result.output_lines[-1])
+
+
+def test_link(run_cli_command, config_with_profile):
+    """Test that the code printed on request carries this collab, this endpoint, the current key and the terms.
+
+    Asking for it is what obtains a code: `verdi status` withholds it, being the command whose output users are
+    asked to paste into bug reports.
+    """
+    from aiida.tools.collab.protocol import JoinCode
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_link, use_subprocess=False)
+
+    assert printed_code(result) == JoinCode(collab=COLLAB_UUID, url='http://127.0.0.1:9137', token=TOKEN, policy=POLICY)
+
+
+@pytest.fixture
+def stub_signal(monkeypatch):
+    """Record the rotation signals a command sends, with the key they go out under, sending nothing anywhere."""
+    from aiida.tools.collab.client import CollabClient
+
+    signals = []
+
+    def signal_retired(self, peer):
+        signals.append((self._base_url, peer, self._session.headers['Authorization']))
+
+    monkeypatch.setattr(CollabClient, 'signal_retired', signal_retired)
+
+    return signals
+
+
+def test_rotate(run_cli_command, config_with_profile, stub_signal):
+    """Test that rotating mints a new key, prints it as a code and tells the peers it holds — and no more.
+
+    The collab UUID is untouched: a rotation replaces the key of a collab, never its identity, so the code still
+    names the same collab and every cross-check against it keeps working.
+    """
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    result = run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    get = config_with_profile.get_option
+    token = get(OPTION_TOKEN, scope=profile.name)
+    code = printed_code(result)
+
+    assert token != TOKEN
+    assert (code.collab, code.token, code.url) == (COLLAB_UUID, token, 'http://127.0.0.1:9137')
+    assert stub_signal == [(PEER_URL, profile.uuid, f'Bearer {TOKEN}')], (
+        'the signal goes out under the token it retires: the peers know no other one yet'
+    )
+    assert get(OPTION_PEERS, scope=profile.name) == {PEER_UUID: peer_entry(active=False)}, (
+        'dormancy is not deletion: the whole record is kept as the history a returning member is recognized by'
+    )
+
+
+def test_rotate_leaves_dormant_peers_alone(run_cli_command, config_with_profile, stub_signal):
+    """Test that a rotation signals the members it holds and not the ones it already rotated away from.
+
+    Signalling the other branch of a split, or the member that was just excluded, would tell them to come and
+    ask for a code they are not meant to get.
+    """
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', active=False)},
+    )
+
+    run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    assert [url for url, _, _ in stub_signal] == [PEER_URL]
+
+
+def test_rotate_survives_an_unreachable_peer(run_cli_command, config_with_profile, monkeypatch):
+    """Test that a peer that cannot be told about the rotation is a warning, not a half-done rotation.
+
+    The signal is a courtesy; the rotation is the point. Aborting on it would leave the token swapped on some
+    machines and not others depending on who happened to be up.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+    monkeypatch.setattr(
+        CollabClient, 'signal_retired', lambda self, peer: (_ for _ in ()).throw(CollabRequestError('offline'))
+    )
+
+    result = run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    assert 'could not tell alice' in result.output
+    assert printed_code(result).token == config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name)
+
+
+def test_rotate_does_not_stop_a_peer_that_has_not_rotated(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer
+):
+    """Test that the signal is advisory: a member that received one still syncs with the collab as before.
+
+    Enforcement is the 401 of the endpoints that rotated, and only that. If the signal itself stopped anything,
+    an excluded member — who still holds the retired token — could freeze the collab by sending it around.
+    """
+    init_collab(config_with_profile, peers={PEER_UUID: peer_entry(signalled=True)})
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert 'pulled 1 node(s)' in result.output
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name) == TOKEN
+
+
+def test_offline_stops_serving_without_touching_the_workers(run_cli_command, config_with_profile, stub_daemon):
+    """Test that going offline writes the option and restarts the endpoint watcher, and nothing else.
+
+    Stopping the daemon would stop the workers with it, and switching `collab.enabled` off would silence the
+    tombstone and membership hooks — so a member "offline" that way stops recording what its next sync needs.
+    """
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_offline, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is False
+    assert [command['properties']['name'] for command in commands] == [f'aiida-{get_profile().name}-collab-endpoint']
+    assert [command['properties']['waiting'] for command in commands] == [True], (
+        'the announcement that follows an address change must not overtake the endpoint re-binding'
+    )
+    assert 'does not serve the collab from now on' in result.output
+
+
+def test_offline_with_a_stopped_daemon_is_a_report(run_cli_command, config_with_profile, stub_daemon):
+    """Test that going offline while the daemon is down writes the option and says when it takes effect.
+
+    Refusing it would be refusing to arrange something for later, and the option is exactly what carries the
+    standing across a daemon that is not running yet.
+    """
+    _, commands = stub_daemon
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_offline, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is False
+    assert commands == []
+    assert 'from the next daemon start' in result.output
+
+
+def test_offline_says_when_the_daemon_has_no_endpoint_watcher(run_cli_command, config_with_profile, stub_daemon):
+    """Test that circus refusing a watcher it does not have is a warning, not a restart reported as done.
+
+    The watcher list is built when the daemon starts and only carries an endpoint when `collab.enabled` was
+    already set, so the daemon of a profile that joined a collab while it was running has none. circus answers
+    such a command rather than raising, which is how discarding the answer turned "nothing happened" into
+    "Success".
+    """
+    state, _ = stub_daemon
+    state['running'] = True
+    state['answer'] = {'status': 'error', 'reason': 'program not found'}
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_offline, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is False
+    assert 'could not restart the collab endpoint' in result.output
+    assert 'verdi daemon restart' in result.output
+    assert 'from the next daemon start' in result.output
+
+
+def test_online_serves_again(run_cli_command, config_with_profile, stub_daemon):
+    """Test that ``verdi collab online`` writes the option back and restarts the endpoint onto it."""
+    state, commands = stub_daemon
+    state['running'] = True
+
+    init_collab(config_with_profile, **{OPTION_ONLINE: False})
+
+    result = run_cli_command(cmd_collab.collab_online, use_subprocess=False)
+
+    assert stored_option(config_with_profile, OPTION_ONLINE) is True
+    assert [command['command'] for command in commands] == ['restart']
+    assert 'serves the collab from now on' in result.output
+
+
+def rekey_code(token='the-new-token', collab=COLLAB_UUID, url=PEER_URL):
+    from aiida.tools.collab.protocol import JoinCode
+
+    return JoinCode(collab=collab, url=url, token=token, policy=POLICY).encode()
+
+
+@pytest.fixture
+def stub_join(monkeypatch):
+    """Answer the announcement a rekey makes with the issuer's roster, recording what was announced."""
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import JoinResponse
+
+    announced = []
+
+    def join(self, entry):
+        announced.append((self._base_url, entry))
+        return JoinResponse(collab=COLLAB_UUID, roster=[{'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1}])
+
+    monkeypatch.setattr(CollabClient, 'join', join)
+
+    return announced
+
+
+def test_rekey_swaps_the_token_and_recognizes_the_issuer(run_cli_command, config_with_profile, stub_join):
+    """Test that rekeying changes the key and nothing else, and that the member whose code it was comes back.
+
+    Recognition is by profile UUID, so the entry is the one that was there before: the nickname stays, and the
+    cursor kept under that UUID means the next sync resumes instead of re-transferring the whole history.
+    """
+    init_collab(config_with_profile, peers={PEER_UUID: peer_entry(nickname='ali')})
+
+    profile = get_profile()
+    before = Config.from_file(config_with_profile.filepath).dictionary
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+
+    get = config_with_profile.get_option
+    after = Config.from_file(config_with_profile.filepath).dictionary
+    changed = {
+        option
+        for option in {*before['profiles'][profile.name]['options'], *after['profiles'][profile.name]['options']}
+        if before['profiles'][profile.name]['options'].get(option)
+        != after['profiles'][profile.name]['options'].get(option)
+    }
+
+    assert changed == {OPTION_TOKEN}, 'a rekey swaps the key and leaves everything else where it was'
+    assert get(OPTION_TOKEN, scope=profile.name) == 'the-new-token'
+    assert get(OPTION_PEERS, scope=profile.name) == {PEER_UUID: peer_entry(nickname='ali')}, (
+        'the roster went dormant and the issuer came straight back out of it: same entry, same nickname'
+    )
+    assert stub_join == [
+        (PEER_URL, {'uuid': profile.uuid, 'url': 'http://127.0.0.1:9137', 'name': profile.name, 'stamp': 1})
+    ], 'the returning member announces itself: nothing else would tell the issuer it is back'
+
+
+def test_rekey_without_a_reachable_issuer_leaves_everyone_dormant(
+    run_cli_command, config_with_profile, monkeypatch, stub_environment
+):
+    """Test that a rekey nobody answered swaps the key anyway and leaves no peer to contact.
+
+    Until some peer is seen under the new token there is nobody to sync with, and a pull must say so rather than
+    knock on addresses whose owners are still on the old key.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+
+    contacted = []
+
+    monkeypatch.setattr(CollabClient, 'join', lambda self, entry: (_ for _ in ()).throw(CollabRequestError('offline')))
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: contacted.append(self._base_url)
+    )
+
+    result = run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+
+    assert 'could not reach' in result.output
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name) == 'the-new-token'
+
+    for command in (cmd_collab.collab_pull, cmd_collab.collab_push):
+        result = run_cli_command(command, ['--force'], use_subprocess=False, raises=True)
+
+        assert 'dormant' in result.output
+
+    assert contacted == [], 'a dormant peer is not polled, so nothing goes out at all'
+
+
+def test_rotate_then_rekey_onto_another_code(run_cli_command, config_with_profile, stub_signal, stub_join):
+    """Test that a member that has just rotated can adopt somebody else's fresh code all the same.
+
+    Two members rotating at once need no arbitration: a rotator is nobody special, so the way out of the mutual
+    401s is that one of them simply rekeys onto the other's code and the collab converges socially.
+    """
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    mine = printed_code(run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)).token
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code(token='the-other-rotation')], use_subprocess=False)
+
+    get = config_with_profile.get_option
+
+    assert mine != TOKEN
+    assert get(OPTION_TOKEN, scope=profile.name) == 'the-other-rotation', 'the code wins over the self-minted key'
+    assert get(OPTION_PEERS, scope=profile.name) == {PEER_UUID: peer_entry()}, (
+        'the issuer comes back out of the roster the rotation had just set dormant'
+    )
+
+
+def test_a_rotation_during_a_sync_is_not_undone_by_it(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a pull finishing after a rotation does not put the peers it talked to back on their feet.
+
+    A pin belongs to the key its sync was negotiated under. Merging this one into the roster the rotation had
+    just set dormant would mark the peer active again — and with it everyone that peer vouched for, the member
+    that was just excluded included — under a key none of them holds.
+    """
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+
+    def download_delta(self, filepath, delta_id, progress=None):
+        # `verdi collab rotate` in another terminal, landing while the delta is being transferred here.
+        terminal = Config.from_file(config_with_profile.filepath)
+
+        with mutate_config(terminal) as stored:
+            cmd_collab.set_key(stored, terminal, profile, 'the-rotated-token')
+
+        filepath.write_bytes(b'delta')
+        return len(b'delta')
+
+    monkeypatch.setattr(CollabClient, 'download_delta', download_delta)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    peers = Config.from_file(config_with_profile.filepath).get_option(OPTION_PEERS, scope=profile.name)
+
+    assert 'rekeyed while syncing' in result.output
+    assert peers == {PEER_UUID: peer_entry(active=False)}, 'the rotation stands; the peer waits for its rekey'
+
+
+def test_a_rotation_racing_a_roster_merge_keeps_both(run_cli_command, config_with_profile, stub_signal, monkeypatch):
+    """Test that a rotation and a gossip merge landing together lose neither the new key nor the merged entry.
+
+    The two writers of ``config.json`` hold one lock across their read and their write, so they serialize.
+    Re-reading before writing is not enough on its own: a merge that reads before the rotation stores and
+    stores after it writes the retired token back, while `rotate` has already printed success and handed out
+    a code nobody holds.
+    """
+    import threading
+
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    scope = profile.name
+    bob = peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False)
+    holding, rotated, raced = threading.Event(), threading.Event(), []
+
+    written = cmd_collab.set_key
+
+    def rotating(*args):
+        written(*args)
+        rotated.set()
+
+    monkeypatch.setattr(cmd_collab, 'set_key', rotating)
+
+    def endpoint_merge():
+        """Merge a newly gossiped peer, as the daemon's endpoint does whenever a peer makes contact."""
+        with mutate_config(config_with_profile) as stored:
+            peers = stored.get_option(OPTION_PEERS, scope=scope)
+            holding.set()
+            # Held open for longer than a rotation takes: what the rotation must not do is write in here, and
+            # the wait ends early exactly when it did.
+            raced.append(rotated.wait(timeout=1.0))
+            stored.set_option(OPTION_PEERS, {**peers, 'uuid-of-bob': bob}, scope=scope)
+
+    thread = threading.Thread(target=endpoint_merge)
+    thread.start()
+
+    assert holding.wait(timeout=30), 'the merge never got as far as reading the roster'
+
+    result = run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    thread.join(timeout=30)
+
+    stored = Config.from_file(config_with_profile.filepath)
+
+    assert stored.get_option(OPTION_TOKEN, scope=scope) == printed_code(result).token != TOKEN, (
+        'the rotation stands: the key on the file is the one the printed code hands out'
+    )
+    assert stored.get_option(OPTION_PEERS, scope=scope) == {
+        PEER_UUID: peer_entry(active=False),
+        'uuid-of-bob': {**bob, 'active': False},
+    }, 'the merged entry stands too: the rotation read it and rested it with the rest of the roster'
+    assert raced == [False], 'the rotation waited for the merge rather than writing inside its window'
+
+
+def test_rekey_announces_without_reverting_what_the_daemon_merged(
+    run_cli_command, config_with_profile, stub_join, monkeypatch
+):
+    """Test that announcing a rekey keeps a roster entry the endpoint merged while the command was running.
+
+    The stamp a member raises when it moved while it was dormant is written onto the file as it is now. It
+    used to be stored from the configuration the command had loaded at startup, which reverted every entry
+    gossiped in between — and, a store writing the whole document, other profiles' options with it.
+    """
+    # Moved while dormant: the endpoint listens on 9137, but 9000 is the address the peers were last told.
+    init_collab(config_with_profile, **{OPTION_ANNOUNCED: 'http://127.0.0.1:9000'})
+
+    profile = get_profile()
+    scope = profile.name
+    bob = peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False)
+    announcing = cmd_collab.announce
+
+    def announce(config, profile, **keywords):
+        # The endpoint merges a peer somebody gossiped to it, in the window between the new key being written
+        # and this profile announcing itself under it.
+        daemon = Config.from_file(config_with_profile.filepath)
+        peers = {**daemon.get_option(OPTION_PEERS, scope=scope), 'uuid-of-bob': bob}
+        daemon.set_option(OPTION_PEERS, peers, scope=scope)
+        daemon.store()
+
+        return announcing(config, profile, **keywords)
+
+    monkeypatch.setattr(cmd_collab, 'announce', announce)
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+
+    stored = Config.from_file(config_with_profile.filepath)
+
+    assert stored.get_option(OPTION_PEERS, scope=scope) == {PEER_UUID: peer_entry(), 'uuid-of-bob': bob}, (
+        'the entry the endpoint merged survives the announcement, and the issuer is back out of dormancy'
+    )
+    assert stored.get_option(OPTION_STAMP, scope=scope) == 2
+    assert stored.get_option(OPTION_ANNOUNCED, scope=scope) == 'http://127.0.0.1:9137'
+    assert stub_join[0][1]['stamp'] == 2, 'the raised stamp is what makes the issuer take the new address over'
+
+
+def test_rekey_refuses_this_profiles_own_code(run_cli_command, config_with_profile):
+    """Test that the one code that cannot help is refused before it dormants the roster.
+
+    Every member's `verdi status` prints a code, this profile's own included, and `rekey` sends the user there
+    for one — but one's own endpoint is the only member that can teach one nothing.
+    """
+    init_collab(config_with_profile)
+
+    own = rekey_code(url='http://127.0.0.1:9137')
+    result = run_cli_command(cmd_collab.collab_rekey, [own], use_subprocess=False, raises=True)
+
+    assert 'this very profile' in result.output
+    assert config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name) == {PEER_UUID: peer_entry()}
+
+
+def test_rekey_with_a_superseded_code_says_so(run_cli_command, config_with_profile, monkeypatch):
+    """Test that a code the issuer itself refuses is reported as superseded, not as waiting for contact.
+
+    A code minted before its issuer rotated again leaves this profile holding a key no member accepts: nobody
+    can reach it and it can reach nobody, so telling the user to wait for a contact would be a false promise.
+    """
+    from http import HTTPStatus
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+
+    def refused(self, entry):
+        raise CollabRequestError('responded 401', status=HTTPStatus.UNAUTHORIZED)
+
+    monkeypatch.setattr(CollabClient, 'join', refused)
+
+    result = run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False, raises=True)
+
+    assert 'superseded by a later rotation' in result.output
+
+
+def test_rekey_refuses_a_code_of_another_collab(run_cli_command, config_with_profile):
+    """Test that a code of a different collab is refused naming both, and changes nothing.
+
+    Rotation keeps the identity of a collab, so a code naming another one can only be somebody else's — and
+    adopting its token would leave this profile unable to talk to either side.
+    """
+    init_collab(config_with_profile)
+
+    result = run_cli_command(
+        cmd_collab.collab_rekey, [rekey_code(collab='uuid-of-another-collab')], use_subprocess=False, raises=True
+    )
+
+    assert 'uuid-of-another-collab' in result.output
+    assert COLLAB_UUID in result.output
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name) == TOKEN
+
+
+def test_rekey_resumes_at_the_cursor_it_had(
+    run_cli_command, config_with_profile, stub_join, stub_environment, stub_transfer
+):
+    """Test that a member that rekeys picks up where it stopped: same cursor, nothing re-transferred.
+
+    Cursors key on the profile UUID and dormancy keeps the entry, so a rotation costs a member nothing beyond
+    the code it has to be handed.
+    """
+    init_collab(config_with_profile)
+
+    cursor = timezone.now()
+    state = CollabState.load(get_profile())
+    state.cursors[PEER_UUID] = cursor
+    state.save()
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert stub_transfer[0] == ('negotiate', cursor, set()), 'nothing already held is asked for again'
+
+
+def reload_peers(config, profile):
+    """Adopt the roster as the endpoint left it on the file, as the next `verdi` process reads it."""
+    stored = Config.from_file(config.filepath).get_option(OPTION_PEERS, scope=profile.name)
+    config.set_option(OPTION_PEERS, stored, scope=profile.name)
+
+
+def test_branching_and_reunion(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, stub_signal, monkeypatch
+):
+    """Test the whole lifecycle from the side of the member that rotates: split, sync within, reunion.
+
+    Two members rekey and one does not. The one that does not is neither contacted nor visible, and syncing
+    goes on within the branch. When it rekeys later it is recognized by its UUID — same entry, same cursor —
+    and the branches are one collab again, which is what keeping the collab UUID across a rotation buys.
+    """
+    from unittest.mock import MagicMock
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.endpoint import CollabEndpoint
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+        },
+    )
+
+    profile = get_profile()
+    state = CollabState.load(profile)
+    state.cursors['uuid-of-bob'] = timezone.now()
+    state.save()
+
+    # Rotating puts both peers out of reach until they come back under the new token.
+    run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False, raises=True)
+
+    assert stub_transfer == [], 'a rotation stops every peer from being contacted until one of them rekeys'
+
+    # Alice rekeys and announces herself to this profile: that inbound contact is what brings her back. It arrives
+    # at `join`, which is the one route `announce` calls and the one a rekey is admitted through.
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+    endpoint.join({'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1})
+    reload_peers(config_with_profile, profile)
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert [call for call in stub_transfer if call[0] == 'negotiate'] == [('negotiate', None, set())], (
+        'the branch syncs within itself and never reaches across to the members that stayed behind'
+    )
+
+    # Bob rekeys much later, is recognized by his UUID and resumes at the cursor his dormant entry kept.
+    stub_transfer.clear()
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kw: make_peer_info(uuid='uuid-of-bob')
+    )
+    bob = {'uuid': 'uuid-of-bob', 'url': 'http://100.64.0.3:9137', 'name': 'bob', 'stamp': 1}
+    endpoint.join(bob)
+    reload_peers(config_with_profile, profile)
+
+    run_cli_command(cmd_collab.collab_pull, ['bob', '--force'], use_subprocess=False)
+
+    assert stub_transfer[0] == ('negotiate', state.cursors['uuid-of-bob'], set())
+
+
+def test_gossip_reactivates_a_third_member(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test the relay: C rekeys through B, and A learns that C is back from B's gossip alone.
+
+    A never contacts C — nobody polls a dormant peer — so without this path a member that rekeyed through
+    somebody else would stay invisible to everyone it did not personally call.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import DeltaManifest
+
+    carol_url = 'http://100.64.0.4:9137'
+
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-carol': peer_entry(url=carol_url, nickname='carol', active=False)},
+    )
+
+    def negotiate_delta(self, cursor, claim, roster=None):
+        # B vouches for C, having just seen it under the current token; it says nothing about anyone else.
+        return DeltaManifest(
+            manifest=[],
+            instant=OFFER_INSTANT,
+            roster=[{'uuid': 'uuid-of-carol', 'url': carol_url, 'name': 'carol', 'stamp': 1}],
+        )
+
+    monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiate_delta)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['alice', '--force'], use_subprocess=False)
+
+    peers = config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)
+
+    assert peers['uuid-of-carol']['active'] is True
+    assert peers['uuid-of-carol']['nickname'] == 'carol', 'a vouched member is the one that was there, not a new one'
+    assert 'carol` is back' in result.output, 'membership is auto-trusted, but never silent'
+
+
+def test_pull_without_collab(run_cli_command, config_with_profile):
+    """Test that a profile which is not part of a collab refuses to pull, as it refuses every other collab command.
+
+    Leaving a collab is switching `collab.enabled` off, so this guard is what stops the sync half of it; the
+    endpoint half is the daemon watcher, covered in `tests/tools/collab/test_endpoint.py`.
+    """
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False, raises=True)
+
+    assert 'not part of a collab' in result.output
+
+
+def test_log_without_events(run_cli_command, config_with_profile):
+    """Test that ``verdi collab log`` reports that nothing was synced yet instead of failing."""
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False)
+
+    assert 'no sync events recorded yet' in result.output
+
+
+def test_log(run_cli_command, config_with_profile):
+    """Test that ``verdi collab log`` shows one row per event, with the peer shown under its nickname."""
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    state = CollabState.load(profile)
+    state.events.append(
+        CollabEvent(time=timezone.now(), direction='push', peer=PEER_UUID, uuids=['uuid-one', 'uuid-two'], size=1024)
+    )
+    state.save()
+
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False)
+    row = next(line for line in result.output_lines if 'push' in line)
+
+    assert row.split() == [state.events[0].time.isoformat(timespec='seconds'), 'push', PEER, '2', '1024']
+
+
+def test_log_without_collab(run_cli_command, config_with_profile):
+    """Test that ``verdi collab log`` aborts on a profile that is not part of a collab."""
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False, raises=True)
+
+    assert 'not part of a collab' in result.output
+
+
+def test_complete_peer(run_cli_command, config_with_profile):
+    """Test that the PEER argument completes to the nicknames of the collab, from the configuration alone."""
+    import click
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+            'uuid-of-amir': peer_entry(url='http://100.64.0.4:9137', nickname='amir', active=False),
+        },
+    )
+
+    ctx = click.Context(cmd_collab.collab_pull)
+    completions = [item.value for item in cmd_collab.complete_peer(ctx, None, 'a')]
+
+    assert completions == ['alice'], 'a dormant peer is not offered: the command would only refuse it'
+
+
+def make_peer_info(**overrides):
+    from aiida.tools.collab.protocol import PeerInfo
+
+    values = {
+        'version': '2.9.0',
+        'backend': 'core.sqlite_dos',
+        'storage_schema': 'main_0002',
+        'archive_schema': 'main_0001',
+        'pending_count': 7,
+        'accept_push': True,
+        'extras_mode': 'local',
+        'groups_mode': 'local',
+        'uuid': PEER_UUID,
+        'collab': COLLAB_UUID,
+    }
+    values.update(overrides)
+    return PeerInfo(**values)
+
+
+@pytest.fixture
+def stub_environment(monkeypatch):
+    """Stub the storage backend, the local handshake and the session release, none of which CLI tests touch for real."""
+    from unittest.mock import MagicMock
+
+    from aiida.manage import get_manager
+    from aiida.tools.collab import endpoint
+    from aiida.tools.collab.client import CollabClient
+
+    monkeypatch.setattr(get_manager(), 'get_profile_storage', MagicMock())
+    monkeypatch.setattr(endpoint, 'local_info', lambda profile, backend: make_peer_info(pending_count=3))
+    # An abandoned transfer tells the peer so; here that is the one call left talking to an address nobody
+    # answers at. That it happens at all is covered over the wire, in `tests/tools/collab/test_e2e_failures.py`.
+    monkeypatch.setattr(CollabClient, 'release', lambda self: None)
+
+
+def test_pull_rejects_pause_my_daemon(run_cli_command, config_with_profile):
+    """Test that the pause is no longer something to ask for: the option that used to be required is gone."""
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--pause-my-daemon'], use_subprocess=False, raises=True)
+
+    assert result.exit_code == 2
+    assert 'no such option' in result.output.lower()
+
+
+def test_pull_unknown_peer(run_cli_command, config_with_profile, stub_environment):
+    """Test that a pull naming an unknown nickname aborts, listing the known ones."""
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['bob'], use_subprocess=False, raises=True)
+
+    assert 'unknown peer(s) bob' in result.output
+    assert PEER in result.output
+
+
+@pytest.fixture
+def storage(tmp_path, monkeypatch):
+    """Return a real storage for the loaded profile, which is what a computer mapping is resolved against.
+
+    `stub_environment` mocks the storage away, which is right for the commands that make no query at all; the
+    ones whose subject *is* a lookup — every refusal of a mapping — need one that answers.
+    """
+    from aiida.manage import get_manager
+    from aiida.storage.sqlite_temp import SqliteTempBackend
+
+    backend = SqliteTempBackend(SqliteTempBackend.create_profile(filepath=str(tmp_path / 'storage')))
+    monkeypatch.setattr(get_manager(), 'get_profile_storage', lambda: backend)
+
+    yield backend
+
+    backend.close()
+
+
+def test_pull_refuses_a_stale_computer_map(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, storage, monkeypatch
+):
+    """Test that a mapping naming a computer this profile does not have aborts before any peer is contacted.
+
+    Unlike a delta that cannot land, it is not one peer's answer: it would refuse every peer's delta identically,
+    so it is refused up front rather than after each download.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile, **{OPTION_COMPUTER_MAP: {'lumi': 'missing'}})
+
+    # Recorded too, so that "nobody was contacted" covers the handshake the loop opens with and not only the
+    # negotiation after it.
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: stub_transfer.append('info'))
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False, raises=True)
+
+    assert 'collab.computer_map' in result.output
+    assert 'missing' in result.output
+    assert stub_transfer == [], 'a peer was contacted before the mapping was resolved'
+
+
+OFFER_INSTANT = timezone.now()
+OFFER_COMPUTED = OFFER_INSTANT + timedelta(seconds=1)
+"""Distinct from the export instant, which a withheld seed pins: the request has to echo this one."""
+
+
+@pytest.fixture
+def stub_transfer(monkeypatch):
+    """Stub the negotiation, download and import of a pull, recording circus commands and sync kwargs in order."""
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import DeltaManifest, DeltaOffer
+    from aiida.tools.collab.sync import DeltaReport
+
+    calls = []
+
+    def negotiate_delta(self, cursor, claim, roster=None):
+        calls.append(('negotiate', cursor, set(claim)))
+        return DeltaManifest(manifest=['uuid-offered', 'uuid-held'], instant=OFFER_INSTANT, computed=OFFER_COMPUTED)
+
+    def missing_uuids(backend, uuids):
+        return [uuid for uuid in uuids if uuid != 'uuid-held']
+
+    def request_delta(self, cursor, claim, want, refresh_want=frozenset(), refuse=frozenset(), computed=None):
+        calls.append(('request', set(want), set(refuse), computed))
+        # A later instant than the negotiated one, as served by a peer that recomputed its delta in between:
+        # the import must advance the cursor to the negotiated instant, not this one, or in-window nodes are
+        # silently never delivered.
+        return DeltaOffer(delta='0' * 64, instant=OFFER_INSTANT + timedelta(minutes=1), size=5)
+
+    def download_delta(self, filepath, delta_id, progress=None):
+        filepath.write_bytes(b'delta')
+        return len(b'delta')
+
+    def import_delta(filepath, **kwargs):
+        calls.append(('import', kwargs['include_deleted'], kwargs['instant']))
+        return DeltaReport(uuids=['uuid-offered'], skipped=[], size=5)
+
+    monkeypatch.setattr(DaemonClient, 'call_client', lambda self, command: calls.append(command) or {})
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiate_delta)
+    monkeypatch.setattr(CollabClient, 'request_delta', request_delta)
+    monkeypatch.setattr(CollabClient, 'download_delta', download_delta)
+    monkeypatch.setattr(sync, 'missing_uuids', missing_uuids)
+    monkeypatch.setattr(sync, 'import_delta', import_delta)
+
+    return calls
+
+
+def test_pull_on_sqlite_pauses_the_workers(
+    run_cli_command, config_with_profile_factory, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a SQLite pull with a running daemon stops the workers around the import and says so."""
+    from aiida.engine.daemon.client import DaemonClient
+
+    init_collab(config_with_profile_factory(storage_backend='core.sqlite_dos'))
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    name = f'aiida-{get_profile().name}'
+    assert stub_transfer == [
+        ('negotiate', None, set()),
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
+        {'command': 'stop', 'properties': {'name': name, 'waiting': True}},
+        ('import', False, OFFER_INSTANT),
+        {'command': 'start', 'properties': {'name': name, 'waiting': True}},
+    ]
+    assert 'pausing the daemon workers' in result.output
+    assert 'pulled 1 node(s)' in result.output
+
+
+def test_pull_on_sqlite_announces_no_pause_it_does_not_make(
+    run_cli_command, config_with_profile_factory, stub_environment, monkeypatch
+):
+    """Test that a SQLite pull whose peer never answers pauses nothing and says nothing about pausing."""
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile_factory(storage_backend='core.sqlite_dos'))
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
+
+    def offline(self, local, **kwargs):
+        raise CollabRequestError('the peer is not there')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', offline)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert 'pausing the daemon workers' not in result.output
+
+
+def test_pull_on_postgresql_pauses_nothing(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a running daemon is left alone on storage that takes a second writer."""
+    from aiida.engine.daemon.client import DaemonClient
+
+    init_collab(config_with_profile)
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert [call for call in stub_transfer if isinstance(call, dict)] == []
+    assert 'pausing the daemon workers' not in result.output
+
+
+def test_pull_announces_every_step(run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch):
+    """Test that a pull names each step *before* it takes it.
+
+    A first negotiation against a large profile legitimately runs for minutes; a terminal that says nothing for
+    minutes is one people interrupt. Interleaved with the calls themselves, so that an announcement moved after
+    the step it describes — which is the silence coming back — fails here.
+    """
+    from aiida.cmdline.utils import echo
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile)
+
+    monkeypatch.setattr(
+        CollabClient,
+        'check_version_skew',
+        lambda self, local, **kwargs: stub_transfer.append('info') or make_peer_info(),
+    )
+
+    def download_delta(self, filepath, delta_id, progress=None):
+        filepath.write_bytes(b'delta')
+        stub_transfer.append(('download', callable(progress)))
+        return len(b'delta')
+
+    monkeypatch.setattr(CollabClient, 'download_delta', download_delta)
+
+    report = echo.echo_report
+    monkeypatch.setattr(echo, 'echo_report', lambda message, **kwargs: stub_transfer.append(message) or report(message))
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert stub_transfer == [
+        f'contacting {PEER} at {PEER_URL}',
+        'info',
+        f'negotiating with {PEER} (a first sync of a large profile can take a while)',
+        ('negotiate', None, set()),
+        'requesting the delta',
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
+        # The bar is handed to the client to report into: without it a real pull draws one that never moves.
+        ('download', True),
+        'importing 1 node(s)',
+        ('import', False, OFFER_INSTANT),
+    ]
+
+
+def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, stub_environment, stub_transfer):
+    """Test that a pull presents the cursor of the peer and claims the imported nodes, but no tombstone.
+
+    A deletion is defended at the manifest diff now, so nothing about it rides in the claim — which is what keeps
+    a large deleted campaign off every negotiation forever.
+    """
+    init_collab(config_with_profile)
+
+    cursor = timezone.now()
+    state = CollabState.load(get_profile())
+    state.cursors[PEER_UUID] = cursor
+    state.tombstones.add('uuid-dead')
+    state.events.append(
+        CollabEvent(time=timezone.now(), direction='pull', peer='http://other:9137', uuids=['uuid-held'], size=1)
+    )
+    state.save()
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert stub_transfer == [
+        ('negotiate', cursor, {'uuid-held'}),
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
+        ('import', False, OFFER_INSTANT),
+    ]
+
+
+def test_pull_refuses_its_tombstones_at_the_diff(run_cli_command, config_with_profile, stub_environment, stub_transfer):
+    """Test that an offered node this profile deleted is refused with the export request instead of asked for.
+
+    ``uuid-held`` is tombstoned too, and must *not* be refused: a node can be held and tombstoned at once, since a
+    restoration keeps the tombstone, and refusing one the profile holds would make the sender drop links both ends
+    have. Only what the diff reports missing may be refused.
+    """
+    init_collab(config_with_profile)
+
+    state = CollabState.load(get_profile())
+    state.tombstones.update({'uuid-offered', 'uuid-held'})
+    state.save()
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert stub_transfer == [
+        ('negotiate', None, set()),
+        ('request', set(), {'uuid-offered'}, OFFER_COMPUTED),
+        ('import', False, OFFER_INSTANT),
+    ]
+
+
+def test_pull_include_deleted(run_cli_command, config_with_profile, stub_environment, stub_transfer):
+    """Test that ``--include-deleted`` rewinds the cursor, refuses nothing and drops tombstones from the claim."""
+    init_collab(config_with_profile)
+
+    state = CollabState.load(get_profile())
+    state.cursors[PEER_UUID] = timezone.now()
+    state.tombstones.update({'uuid-dead', 'uuid-offered'})
+    state.events.append(
+        CollabEvent(time=timezone.now(), direction='pull', peer=PEER_UUID, uuids=['uuid-held', 'uuid-dead'], size=1)
+    )
+    state.save()
+
+    run_cli_command(cmd_collab.collab_pull, ['--include-deleted', '--force'], use_subprocess=False)
+
+    assert stub_transfer == [
+        ('negotiate', None, {'uuid-held'}),
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
+        ('import', True, OFFER_INSTANT),
+    ]
+
+
+def test_pull_prompts_and_decline_leaves_no_trace(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer
+):
+    """Test that a pull prompts with the count it asked for and the size, and that declining writes nothing."""
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    peers_before = config_with_profile.get_option(OPTION_PEERS, scope=profile.name)
+
+    # A bare Enter, which now declines: the prompt defaults to no, so nothing moves by inattention.
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False, user_input='\n')
+
+    assert f'pull 1 node(s) (5 bytes) from {PEER}? [y/N]' in result.output
+    assert f'skipped {PEER}' in result.output
+    assert [call[0] for call in stub_transfer] == ['negotiate', 'request'], 'nothing may be transferred or imported'
+    assert not CollabState.get_filepath(profile).exists(), 'no cursor or event may be recorded'
+    assert config_with_profile.get_option(OPTION_PEERS, scope=profile.name) == peers_before
+
+
+def test_pull_dry_run(run_cli_command, config_with_profile, stub_environment, stub_transfer):
+    """Test that ``--dry-run`` reports the pending count per peer after the manifest diff and stops there."""
+    init_collab(config_with_profile)
+
+    scope = get_profile().name
+    # This machine's endpoint moved, so a sync would announce the new address under a raised stamp.
+    config_with_profile.set_option(OPTION_PORT, 9200, scope=scope)
+    config_with_profile.store()
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--dry-run'], use_subprocess=False)
+
+    assert f'{PEER}: 1 node(s) to pull' in result.output
+    assert [call[0] for call in stub_transfer] == ['negotiate'], 'no archive may be requested, let alone imported'
+    assert not CollabState.get_filepath(get_profile()).exists()
+
+    # Read from the file, since that is where a sync writes the stamp and the announcement.
+    stored = Config.from_file(config_with_profile.filepath)
+
+    assert stored.get_option(OPTION_STAMP, scope=scope) == 1, 'a report-only run must stamp nothing'
+    assert stored.get_option(OPTION_ANNOUNCED, scope=scope) == 'http://127.0.0.1:9137'
+
+
+def test_pull_verifies_identity(run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch):
+    """Test that a URL answering with another profile UUID than the entry's key is refused before anything travels.
+
+    A reprovisioned machine, or a stranger, must not inherit the sync history of the profile that URL used to hold.
+    """
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile)
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(uuid='uuid-of-somebody-else')
+    )
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert 'is not the one this collab knows' in result.output
+    assert stub_transfer == []
+
+
+def test_pull_refuses_a_foreign_collab(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a peer serving another collab is refused naming both, so a shared token cannot splice two."""
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile)
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(collab='another-collab')
+    )
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert 'another-collab' in result.output
+    assert COLLAB_UUID in result.output
+    assert stub_transfer == []
+
+
+def test_pull_refuses_a_peer_declaring_another_policy(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a peer declaring a different policy is refused naming both, and that the loop goes on.
+
+    The policy is fixed when the collab is created and travels in the join code, so a mismatch can only mean a
+    hand-edited configuration — here staged the way a user would produce it, by editing the stored policy.
+    """
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob')},
+    )
+
+    scope = get_profile().name
+    config_with_profile.set_option(OPTION_POLICY, {'extras_mode': 'sync', 'groups_mode': 'local'}, scope=scope)
+    monkeypatch.setattr(
+        CollabClient,
+        'check_version_skew',
+        lambda self, local, **kwargs: make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-bob'),
+    )
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert result.output.count('refusing to sync') == 2, 'both peers declare the collab policy, this profile another'
+    assert 'extras `local`' in result.output, 'the policy the peers declare'
+    assert 'extras `sync`' in result.output, 'the policy this profile holds'
+    assert 'fixed when it is created' in result.output
+    assert stub_transfer == [], 'nothing may travel with the two sides disagreeing'
+
+
+def test_pull_refuses_a_changed_policy_and_continues(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that one peer's mismatch does not stop the sync with the others, like every other per-peer refusal."""
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob')},
+    )
+
+    def check_version_skew(self, local, **kwargs):
+        if PEER_URL in self._base_url:
+            return make_peer_info(extras_mode='sync')
+
+        return make_peer_info(uuid='uuid-of-bob')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert f'refusing to sync with {PEER}' in result.output
+    assert 'pulled 1 node(s)' in result.output, 'the peer that agrees is synced with all the same'
+
+
+def test_pull_records_the_contact_without_pinning_a_policy(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer
+):
+    """Test that a completed sync leaves the peer entry with nothing but its identity and its standing.
+
+    The policy is no longer duplicated onto every link — it is the collab's, held once — so what marks a peer as
+    paired is its profile UUID and nothing else.
+    """
+    init_collab(config_with_profile, peers={PEER_UUID: peer_entry(seen=False)})
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    peers = config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)
+
+    assert peers == {PEER_UUID: peer_entry(seen=True)}, 'the contact proves the address and pins no policy'
+
+
+def test_pull_reports_the_membership_count(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a sync carrying no nodes at all still prompts, naming how many memberships it would add.
+
+    The headline case of the curation exchange: everything the peer has already travelled, so the only thing
+    left to move is the membership — which makes it a real sync, not a bookkeeping one that passes unasked.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import GroupMembers
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'local', 'groups_mode': 'grow'}})
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(groups_mode='grow')
+    )
+    monkeypatch.setattr(sync, 'missing_uuids', lambda backend, uuids: [])
+    monkeypatch.setattr(
+        sync,
+        'members_wanted',
+        lambda backend, offer: [
+            GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])
+        ],
+    )
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--dry-run', '--force'], use_subprocess=False)
+
+    assert f'{PEER}: 0 node(s) to pull, 1 group membership(s) to add' in result.output
+
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False, user_input='\n')
+
+    assert 'pull 0 node(s)' in result.output
+    assert 'adding 1 group membership(s)' in result.output
+    assert f'skipped {PEER}.' in result.output, 'a bare Enter declines a sync that is only memberships too'
+
+
+def test_pull_reports_the_refresh_count(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that the pull prompt and its dry run name how many nodes' extras an incoming refresh replaces."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'sync', 'groups_mode': 'local'}})
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(extras_mode='sync')
+    )
+    monkeypatch.setattr(sync, 'refresh_wanted', lambda backend, offer: ['uuid-stale'])
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--dry-run', '--force'], use_subprocess=False)
+
+    assert f'{PEER}: 1 node(s) to pull, extras of 1 node(s) to be replaced by theirs' in result.output
+
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False, user_input='n\n')
+
+    assert 'letting their extras replace yours on 1 node(s)' in result.output
+
+
+def test_pull_keys_the_cursor_by_profile_uuid(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that the cursor a pull presents and advances is the one held under the peer's profile UUID."""
+    from aiida.tools.collab import sync
+
+    init_collab(config_with_profile)
+
+    imports = []
+
+    def import_delta(filepath, **kwargs):
+        imports.append(kwargs['peer'])
+        return sync.DeltaReport(uuids=['uuid-offered'], skipped=[], size=5)
+
+    monkeypatch.setattr(sync, 'import_delta', import_delta)
+
+    cursor = timezone.now()
+    state = CollabState.load(get_profile())
+    state.cursors[PEER_UUID] = cursor
+    state.save()
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert imports == [PEER_UUID]
+    assert stub_transfer[0] == ('negotiate', cursor, set())
+
+
+def test_pull_gossips_a_move(run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch):
+    """Test that a changed address travels: this profile announces its own, and relays a peer's to a third one.
+
+    Nobody can discover an address nobody knows, so a move is repaired by the mover initiating one sync; from
+    there the raised stamp is what lets the correction win wherever it arrives.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import DeltaManifest
+
+    moved = 'http://100.64.0.9:9137'
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+            'uuid-of-carol': peer_entry(url='http://100.64.0.4:9137', nickname='carol'),
+        },
+    )
+
+    profile = get_profile()
+
+    # This machine moved to another port: its own configuration is corrected, and the next sync spreads it.
+    config_with_profile.set_option(OPTION_PORT, 9200, scope=profile.name)
+    config_with_profile.store()
+
+    gossiped = []
+
+    def negotiate_delta(self, cursor, claim, roster=None):
+        gossiped.append(roster)
+        # Alice has bob's own announcement, whose raised stamp is what makes it supersede the address held here,
+        # and announces that she has moved too — while still answering at the address this profile reached her at.
+        theirs = [
+            {'uuid': 'uuid-of-bob', 'url': moved, 'name': 'bob', 'stamp': 2},
+            {'uuid': PEER_UUID, 'url': 'http://100.64.0.8:9137', 'name': PEER, 'stamp': 2},
+        ]
+
+        return DeltaManifest(manifest=[], instant=OFFER_INSTANT, roster=theirs if PEER_URL in self._base_url else [])
+
+    monkeypatch.setattr(
+        CollabClient,
+        'check_version_skew',
+        lambda self, local, **kwargs: make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-carol'),
+    )
+    monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiate_delta)
+
+    result = run_cli_command(cmd_collab.collab_pull, [PEER, 'carol', '--force'], use_subprocess=False)
+
+    peers = config_with_profile.get_option(OPTION_PEERS, scope=profile.name)
+
+    assert gossiped[0][0] == {
+        'uuid': profile.uuid,
+        'url': 'http://127.0.0.1:9200',
+        'name': profile.name,
+        'stamp': 2,
+    }, 'the mover announces its new address under a raised stamp'
+    assert peers['uuid-of-bob'] == peer_entry(url=moved, nickname='bob', stamp=2, seen=False)
+    assert peers[PEER_UUID]['url'] == 'http://100.64.0.8:9137'
+    assert peers[PEER_UUID]['seen'] is False, 'answering at the old address is no proof of the new one'
+    assert f'peer `bob` moved to {moved}' in result.output
+    assert {'uuid': 'uuid-of-bob', 'url': moved, 'name': 'bob', 'stamp': 2} in gossiped[1], (
+        'the second contact of the same run relays what the first one taught'
+    )
+
+
+def test_pull_flags_a_peer_that_never_answered(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a peer which has never answered is called out apart from one that is merely down.
+
+    An address announced at join is only ever proven by a contact — a joiner's endpoint starts with its daemon,
+    long after the join finished — so a wrong one surfaces here and nowhere else.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile, peers={PEER_UUID: peer_entry(seen=False)})
+
+    def offline(self, local, **kwargs):
+        raise CollabRequestError('connection refused')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', offline)
+
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False)
+
+    assert f'skipping never-answering peer {PEER}' in result.output
+
+
+def test_pull_does_not_call_a_peer_that_answered_offline(
+    run_cli_command, config_with_profile, stub_environment, monkeypatch
+):
+    """Test that a peer refusing the key is skipped as itself, not reported as unreachable.
+
+    After a rotation this is the routine outcome for every member that has not rekeyed yet: the peer is up and
+    answers, and what it answers — with the rekey hint in it — is the whole message.
+    """
+    from http import HTTPStatus
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import REKEY_HINT, CollabRequestError
+
+    init_collab(config_with_profile)
+
+    def refused(self, local, **kwargs):
+        raise CollabRequestError(f'responded 401: {REKEY_HINT}', status=HTTPStatus.UNAUTHORIZED)
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', refused)
+
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False)
+
+    assert f'skipping peer {PEER}' in result.output
+    assert 'offline' not in result.output
+    assert 'verdi collab rekey' in result.output
+
+
+def test_pull_version_skew(run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch):
+    """Test that a peer whose archives this profile cannot read is warned about and skipped, not fatal.
+
+    The middle peer of the three is skewed: an aiida-core that is too new on one machine must not stop the sync
+    with everybody else, exactly as an offline or push-refusing peer does not.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import VersionSkew
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+            'uuid-of-carol': peer_entry(url='http://100.64.0.4:9137', nickname='carol'),
+        },
+    )
+
+    directions = []
+
+    def check_version_skew(self, local, *, direction):
+        directions.append(direction)
+
+        if 'http://100.64.0.3:9137' in self._base_url:
+            raise VersionSkew('the peer runs a newer version')
+
+        return make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-carol')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert result.output.count('the peer runs a newer version') == 1, 'the skewed peer is warned about once'
+    assert 'skipping peer bob' in result.output
+    assert result.output.count('pulled 1 node(s)') == 2, 'the other two peers sync all the same'
+    assert directions == ['pull'] * 3, 'the pull must be checked in the direction the delta would travel'
+
+
+def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a push exports against the receiver's handshake and that a retry reuses the delta and instant."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import CollabRequestError, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    computes = []
+    exports = []
+    handshakes = []
+    imports = []
+    instant = timezone.now()
+    receiver_cursor = timezone.now()
+    delta = Delta(uuid_by_pk={1: 'uuid-one', 2: 'uuid-held'}, links=[], instant=instant, computed=instant)
+
+    def push_handshake(self, requester, roster=None):
+        handshakes.append(requester)
+        return PushHandshake(busy=False, cursor=receiver_cursor, claim=['uuid-claimed'])
+
+    def compute_delta(*, state, backend, cursor, claim=frozenset()):
+        computes.append((cursor, set(claim)))
+        return delta
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        exports.append(set(want))
+        return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
+
+    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None, members=None):
+        raise CollabRequestError('the peer failed to import')
+
+    monkeypatch.setattr(sync, 'compute_delta', compute_delta)
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=['uuid-one'], refresh=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
+    )
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_failing)
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False, raises=True)
+
+    assert 'files transferred, provenance not landed' in result.output
+    assert result.exit_code != 0
+    assert computes == [(receiver_cursor, {'uuid-claimed'})], 'the delta must be bounded by the handshake'
+    assert exports == [{'uuid-one'}], 'only what the receiver reported missing may be exported and uploaded'
+
+    profile = get_profile()
+    state = CollabState.load(profile)
+    assert state.events == []
+
+    # The retry has to reuse the exported delta: the same bytes are what the peer already staged, and the
+    # original instant is what describes them.
+    def trigger_import(self, sha256, *, peer, instant, refresh=None, members=None):
+        imports.append((peer, instant))
+        return {'uuids': ['uuid-one']}
+
+    monkeypatch.setattr(
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=0, staged=5),
+    )
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import)
+
+    # Not forced, because the retry reaches the confirmation prompt without having negotiated anything: whatever
+    # the prompt reports has to be sound on a path that computed none of it.
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False, user_input='y\n')
+
+    assert 'push 1 node(s) (5 bytes) to alice?' in result.output
+    assert len(exports) == 1, 'the retry should not export a new delta'
+    assert 'retrying the delta of the previous failed push' in result.output
+    assert 'transferred 0 bytes' in result.output
+
+    identity = profile.uuid
+    assert handshakes == [identity, identity], 'the pusher identifies itself with its profile UUID'
+    assert imports == [(identity, instant)]
+
+    state = CollabState.load(profile)
+    assert state.cursors == {}, 'the sender keeps no send-state; what the peer holds is tracked on its side'
+    assert [(event.direction, event.peer, event.uuids) for event in state.events] == [
+        ('push', PEER_UUID, ['uuid-one'])
+    ], 'the event keys the peer by its profile UUID'
+
+
+def test_push_announces_every_step(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a push names each step *before* it takes it, interleaved with the calls themselves."""
+    from aiida.cmdline.utils import echo
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    calls = []
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
+
+    def push_handshake(self, requester, roster=None):
+        calls.append('handshake')
+        return PushHandshake(busy=False, cursor=None, claim=[])
+
+    def upload_delta(self, filepath, progress=None):
+        calls.append(('upload', callable(progress)))
+        return UploadReport(sha256='0' * 64, sent=5, staged=5)
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: calls.append('info') or make_peer_info()
+    )
+    monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'upload_delta', upload_delta)
+    monkeypatch.setattr(CollabClient, 'trigger_import', lambda self, sha256, **kwargs: calls.append('import') or {})
+
+    report = echo.echo_report
+    monkeypatch.setattr(echo, 'echo_report', lambda message, **kwargs: calls.append(message) or report(message))
+
+    run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert calls == [
+        f'contacting {PEER} at {PEER_URL}',
+        'info',
+        f'negotiating with {PEER} (a first sync of a large profile can take a while)',
+        'handshake',
+        # The bar is handed to the client to report into, as on the download.
+        ('upload', True),
+        'transferred 5 bytes, 5 staged on the peer',
+        f'waiting for {PEER} to import',
+        'import',
+    ]
+
+
+def test_push_retry_renegotiates_the_memberships(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a retried push carries the memberships again, though it reuses the bytes of the failed one.
+
+    The import advances the peer's cursor to the stashed instant, past every journal entry older than it, so a
+    curation the failed push had negotiated would never be offered again — and the node it names is shared
+    already, so no later delta could carry it either.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import CollabRequestError, GroupMembers, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'local', 'groups_mode': 'grow'}})
+
+    curation = [GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])]
+    imports = []
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
+
+    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None, members=None):
+        raise CollabRequestError('the peer failed to import')
+
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(groups_mode='grow')
+    )
+    monkeypatch.setattr(
+        CollabClient, 'push_handshake', lambda self, requester, roster=None: PushHandshake(False, None, [])
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=list(uuids), refresh=[], members=members),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
+    )
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(sync, 'membership_offer', lambda **kwargs: curation)
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_failing)
+
+    run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False, raises=True)
+
+    def trigger_import(self, sha256, *, peer, instant, refresh=None, members=None):
+        imports.append(members)
+        return {'uuids': ['uuid-one']}
+
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import)
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert 'retrying the delta of the previous failed push' in result.output
+    assert imports == [curation], 'the retry must offer the curation again, not drop it with the renegotiation'
+
+
+def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a push prompts with the exact count and size, and that declining drops the cut archive."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
+
+    def untouched(*args, **kwargs):
+        raise AssertionError('a declined prompt must stop the push before any upload')
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'upload_delta', untouched)
+
+    # A bare Enter, which now declines: the prompt defaults to no in both directions.
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False, user_input='\n')
+
+    assert f'push 1 node(s) (5 bytes) to {PEER}? [y/N]' in result.output
+    assert f'skipped {PEER}' in result.output
+    assert not CollabState.get_filepath(get_profile()).exists(), 'no event may be recorded'
+
+    workdir = CollabState.get_workdir(get_profile())
+    assert not any(workdir.glob('push-*')), 'the cut archive and its meta file should be dropped'
+
+
+def test_push_dry_run(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that ``--dry-run`` reports the pending count after the manifest diff, exporting nothing."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta
+
+    init_collab(config_with_profile)
+
+    def untouched(*args, **kwargs):
+        raise AssertionError('a dry run must not export or upload anything')
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', untouched)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'upload_delta', untouched)
+
+    result = run_cli_command(cmd_collab.collab_push, ['--dry-run'], use_subprocess=False)
+
+    assert f'{PEER}: 1 node(s) to push' in result.output
+
+
+def test_push_reports_the_refresh_count(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that the push prompt and its dry run name how many nodes' extras the receiver asked for."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ExtrasSnapshot, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'sync', 'groups_mode': 'local'}})
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-stale': timezone.now()})
+    monkeypatch.setattr(
+        sync,
+        'refresh_snapshots',
+        lambda backend, uuids: [ExtrasSnapshot(uuid=uuid, mtime=timezone.now(), extras={}) for uuid in uuids],
+    )
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(extras_mode='sync')
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=['uuid-stale']),
+    )
+
+    result = run_cli_command(cmd_collab.collab_push, ['--dry-run', '--force'], use_subprocess=False)
+
+    assert f'{PEER}: 1 node(s) to push, extras of 1 node(s) to be replaced by yours' in result.output
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False, user_input='n\n')
+
+    assert 'replacing their extras with yours on 1 node(s)' in result.output
+
+
+def test_push_offers_no_refresh_under_local(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a collab that keeps extras local exchanges no refresh metadata, in the push direction either."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta
+
+    init_collab(config_with_profile)
+
+    offered = []
+
+    def diff_manifest(self, uuids, refresh=None, members=None):
+        offered.append(refresh)
+        return ManifestDiff(missing=[], refresh=[])
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-edited': timezone.now()})
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=timezone.now(), claim=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'diff_manifest', diff_manifest)
+
+    run_cli_command(cmd_collab.collab_push, ['--dry-run'], use_subprocess=False)
+
+    assert offered == [{}], 'nothing about extras may be offered to a peer of a collab that keeps them local'
+
+
+def test_push_retry_offers_no_refresh_under_local(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a collab that keeps extras local negotiates none on the retry of a stashed push either.
+
+    Asserted on what the sender offers rather than on what the receiver keeps: a receiver under ``local`` answers
+    every refresh offer with nothing, so its extras staying its own would hold with this gate removed too.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import CollabRequestError, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    offered = []
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
+
+    def diff_manifest(self, uuids, refresh=None, members=None):
+        offered.append(refresh)
+        return ManifestDiff(missing=list(uuids), refresh=[])
+
+    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None, members=None):
+        raise CollabRequestError('the peer failed to import')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=timezone.now(), claim=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'diff_manifest', diff_manifest)
+    monkeypatch.setattr(
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
+    )
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-edited': timezone.now()})
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_failing)
+
+    run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False, raises=True)
+
+    monkeypatch.setattr(
+        CollabClient,
+        'trigger_import',
+        lambda self, sha256, *, peer, instant, refresh=None, members=None: {'uuids': ['uuid-one']},
+    )
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert 'retrying the delta of the previous failed push' in result.output
+    assert offered == [{}, {}], 'a retry of a collab that keeps extras local may offer nothing about them either'
+
+
+def test_push_offers_a_membership_journalled_while_the_delta_was_cut(
+    run_cli_command, config_with_profile, stub_environment, monkeypatch
+):
+    """Test that the push computes its offers from a state read after the instant it exports at.
+
+    The receiver's cursor advances to that instant, so a curation another ``verdi`` run journals while the delta
+    is being cut is behind that cursor the moment the import lands: an offer computed from a state read before
+    the instant would drop it for good. Over-stating is the safe side of the trade — a membership the receiver
+    already holds is dropped by its own diff.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import GroupMembers, ManifestDiff, PushHandshake
+    from aiida.tools.collab.state import Membership
+    from aiida.tools.collab.sync import Delta
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'local', 'groups_mode': 'grow'}})
+
+    offered = []
+
+    def compute_delta(*, state, backend, cursor, claim=frozenset()):
+        instant = timezone.now()
+
+        # The other terminal, curating a node while this push cuts its delta: journalled after the instant this
+        # export carries, which is what puts it in the window the state read has to be on the far side of.
+        with CollabState.mutate(CollabState.get_filepath(get_profile())) as fresh:
+            fresh.memberships.append(Membership(time=timezone.now(), group='uuid-of-group', node='uuid-late'))
+
+        return Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant, computed=instant)
+
+    def membership_offer(*, state, backend, cursor):
+        nodes = [entry.node for entry in state.memberships]
+
+        return [GroupMembers(uuid='uuid-of-group', label='band', type_string='', nodes=nodes)]
+
+    def diff_manifest(self, uuids, refresh=None, members=None):
+        offered.append(members)
+        return ManifestDiff(missing=[], refresh=[], members=[])
+
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(groups_mode='grow')
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'diff_manifest', diff_manifest)
+    monkeypatch.setattr(sync, 'compute_delta', compute_delta)
+    monkeypatch.setattr(sync, 'membership_offer', membership_offer)
+
+    run_cli_command(cmd_collab.collab_push, ['--dry-run'], use_subprocess=False)
+
+    assert offered == [[GroupMembers(uuid='uuid-of-group', label='band', type_string='', nodes=['uuid-late'])]]
+
+
+def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a 422-refused push drops its retry stash, so the next push negotiates afresh.
+
+    Retrying the same bytes would abort forever: the peer deleted a node the delta's boundary links to, and only
+    a fresh negotiation, whose diff includes the hole, can deliver it.
+    """
+    from http import HTTPStatus
+
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import CollabRequestError, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    instant = timezone.now()
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=instant)
+
+    def trigger_import_refused(self, sha256, *, peer, instant, refresh=None, members=None):
+        raise CollabRequestError('it links to node gone-uuid', status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant, computed=instant),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
+    )
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_refused)
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False, raises=True)
+
+    assert 'negotiates afresh' in result.output
+
+    workdir = CollabState.get_workdir(get_profile())
+    assert not any(workdir.glob('push-*')), 'the stashed delta should be dropped'
+
+
+def test_push_discards_a_stash_it_cannot_read(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a stash whose description will not parse is discarded and the push negotiated afresh.
+
+    The description is written whole beside the archive it describes, so one that will not parse is a run that
+    was killed mid-write or a disk that filled. There is no recovering the bytes it was meant to describe — the
+    instant that says what they are is exactly what was lost — and left alone it is permanent: the decode error
+    escapes every handler this command has, so every future push to every peer dies on it until somebody finds
+    the file and deletes it. Discarding costs one re-transfer, which is what a push with no stash does anyway.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    instant = timezone.now()
+    workdir = CollabState.get_workdir(get_profile())
+    workdir.mkdir(parents=True, exist_ok=True)
+    (workdir / f'push-{PEER_UUID}.aiida').write_bytes(b'the bytes of a push that never finished')
+    (workdir / f'push-{PEER_UUID}.json').write_text('{"peer": "', encoding='utf-8')
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=instant)
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant, computed=instant),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=5, staged=5),
+    )
+    monkeypatch.setattr(CollabClient, 'trigger_import', lambda self, sha256, **kwargs: {'uuids': ['uuid-one']})
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert 'discarding the unreadable stash' in result.output
+    assert 'retrying the delta of the previous failed push' not in result.output, 'the stash must not be reused'
+    assert 'pushed 1 node(s)' in result.output
+
+
+def test_push_busy_peer(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a push against a busy peer warns and skips it, before exporting or uploading anything."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import PushHandshake
+
+    init_collab(config_with_profile)
+
+    def untouched(*args, **kwargs):
+        raise AssertionError('a busy handshake must stop the push before any export or upload')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=True, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(sync, 'compute_delta', untouched)
+    monkeypatch.setattr(sync, 'export_delta', untouched)
+    monkeypatch.setattr(CollabClient, 'upload_delta', untouched)
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
+
+    assert 'busy right now' in result.output
+
+
+def test_push_offline_peer_warns_and_continues(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that an offline peer is warned about and skipped by a push, not a failure."""
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+
+    def offline(self, local, **kwargs):
+        raise CollabRequestError('connection refused')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', offline)
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
+
+    assert 'skipping offline peer' in result.output
+
+
+def test_push_dying_peer_warns_and_continues(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a peer dying after the version check — handshake, diff or upload — is skipped like an offline one."""
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+
+    def dying(self, requester, roster=None):
+        raise CollabRequestError('connection reset by peer')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'push_handshake', dying)
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
+
+    assert f'skipping peer {PEER}: connection reset by peer' in result.output
+
+
+def test_push_refusing_peer_warns_and_continues(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a peer that does not accept pushes is warned about and skipped, not a failure."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile)
+
+    def untouched(*args, **kwargs):
+        raise AssertionError('a refusing peer must stop the push before any handshake or export')
+
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(accept_push=False)
+    )
+    monkeypatch.setattr(CollabClient, 'push_handshake', untouched)
+    monkeypatch.setattr(sync, 'compute_delta', untouched)
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
+
+    assert 'does not accept pushes' in result.output
+
+
+def test_map_computer(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that ``verdi collab map-computer`` merges new mappings and applies them to existing calculations."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    applied = []
+
+    def apply_computer_map(backend, computer_map):
+        applied.append(computer_map)
+        return 2
+
+    monkeypatch.setattr(sync, 'apply_computer_map', apply_computer_map)
+
+    # A mapping declared by an earlier call, so it names a peer computer as one that got here would be labelled.
+    init_collab(config_with_profile, **{OPTION_COMPUTER_MAP: {'lumi@collab': 'leonardo'}})
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['daint@collab=leonardo'], use_subprocess=False)
+
+    scope = get_profile().name
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=scope) == {
+        'lumi@collab': 'leonardo',
+        'daint@collab': 'leonardo',
+    }
+    assert applied == [{'lumi@collab': 'leonardo', 'daint@collab': 'leonardo'}]
+    assert '2 calculation(s) now carry the hash of their local twin' in result.output
+    # The whole mapping is applied, so the count covers it, but only this call's pair was declared by this call.
+    assert 'mapped `daint@collab` → `leonardo`;' in result.output
+    assert 'lumi' not in result.output
+
+
+def computer_on(backend, label):
+    """Store a computer of this label and return it."""
+    return orm.Computer(
+        label=label, hostname='localhost', transport_type='core.local', scheduler_type='core.direct', backend=backend
+    ).store()
+
+
+def calculation_on(backend, label):
+    """Store a sealed calculation that ran on a computer of this label, creating the computer, and return it."""
+    from aiida.common.links import LinkType
+
+    calculation = orm.CalcJobNode(backend=backend, computer=computer_on(backend, label))
+    calculation.base.links.add_incoming(
+        orm.Int(1, backend=backend).store(), link_type=LinkType.INPUT_CALC, link_label='term'
+    )
+    calculation.store()
+    calculation.seal()
+
+    return calculation
+
+
+def test_map_computer_refuses_unknown_peer_computers(run_cli_command, config_with_profile, storage):
+    """Test that a mapping naming a peer computer this profile does not hold is refused whole, listing them all.
+
+    All or nothing: every accepted pair also rewrites hashes onto existing nodes, and half a set of declared
+    equivalences is harder to reason about than none. So the good pair of this call must not have been applied.
+    """
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile)
+    calculation = calculation_on(storage, 'lumi@collab')
+    computer_on(storage, 'leonardo')
+    before = calculation.base.caching.get_hash()
+
+    result = run_cli_command(
+        cmd_collab.collab_map_computer,
+        ['lumi@collab=leonardo', 'daint=leonardo', 'perlmutter=leonardo'],
+        use_subprocess=False,
+        raises=True,
+    )
+
+    assert '`daint`' in result.output
+    assert '`perlmutter`' in result.output, 'only the first unknown label was named'
+    assert 'lumi@collab' in result.output, 'the labels that could be mapped are what makes the refusal actionable'
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=get_profile().name) == {}
+    assert calculation.base.caching.get_hash() == before, 'the pair that resolved was applied anyway'
+
+
+def test_map_computer_refuses_a_reversed_pair(run_cli_command, config_with_profile, storage):
+    """Test that PEER=LOCAL written the natural way round is refused, with the right spelling suggested.
+
+    `lumi=lumi@collab` passes every other check and then rewrites `_aiida_hash` on every calculation of this
+    profile's own `lumi`, with the arrived computer's UUID inside: local caching breaks, the mapping matches
+    nothing that ever arrives, and nothing says so. The peer half is the machine that arrived through the collab,
+    which is exactly what the marker on its label says.
+    """
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile)
+    calculation_on(storage, 'lumi@collab')
+    local = calculation_on(storage, 'lumi')
+    before = local.base.caching.get_hash()
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['lumi=lumi@collab'], use_subprocess=False, raises=True)
+
+    assert '`lumi@collab=lumi`' in result.output, 'the refusal has to name the spelling that would work'
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=get_profile().name) == {}
+    assert local.base.caching.get_hash() == before, "this profile's own calculations were remapped anyway"
+
+
+def test_map_computer_refuses_a_computer_mapped_onto_itself(run_cli_command, config_with_profile, storage):
+    """Test that a pair whose halves are one and the same computer is refused rather than remapping onto itself."""
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile)
+    calculation_on(storage, 'lumi@collab')
+
+    result = run_cli_command(
+        cmd_collab.collab_map_computer, ['lumi@collab=lumi@collab'], use_subprocess=False, raises=True
+    )
+
+    assert 'one and the same computer' in result.output
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=get_profile().name) == {}
+
+
+def test_map_computer_writes_the_mapped_hash(run_cli_command, config_with_profile, storage):
+    """Test that a mapping of two computers this profile holds is applied and the report names what it did."""
+    init_collab(config_with_profile)
+    calculation = calculation_on(storage, 'lumi@collab')
+    twin = calculation_on(storage, 'leonardo')
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['lumi@collab=leonardo'], use_subprocess=False)
+
+    assert calculation.base.caching.get_hash() == twin.base.caching.compute_hash()
+    assert '1 calculation(s) now carry the hash of their local twin' in result.output
+
+
+def test_map_computer_says_when_it_rewrote_nothing(run_cli_command, config_with_profile, storage):
+    """Test that a mapping with no calculation to rewrite says so, rather than reporting a bare zero.
+
+    Reachable where the peer's computer arrived on something other than a calculation — a ``RemoteData`` input —
+    or where the calculations it came with have since been deleted. The mapping is still worth declaring, and
+    the report has to say that it applies to what arrives later rather than that it did nothing.
+    """
+    init_collab(config_with_profile)
+    computer_on(storage, 'lumi@collab')
+    computer_on(storage, 'leonardo')
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['lumi@collab=leonardo'], use_subprocess=False)
+
+    assert 'no calculation here ran on those computers' in result.output
+    assert 'applies to whatever arrives from now on' in result.output
+
+
+def test_init_no_longer_maps_computers(run_cli_command, config_with_profile):
+    """Test that ``verdi collab init`` refuses ``--map-computer``: nothing has been pulled when it runs.
+
+    Joining creates a fresh profile and founding starts a fresh collab, so in neither path can a peer computer
+    exist yet — the option could only ever write a mapping that the first pull would then refuse.
+    """
+    result = run_cli_command(
+        cmd_collab.collab_init,
+        ['--map-computer', 'lumi=leonardo', '--bind', '127.0.0.1', '-n'],
+        use_subprocess=False,
+        raises=True,
+    )
+
+    assert 'no such option' in result.output.lower()
+
+
+def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a push finding the peer up to date records an event, so the log says when it last ran.
+
+    The peer holds a cursor for this profile, which is what the short-circuit needs: without one the empty delta
+    is uploaded and imported instead, to write that very cursor (see the test below).
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'')
+        return DeltaExport(filepath=filepath, uuids=[], instant=timezone.now())
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(uuid='uuid-of-alice')
+    )
+    gossiped = []
+
+    def push_handshake(self, requester, roster=None):
+        gossiped.append(roster)
+        return PushHandshake(busy=False, cursor=timezone.now(), claim=[])
+
+    monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=[], refresh=[]),
+    )
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert f'{PEER} is up to date' in result.output
+    assert gossiped[0][0] == {
+        'uuid': get_profile().uuid,
+        'url': 'http://127.0.0.1:9137',
+        'name': get_profile().name,
+        'stamp': 1,
+    }, 'a push announces this profile as a pull does, so a move heals whichever way the sync goes'
+
+    events = CollabState.load(get_profile()).events
+
+    assert [(event.direction, event.peer, event.uuids, event.size) for event in events] == [
+        ('push', 'uuid-of-alice', [], 0)
+    ]
+
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False)
+    row = next(line for line in result.output_lines if 'push' in line)
+
+    assert row.split()[1:] == ['push', PEER, '0', '0'], 'the empty push should show under the nickname'
+
+
+def test_push_to_a_peer_without_a_cursor_imports_the_empty_delta(
+    run_cli_command, config_with_profile, stub_environment, monkeypatch
+):
+    """Test that an empty push to a peer holding no cursor rides through the import, and prompts about nothing.
+
+    Only an import writes the receiver's cursor, so short-circuiting here would leave the pusher presenting a null
+    cursor forever — and an extras-only change with no route at all. Nothing travels, so nothing is asked: the
+    command runs unforced with no answer available to it.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    imports = []
+    instant = timezone.now()
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'')
+        return DeltaExport(filepath=filepath, uuids=[], instant=instant)
+
+    def trigger_import(self, sha256, *, peer, instant, refresh=None, members=None):
+        imports.append((peer, instant))
+        return {'uuids': []}
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=instant, computed=instant),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=[], refresh=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'upload_delta',
+        lambda self, filepath, progress=None: UploadReport(sha256='0' * 64, sent=0, staged=0),
+    )
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import)
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
+
+    assert 'is up to date' not in result.output
+    assert 'pushed 0 node(s)' in result.output
+    assert imports == [(get_profile().uuid, instant)], 'the empty delta has to reach the import that sets the cursor'
+
+
+def test_push_version_skew(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a peer that cannot read this profile's archives is warned about, skipped, and the loop goes on.
+
+    Nothing is uploaded to the skewed peer — the check precedes the handshake — and the peer after it in the list
+    is pushed to as if the skewed one were merely offline.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake, VersionSkew
+    from aiida.tools.collab.sync import Delta
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+            'uuid-of-carol': peer_entry(url='http://100.64.0.4:9137', nickname='carol'),
+        },
+    )
+
+    directions = []
+    handshakes = []
+
+    def check_version_skew(self, local, *, direction):
+        directions.append(direction)
+
+        if 'http://100.64.0.3:9137' in self._base_url:
+            raise VersionSkew('the peer reads an older archive format')
+
+        return make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-carol')
+
+    def push_handshake(self, requester, roster=None):
+        handshakes.append(self._base_url)
+        # A cursor, so the empty deltas short-circuit and the subject stays the skew: without one they would be
+        # uploaded and imported, which is what the peer without a cursor is pushed for.
+        return PushHandshake(busy=False, cursor=timezone.now(), claim=[])
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
+    monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
+    monkeypatch.setattr(
+        CollabClient, 'diff_manifest', lambda self, uuids, refresh=None, members=None: ManifestDiff([], [])
+    )
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert result.output.count('skipping peer bob: the peer reads an older archive format') == 1
+    assert f'{PEER} is up to date' in result.output, 'the peer before the skewed one is pushed to'
+    assert 'carol is up to date' in result.output, 'and so is the peer after it'
+    assert handshakes == [PEER_URL, 'http://100.64.0.4:9137'], 'nothing may be negotiated with the skewed peer'
+    assert directions == ['push'] * 3, 'the push must be checked in the direction the delta would travel'

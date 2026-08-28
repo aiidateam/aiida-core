@@ -106,6 +106,36 @@ Below is a list with all available subcommands.
       test       Run tests for the given code to check whether it is usable.
 
 
+.. _reference:command-line:verdi-collab:
+
+``verdi collab``
+----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Share provenance with the peers of a collab.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      config        Change what this profile serves to its peers: consent to pushes, and...
+      init          Create a collab on the loaded profile.
+      join          Join the collab a code was minted for, in a new profile.
+      link          Print the code that admits a newcomer to this collab.
+      log           Show the history of the syncs of the collab.
+      map-computer  Treat calculations that ran on a peer computer as if they ran on a...
+      offline       Stop serving this profile to the peers of the collab, without...
+      online        Serve this profile to the peers of the collab again, after `verdi...
+      peer          Show and correct the roster of the collab, as this profile holds it.
+      pull          Fetch the new sealed provenance of peers and import it.
+      push          Send the new sealed provenance of this profile to peers.
+      rekey         Adopt the new token of a collab whose token was rotated.
+      rotate        Retire the token of the collab and mint a new one.
+
+
 .. _reference:command-line:verdi-computer:
 
 ``verdi computer``

@@ -56,6 +56,34 @@ def default_projections():
     return CalculationQueryBuilder.default_projections
 
 
+# The default columns on a profile that takes part in a collab. The PK is assigned by whichever database the node
+# landed in, so it names nothing a collaborator would recognize: the UUID the collab works by takes its place, and
+# the peer the node came from is shown beside it. The cache mark makes way for them — across peers it is the
+# origin, not the local cache, that answers where a result came from.
+COLLAB_PROJECTIONS = ('pk', 'short_uuid', 'ctime', 'process_label', 'state', 'process_status', 'peer')
+
+
+def collab_projection_mapper():
+    """Return a projection mapper whose ``peer`` column names each origin by the nickname this profile calls it.
+
+    The extra holds a profile UUID, which is what survives a peer moving or being renamed; the roster is what turns
+    it back into the name the collaborator is addressed by on the command line.
+    """
+    from aiida.manage.configuration import get_config_option
+    from aiida.tools.collab.config import COLLAB_PEER_KEY, OPTION_PEERS
+    from aiida.tools.query.mapping import CalculationProjectionMapper
+
+    peers = get_config_option(OPTION_PEERS)
+    peer_key = f'extras.{COLLAB_PEER_KEY}'
+
+    def format_peer(value):
+        uuid = value[peer_key]
+
+        return peers[uuid]['nickname'] if uuid in peers else (uuid or '')[:8]
+
+    return CalculationProjectionMapper(valid_projections(), projection_formatters={'peer': format_peer})
+
+
 def get_most_recent_node():
     """Return the most recent process node.
 
@@ -109,6 +137,7 @@ def process_list(
 
     By default, only processes that are still running are shown, but there are options to show also the finished ones.
     """
+    from click.core import ParameterSource
     from tabulate import tabulate
 
     from aiida.cmdline.commands.cmd_daemon import execute_client_command
@@ -117,6 +146,7 @@ def process_list(
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.orm import ProcessNode, QueryBuilder
+    from aiida.tools.collab.config import is_enabled
     from aiida.tools.query.calculation import CalculationQueryBuilder
 
     relationships = {}
@@ -124,7 +154,14 @@ def process_list(
     if group:
         relationships['with_node'] = group
 
-    builder = CalculationQueryBuilder()
+    if is_enabled():
+        builder = CalculationQueryBuilder(collab_projection_mapper())
+
+        if ctx.get_parameter_source('project') is ParameterSource.DEFAULT:
+            project = COLLAB_PROJECTIONS
+    else:
+        builder = CalculationQueryBuilder()
+
     filters = builder.get_filters(all_entries, process_state, process_label, paused, exit_status, failed)
     query_set = builder.get_query_set(
         relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit

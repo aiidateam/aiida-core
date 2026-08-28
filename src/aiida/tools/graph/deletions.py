@@ -102,10 +102,26 @@ def delete_nodes(
     if not pks_set_to_delete:
         return (pks_set_to_delete, True)
 
+    from aiida.tools.collab.config import get_collab_profile
+    from aiida.tools.collab.state import record_tombstones
+
+    # The UUIDs have to be fetched before the rows are gone, but should only be recorded once the deletion succeeded.
+    collab_profile = get_collab_profile(backend)
+    tombstone_uuids: list[str] = []
+    if collab_profile is not None:
+        tombstone_uuids = (
+            QueryBuilder(backend=backend)
+            .append(Node, filters={'id': {'in': pks_set_to_delete}}, project='uuid')
+            .all(flat=True)
+        )
+
     DELETE_LOGGER.report('Starting node deletion...')
     with backend.transaction():
         backend.delete_nodes_and_connections(pks_set_to_delete)
     DELETE_LOGGER.report('Deletion of nodes completed.')
+
+    if collab_profile is not None:
+        record_tombstones(tombstone_uuids, collab_profile)
 
     return (pks_set_to_delete, True)
 

@@ -103,6 +103,7 @@ def _make_filepaths(dirpath: pathlib.Path) -> dict:
         'daemon': {'log': str(dirpath / 'daemon.log')},
         'circus': {'log': str(dirpath / 'circus.log')},
         'broker_service': {'dir': str(dirpath / 'broker'), 'log': str(dirpath / 'broker' / 'broker.log')},
+        'collab': {'log': str(dirpath / 'collab.log')},
     }
 
 
@@ -279,6 +280,9 @@ def test_get_log_files(monkeypatch, tmp_path):
     broker_log.parent.mkdir()
     broker_log.write_text('broker', encoding='utf-8')
 
+    collab_log = tmp_path / 'collab.log'
+    collab_log.write_text('collab', encoding='utf-8')
+
     profile = SimpleNamespace(name='default')
     manager = SimpleNamespace(get_profile=lambda: profile)
 
@@ -290,6 +294,7 @@ def test_get_log_files(monkeypatch, tmp_path):
         'circus': circus_log,
         'daemon': daemon_log,
         'broker_service': broker_log,
+        'collab': collab_log,
     }
 
 
@@ -458,7 +463,14 @@ def test_bug_report_command(run_cli_command, tmp_path):
         diagnostics = json.loads(zf.read('diagnostics.json'))
         contents = {name: zf.read(name).decode('utf-8') for name in namelist if name.endswith('.log')}
 
-    assert set(namelist) == {'broker_service.log', 'circus.log', 'daemon.log', 'diagnostics.json', 'profile.log'}
+    assert set(namelist) == {
+        'broker_service.log',
+        'circus.log',
+        'collab.log',
+        'daemon.log',
+        'diagnostics.json',
+        'profile.log',
+    }
     assert len(namelist) == len(set(namelist))
 
     # The command may log to the profile log while it runs, so only assert that each entry holds its own log

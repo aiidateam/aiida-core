@@ -1,0 +1,435 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Local state of a collab: the per-peer sync cursors, the tombstones and the log of pull and push events.
+
+This state is deliberately kept local to the profile and is never shared with peers. It lives next to the configuration
+instead of inside it, because the event log grows with every sync whereas the configuration is read on every ``verdi``
+invocation.
+"""
+
+from __future__ import annotations
+
+import errno
+import json
+import os
+import sys
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from aiida.manage.configuration import Profile
+
+Direction = Literal['pull', 'push', 'refresh', 'served']
+
+# Above this many events the log is folded on save. The trigger is a count, not an age, because what the log
+# costs is the linear scan on every negotiation and the size of the state file — both functions of the count.
+COMPACT_THRESHOLD = 1000
+
+COMPACTED_PEER = '(compacted)'
+
+
+@contextmanager
+def exclusive_lock(lockpath: Path, *, blocking: bool = True) -> Iterator[bool]:
+    """Hold the exclusive advisory lock kept at ``lockpath``, waiting for it if another holder has it.
+
+    The one lock of the collab, taken by everything that has a second writer: the state file, the configuration
+    file, the imports and one sync command per profile. It always lives on a sidecar rather than on what it
+    guards — the state and the configuration are replaced rather than written in place, and neither an import nor
+    a sync guards a single file at all.
+
+    :param blocking: wait for whoever holds it. Passed ``False`` the body is entered either way and told which it
+        was, which is what lets a caller refuse rather than queue behind a transfer that may run for hours.
+    :returns: whether the lock is held, which only a non-blocking caller has any reason to look at.
+    """
+    lockpath.parent.mkdir(parents=True, exist_ok=True)
+
+    with lockpath.open('w') as handle:
+        # On Windows there is no ``fcntl``, so writers there stay unguarded, as all writers are on any platform
+        # before the daemon serves the collab endpoint and becomes the second one.
+        if sys.platform == 'win32':
+            yield True
+            return
+
+        import fcntl
+
+        if blocking:
+            # Unguarded, as it was before there was a second mode: a blocking acquisition fails only when the
+            # lock cannot be taken at all — no locking on the filesystem, a bad descriptor — and a caller that
+            # never looks at what is yielded would then write where it believes it holds the lock. Those callers
+            # guard the state file, the configuration and the imports, so the error has to keep propagating.
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            yield True
+            return
+
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exception:
+            # Only "somebody holds it" answers `False`. A filesystem with no locking raises here too, and this is
+            # the first lock a sync command takes, so swallowing that would wedge it behind a peer that is not there.
+            if exception.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
+                raise
+
+            yield False
+            return
+
+        yield True
+
+
+@dataclass
+class CollabEvent:
+    """A single completed pull, push, extras refresh or served download.
+
+    A ``served`` row is the one trace the serving side of a pull keeps of it: the sender holds no sync state by
+    design, but that is a reason to keep no cursor, not a reason to keep no audit row.
+    """
+
+    time: datetime
+    direction: Direction
+    peer: str
+    uuids: list[str]
+    size: int
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            'time': self.time.isoformat(),
+            'direction': self.direction,
+            'peer': self.peer,
+            'uuids': self.uuids,
+            'size': self.size,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CollabEvent:
+        return cls(
+            time=datetime.fromisoformat(data['time']),
+            direction=data['direction'],
+            peer=data['peer'],
+            uuids=data['uuids'],
+            size=data['size'],
+        )
+
+
+@dataclass
+class Membership:
+    """A node joining a group in this profile, and when it happened.
+
+    ``GROUP_NODE`` rows carry no timestamp, so this journal is the only clock a collab has for membership: it is
+    what answers "which memberships were made here since T" when a peer presents its cursor. Both a person
+    curating and a peer's addition being applied are recorded, which is what makes membership relay A→B→C.
+    """
+
+    time: datetime
+    group: str
+    node: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {'time': self.time.isoformat(), 'group': self.group, 'node': self.node}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Membership:
+        return cls(time=datetime.fromisoformat(data['time']), group=data['group'], node=data['node'])
+
+
+@dataclass
+class CollabState:
+    """The local state of the collab of a single profile.
+
+    The cursors record, per peer, the export instant of the last delta imported from that peer: "I hold a snapshot
+    of everything that was in this peer's profile at T". A cursor advances only on a successful import — identically
+    for pulls and received pushes — and every instant it is compared against is generated by that same peer, so
+    clocks never cross.
+    """
+
+    filepath: Path
+    cursors: dict[str, datetime] = field(default_factory=dict)
+    tombstones: set[str] = field(default_factory=set)
+    events: list[CollabEvent] = field(default_factory=list)
+    pending_links: list[list[str]] = field(default_factory=list)
+    """Boundary links of a thin delta, as ``[input_uuid, output_uuid, type, label]``, journalled before the import
+    and cleared once they are written: the import commits its own transaction, so a crash between the two would
+    otherwise lose the links between imported nodes and the ones already held."""
+
+    pending_computers: dict[str, str] = field(default_factory=dict)
+    """Computers a delta is about to create, as UUID to the label the sender holds them under, journalled before
+    the import for the same reason as the links and cleared once they are marked. Which computers an import
+    created is a question only the state *before* it can answer, so a crash between the import and the marking
+    would otherwise leave a peer's machine looking like one of this profile's own for good."""
+
+    memberships: list[Membership] = field(default_factory=list)
+    """The membership journal: which node joined which group here, and when. Written only under the ``grow``
+    groups policy, since it exists for nothing else."""
+
+    @staticmethod
+    def get_filepath(profile: Profile) -> Path:
+        """Return the path of the file in which the state of the collab of ``profile`` is stored.
+
+        Keyed by the UUID of the profile rather than its name, so that a profile recreated under the name of a
+        deleted one does not inherit its cursors and tombstones — which would make a pull skip nodes for no
+        visible reason.
+        """
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+        return AiiDAConfigPathResolver().collab_dir / f'{profile.uuid}.json'
+
+    @staticmethod
+    def get_workdir(profile: Profile) -> Path:
+        """Return the directory in which the transfer files of the collab of ``profile`` live."""
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+        return AiiDAConfigPathResolver().collab_dir / str(profile.uuid)
+
+    @classmethod
+    def load(cls, profile: Profile) -> CollabState:
+        """Load the state of the collab of ``profile``."""
+        return cls.read(cls.get_filepath(profile))
+
+    @classmethod
+    def read(cls, filepath: Path) -> CollabState:
+        """Read the state stored at ``filepath``; a missing file is empty state, not an error."""
+        if not filepath.exists():
+            return cls(filepath=filepath)
+
+        data = json.loads(filepath.read_text(encoding='utf-8'))
+
+        return cls(
+            filepath=filepath,
+            cursors={peer: datetime.fromisoformat(value) for peer, value in data['cursors'].items()},
+            tombstones=set(data['tombstones']),
+            events=[CollabEvent.from_dict(event) for event in data['events']],
+            pending_links=data['pending_links'],
+            pending_computers=data['pending_computers'],
+            memberships=[Membership.from_dict(entry) for entry in data['memberships']],
+        )
+
+    def _compact(self) -> None:
+        """Fold all but the newest half of the events into one synthetic event per direction, losing no UUID.
+
+        The synthetic events sit at the horizon — the time of the newest folded event — so any query bounded by an
+        instant after the horizon correctly excludes them, and one bounded inside the folded range still sees the
+        whole union. The latter over-states what was imported or refreshed since that instant, which only re-offers
+        UUIDs the manifest diff and the mtime comparison then drop; it can never under-state, which would lose
+        relayed provenance or a relayed extras edit.
+        """
+        if len(self.events) <= COMPACT_THRESHOLD:
+            return
+
+        folded = self.events[: -COMPACT_THRESHOLD // 2]
+        # The maximum rather than the last: a backwards wall-clock step between appends must not leave a folded
+        # event beyond the horizon, which would under-state the union for cursors in between.
+        horizon = max(event.time for event in folded)
+        by_direction: dict[Direction, list[CollabEvent]] = {}
+
+        for event in folded:
+            by_direction.setdefault(event.direction, []).append(event)
+
+        synthetic = [
+            CollabEvent(
+                time=horizon,
+                direction=direction,
+                peer=COMPACTED_PEER,
+                # A folded push or served row keeps its row and its byte total for the log but drops its UUIDs:
+                # nothing ever queries them, and keeping them would grow without bound the very file compaction
+                # exists to hold.
+                uuids=sorted({uuid for event in events for uuid in event.uuids})
+                if direction not in ('push', 'served')
+                else [],
+                size=sum(event.size for event in events),
+            )
+            for direction, events in sorted(by_direction.items())
+        ]
+
+        self.events = [*synthetic, *self.events[len(folded) :]]
+
+    def _compact_memberships(self) -> None:
+        """Fold all but the newest half of the membership journal onto one instant, losing no pair.
+
+        The same trade as the event log: the folded entries move up to the horizon, so a cursor after it correctly
+        excludes them and one inside the folded range still sees every pair. That over-states what was curated
+        since such a cursor, which only re-offers memberships the receiver already holds and drops on apply; it can
+        never under-state, which would lose a curation forever.
+        """
+        if len(self.memberships) <= COMPACT_THRESHOLD:
+            return
+
+        folded = self.memberships[: -COMPACT_THRESHOLD // 2]
+        horizon = max(entry.time for entry in folded)
+        pairs = sorted({(entry.group, entry.node) for entry in folded})
+
+        self.memberships = [
+            *(Membership(time=horizon, group=group, node=node) for group, node in pairs),
+            *self.memberships[len(folded) :],
+        ]
+
+    def save(self) -> None:
+        """Write the state to disk, replacing the existing file atomically."""
+        import tempfile
+
+        from aiida.manage.configuration.settings import DEFAULT_UMASK
+
+        self._compact()
+        self._compact_memberships()
+
+        data = {
+            'cursors': {peer: cursor.isoformat() for peer, cursor in self.cursors.items()},
+            'tombstones': sorted(self.tombstones),
+            'events': [event.as_dict() for event in self.events],
+            'pending_links': self.pending_links,
+            'pending_computers': self.pending_computers,
+            'memberships': [entry.as_dict() for entry in self.memberships],
+        }
+
+        umask = os.umask(DEFAULT_UMASK)
+
+        try:
+            self.filepath.parent.mkdir(parents=True, exist_ok=True)
+
+            # The temporary file has to live in the same directory for ``os.replace`` to be atomic, and has to have a
+            # unique name because another process can be writing the state of the same profile at the same time.
+            with tempfile.NamedTemporaryFile(
+                dir=self.filepath.parent, delete=False, mode='w', encoding='utf-8'
+            ) as handle:
+                json.dump(data, handle, indent=4)
+                filepath_temporary = handle.name
+        finally:
+            os.umask(umask)
+
+        os.replace(filepath_temporary, self.filepath)
+
+    def imported_uuids_since(self, instant: datetime | None) -> set[str]:
+        """Return the UUIDs of every node imported from any peer since ``instant``, or ever when ``None``.
+
+        Received pushes are recorded with direction ``pull`` too — the direction describes the flow relative to this
+        profile — so this is the complete set of nodes that entered the profile through the collab.
+        """
+        return self._uuids_since('pull', instant)
+
+    def refreshed_uuids_since(self, instant: datetime | None) -> set[str]:
+        """Return the UUIDs of every node whose extras a peer refreshed here since ``instant``, or ever when ``None``.
+
+        These are shared nodes, not new provenance, so they are kept apart from the imported ones: what they feed is
+        the refresh offer, which is how an extras edit relayed through this profile reaches the next peer.
+        """
+        return self._uuids_since('refresh', instant)
+
+    def memberships_since(self, instant: datetime | None) -> set[tuple[str, str]]:
+        """Return every ``(group, node)`` pair that became a membership here since ``instant``, or ever when ``None``.
+
+        A peer that presents no cursor holds nothing this profile sent it, but may well hold its nodes through a
+        third party — and those are exactly the memberships no delta of ours can carry — so it is offered the
+        whole journal rather than nothing.
+        """
+        return {(entry.group, entry.node) for entry in self.memberships if instant is None or entry.time >= instant}
+
+    def _uuids_since(self, direction: Direction, instant: datetime | None) -> set[str]:
+        return {
+            uuid
+            for event in self.events
+            if event.direction == direction and (instant is None or event.time >= instant)
+            for uuid in event.uuids
+        }
+
+    @classmethod
+    @contextmanager
+    def mutate(cls, filepath: Path) -> Iterator[CollabState]:
+        """Read the state stored at ``filepath`` under an exclusive lock and save it on exit.
+
+        Every writer has to mutate through this: the CLI and the collab endpoint of the daemon share the state
+        file, and an unguarded read-modify-write cycle loses whichever of two concurrent writes finishes first —
+        a lost tombstone being exactly what lets a deleted node come back on the next pull.
+        """
+        with exclusive_lock(filepath.with_name(f'{filepath.name}.lock')):
+            state = cls.read(filepath)
+            yield state
+            state.save()
+
+
+@contextmanager
+def import_lock(filepath: Path) -> Iterator[None]:
+    """Hold the import lock of the profile whose state is stored at ``filepath``, waiting for it if necessary.
+
+    Every import into the profile — a CLI pull as much as a push received by the collab endpoint — runs under this
+    lock, so two of them can never interleave. The endpoint's push handshake answers busy while it is held, which is
+    what serializes concurrent fan-in before any bytes travel.
+    """
+    with exclusive_lock(filepath.with_name(f'{filepath.name}.import.lock')):
+        yield
+
+
+def import_lock_held(filepath: Path) -> bool:
+    """Return whether an import into the profile whose state is stored at ``filepath`` is running right now."""
+    if sys.platform == 'win32':
+        return False
+
+    import fcntl
+
+    lockpath = filepath.with_name(f'{filepath.name}.import.lock')
+
+    if not lockpath.exists():
+        return False
+
+    with lockpath.open('w') as handle:
+        try:
+            # A shared lock, because this only ever asks a question: two probes running at once would report each
+            # other as a running import were they to ask for an exclusive one, which is the very moment the busy
+            # answer exists for.
+            fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except OSError:
+            return True
+
+        fcntl.flock(handle, fcntl.LOCK_UN)
+        return False
+
+
+def delete_state(profile: Profile) -> None:
+    """Remove the collab state and transfer files of a profile, called when the profile itself is deleted.
+
+    Collab state must not outlive its profile: it describes what this profile holds of its peers, which a
+    recreated profile of the same name holds nothing of.
+    """
+    import shutil
+
+    filepath = CollabState.get_filepath(profile)
+
+    for suffix in ('', '.lock', '.import.lock'):
+        filepath.with_name(f'{filepath.name}{suffix}').unlink(missing_ok=True)
+
+    shutil.rmtree(CollabState.get_workdir(profile), ignore_errors=True)
+
+
+def record_tombstones(uuids: list[str], profile: Profile) -> None:
+    """Record nodes as deleted, such that they are not pulled from a peer again.
+
+    :param uuids: the UUIDs of the deleted nodes.
+    :param profile: the profile from which the nodes were deleted.
+    """
+    with CollabState.mutate(CollabState.get_filepath(profile)) as state:
+        state.tombstones.update(uuids)
+
+
+def record_memberships(pairs: list[tuple[str, str]], profile: Profile) -> None:
+    """Journal nodes joining groups, so that a peer presenting a cursor can be told what it missed.
+
+    :param pairs: the ``(group uuid, node uuid)`` memberships that were made.
+    :param profile: the profile they were made in.
+    """
+    from aiida.common import timezone
+
+    if not pairs:
+        return
+
+    with CollabState.mutate(CollabState.get_filepath(profile)) as state:
+        # Stamped under the lock, not before waiting for it: a peer whose cursor lands between the two would
+        # never be offered the pair, and the offer is allowed to over-state but never to omit.
+        instant = timezone.now()
+        state.memberships.extend(Membership(time=instant, group=group, node=node) for group, node in pairs)

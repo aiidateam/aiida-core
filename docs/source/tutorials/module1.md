@@ -114,11 +114,22 @@ if PROFILE_NAME not in config.profile_names:
 :    code_prompt_hide: 'Hide the connect-and-daemon code'
 
 # Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
+import time
+
 from aiida import load_profile
+from aiida.manage import get_manager
 from aiida.orm import load_code
 
 load_profile(PROFILE_NAME, allow_switch=True)
 !verdi -p {PROFILE_NAME} daemon start
+
+# `daemon start` returns before the ZeroMQ broker is reachable; wait for it so a later
+# `verdi status` does not report "Broker is NOT running" (and fail the notebook).
+_broker = get_manager().get_broker()
+_deadline = time.monotonic() + 30.0
+while _broker is not None and not _broker.check_service_reachable() and time.monotonic() < _deadline:
+    time.sleep(0.2)
+
 gsrd_code = load_code('gsrd@localhost')
 
 %load_ext aiida

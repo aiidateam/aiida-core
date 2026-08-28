@@ -213,7 +213,7 @@ requires-dist = [
     { name = "aiida-core", extras = ["tests"], marker = "extra == 'pre-commit'" },
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
     { name = "aiida-shell", marker = "extra == 'tutorials'", specifier = ">=0.9.0" },
-    { name = "aiida-workgraph", marker = "extra == 'tutorials'", git = "https://github.com/GeigerJ2/aiida-workgraph.git?rev=fix%2Fmap-zone-output-retrieval" },
+    { name = "aiida-workgraph", marker = "extra == 'tutorials'", specifier = ">=0.9.0" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.21" },
@@ -230,7 +230,7 @@ requires-dist = [
     { name = "flask-cors", marker = "extra == 'rest'", specifier = "~=4.0" },
     { name = "flask-restful", marker = "extra == 'rest'", specifier = "~=0.3.10" },
     { name = "graphviz", specifier = "~=0.19" },
-    { name = "gsrd", marker = "extra == 'tutorials'", git = "https://github.com/aiidateam/gsrd.git" },
+    { name = "gsrd", marker = "extra == 'tutorials'", specifier = ">=0.2.0" },
     { name = "gssapi", marker = "extra == 'ssh-kerberos'", specifier = "~=1.6" },
     { name = "importlib-metadata", specifier = "~=6.0" },
     { name = "ipykernel", marker = "extra == 'tests'", specifier = "~=6.9" },
@@ -347,8 +347,8 @@ wheels = [
 
 [[package]]
 name = "aiida-workgraph"
-version = "0.8.1"
-source = { git = "https://github.com/GeigerJ2/aiida-workgraph.git?rev=fix%2Fmap-zone-output-retrieval#f096639acb083f1935451a9f00386b8d9c629453" }
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "aiida-pythonjob" },
@@ -363,6 +363,10 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7b/34/5d2da34e75081921d6e0123ec0d5d2aeba9a7377cc1c8dd7338ac789a87c/aiida_workgraph-0.9.0.tar.gz", hash = "sha256:5ea282fad9506171e5baf4e00b26b7f73f92b542cd3d94b138b196e4add79159", size = 70887, upload-time = "2026-08-28T09:10:41.304Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/1c/d6a8c8911168804367ef99ea4e82747b7a0bbf446a69f9d800920aea00bd/aiida_workgraph-0.9.0-py3-none-any.whl", hash = "sha256:06d78420f046bcaf300a1d4823787ccfc586bccb54acc2f151473bb842e37967", size = 87768, upload-time = "2026-08-28T09:10:39.907Z" },
 ]
 
 [[package]]
@@ -2095,13 +2099,17 @@ wheels = [
 
 [[package]]
 name = "gsrd"
-version = "0.1.0"
-source = { git = "https://github.com/aiidateam/gsrd.git#2b43234ba82c796fd082278f7b0f874c35829d89" }
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a6/bb/462757a2c6a3a999be175689d865a15389ad4fb835064e384fb06ea4a532/gsrd-0.2.0.tar.gz", hash = "sha256:e09d2133de0e7871eb3e1411c98b31777b659026f732a290194b72a85c67c641", size = 310819, upload-time = "2026-08-27T14:24:01.171Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/45/54ec68304c93dc626b2dd03101f08a2b9fd56699649b01af75e107841fd9/gsrd-0.2.0-py3-none-any.whl", hash = "sha256:3e7a81488916429115139835b9d2cf876c3d6eed3a47514d06a61892aaf38a36", size = 11345, upload-time = "2026-08-27T14:24:00.062Z" },
 ]
 
 [[package]]

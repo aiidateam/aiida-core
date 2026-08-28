@@ -11,10 +11,11 @@ example that progressively grows in complexity.
 .. note::
 
    These tutorials are actively being developed and may still change. If you
-   run into any problems or have suggestions for improvement, please open an
-   issue on `GitHub <https://github.com/aiidateam/aiida-core/issues>`__ or
-   start a thread on `Discourse <https://aiida.discourse.group/>`__; your
-   feedback is very welcome.
+   run into any problems or have suggestions for improvement, please add a
+   comment on the `tutorial feedback issue
+   <https://github.com/aiidateam/aiida-core/issues/7590>`__ or start a thread
+   on `Discourse <https://aiida.discourse.group/>`__; your feedback is very
+   welcome.
 
 Introductory modules
 =====================

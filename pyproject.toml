@@ -299,8 +299,8 @@ tui = [
 ]
 tutorials = [
   'aiida-shell>=0.9.0',
-  'aiida-workgraph @ git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval',
-  'gsrd @ git+https://github.com/aiidateam/gsrd.git'
+  'aiida-workgraph>=0.9.0',
+  'gsrd>=0.2.0'
 ]
 
 [project.scripts]
@@ -480,8 +480,7 @@ xfail_strict = true
 [tool.ruff]
 exclude = [
   'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py',
-  'docs/source/tutorials/_notes/**'
+  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
 ]
 line-length = 120
 
@@ -584,7 +583,7 @@ commands =
     sphinx-autobuild \
         --re-ignore build/.* \
         --re-ignore .*/.aiida-tutorial/.* \
-        --re-ignore .*/tutorials/(results.npz|input.yaml)$ \
+        --re-ignore .*/tutorials/(results.npz|input.yaml|input_bad.yaml)$ \
         --port 0 --open-browser \
         -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
 

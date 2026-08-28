@@ -27,7 +27,7 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 This module uses `aiida-core`, `aiida-shell`, and `aiida-workgraph`. Install them with:
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib "gsrd>=0.2.0"
+uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" "aiida-workgraph>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
 
 `aiida-workgraph` is currently a separate package; it is planned to become part of `aiida-core` with the v3.0 release.

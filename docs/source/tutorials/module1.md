@@ -58,12 +58,34 @@ An AiiDA **profile** defines the configuration for an AiiDA instance:
 Before running any calculations, you need one.
 
 AiiDA comes with a command-line interface, `verdi`, which you will use throughout the tutorial to inspect and manage your data.
-We recommend running this tutorial in its own **isolated sandbox profile**, kept separate from any profile you may already have, so the data you create here never mixes with your real work and every module reproduces exactly.
 
-For the documentation build, we use the setup cell below, which is also included in the downloaded notebooks.
+Setting up your AiiDA profile for the tutorial comes down to just three commands:
 
-:::{dropdown} What the setup cell does
-The cell below creates the profile in an isolated `.aiida-tutorial/` sandbox (so it never touches your real `~/.aiida`), registers the `gsrd` code, starts the daemon, loads the `%verdi` magic, and defines a small `plot_provenance` helper. You do not need to run it yourself, or even read it; the handful of commands it comes down to, the ones you would actually run yourself, are shown right after.
+```console
+$ verdi presto --profile-name tutorial --use-zeromq
+$ verdi daemon start
+$ verdi code create core.code.installed \
+    --label gsrd --computer localhost \
+    --default-calc-job-plugin core.shell -X $(which gsrd)
+```
+
+`verdi presto` creates a profile with sensible defaults for all three components above: **SQLite** for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZeroMQ broker** (`--use-zeromq` keeps it dependency-free; without it, `verdi presto` uses RabbitMQ whenever it detects it running).
+
+`verdi daemon start` then brings up the daemon that runs your calculations. For more advanced, high-throughput production setups, see the {ref}`installation guide <installation>`.
+
+With the profile and daemon up, the last step is registering the code you will run. `verdi code create core.code.installed` sets just the few fields that differ from the `InstalledCode` defaults: the `--label`, `--computer`, and `--default-calc-job-plugin` above, plus `-X` for the path to the executable (which depends on where `gsrd` is installed).
+
+:::{note}
+AiiDA keeps all of its configuration, your profiles, their databases, and the daemon's state, in its **configuration directory**, which defaults to `~/.aiida`.
+Where AiiDA looks for (and creates) that directory is controlled by the `AIIDA_PATH` environment variable.
+To keep the tutorial self-contained, the hidden setup cells below point `AIIDA_PATH` at a local `.aiida-tutorial/` directory in your working directory, so this profile, its database, and its daemon live there instead of in your usual `~/.aiida`.
+Nothing here touches any AiiDA profile you already have, and deleting `.aiida-tutorial/` removes every trace of the tutorial.
+:::
+
+For the documentation build and the downloadable notebooks, the hidden cells below run exactly these steps for you.
+
+:::{dropdown} What the setup cells do (when reading online, you can ignore these)
+The cells below create the profile in the isolated `.aiida-tutorial/` sandbox, register the `gsrd` code, start the daemon, load the `%verdi` magic, and define a small `plot_provenance` helper. You do not need to run them yourself, or even read them; they come down to the handful of commands shown above.
 
 Module 1 creates the profile; the later modules reconnect to it, so the data you create now stays available throughout.
 :::
@@ -71,7 +93,7 @@ Module 1 creates the profile; the later modules reconnect to it, so the data you
 ```{code-cell} ipython3
 :tags: [hide-cell]
 :mystnb:
-:    code_prompt_show: 'Show the profile-setup code (you can ignore this)'
+:    code_prompt_show: 'Show the profile-setup code'
 :    code_prompt_hide: 'Hide the profile-setup code'
 
 # Point AiiDA at a local .aiida-tutorial/ sandbox (via AIIDA_PATH, so nothing touches
@@ -110,8 +132,8 @@ if PROFILE_NAME not in config.profile_names:
 ```{code-cell} ipython3
 :tags: [hide-cell]
 :mystnb:
-:    code_prompt_show: 'Show the connect-and-daemon code'
-:    code_prompt_hide: 'Hide the connect-and-daemon code'
+:    code_prompt_show: 'Show the profile-connect and daemon-start code'
+:    code_prompt_hide: 'Hide the profile-connect and daemon-start code'
 
 # Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
 import time
@@ -152,30 +174,16 @@ def plot_provenance(node):
     return graph.graphviz
 ```
 
-For your own work, outside the tutorial's sandbox, setting up your AiiDA profile for the tutorial is just three commands:
-
-```console
-$ verdi presto --profile-name tutorial --use-zeromq
-$ verdi daemon start
-$ verdi code create core.code.installed --config gsrd_code.yaml -X $(which gsrd)
-```
-
-`verdi presto` creates a profile with sensible defaults for all three components above: **SQLite** for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZeroMQ broker** (`--use-zeromq` keeps it dependency-free; without it, `verdi presto` uses RabbitMQ whenever it detects it running).
-
-`verdi daemon start` then brings up the daemon that runs your calculations. For more advanced, high-throughput production setups, see the {ref}`installation guide <installation>`.
-
-:::{note}
-AiiDA keeps all of its configuration, your profiles, their databases, and the daemon's state, in its **configuration directory**, which defaults to `~/.aiida`.
-Where AiiDA looks for (and creates) that directory is controlled by the `AIIDA_PATH` environment variable.
-To keep the tutorial self-contained, the hidden setup cell above points `AIIDA_PATH` at a local `.aiida-tutorial/` directory in your working directory, so this profile, its database, and its daemon live there instead of in your usual `~/.aiida`.
-Nothing here touches any AiiDA profile you already have, and deleting `.aiida-tutorial/` removes every trace of the tutorial.
-:::
-
-You can verify that the profile is set up correctly with `verdi status`:
+Running those cells applies the setup above. To verify everything works correctly, `verdi status` reports the profile and its services, and `verdi code test` confirms the registered code is usable.
 
 ```{code-cell} ipython3
-# Check that the AiiDA profile is configured and all services are reachable.
+# Check the profile is configured and all services are reachable.
 %verdi status
+```
+
+```{code-cell} ipython3
+# Confirm the registered gsrd code is usable.
+%verdi code test gsrd@localhost
 ```
 
 :::{note}
@@ -183,22 +191,8 @@ We use IPython magic commands like `%verdi <cmd>` in Code cells (`%verdi` runs a
 To execute in a terminal, drop the `%` prefix.
 :::
 
-With the profile up and verified, the last step is registering the code you will run. `verdi code create` registers the `gsrd` CLI as an AiiDA `Code` object from a small config file, `gsrd_code.yaml`, which `gsrd` ships as package data, setting just its `label`, `computer`, and default calculation plugin (`-X` gives the executable path, which depends on where `gsrd` is installed; everything else stays at its defaults):
-
-```{code-cell} ipython3
-:tags: [hide-input]
-:mystnb:
-:    code_prompt_show: 'Show gsrd_code.yaml'
-:    code_prompt_hide: 'Hide gsrd_code.yaml'
-
-# The Code config file gsrd ships, used by the setup cell's `verdi code create`.
-from importlib.resources import files
-
-print((files('gsrd') / 'data' / 'gsrd_code.yaml').read_text())
-```
-
 :::{dropdown} Inspecting the&nbsp;`gsrd@localhost`&nbsp;Code
-The setup cell registered this Code for you, but there is nothing magic about it: a Code is a normal, portable AiiDA object. You can export its configuration to YAML with `verdi code export <label>`. Where the `gsrd_code.yaml` above set only the few fields that differ from the defaults, the export lists them all:
+Once registered, the Code is a normal, portable AiiDA object. You can export its configuration to YAML with `verdi code export <label>`; where `verdi code create` above set only the few fields that differ from the defaults, the export lists them all:
 
 ```console
 $ verdi code export gsrd@localhost
@@ -222,6 +216,8 @@ The `filepath_executable` points wherever `gsrd` is installed in your environmen
 $ verdi code create core.code.installed --config gsrd.yml
 ```
 :::
+
+With this, we have everything set up to run our first calculation through AiiDA.
 
 ## Running the simulation with `aiida-shell`
 

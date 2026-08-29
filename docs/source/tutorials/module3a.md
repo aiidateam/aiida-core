@@ -39,10 +39,7 @@ If not, or you are starting here, work through the {ref}`setup section of Module
 :::
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the profile-setup code (same as Module 1)'
-:    code_prompt_hide: 'Hide the profile-setup code'
+:tags: [remove-cell]
 
 # Point AiiDA at a local .aiida-tutorial/ sandbox (via AIIDA_PATH, so nothing touches
 # your real ~/.aiida), then create the `tutorial` profile and register the gsrd code
@@ -78,10 +75,7 @@ if PROFILE_NAME not in config.profile_names:
 ```
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the connect-and-daemon code (same as Module 1)'
-:    code_prompt_hide: 'Hide the connect-and-daemon code'
+:tags: [remove-cell]
 
 # Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
 import time
@@ -106,10 +100,7 @@ gsrd_code = load_code('gsrd@localhost')
 ```
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the plot_provenance helper (same as Module 1)'
-:    code_prompt_hide: 'Hide the plot_provenance helper'
+:tags: [remove-cell]
 
 # A thin provenance-graph helper used throughout the tutorial (plotting is not the focus).
 def plot_provenance(node):

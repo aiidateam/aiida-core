@@ -88,6 +88,7 @@ For the documentation build and the downloadable notebooks, the hidden cells bel
 The cells below create the profile in the isolated `.aiida-tutorial/` sandbox, register the `gsrd` code, start the daemon, load the `%verdi` magic, and define a small `plot_provenance` helper. You do not need to run them yourself, or even read them; they come down to the handful of commands shown above.
 
 Module 1 creates the profile; the later modules reconnect to it, so the data you create now stays available throughout.
+Every module's notebook ships with these same setup cells (hidden in the rendered pages of the later modules), so each downloaded notebook stays self-contained and runs on its own.
 :::
 
 ```{code-cell} ipython3
@@ -174,7 +175,7 @@ def plot_provenance(node):
     return graph.graphviz
 ```
 
-Running those cells applies the setup above. To verify everything works correctly, `verdi status` reports the profile and its services, and `verdi code test` confirms the registered code is usable.
+To verify everything works correctly, `verdi status` reports the profile and its services, and `verdi code test` confirms the registered code is usable.
 
 ```{code-cell} ipython3
 # Check the profile is configured and all services are reachable.

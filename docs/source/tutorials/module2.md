@@ -16,7 +16,7 @@ execution:
 (tutorial:module2)=
 # Module 2: Structured data and calcfunctions
 
-{bdg-secondary}`⏱️ ~90 min read` {bdg-success}`Beginner`
+{bdg-secondary}`⏱️ ~75 min read` {bdg-success}`Beginner`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
@@ -36,10 +36,7 @@ If not, or you are starting here, work through the {ref}`setup section of Module
 :::
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the profile-setup code (same as Module 1)'
-:    code_prompt_hide: 'Hide the profile-setup code'
+:tags: [remove-cell]
 
 # Point AiiDA at a local .aiida-tutorial/ sandbox (via AIIDA_PATH, so nothing touches
 # your real ~/.aiida), then create the `tutorial` profile and register the gsrd code
@@ -75,10 +72,7 @@ if PROFILE_NAME not in config.profile_names:
 ```
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the connect-and-daemon code (same as Module 1)'
-:    code_prompt_hide: 'Hide the connect-and-daemon code'
+:tags: [remove-cell]
 
 # Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
 import time
@@ -103,10 +97,7 @@ gsrd_code = load_code('gsrd@localhost')
 ```
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the plot_provenance helper (same as Module 1)'
-:    code_prompt_hide: 'Hide the plot_provenance helper'
+:tags: [remove-cell]
 
 # A thin provenance-graph helper used throughout the tutorial (plotting is not the focus).
 def plot_provenance(node):
@@ -260,10 +251,8 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
     }
 ```
 
-:::{note}
 Writing a small parsing step is a common cost when wrapping codes that emit their results in unstructured text (the alternative being a schema-defined output format like XML or HDF5, which not every code provides).
 What is new here is that the parsing step itself becomes a tracked AiiDA process: its inputs (the stdout node) and its outputs (the `Float` nodes) get linked into the provenance graph, so the regex result lives at the same level as the simulation's other data.
-:::
 
 :::{note}
 A calcfunction can return either a single data node or a `dict` mapping string labels to data nodes.

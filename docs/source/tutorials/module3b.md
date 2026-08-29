@@ -36,10 +36,7 @@ If you are following along locally, work through {ref}`Module 3a <tutorial:modul
 :::
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the profile-setup code (same as Module 1)'
-:    code_prompt_hide: 'Hide the profile-setup code'
+:tags: [remove-cell]
 
 # Point AiiDA at a local .aiida-tutorial/ sandbox (via AIIDA_PATH, so nothing touches
 # your real ~/.aiida), then create the `tutorial` profile and register the gsrd code
@@ -75,10 +72,7 @@ if PROFILE_NAME not in config.profile_names:
 ```
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the connect-and-daemon code (same as Module 1)'
-:    code_prompt_hide: 'Hide the connect-and-daemon code'
+:tags: [remove-cell]
 
 # Load the profile into this kernel, start the daemon, and get a handle on the gsrd Code.
 import time
@@ -103,10 +97,7 @@ gsrd_code = load_code('gsrd@localhost')
 ```
 
 ```{code-cell} ipython3
-:tags: [hide-cell]
-:mystnb:
-:    code_prompt_show: 'Show the plot_provenance helper (same as Module 1)'
-:    code_prompt_hide: 'Hide the plot_provenance helper'
+:tags: [remove-cell]
 
 # A thin provenance-graph helper used throughout the tutorial (plotting is not the focus).
 def plot_provenance(node):
@@ -476,9 +467,7 @@ The curve's two regimes look strikingly different in the simulated concentration
 ::::
 
 :::{note}
-The sweep stops at `F=0.050` on purpose.
-At `k=0.060` the pattern holds up to about `F=0.046`, then collapses across a sharp cliff: `variance(V)` falls to `~2e-3` at `F=0.050` and, just beyond, to essentially zero (a flat, trivial steady state) that sits off the bottom of the log axis.
-`gsrd` runs fine at higher `F` (the 2D scan below reaches `F=0.062`); extending the curve would only add an unplottable tail, so stopping here is a physics choice, not a limit of the code.
+The sweep stops at `F=0.050`: just beyond, the pattern collapses to a flat, trivial steady state and `variance(V)` drops to essentially zero, off the bottom of the log axis.
 :::
 
 ## A 2D scan: feed rate &times; kill rate

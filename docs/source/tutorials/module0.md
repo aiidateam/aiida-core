@@ -17,7 +17,7 @@ execution:
 (tutorial:intro)=
 # Module 0: Calculations without AiiDA
 
-{bdg-secondary}`⏱️ ~45 min read` {bdg-success}`Beginner`
+{bdg-secondary}`⏱️ ~30 min read` {bdg-success}`Beginner`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module0.ipynb` {octicon}`download`

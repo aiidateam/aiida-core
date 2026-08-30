@@ -341,7 +341,7 @@ Wires the named outputs to the graph's own outputs.
 `parsed.variance_V` and `parsed.mean_V` are the two scalar results parsed from stdout; `simulation.results_npz` is the file output declared on the `ShellJob` (`outputs=['results.npz']`), kept around so later modules can read the V and U fields directly.
 
 :::{note}
-This return is also where `gray_scott_pipeline` differs from `run_pipeline` in {ref}`Module 2 <tutorial:module2>`, which we chose to return the `parse_output` **node**.
+This return is also where `gray_scott_pipeline` differs from `run_pipeline` in {ref}`Module 2 <tutorial:module2>`, which returned the `parse_output` **node**.
 There, with no workflow node to hold onto, that node was the handle you tagged, grouped, and queried.
 A `@task.graph()`'s `return` instead declares the workflow's **output sockets**, so the workflow exposes the results themselves (`variance_V`, `mean_V`, `results_npz`); the single handle for the whole run is now the WorkGraph node, which you organize and query as one unit.
 :::
@@ -516,7 +516,6 @@ You can later find this exact run by that tag with the `QueryBuilder`, without n
 
 You've now turned the pipeline of Module 2 into a single, reusable workflow.
 In {ref}`Module 3b <tutorial:module3b>`, WorkGraph's `Map` runs that same workflow over many inputs at once, as a single tracked, parallel workflow.
-
 
 ## Further reading
 

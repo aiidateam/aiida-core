@@ -260,9 +260,7 @@ When returning a single node, AiiDA registers it under the default link label `r
 When returning a dict, each value is registered as a named output instead, accessible via `node.outputs.<label>`.
 :::
 
-:::{note}
 `prepare_input` and `parse_output` are kept deliberately small here to keep the AiiDA concepts in focus; in real workflows any of these steps can carry substantial work, such as expensive input preparation, data analysis, or downstream simulation stages.
-:::
 
 ### Chaining the steps into a pipeline
 

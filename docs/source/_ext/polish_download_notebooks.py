@@ -31,6 +31,7 @@ import base64
 import json
 import mimetypes
 import re
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +68,20 @@ _ALERT_MAP: dict[str, tuple[str, str]] = {
 }
 
 
+def _cap_notebook_width(width: str) -> str:
+    """Cap a percentage image width at 50% for the downloaded notebooks.
+
+    Source pages render inside a fixed content column, so a ``width: 100%`` gallery
+    image is fine there; in a Jupyter cell the same image fills the whole window, so
+    shrink the wide ones (anything above 50% is clamped to half the cell width).
+    Non-percentage widths are left untouched.
+    """
+    match = re.fullmatch(r'(\d+(?:\.\d+)?)%', width.strip())
+    if match is None:
+        return width
+    return f'{min(float(match.group(1)), 50):g}%'
+
+
 def _render_image(rel_path: str, options: dict[str, str], source_dir: Path) -> str:
     """Render an ``{image}``/``{figure}`` target as a self-contained ``<img>`` tag.
 
@@ -77,7 +92,7 @@ def _render_image(rel_path: str, options: dict[str, str], source_dir: Path) -> s
     path = source_dir / rel_path
     attrs = ''
     if (width := options.get('width')) is not None:
-        attrs += f' width="{width}"'
+        attrs += f' width="{_cap_notebook_width(width)}"'
     if (alt := options.get('alt')) is not None:
         attrs += f' alt="{alt}"'
 
@@ -256,6 +271,30 @@ def _polish_markdown_cells(cells: list[dict[str, Any]], source_dir: Path) -> boo
     return changed
 
 
+def _bundle_module_notebooks(app: Sphinx, downloads_dir: Path, module_stems: set[str]) -> None:
+    """Zip the module notebooks into a single archive next to the tutorials index.
+
+    Offering one download nudges readers to keep the modules in a single folder.
+    Each notebook's setup cell resolves its ``.aiida-tutorial`` sandbox against the
+    working directory, so a shared folder means the ``tutorial`` profile is created
+    once (Module 1) and reused by the rest, rather than recreated per notebook.
+    """
+    notebooks = sorted(
+        (path for path in downloads_dir.rglob('*.ipynb') if path.stem in module_stems),
+        key=lambda path: path.stem,
+    )
+    if not notebooks:
+        return
+
+    bundle_path = Path(app.outdir) / 'tutorials' / 'aiida-tutorials.zip'
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(bundle_path, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for notebook_path in notebooks:
+            archive.write(notebook_path, arcname=f'aiida-tutorials/{notebook_path.name}')
+
+    logger.info('polish_download_notebooks: bundled %d notebook(s) into %s', len(notebooks), bundle_path.name)
+
+
 def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
     """Post-process downloaded notebooks after build completes."""
     if exception is not None:
@@ -284,6 +323,8 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
 
     if count:
         logger.info('polish_download_notebooks: post-processed %d notebook(s)', count)
+
+    _bundle_module_notebooks(app, downloads_dir, module_stems)
 
 
 def setup(app: Sphinx) -> dict[str, Any]:

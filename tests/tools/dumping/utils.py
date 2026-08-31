@@ -131,7 +131,7 @@ def compare_tree(expected: dict, base_path: Path, relative_path: Path = Path()):
                 compare_tree(item, base_path, relative_path / dir_name)
 
         # Check for unexpected entries
-        actual_entries = set(entry.name for entry in dir_path.iterdir())
+        actual_entries = {entry.name for entry in dir_path.iterdir()}
         unexpected_entries = actual_entries - expected_entries
 
         assert not unexpected_entries, f'Unexpected entries found in {dir_path}: {unexpected_entries}'

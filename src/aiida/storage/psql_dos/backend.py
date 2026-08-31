@@ -449,7 +449,7 @@ class PsqlDosBackend(StorageBackend):
         with nullcontext() if self.in_transaction else self.transaction():
             if session.query(DbSetting).filter(DbSetting.key == key).count():
                 if overwrite:
-                    session.query(DbSetting).filter(DbSetting.key == key).update(dict(val=value))
+                    session.query(DbSetting).filter(DbSetting.key == key).update({'val': value})
                 else:
                     raise ValueError(f'The setting {key} already exists')
             else:

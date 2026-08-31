@@ -200,10 +200,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
-    _updatable_attributes: tuple[str, ...] = tuple()
+    _updatable_attributes: tuple[str, ...] = ()
 
     # A tuple of attribute names that will be ignored when creating the hash.
-    _hash_ignored_attributes: tuple[str, ...] = tuple()
+    _hash_ignored_attributes: tuple[str, ...] = ()
 
     # Flag that determines whether the class can be cached.
     _cachable = False

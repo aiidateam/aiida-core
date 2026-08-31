@@ -51,9 +51,9 @@ def validate_entry_point_strings(_, __, value):
 
 @verdi.command(
     'run',
-    context_settings=dict(
-        ignore_unknown_options=True,
-    ),
+    context_settings={
+        'ignore_unknown_options': True,
+    },
 )
 @click.argument('filepath', type=click.Path(exists=True, readable=True, dir_okay=False, path_type=pathlib.Path))
 @click.argument('varargs', nargs=-1, type=click.UNPROCESSED)

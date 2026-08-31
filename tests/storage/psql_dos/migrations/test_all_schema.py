@@ -13,7 +13,7 @@ import pytest
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-@pytest.mark.parametrize('version', list(v for v in PsqlDosMigrator.get_schema_versions() if v.startswith('main')))
+@pytest.mark.parametrize('version', [v for v in PsqlDosMigrator.get_schema_versions() if v.startswith('main')])
 def test_main(version, uninitialised_profile, reflect_schema, data_regression):
     """Test that the migrations produce the expected database schema."""
     with PsqlDosMigrator(uninitialised_profile) as migrator:
@@ -51,7 +51,7 @@ def test_head_vs_orm(uninitialised_profile, reflect_schema, data_regression):
 
 
 @pytest.mark.nightly
-@pytest.mark.parametrize('version', list(v for v in PsqlDosMigrator.get_schema_versions() if v.startswith('django')))
+@pytest.mark.parametrize('version', [v for v in PsqlDosMigrator.get_schema_versions() if v.startswith('django')])
 def test_django(version, uninitialised_profile, reflect_schema, data_regression):
     """Test that the migrations (along the legacy django branch) produce the expected database schema."""
     with PsqlDosMigrator(uninitialised_profile) as migrator:

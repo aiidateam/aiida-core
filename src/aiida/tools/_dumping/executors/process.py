@@ -561,7 +561,7 @@ class NodeRepoIoDumper:
 
         if flat:
             # Empty string means dump into the parent directory itself
-            mapping = {entity: '' for entity in aiida_entities}
+            mapping = dict.fromkeys(aiida_entities, '')
         else:
             mapping = dict(zip(aiida_entities, default_dirs))
 

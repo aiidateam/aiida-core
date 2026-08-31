@@ -56,9 +56,12 @@ class TestSessionSqla:
         session.add(user.bare_model)
         session.commit()
 
-        defaults = dict(
-            label=uuid.uuid4().hex, hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
-        )
+        defaults = {
+            'label': uuid.uuid4().hex,
+            'hostname': 'localhost',
+            'transport_type': 'core.local',
+            'scheduler_type': 'core.pbspro',
+        }
         computer = self.backend.computers.create(**defaults)
         session.add(computer.bare_model)
         session.commit()
@@ -100,9 +103,12 @@ class TestSessionSqla:
         session.add(user.bare_model)
         session.commit()
 
-        defaults = dict(
-            label=uuid.uuid4().hex, hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
-        )
+        defaults = {
+            'label': uuid.uuid4().hex,
+            'hostname': 'localhost',
+            'transport_type': 'core.local',
+            'scheduler_type': 'core.pbspro',
+        }
         computer = self.backend.computers.create(**defaults)
         session.add(computer.bare_model)
         session.commit()
@@ -125,9 +131,12 @@ class TestSessionSqla:
         session.add(user.bare_model)
         session.commit()
 
-        defaults = dict(
-            label=uuid.uuid4().hex, hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
-        )
+        defaults = {
+            'label': uuid.uuid4().hex,
+            'hostname': 'localhost',
+            'transport_type': 'core.local',
+            'scheduler_type': 'core.pbspro',
+        }
         computer = self.backend.computers.create(**defaults)
         computer.store()
 

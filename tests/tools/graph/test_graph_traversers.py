@@ -296,7 +296,7 @@ class TestTraverseGraph:
         every_node = [data_take, data_drop, work_select]
 
         for single_node in every_node:
-            expected_nodes = set([single_node])
+            expected_nodes = {single_node}
             obtained_nodes = traverse_graph([single_node])['nodes']
             assert obtained_nodes == expected_nodes
 
@@ -314,7 +314,7 @@ class TestTraverseGraph:
         obtained_nodes = traverse_graph([data_take], links_forward=links_forward, links_backward=links_backward)[
             'nodes'
         ]
-        expected_nodes = set([work_select, data_take])
+        expected_nodes = {work_select, data_take}
         assert obtained_nodes == expected_nodes
 
         # Forward: work_select to (return) data_take (data_drop is not returned)
@@ -327,7 +327,7 @@ class TestTraverseGraph:
         links_backward = [LinkType.INPUT_WORK, LinkType.RETURN]
 
         # Backward: data_drop is not returned so it has no backward link
-        expected_nodes = set([data_drop])
+        expected_nodes = {data_drop}
         obtained_nodes = traverse_graph([data_drop], links_forward=links_forward, links_backward=links_backward)[
             'nodes'
         ]
@@ -398,19 +398,19 @@ class TestTraverseGraph:
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['data_o'].pk])['nodes']
-        expected_nodes = set(nodes_pklist).difference(set([nodes_dict['data_i'].pk]))
+        expected_nodes = set(nodes_pklist).difference({nodes_dict['data_i'].pk})
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['work_1'].pk], call_calc_forward=False)['nodes']
-        expected_nodes = set([nodes_dict['work_1'].pk, nodes_dict['work_2'].pk])
+        expected_nodes = {nodes_dict['work_1'].pk, nodes_dict['work_2'].pk}
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['work_2'].pk], call_work_forward=False)['nodes']
-        expected_nodes = set([nodes_dict['work_2'].pk])
+        expected_nodes = {nodes_dict['work_2'].pk}
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['calc_0'].pk], create_forward=False)['nodes']
-        expected_nodes = set([nodes_dict['calc_0'].pk, nodes_dict['work_1'].pk, nodes_dict['work_2'].pk])
+        expected_nodes = {nodes_dict['calc_0'].pk, nodes_dict['work_1'].pk, nodes_dict['work_2'].pk}
         assert obtained_nodes == expected_nodes
 
         with pytest.raises(ValueError):

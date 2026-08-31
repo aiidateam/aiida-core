@@ -502,6 +502,7 @@ ignore = [
   'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]
 select = [
+  'C4',  # flake8-comprehensions
   'E',  # pydocstyle
   'W',  # pydocstyle
   'F',  # pyflakes

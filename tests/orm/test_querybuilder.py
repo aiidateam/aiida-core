@@ -978,33 +978,33 @@ class TestAttributes:
         for val in (1.0, 1):
             qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': val}, project='uuid')
             res = [str(_) for (_,) in qb.all()]
-            assert set(res) == set((n_float.uuid, n_int.uuid))
+            assert set(res) == {n_float.uuid, n_int.uuid}
             qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'>': 0.5}}, project='uuid')
             res = [str(_) for (_,) in qb.all()]
-            assert set(res) == set((n_float.uuid, n_int.uuid))
+            assert set(res) == {n_float.uuid, n_int.uuid}
             qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'<': 1.5}}, project='uuid')
             res = [str(_) for (_,) in qb.all()]
-            assert set(res) == set((n_float.uuid, n_int.uuid))
+            assert set(res) == {n_float.uuid, n_int.uuid}
         # Now I am testing the boolean value:
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': True}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_bool.uuid,))
+        assert set(res) == {n_bool.uuid}
 
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'like': '%n%'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str2.uuid,))
+        assert set(res) == {n_str2.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'ilike': 'On%'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str2.uuid,))
+        assert set(res) == {n_str2.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'like': '1'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str.uuid,))
+        assert set(res) == {n_str.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'==': '1'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str.uuid,))
+        assert set(res) == {n_str.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'of_length': 3}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_arr.uuid,))
+        assert set(res) == {n_arr.uuid}
 
 
 class TestQueryBuilderLimitOffsets:
@@ -1337,7 +1337,7 @@ class QueryBuilderPath:
             node.store()
 
         # There are no parents to n9, checking that
-        assert set([]) == set(self.get_all_parents([n9.pk]))
+        assert set() == set(self.get_all_parents([n9.pk]))
         # There is one parent to n6
         assert {(_,) for _ in (n6.pk,)} == {tuple(_) for _ in self.get_all_parents([n7.pk])}
         # There are several parents to n4

@@ -134,7 +134,7 @@ def test_constructor_invalid_compressed(argument, value):
 def test_constructor_invalid_stash_mode(dataclass, valid_stash_modes):
     """The constructor should raise if an invalid stash mode is passed."""
 
-    all_modes = [mode for mode in StashMode.__members__.values()]
+    all_modes = list(StashMode.__members__.values())
 
     for mode in all_modes:
         kwargs = {

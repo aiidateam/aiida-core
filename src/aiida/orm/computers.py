@@ -228,7 +228,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         except exceptions.EntryPointError:
             raise exceptions.ValidationError('Unable to load the scheduler for this computer')
 
-        subst = {i: 'value' for i in job_resource_keys}
+        subst = dict.fromkeys(job_resource_keys, 'value')
         subst['tot_num_mpiprocs'] = 'value'
 
         try:

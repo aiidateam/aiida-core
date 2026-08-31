@@ -53,7 +53,7 @@ def validate_float_or_none(value):
 def validate_len3_list(value):
     """Validate that the value is a list of three floats"""
     try:
-        conv_value = list(float(i) for i in value)
+        conv_value = [float(i) for i in value]
         if len(conv_value) != 3:
             raise ValueError
     except (ValueError, TypeError):
@@ -92,7 +92,7 @@ class Orbital:
 
     # len-3 tuples, with (name, validator, default_value)
     # See how it is defined in the RealhydrogenOrbital class
-    _base_fields_optional = tuple()
+    _base_fields_optional = ()
 
     def __init__(self, **kwargs):
         # This runs the validator as well

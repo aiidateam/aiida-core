@@ -109,7 +109,7 @@ class FixedFieldsAttributeDict(AttributeDict):
             _valid_fields = ('a','b','c')
     """
 
-    _valid_fields: tuple[Any, ...] = tuple()
+    _valid_fields: tuple[Any, ...] = ()
 
     def __init__(self, init: Mapping[str, Any] | None = None):
         if init is None:
@@ -199,7 +199,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         See if we want that setting a default field to None means deleting it.
     """
 
-    _default_fields: tuple[str, ...] = tuple()
+    _default_fields: tuple[str, ...] = ()
 
     def validate(self) -> None:
         """Validate the keys, if any ``validate_*`` method is available."""

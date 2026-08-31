@@ -310,7 +310,7 @@ def identify_outdated(extras, pre_releases):
 
     release_data = {requirement: get_package_data(requirement.name)['releases'] for requirement in to_install}
     for requirement, releases in release_data.items():
-        releases_ = list(sorted(map(parse, releases)))
+        releases_ = sorted(map(parse, releases))
         latest_release = [r for r in releases_ if pre_releases or not r.is_prerelease][-1]
 
         if str(latest_release) not in requirement.specifier:

@@ -297,6 +297,11 @@ tests = [
 tui = [
   'trogon'
 ]
+tutorials = [
+  'aiida-shell>=0.9.0',
+  'aiida-workgraph>=0.9.0',
+  'gsrd>=0.2.0'
+]
 
 [project.scripts]
 runaiida = 'aiida.cmdline.commands.cmd_run:run'
@@ -577,6 +582,8 @@ setenv =
 commands =
     sphinx-autobuild \
         --re-ignore build/.* \
+        --re-ignore .*/.aiida-tutorial/.* \
+        --re-ignore .*/tutorials/(results.npz|input.yaml|input_bad.yaml)$ \
         --port 0 --open-browser \
         -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
 

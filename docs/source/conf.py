@@ -7,8 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
+import sys
+from pathlib import Path
 
 import aiida
+
+# Make local extensions importable
+sys.path.insert(0, str(Path(__file__).parent / '_ext'))
 
 # imports required for docs/source/reference/api/public.rst
 from aiida import (  # noqa: F401
@@ -59,6 +64,15 @@ pygments_style = 'sphinx'
 # Enable labeling for figures
 numfig = True
 
+# The tutorial embeds its gallery images from the gsrd repository by raw URL,
+# to keep binaries out of this repo. Sphinx flags remote image URIs as
+# `image.nonlocal_uri`; suppress just that so the ``-W`` build does not fail.
+# The tutorial notebooks contain IPython shell/magic lines (``!verdi``, ``%verdi``)
+# in ``python``-highlighted code cells, which Pygments cannot lex (it retries in
+# relaxed mode and highlights fine); suppress the warning so it does not fail the
+# ``-W`` docs build on Read the Docs.
+suppress_warnings = ['image.nonlocal_uri', 'misc.highlighting_failure']
+
 # -- Extension configuration -----------------------------------------------------
 
 extensions = [
@@ -78,6 +92,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinxext.rediraffe',
     'notfound.extension',
+    'polish_download_notebooks',
 ]
 
 intersphinx_mapping = {
@@ -97,8 +112,16 @@ ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
 myst_heading_anchors = 4
+
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
+
+# The tutorial setup cell creates a ``.aiida-tutorial/`` sandbox with a live daemon whose broker
+# heartbeat file is rewritten ~1/s. Left under the sphinx-watched source tree that would make
+# ``sphinx-autobuild`` loop forever, so relocate it into the git-ignored ``docs/build/`` via the
+# override the setup cell honours. Downloaded notebooks ignore this and keep the sandbox in the CWD.
+os.environ['AIIDA_TUTORIAL_SANDBOX'] = str(Path(__file__).resolve().parent.parent / 'build' / '.aiida-tutorial')
+
 nb_mime_priority_overrides = [
     ('gettext', 'application/vnd.jupyter.widget-view+json', 0),
     ('gettext', 'application/javascript', 10),
@@ -109,6 +132,14 @@ nb_mime_priority_overrides = [
     ('gettext', 'text/markdown', 60),
     ('gettext', 'text/latex', 70),
     ('gettext', 'text/plain', 80),
+    # HTML builders: prefer text/html over the Jupyter widget-view mime, so
+    # that printing a bare WorkGraph in a cell renders the self-contained
+    # srcdoc-iframe returned by ``WorkGraph._repr_html_`` (the interactive
+    # Rete.js viewer) instead of the widget-view mime, which only works in
+    # live Jupyter sessions with the ipywidgets JS bundle loaded.
+    ('html', 'text/html', 5),
+    ('dirhtml', 'text/html', 5),
+    ('singlehtml', 'text/html', 5),
 ]
 
 # -- Options for HTML output ---------------------------------------------------

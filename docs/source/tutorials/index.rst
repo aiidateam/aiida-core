@@ -25,10 +25,6 @@ Introductory modules
    These four modules are designed to be worked through in order.
    Each builds on the previous one, so start with Module 0 if you are new to AiiDA.
 
-.. raw:: html
-
-   <p>Prefer to run them locally? <a href="aiida-tutorials.zip" download><strong>Download all notebooks (.zip)</strong></a>, then extract them into one folder and run in order.</p>
-
 .. grid:: 2 2 2 2
    :gutter: 3
 
@@ -99,6 +95,10 @@ Introductory modules
          :outline:
 
          Go to Module 3
+
+.. raw:: html
+
+   <p>Prefer to run them locally? <a href="aiida-tutorials.zip" download><strong>Download all notebooks (.zip)</strong></a>, then extract them into one folder and run in order.</p>
 
 Advanced modules
 ================

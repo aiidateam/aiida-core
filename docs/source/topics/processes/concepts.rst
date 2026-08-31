@@ -64,7 +64,7 @@ Process state
 =============
 Each instance of a ``Process`` class that is being executed has a process state.
 This property tells you about the current status of the process.
-It is stored in the instance of the ``Process`` itself and the workflow engine, the ``plumpy`` library, operates only on that value.
+It is stored in the instance of the ``Process`` itself and the workflow engine operates only on that value.
 However, the ``Process`` instance 'dies' as soon as it is terminated, therefore the process state is also written to the calculation node that the process uses as its database record, under the ``process_state`` attribute.
 The process can be in one of six states:
 

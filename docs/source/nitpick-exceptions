@@ -190,14 +190,13 @@ py:class Signature
 py:class ConfigDict
 py:class FieldInfo
 
-# These can be removed once they are properly included in the `__all__` in `plumpy`
-py:class plumpy.ports.PortNamespace
-py:class plumpy.utils.AttributesDict
-py:class plumpy.utils.AttributesFrozendict
-py:class plumpy.process_states.State
-py:class plumpy.workchains._If
-py:class plumpy.workchains._While
-py:class plumpy.processes.ProcessStateMachineMeta
+# These can be removed once they are properly included in the `__all__` of the engine process modules
+py:class aiida.engine.processes.generic.ports.PortNamespace
+py:class aiida.common.extendeddicts.AttributesFrozendict
+py:class aiida.engine.processes.states.State
+py:class aiida.engine.processes.workchains.outline._If
+py:class aiida.engine.processes.workchains.outline._While
+py:class aiida.engine.processes.generic.process.ProcessStateMachineMeta
 py:class PersistenceError
 py:class State
 py:class Stepper

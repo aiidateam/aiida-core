@@ -93,7 +93,7 @@ For example:
 The first line of the method calls the |define| method of the |CalcJob| parent class.
 This necessary step defines the `inputs` and `outputs` that are common to all |CalcJob|'s.
 
-Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input files ``file1`` and ``file2`` of type |SinglefileData|.
+Next, we use the :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.input` method in order to define our two input files ``file1`` and ``file2`` of type |SinglefileData|.
 
 .. admonition:: Further reading
 
@@ -102,7 +102,7 @@ Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in ord
     :ref:`how-to:plugin-codes:cli-options` shows how to use the |Dict| class to represent the ``diff`` command line options as a python dictionary.
     The `aiida-diff`_ demo plugin goes further and adds automatic validation.
 
-We then use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the only output of the calculation with the label ``diff``.
+We then use :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.output` to define the only output of the calculation with the label ``diff``.
 AiiDA will attach the outputs defined here to a (successfully) finished calculation using the link label provided.
 
 ..  I think the following is not really needed here at this point
@@ -112,7 +112,7 @@ AiiDA will attach the outputs defined here to a (successfully) finished calculat
 
 
 Finally, we set a few default ``options``, such as the name of the parser (which we will implement later), the name of input and output files, and the computational resources to use for such a calculation.
-These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and they can be accessed through the :py:attr:`~plumpy.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
+These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and they can be accessed through the :py:attr:`~aiida.engine.processes.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
 
 There is no ``return`` statement in ``define``: the ``define`` method directly modifies the |spec| object it receives.
 
@@ -144,7 +144,7 @@ For example:
     :pyobject: DiffCalculation.prepare_for_submission
 
 All inputs provided to the calculation are validated against the ``spec`` *before* |prepare_for_submission| is called.
-Therefore, when accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can safely assume that all required inputs have been set and that all inputs have a valid type.
+Therefore, when accessing the :py:attr:`~aiida.engine.processes.process.Process.inputs` attribute, you can safely assume that all required inputs have been set and that all inputs have a valid type.
 
 We start by creating a |CodeInfo| object that lets AiiDA know how to run the code, i.e. here:
 

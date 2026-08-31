@@ -430,7 +430,7 @@ AiiDA provides separate options to control the verbosity of what is also directe
 
 With verdi commands adding the ``--verbosity`` flag the ``logging.aiida_loglevel`` and ``logging.terminal_handler`` option can be changed for execution of the command.
 
-By default, only messages from AiiDA's own loggers (``aiida-core``, ``plumpy``, ``kiwipy``, ``disk-objectstore``) are affected by ``logging.aiida_loglevel``.
+By default, only messages from AiiDA's own loggers (``aiida-core``, ``aiida.engine``, ``kiwipy``, ``disk-objectstore``) are affected by ``logging.aiida_loglevel``.
 To also include messages from third-party libraries, lower their log level as well.
 For example, to include SQLAlchemy messages:
 

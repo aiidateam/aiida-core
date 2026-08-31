@@ -2,6 +2,7 @@
 
 import datetime
 import math
+from typing import Any
 
 import pytest
 from pymatgen.core.structure import Molecule
@@ -152,14 +153,14 @@ def test_msonable():
 class _MsonableWithRequiredKeys:
     """Class that requires @class and @module to be present in from_dict."""
 
-    def __init__(self, data):
+    def __init__(self, data: Any) -> None:
         self._data = data
 
     @property
-    def data(self):
+    def data(self) -> Any:
         return self._data
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, Any]:
         return {
             '@module': self.__class__.__module__,
             '@class': self.__class__.__name__,
@@ -167,9 +168,10 @@ class _MsonableWithRequiredKeys:
         }
 
     @classmethod
-    def from_dict(cls, dictionary):
+    def from_dict(cls, dictionary: dict[str, Any]) -> '_MsonableWithRequiredKeys':
         if '@module' not in dictionary or '@class' not in dictionary:
-            raise KeyError('`@module` and `@class` must be present in serialized dictionary')
+            msg = '`@module` and `@class` must be present in serialized dictionary'
+            raise KeyError(msg)
         return cls(dictionary['data'])
 
 
@@ -181,5 +183,6 @@ def test_msonable_preserves_class_and_module():
 
     loaded = load_node(node.pk)
     assert loaded.obj.data == 'test_data'
+
 
 

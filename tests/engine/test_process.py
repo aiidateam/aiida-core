@@ -10,14 +10,15 @@
 
 import threading
 
-import plumpy
 import pytest
 from plumpy.utils import AttributesFrozendict
 
+import plumpy
 from aiida import orm
 from aiida.common.lang import override
-from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
+from aiida.engine import ExitCode, ExitCodesNamespace, Process, WorkChain, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
+from aiida.manage import get_manager
 from aiida.manage.caching import disable_caching, enable_caching
 from aiida.orm import to_aiida_type
 from aiida.orm.nodes.caching import NodeCaching
@@ -624,3 +625,32 @@ def test_auto_default_serializer():
     assert AutoSerializeProcess.spec().inputs['non_metadata_input'].serializer is to_aiida_type
     assert AutoSerializeProcess.spec().inputs['metadata_input'].serializer is None
     assert AutoSerializeProcess.spec().inputs['custom_input'].serializer is custom_serializer
+
+
+class PortalProbeWorkChain(WorkChain):
+    """Record whether a greenback portal is available in an outline step and in ``on_terminated``."""
+
+    portal_in_step = None
+    portal_in_on_terminated = None
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.outline(cls.a_step)
+
+    def a_step(self):
+        PortalProbeWorkChain.portal_in_step = plumpy.has_portal()
+
+    def on_terminated(self):
+        super().on_terminated()
+        PortalProbeWorkChain.portal_in_on_terminated = plumpy.has_portal()
+
+
+def test_portal_available_in_on_terminated():
+    """A portal must still be available once the process transitions to a terminal state."""
+    runner = get_manager().get_runner()
+    process = runner.instantiate_process(PortalProbeWorkChain)
+    runner.loop.run_until_complete(process.step_until_terminated())
+
+    assert PortalProbeWorkChain.portal_in_step is True
+    assert PortalProbeWorkChain.portal_in_on_terminated is True

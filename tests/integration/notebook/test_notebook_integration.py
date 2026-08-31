@@ -60,3 +60,13 @@ def test_separate_cell_passes():
 def test_magic_cells_passes():
     """Test that magic commands work correctly after greenback portal is installed."""
     _execute_notebook('test_magic_cells.ipynb')
+
+
+@pytest.mark.timeout(180)
+def test_progress_bar_shown_in_notebook():
+    """Test that a progress bar is shown in a kernel, whose stderr is not a terminal."""
+    nb = _execute_notebook('test_progress_bar.ipynb')
+
+    code_cell = nb.cells[1]  # Cell index 1, after the markdown cell
+    stderr = _get_cell_outputs(code_cell, name='stderr')
+    assert 'Doing something' in stderr

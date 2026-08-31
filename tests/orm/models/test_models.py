@@ -4,6 +4,7 @@ import datetime
 import enum
 import io
 import typing as t
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -794,3 +795,54 @@ def test_roundtrip_node_from_serialized_constructor(required_arguments: Required
     new = cls.from_serialized(serialized)
     assert isinstance(new, cls)
     _assert_roundtrip_field_values_equal(cls, model, new, 'constructor', tmp_path)
+
+
+# Creation models ``orm.Int`` does not define, each paired with the classproperty that reports so.
+UNSUPPORTED_MODELS = (
+    pytest.param('CliModel', 'supports_cli_model', id='cli'),
+    pytest.param('ConstructorModel', 'supports_constructor_model', id='constructor'),
+)
+
+
+@pytest.fixture(params=('class', 'instance'))
+def int_class_or_instance(request):
+    """``orm.Int`` in both spellings: an instance additionally routes the lookup through ``Node.__getattr__``.
+
+    The instance has to be built at run time: ``orm.Int(5)`` inside a ``parametrize`` decorator is evaluated at
+    collection, before a profile is loaded, and fails the whole module with a ``ConfigurationError``.
+    """
+    return orm.Int if request.param == 'class' else orm.Int(5)
+
+
+@pytest.mark.parametrize('model_name, supports_flag', UNSUPPORTED_MODELS)
+def test_unsupported_model_is_absent_to_introspection(model_name, supports_flag, int_class_or_instance):
+    """A creation model a node class does not define must look absent to attribute-protocol introspection.
+
+    The classproperty raises ``UnsupportedModelError``, which ``getattr`` with a default and ``hasattr`` swallow
+    because it is an ``AttributeError``. A plain ``UnsupportedSchemaError`` instead propagated out of anything
+    walking the attributes of a node class, such as ``inspect.getmembers`` and the
+    ``unittest.mock.Mock(spec=...)`` that plugin test suites hit. Same underlying cause as
+    https://github.com/aiidateam/aiida-core/issues/7379, which was fixed only for the ``verdi code create``
+    command group.
+    """
+    assert getattr(orm.Int, supports_flag) is False, f'`orm.Int` unexpectedly defines a `{model_name}`'
+
+    assert getattr(int_class_or_instance, model_name, None) is None
+    assert not hasattr(int_class_or_instance, model_name)
+
+    # ``Mock(spec=...)`` walks ``dir()`` and used to reach the creation models through a plain ``getattr``, which
+    # raised. Python 3.13 moved that walk to ``inspect.getattr_static``, so this only bites on 3.10 to 3.12.
+    assert hasattr(Mock(spec=int_class_or_instance), 'uuid')
+
+
+@pytest.mark.parametrize('model_name, supports_flag', UNSUPPORTED_MODELS)
+def test_unsupported_model_access_raises(model_name, supports_flag, int_class_or_instance):
+    """Explicit access to a creation model the class does not define still fails loudly.
+
+    Degrading to a bare ``AttributeError`` would leave the user without the reason, and would stop
+    ``except UnsupportedSchemaError`` from catching it.
+    """
+    assert getattr(orm.Int, supports_flag) is False, f'`orm.Int` unexpectedly defines a `{model_name}`'
+
+    with pytest.raises(UnsupportedSchemaError, match=f"'{orm.Int.class_node_type}' does not support"):
+        getattr(int_class_or_instance, model_name)

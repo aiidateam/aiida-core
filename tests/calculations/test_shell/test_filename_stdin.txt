@@ -1,0 +1,8 @@
+#!/bin/bash
+exec > _scheduler-stdout.txt
+exec 2> _scheduler-stderr.txt
+
+
+'/usr/bin/diff' < 'filename' > 'stdout' 2> 'stderr'
+
+echo $? > status

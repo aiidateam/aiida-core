@@ -136,6 +136,8 @@ repos:
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
+
+        src/aiida/workgraph/.*|
       )$
 
   - id: generate-conda-environment

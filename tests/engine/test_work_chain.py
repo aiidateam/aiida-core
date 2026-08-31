@@ -1769,3 +1769,193 @@ def test_illegal_override_run():
 
             async def run(self):
                 pass
+
+
+class SequenceStepper(plumpy.workchains.Stepper):
+    """A minimal alternative execution strategy, running a work chain's `STEPS` in order.
+
+    Stands in for a stepper that derives its order from something other than the outline, such as a graph of data
+    dependencies.
+    """
+
+    POSITION = 'position'
+
+    def __init__(self, workchain, position=0):
+        super().__init__(workchain)
+        self._position = position
+
+    def save_instance_state(self, out_state, save_context):
+        super().save_instance_state(out_state, save_context)
+        out_state[self.POSITION] = self._position
+
+    def load_instance_state(self, saved_state, load_context):
+        super().load_instance_state(saved_state, load_context)
+        self._position = saved_state[self.POSITION]
+
+    def step(self):
+        steps = self._workchain.STEPS
+        getattr(self._workchain, steps[self._position])()
+        self._position += 1
+        return self._position >= len(steps), None
+
+    def __str__(self):
+        return f'{self._position}/{len(self._workchain.STEPS)}'
+
+
+class CustomStepperWorkChain(WorkChain):
+    """A work chain whose execution is driven by its own stepper instead of the outline."""
+
+    STEPS = ('step_a', 'step_b', 'step_c')
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        # Deliberately an outline that fails if it is ever stepped through.
+        spec.outline(cls.outline_must_not_run)
+        spec.output('result', valid_type=Int)
+
+    def _create_stepper(self):
+        return SequenceStepper(self)
+
+    def _recreate_stepper(self, saved_state):
+        return SequenceStepper(self, position=saved_state[SequenceStepper.POSITION])
+
+    def outline_must_not_run(self):
+        raise AssertionError('the outline drove execution instead of the custom stepper')
+
+    def step_a(self):
+        self.ctx.trail = 'a'
+
+    def step_b(self):
+        self.ctx.trail += 'b'
+
+    def step_c(self):
+        self.ctx.trail += 'c'
+        self.out('result', Int(len(self.ctx.trail)).store())
+
+
+class PausingStepperWorkChain(CustomStepperWorkChain):
+    """As above, but pauses after the first step so the checkpoint path can be exercised."""
+
+    def step_a(self):
+        super().step_a()
+        self.pause()
+
+
+class TestCustomStepper:
+    """Test that a `WorkChain` subclass can supply its own stepping strategy."""
+
+    def test_custom_stepper_drives_execution(self):
+        """The stepper returned by `_create_stepper` runs, and the outline does not."""
+        result, node = launch.run_get_node(CustomStepperWorkChain)
+        assert node.is_finished_ok, node.exit_status
+        assert result['result'] == 3
+
+    def test_custom_stepper_survives_checkpoint(self):
+        """`_recreate_stepper` restores position, so a resumed process does not redo completed steps."""
+        runner = get_manager().get_runner()
+        workchain = PausingStepperWorkChain()
+        runner.schedule(workchain)
+
+        async def run_async(wc):
+            await run_until_paused(wc)
+            assert wc.ctx.trail == 'a'
+
+            bundle = plumpy.Bundle(wc)
+            wc.close()
+
+            reloaded = bundle.unbundle()
+            assert reloaded.ctx.trail == 'a'
+
+            runner.schedule(reloaded)
+            reloaded.play()
+            await reloaded.future()
+
+            # 'aabc' would mean the stepper restarted rather than resumed
+            assert reloaded.ctx.trail == 'abc'
+
+            wc.future().set_result(None)
+
+        runner.loop.run_until_complete(run_async(workchain))
+
+
+class OneShotStepper(plumpy.workchains.Stepper):
+    """A stepper that finishes in a single step, used to drive `_do_step` once in isolation."""
+
+    def step(self):
+        return True, None
+
+
+class StreamingStepper(OneShotStepper):
+    """A stepper in the streaming (data-dependency) model, where awaitables persist across steps."""
+
+    awaitable_barrier = False
+
+
+class TestAwaitableBarrier:
+    """The awaitable barrier is a property of the stepping strategy.
+
+    Under the barrier model (the outline default) each step waits for every child it launched before the next
+    begins; a streaming stepper keeps its awaitables so independent children stay in flight. The switch lives on
+    the stepper (``awaitable_barrier``), and the work chain reads it.
+    """
+
+    @staticmethod
+    def _work_chain():
+        class _WorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls._noop)
+
+            def _noop(self):
+                pass
+
+        return _WorkChain()
+
+    @pytest.mark.parametrize(
+        'stepper_cls, expected',
+        [(OneShotStepper, []), (StreamingStepper, ['keep'])],
+        ids=['barrier', 'streaming'],
+    )
+    def test_do_step_clears_awaitables_only_under_barrier(self, stepper_cls, expected):
+        """`_do_step` clears the awaitables at the start of a step under the barrier model, and keeps them under
+        the streaming model. The clearing is what forces an outline step to wait for all its children."""
+        work_chain = self._work_chain()
+        work_chain._stepper = stepper_cls(work_chain)
+        work_chain._awaitables = ['keep']
+
+        work_chain._do_step()
+
+        assert work_chain._awaitables == expected
+
+    def test_barrier_is_the_default(self):
+        """A stepper that does not declare the flag (every outline stepper) gets the barrier."""
+        work_chain = self._work_chain()
+        work_chain._stepper = OneShotStepper(work_chain)
+        assert work_chain._awaitable_barrier is True
+
+    def test_action_awaitables_registers_each_awaitable_once(self, monkeypatch):
+        """A streaming stepper sees the same awaitable on every pass through the waiting state, so the callback
+        must be registered once, not once per pass, and again only after the awaitable is resolved."""
+        from types import SimpleNamespace
+
+        from aiida.engine.processes.workchains.awaitable import AwaitableTarget
+
+        work_chain = self._work_chain()
+        work_chain._stepper = StreamingStepper(work_chain)
+
+        registered: list[int] = []
+        monkeypatch.setattr(work_chain.runner, 'call_on_process_finish', lambda pk, callback: registered.append(pk))
+
+        awaitable = SimpleNamespace(pk=123, target=AwaitableTarget.PROCESS)
+        work_chain._awaitables = [awaitable]
+
+        work_chain._action_awaitables()
+        work_chain._action_awaitables()
+        assert registered == [123], 'the persisting awaitable was registered more than once'
+
+        # Once resolved, its pk is forgotten and a fresh awaitable reusing it would register again.
+        work_chain._registered_awaitable_pks.discard(123)
+        work_chain._action_awaitables()
+        assert registered == [123, 123]

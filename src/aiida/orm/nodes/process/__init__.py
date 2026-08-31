@@ -23,6 +23,7 @@ __all__ = (
     'ProcessNode',
     'WorkChainNode',
     'WorkFunctionNode',
+    'WorkGraphNode',
     'WorkflowNode',
 )
 

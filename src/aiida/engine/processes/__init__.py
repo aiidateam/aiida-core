@@ -21,6 +21,7 @@ from .ports import *
 from .process import *
 from .process_spec import *
 from .workchains import *
+from .workflow import *
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -51,6 +52,7 @@ __all__ = (
     'WithNonDb',
     'WithSerialize',
     'WorkChain',
+    'Workflow',
     'append_',
     'assign_',
     'calcfunction',

@@ -89,6 +89,7 @@ extensions = [
     'IPython.sphinxext.ipython_directive',
     'aiida.sphinxext',
     'sphinx_design',
+    'sphinxcontrib.mermaid',
     'sphinx_copybutton',
     'sphinxext.rediraffe',
     'notfound.extension',

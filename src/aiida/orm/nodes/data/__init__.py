@@ -18,16 +18,21 @@ from .bool import *
 from .cif import *
 from .code import *
 from .data import *
+from .datetime import *
+from .deserializer import *
 from .dict import *
 from .enum import *
 from .float import *
 from .folder import *
+from .function import *
 from .int import *
 from .jsonable import *
 from .list import *
+from .none import *
 from .numeric import *
 from .orbital import *
 from .remote import *
+from .serializer import *
 from .singlefile import *
 from .str import *
 from .structure import *
@@ -43,16 +48,19 @@ __all__ = (
     'Code',
     'ContainerizedCode',
     'Data',
+    'DateTimeData',
     'Dict',
     'EnumData',
     'Float',
     'FolderData',
+    'FunctionData',
     'InstalledCode',
     'Int',
     'JsonableData',
     'Kind',
     'KpointsData',
     'List',
+    'NoneData',
     'NumericType',
     'OrbitalData',
     'PortableCode',
@@ -70,9 +78,12 @@ __all__ = (
     'UpfData',
     'XyData',
     'cif_from_ase',
+    'deserialize_to_raw_python_data',
     'find_bandgap',
+    'general_serializer',
     'has_pycifrw',
     'pycifrw_from_cif',
+    'serialize_to_aiida_nodes',
     'to_aiida_type',
 )
 

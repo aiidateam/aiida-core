@@ -412,6 +412,18 @@ class Process(PlumpyProcess):
             self._task = None
 
     @override
+    async def step_until_terminated(self) -> None:
+        """Keep a greenback portal open for as long as this process is being stepped.
+
+        Ensuring the portal here covers every way a process is driven, including the continuation tasks that the
+        broker creates and that never pass through the runner.
+        """
+        from plumpy import ensure_portal
+
+        await ensure_portal()
+        await super().step_until_terminated()
+
+    @override
     def out(self, output_port: str, value: Any = None) -> None:
         """Attach output to output port.
 

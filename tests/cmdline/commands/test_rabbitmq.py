@@ -34,7 +34,7 @@ def test_tasks_list_running_daemon(run_cli_command):
 @pytest.mark.usefixtures('stopped_daemon_client')
 def test_tasks_list(monkeypatch, run_cli_command):
     """Test the ``tasks list`` command when everything is consistent."""
-    monkeypatch.setattr(control, 'get_process_tasks', lambda *args: [1, 2, 3])
+    monkeypatch.setattr(control, 'get_process_tasks', lambda *args, **kwargs: [1, 2, 3])
 
     result = run_cli_command(cmd_rabbitmq.cmd_tasks_list, use_subprocess=False)
     assert result.output == '1\n2\n3\n'
@@ -57,7 +57,7 @@ def test_tasks_analyze_consistent(monkeypatch, run_cli_command):
     This is a copy of the test for the equivalent ``verdi process repair`` since it just forwards to that command.
     """
     monkeypatch.setattr(control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
-    monkeypatch.setattr(control, 'get_process_tasks', lambda *args: [1, 2, 3])
+    monkeypatch.setattr(control, 'get_process_tasks', lambda *args, **kwargs: [1, 2, 3])
 
     result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, use_subprocess=False)
     assert 'No inconsistencies detected between database and broker.' in result.output

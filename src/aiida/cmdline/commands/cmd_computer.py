@@ -407,7 +407,7 @@ def computer_enable(computer, user):
 def computer_disable(computer, user):
     """Disable the computer for the given user.
 
-    Thi can be useful, for example, when a computer is under maintenance.
+    This can be useful, for example, when a computer is under maintenance.
     """
     from aiida.common.exceptions import NotExistent
 

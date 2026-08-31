@@ -1,12 +1,14 @@
 """Tests for the :mod:`aiida.engine.processes.control` module."""
 
+from types import SimpleNamespace
+
 import pytest
 from plumpy.process_comms import RemoteProcessThreadController
 
 from aiida.engine import ProcessState
 from aiida.engine.launch import submit
 from aiida.engine.processes import control
-from aiida.orm import Int
+from aiida.orm import CalcJobNode, Int, User
 from tests.utils.processes import WaitProcess
 
 
@@ -27,6 +29,51 @@ def test_daemon_not_running(action, caplog):
     """Test that control methods warns if the daemon is not running."""
     action(all_entries=True)
     assert 'The daemon is not running' in caplog.records[0].message
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_active_processes_user_filter(default_user):
+    """Test that ``get_active_processes`` filters by user without including terminated processes."""
+    other_user = User('other@example.com').store()
+
+    selected_process = CalcJobNode(user=default_user)
+    selected_process.set_process_state(ProcessState.WAITING)
+    selected_process.store()
+
+    other_process = CalcJobNode(user=other_user)
+    other_process.set_process_state(ProcessState.WAITING)
+    other_process.store()
+
+    terminated_process = CalcJobNode(user=default_user)
+    terminated_process.set_process_state(ProcessState.FINISHED)
+    terminated_process.store()
+
+    assert control.get_active_processes(project='id') == [selected_process.pk, other_process.pk]
+    assert control.get_active_processes(project='id', user=default_user.email) == [selected_process.pk]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_process_tasks_user_filter(default_user):
+    """Test that ``get_process_tasks`` filters task PIDs by user and preserves duplicates."""
+    other_user = User('other@example.com').store()
+
+    selected_process = CalcJobNode(user=default_user).store()
+    other_process = CalcJobNode(user=other_user).store()
+
+    tasks = [
+        SimpleNamespace(body={'args': {'pid': selected_process.pk}}),
+        SimpleNamespace(body={'args': {'pid': other_process.pk}}),
+        SimpleNamespace(body={'args': {'pid': selected_process.pk}}),
+    ]
+
+    class Broker:
+        """Provide the task iterator used by ``get_process_tasks``."""
+
+        def iterate_tasks(self):
+            yield from tasks
+
+    assert control.get_process_tasks(Broker()) == [selected_process.pk, other_process.pk, selected_process.pk]
+    assert control.get_process_tasks(Broker(), user=default_user.email) == [selected_process.pk, selected_process.pk]
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')

@@ -50,6 +50,7 @@ __all__ = (
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
+    'UnsupportedModelError',
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',
@@ -299,4 +300,20 @@ class LockingProfileError(AiidaException):
 
 
 class UnsupportedSchemaError(AiidaException):
-    """Raised when a schema (model) is not supported by the entity."""
+    """Raised when a schema (model) is not supported by the entity.
+
+    Raised directly for a schema *name* the entity does not offer, such as ``to_model(schema='cli')`` on a
+    plain node. See :class:`UnsupportedModelError` for the subclass covering the creation-model attributes.
+    """
+
+
+class UnsupportedModelError(AttributeError, UnsupportedSchemaError):
+    """Raised when a node class does not define the requested creation model.
+
+    Raised for the ``ConstructorModel`` and ``CliModel`` attributes themselves, which only some node classes
+    define, rather than for a schema name that was passed in.
+
+    Being an ``AttributeError`` as well, attribute-protocol introspection (``getattr`` with a default, ``hasattr``,
+    ``inspect.getmembers``, ``unittest.mock.Mock(spec=...)``) sees the model as simply absent, as it does for any
+    other undefined attribute, instead of having this error propagate out of it.
+    """

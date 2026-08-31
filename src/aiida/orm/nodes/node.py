@@ -326,13 +326,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         def ConstructorModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
             """Return the constructor-based creation model class for this entity.
 
-            :raises UnsupportedSchemaError: if this node type does not support creation via a constructor model.
+            :raises UnsupportedModelError: if this node type does not support creation via a constructor model.
             :return: The constructor-based creation model class.
             """
             if cls._ConstructorModel is None:
-                raise exceptions.UnsupportedSchemaError(
-                    f"'{cls.class_node_type}' does not support constructor-based creation."
-                )
+                msg = f"'{cls.class_node_type}' does not support constructor-based creation."
+                raise exceptions.UnsupportedModelError(msg)
             return cls._ConstructorModel
 
         @classproperty
@@ -340,10 +339,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             """Return the CLI model class for this entity.
 
             :return: The CLI model class.
-            :raises UnsupportedSchemaError: if this node type does not support creation via a CLI model.
+            :raises UnsupportedModelError: if this node type does not support creation via a CLI model.
             """
             if cls._CliModel is None:
-                raise exceptions.UnsupportedSchemaError(f"'{cls.class_node_type}' does not support CLI-based creation.")
+                msg = f"'{cls.class_node_type}' does not support CLI-based creation."
+                raise exceptions.UnsupportedModelError(msg)
             return cls._CliModel
 
     def __init__(
@@ -675,13 +675,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     @classproperty
     def supports_constructor_model(cls) -> bool:  # noqa: N805
-        """Return whether this node class supports constructor-based creation."""
+        """Return whether this node class supports constructor-based creation.
+
+        Keyed on the arguments model rather than on ``ConstructorModel``, because ``_patch_constructor_model``
+        consults this before synthesizing the latter.
+        """
         return hasattr(cls, 'ConstructorArgsModel')
 
     @classproperty
     def supports_cli_model(cls) -> bool:  # noqa: N805
         """Return whether this node class supports CLI-based creation."""
-        return cls._CliModel is not None
+        return hasattr(cls, 'CliModel')
 
     @classproperty
     def class_node_type(cls) -> str:  # noqa: N805
@@ -1064,6 +1068,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         'get_outgoing': 'get_outgoing',
     }
 
+    # Creation models that are exposed as classproperties and raise ``UnsupportedModelError`` when the class does
+    # not define them. ``__getattr__`` needs them by name to keep that error intact on instance access.
+    _creation_model_attributes: tuple[str, ...] = ('CliModel', 'ConstructorModel')
+
     @classproperty
     def Collection(cls) -> type[NodeCollection]:  # noqa: N802, N805
         """Return the collection type for this class.
@@ -1081,6 +1089,14 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         It allows for the handling of deprecated mixin methods.
         """
+        if name in self._creation_model_attributes:
+            # ``UnsupportedModelError`` is an ``AttributeError``, so a class that does not define the model sends
+            # the lookup here. Delegate to the class, where no ``__getattr__`` intercepts, to re-raise it with its
+            # explanation rather than replacing it with the bare ``AttributeError(name)`` below. This holds only
+            # because both are ``classproperty``, whose ``__get__`` ignores the instance; delegating a plain
+            # ``property`` this way would return the descriptor object instead of re-raising.
+            return getattr(type(self), name)
+
         if name in self._deprecated_extra_methods:
             new_name = self._deprecated_extra_methods[name]
             kls = self.__class__.__name__

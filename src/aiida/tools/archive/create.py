@@ -14,16 +14,17 @@ stored in a single file.
 
 import shutil
 import tempfile
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from tabulate import tabulate
+from typing_extensions import Unpack
 
 from aiida import orm
 from aiida.common.lang import type_check
-from aiida.common.links import GraphTraversalRules
+from aiida.common.links import GraphTraversalRules, GraphTraversalRulesType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
@@ -61,7 +62,7 @@ def create_archive(
     compression: int = 6,
     test_run: bool = False,
     backend: StorageBackend | None = None,
-    **traversal_rules: bool,
+    **traversal_rules: Unpack[GraphTraversalRulesType],
 ) -> Path:
     """Export AiiDA data to an archive file.
 
@@ -249,7 +250,7 @@ def create_archive(
         group_nodes, link_data = _collect_required_entities(
             querybuilder,
             entity_ids,
-            traversal_rules,
+            cast(Mapping[str, bool], traversal_rules),
             include_authinfos,
             include_comments,
             include_logs,
@@ -499,7 +500,7 @@ def _collect_all_entities(
 def _collect_required_entities(
     querybuilder: QbType,
     entity_ids: dict[EntityTypes, set[int]],
-    traversal_rules: dict[str, bool],
+    traversal_rules: Mapping[str, bool],
     include_authinfos: bool,
     include_comments: bool,
     include_logs: bool,

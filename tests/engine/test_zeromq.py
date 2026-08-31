@@ -84,7 +84,7 @@ class TestProcessControl:
 
         async def do_pause():
             calc_node = self.runner.submit(test_processes.WaitProcess)
-            while calc_node.process_state != ProcessState.WAITING:
+            while calc_node.process_state != ProcessState.WAITING:  # noqa: ASYNC110
                 await asyncio.sleep(0.1)
 
             assert not calc_node.paused
@@ -107,7 +107,7 @@ class TestProcessControl:
         async def do_pause_play():
             calc_node = self.runner.submit(test_processes.WaitProcess)
             assert not calc_node.paused
-            while calc_node.process_state != ProcessState.WAITING:
+            while calc_node.process_state != ProcessState.WAITING:  # noqa: ASYNC110
                 await asyncio.sleep(0.1)
 
             pause_message = 'Take a seat'
@@ -136,7 +136,7 @@ class TestProcessControl:
         async def do_kill():
             calc_node = self.runner.submit(test_processes.WaitProcess)
             assert not calc_node.is_killed
-            while calc_node.process_state != ProcessState.WAITING:
+            while calc_node.process_state != ProcessState.WAITING:  # noqa: ASYNC110
                 await asyncio.sleep(0.1)
 
             kill_message = 'Sorry, you have to go mate'

@@ -127,6 +127,14 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             )
             return instance
 
+        if data_class is orm.ShellCode:
+            instance = data_class(
+                label='test_shell_code',
+                computer=aiida_localhost,
+                filepath_executable='/bin/cat',
+            )
+            return instance
+
         if data_class is orm.PortableCode:
             (tmp_path / 'bash').touch()
             filepath_executable = 'bash'

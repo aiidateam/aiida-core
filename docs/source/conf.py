@@ -116,6 +116,9 @@ myst_heading_anchors = 4
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 
+# TODO: Remove before v3 release issue #7594
+nb_execution_excludepatterns = ['tutorials/module*.md']
+
 # The tutorial setup cell creates a ``.aiida-tutorial/`` sandbox with a live daemon whose broker
 # heartbeat file is rewritten ~1/s. Left under the sphinx-watched source tree that would make
 # ``sphinx-autobuild`` loop forever, so relocate it into the git-ignored ``docs/build/`` via the

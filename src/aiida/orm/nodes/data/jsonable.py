@@ -182,8 +182,12 @@ class JsonableData(Data):
             return self._obj
         except AttributeError:
             attributes = self.base.attributes.all
-            class_name = attributes.pop('@class')
-            module_name = attributes.pop('@module')
+
+            try:
+                class_name = attributes['@class']
+                module_name = attributes['@module']
+            except KeyError as exc:
+                raise ImportError(f'the attributes do not contain `{exc.args[0]}`.') from exc
 
             try:
                 module = importlib.import_module(module_name)

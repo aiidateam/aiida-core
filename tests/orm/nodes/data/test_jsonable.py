@@ -147,3 +147,39 @@ def test_msonable():
     loaded = load_node(node.pk)
     assert loaded is not node
     assert loaded.obj == obj
+
+
+class _MsonableWithRequiredKeys:
+    """Class that requires @class and @module to be present in from_dict."""
+
+    def __init__(self, data):
+        self._data = data
+
+    @property
+    def data(self):
+        return self._data
+
+    def as_dict(self):
+        return {
+            '@module': self.__class__.__module__,
+            '@class': self.__class__.__name__,
+            'data': self._data,
+        }
+
+    @classmethod
+    def from_dict(cls, dictionary):
+        if '@module' not in dictionary or '@class' not in dictionary:
+            raise KeyError('`@module` and `@class` must be present in serialized dictionary')
+        return cls(dictionary['data'])
+
+
+def test_msonable_preserves_class_and_module():
+    """Test that `@class` and `@module` are preserved in the dictionary passed to `from_dict`."""
+    obj = _MsonableWithRequiredKeys('test_data')
+    node = JsonableData(obj)
+    node.store()
+
+    loaded = load_node(node.pk)
+    assert loaded.obj.data == 'test_data'
+
+

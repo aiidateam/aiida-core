@@ -187,7 +187,8 @@ class JsonableData(Data):
                 class_name = attributes['@class']
                 module_name = attributes['@module']
             except KeyError as exc:
-                raise ImportError(f'the attributes do not contain `{exc.args[0]}`.') from exc
+                msg = f'the attributes do not contain `{exc.args[0]}`.'
+                raise ImportError(msg) from exc
 
             try:
                 module = importlib.import_module(module_name)

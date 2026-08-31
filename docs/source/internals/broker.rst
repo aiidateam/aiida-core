@@ -50,7 +50,7 @@ Module overview
 ===============
 
 ``ZeromqCommunicator`` implements ``kiwipy.Communicator``, the same interface that ``RmqThreadCommunicator`` implements for RabbitMQ.
-plumpy and the AiiDA engine only ever see this interface; they do not know which broker backend they are talking to.
+The AiiDA engine only ever sees this interface; they do not know which broker backend they are talking to.
 
 .. code-block:: text
 
@@ -220,7 +220,7 @@ The empty delimiter frame is the standard ZeroMQ convention for ROUTER/DEALER in
 The ROUTER socket prepends the sender's identity on receive and uses the first frame as the routing target on send.
 
 Payload fields like ``body`` and ``result`` are opaque to the broker.
-They are pre-encoded by the sender (typically as YAML strings by plumpy/kiwipy) and passed through without inspection.
+They are pre-encoded by the sender (typically as YAML strings by the engine/kiwipy) and passed through without inspection.
 
 
 Message flow: task submission
@@ -298,7 +298,7 @@ A ``NACK``, and the requeueing of tasks belonging to a worker that died, free th
 Deferred ACK pattern
 ====================
 
-kiwipy allows a task subscriber to return a ``Future`` instead of a result, and plumpy's process runner relies on this because AiiDA processes are long-running and asynchronous.
+kiwipy allows a task subscriber to return a ``Future`` instead of a result, and the process runner relies on this because AiiDA processes are long-running and asynchronous.
 Any compatible ``kiwipy.Communicator`` has to support it, so ours does too.
 
 When a task subscriber returns, there are two cases:
@@ -340,7 +340,7 @@ Receiving is purely client-local: ``add_broadcast_subscriber()`` sends nothing t
 The communicator just registers the callback and invokes it for any ``BROADCAST`` message that arrives on its DEALER socket.
 
 The catch is that a client only receives broadcasts if the broker knows about it, i.e. if it is registered as a task or RPC subscriber.
-That is enough for AiiDA: daemon workers always hold task and RPC subscriptions, and any client running a process holds an RPC subscription for it (registered by plumpy).
+That is enough for AiiDA: daemon workers always hold task and RPC subscriptions, and any client running a process holds an RPC subscription for it (registered by the engine).
 
 
 Dead worker detection

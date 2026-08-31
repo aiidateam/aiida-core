@@ -177,8 +177,8 @@ The third and final line is extremely important, as it will call the ``define`` 
 Inputs and outputs
 ------------------
 With those formalities out of the way, you can start defining the interesting properties of the work chain through the ``spec``.
-In the example you can see how the method :py:meth:`~plumpy.ProcessSpec.input` is used to define multiple input ports, which document exactly which inputs the work chain expects.
-Similarly, :py:meth:`~plumpy.ProcessSpec.output` is called to instruct that the work chain will produce an output with the label ``result``.
+In the example you can see how the method :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.input` is used to define multiple input ports, which document exactly which inputs the work chain expects.
+Similarly, :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.output` is called to instruct that the work chain will produce an output with the label ``result``.
 These two port creation methods support a lot more functionality, such as adding help string, validation and more, all of which is documented in detail in the section on :ref:`ports and port namespace<topics:processes:usage:ports_portnamespaces>`.
 
 
@@ -188,7 +188,7 @@ Outline
 -------
 The outline is what sets the work chain apart from other processes.
 It is a way of defining the higher-level logic that encodes the workflow that the work chain takes.
-The outline is defined in the ``define`` method through the :py:meth:`~plumpy.WorkChainSpec.outline`.
+The outline is defined in the ``define`` method through the :py:meth:`~aiida.engine.processes.workchains.workchain.WorkChainSpec.outline`.
 It takes a sequence of instructions that the work chain will execute, each of which is implemented as a method of the work chain class.
 In the simple example above, the outline consists of three simple instructions: ``add``, ``multiply``, ``results``.
 Since these are implemented as instance methods, they are prefixed with ``cls.`` to indicate that they are in fact methods of the work chain class.
@@ -551,7 +551,7 @@ As a first example, we will implement a thin wrapper workflow, which simply forw
 .. include:: include/snippets/expose_inputs/simple_parent.py
     :code: python
 
-In the ``define`` method of this simple parent work chain, we use the :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`~plumpy.process_spec.ProcessSpec.expose_outputs`.
+In the ``define`` method of this simple parent work chain, we use the :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_inputs` and :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_outputs`.
 This creates the corresponding input and output ports in the parent work chain.
 Additionally, AiiDA remembers which inputs and outputs were exposed from that particular work chain class.
 This is used when calling the child in the ``run_child`` method.
@@ -580,9 +580,9 @@ In the next section, we will explain each of the steps.
     :code: python
 
 First of all, we want to expose the ``a`` input and the ``e`` output at the top-level.
-For this, we again use :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`~plumpy.process_spec.ProcessSpec.expose_outputs`, but with the optional keyword ``include``.
+For this, we again use :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_inputs` and :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_outputs`, but with the optional keyword ``include``.
 This specifies a list of keys, and only inputs or outputs which are in that list will be exposed.
-So by passing ``include=['a']`` to :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs`, only the input ``a`` is exposed.
+So by passing ``include=['a']`` to :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_inputs`, only the input ``a`` is exposed.
 
 Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``f``), but in a namespace specific for each of the two children.
 For this purpose, we pass the ``namespace`` parameter to the expose functions.

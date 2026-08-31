@@ -40,7 +40,7 @@ Through these attributes, one can define what inputs a process takes, what outpu
 Just by looking at a process specification then, one will know exactly *what* will happen, just not *how* it will happen.
 The ``inputs`` and ``outputs`` attributes are *namespaces* that contain so called *ports*, each one of which represents a specific input or output.
 The namespaces can be arbitrarily nested with ports and so are called *port namespaces*.
-The port and port namespace are implemented by the :py:class:`~plumpy.Port` and :py:class:`~aiida.engine.processes.ports.PortNamespace` class, respectively.
+The port and port namespace are implemented by the :py:class:`~aiida.engine.processes.generic.ports.Port` and :py:class:`~aiida.engine.processes.ports.PortNamespace` class, respectively.
 
 
 .. _topics:processes:usage:ports_portnamespaces:
@@ -54,15 +54,15 @@ To define an input for a process specification, we only need to add a port to th
     spec = ProcessSpec()
     spec.input('parameters')
 
-The ``input`` method, will create an instance of :py:class:`~aiida.engine.processes.ports.InputPort`, a sub class of the base :py:class:`~plumpy.Port`, and will add it to the ``inputs`` port namespace of the spec.
-Creating an output is just as easy, but one should use the :py:meth:`~plumpy.ProcessSpec.output` method instead:
+The ``input`` method, will create an instance of :py:class:`~aiida.engine.processes.ports.InputPort`, a sub class of the base :py:class:`~aiida.engine.processes.generic.ports.Port`, and will add it to the ``inputs`` port namespace of the spec.
+Creating an output is just as easy, but one should use the :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.output` method instead:
 
 .. code:: python
 
     spec = ProcessSpec()
     spec.output('result')
 
-This will cause an instance of :py:class:`~aiida.engine.processes.ports.CalcJobOutputPort`, also a sub class of the base :py:class:`~plumpy.Port`, to be created and to be added to the ``outputs`` specifcation attribute.
+This will cause an instance of :py:class:`~aiida.engine.processes.ports.CalcJobOutputPort`, also a sub class of the base :py:class:`~aiida.engine.processes.generic.ports.Port`, to be created and to be added to the ``outputs`` specifcation attribute.
 Recall, that the ``inputs`` and ``output`` are instances of a :py:class:`~aiida.engine.processes.ports.PortNamespace`, which means that they can contain any port.
 But the :py:class:`~aiida.engine.processes.ports.PortNamespace` itself is also a port itself, so it can be added to another port namespace, allowing one to create nested port namespaces.
 Creating a new namespace in for example the inputs namespace is as simple as:
@@ -105,7 +105,7 @@ Therefore the same concept of nesting through ``PortNamespaces`` applies to the 
 Validation and defaults
 ^^^^^^^^^^^^^^^^^^^^^^^
 In the previous section, we saw that the ``ProcessSpec`` uses the ``PortNamespace``, ``InputPort`` and ``OutputPort`` to define the inputs and outputs structure of the ``Process``.
-The underlying concept that allows this nesting of ports is that the ``PortNamespace``, ``InputPort`` and ``OutputPort``, are all a subclass of :py:class:`~plumpy.ports.Port`.
+The underlying concept that allows this nesting of ports is that the ``PortNamespace``, ``InputPort`` and ``OutputPort``, are all a subclass of :py:class:`~aiida.engine.processes.generic.ports.Port`.
 And as different subclasses of the same class, they have more properties and attributes in common, for example related to the concept of validation and default values.
 All three have the following attributes (with the exception of the ``OutputPort`` not having a ``default`` attribute):
 

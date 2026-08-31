@@ -258,7 +258,7 @@ In the case of the example above, it would look something like the following:
 .. code-block:: bash
 
     2019-03-21 15:12:25 [19]: [10|divide|on_except]: Traceback (most recent call last):
-      File "/home/sphuber/code/aiida/env/dev/plumpy/plumpy/process_states.py", line 220, in execute
+      File "/home/sphuber/code/aiida/env/dev/aiida-core/src/aiida/engine/processes/states.py", line 220, in execute
         result = self.run_fn(*self.args, **self.kwargs)
       File "/home/sphuber/code/aiida/env/dev/aiida-core/aiida/engine/processes/functions.py", line 319, in run
         result = self._func(*args, **kwargs)

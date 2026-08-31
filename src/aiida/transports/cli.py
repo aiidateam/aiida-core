@@ -15,6 +15,7 @@ import click
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.common import resolve_param
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 
@@ -88,11 +89,12 @@ def interactive_default(key, also_non_interactive=False):
         """Determine the default value from the context."""
         from aiida import orm
 
-        if not also_non_interactive and ctx.params['non_interactive']:
+        non_interactive = resolve_param(ctx, 'non_interactive', default=False)
+        if not also_non_interactive and non_interactive:
             raise click.MissingParameter()
 
-        user = ctx.params.get('user', None) or orm.User.collection.get_default()
-        computer = ctx.params.get('computer', None)
+        user = resolve_param(ctx, 'user') or orm.User.collection.get_default()
+        computer = resolve_param(ctx, 'computer')
 
         if computer is None:
             return None

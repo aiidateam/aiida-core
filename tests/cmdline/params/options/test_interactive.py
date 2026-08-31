@@ -481,6 +481,70 @@ def test_interactive_ignore_default_required_option(run_cli_command):
     assert expected in result.output
 
 
+def test_interactive_ignore_default_required_fn_option(run_cli_command):
+    """Test that ``!`` re-prompts when ``required_fn`` makes the option required (not just ``required=True``)."""
+
+    @click.command()
+    @click.option('--opt', prompt='Opt', cls=InteractiveOption, required_fn=lambda ctx: True)
+    @NON_INTERACTIVE()
+    def cmd(opt, non_interactive):
+        click.echo(str(opt))
+
+    result = run_cli_command(cmd, user_input='!\nvalue\n')
+    expected = 'Opt: !\nError: Opt has to be specified\nOpt: value\nvalue\n'
+    assert expected in result.output
+
+
+@pytest.mark.parametrize('non_interactive', [False, True])
+def test_default_map_takes_precedence(run_cli_command, non_interactive):
+    """Test that a value in ``default_map`` (e.g. from ``--config``) is used without prompting."""
+
+    @click.command(context_settings={'default_map': {'opt': 'from-config'}})
+    @click.option('--opt', prompt='Opt', cls=InteractiveOption)
+    @NON_INTERACTIVE()
+    def cmd(opt, non_interactive):
+        click.echo(str(opt))
+
+    options = ['--non-interactive'] if non_interactive else []
+    result = run_cli_command(cmd, options)
+    assert result.output.strip() == 'from-config'
+    assert 'Opt' not in result.output.split('\n')[0]
+
+
+def test_default_map_overrides_contextual_default(run_cli_command):
+    """Test that ``default_map`` wins over ``contextual_default`` in non-interactive mode."""
+
+    @click.command(context_settings={'default_map': {'opt': 'from-config'}})
+    @click.option(
+        '--opt',
+        prompt='Opt',
+        cls=InteractiveOption,
+        contextual_default=lambda ctx: 'from-contextual',
+    )
+    @NON_INTERACTIVE()
+    def cmd(opt, non_interactive):
+        click.echo(str(opt))
+
+    result = run_cli_command(cmd, ['--non-interactive'])
+    assert result.output.strip() == 'from-config'
+
+
+@pytest.mark.parametrize('non_interactive', [False, True])
+def test_template_option_default_map(run_cli_command, non_interactive):
+    """Test that ``default_map`` is respected by ``TemplateInteractiveOption.prompt_for_value``."""
+    from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
+
+    @click.command(context_settings={'default_map': {'opt': 'from-config'}})
+    @click.option('--opt', prompt='Opt', cls=TemplateInteractiveOption)
+    @NON_INTERACTIVE()
+    def cmd(opt, non_interactive):
+        click.echo(str(opt))
+
+    options = ['--non-interactive'] if non_interactive else []
+    result = run_cli_command(cmd, options)
+    assert result.output.strip() == 'from-config'
+
+
 def test_get_help_message():
     """Test the :meth:`aiida.cmdline.params.options.interactive.InteractiveOption.get_help_message`."""
     option = InteractiveOption('-s', type=click.STRING)

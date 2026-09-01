@@ -33,10 +33,10 @@ After this module, you will be able to:
 - Dump calculation data to disk with `verdi process dump`
 
 :::{note}
-This module needs AiiDA and `aiida-shell`. The tutorial uses [`uv`](https://docs.astral.sh/uv/); if you prefer plain `pip`, drop the `uv` prefix (`pip install ...`):
+This module needs AiiDA. The tutorial uses [`uv`](https://docs.astral.sh/uv/); if you prefer plain `pip`, drop the `uv` prefix (`pip install ...`):
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
+uv pip install "aiida-core>=2.9" matplotlib "gsrd>=0.2.0"
 ```
 
 It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.
@@ -220,21 +220,21 @@ $ verdi code create core.code.installed --config gsrd.yml
 
 With this, we have everything set up to run our first calculation through AiiDA.
 
-## Running the simulation with `aiida-shell`
+## Running the simulation with a shell job
 
 In {ref}`Module 0 <tutorial:module0>`, we ran `gsrd` directly from the command line.
 Now let's run it through AiiDA, so the inputs, outputs, and execution metadata get captured in the provenance graph.
 
 AiiDA uses the **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** class to manage external executables by preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and parsing the results.
 
-The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command without requiring additional plugin code.
+The fastest way to run a CalcJob is with {ref}`launch_shell_job <how-to:run-shell-commands>`, which wraps any shell command without requiring additional plugin code.
 Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `gsrd_code` object: an `InstalledCode` pointing at the `gsrd` CLI binary, set up by the setup cell above and registered under the AiiDA label `gsrd@localhost` (which is what you will see in `verdi` output later on; the Python variable `gsrd_code` is just a local handle for the same Code object).
 
 ```{code-cell} ipython3
-# Run the simulation through AiiDA using aiida-shell's launch_shell_job.
+# Run the simulation through AiiDA using launch_shell_job.
 from importlib.resources import files
 
-from aiida_shell import launch_shell_job
+from aiida.tools import launch_shell_job
 
 # The same example input.yaml as in Module 0, shipped with the gsrd package.
 input_path = str(files('gsrd') / 'data' / 'input.yaml')
@@ -252,7 +252,7 @@ print(f"Exit status: {node.exit_status}")
 
 ### What just happened?
 
-When you called `launch_shell_job(...)`, AiiDA ran a `ShellJob` (`aiida-shell`'s built-in `CalcJob` implementation).
+When you called `launch_shell_job(...)`, AiiDA ran a `ShellJob`, the `CalcJob` implementation that runs an arbitrary command.
 The call returns two things, which we unpacked as `results, node`: `results` is a dict of the output data nodes, and `node` is the `CalcJobNode` that records the run itself, its inputs, outputs, and status in the provenance graph.
 Here is the {ref}`lifecycle <topics:calculations:concepts:calcjobs_transport_tasks>` it went through:
 
@@ -265,7 +265,7 @@ Every CalcJob needs two things to run:
 
 - A **{ref}`Computer <how-to:run-codes:computer>`** defines *where* calculations run, specifying the hostname, transport, and scheduler.
   When you set up a profile with `verdi presto`, a `localhost` Computer is created automatically.
-- A **{ref}`Code <how-to:run-codes:code>`** wraps an executable bound to a specific Computer. `aiida-shell` creates one automatically from the command you pass to `launch_shell_job`.
+- A **{ref}`Code <how-to:run-codes:code>`** wraps an executable bound to a specific Computer. `launch_shell_job` creates one automatically from the command you pass it.
 
 In day-to-day use you only ever pass the `Code` to a process; the `Computer` is resolved implicitly through the `Code`, which already references it.
 
@@ -371,7 +371,7 @@ From the command line, `verdi calcjob gotocomputer <PK>` SSHes into the Computer
 
 Now to the actual numbers.
 Recall from {ref}`Module 0 <tutorial:module0>` that `gsrd` splits its output across two places: the arrays go into `results.npz`, but the scalar diagnostics (`variance(V)`, `mean(V)`) appear *only* on stdout.
-Both are now tracked by AiiDA as {py:class}`~aiida.orm.SinglefileData` nodes (`aiida-shell` captures stdout as a file just like any other output), so we can open either of them the same way.
+Both are now tracked by AiiDA as {py:class}`~aiida.orm.SinglefileData` nodes (a shell job captures stdout as a file just like any other output), so we can open either of them the same way.
 
 The full raw stdout text we already saw printed inline in {ref}`Module 0 <tutorial:module0>` is still retrievable via `node.outputs.stdout.get_content()`.
 We collapse the cell output here, since it is the same wall of text as before:

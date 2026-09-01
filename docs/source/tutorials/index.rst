@@ -49,7 +49,7 @@ Introductory modules
       :text-align: center
       :shadow: md
 
-      Run tracked calculations with aiida-shell and inspect the provenance AiiDA records for them.
+      Run tracked calculations with shell jobs and inspect the provenance AiiDA records for them.
 
       +++
 

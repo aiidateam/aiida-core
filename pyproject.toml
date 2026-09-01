@@ -305,7 +305,6 @@ tui = [
   'trogon'
 ]
 tutorials = [
-  'aiida-shell>=0.9.0',
   'aiida-workgraph>=0.9.0',
   'gsrd>=0.2.0'
 ]

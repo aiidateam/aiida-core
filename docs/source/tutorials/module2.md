@@ -26,7 +26,7 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 If you have not already installed these in an earlier module, run:
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
+uv pip install "aiida-core>=2.9" matplotlib "gsrd>=0.2.0"
 ```
 :::
 
@@ -121,7 +121,7 @@ After this module, you will be able to:
 
 ## Why structured data?
 
-In {ref}`Module 1 <tutorial:module1>`, you ran a single `gsrd` simulation through `aiida-shell` and got back `SinglefileData` nodes: the input YAML, the captured stdout, and the `results.npz` file, all tracked with provenance.
+In {ref}`Module 1 <tutorial:module1>`, you ran a single `gsrd` simulation through a shell job and got back `SinglefileData` nodes: the input YAML, the captured stdout, and the `results.npz` file, all tracked with provenance.
 
 Let's run one again here to work with, holding the Gray-Scott parameters fixed:
 
@@ -134,7 +134,7 @@ Let's run one again here to work with, holding the Gray-Scott parameters fixed:
 # Run a single tracked gsrd calculation (as in Module 1).
 from importlib.resources import files
 
-from aiida_shell import launch_shell_job
+from aiida.tools import launch_shell_job
 
 results, calc_node = launch_shell_job(
     gsrd_code,
@@ -300,7 +300,7 @@ print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 Reading `variance(V)` and `mean(V)` straight off the run's `Float` output nodes via `.value`, instead of opening the output files, is one of the advantages of structured data.
 
 :::{note}
-`launch_shell_job` is `aiida-shell`'s convenience wrapper: it builds a **ShellJob** (a `CalcJob`) from your command and inputs, runs it, and returns `(outputs, node)`.
+`launch_shell_job` is a convenience wrapper: it builds a **ShellJob** (a `CalcJob`) from your command and inputs, runs it, and returns `(outputs, node)`.
 So the `gsrd` step is an AiiDA process just like the two calcfunctions around it.
 :::
 

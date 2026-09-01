@@ -13,6 +13,7 @@
 # fmt: off
 
 from .calcjob import *
+from .collections import *
 from .links import *
 from .loaders import *
 from .managers import *
@@ -41,6 +42,7 @@ __all__ = (
     'load_group',
     'load_node',
     'load_node_class',
+    'shallow_copy_nested_dict',
     'validate_link',
 )
 

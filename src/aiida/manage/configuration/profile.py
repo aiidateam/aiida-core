@@ -20,8 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions
-
-from .options import parse_option
+from aiida.manage.configuration.options import parse_option
 
 if TYPE_CHECKING:
     from aiida.orm import Code, Computer, Group, User

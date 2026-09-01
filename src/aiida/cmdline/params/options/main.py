@@ -16,15 +16,14 @@ import typing as t
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
+from aiida.cmdline.params import types
+from aiida.cmdline.params.options.callable import CallableDefaultOption
+from aiida.cmdline.params.options.config import ConfigFileOption
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
+from aiida.cmdline.params.options.overridable import OverridableOption
+from aiida.cmdline.utils import defaults, echo
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
-
-from ...utils import defaults, echo
-from .. import types
-from .callable import CallableDefaultOption
-from .config import ConfigFileOption
-from .multivalue import MultipleValueOption
-from .overridable import OverridableOption
 
 if t.TYPE_CHECKING:
     from click.decorators import FC

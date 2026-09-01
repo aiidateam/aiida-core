@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, ParamSpec
 import docstring_parser
 
 from aiida.common.lang import override
+from aiida.engine.processes.process import Process
+from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.manage import get_manager
 from aiida.orm import (
     Bool,
@@ -39,11 +41,8 @@ from aiida.orm import (
 )
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-from .process import Process
-from .process_spec import ProcessSpec
-
 if TYPE_CHECKING:
-    from .exit_code import ExitCode
+    from aiida.engine.processes.exit_code import ExitCode
 
 __all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
 
@@ -525,7 +524,7 @@ class FunctionProcess(Process):
     @override
     async def run(self) -> ExitCode | None:
         """Run the process."""
-        from .exit_code import ExitCode
+        from aiida.engine.processes.exit_code import ExitCode
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
         # state of `Finished` the cached process will still enter the running state. The process state will have then

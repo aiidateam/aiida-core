@@ -20,9 +20,8 @@ import numpy as np
 from pydantic import ConfigDict, field_validator
 
 from aiida.common.exceptions import NotExistent
+from aiida.orm.nodes.data.array.array import ArrayData
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
-
-from .array import ArrayData
 
 __all__ = ('XyData',)
 

@@ -23,10 +23,9 @@ from enum import Enum
 from plumpy.loaders import get_object_loader
 
 from aiida.common.lang import type_check
+from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
-
-from .base import to_aiida_type
-from .data import Data
 
 __all__ = ('EnumData',)
 

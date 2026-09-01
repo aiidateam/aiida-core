@@ -15,7 +15,7 @@ from typing import Any
 
 from typing_extensions import Self
 
-from . import exceptions
+from aiida.common import exceptions
 
 __all__ = ('AttributeDict', 'DefaultFieldsAttributeDict', 'FixedFieldsAttributeDict')
 

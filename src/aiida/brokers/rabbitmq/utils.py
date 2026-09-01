@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import defaults
+from aiida.brokers.rabbitmq import defaults
 
 
 def get_rmq_url(

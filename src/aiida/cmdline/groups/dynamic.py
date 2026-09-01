@@ -8,13 +8,12 @@ import typing as t
 
 import click
 
+from aiida.cmdline.groups.verdi import VerdiCommandGroup
+from aiida.cmdline.params import options
+from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 from aiida.plugins.factories import BaseFactory
-
-from ..params import options
-from ..params.options.interactive import InteractiveOption
-from .verdi import VerdiCommandGroup
 
 if t.TYPE_CHECKING:
     from click.decorators import FC

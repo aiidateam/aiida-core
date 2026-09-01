@@ -9,10 +9,9 @@ from collections.abc import Iterator
 
 from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus, JsonValue
 from aiida.brokers.rabbitmq import defaults
+from aiida.brokers.rabbitmq.utils import get_launch_queue_name, get_message_exchange_name, get_task_exchange_name
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
-
-from .utils import get_launch_queue_name, get_message_exchange_name, get_task_exchange_name
 
 if t.TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
@@ -217,7 +216,7 @@ class RabbitmqBroker(Broker):
         """
         from urllib.parse import urlsplit, urlunsplit
 
-        from .utils import get_rmq_url
+        from aiida.brokers.rabbitmq.utils import get_rmq_url
 
         kwargs = {
             key[7:]: val for key, val in self._profile.process_control_config.items() if key.startswith('broker_')

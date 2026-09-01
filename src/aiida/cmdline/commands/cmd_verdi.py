@@ -11,9 +11,8 @@
 import click
 
 from aiida import __version__
-
-from ..groups import VerdiCommandGroup
-from ..params import options, types
+from aiida.cmdline.groups import VerdiCommandGroup
+from aiida.cmdline.params import options, types
 
 
 # Pass the version explicitly to ``version_option`` otherwise editable installs can show the wrong version number

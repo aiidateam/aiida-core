@@ -12,7 +12,7 @@ This migration is necessary after the v0.11 to v0.12 migration did not add the c
 to transport entry points.
 """
 
-from ..utils import update_metadata, verify_metadata_version
+from aiida.storage.sqlite_zip.migrations.utils import update_metadata, verify_metadata_version
 
 MAPPING_TRANSPORTS = {
     'local': 'core.local',

@@ -13,10 +13,10 @@
 
 # fmt: off
 
-from .migrations import *
-from .options import *
-from .profile import *
-from .settings import *
+from aiida.manage.configuration.migrations import *
+from aiida.manage.configuration.options import *
+from aiida.manage.configuration.profile import *
+from aiida.manage.configuration.settings import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
@@ -59,9 +59,8 @@ from typing import TYPE_CHECKING, Any, Optional
 from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
+    from aiida.manage.configuration.config import Config
     from aiida.orm import User
-
-    from .config import Config
 
 # global variables for aiida
 CONFIG: Optional['Config'] = None
@@ -69,7 +68,7 @@ CONFIG: Optional['Config'] = None
 
 def get_config_path():
     """Returns path to aiida configuration file."""
-    from .settings import DEFAULT_CONFIG_FILE_NAME, AiiDAConfigDir
+    from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME, AiiDAConfigDir
 
     return os.path.join(AiiDAConfigDir.get(), DEFAULT_CONFIG_FILE_NAME)
 
@@ -88,8 +87,7 @@ def load_config(create=False) -> 'Config':
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
     from aiida.common import exceptions
-
-    from .config import Config
+    from aiida.manage.configuration.config import Config
 
     filepath = get_config_path()
 

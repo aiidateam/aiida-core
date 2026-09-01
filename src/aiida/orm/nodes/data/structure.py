@@ -22,9 +22,8 @@ from pydantic import field_validator
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
-
-from .data import Data
 
 __all__ = ('Kind', 'Site', 'StructureData')
 
@@ -1772,9 +1771,8 @@ class StructureData(Data):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` node.
         """
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.tools.data import structure as structure_tools
-
-        from .dict import Dict
 
         param = Dict(kwargs)
         try:

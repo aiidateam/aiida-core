@@ -40,9 +40,8 @@ from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
-
-from . import orm
-from .utils import (
+from aiida.storage.sqlite_zip import orm
+from aiida.storage.sqlite_zip.utils import (
     DB_FILENAME,
     META_FILENAME,
     REPO_FOLDER,
@@ -141,7 +140,7 @@ class SqliteZipBackend(StorageBackend):
 
     @classmethod
     def version_head(cls) -> str:
-        from .migrator import get_schema_version_head
+        from aiida.storage.sqlite_zip.migrator import get_schema_version_head
 
         return get_schema_version_head()
 
@@ -177,7 +176,7 @@ class SqliteZipBackend(StorageBackend):
         filepath_archive = Path(profile.storage_config['filepath'])
 
         if filepath_archive.exists() and not reset:
-            from .migrator import migrate
+            from aiida.storage.sqlite_zip.migrator import migrate
 
             # Check if migration is needed. If we are already at the desired version, then no migration is required
             target_version = cls.version_head()
@@ -203,7 +202,7 @@ class SqliteZipBackend(StorageBackend):
         # Here the original archive either doesn't exist or ``reset == True`` so we simply create an empty base archive
         # and move it to the path pointed to by the storage configuration of the profile.
         with tempfile.TemporaryDirectory() as dirpath:
-            from .models import SqliteBase
+            from aiida.storage.sqlite_zip.models import SqliteBase
 
             if reset:
                 LOGGER.report(f'Resetting existing {cls.__name__} at {filepath_archive}')
@@ -239,7 +238,7 @@ class SqliteZipBackend(StorageBackend):
         raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
 
     def __init__(self, profile: Profile):
-        from .migrator import validate_storage
+        from aiida.storage.sqlite_zip.migrator import validate_storage
 
         validate_sqlite_version()
         super().__init__(profile)
@@ -424,7 +423,7 @@ class SqliteZipBackend(StorageBackend):
     @staticmethod
     def validate_archive_versions(current_version: str, target_version: str) -> None:
         """Check if migration is needed, raising if legacy/unsupported/invalid."""
-        from .migrator import list_versions
+        from aiida.storage.sqlite_zip.migrator import list_versions
 
         if current_version in ('0.1', '0.2', '0.3') or target_version in ('0.1', '0.2', '0.3'):
             raise StorageMigrationError(

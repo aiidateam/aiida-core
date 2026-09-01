@@ -17,10 +17,9 @@ if t.TYPE_CHECKING:
 
 import click
 
+from aiida.cmdline.params.types.identifier import IdentifierParamType
 from aiida.cmdline.utils import decorators
 from aiida.common.lang import type_check
-
-from .identifier import IdentifierParamType
 
 __all__ = ('GroupParamType',)
 

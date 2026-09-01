@@ -15,9 +15,8 @@ import typing as t
 import click
 from click.shell_completion import CompletionItem
 
+from aiida.cmdline.params.options.conditional import ConditionalOption
 from aiida.cmdline.utils import echo
-
-from .conditional import ConditionalOption
 
 if t.TYPE_CHECKING:
     from collections.abc import Sequence

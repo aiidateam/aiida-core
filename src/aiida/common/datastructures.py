@@ -13,7 +13,7 @@ from __future__ import annotations
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING
 
-from .extendeddicts import DefaultFieldsAttributeDict
+from aiida.common.extendeddicts import DefaultFieldsAttributeDict
 
 __all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode', 'UnstashTargetMode')
 

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import typing as t
 
-from ..comments import Comment
-from ..users import User
+from aiida.orm.comments import Comment
+from aiida.orm.users import User
 
 if t.TYPE_CHECKING:
-    from .node import Node
+    from aiida.orm.nodes.node import Node
 
 
 class NodeComments:

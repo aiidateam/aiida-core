@@ -35,7 +35,7 @@ and these revisions are handled by the `version_profile` and `migrate` backend m
 
 # fmt: off
 
-from .backend import *
+from aiida.storage.sqlite_zip.backend import *
 
 __all__ = (
     'SqliteZipBackend',

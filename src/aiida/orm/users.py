@@ -14,9 +14,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
-
-from . import entities
-from .pydantic import OrmMetadataField
+from aiida.orm import entities
+from aiida.orm.pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend

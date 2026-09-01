@@ -14,9 +14,8 @@ from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.orm.entities import from_backend_entity
+from aiida.orm.nodes.node import Node
 from aiida.orm.pydantic import OrmMetadataField
-
-from ..node import Node
 
 __all__ = ('Data',)
 

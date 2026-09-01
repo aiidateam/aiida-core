@@ -12,8 +12,7 @@ from typing import Generic, TypeVar
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.models.base import Base
-
-from . import utils
+from aiida.storage.psql_dos.orm import utils
 
 ModelType = TypeVar('ModelType')
 SelfType = TypeVar('SelfType', bound='SqlaModelEntity')
@@ -38,7 +37,7 @@ class SqlaModelEntity(Generic[ModelType]):
         :param backend: the corresponding storage backend
         :return: the AiiDA entity
         """
-        from ..backend import PsqlDosBackend
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
 
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)

@@ -12,26 +12,26 @@
 
 # fmt: off
 
-from .array import *
-from .base import *
-from .bool import *
-from .cif import *
-from .code import *
-from .data import *
-from .dict import *
-from .enum import *
-from .float import *
-from .folder import *
-from .int import *
-from .jsonable import *
-from .list import *
-from .numeric import *
-from .orbital import *
-from .remote import *
-from .singlefile import *
-from .str import *
-from .structure import *
-from .upf import *
+from aiida.orm.nodes.data.array import *
+from aiida.orm.nodes.data.base import *
+from aiida.orm.nodes.data.bool import *
+from aiida.orm.nodes.data.cif import *
+from aiida.orm.nodes.data.code import *
+from aiida.orm.nodes.data.data import *
+from aiida.orm.nodes.data.dict import *
+from aiida.orm.nodes.data.enum import *
+from aiida.orm.nodes.data.float import *
+from aiida.orm.nodes.data.folder import *
+from aiida.orm.nodes.data.int import *
+from aiida.orm.nodes.data.jsonable import *
+from aiida.orm.nodes.data.list import *
+from aiida.orm.nodes.data.numeric import *
+from aiida.orm.nodes.data.orbital import *
+from aiida.orm.nodes.data.remote import *
+from aiida.orm.nodes.data.singlefile import *
+from aiida.orm.nodes.data.str import *
+from aiida.orm.nodes.data.structure import *
+from aiida.orm.nodes.data.upf import *
 
 __all__ = (
     'AbstractCode',

@@ -10,8 +10,7 @@ import typing as t
 import uuid
 
 from aiida.common.folders import SandboxFolder
-
-from .abstract import AbstractRepositoryBackend, InfoDictType
+from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 
 __all__ = ('SandboxRepositoryBackend',)
 

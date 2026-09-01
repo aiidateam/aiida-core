@@ -26,9 +26,8 @@ from aiida.common.hashing import chunked_file_hash
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.repository.common import File, FileType
 from aiida.storage.log import MIGRATE_LOGGER
-
-from ..utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine
-from .utils import update_metadata
+from aiida.storage.sqlite_zip.migrations.utils import update_metadata
+from aiida.storage.sqlite_zip.utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine
 
 _NODE_ENTITY_NAME = 'Node'
 _GROUP_ENTITY_NAME = 'Group'
@@ -133,8 +132,7 @@ def _json_to_sqlite(
 ) -> None:
     """Convert a JSON archive format to SQLite."""
     from aiida.common.utils import batch_iter
-
-    from . import v1_db_schema as v1_schema
+    from aiida.storage.sqlite_zip.migrations import v1_db_schema as v1_schema
 
     aiida_orm_to_backend = {
         _USER_ENTITY_NAME: v1_schema.DbUser,

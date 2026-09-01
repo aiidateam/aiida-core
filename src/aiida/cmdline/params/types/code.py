@@ -18,9 +18,8 @@ if t.TYPE_CHECKING:
 import click
 from click.shell_completion import CompletionItem
 
+from aiida.cmdline.params.types.identifier import IdentifierParamType
 from aiida.cmdline.utils import decorators
-
-from .identifier import IdentifierParamType
 
 __all__ = ('CodeParamType',)
 

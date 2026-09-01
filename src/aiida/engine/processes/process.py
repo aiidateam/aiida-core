@@ -43,16 +43,15 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.engine.processes.builder import ProcessBuilder
+from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
+from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
+from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.utils import prune_mapping
 from aiida.engine.utils import InterruptableFuture
 from aiida.orm.implementation.utils import clean_value
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.orm.utils import serialize
-
-from .builder import ProcessBuilder
-from .exit_code import ExitCode, ExitCodesNamespace
-from .ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
-from .process_spec import ProcessSpec
-from .utils import prune_mapping
 
 if TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -348,7 +347,7 @@ class Process(PlumpyProcess):
                 self._cancelling_scheduler_job.cancel()
                 self.node.logger.report('Found active scheduler job cancelation that will be rescheduled.')
 
-            from .calcjobs.tasks import task_kill_job
+            from aiida.engine.processes.calcjobs.tasks import task_kill_job
 
             coro = self._launch_task(task_kill_job, self.node, self.runner.transport)
             self._cancelling_scheduler_job = asyncio.create_task(coro)

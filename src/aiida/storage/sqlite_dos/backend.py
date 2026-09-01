@@ -30,14 +30,13 @@ from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
 from aiida.storage.log import MIGRATE_LOGGER
+from aiida.storage.migrations import TEMPLATE_INVALID_SCHEMA_VERSION
+from aiida.storage.psql_dos import PsqlDosBackend
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.backend import validate_sqlite_version
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
-
-from ..migrations import TEMPLATE_INVALID_SCHEMA_VERSION
-from ..psql_dos import PsqlDosBackend
-from ..psql_dos.migrator import PsqlDosMigrator
 
 if TYPE_CHECKING:
     from disk_objectstore import Container
@@ -330,7 +329,7 @@ class SqliteDosStorage(PsqlDosBackend):
         """
         from sqlalchemy import inspect
 
-        from ..sqlite_zip.models import MAP_ENTITY_TYPE_TO_MODEL
+        from aiida.storage.sqlite_zip.models import MAP_ENTITY_TYPE_TO_MODEL
 
         model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
         mapper = inspect(model).mapper  # type: ignore[union-attr]

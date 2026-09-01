@@ -11,11 +11,11 @@
 import abc
 from typing import TYPE_CHECKING, Any
 
-from .entities import BackendCollection, BackendEntity
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
 if TYPE_CHECKING:
-    from .computers import BackendComputer
-    from .users import BackendUser
+    from aiida.orm.implementation.computers import BackendComputer
+    from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
 

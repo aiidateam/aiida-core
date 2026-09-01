@@ -10,8 +10,7 @@
 
 from aiida.orm.implementation.users import BackendUser, BackendUserCollection
 from aiida.storage.psql_dos.models.user import DbUser
-
-from . import entities, utils
+from aiida.storage.psql_dos.orm import entities, utils
 
 
 class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):

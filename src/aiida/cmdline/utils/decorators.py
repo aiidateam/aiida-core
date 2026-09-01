@@ -26,7 +26,7 @@ from contextlib import contextmanager
 from click_spinner import spinner
 from wrapt import decorator
 
-from . import echo
+from aiida.cmdline.utils import echo
 
 DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
 

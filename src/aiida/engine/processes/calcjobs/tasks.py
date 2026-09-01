@@ -27,18 +27,17 @@ from aiida.common.exceptions import FeatureNotAvailable, StashingError, Transpor
 from aiida.common.folders import SandboxFolder
 from aiida.engine import utils
 from aiida.engine.daemon import execmanager
+from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult, CalcJobMonitors
 from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.process import ProcessState
 from aiida.engine.transports import TransportQueue
 from aiida.engine.utils import InterruptableFuture, interruptable_task
 from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 
-from ..process import ProcessState
-from .monitors import CalcJobMonitorAction, CalcJobMonitorResult, CalcJobMonitors
-
 if TYPE_CHECKING:
-    from .calcjob import CalcJob
+    from aiida.engine.processes.calcjobs.calcjob import CalcJob
 
 UPLOAD_COMMAND = 'upload'
 SUBMIT_COMMAND = 'submit'

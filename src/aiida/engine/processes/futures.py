@@ -40,7 +40,7 @@ class ProcessFuture(asyncio.Future):
         :param poll_interval: optional polling interval, if None, polling is not activated.
         :param communicator: optional communicator, if None, will not subscribe to broadcasts.
         """
-        from .process import ProcessState
+        from aiida.engine.processes.process import ProcessState
 
         # create future in specified event loop
         loop = loop if loop is not None else get_or_create_event_loop()

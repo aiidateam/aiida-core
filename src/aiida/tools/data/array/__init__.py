@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .kpoints import *
+from aiida.tools.data.array.kpoints import *
 
 __all__ = (
     'get_explicit_kpoints_path',

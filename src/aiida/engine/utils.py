@@ -21,10 +21,9 @@ from typing import TYPE_CHECKING, Any
 from plumpy import get_or_create_event_loop
 
 if TYPE_CHECKING:
+    from aiida.engine.processes import Process, ProcessBuilder
+    from aiida.engine.runners import Runner
     from aiida.orm import ProcessNode
-
-    from .processes import Process, ProcessBuilder
-    from .runners import Runner
 
 __all__ = ('InterruptableFuture', 'interruptable_task', 'is_process_function')
 
@@ -66,7 +65,7 @@ def instantiate_process(runner: Runner, process: Process | type[Process] | Proce
     :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
     :param inputs: the inputs for the process to be instantiated with
     """
-    from .processes import Process, ProcessBuilder
+    from aiida.engine.processes import Process, ProcessBuilder
 
     if isinstance(process, Process):
         assert not inputs
@@ -242,7 +241,7 @@ def is_process_scoped() -> bool:
 
     :returns: True if the current scope is within a nested process, False otherwise
     """
-    from .processes.process import Process
+    from aiida.engine.processes.process import Process
 
     return Process.current() is not None
 

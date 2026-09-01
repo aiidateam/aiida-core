@@ -25,13 +25,12 @@ from plumpy.workchains import WorkChainSpec as PlumpyWorkChainSpec
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
+from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.process import Process, ProcessState
+from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.workchains.awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
 from aiida.orm import Node, ProcessNode, WorkChainNode
 from aiida.orm.utils import load_node
-
-from ..exit_code import ExitCode
-from ..process import Process, ProcessState
-from ..process_spec import ProcessSpec
-from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -310,7 +309,7 @@ class WorkChain(Process, metaclass=Protect):
         will enter in the Wait state, otherwise it will go to Continue. When the stepper returns that it is done, the
         stepper result will be converted to None and returned, unless it is an integer or instance of ExitCode.
         """
-        from .context import ToContext
+        from aiida.engine.processes.workchains.context import ToContext
 
         self._awaitables = []
         result: t.Any = None

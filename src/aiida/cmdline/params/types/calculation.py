@@ -10,7 +10,7 @@
 
 import typing as t
 
-from .identifier import IdentifierParamType
+from aiida.cmdline.params.types.identifier import IdentifierParamType
 
 if t.TYPE_CHECKING:
     from aiida.orm.utils.loaders import CalculationEntityLoader

@@ -4,7 +4,7 @@
 
 # fmt: off
 
-from .broker import *
+from aiida.brokers.zeromq.broker import *
 
 __all__ = (
     'ZeromqBroker',

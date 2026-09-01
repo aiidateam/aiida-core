@@ -15,7 +15,7 @@ import typing as t
 import click
 from click.shell_completion import CompletionItem
 
-from .strings import LabelStringType
+from aiida.cmdline.params.types.strings import LabelStringType
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration import Profile

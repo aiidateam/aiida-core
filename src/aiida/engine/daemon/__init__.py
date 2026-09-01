@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .client import *
+from aiida.engine.daemon.client import *
 
 __all__ = (
     'DaemonClient',

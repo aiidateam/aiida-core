@@ -18,10 +18,9 @@ from typing import Any, BinaryIO
 import numpy as np
 from pydantic import ConfigDict, field_validator
 
+from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
-
-from ..base import to_aiida_type
-from ..data import Data
 
 __all__ = ('ArrayData',)
 

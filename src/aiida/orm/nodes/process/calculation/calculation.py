@@ -9,9 +9,8 @@
 """Module with `Node` sub class for calculation processes."""
 
 from aiida.common.links import LinkType
+from aiida.orm.nodes.process.process import ProcessNode
 from aiida.orm.utils.managers import NodeLinksManager
-
-from ..process import ProcessNode
 
 __all__ = ('CalculationNode',)
 

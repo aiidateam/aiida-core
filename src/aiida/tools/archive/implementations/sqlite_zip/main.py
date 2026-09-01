@@ -14,9 +14,8 @@ from typing import Any, Literal, overload
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from aiida.storage.sqlite_zip.utils import read_version
 from aiida.tools.archive.abstract import ArchiveFormatAbstract
-
-from .reader import ArchiveReaderSqlZip
-from .writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
+from aiida.tools.archive.implementations.sqlite_zip.reader import ArchiveReaderSqlZip
+from aiida.tools.archive.implementations.sqlite_zip.writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
 
 
 class ArchiveFormatSqlZip(ArchiveFormatAbstract):

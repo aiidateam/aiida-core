@@ -55,7 +55,7 @@ class Option:
 
     @property
     def global_only(self) -> bool:
-        from .config import ProfileOptionsSchema
+        from aiida.manage.configuration.config import ProfileOptionsSchema
 
         return self._name.replace('.', '__') not in ProfileOptionsSchema.model_fields
 
@@ -82,7 +82,7 @@ class Option:
         """
         from pydantic import ValidationError
 
-        from .config import GlobalOptionsSchema
+        from aiida.manage.configuration.config import GlobalOptionsSchema
 
         attribute = self.name.replace('.', '__')
 
@@ -108,7 +108,7 @@ class Option:
 
 def get_option_names() -> list[str]:
     """Return a list of available option names."""
-    from .config import GlobalOptionsSchema
+    from aiida.manage.configuration.config import GlobalOptionsSchema
 
     return [key.replace('__', '.') for key in GlobalOptionsSchema.model_fields]
 
@@ -116,14 +116,14 @@ def get_option_names() -> list[str]:
 @lru_cache(maxsize=1)
 def _get_options_schema_properties() -> dict[str, Any]:
     """Return the JSON schema properties for the global options schema."""
-    from .config import GlobalOptionsSchema
+    from aiida.manage.configuration.config import GlobalOptionsSchema
 
     return GlobalOptionsSchema.model_json_schema()['properties']
 
 
 def get_option(name: str) -> Option:
     """Return option."""
-    from .config import GlobalOptionsSchema
+    from aiida.manage.configuration.config import GlobalOptionsSchema
 
     options = GlobalOptionsSchema.model_fields
     option_name = name.replace('.', '__')

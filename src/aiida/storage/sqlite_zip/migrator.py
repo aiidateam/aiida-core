@@ -31,11 +31,17 @@ from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, S
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
-
-from .migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
-from .migrations.legacy_to_main import LEGACY_TO_MAIN_REVISION, perform_v1_migration
-from .migrations.utils import copy_tar_to_zip, copy_zip_to_zip, update_metadata
-from .utils import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine, extract_metadata, read_version
+from aiida.storage.sqlite_zip.migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
+from aiida.storage.sqlite_zip.migrations.legacy_to_main import LEGACY_TO_MAIN_REVISION, perform_v1_migration
+from aiida.storage.sqlite_zip.migrations.utils import copy_tar_to_zip, copy_zip_to_zip, update_metadata
+from aiida.storage.sqlite_zip.utils import (
+    DB_FILENAME,
+    META_FILENAME,
+    REPO_FOLDER,
+    create_sqla_engine,
+    extract_metadata,
+    read_version,
+)
 
 
 def get_schema_version_head() -> str:

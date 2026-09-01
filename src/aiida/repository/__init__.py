@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .backend import *
-from .common import *
-from .repository import *
+from aiida.repository.backend import *
+from aiida.repository.common import *
+from aiida.repository.repository import *
 
 __all__ = (
     'AbstractRepositoryBackend',

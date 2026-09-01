@@ -13,12 +13,12 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional, TypeVar
 
-from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 
 if TYPE_CHECKING:
-    from ..utils import LinkTriple
-    from .computers import BackendComputer
-    from .users import BackendUser
+    from aiida.orm.implementation.computers import BackendComputer
+    from aiida.orm.implementation.users import BackendUser
+    from aiida.orm.utils import LinkTriple
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 

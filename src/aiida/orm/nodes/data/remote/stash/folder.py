@@ -12,9 +12,8 @@ from __future__ import annotations
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+from aiida.orm.nodes.data.remote.stash.base import RemoteStashData
 from aiida.orm.pydantic import OrmMetadataField
-
-from .base import RemoteStashData
 
 __all__ = ('RemoteStashFolderData',)
 

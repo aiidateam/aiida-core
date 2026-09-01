@@ -27,12 +27,11 @@ from plumpy.persistence import Persister
 from plumpy.process_comms import RemoteProcessThreadController
 
 from aiida.common import exceptions
+from aiida.engine import transports, utils
+from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
+from aiida.engine.processes.calcjobs import manager
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
-
-from . import transports, utils
-from .processes import Process, ProcessBuilder, ProcessState, futures
-from .processes.calcjobs import manager
 
 __all__ = ('Runner',)
 
@@ -170,7 +169,7 @@ class Runner:
         self._closed = True
 
     def instantiate_process(self, process: TYPE_RUN_PROCESS, **inputs):
-        from .utils import instantiate_process
+        from aiida.engine.utils import instantiate_process
 
         return instantiate_process(self, process, **inputs)
 

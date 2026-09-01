@@ -13,9 +13,8 @@ from __future__ import annotations
 import typing as t
 from functools import singledispatch
 
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
-
-from .data import Data
 
 __all__ = ('BaseType', 'to_aiida_type')
 

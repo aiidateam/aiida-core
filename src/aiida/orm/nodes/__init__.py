@@ -12,11 +12,11 @@
 
 # fmt: off
 
-from .attributes import *
-from .data import *
-from .node import *
-from .process import *
-from .repository import *
+from aiida.orm.nodes.attributes import *
+from aiida.orm.nodes.data import *
+from aiida.orm.nodes.node import *
+from aiida.orm.nodes.process import *
+from aiida.orm.nodes.repository import *
 
 __all__ = (
     'AbstractCode',

@@ -34,7 +34,7 @@ def get_backend_entity(dbmodel, backend):
 @get_backend_entity.register(DbUser)
 def _(dbmodel, backend):
     """get_backend_entity for SQLA DbUser"""
-    from . import users
+    from aiida.storage.psql_dos.orm import users
 
     return users.SqlaUser.from_dbmodel(dbmodel, backend)
 
@@ -42,7 +42,7 @@ def _(dbmodel, backend):
 @get_backend_entity.register(DbGroup)
 def _(dbmodel, backend):
     """get_backend_entity for SQLA DbGroup"""
-    from . import groups
+    from aiida.storage.psql_dos.orm import groups
 
     return groups.SqlaGroup.from_dbmodel(dbmodel, backend)
 
@@ -50,7 +50,7 @@ def _(dbmodel, backend):
 @get_backend_entity.register(DbComputer)
 def _(dbmodel, backend):
     """get_backend_entity for SQLA DbGroup"""
-    from . import computers
+    from aiida.storage.psql_dos.orm import computers
 
     return computers.SqlaComputer.from_dbmodel(dbmodel, backend)
 
@@ -60,7 +60,7 @@ def _(dbmodel, backend):
     """get_backend_entity for SQLA DbNode. It will return an ORM instance since
     there is not Node backend entity yet.
     """
-    from . import nodes
+    from aiida.storage.psql_dos.orm import nodes
 
     return nodes.SqlaNode.from_dbmodel(dbmodel, backend)
 
@@ -68,7 +68,7 @@ def _(dbmodel, backend):
 @get_backend_entity.register(DbAuthInfo)
 def _(dbmodel, backend):
     """get_backend_entity for SQLA DbAuthInfo"""
-    from . import authinfos
+    from aiida.storage.psql_dos.orm import authinfos
 
     return authinfos.SqlaAuthInfo.from_dbmodel(dbmodel, backend)
 
@@ -76,7 +76,7 @@ def _(dbmodel, backend):
 @get_backend_entity.register(DbComment)
 def _(dbmodel, backend):
     """Get the comment from the model"""
-    from . import comments
+    from aiida.storage.psql_dos.orm import comments
 
     return comments.SqlaComment.from_dbmodel(dbmodel, backend)
 
@@ -84,7 +84,7 @@ def _(dbmodel, backend):
 @get_backend_entity.register(DbLog)
 def _(dbmodel, backend):
     """Get the comment from the model"""
-    from . import logs
+    from aiida.storage.psql_dos.orm import logs
 
     return logs.SqlaLog.from_dbmodel(dbmodel, backend)
 

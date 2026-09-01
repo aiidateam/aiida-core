@@ -15,8 +15,7 @@ import click
 import sqlalchemy as sa
 
 from aiida.cmdline.utils import echo
-
-from .utils import dumps_json
+from aiida.storage.psql_dos.migrations.utils.utils import dumps_json
 
 
 def get_legacy_workflow_log_number(connection):

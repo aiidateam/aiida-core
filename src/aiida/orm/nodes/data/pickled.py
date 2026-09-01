@@ -98,7 +98,7 @@ class PickledData(SinglefileData):
         :returns: A callable that takes a number of bytes and unpickles it into the original Python object.
         :raises RuntimeError: If the required unpickling method could not be loaded.
         """
-        module, name, version = self.get_unpickler_information()
+        module, name, pickled_version = self.get_unpickler_information()
         package = module.split('.', maxsplit=1)[0]
 
         try:
@@ -106,7 +106,7 @@ class PickledData(SinglefileData):
         except ImportError as exception:
             msg = (
                 f'Could not import module `{module}` which should be able to unpickle this node.'
-                f'Install `{package}=={version}` to install the required package.'
+                f'Install `{package}=={pickled_version}` to install the required package.'
             )
             raise RuntimeError(msg) from exception
 
@@ -115,25 +115,19 @@ class PickledData(SinglefileData):
         except AttributeError as exception:
             msg = (
                 f'Could not load `{name}` from `{module} which should be able to unpickle this node.'
-                f'Install `{package}=={version}` to install the required package.'
+                f'Install `{package}=={pickled_version}` to install the required package.'
             )
             raise RuntimeError(msg) from exception
 
         try:
-            required_version = importlib.metadata.version(package)
+            installed_version = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
-            required_version = None
+            installed_version = None
 
-        try:
-            unpickler_package = importlib.import_module(package)
-            version = getattr(unpickler_package, '__version__')
-        except ImportError:
-            version = ''
-
-        if version != required_version:
-            LOGGER.info(
-                f'Version of required unpickling module `{required_version}` does not match the one installed '
-                f'`{version}`. It is possible that the unpickling may fail.'
+        if installed_version != pickled_version:
+            LOGGER.warning(
+                f'This node was pickled with `{package}=={pickled_version}` but version `{installed_version}` is '
+                'installed. It is possible that the unpickling may fail.'
             )
 
         return unpickler

@@ -11,6 +11,24 @@ Explicit values are migrated to `logging.aiida_core_loglevel` unless that option
 
 ### New features
 
+#### `ShellJob`: run any command without writing a plugin
+
+The `aiida-shell` package has been integrated into `aiida-core`.
+Running an arbitrary command on a computer, with full provenance, no longer requires writing a dedicated calculation job plugin, nor installing a separate package:
+
+```python
+from aiida.tools import launch_shell_job
+
+results, node = launch_shell_job('date')
+print(results['stdout'].get_content())
+```
+
+The `core.shell` calculation job and parser entry points keep the names they had in `aiida-shell`, so existing nodes, archives and scripts that refer to them are unaffected.
+`launch_shell_job` is importable from `aiida.tools`, and the `PickledData` and `EntryPointData` data plugins from `aiida.orm`.
+
+Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
+Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
+
 ### Behavior changes
 
 ### Fixes

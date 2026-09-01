@@ -23,6 +23,25 @@ def test_verdi_version(run_cli_command):
 
 
 @pytest.mark.usefixtures('config_with_profile')
+def test_verdi_external_command(run_cli_command, monkeypatch):
+    """Verify that a command registered through an entry point can be invoked."""
+
+    @click.command()
+    def external():
+        click.echo('external command')
+
+    def load_entry_point(group, name):
+        assert group == 'aiida.cmdline.verdi'
+        assert name == 'external'
+        return external
+
+    monkeypatch.setattr('aiida.cmdline.utils.pluginable.load_entry_point', load_entry_point)
+
+    result = run_cli_command(cmd_verdi.verdi, ['external'], use_subprocess=False)
+    assert result.output == 'external command\n'
+
+
+@pytest.mark.usefixtures('config_with_profile')
 def test_verdi_with_empty_profile_list(run_cli_command):
     """Regression test for #2424: verify that verdi remains operable even if profile list is empty"""
     from aiida.manage.configuration import CONFIG

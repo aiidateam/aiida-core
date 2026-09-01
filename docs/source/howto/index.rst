@@ -9,6 +9,7 @@ How-To Guides
    daemon
    plugins_install
    run_codes
+   run_shell_commands
    run_workflows
    ssh
    plugin_codes

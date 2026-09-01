@@ -14,8 +14,6 @@ import importlib.metadata
 import io
 import typing as t
 
-import dill
-
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.nodes.data.singlefile import SinglefileData
 
@@ -39,12 +37,6 @@ class PickledData(SinglefileData):
     KEY_ATTRIBUTES_PICKLER_KWARGS: str = 'pickler_kwargs'
     """Attribute key that stores the keyword arguments passed to the constructor which are forwarded to the pickler."""
 
-    PICKLER: t.Callable[[t.Any], bytes] = dill.dumps
-    """The method used to pickle the Python object."""
-
-    UNPICKLER: t.Callable[[bytes], t.Any] = dill.loads
-    """The method used to unpickle the Python object."""
-
     def __init__(self, obj: t.Any, **kwargs: t.Any) -> None:
         """Construct a new instance by pickling the provided Python object.
 
@@ -52,7 +44,7 @@ class PickledData(SinglefileData):
         :param kwargs: Keyword arguments forwarded to the pickler, and recorded on the node.
         :raises TypeError: If the Python object cannot be pickled.
         """
-        pickled = self.get_pickler()(obj, **kwargs)
+        pickled = self._get_pickler()(obj, **kwargs)
 
         super().__init__(file=io.BytesIO(pickled))
 
@@ -60,19 +52,38 @@ class PickledData(SinglefileData):
         self.base.attributes.set(self.KEY_ATTRIBUTES_PICKLER_KWARGS, kwargs)
 
     @classmethod
-    def get_pickler(cls) -> t.Callable[[t.Any], bytes]:
+    def _get_pickler(cls) -> t.Callable[[t.Any], bytes]:
         """Return the function that should be used to pickle the object stored by this node.
+
+        Subclasses override this, and :meth:`_get_default_unpickler`, to store objects with a different pickler.
 
         :returns: A callable that is used to pickle the object to be stored by this node.
         """
-        return cls.PICKLER
+        import dill
+
+        pickler: t.Callable[[t.Any], bytes] = dill.dumps
+        return pickler
+
+    @classmethod
+    def _get_default_unpickler(cls) -> t.Callable[[bytes], t.Any]:
+        """Return the function that this class records as being able to unpickle the objects it stores.
+
+        This is the counterpart of :meth:`_get_pickler`. It is not :meth:`get_unpickler`, which returns the
+        function that a given node recorded when it was created.
+
+        :returns: A callable that takes a number of bytes and unpickles it into the original Python object.
+        """
+        import dill
+
+        unpickler: t.Callable[[bytes], t.Any] = dill.loads
+        return unpickler
 
     def _set_unpickler_information(self) -> None:
         """Store the module, function and version of the package that can be used for unpickling this object.
 
         .. note:: If the version of the package cannot be determined, it will be set to ``None``.
         """
-        unpickler = self.UNPICKLER
+        unpickler = self._get_default_unpickler()
         package = unpickler.__module__.split('.', maxsplit=1)[0]
 
         try:

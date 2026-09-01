@@ -185,4 +185,21 @@ def test_msonable_preserves_class_and_module():
     assert loaded.obj.data == 'test_data'
 
 
+def test_invalid_reserved_key():
+    """Test that @-prefixed keys other than MSONable reserved ones raise ValueError."""
+
+    class BadClass:
+
+        def as_dict(self) -> dict[str, Any]:
+            return {'@custom': 'bad', 'value': 1}
+
+        @classmethod
+        def from_dict(cls, d: dict[str, Any]) -> 'BadClass':
+            return cls()
+
+    with pytest.raises(ValueError, match=r'invalid `@`-prefixed keys'):
+        JsonableData(BadClass())
+
+
+
 

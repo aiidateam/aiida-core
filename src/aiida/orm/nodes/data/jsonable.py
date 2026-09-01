@@ -13,6 +13,8 @@ from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
 __all__ = ('JsonableData',)
 
+MSONABLE_RESERVED_KEYS: typing.Final[set[str]] = {'@module', '@class', '@version', '@submodule'}
+
 
 @t.runtime_checkable
 class JsonSerializableProtocol(t.Protocol):
@@ -100,6 +102,16 @@ class JsonableData(Data):
 
         self._obj = obj
         dictionary = obj.as_dict()
+
+        # Validate against MSONable convention: only known @-prefixed keys are allowed
+        invalid_keys = [k for k in dictionary if isinstance(k, str) and k.startswith('@') and k not in MSONABLE_RESERVED_KEYS]
+        if invalid_keys:
+            msg = (
+                f'the dictionary returned by `as_dict` contains invalid `@`-prefixed keys: {invalid_keys}. '
+                'Keys prefixed with `@` are reserved for MSONable metadata '
+                '(`@module`, `@class`, `@version`, `@submodule`).'
+            )
+            raise ValueError(msg)
 
         if '@class' not in dictionary:
             dictionary['@class'] = obj.__class__.__name__

@@ -47,6 +47,7 @@ __all__ = (
     'FixedFieldsAttributeDict',
     'GraphTraversalRule',
     'GraphTraversalRules',
+    'GraphTraversalRulesType',
     'HashingError',
     'IncompatibleStorageSchema',
     'InputValidationError',

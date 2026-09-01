@@ -13,6 +13,9 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Iterable
 
+from typing_extensions import Unpack
+
+from aiida.common.links import GraphTraversalRulesType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
 from aiida.orm import Group, Node, QueryBuilder
@@ -28,7 +31,7 @@ def delete_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
-    **traversal_rules: bool,
+    **traversal_rules: Unpack[GraphTraversalRulesType],
 ) -> tuple[set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
 
@@ -114,7 +117,7 @@ def delete_group_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
-    **traversal_rules: bool,
+    **traversal_rules: Unpack[GraphTraversalRulesType],
 ) -> tuple[set[int], bool]:
     """Delete nodes contained in a list of groups (not the groups themselves!).
 

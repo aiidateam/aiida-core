@@ -11,9 +11,11 @@
 from collections import namedtuple
 from enum import Enum
 
+from typing_extensions import TypedDict
+
 from .lang import isidentifier, type_check
 
-__all__ = ('GraphTraversalRule', 'GraphTraversalRules', 'LinkType', 'validate_link_label')
+__all__ = ('GraphTraversalRule', 'GraphTraversalRules', 'GraphTraversalRulesType', 'LinkType', 'validate_link_label')
 
 
 class LinkType(Enum):
@@ -40,6 +42,23 @@ add adjacent nodes to finally arrive at a set of nodes that represent a valid an
 :param default: boolean, the default value of the rule, if `True` means that the link type for the given direction
     should be followed.
 """
+
+
+class GraphTraversalRulesType(TypedDict, total=False):
+    """Boolean overrides for graph traversal rules."""
+
+    input_calc_forward: bool
+    input_calc_backward: bool
+    create_forward: bool
+    create_backward: bool
+    return_forward: bool
+    return_backward: bool
+    input_work_forward: bool
+    input_work_backward: bool
+    call_calc_forward: bool
+    call_calc_backward: bool
+    call_work_forward: bool
+    call_work_backward: bool
 
 
 class GraphTraversalRules(Enum):

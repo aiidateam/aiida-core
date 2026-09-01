@@ -39,9 +39,9 @@ def _load_computer_validator(value: int | str | orm.Computer) -> orm.Computer:
         return orm.load_computer(identifier=value)
 
 
-def _load_code_validator(value: int | str | orm.Code) -> orm.Code:
-    """Pydantic validator to load an ``orm.Code`` from identifier."""
-    if isinstance(value, orm.Code):
+def _load_code_validator(value: int | str | orm.AbstractCode) -> orm.AbstractCode:
+    """Pydantic validator to load an ``orm.AbstractCode`` from identifier."""
+    if isinstance(value, orm.AbstractCode):
         return value
     elif isinstance(value, (str, int)):
         return orm.load_code(identifier=value)
@@ -64,8 +64,8 @@ def _validate_computers_input(value: list[orm.Computer] | list[str] | None) -> l
     return [_load_computer_validator(item) for item in value]
 
 
-def _validate_codes_input(value: list[orm.Code] | list[str] | None) -> list[orm.Code] | None:
-    """Load Code objects from identifiers."""
+def _validate_codes_input(value: list[orm.AbstractCode] | list[str] | None) -> list[orm.AbstractCode] | None:
+    """Load code objects from identifiers."""
     if not value:
         return None
 
@@ -73,9 +73,9 @@ def _validate_codes_input(value: list[orm.Code] | list[str] | None) -> list[orm.
     if all(isinstance(item, str) for item in value):
         return [_load_code_validator(item) for item in value]
 
-    # Check if all items are orm.Code objects
-    if all(isinstance(item, orm.Code) for item in value):
-        # Return list of orm.Code objects as-is
+    # Check if all items are orm.AbstractCode objects
+    if all(isinstance(item, orm.AbstractCode) for item in value):
+        # Return list of orm.AbstractCode objects as-is
         # mypy doesn't correctly resolve with all and isinstance
         return value  # type: ignore[return-value]
 
@@ -177,7 +177,9 @@ class EntityFilterMixin(BaseModel):
     computers: list[orm.Computer] | None = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: list[orm.Code] | None = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
+    codes: list[orm.AbstractCode] | None = Field(
+        default=None, description='List of code objects or UUIDs/labels to filter by'
+    )
 
     @field_validator('user', mode='before')
     @classmethod

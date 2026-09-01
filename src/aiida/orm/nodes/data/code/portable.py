@@ -32,18 +32,15 @@ from aiida.orm import Computer
 from aiida.orm.pydantic import OrmMetadataField
 
 from .abstract import AbstractCode
-from .legacy import Code
 
 __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
 
-class PortableCode(Code):
+class PortableCode(AbstractCode):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
-    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
-    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class CommonFields(AbstractCode.CommonFields):
         filepath_executable: str = OrmMetadataField(
@@ -121,7 +118,7 @@ class PortableCode(Code):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
+        super()._validate()
 
         try:
             filepath_executable = self.filepath_executable

@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
@@ -100,13 +99,17 @@ def default_node_styles(node: orm.Node) -> dict:
             'penwidth': 0,
         }
 
+    code_style = {
+        'shape': 'ellipse',
+        'style': 'filled',
+        'fillcolor': '#4ca4b9aa',  # blue
+        'penwidth': 0,
+    }
+
     node_type_map = {
-        'data.core.code.Code.': {
-            'shape': 'ellipse',
-            'style': 'filled',
-            'fillcolor': '#4ca4b9aa',  # blue
-            'penwidth': 0,
-        },
+        'data.core.code.installed.InstalledCode.': code_style,
+        'data.core.code.containerized.ContainerizedCode.': code_style,
+        'data.core.code.portable.PortableCode.': code_style,
         'process.calculation.calcjob.CalcJobNode.': {
             'shape': 'rectangle',
             'style': 'filled',
@@ -223,9 +226,14 @@ def default_node_sublabels(node: orm.Node) -> str:
         sublabel = f'{node.base.attributes.get("value", "")}'
     elif class_node_type == 'data.core.bool.Bool.':
         sublabel = f'{node.base.attributes.get("value", "")}'
-    elif class_node_type == 'data.core.code.Code.':
+    elif class_node_type in (
+        'data.core.code.installed.InstalledCode.',
+        'data.core.code.containerized.ContainerizedCode.',
+    ):
         label = '?' if node.computer is None else node.computer.label
-        sublabel = f'{os.path.basename(node.get_execname())}@{label}'
+        sublabel = f'{node.get_executable().name}@{label}'
+    elif class_node_type == 'data.core.code.portable.PortableCode.':
+        sublabel = str(node.get_executable())
     elif class_node_type == 'data.core.singlefile.SinglefileData.':
         sublabel = node.filename
     elif class_node_type == 'data.core.remote.RemoteData.':

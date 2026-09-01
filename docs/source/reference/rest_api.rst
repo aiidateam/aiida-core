@@ -418,9 +418,8 @@ Nodes
             "attributes": {
               "append_text": "",
               "input_plugin": "quantumespresso.pw",
-              "is_local": false,
               "prepend_text": "",
-              "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
+              "filepath_executable": "/project/espresso-5.1-intel/bin/pw.x"
             }
           },
           "id": "ffe11",
@@ -464,11 +463,11 @@ Nodes
 
     REST URL::
 
-         http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,is_local
+         http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,filepath_executable
 
     Description:
 
-        Returns a list of the attributes ``append_text`` and ``is_local`` of the |Node| object with ``uuid="ffe11..."``.
+        Returns a list of the attributes ``append_text`` and ``filepath_executable`` of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -476,15 +475,15 @@ Nodes
           "data": {
             "attributes": {
               "append_text": "",
-              "is_local": false
+              "filepath_executable": "/project/espresso-5.1-intel/bin/pw.x"
             }
           },
           "id": "ffe11",
           "method": "GET",
           "path": "/api/v4/nodes/ffe11/contents/attributes",
-          "query_string": "attributes_filter=append_text,is_local",
+          "query_string": "attributes_filter=append_text,filepath_executable",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,is_local",
+          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,filepath_executable",
           "url_root": "http://localhost:5000/"
         }
 
@@ -972,14 +971,13 @@ Option 1: HTTPie
 
       {
           "data": {
-              "Code_1": [
+              "InstalledCode_1": [
                   {
                       "attributes": {
                           "append_text": " ",
                           "input_plugin": "quantumespresso.ph",
-                          "is_local": false,
                           "prepend_text": "ulimit -s unlimited",
-                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/ph.x"
+                          "filepath_executable": "/home/ubuntu/codes/q-e/bin/ph.x"
                       },
                       "ctime": "Wed, 16 Dec 2020 11:50:03 GMT",
                       "dbcomputer_id": 1,
@@ -988,11 +986,11 @@ Option 1: HTTPie
                           "_aiida_hash": "045368af9cfeafa6fe3b0c6707e71b85cbef4fec55514ad0068c3ff19193e11f",
                           "hidden": false
                       },
-                      "full_type": "data.code.Code.|",
+                      "full_type": "data.core.code.installed.InstalledCode.|",
                       "id": 3428,
                       "label": "q-e_6.6_ph",
                       "mtime": "Wed, 16 Dec 2020 11:50:03 GMT",
-                      "node_type": "data.code.Code.",
+                      "node_type": "data.core.code.installed.InstalledCode.",
                       "process_type": null,
                       "user_id": 1,
                       "uuid": "7565cf2a-8219-4c2b-bbae-9c6cd3d95aa2"
@@ -1001,9 +999,8 @@ Option 1: HTTPie
                       "attributes": {
                           "append_text": " ",
                           "input_plugin": "quantumespresso.pp",
-                          "is_local": false,
                           "prepend_text": "ulimit -s unlimited",
-                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/pp.x"
+                          "filepath_executable": "/home/ubuntu/codes/q-e/bin/pp.x"
                       },
                       "ctime": "Mon, 14 Dec 2020 16:44:20 GMT",
                       "dbcomputer_id": 1,
@@ -1012,11 +1009,11 @@ Option 1: HTTPie
                           "_aiida_hash": "1dca299bb587e002ac7aa745b5fd0b8893105dc0a16acefdfbc6188637dad05f",
                           "hidden": false
                       },
-                      "full_type": "data.code.Code.|",
+                      "full_type": "data.core.code.installed.InstalledCode.|",
                       "id": 1822,
                       "label": "q-e_6.6_pp",
                       "mtime": "Mon, 14 Dec 2020 16:44:20 GMT",
-                      "node_type": "data.code.Code.",
+                      "node_type": "data.core.code.installed.InstalledCode.",
                       "process_type": null,
                       "user_id": 1,
                       "uuid": "a1b0530d-1a8d-413c-a4bd-af79868926c8"
@@ -1025,9 +1022,8 @@ Option 1: HTTPie
                       "attributes": {
                           "append_text": " ",
                           "input_plugin": "quantumespresso.pw",
-                          "is_local": false,
                           "prepend_text": "ulimit -s unlimited",
-                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/pw.x"
+                          "filepath_executable": "/home/ubuntu/codes/q-e/bin/pw.x"
                       },
                       "ctime": "Thu, 19 Nov 2020 14:38:42 GMT",
                       "dbcomputer_id": 1,
@@ -1036,11 +1032,11 @@ Option 1: HTTPie
                           "_aiida_hash": "e714b9e79656a0cf1c24d19a92f3553c3052d103b4f5b25bd2ae89581cb4886e",
                           "hidden": false
                       },
-                      "full_type": "data.code.Code.|",
+                      "full_type": "data.core.code.installed.InstalledCode.|",
                       "id": 1,
                       "label": "q-e_6.6_pw",
                       "mtime": "Thu, 19 Nov 2020 14:38:42 GMT",
-                      "node_type": "data.code.Code.",
+                      "node_type": "data.core.code.installed.InstalledCode.",
                       "process_type": null,
                       "user_id": 1,
                       "uuid": "e48ec85b-3034-435b-ac96-d5ba37df393e"
@@ -1068,7 +1064,7 @@ Option 1: HTTPie
 
     In [1]: qb = QueryBuilder()
 
-    In [2]: qb.append(Code)
+    In [2]: qb.append(InstalledCode)
     Out[2]: <aiida.orm.querybuilder.QueryBuilder at 0x7f2bbeedd700>
 
     In [3]: qb_dict = qb.queryhelp
@@ -1085,8 +1081,8 @@ Option 1: HTTPie
     {
       "path": [
         {
-          "entity_type": "data.code.Code.",
-          "tag": "Code_1",
+          "entity_type": "data.core.code.installed.InstalledCode.",
+          "tag": "InstalledCode_1",
           "joining_keyword": null,
           "joining_value": null,
           "outerjoin": false,
@@ -1094,14 +1090,14 @@ Option 1: HTTPie
         }
       ],
       "filters": {
-        "Code_1": {
+        "InstalledCode_1": {
           "node_type": {
-            "like": "data.code.%"
+            "like": "data.core.code.installed.%"
           }
         }
       },
       "project": {
-        "Code_1": []
+        "InstalledCode_1": []
       },
       "order_by": {},
       "limit": null,
@@ -1114,14 +1110,14 @@ Option 2: Resquests library (all python approach)
 
   .. code-block:: python
 
-    from aiida.orm import QueryBuilder, Code
+    from aiida.orm import InstalledCode, QueryBuilder
     from aiida import load_profile
     import requests
 
     load_profile('my_profile')
 
     qb = QueryBuilder()
-    qb.append(Code)
+    qb.append(InstalledCode)
 
     qb_dict = qb.queryhelp
 
@@ -1309,7 +1305,7 @@ Regular filters can be compounded, requiring all specified filters to apply.
 .. note:: Node types are specified by a string that defines their position in the AiiDA source tree, ending with a dot.
     Examples:
 
-    - ``node_type="data.core.code.Code."`` selects only objects of type |Code|.
+    - ``node_type="data.core.code.installed.InstalledCode."`` selects only objects of type :py:class:`~aiida.orm.InstalledCode`.
     - ``node_type="data.core.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.RemoteData`.
 
 .. note:: When using the *links/incoming* (*links/outgoing*) endpoints in combination with one or more filters, the filters are applied to the incoming (outgoing) nodes of the selected *id*.
@@ -1462,7 +1458,7 @@ Filter values should be specified as follows:
 
 
 .. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`
-.. |Code| replace:: :py:class:`~aiida.orm.Code`
+.. |Code| replace:: :py:class:`~aiida.orm.nodes.data.code.abstract.AbstractCode`
 .. |Node| replace:: :py:class:`~aiida.orm.Node`
 .. |ProcessNode| replace:: :py:class:`~aiida.orm.ProcessNode`
 .. |CalcJobNode| replace:: :py:class:`~aiida.orm.CalcJobNode`

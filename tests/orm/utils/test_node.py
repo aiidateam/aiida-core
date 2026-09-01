@@ -38,6 +38,12 @@ def test_load_node_class_fallback():
     assert loaded_class == ProcessNode
 
 
+def test_load_node_class_legacy_code():
+    """Verify that the removed ``Code`` plugin raises instead of falling back to ``Data``."""
+    with pytest.raises(exceptions.IncompatibleStorageSchema, match=r'verdi storage migrate'):
+        load_node_class('data.core.code.Code.')
+
+
 def test_load_node_class_with_node_prefix():
     """Test the behavior of load_node_class with node prefix."""
     # Test node prefix removal

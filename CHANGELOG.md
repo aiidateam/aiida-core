@@ -6,6 +6,18 @@
 
 ### Behavior changes
 
+#### `Code`: the deprecated data plugin has been removed
+
+The `Code` class, deprecated since `aiida-core==2.1`, and its `core.code` entry point have been removed.
+`InstalledCode` and `PortableCode` no longer subclass it; they now derive directly from `AbstractCode`, which also means they no longer inherit `Code`'s deprecated methods, such as `get_execname`, `can_run_on` and `hide`.
+
+Use `AbstractCode` wherever `Code` was used to identify a code by type, for example in `isinstance` checks and in `QueryBuilder().append(...)`.
+Note that `aiida.orm.load_code`, the `CodeParamType` and `verdi code` already resolve any code plugin and need no changes.
+
+Stored nodes are migrated automatically: `verdi storage migrate` rewrites `data.core.code.Code.` nodes to `InstalledCode` (if `is_local` was false) or `PortableCode` (if it was true), renaming the `remote_exec_path`/`local_executable` attribute to `filepath_executable`.
+The migration invalidates the hashes of the migrated nodes, so run `verdi node rehash` afterwards if you rely on caching.
+Loading a node whose storage has not been migrated now raises `IncompatibleStorageSchema` instead of silently falling back to the `Data` class.
+
 ### Fixes
 
 ### Deprecations

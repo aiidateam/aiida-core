@@ -37,14 +37,15 @@ __all__ = ('AbstractCode',)
 class AbstractCode(Data, metaclass=abc.ABCMeta):
     """Abstract data plugin representing an executable code."""
 
-    # Should become ``default_calc_job_plugin`` once ``Code`` is dropped in ``aiida-core==3.0``
+    # These two keep the names inherited from the removed ``Code`` plugin. Renaming them to match the properties they
+    # back would need its own attribute migration of every stored code, so it is deliberately left for a later change.
     _KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'input_plugin'
+    _KEY_EXTRA_IS_HIDDEN: str = 'hidden'
     _KEY_ATTRIBUTE_APPEND_TEXT: str = 'append_text'
     _KEY_ATTRIBUTE_PREPEND_TEXT: str = 'prepend_text'
     _KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
     _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
-    _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
     class BaseNodeModel(Data.BaseNodeModel):
         label: str = OrmMetadataField(
@@ -470,8 +471,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             exclude_none=True,
         )
 
-        # NOTE: remove this in v3 when the deprecated `input_plugin` is removed
-        # Until then, we serialize by the alias (`input_plugin`), so we must rewire
+        # The field is serialized under its stored alias (`input_plugin`), so rewire it to the property name. Drop this
+        # once the stored key itself is renamed, see ``_KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN``.
         default_calc_job_plugin = code_data.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
         if default_calc_job_plugin is not None:
             code_data['default_calc_job_plugin'] = default_calc_job_plugin

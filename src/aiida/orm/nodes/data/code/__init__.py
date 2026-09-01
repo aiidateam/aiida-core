@@ -7,12 +7,10 @@
 from .abstract import *
 from .containerized import *
 from .installed import *
-from .legacy import *
 from .portable import *
 
 __all__ = (
     'AbstractCode',
-    'Code',
     'ContainerizedCode',
     'InstalledCode',
     'PortableCode',

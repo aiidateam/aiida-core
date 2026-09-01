@@ -466,7 +466,7 @@ def aiida_local_code_factory(aiida_localhost):
             multiple codes need to be created in a test which require unique labels.
         :param kwargs: Additional keyword arguments that are passed to the code's constructor.
         :return: the `Code` either retrieved from the database or created if it did not yet exist.
-        :rtype: :py:class:`~aiida.orm.Code`
+        :rtype: :py:class:`~aiida.orm.InstalledCode`
         """
         from aiida.common import exceptions
         from aiida.orm import InstalledCode, QueryBuilder

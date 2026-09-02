@@ -718,6 +718,8 @@ class TestVerdiProfileDumpCLI:
             '7',
             '--include-inputs',
             '--include-outputs',
+            '--include-workflow-outputs',
+            '--include-data-json',
             '--organize-by-groups',
             '--also-ungrouped',
             '--flat',
@@ -732,6 +734,8 @@ class TestVerdiProfileDumpCLI:
         assert kwargs['past_days'] == 7
         assert kwargs['include_inputs'] is True
         assert kwargs['include_outputs'] is True
+        assert kwargs['include_workflow_outputs'] is True
+        assert kwargs['include_data_json'] is True
         assert kwargs['organize_by_groups'] is True
         assert kwargs['also_ungrouped'] is True
         assert kwargs['flat'] is True

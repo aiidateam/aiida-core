@@ -80,9 +80,11 @@ __all__ = (
     'HOSTNAME',
     'IDENTIFIER',
     'INCLUDE_ATTRIBUTES',
+    'INCLUDE_DATA_JSON',
     'INCLUDE_EXTRAS',
     'INCLUDE_INPUTS',
     'INCLUDE_OUTPUTS',
+    'INCLUDE_WORKFLOW_OUTPUTS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -816,6 +818,22 @@ INCLUDE_OUTPUTS = OverridableOption(
     default=False,
     show_default=True,
     help='Include linked output nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_WORKFLOW_OUTPUTS = OverridableOption(
+    '--include-workflow-outputs/--exclude-workflow-outputs',
+    default=False,
+    show_default=True,
+    help='Include the outputs returned by `WorkflowNode`(s), in their own `node_outputs` directory. A returned node '
+    'that carries no repository content is written only if `--include-data-json` is also given.',
+)
+
+INCLUDE_DATA_JSON = OverridableOption(
+    '--include-data-json/--exclude-data-json',
+    default=False,
+    show_default=True,
+    help='Write linked `Data` nodes that carry no repository content, such as `Dict` results, as JSON files. Applies '
+    'wherever nodes are dumped, so the JSON of the `Dict` a workflow returns needs `--include-workflow-outputs` too.',
 )
 
 INCLUDE_ATTRIBUTES = OverridableOption(

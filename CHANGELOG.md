@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.9.2 - 2026-09-03
+
+This patch fixes an error triggered when `clean_workdir` is enabled for a `BaseRestartWorkChain`.
+
+### Fixes
+
+- Ensure a greenback portal is available during terminal process transitions ([#7593](https://github.com/aiidateam/aiida-core/pull/7593)) [[bae336194]](https://github.com/aiidateam/aiida-core/commit/bae336194f97a11c8334c4fb8fc4003aaef881ae)
+
+
 ## v2.9.1 - 2026-08-27
 
 This patch ensures that process dumps include repository files from all output data types, instead of silently omitting outputs that do not have a `SinglefileData` or `FolderData` sibling.

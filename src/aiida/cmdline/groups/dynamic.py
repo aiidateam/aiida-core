@@ -66,8 +66,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         Reads the ``supports_cli_model`` classproperty, defaulting to ``True`` for plugins that do not declare it
         (anything outside the ``Node`` model system, e.g. storage backends). Node-based classes without a CLI
-        model, such as the abstract base ``AbstractCode``, report ``False`` and are excluded, as building their
-        options would crash the group help.
+        model, such as the abstract base ``AbstractCode``, report ``False`` and are excluded. This gate is what
+        keeps them away from the ``getattr(cls, 'CliModel', None)`` lookups below, which would otherwise treat
+        them as legacy plugins predating the model system.
 
         :param entry_point: The entry point name.
         :returns: ``True`` if the plugin supports CLI-based creation, ``False`` otherwise.

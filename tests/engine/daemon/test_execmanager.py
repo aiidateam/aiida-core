@@ -16,6 +16,7 @@ import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
 from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
+from aiida.common.links import LinkType
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
@@ -682,12 +683,8 @@ async def test_stashing(
     serialize_file_hierarchy,
     tmp_path,
     monkeypatch,
-    caplog,
 ):
     """Test `stash_calculation`"""
-
-    import logging
-
     computer_wdir = tmp_path / 'aiida'
     computer_wdir.mkdir()
     dest_path = tmp_path / 'stash_path'
@@ -739,10 +736,11 @@ async def test_stashing(
 
     if stash_mode != StashMode.COPY.value:
         # more detailed test on integrity of the zip file is in `test_all_plugins.py`
-        assert pathlib.Path(str(dest_path / node.uuid) + '.' + stash_mode).is_file()
+        archive = dest_path / uuid[:2] / uuid[2:4] / uuid[4:] / f'{uuid}.{stash_mode}'
+        assert archive.is_file()
 
         with LocalTransport() as transport:
-            transport.extract(str(dest_path / node.uuid) + '.' + stash_mode, dest_path / 'extracted')
+            transport.extract(archive, dest_path / 'extracted')
         base_path = dest_path / 'extracted'
 
     else:
@@ -758,7 +756,7 @@ async def test_stashing(
     # a calculation already stashed in the same shard, i.e. its UUID shares the first four characters
     if stash_mode == StashMode.COPY.value:
         other_uuid = uuid[:4] + 'beef-0000-0000-0000-000000000000'
-        other_stash = dest_path_error / other_uuid[:2] / other_uuid[2:4] / other_uuid[4:]
+        other_stash = dest_path_error / other_uuid[:2] / other_uuid[2:4] / other_uuid[4:] / other_uuid
         other_stash.mkdir(parents=True)
         (other_stash / 'aiida.out').write_text('other')
     else:
@@ -787,53 +785,153 @@ async def test_stashing(
             },
         )
 
+    async def mock_raise_oserror(*args, **kwargs):
+        raise OSError('mocked error')
+
+    async def mock_compress_partial(*args, **kwargs):
+        # Leave a partial archive behind, as an interrupted ``tar`` would
+        pathlib.Path(kwargs['remotedestination']).write_text('partial')
+        raise OSError('mocked error')
+
     with LocalTransport() as transport:
         if stash_mode == StashMode.COPY.value:
-
-            async def mock_copy_async(*args, **kwargs):
-                raise OSError('copy mocked error')
-
-            monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
-
-            # StashingError should be raised for copy failures
-            with pytest.raises(StashingError, match='Failed to copy'):
-                await execmanager.stash_calculation(node, transport)
+            monkeypatch.setattr(transport, 'copy_async', mock_raise_oserror)
+            match = 'Failed to copy'
         else:
+            monkeypatch.setattr(transport, 'compress_async', mock_compress_partial)
+            match = 'Failed to stash'
 
-            async def mock_compress_async(*args, **kwargs):
-                raise OSError('compress mocked error')
-
-            monkeypatch.setattr(transport, 'compress_async', mock_compress_async)
-
-            with caplog.at_level(logging.WARNING):
-                await execmanager.stash_calculation(node, transport)
-                assert any('Failed to stash' in message for message in caplog.messages)
+        with pytest.raises(StashingError, match=match):
+            await execmanager.stash_calculation(node, transport)
 
     # A failed stash must not remove anything that was already on disk, in any mode
     removed = existing_paths - set(tmp_path.rglob('*'))
     assert not removed, f'failed stash removed pre-existing paths: {sorted(str(path) for path in removed)}'
 
-    # COPY also cleans up its own half-written target; the compress modes will do that in #7564
+    # Both modes also clean up their own half-written target
     if stash_mode == StashMode.COPY.value:
-        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:]).exists()
+        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:] / uuid).exists()
+    else:
+        assert not (dest_path_error / uuid[:2] / uuid[2:4] / uuid[4:] / f'{uuid}.{stash_mode}').exists()
 
-    ## 3) test that an existing stash target is never overwritten (see #7564)
-    if stash_mode != StashMode.COPY.value:
-        existing_archive = pathlib.Path(str(dest_path / uuid) + '.' + stash_mode)
-        existing_archive.write_text('tampered')
 
+@pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.asyncio
+async def test_stashing_skips_missing(generate_calcjob_node, stash_mode, tmp_path, monkeypatch):
+    """With ``fail_on_missing=False`` missing sources are skipped and the stash node records only what was stashed."""
+    node = generate_calcjob_node()
+    workdir = tmp_path / 'workdir'
+    workdir.mkdir()
+    (workdir / 'present.out').write_text('present')
+    node.set_remote_workdir(str(workdir))
+    target_base = tmp_path / 'stash'
+    node.set_option(
+        'stash',
+        {
+            'source_list': ['present.out', 'missing.out', 'nomatch*'],
+            'target_base': str(target_base),
+            'stash_mode': stash_mode,
+            'fail_on_missing': False,
+        },
+    )
+
+    class MockAuthInfo:
+        def get_workdir(self, *args, **kwargs):
+            return str(workdir)
+
+    monkeypatch.setattr(node, 'get_authinfo', MockAuthInfo)
+    node.store()
+
+    with LocalTransport() as transport:
+        await execmanager.stash_calculation(node, transport)
+        remote_stash = node.base.links.get_outgoing(link_label_filter='remote_stash').one().node
+        if stash_mode == StashMode.COPY.value:
+            stashed = pathlib.Path(remote_stash.target_basepath)
+        else:
+            stashed = tmp_path / 'extracted'
+            transport.extract(remote_stash.target_basepath, stashed)
+
+    assert [path.name for path in stashed.iterdir()] == ['present.out']
+    assert list(remote_stash.source_list) == ['present.out']
+
+
+@pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.asyncio
+async def test_stashing_fail_on_missing_rejects_glob(generate_calcjob_node, stash_mode, tmp_path, monkeypatch):
+    """With ``fail_on_missing=True`` glob patterns are rejected, since a non-matching one cannot be told apart."""
+    node = generate_calcjob_node(workdir=tmp_path)
+    node.set_option(
+        'stash',
+        {
+            'source_list': ['*.out'],
+            'target_base': str(tmp_path / 'stash'),
+            'stash_mode': stash_mode,
+            'fail_on_missing': True,
+        },
+    )
+
+    class MockAuthInfo:
+        def get_workdir(self, *args, **kwargs):
+            return str(tmp_path)
+
+    monkeypatch.setattr(node, 'get_authinfo', MockAuthInfo)
+
+    with LocalTransport() as transport, pytest.raises(StashingError, match='glob patterns'):
+        await execmanager.stash_calculation(node, transport)
+
+
+@pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.asyncio
+async def test_stashing_same_source_twice(generate_calcjob_node, aiida_localhost, stash_mode, tmp_path, monkeypatch):
+    """Stash jobs of the same source node write distinct targets, each replacing only its own leftover."""
+    source_dir = tmp_path / 'source'
+    source_dir.mkdir()
+    (source_dir / 'aiida.out').write_text('out')
+    (source_dir / 'aiida.in').write_text('in')
+    remote = RemoteData(remote_path=str(source_dir), computer=aiida_localhost).store()
+
+    target_base = tmp_path / 'stash'
+    target_base.mkdir()
+
+    class MockAuthInfo:
+        def get_workdir(self, *args, **kwargs):
+            return str(source_dir)
+
+    targets = []
+    for source_list in (['aiida.out'], ['aiida.in']):
+        node = generate_calcjob_node(entry_point='aiida.calculations:core.stash')
         node.set_option(
             'stash',
             {
-                'source_list': ['*'],
-                'target_base': str(dest_path),
+                'source_list': source_list,
+                'target_base': str(target_base),
                 'stash_mode': stash_mode,
-                'dereference': True,
             },
         )
+        node.base.links.add_incoming(remote, link_type=LinkType.INPUT_CALC, link_label='source_node')
+        monkeypatch.setattr(node, 'get_authinfo', MockAuthInfo)
+        node.store()
 
-        with LocalTransport() as transport, caplog.at_level(logging.WARNING):
+        # leftover of a previous attempt of this very job
+        if stash_mode == StashMode.COPY.value:
+            target = target_base / remote.uuid[:2] / remote.uuid[2:4] / remote.uuid[4:] / node.uuid
+            target.mkdir(parents=True)
+            (target / source_list[0]).write_text('stale')
+        else:
+            target = target_base / remote.uuid[:2] / remote.uuid[2:4] / remote.uuid[4:] / f'{node.uuid}.{stash_mode}'
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text('stale')
+
+        with LocalTransport() as transport:
             await execmanager.stash_calculation(node, transport)
+        targets.append(target)
 
-        assert existing_archive.read_text() == 'tampered'
-        assert any('already exists' in message for message in caplog.messages)
+    for target, filename, content in zip(targets, ('aiida.out', 'aiida.in'), ('out', 'in')):
+        if stash_mode == StashMode.COPY.value:
+            extracted = target
+        else:
+            extracted = tmp_path / f'extracted-{filename}'
+            with LocalTransport() as transport:
+                transport.extract(target, extracted)
+        assert [path.name for path in extracted.iterdir()] == [filename]
+        assert (extracted / filename).read_text() == content

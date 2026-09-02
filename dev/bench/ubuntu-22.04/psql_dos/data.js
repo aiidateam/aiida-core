@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788255578099,
+  "lastUpdate": 1788364185645,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -135036,6 +135036,205 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0021792",
             "group": "node",
             "extra": "mean: 19.706 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "0.00",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.21",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "bae336194f97a11c8334c4fb8fc4003aaef881ae",
+          "message": "🐛 Missing greenback portal on terminal transitions (#7593)\n\nFixes #7360. This commit ensure the portal is open in\n`Process.step_until_terminated`.\n\n`BaseRestartWorkChain` cleans the remote working in `on_terminated` when input\n`clean_workdir` is true. The directories of its calculations are cleaned\nthrough the blocking transport interface. With `core.ssh_async` that bridges\nback into the running event loop, which requires a greenback portal on the\ncurrent task.\n\nThe relevant stack that produces this failure\n\nrunner event loop  (started by daemon/worker.py:76 -> runners.py:152 run_forever)\n  asyncio/events.py:88                 _run\n\ntask\n  plumpy/futures.py:76                       run_task\n  plumpy/process_comms.py:557                ProcessLauncher.__call__\n  aiida/engine/processes/launcher.py:87      _continue\n  plumpy/process_comms.py:629                _continue\n  plumpy/processes.py:1369                   step_until_terminated      This commit opens portal here\n  plumpy/processes.py:1332 / :1355           step                    \n\n  branch A  (line 1332: await self._run_task(...))\n    plumpy/process_states.py:250             execute\n    aiida/engine/.../workchain.py:303        run\n    plumpy/greenback_bridge.py:37            run_with_portal\n    greenback/_impl.py:564                   with_portal_run_sync       opens portal \n    aiida/engine/.../workchain.py:320        _do_step\n    <outline step>                                                      has_portal() -> True\n                                                                        ...returns, portal closes\n\n  branch B  (line 1355: self.transition_to(next_state))\n    plumpy/base/state_machine.py:351         transition_to\n    plumpy/base/utils.py:31                  call_with_super_check\n    aiida/.../restart.py:513                 on_terminated              has_portal() -> False\n    aiida/orm/nodes/data/remote/base.py:182  _clean\n    aiida/transports/transport.py:177        __enter__\n    aiida/transports/transport.py:1888       open\n    aiida/transports/transport.py:1886       run_command_blocking\n    plumpy/greenback_bridge.py:50            run_until_complete\n    RuntimeError: Cannot run awaitable: event loop is running\n                  but no greenback portal is available.\n\n`WorkChain.run` opens a portal around a single outline step (branch A) but\ncloses it again when that step returns. Before this commit the portal was thus\nclosed for any state transition callback.",
+          "timestamp": "2026-09-02T17:42:23+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/bae336194f97a11c8334c4fb8fc4003aaef881ae",
+          "distinct": true,
+          "tree_id": "de76dbfe9b440359b6455f373860a3cf86f3f741"
+        },
+        "date": 1788364177667,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.805421606106808,
+            "unit": "iter/sec",
+            "range": "stddev: 0.087905",
+            "group": "import-export",
+            "extra": "mean: 262.78 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.9185314531167648,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017804",
+            "group": "import-export",
+            "extra": "mean: 255.20 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.240578444131475,
+            "unit": "iter/sec",
+            "range": "stddev: 0.089435",
+            "group": "import-export",
+            "extra": "mean: 235.82 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.144666479097755,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10685",
+            "group": "import-export",
+            "extra": "mean: 241.27 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_large_archive_export_benchmark",
+            "value": 0.612255639047241,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18019",
+            "group": "large-archive",
+            "extra": "mean: 1.6333 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_large_archive_import_benchmark",
+            "value": 0.1827859920840556,
+            "unit": "iter/sec",
+            "range": "stddev: 0.19388",
+            "group": "large-archive",
+            "extra": "mean: 5.4709 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 4.759576381671827,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0068113",
+            "group": "engine",
+            "extra": "mean: 210.10 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.9949284828915556,
+            "unit": "iter/sec",
+            "range": "stddev: 0.097386",
+            "group": "engine",
+            "extra": "mean: 1.0051 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 1.1277468539284095,
+            "unit": "iter/sec",
+            "range": "stddev: 0.027349",
+            "group": "engine",
+            "extra": "mean: 886.72 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.22345376031615524,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14986",
+            "group": "engine",
+            "extra": "mean: 4.4752 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.25276035650492207,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16347",
+            "group": "engine",
+            "extra": "mean: 3.9563 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.5690565093649296,
+            "unit": "iter/sec",
+            "range": "stddev: 0.044320",
+            "group": "engine",
+            "extra": "mean: 389.25 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6668331211502673,
+            "unit": "iter/sec",
+            "range": "stddev: 0.054198",
+            "group": "engine",
+            "extra": "mean: 1.4996 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.7396791858287022,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16867",
+            "group": "engine",
+            "extra": "mean: 1.3519 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1920311362074075,
+            "unit": "iter/sec",
+            "range": "stddev: 0.074944",
+            "group": "engine",
+            "extra": "mean: 5.2075 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.21245468224910347,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18497",
+            "group": "engine",
+            "extra": "mean: 4.7069 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 437.6212532447026,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00024854",
+            "group": "node",
+            "extra": "mean: 2.2851 msec\nrounds: 239"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 171.7036263319334,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00051767",
+            "group": "node",
+            "extra": "mean: 5.8240 msec\nrounds: 155"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 98.17554744895924,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00046540",
+            "group": "node",
+            "extra": "mean: 10.186 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 275.9229935235511,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00029796",
+            "group": "node",
+            "extra": "mean: 3.6242 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 56.64296039257864,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013944",
+            "group": "node",
+            "extra": "mean: 17.654 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 54.69014938737097,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015137",
+            "group": "node",
+            "extra": "mean: 18.285 msec\nrounds: 100"
           }
         ]
       }

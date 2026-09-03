@@ -548,7 +548,7 @@ class BaseRestartWorkChain(WorkChain):
                 continue
 
             port = port_namespace[key]
-            valid_types = port.valid_type if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)  # type: ignore[redundant-expr]
+            valid_types = port.valid_type if isinstance(port.valid_type, tuple) else (port.valid_type,)
 
             if isinstance(port, PortNamespace):
                 wrapped[key] = self._wrap_bare_dict_inputs(port, value)

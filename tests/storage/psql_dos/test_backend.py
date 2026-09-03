@@ -49,11 +49,21 @@ def test_get_unreferenced_keyset():
     unreferenced_keyset = storage_backend.get_unreferenced_keyset()
     assert unreferenced_keyset == set()
 
-    # Error catching: put a file, get the keys from the aiida db, manually delete the keys
-    # in the repository
     datanode = orm.FolderData()
     datanode.base.repository.put_object_from_filelike(BytesIO(b'File content'), 'file.txt')
     datanode.store()
+
+    assert storage_backend.get_unreferenced_keyset() == set()
+
+    datanode.base.repository.mark_for_deletion('file.txt')
+    key = next(iter(orm.Node.collection(storage_backend).iter_repo_keys(include_deleted=True)))
+    assert storage_backend.get_unreferenced_keyset() == {key}
+
+    # Error catching: put a file, get the keys from the aiida db, manually delete the keys
+    # in the repository
+    datanode_two = orm.FolderData()
+    datanode_two.base.repository.put_object_from_filelike(BytesIO(b'File content 2'), 'file-two.txt')
+    datanode_two.store()
 
     aiida_backend = get_manager().get_profile_storage()
     keys = list(orm.Node.collection(aiida_backend).iter_repo_keys())
@@ -104,6 +114,37 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
     message_list = caplog.records[0].msg.splitlines()
     for text in logged_texts:
         assert text in message_list
+
+
+@pytest.mark.usefixtures('aiida_profile_clean', 'stopped_daemon_client')
+def test_maintain_reports_repository_deletion_conflicts(caplog, monkeypatch):
+    """Test repository deletion conflicts are reported during maintenance."""
+    from io import BytesIO
+    import logging
+
+    from aiida import orm
+
+    storage_backend = get_manager().get_profile_storage()
+
+    node_one = orm.Data()
+    node_one.base.repository.put_object_from_filelike(BytesIO(b'same content'), 'file.txt')
+    node_one.store()
+    node_one.base.repository.mark_for_deletion('file.txt')
+
+    node_two = orm.Data()
+    node_two.base.repository.put_object_from_filelike(BytesIO(b'same content'), 'file.txt')
+    node_two.store()
+
+    RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # noqa: N806
+    monkeypatch.setattr(RepoBackendClass, 'maintain', lambda self, **kwargs: None)
+
+    with caplog.at_level(logging.REPORT):
+        storage_backend.maintain(dry_run=True)
+
+    assert any(
+        'is marked for deletion in node' in record.message and 'is still referring to it' in record.message
+        for record in caplog.records
+    )
 
 
 def test_get_info(monkeypatch):

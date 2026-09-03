@@ -82,13 +82,20 @@ class Repository:
         return self._directory.serialize()
 
     @classmethod
-    def flatten(cls, serialized: dict[str, Any] | None, delimiter: str = '/') -> dict[str, str | None]:
+    def flatten(
+        cls,
+        serialized: dict[str, Any] | None,
+        delimiter: str = '/',
+        *,
+        include_deleted: bool = True,
+    ) -> dict[str, str | None]:
         """Flatten the serialized content of a repository into a mapping of path -> key or None (if folder).
 
         Note, all folders are represented in the flattened output, and their path is suffixed with the delimiter.
 
         :param serialized: the serialized content of the repository.
         :param delimiter: the delimiter to use to separate the path elements.
+        :param include_deleted: if False, skip objects marked with ``deleted: True``.
         :return: dictionary with the flattened content.
         """
         if serialized is None:
@@ -99,6 +106,9 @@ class Repository:
             path, sub_dict = stack.pop()
             for name, obj in sub_dict.get('o', {}).items():
                 sub_path = f'{path}{delimiter}{name}' if path else name
+                is_deleted = bool(obj.get('deleted')) if obj else False
+                if is_deleted and not include_deleted:
+                    continue
                 if not obj:
                     items[f'{sub_path}{delimiter}'] = None
                 elif 'k' in obj:
@@ -107,6 +117,36 @@ class Repository:
                     items[f'{sub_path}{delimiter}'] = None
                     stack.append((sub_path, obj))
         return items
+
+    @classmethod
+    def iter_file_keys(
+        cls,
+        serialized: dict[str, Any] | None,
+        *,
+        include_deleted: bool = True,
+    ) -> Iterator[tuple[str, bool]]:
+        """Yield ``(key, deleted)`` pairs for all file objects in the serialized metadata.
+
+        :param serialized: the serialized content of the repository.
+        :param include_deleted: if False, skip file objects marked with ``deleted: True``.
+        :return: iterator of tuples of the object key and whether it is marked for deletion.
+        """
+        if not serialized:
+            return
+
+        stack = [serialized]
+        while stack:
+            sub_dict = stack.pop()
+            for obj in sub_dict.get('o', {}).values():
+                if not obj:
+                    continue
+                deleted = bool(obj.get('deleted'))
+                if 'k' in obj:
+                    if include_deleted or not deleted:
+                        yield obj['k'], deleted
+                else:
+                    if not (deleted and not include_deleted):
+                        stack.append(obj)
 
     def hash(self) -> str:
         """Generate a hash of the repository's contents.
@@ -289,7 +329,7 @@ class Repository:
         :raises NotADirectoryError: if the object at the given path is not a directory.
         """
         directory = self.get_directory(path)
-        return sorted(directory.objects.values(), key=lambda obj: obj.name)
+        return sorted((obj for obj in directory.objects.values() if not obj.deleted), key=lambda obj: obj.name)
 
     def list_object_names(self, path: FilePath | None = None) -> list[str]:
         """Return a sorted list of the object names contained in this repository, optionally in the given sub directory.
@@ -408,6 +448,38 @@ class Repository:
         key = self.get_file(path).key
         assert key is not None, 'Expected FileType.File to have a key'
         return self.backend.get_object_content(key)
+
+    def mark_for_deletion(self, path: FilePath) -> None:
+        """Mark the object at the given path for deletion.
+
+        The object remains in the virtual hierarchy, but is serialized with ``deleted: True`` in the repository
+        metadata. Objects marked for deletion are omitted from ``list_objects`` and ``list_object_names``.
+
+        :param path: the relative path of the object within the repository.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path.
+        """
+        self.get_object(path).deleted = True
+
+    def unmark_for_deletion(self, path: FilePath) -> None:
+        """Remove the deletion mark from the object at the given path.
+
+        :param path: the relative path of the object within the repository.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path, or the content has already been hard deleted.
+        """
+        file_object = self.get_object(path)
+
+        if (
+            file_object.deleted
+            and file_object.file_type == FileType.FILE
+            and file_object.key is not None
+            and not self.backend.has_object(file_object.key)
+        ):
+            msg = f'cannot unmark object `{path}` for deletion because the content has already been hard deleted.'
+            raise FileNotFoundError(msg)
+
+        file_object.deleted = False
 
     def delete_object(self, path: FilePath, hard_delete: bool = False) -> None:
         """Soft delete the object from the repository.

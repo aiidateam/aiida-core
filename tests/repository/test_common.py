@@ -74,16 +74,17 @@ def test_constructor_kwargs_invalid():
 def test_serialize():
     """Test the ``File.serialize`` method."""
     objects = {
-        'empty': File('empty', file_type=FileType.DIRECTORY),
-        'file.txt': File('file.txt', file_type=FileType.FILE, key='abcdef'),
+        'empty': File('empty', file_type=FileType.DIRECTORY, deleted=True),
+        'file.txt': File('file.txt', file_type=FileType.FILE, key='abcdef', deleted=True),
     }
     file_object = File(file_type=FileType.DIRECTORY, objects=objects)
 
     expected = {
         'o': {
-            'empty': {},
+            'empty': {'deleted': True},
             'file.txt': {
                 'k': 'abcdef',
+                'deleted': True,
             },
         }
     }
@@ -120,6 +121,7 @@ def test_eq():
     assert file_object != File(file_type=FileType.FILE)
     assert file_object != File(key='123456', file_type=FileType.FILE)
     assert file_object != File(objects={'sub': File()})
+    assert file_object != File(deleted=True)
 
     # Test ordering of nested files:
     objects = {

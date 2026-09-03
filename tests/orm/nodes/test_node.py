@@ -1028,14 +1028,21 @@ def test_iter_repo_keys():
     """Test the ``iter_repo_keys`` method."""
     data1 = Data()
     data1.base.repository.put_object_from_filelike(BytesIO(b'value1'), 'key1')
-    data1.base.repository.put_object_from_filelike(BytesIO(b'value1'), 'key2')
+    data1.base.repository.put_object_from_filelike(BytesIO(b'value2'), 'key2')
     data1.base.repository.put_object_from_filelike(BytesIO(b'value3'), 'folder/key3')
     data1.store()
+    data1.base.repository.mark_for_deletion('key2')
     data2 = Data()
     data2.base.repository.put_object_from_filelike(BytesIO(b'value1'), 'key1')
     data2.base.repository.put_object_from_filelike(BytesIO(b'value4'), 'key2')
     data2.store()
     assert set(Data.collection.iter_repo_keys()) == {
+        '31cd97ebe10a80abe1b3f401824fc2040fb8b03aafd0d37acf6504777eddee11',
+        '3c9683017f9e4bf33d0fbedd26bf143fd72de9b9dd145441b75f0604047ea28e',
+        '89dc6ae7f06a9f46b565af03eab0ece0bf6024d3659b7e3a1d03573cfeb0b59d',
+    }
+    assert set(Data.collection.iter_repo_keys(include_deleted=True)) == {
+        '0537d481f73a757334328052da3af9626ced97028e20b849f6115c22cd765197',
         '31cd97ebe10a80abe1b3f401824fc2040fb8b03aafd0d37acf6504777eddee11',
         '3c9683017f9e4bf33d0fbedd26bf143fd72de9b9dd145441b75f0604047ea28e',
         '89dc6ae7f06a9f46b565af03eab0ece0bf6024d3659b7e3a1d03573cfeb0b59d',

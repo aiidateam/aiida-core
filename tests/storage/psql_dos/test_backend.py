@@ -147,6 +147,7 @@ def test_maintain_reports_repository_deletion_conflicts(caplog, monkeypatch):
     )
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_info(monkeypatch):
     """Test the ``get_info`` method."""
     from aiida import orm
@@ -186,11 +187,11 @@ def test_get_info(monkeypatch):
 
     assert 'first_created' in nodes_info
     assert 'last_created' in nodes_info
-    # Reload nodes to get their ctime as stored in DB
-    first_created = load_node(node1.pk).ctime
-    last_created = load_node(node2.pk).ctime
-    assert nodes_info['first_created'] == str(first_created)
-    assert nodes_info['last_created'] == str(last_created)
+    # Reload nodes to get their ctime as stored in DB and compare against the extrema,
+    # since ordering by creation time alone does not guarantee which of two closely created nodes is first.
+    ctimes = sorted([load_node(node1.pk).ctime, load_node(node2.pk).ctime])
+    assert nodes_info['first_created'] == str(ctimes[0])
+    assert nodes_info['last_created'] == str(ctimes[-1])
 
 
 def test_unload_profile():

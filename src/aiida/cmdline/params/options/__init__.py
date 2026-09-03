@@ -82,6 +82,7 @@ __all__ = (
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_ROOTS',
     'ONLY_TOP_LEVEL_CALCS',
     'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',

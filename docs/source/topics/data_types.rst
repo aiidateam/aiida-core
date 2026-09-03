@@ -203,7 +203,7 @@ To deserialize it should also implement a ``from_dict`` method, which takes the 
 
 .. note::
 
-    :py:class:`~aiida.orm.JsonableData` follows the `MSONable serialization convention <https://materialsproject.github.io/monty/monty.json.html#monty.json.MSONable>`_ used by monty and pymatgen.
+    :py:class:`~aiida.orm.JsonableData` follows the `MSONable serialization convention <https://pythonhosted.org/monty/monty.html#monty.json.MSONable>`_ used by monty and pymatgen.
     Dictionary keys prefixed with ``@`` (such as ``@module``, ``@class``, and ``@version``) are reserved for internal class identification and reconstruction.
     User-defined attributes in ``as_dict()`` must not use ``@``-prefixed keys.
 

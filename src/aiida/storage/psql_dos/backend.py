@@ -527,6 +527,9 @@ class PsqlDosBackend(StorageBackend):
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
+            for message in self._get_repository_deletion_conflicts():
+                STORAGE_LOGGER.report(message)
+
     def get_unreferenced_keyset(self, check_consistency: bool = True) -> set[str]:
         """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
@@ -546,7 +549,7 @@ class PsqlDosBackend(StorageBackend):
         repository = self.get_repository()
 
         keyset_repository = set(repository.list_objects())
-        keyset_database = set(orm.Node.get_collection(self).iter_repo_keys())
+        keyset_database = set(orm.Node.get_collection(self).iter_repo_keys(include_deleted=False))
 
         if check_consistency:
             keyset_missing = keyset_database - keyset_repository
@@ -556,6 +559,38 @@ class PsqlDosBackend(StorageBackend):
                 )
 
         return keyset_repository - keyset_database
+
+    def _get_repository_deletion_conflicts(self) -> list[str]:
+        """Return report messages for repository objects marked for deletion but still referenced elsewhere."""
+        from aiida import orm
+        from aiida.repository import Repository
+
+        query = orm.QueryBuilder(backend=self).append(orm.Node, project=['uuid', 'repository_metadata'])
+
+        deleted_references: dict[str, list[str]] = {}
+        active_references: dict[str, list[str]] = {}
+
+        for node_uuid, metadata in query.iterall():
+            for key, deleted in Repository.iter_file_keys(metadata, include_deleted=True):
+                if deleted:
+                    deleted_references.setdefault(key, []).append(node_uuid)
+                else:
+                    active_references.setdefault(key, []).append(node_uuid)
+
+        messages = []
+        for key, deleted_nodes in deleted_references.items():
+            if key not in active_references:
+                continue
+
+            for deleted_node in deleted_nodes:
+                for active_node in active_references[key]:
+                    msg = (
+                        f'Repository object `{key}` is marked for deletion in node `{deleted_node}` but node '
+                        f'`{active_node}` is still referring to it.'
+                    )
+                    messages.append(msg)
+
+        return messages
 
     def get_info(self, detailed: bool = False, **kwargs: Any) -> dict[str, Any]:
         results = super().get_info(detailed=detailed)

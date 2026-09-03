@@ -19,7 +19,7 @@ from aiida.orm import Group, Node, QueryBuilder
 from aiida.orm.implementation import StorageBackend
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
-__all__ = ('delete_group_nodes', 'delete_nodes')
+__all__ = ('delete_group_nodes', 'delete_node_repositories', 'delete_nodes')
 
 DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
@@ -108,6 +108,46 @@ def delete_nodes(
     DELETE_LOGGER.report('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)
+
+
+def delete_node_repositories(pks: Iterable[int], *, dry_run: bool = True) -> tuple[set[int], bool]:
+    """Mark the repositories of nodes for deletion.
+
+    This marks the top-level repository entries of the specified stored nodes for deletion by setting the
+    ``deleted: True`` flag in their ``repository_metadata``.
+    The repository metadata is retained such that storage maintenance can determine whether the underlying repository
+    objects are still referenced by other nodes and can therefore be hard-deleted safely.
+
+    :param pks: the PKs of the nodes whose repositories should be marked for deletion.
+    :param dry_run: if True, return the PKs that would be processed without modifying anything.
+    :returns: the set of node PKs whose repositories were considered and whether they were modified.
+    """
+    backend = get_manager().get_profile_storage()
+    pks_set = set(pks)
+
+    builder = QueryBuilder(backend=backend).append(Node, filters={'id': {'in': list(pks_set)}}, project='id')
+    existing_pks = set(builder.all(flat=True))
+
+    for pk in sorted(pks_set - existing_pks):
+        DELETE_LOGGER.warning(f'warning: node with pk<{pk}> does not exist, skipping')
+
+    DELETE_LOGGER.report('%s Node repository/repositories marked for deletion', len(existing_pks))
+
+    if dry_run:
+        DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
+        return existing_pks, False
+
+    for pk in existing_pks:
+        node = Node.collection.get(pk=pk)
+        for entry in node.base.repository.list_object_names():
+            node.base.repository.mark_for_deletion(entry)
+
+    if existing_pks:
+        DELETE_LOGGER.report(
+            'Repository entries were marked for deletion. Run `verdi storage maintain` afterwards to free disk space.'
+        )
+
+    return existing_pks, True
 
 
 def delete_group_nodes(

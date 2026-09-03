@@ -11,6 +11,7 @@ import click
 
 from aiida.cmdline.params import options
 from aiida.cmdline.utils.echo import echo_deprecated
+from aiida.common import log
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.extendeddicts import AttributeDict
 from aiida.manage.configuration import get_config
@@ -123,6 +124,13 @@ class VerdiCommandGroup(click.Group):
 
     context_class = VerdiContext
     command_class = VerdiCommand
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        """Parse arguments for the ``verdi`` command."""
+        if ctx.parent is None and not ctx.resilient_parsing:
+            log.CLI_ACTIVE = True
+
+        return super().parse_args(ctx, args)
 
     @staticmethod
     def add_verbosity_option(cmd: click.Command) -> click.Command:

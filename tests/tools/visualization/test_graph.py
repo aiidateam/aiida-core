@@ -124,6 +124,18 @@ class TestVisGraph:
         graph.add_node(nodes.pd1)
         assert graph.nodes == set([nodes.pd0.pk, nodes.pd1.pk])
 
+    def test_graph_add_contracted_node(self):
+        """A contraction marker can be rendered despite not being data or a process."""
+        from aiida.orm.nodes.contracted import ContractedNode
+
+        marker = ContractedNode().store()
+        graph = graph_mod.Graph()
+
+        graph.add_node(marker)
+
+        assert graph.nodes == {marker.pk}
+        assert f'ContractedNode ({marker.pk})' in graph.graphviz.source
+
     def test_graph_add_edge(self):
         """Test adding an edge to the graph"""
         nodes = self.create_provenance()

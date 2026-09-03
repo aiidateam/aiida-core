@@ -964,6 +964,32 @@ The full list of these flags is available from the help command ``verdi node del
         [1, 2, 3], dry_run=True, create_forward=True, call_calc_forward=True, call_work_forward=True
     )
 
+Contracting provenance
+----------------------
+
+Use ``verdi node contract`` or :py:func:`~aiida.tools.graph.deletions.contract_nodes` when you need to remove only explicitly selected intermediate nodes without traversal-expanding the deletion set.
+Contraction is the graph operation that removes a selected region and reconnects its surviving incoming and outgoing boundary with links marked as contracted provenance.
+A selected region containing a process is represented by a dedicated internal marker node, while a region containing only data is reconnected directly.
+Contracted links record reachability through omitted provenance and do not claim that an ordinary calculation or workflow created or returned the surviving data.
+
+.. caution::
+   Contraction deliberately reduces provenance and does not preserve reproducibility or make deletion reversible.
+
+Always preview the contraction before applying it:
+
+.. code-block:: console
+
+    verdi node contract 42 --dry-run
+    verdi node contract 42
+
+The equivalent Python interface is:
+
+.. code-block:: python
+
+    from aiida.tools import contract_nodes
+
+    pks_to_be_contracted, was_contracted = contract_nodes([42], dry_run=True)
+
 Deleting computers
 ------------------
 To delete a computer, you can use ``verdi computer delete``.

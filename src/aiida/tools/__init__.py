@@ -47,6 +47,7 @@ __all__ = (
     'Orbital',
     'RealhydrogenOrbital',
     'WorkflowTools',
+    'contract_nodes',
     'create_archive',
     'default_link_styles',
     'default_node_styles',

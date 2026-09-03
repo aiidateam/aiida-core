@@ -6,18 +6,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Provides tools for traversing the provenance graph."""
+"""Add archive support for contracted provenance.
 
-# AUTO-GENERATED
+Revision ID: main_0002
+Revises: main_0001
+Create Date: 2026-08-19
 
-# fmt: off
+The database schema is unchanged. Bumping the archive format ensures readers
+that do not understand contracted nodes and links reject these archives.
+"""
 
-from aiida.tools.graph.deletions import *
+revision = 'main_0002'
+down_revision = 'main_0001'
+branch_labels = None
+depends_on = None
 
-__all__ = (
-    'contract_nodes',
-    'delete_group_nodes',
-    'delete_nodes',
-)
 
-# fmt: on
+def upgrade():
+    """Migrations for the upgrade."""
+
+
+def downgrade():
+    """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of main_0002.')

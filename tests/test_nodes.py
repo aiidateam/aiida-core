@@ -15,7 +15,8 @@ import pytest
 from aiida import get_profile, orm
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.tools import delete_group_nodes, delete_nodes
+from aiida.orm.nodes.contracted import ContractedNode
+from aiida.tools import contract_nodes, delete_group_nodes, delete_nodes
 
 
 class TestNodeIsStorable:
@@ -1523,6 +1524,125 @@ class TestNodeDeletion:
         with pytest.raises(NotExistent):
             orm.load_node(node_pk)
         assert callback_pks == [node_pk]
+
+    @staticmethod
+    def _create_calculation(input_node, label):
+        """Create a finished calculation with one input."""
+        from plumpy import ProcessState
+
+        calculation = orm.CalculationNode()
+        calculation.base.links.add_incoming(input_node, LinkType.INPUT_CALC, 'input')
+        calculation.store()
+        output = orm.Data().store()
+        output.base.links.add_incoming(calculation, LinkType.CREATE, label)
+        calculation.set_process_state(ProcessState.FINISHED)
+        calculation.seal()
+        return calculation, output
+
+    def test_contract_data_region(self):
+        """Contracting intermediate data preserves its process boundary."""
+        input_node = orm.Data().store()
+        creator, intermediate = self._create_calculation(input_node, 'intermediate')
+        consumer, output = self._create_calculation(intermediate, 'result')
+        intermediate_pk = intermediate.pk
+        intermediate_uuid = intermediate.uuid
+        marker_count = orm.QueryBuilder().append(ContractedNode).count()
+
+        contracted_pks, was_contracted = contract_nodes([intermediate_pk], dry_run=False)
+
+        assert was_contracted
+        assert contracted_pks == {intermediate_pk}
+        self._check_existence([creator.uuid, consumer.uuid, output.uuid], [intermediate_uuid])
+        link = consumer.base.links.get_incoming(link_type=LinkType.CONTRACTED).one()
+        assert link.node.pk == creator.pk
+        assert orm.QueryBuilder().append(ContractedNode).count() == marker_count
+
+    def test_contract_process_region(self):
+        """A selected process is replaced by one non-process marker."""
+        input_node = orm.Data().store()
+        calculation, output = self._create_calculation(input_node, 'result')
+        calculation_pk = calculation.pk
+        existing = set(orm.QueryBuilder().append(ContractedNode, project='id').all(flat=True))
+
+        contracted_pks, was_contracted = contract_nodes([calculation_pk], dry_run=False)
+
+        assert was_contracted
+        assert contracted_pks == {calculation_pk}
+        markers = set(orm.QueryBuilder().append(ContractedNode, project='id').all(flat=True))
+        marker = orm.load_node((markers - existing).pop())
+        assert not isinstance(marker, orm.ProcessNode)
+        assert not marker.base.caching.is_valid_cache
+        assert marker.base.links.get_incoming(link_type=LinkType.CONTRACTED).one().node.pk == input_node.pk
+        assert output.base.links.get_incoming(link_type=LinkType.CONTRACTED).one().node.pk == marker.pk
+        assert marker.base.attributes.get('contraction')['removed_node_count'] == 1
+
+    def test_contract_deduplicates_boundary_nodes(self):
+        """Multiple original links to one boundary node produce one contracted link."""
+        from plumpy import ProcessState
+
+        input_node = orm.Data().store()
+        workflow = orm.WorkflowNode()
+        workflow.base.links.add_incoming(input_node, LinkType.INPUT_WORK, 'input_a')
+        workflow.base.links.add_incoming(input_node, LinkType.INPUT_WORK, 'input_b')
+        workflow.store()
+        output = orm.Data().store()
+        output.base.links.add_incoming(workflow, LinkType.RETURN, 'output_a')
+        output.base.links.add_incoming(workflow, LinkType.RETURN, 'output_b')
+        workflow.set_process_state(ProcessState.FINISHED)
+        workflow.seal()
+
+        contract_nodes([workflow.pk], dry_run=False)
+
+        marker = input_node.base.links.get_outgoing(link_type=LinkType.CONTRACTED).one().node
+        assert len(marker.base.links.get_incoming(link_type=LinkType.CONTRACTED).all()) == 1
+        assert len(marker.base.links.get_outgoing(link_type=LinkType.CONTRACTED).all()) == 1
+        mappings = marker.base.attributes.get('contraction')['boundary_links']
+        assert len(mappings) == 4
+        assert len({mapping['contracted_label'] for mapping in mappings}) == 2
+
+    def test_contract_dry_run(self):
+        """A contraction dry run neither deletes nodes nor allocates markers."""
+        input_node = orm.Data().store()
+        calculation, output = self._create_calculation(input_node, 'result')
+        marker_count = orm.QueryBuilder().append(ContractedNode).count()
+
+        contracted_pks, was_contracted = contract_nodes([calculation.pk])
+
+        assert contracted_pks == {calculation.pk}
+        assert not was_contracted
+        self._check_existence([calculation.uuid, output.uuid], [])
+        assert orm.QueryBuilder().append(ContractedNode).count() == marker_count
+
+    def test_contracted_links_are_internal(self):
+        """Callers cannot create contracted links through the public link API."""
+        source = orm.Data().store()
+        target = orm.Data().store()
+        with pytest.raises(ModificationNotAllowed, match='only be created by provenance contraction'):
+            target.base.links.add_incoming(source, LinkType.CONTRACTED, 'contracted')
+
+    def test_contract_is_atomic(self, monkeypatch):
+        """A failure after applying the storage rewrite rolls back every change."""
+        from aiida.manage import get_manager
+
+        input_node = orm.Data().store()
+        calculation, output = self._create_calculation(input_node, 'result')
+        calculation_pk = calculation.pk
+        calculation_uuid = calculation.uuid
+        marker_count = orm.QueryBuilder().append(ContractedNode).count()
+        backend = get_manager().get_profile_storage()
+        replace = backend.replace_nodes_and_connections
+
+        def fail_after_rewrite(pks_to_delete, contracted_links):
+            replace(pks_to_delete, contracted_links)
+            raise RuntimeError('injected failure')
+
+        monkeypatch.setattr(backend, 'replace_nodes_and_connections', fail_after_rewrite)
+        with pytest.raises(RuntimeError, match='injected failure'):
+            contract_nodes([calculation_pk], dry_run=False)
+
+        self._check_existence([calculation_uuid, output.uuid], [])
+        assert orm.QueryBuilder().append(ContractedNode).count() == marker_count
+        assert not output.base.links.get_incoming(link_type=LinkType.CONTRACTED).all()
 
     #   TEST BASIC CASES
 

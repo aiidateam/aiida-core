@@ -118,14 +118,14 @@ def import_archive(
     if group and not group.is_stored:
         group.store()
 
-    # check the version is latest
-    # to-do we should have a way to check the version against aiida-core
-    # i.e. its not whether the version is the latest that matters, it is that it is compatible with the backend version
-    # its a bit weird at the moment because django/sqlalchemy have different versioning
-    if not archive_format.read_version(path) == archive_format.latest_version:
+    archive_version = archive_format.read_version(path)
+    # ``main_0002`` changes marker semantics but not the schema, so current readers remain compatible with 0001.
+    compatible_versions = {archive_format.latest_version}
+    if archive_format.latest_version == 'main_0002':
+        compatible_versions.add('main_0001')
+    if archive_version not in compatible_versions:
         raise IncompatibleStorageSchema(
-            f'The archive version {archive_format.read_version(path)!r} '
-            f'is not the latest version {archive_format.latest_version!r}'
+            f'The archive version {archive_version!r} is not compatible with version {archive_format.latest_version!r}'
         )
 
     IMPORT_LOGGER.report(
@@ -858,6 +858,7 @@ def _import_links(
         LinkType.INPUT_CALC: (data_node_types, calculation_node_types),
         LinkType.INPUT_WORK: (data_node_types, workflow_node_types),
         LinkType.RETURN: (workflow_node_types, data_node_types),
+        LinkType.CONTRACTED: ('', ''),
     }
     link_type_uniqueness = {
         LinkType.CALL_CALC: ('out_id',),
@@ -869,6 +870,7 @@ def _import_links(
         LinkType.INPUT_CALC: ('out_id_label',),
         LinkType.INPUT_WORK: ('out_id_label',),
         LinkType.RETURN: ('in_id_label',),
+        LinkType.CONTRACTED: (),
     }
 
     # Batch by type, to reduce memory load
@@ -877,6 +879,13 @@ def _import_links(
         # get validation parameters
         allowed_in_type, allowed_out_type = allowed_link_nodes[link_type]
         link_uniqueness = link_type_uniqueness[link_type]
+        adjacency: dict[int, set[int]] = {}
+        if link_type is LinkType.CONTRACTED:
+            adjacency_query = QueryBuilder(backend=backend_to).append(
+                entity_type='link', project=['input_id', 'output_id']
+            )
+            for source, target in adjacency_query.iterall(batch_size=batch_size):
+                adjacency.setdefault(source, set()).add(target)
 
         # count links of this type in archive
         archive_query = (
@@ -938,6 +947,19 @@ def _import_links(
                 # validation
                 if in_id == out_id:
                     raise ImportValidationError(f'Cannot add a link to oneself: {in_id}')
+                if link_type is LinkType.CONTRACTED:
+                    pending = [out_id]
+                    seen: set[int] = set()
+                    while pending:
+                        current = pending.pop()
+                        if current == in_id:
+                            raise ImportValidationError(
+                                f'Contracted link from node {in_id} to node {out_id} would create a cycle'
+                            )
+                        if current not in seen:
+                            seen.add(current)
+                            pending.extend(adjacency.get(current, set()) - seen)
+                    adjacency.setdefault(in_id, set()).add(out_id)
                 if not in_type.startswith(allowed_in_type):
                     raise ImportValidationError(
                         f'Cannot add a {link_type.value!r} link from {in_type} (link {link_id})'

@@ -33,6 +33,20 @@ def get_result_lines(result):
 
 
 class TestVerdiNode:
+    def test_node_contract_dry_run(self, run_cli_command):
+        """The contraction preview reports the selected region without modifying it."""
+        node = orm.Data().store()
+        result = run_cli_command(cmd_node.node_contract, ['--dry-run', str(node.pk)])
+        assert f'Report: Selected nodes: {node.pk}' in result.output
+        assert 'Report: Contraction markers: none' in result.output
+        orm.load_node(node.pk)
+
+    def test_node_delete_has_no_contraction_mode(self, run_cli_command):
+        """Deletion and contraction remain distinct commands."""
+        node = orm.Data().store()
+        result = run_cli_command(cmd_node.node_delete, ['--replace', '--dry-run', str(node.pk)], raises=True)
+        assert 'No such option: --replace' in result.output
+
     """Tests for `verdi node`."""
 
     @pytest.fixture(autouse=True)

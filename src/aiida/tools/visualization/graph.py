@@ -71,6 +71,10 @@ def default_link_styles(link_pair: LinkPair, add_label: bool, add_type: bool) ->
             'style': 'dashed',
             'color': '#000000',  # black
         },
+        LinkType.CONTRACTED: {
+            'style': 'dashed',
+            'color': '#7f3c8d',  # purple
+        },
     }[link_pair.link_type]
 
     if add_label and not add_type:
@@ -119,6 +123,12 @@ def default_node_styles(node: orm.Node) -> dict:
             'fillcolor': '#de707f77',  # red
             'penwidth': 0,
         },
+        'contracted.ContractedNode.': {
+            'shape': 'octagon',
+            'style': 'dashed',
+            'color': '#7f3c8d',
+            'penwidth': 2,
+        },
         'process.workflow.workchain.WorkChainNode.': {
             'shape': 'rectangle',
             'style': 'filled',
@@ -159,6 +169,12 @@ def pstate_node_styles(node: orm.Node) -> dict:
             'style': 'filled',
             'penwidth': 0,
             'fillcolor': '#ffffffff',
+        },
+        'contracted.ContractedNode.': {
+            'shape': 'octagon',
+            'style': 'dashed',
+            'color': '#7f3c8d',
+            'penwidth': 2,
         },
         'process.workflow.workchain.WorkChainNode.': {
             'shape': 'polygon',
@@ -284,7 +300,7 @@ def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierTyp
             f'({get_node_id_label(node, id_type)})'
         )
     else:
-        raise TypeError(f'Unknown type: {type(node)}')
+        label = f'{node.__class__.__name__} ({get_node_id_label(node, id_type)})'
 
     return label
 

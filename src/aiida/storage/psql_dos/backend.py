@@ -431,6 +431,45 @@ class PsqlDosBackend(StorageBackend):
             synchronize_session='fetch'
         )
 
+    def replace_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], contracted_links: Iterable[tuple[int, int, str]]
+    ) -> None:
+        """Atomically add contracted links and delete nodes and their connections."""
+        from aiida.common.links import LinkType
+        from aiida.storage.psql_dos.models.node import DbLink
+
+        if not self.in_transaction:
+            raise AssertionError('Cannot replace nodes and links outside a transaction')
+
+        pks = set(pks_to_delete)
+        links = list(contracted_links)
+        session = self.get_session()
+
+        adjacency: dict[int, set[int]] = {}
+        for source, target in session.query(DbLink.input_id, DbLink.output_id):
+            if source not in pks and target not in pks:
+                adjacency.setdefault(source, set()).add(target)
+
+        for source, target, _ in links:
+            pending = [target]
+            seen: set[int] = set()
+            while pending:
+                current = pending.pop()
+                if current == source:
+                    msg = f'contracted link from node<{source}> to node<{target}> would create a cycle'
+                    raise ValueError(msg)
+                if current not in seen:
+                    seen.add(current)
+                    pending.extend(adjacency.get(current, set()) - seen)
+            adjacency.setdefault(source, set()).add(target)
+
+        session.add_all(
+            DbLink(input_id=source, output_id=target, label=label, type=LinkType.CONTRACTED.value)
+            for source, target, label in links
+        )
+        session.flush()
+        self.delete_nodes_and_connections(pks)
+
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """Return the backend entity that corresponds to the given Model instance
 

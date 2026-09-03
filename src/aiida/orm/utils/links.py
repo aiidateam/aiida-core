@@ -144,6 +144,10 @@ def validate_link(
     type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
     type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
 
+    if link_type is LinkType.CONTRACTED:
+        msg = 'contracted links can only be created by provenance contraction'
+        raise exceptions.ModificationNotAllowed(msg)
+
     if source.backend != target.backend:
         raise ValueError(
             f'source and target nodes must be stored in the same backend, but got {source.backend} and {target.backend}'

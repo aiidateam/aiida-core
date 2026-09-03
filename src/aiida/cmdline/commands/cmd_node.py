@@ -464,6 +464,39 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
     _perform_delete()
 
 
+@verdi_node.command('contract')
+@click.argument('identifier', nargs=-1, metavar='NODES')
+@options.DRY_RUN()
+@options.FORCE()
+@with_dbenv()
+def node_contract(identifier, dry_run, force):
+    """Contract selected nodes in the provenance graph.
+
+    Only explicitly selected nodes are removed. Surviving nodes on either side
+    are reconnected with links that explicitly mark the omitted provenance.
+    """
+    from aiida.orm.utils.loaders import NodeEntityLoader
+    from aiida.tools import contract_nodes
+
+    pks = []
+    for obj in identifier:
+        try:
+            pks.append(int(obj))
+        except ValueError:
+            pks.append(NodeEntityLoader.load_entity(obj).pk)
+
+    def _dry_run_callback(selected_pks):
+        if not selected_pks or force:
+            return False
+        echo.echo_warning(f'YOU ARE ABOUT TO CONTRACT {len(selected_pks)} NODES! THIS CANNOT BE UNDONE!')
+        echo.echo_info('The nodes with the following pks would be contracted: ' + ' '.join(map(str, selected_pks)))
+        return not click.confirm('Shall I continue?', abort=True)
+
+    _, was_contracted = contract_nodes(pks, dry_run=dry_run or _dry_run_callback)
+    if was_contracted:
+        echo.echo_success('Finished contraction.')
+
+
 @verdi_node.command('rehash')
 @arguments.NODES()
 @click.option(

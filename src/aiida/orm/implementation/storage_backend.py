@@ -271,6 +271,20 @@ class StorageBackend(abc.ABC):
         :raises: ``AssertionError`` if a transaction is not active
         """
 
+    def replace_nodes_and_connections(
+        self, pks_to_delete: Iterable[int], contracted_links: Iterable[tuple[int, int, str]]
+    ) -> None:
+        """Atomically add contracted links and delete nodes and their connections.
+
+        This internal operation is intended to be called within a transaction.
+        Backends that support provenance contraction should override it and
+        validate that the links do not create a directed cycle.
+
+        :param pks_to_delete: node PKs to delete.
+        :param contracted_links: ``(source PK, target PK, label)`` tuples to insert.
+        """
+        raise NotImplementedError
+
     @abc.abstractmethod
     def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""

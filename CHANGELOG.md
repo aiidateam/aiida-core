@@ -11,6 +11,8 @@ Explicit values are migrated to `logging.aiida_core_loglevel` unless that option
 
 ### New features
 
+- Add `contract_nodes` and `verdi node contract` to remove explicitly selected provenance while preserving boundary reachability. Contracted provenance is represented by the new public `LinkType.CONTRACTED` enum member, which can only be created by the contraction operation.
+
 ### Behavior changes
 
 ### Fixes

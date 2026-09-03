@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import final
+
 import collections.abc
 import functools
 import logging
@@ -19,7 +21,6 @@ from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.engine.processes.generic.process import ProcessStateMachineMeta
 from aiida.engine.processes.greenback import run_with_portal
 from aiida.engine.processes.persistence import auto_persist
 from aiida.engine.processes.process import Process, ProcessState
@@ -41,67 +42,10 @@ class WorkChainSpec(ProcessSpec, ProcessWorkChainSpec):
     pass
 
 
-MethodType = t.TypeVar('MethodType')
-
-
-class Protect(ProcessStateMachineMeta):
-    """Metaclass that allows protecting class methods from being overridden by subclasses.
-
-    Usage as follows::
-
-        class SomeClass(metaclass=Protect):
-
-            @Protect.final
-            def private_method(self):
-                "This method cannot be overridden by a subclass."
-
-    If a subclass is imported that overrides the subclass, a ``RuntimeError`` is raised.
-    """
-
-    __SENTINEL = object()
-
-    def __new__(mcs, name, bases, namespace, **kwargs):
-        """Collect all methods that were marked as protected and raise if the subclass defines it.
-
-        :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.
-        """
-        private = {
-            key
-            for base in bases
-            for parent in base.__mro__
-            for key, value in vars(parent).items()
-            if callable(value) and mcs.__is_final(value)
-        }
-        for key in namespace:
-            if key in private:
-                raise RuntimeError(f'the method `{key}` is protected cannot be overridden.')
-        return super().__new__(mcs, name, bases, namespace, **kwargs)
-
-    @classmethod
-    def __is_final(mcs, method) -> bool:  # noqa: N804
-        """Return whether the method has been decorated by the ``final`` classmethod.
-
-        :return: Boolean, ``True`` if the method is marked as final, ``False`` otherwise.
-        """
-        try:
-            return method.__final is mcs.__SENTINEL
-        except AttributeError:
-            return False
-
-    @classmethod
-    def final(mcs, method: MethodType) -> MethodType:  # noqa: N804
-        """Decorate a method with this method to protect it from being overridden.
-
-        Adds the ``__SENTINEL`` object as the ``__final`` private attribute to the given ``method`` and wraps it in
-        the ``typing.final`` decorator. The latter indicates to typing systems that it cannot be overridden in
-        subclasses.
-        """
-        method.__final = mcs.__SENTINEL  # type: ignore[attr-defined]
-        return t.final(method)
 
 
 @auto_persist('_awaitables')
-class WorkChain(Process, metaclass=Protect):
+class WorkChain(Process):
     """The `WorkChain` class is the principle component to implement workflows in AiiDA."""
 
     _node_class = WorkChainNode
@@ -183,7 +127,7 @@ class WorkChain(Process, metaclass=Protect):
         if self._awaitables:
             self._action_awaitables()
 
-    @Protect.final
+    @final
     def on_run(self):
         super().on_run()
         self.node.set_stepper_state_info(str(self._stepper))
@@ -273,7 +217,7 @@ class WorkChain(Process, metaclass=Protect):
             # then we should not try to update it
             self._update_process_status()
 
-    @Protect.final
+    @final
     def to_context(self, **kwargs: Awaitable | ProcessNode) -> None:
         """Add a dictionary of awaitables to the context.
 
@@ -299,13 +243,13 @@ class WorkChain(Process, metaclass=Protect):
             self.set_status(status)
 
     @override
-    @Protect.final
+    @final
     async def step(self) -> None:
         """Advance the process state machine by one step."""
         await super().step()
 
     @override
-    @Protect.final
+    @final
     async def run(self) -> t.Any:
         self._stepper = self.spec().get_outline().create_stepper(self)
         return await run_with_portal(self._do_step)
@@ -364,7 +308,7 @@ class WorkChain(Process, metaclass=Protect):
                 self._store_nodes(value)
 
     @override
-    @Protect.final
+    @final
     def on_exiting(self) -> None:
         """Ensure that any unstored nodes in the context are stored, before the state is exited
 
@@ -378,7 +322,7 @@ class WorkChain(Process, metaclass=Protect):
             # An uncaught exception here will have bizarre and disastrous consequences
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
-    @Protect.final
+    @final
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
         """Entering the WAITING state."""
         super().on_wait(awaitables)

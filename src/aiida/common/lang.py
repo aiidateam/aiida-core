@@ -12,7 +12,7 @@ import functools
 import inspect
 import keyword
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, TypeVar
 
 
 def isidentifier(identifier: str) -> bool:
@@ -73,33 +73,6 @@ def call_with_super_check(wrapped: MethodType, *args: Any, **kwargs: Any) -> Non
     wrapped(*args, **kwargs)
     msg = f"Base '{wrapped.__name__}' was not called from '{self.__class__}'\nHint: Did you forget to call the super?"
     assert self._called == call_count, msg
-
-
-def protected(check: bool = False) -> Callable[[MethodType], MethodType]:
-    """Return a decorator that marks a method as protected."""
-
-    def wrap(func: MethodType) -> MethodType:
-        args = inspect.getfullargspec(func)[0]
-        if not args:
-            msg = 'Can only use the protected decorator on member functions'
-            raise RuntimeError(msg)
-
-        if not check:
-            return func
-
-        @functools.wraps(func)
-        def wrapped_fn(self: Any, *args: Any, **kwargs: Any) -> Any:
-            try:
-                calling_instance = inspect.stack()[1][0].f_locals['self']
-                assert self is calling_instance
-            except (KeyError, AssertionError) as exception:
-                msg = f'Cannot access protected function {func.__name__} from outside class hierarchy'
-                raise RuntimeError(msg) from exception
-            return func(self, *args, **kwargs)
-
-        return cast(MethodType, wrapped_fn)
-
-    return wrap
 
 
 def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType]:

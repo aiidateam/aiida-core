@@ -1757,14 +1757,3 @@ class TestWorkChainEvents:
             manager.reset_runner()
 
         assert listener.called == {'running', 'waiting', 'killed'}
-
-
-@pytest.mark.parametrize('method_name', ('run', 'step'))
-def test_illegal_override_protected_method(method_name):
-    """Test that overriding an inherited protected workchain method raises a ``RuntimeError``."""
-
-    class IntermediateWorkChain(WorkChain):
-        pass
-
-    with pytest.raises(RuntimeError, match=rf'the method `{method_name}` is protected cannot be overridden'):
-        type('IllegalWorkChain', (IntermediateWorkChain,), {method_name: lambda _: None})

@@ -17,14 +17,10 @@
 import abc
 from typing import TYPE_CHECKING, Any
 
-from aiida.common.lang import protected as protected_decorator
 from aiida.engine.processes import persistence
 from aiida.engine.processes.persistence import SAVED_STATE_TYPE
-from aiida.engine.processes.settings import check_protected
 
 __all__: tuple[str, ...] = ()
-
-protected = protected_decorator(check=check_protected)
 
 if TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
@@ -41,7 +37,6 @@ class ProcessListener(persistence.Savable, metaclass=abc.ABCMeta):
     def init(self, **kwargs: Any) -> None:
         self._params = kwargs
 
-    @protected
     def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self.init(**saved_state['_params'])

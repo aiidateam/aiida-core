@@ -178,7 +178,7 @@ class WorkChain(Process, metaclass=Protect):
         if stepper_state is not None:
             self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)
 
-        self.set_logger(self.node.logger)
+        self._set_logger(self.node.logger)
 
         if self._awaitables:
             self._action_awaitables()

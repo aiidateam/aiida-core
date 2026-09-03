@@ -201,11 +201,9 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
 
     Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
     is that after this callback is finished, the :meth:`aiida.common.log.configure_logging` method can be called again,
-    for example when the database backend is loaded, and this will undo this change. So instead, we set to globals in
-    the :mod:`aiida.common.log` module: ``CLI_ACTIVE`` and ``CLI_LOG_LEVEL``. The ``CLI_ACTIVE`` global is always set to
-    ``True``. The ``configure_logging`` function will interpret this as the code being executed through a ``verdi``
-    call. The ``CLI_LOG_LEVEL`` global is only set if an explicit value is set for the ``--verbosity`` option. In this
-    case, it is set to the specified log level and ``configure_logging`` will then set this log level for all loggers.
+    for example when the database backend is loaded, and this will undo this change. So instead, we set the
+    ``CLI_LOG_LEVEL`` global in :mod:`aiida.common.log`. If an explicit value is set for the ``--verbosity`` option, it
+    is set to the specified log level and ``configure_logging`` will then set this log level for all loggers.
 
     This approach tightly couples the generic :mod:`aiida.common.log` module to the :mod:`aiida.cmdline` module, which
     is not the cleanest, but given that other module code can undo the logging configuration by calling that method,

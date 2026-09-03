@@ -33,52 +33,59 @@ def test_create_profile(isolated_config, tmp_path, entry_point):
     assert profile_name in isolated_config.profile_names
 
 
-def test_check_version_release(monkeypatch, capsys, isolated_config):
-    """Test that ``Manager.check_version`` prints nothing for a release version.
+def test_check_version_release(monkeypatch, isolated_config):
+    """Test that ``Manager.check_version`` emits nothing for a release version."""
+    from unittest.mock import MagicMock
 
-    If a warning is emitted, it should be printed to stdout. So even though it will go through the logging system, the
-    logging configuration of AiiDA will interfere with that of pytest and the ultimately the output will simply be
-    written to stdout, so we use the ``capsys`` fixture and not the ``caplog`` one.
-    """
     version = '1.0.0'
     monkeypatch.setattr(aiida, '__version__', version)
 
     # Explicitly setting the default in case the test profile has it changed.
     isolated_config.set_option('warnings.development_version', True)
 
-    get_manager().check_version()
-    captured = capsys.readouterr()
-    assert not captured.err
-    assert not captured.out
+    manager = get_manager()
+    mock_warning = MagicMock()
+    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_warning', mock_warning)
+    monkeypatch.setattr(manager.logger, 'warning', MagicMock())
+
+    manager.check_version()
+    mock_warning.assert_not_called()
+    manager.logger.warning.assert_not_called()
 
 
 @pytest.mark.parametrize('version', ('1.0.0.dev0', '1.0.0.post0'))
 @pytest.mark.parametrize('suppress_warning', (True, False))
 @pytest.mark.usefixtures('isolated_config')
-def test_check_version_development(monkeypatch, suppress_warning, version):
-    """Test that ``Manager.check_version`` prints a warning for a development or post release version.
+def test_check_version_development(monkeypatch, suppress_warning, version, manager):
+    """Test that ``Manager.check_version`` warns for a development or post release version.
 
     The ``main`` branch carries a ``.dev0`` version and support branches a ``.post0`` version; both should trigger the
     warning. It can be suppressed by setting the option ``warnings.development_version`` to ``False``.
     """
     from unittest.mock import MagicMock
 
+    from aiida.common import log
+
     monkeypatch.setattr(aiida, '__version__', version)
 
-    manager = get_manager()
     manager._profile.set_option('warnings.development_version', not suppress_warning)
 
-    mock_warning = MagicMock()
-    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_warning', mock_warning)
+    mock_echo_warning = MagicMock()
+    mock_logger_warning = MagicMock()
+    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_warning', mock_echo_warning)
+    monkeypatch.setattr(manager.logger, 'warning', mock_logger_warning)
 
+    monkeypatch.setattr(log, 'CLI_ACTIVE', False)
     manager.check_version()
 
     if suppress_warning:
-        mock_warning.assert_not_called()
+        mock_echo_warning.assert_not_called()
+        mock_logger_warning.assert_not_called()
     else:
-        mock_warning.assert_called()
-        first_call_msg = mock_warning.call_args_list[0][0][0]
-        assert f'You are currently using a development version of AiiDA: {version}' in first_call_msg
+        mock_echo_warning.assert_not_called()
+        mock_logger_warning.assert_called_once()
+        first_call_msg = mock_logger_warning.call_args_list[0][0][0]
+        assert f'You are using a development version of AiiDA ({version}).' in first_call_msg
 
 
 def test_profile_context(config_with_profile, profile_factory):

@@ -95,7 +95,7 @@ class Port:
     def __init__(
         self,
         name: str,
-        valid_type: type[Any] | None = None,
+        valid_type: type[Any] | tuple[type[Any], ...] | None = None,
         help: str | None = None,
         required: bool = True,
         validator: VALIDATOR_TYPE | None = None,
@@ -137,7 +137,7 @@ class Port:
         return self._name
 
     @property
-    def valid_type(self) -> type[Any] | None:
+    def valid_type(self) -> type[Any] | tuple[type[Any], ...] | None:
         """Get the valid value type for this port if one is specified
 
         :return: the value value type
@@ -146,7 +146,7 @@ class Port:
         return self._valid_type
 
     @valid_type.setter
-    def valid_type(self, valid_type: type[Any] | None) -> None:
+    def valid_type(self, valid_type: type[Any] | tuple[type[Any], ...] | None) -> None:
         """Set the valid value type for this port
 
         :param valid_type: the value valid type
@@ -262,7 +262,7 @@ class InputPort(Port):
     def __init__(
         self,
         name: str,
-        valid_type: type[Any] | None = None,
+        valid_type: type[Any] | tuple[type[Any], ...] | None = None,
         help: str | None = None,
         default: Any = UNSPECIFIED,
         required: bool = True,
@@ -336,7 +336,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         help: str | None = None,
         required: bool = True,
         validator: VALIDATOR_TYPE | None = None,
-        valid_type: type[Any] | None = None,
+        valid_type: type[Any] | tuple[type[Any], ...] | None = None,
         default: Any = UNSPECIFIED,
         dynamic: bool = False,
         populate_defaults: bool = True,
@@ -410,11 +410,11 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         self._dynamic = dynamic
 
     @property
-    def valid_type(self) -> type[Any] | None:
+    def valid_type(self) -> type[Any] | tuple[type[Any], ...] | None:
         return super().valid_type
 
     @valid_type.setter
-    def valid_type(self, valid_type: type[Any] | None) -> None:
+    def valid_type(self, valid_type: type[Any] | tuple[type[Any], ...] | None) -> None:
         """Set the `valid_type` for the `PortNamespace`.
 
         If the `valid_type` is None, the `dynamic` property will be set to `False`, in all other cases `dynamic` will be

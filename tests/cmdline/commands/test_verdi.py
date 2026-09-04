@@ -84,6 +84,13 @@ def test_verdi_with_unknown_profile_fails(config_with_profile_factory, run_cli_c
     assert 'profile `profile-does-not-exist` does not exist' in str(result.exception)
 
 
+def test_group_option_names_do_not_overlap_with_ancestors():
+    """Test built-in `verdi` groups do not reuse ancestor option parameter names."""
+    from aiida.tools.pytest_fixtures.cli import assert_verdi_group_option_names_do_not_overlap_with_ancestors
+
+    assert_verdi_group_option_names_do_not_overlap_with_ancestors()
+
+
 @pytest.mark.usefixtures('config_with_profile')
 def test_invalid_cmd_matches(run_cli_command):
     """Test that verdi with an invalid command will return matches if somewhat close"""

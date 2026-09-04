@@ -4,6 +4,7 @@
 # fmt: off
 
 from aiida.tools.pytest_fixtures.broker import run_aiida_broker_service, run_aiida_broker_service_for_profile
+from aiida.tools.pytest_fixtures.cli import check_verdi_group_option_names
 from aiida.tools.pytest_fixtures.configuration import (
     aiida_config,
     aiida_config_factory,
@@ -51,6 +52,7 @@ __all__ = (
     'aiida_profile_clean_class',
     'aiida_profile_factory',
     'aiida_profile_tmp',
+    'check_verdi_group_option_names',
     'config_psql_dos',
     'config_sqlite_dos',
     'daemon_client',

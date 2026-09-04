@@ -258,7 +258,7 @@ class Running(State):
         next_state = self._action_command(command)
         return next_state
 
-    def _action_command(self, command: Kill | Stop | Wait | Continue) -> State:
+    def _action_command(self, command: Command) -> State:
         if isinstance(command, Kill):
             state = self.create_state(ProcessState.KILLED, command.msg)
         # elif isinstance(command, Pause):
@@ -270,7 +270,8 @@ class Running(State):
         elif isinstance(command, Continue):
             state = self.create_state(ProcessState.RUNNING, command.continue_fn, *command.args, **command.kwargs)
         else:
-            raise ValueError('Unrecognised command')
+            msg = 'Unrecognised command'
+            raise ValueError(msg)
 
         return cast(State, state)  # casting from base.State to process.State
 

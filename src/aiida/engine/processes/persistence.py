@@ -582,7 +582,7 @@ class Savable:
     @staticmethod
     def get_custom_meta(saved_state: SAVED_STATE_TYPE, name: str) -> Any:
         try:
-            return saved_state[META][name]
+            return saved_state[META][META__USER][name]
         except KeyError:
             raise ValueError(f"Unknown meta key '{name}'")
 

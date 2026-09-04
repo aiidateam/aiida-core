@@ -185,7 +185,7 @@ class Process(ProcessBase):
     def init(self) -> None:
         super().init()
         if self._logger is None:
-            self.set_logger(self.node.logger)
+            self._set_logger(self.node.logger)
 
     @classmethod
     def get_exit_statuses(cls, exit_code_labels: Iterable[str]) -> list[int]:
@@ -686,7 +686,7 @@ class Process(ProcessBase):
         return UUID(self.node.uuid)
 
     @override
-    def encode_input_args(self, inputs: dict[str, Any]) -> str:
+    def _encode_input_args(self, inputs: dict[str, Any]) -> str:
         """Encode input arguments such that they may be saved in a Bundle
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -695,7 +695,7 @@ class Process(ProcessBase):
         return serialize.serialize(inputs)
 
     @override
-    def decode_input_args(self, encoded: str) -> dict[str, Any]:
+    def _decode_input_args(self, encoded: str) -> dict[str, Any]:
         """Decode saved input arguments as they came from the saved instance state Bundle
 
         :param encoded: encoded (serialized) inputs

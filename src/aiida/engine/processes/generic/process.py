@@ -44,7 +44,6 @@ from aio_pika.exceptions import ChannelInvalidStateError, ConnectionClosed
 
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import call_with_super_check, super_check
-from aiida.common.lang import protected as protected_decorator
 from aiida.common.processes import ProcessState
 from aiida.engine.processes import communications as process_comms
 from aiida.engine.processes import events, exceptions, persistence, state_machine
@@ -56,11 +55,8 @@ from aiida.engine.processes.generic.spec import ProcessSpec
 from aiida.engine.processes.greenback import run_until_complete, run_with_portal
 from aiida.engine.processes.listener import ProcessListener
 from aiida.engine.processes.persistence import PID_TYPE, SAVED_STATE_TYPE
-from aiida.engine.processes.settings import check_protected
 from aiida.engine.processes.state_machine import StateEntryFailed, StateMachine, event
 from aiida.engine.utils import ensure_coroutine
-
-protected = protected_decorator(check=check_protected)
 
 T = TypeVar('T')
 
@@ -637,15 +633,14 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
 
         # Inputs/outputs
         if self.raw_inputs is not None:
-            out_state[BundleKeys.INPUTS_RAW] = self.encode_input_args(self.raw_inputs)
+            out_state[BundleKeys.INPUTS_RAW] = self._encode_input_args(self.raw_inputs)
 
         if self.inputs is not None:
-            out_state[BundleKeys.INPUTS_PARSED] = self.encode_input_args(self.inputs)
+            out_state[BundleKeys.INPUTS_PARSED] = self._encode_input_args(self.inputs)
 
         if self.outputs:
-            out_state[BundleKeys.OUTPUTS] = self.encode_input_args(self.outputs)
+            out_state[BundleKeys.OUTPUTS] = self._encode_input_args(self.outputs)
 
-    @protected
     def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
         """Load the process from its saved instance state.
 
@@ -683,19 +678,19 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
 
         # Inputs/outputs
         try:
-            decoded = self.decode_input_args(saved_state[BundleKeys.INPUTS_RAW])
+            decoded = self._decode_input_args(saved_state[BundleKeys.INPUTS_RAW])
             self._raw_inputs = AttributesFrozendict(decoded)
         except KeyError:
             self._raw_inputs = None
 
         try:
-            decoded = self.decode_input_args(saved_state[BundleKeys.INPUTS_PARSED])
+            decoded = self._decode_input_args(saved_state[BundleKeys.INPUTS_PARSED])
             self._parsed_inputs = AttributesFrozendict(decoded)
         except KeyError:
             self._parsed_inputs = None
 
         try:
-            decoded = self.decode_input_args(saved_state[BundleKeys.OUTPUTS])
+            decoded = self._decode_input_args(saved_state[BundleKeys.OUTPUTS])
             self._outputs = decoded
         except KeyError:
             self._outputs = {}
@@ -716,13 +711,11 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         """Remove a process listener from the process."""
         self._event_helper.remove_listener(listener)
 
-    @protected
-    def set_logger(self, logger: logging.Logger) -> None:
+    def _set_logger(self, logger: logging.Logger) -> None:
         """Set the logger of the process."""
         self._logger = logger
 
-    @protected
-    def log_with_pid(self, level: int, msg: str) -> None:
+    def _log_with_pid(self, level: int, msg: str) -> None:
         """Log the message with the process pid."""
         self.logger.log(level, '%s: %s', self.pid, msg)
 
@@ -1361,7 +1354,6 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
     # endregion
 
     @ensure_not_closed
-    @protected
     def out(self, output_port: str, value: Any) -> None:
         """
         Record an output value for a specific output port. If the output port matches an
@@ -1430,8 +1422,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         output_namespace[port_name] = value
         self.on_output_emitted(output_port, value, is_dynamic_output)
 
-    @protected
-    def encode_input_args(self, inputs: Any) -> Any:
+    def _encode_input_args(self, inputs: Any) -> Any:
         """
         Encode input arguments such that they may be saved in a :class:`aiida.engine.processes.persistence.Bundle`.
         The encoded inputs should contain no reference to the inputs that were passed in.
@@ -1442,8 +1433,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         """
         return copy.deepcopy(inputs)
 
-    @protected
-    def decode_input_args(self, encoded: Any) -> Any:
+    def _decode_input_args(self, encoded: Any) -> Any:
         """
         Decode saved input arguments as they came from the saved instance state
         :class:`aiida.engine.processes.persistence.Bundle`.

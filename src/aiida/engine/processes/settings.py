@@ -16,5 +16,4 @@
 ###########################################################################
 """Settings for process execution."""
 
-check_protected: bool = False
 check_override: bool = False

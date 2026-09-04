@@ -141,10 +141,12 @@ class _FunctionCall(_Instruction):
     def __init__(self, func: WC_COMMAND_TYPE) -> None:
         try:
             args = inspect.getfullargspec(func)[0]
-        except TypeError:
-            raise TypeError(f'func is not a function, got {type(func)}')
+        except TypeError as exception:
+            msg = f'func is not a function, got {type(func)}'
+            raise TypeError(msg) from exception
         if len(args) != 1:
-            raise TypeError('Step must take one argument only: self')
+            msg = 'Step must take one argument only: self'
+            raise TypeError(msg)
 
         self._fn = func
 

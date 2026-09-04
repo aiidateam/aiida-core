@@ -23,10 +23,10 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 :::
 
 :::{dropdown} Installation requirements
-This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
+This module uses AiiDA and `aiida-workgraph`:
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" "aiida-workgraph>=0.9.0" matplotlib "gsrd>=0.2.0"
+uv pip install "aiida-core>=2.9" "aiida-workgraph>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
 :::
 
@@ -536,7 +536,7 @@ To apply these skills to real materials-science calculations, [aiida-quantumespr
 ## Further reading
 
 - AiiDA's workflow concepts in depth: {ref}`topics:workflows`
-- `aiida-shell` (the `ShellJob` launcher used in the pipeline): [aiida-shell documentation](https://aiida-shell.readthedocs.io)
+- `ShellJob` (the launcher used in the pipeline): {ref}`How to run shell commands <how-to:run-shell-commands>`
 - Calcfunctions refresher: {ref}`topics:processes:functions`
 - Alternative workflow construction APIs WorkGraph offers (beyond the `@task.graph()` decorator used here, including `If`/`While` control flow): [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io)
 - Running versus submitting processes: {ref}`topics:processes:usage:launching`

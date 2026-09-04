@@ -35,6 +35,7 @@ dependencies = [
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
+  'dill>=0.3.6,<1',
   'disk-objectstore~=1.5.0',
   'docstring-parser',
   'graphviz~=0.19',
@@ -76,6 +77,7 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.calculations']
 'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
+'core.shell' = 'aiida.calculations.shell:ShellJob'
 'core.stash' = 'aiida.calculations.stash:StashCalculation'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
@@ -118,8 +120,10 @@ requires-python = '>=3.10'
 'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
 'core.code.containerized' = 'aiida.orm.nodes.data.code.containerized:ContainerizedCode'
 'core.code.installed' = 'aiida.orm.nodes.data.code.installed:InstalledCode'
+'core.code.installed.shell' = 'aiida.orm.nodes.data.code.shell:ShellCode'
 'core.code.portable' = 'aiida.orm.nodes.data.code.portable:PortableCode'
 'core.dict' = 'aiida.orm.nodes.data.dict:Dict'
+'core.entry_point' = 'aiida.orm.nodes.data.entry_point:EntryPointData'
 'core.enum' = 'aiida.orm.nodes.data.enum:EnumData'
 'core.float' = 'aiida.orm.nodes.data.float:Float'
 'core.folder' = 'aiida.orm.nodes.data.folder:FolderData'
@@ -128,6 +132,7 @@ requires-python = '>=3.10'
 'core.list' = 'aiida.orm.nodes.data.list:List'
 'core.numeric' = 'aiida.orm.nodes.data.numeric:NumericType'
 'core.orbital' = 'aiida.orm.nodes.data.orbital:OrbitalData'
+'core.pickled' = 'aiida.orm.nodes.data.pickled:PickledData'
 'core.remote' = 'aiida.orm.nodes.data.remote.base:RemoteData'
 'core.remote.stash' = 'aiida.orm.nodes.data.remote.stash.base:RemoteStashData'
 'core.remote.stash.compress' = 'aiida.orm.nodes.data.remote.stash.compress:RemoteStashCompressedData'
@@ -167,6 +172,7 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.parsers']
 'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
+'core.shell' = 'aiida.parsers.plugins.shell.parser:ShellParser'
 'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'
 
 [project.entry-points.'aiida.schedulers']
@@ -299,7 +305,6 @@ tui = [
   'trogon'
 ]
 tutorials = [
-  'aiida-shell>=0.9.0',
   'aiida-workgraph>=0.9.0',
   'gsrd>=0.2.0'
 ]
@@ -389,10 +394,15 @@ disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
   'aiida.brokers.*',
+  'aiida.calculations.shell',
   'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
   'aiida.cmdline.commands.cmd_status',
   'aiida.common.*',
+  'aiida.orm.nodes.data.code.shell',
+  'aiida.orm.nodes.data.entry_point',
+  'aiida.orm.nodes.data.pickled',
+  'aiida.parsers.plugins.shell.parser',
   'aiida.repository.*',
   'aiida.schedulers.*',
   'aiida.storage.psql_dos.migrator',
@@ -412,6 +422,7 @@ module = [
   'bpython.*',
   'bs4.*',
   'circus.*',
+  'dill.*',
   'flask_restful.*',
   'graphviz.*',
   'kiwipy.*',

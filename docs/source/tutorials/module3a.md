@@ -24,10 +24,10 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 :::
 
 :::{dropdown} Installation requirements
-This module uses `aiida-core`, `aiida-shell`, and `aiida-workgraph`. Install them with:
+This module uses `aiida-core` and `aiida-workgraph`. Install them with:
 
 ```bash
-uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" "aiida-workgraph>=0.9.0" matplotlib "gsrd>=0.2.0"
+uv pip install "aiida-core>=2.9" "aiida-workgraph>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
 
 `aiida-workgraph` is currently a separate package; it is planned to become part of `aiida-core` with the v3.0 release.
@@ -520,7 +520,7 @@ In {ref}`Module 3b <tutorial:module3b>`, WorkGraph's `Map` runs that same workfl
 ## Further reading
 
 - AiiDA's workflow concepts in depth: {ref}`topics:workflows`
-- `aiida-shell` (the `ShellJob` launcher used in the pipeline): [aiida-shell documentation](https://aiida-shell.readthedocs.io)
+- `ShellJob` (the launcher used in the pipeline): {ref}`How to run shell commands <how-to:run-shell-commands>`
 - Calcfunctions refresher: {ref}`topics:processes:functions`
 - Running versus submitting processes: {ref}`topics:processes:usage:launching`
 - WorkGraph documentation: [aiida-workgraph](https://aiida-workgraph.readthedocs.io)

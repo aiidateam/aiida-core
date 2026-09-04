@@ -98,6 +98,7 @@ __all__ = (
     'PROCESS_STATE',
     'PROFILE',
     'PROFILE_ONLY_CONFIG',
+    'PROFILE_OPTION_NAME',
     'PROFILE_SET_DEFAULT',
     'PROJECT',
     'RAW',

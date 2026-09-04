@@ -33,7 +33,7 @@ def test_verdi_with_empty_profile_list(run_cli_command):
     run_cli_command(cmd_verdi.verdi, ['-h'], use_subprocess=False)
 
 
-@pytest.mark.parametrize('arguments', [['profile', '--help']])
+@pytest.mark.parametrize('arguments', [['--help'], ['profile', '--help']])
 def test_verdi_shows_development_warning(monkeypatch, config_with_profile_factory, run_cli_command, arguments):
     """Regression test: ``verdi`` help commands show the development-version warning from the global config."""
     config = config_with_profile_factory(load=False)

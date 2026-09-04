@@ -10,11 +10,20 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
 
 from aiida.orm import RemoteData
+
+# ``RemoteData._get_size_on_disk_du`` invokes ``du --block-size=1``, but ``--block-size`` is a GNU coreutils extension
+# that BSD ``du``, as shipped with macOS, does not understand. The command therefore exits non-zero there and the
+# implementation falls back to ``stat``, so the expected disk-usage values can never be met.
+requires_gnu_du = pytest.mark.skipif(
+    sys.platform == 'darwin',
+    reason='`du --block-size=1` is a GNU coreutils option, unavailable on macOS',
+)
 
 
 @pytest.fixture
@@ -57,8 +66,8 @@ def test_clean(remote_data_factory, mode):
 @pytest.mark.parametrize(
     'setup, results',
     (
-        (('du', False), ('8.00 KB', 'du')),
-        (('du', True), (8192, 'du')),
+        pytest.param(('du', False), ('8.00 KB', 'du'), marks=requires_gnu_du),
+        pytest.param(('du', True), (8192, 'du'), marks=requires_gnu_du),
         (('stat', False), ('12.00 B', 'stat')),
         (('stat', True), (12, 'stat')),
     ),
@@ -83,6 +92,7 @@ def test_get_size_on_disk_params(remote_data_factory, mode, setup, results):
     ),
     ids=['1-byte', '10-bytes', '1000-bytes', '1e6-bytes'],
 )
+@requires_gnu_du
 def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
     """Test the different implementations to obtain the size of a ``RemoteData`` on disk."""
 
@@ -112,6 +122,7 @@ def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
         (int(1e6), 'subdir1', {'du': 2015232, 'stat': 2004096, 'human': '1.92 MB'}),
     ),
 )
+@requires_gnu_du
 def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
     # TODO: Use create file hierarchy fixture from test_execmanager?
     sub_dir1 = tmp_path / 'subdir1'
@@ -162,6 +173,7 @@ def test_get_size_on_disk_excs(remote_data_factory, mode):
 
 
 @pytest.mark.parametrize('mode', ('local', 'ssh'))
+@requires_gnu_du
 def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_du` private method."""
     # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.

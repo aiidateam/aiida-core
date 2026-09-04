@@ -529,8 +529,7 @@ class Manager:
         from aiida.cmdline.utils import echo
 
         # Showing of the warning can be turned off by setting the following option to false.
-        assert self._profile is not None
-        show_warning = self._profile.get_option('warnings.development_version')
+        show_warning = self.get_option('warnings.development_version')
         version = parse(__version__)
 
         if (version.is_prerelease or version.is_postrelease) and show_warning:

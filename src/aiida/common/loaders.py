@@ -23,18 +23,33 @@ class ObjectLoader(abc.ABC):
 
     @abc.abstractmethod
     def load_object(self, identifier: str) -> Any:
-        """Load the object represented by an identifier."""
+        """Load the object represented by an identifier.
+
+        :param identifier: the identifier of the object to load
+        :return: the loaded object
+        :raises ImportError: if the object could not be loaded
+        """
 
     @abc.abstractmethod
     def identify_object(self, obj: Any) -> str:
-        """Return the persistent identifier for an object."""
+        """Return the persistent identifier for an object.
+
+        :param obj: the object to identify
+        :return: the identifier of the object
+        :raises ImportError: if the object could not be identified
+        """
 
 
 class DefaultObjectLoader(ObjectLoader):
     """Load module-level classes, functions, and constants."""
 
     def load_object(self, identifier: str) -> Any:
-        """Load an object identified as ``module:name``."""
+        """Load an object identified as ``module:name``.
+
+        :param identifier: the identifier of the object, in the form ``module.path:name``
+        :return: the loaded object
+        :raises ImportError: if the identifier has an invalid format, or the module or object could not be loaded
+        """
         try:
             module_name, name = identifier.split(':')
         except ValueError as exception:
@@ -54,7 +69,12 @@ class DefaultObjectLoader(ObjectLoader):
             raise ImportError(msg) from exception
 
     def identify_object(self, obj: Any) -> str:
-        """Return an importable identifier for an object."""
+        """Return an importable identifier for an object.
+
+        :param obj: the object to identify
+        :return: the identifier of the object, in the form ``module.path:name``
+        :raises ImportError: if the generated identifier cannot be loaded back into the object
+        """
         identifier = f'{obj.__module__}:{obj.__name__}'
         self.load_object(identifier)
         return identifier
@@ -64,7 +84,10 @@ OBJECT_LOADER: ObjectLoader | None = None
 
 
 def get_object_loader() -> ObjectLoader:
-    """Return the global object loader."""
+    """Return the global object loader.
+
+    :return: the globally configured object loader, instantiating the default one if necessary
+    """
     global OBJECT_LOADER  # noqa: PLW0603
     if OBJECT_LOADER is None:
         OBJECT_LOADER = DefaultObjectLoader()
@@ -72,28 +95,52 @@ def get_object_loader() -> ObjectLoader:
 
 
 def load_function(name: str, instance: Any | None = None) -> Any:
-    """Load a function from its fully qualified name."""
+    """Load a function from its fully qualified name.
+
+    If the resolved object is a method and an ``instance`` is provided, it is bound to that instance and its class.
+
+    :param name: the fully qualified name of the function, e.g. ``module.path.function``; a bare name (i.e. one that
+        cannot be resolved as an importable path) raises :class:`ValueError`
+    :param instance: an optional instance to bind the loaded method to
+    :return: the loaded function, bound to ``instance`` if it was provided
+    :raises ValueError: if the resolved object is not a function or method
+    """
     obj = load_object(name)
     if inspect.ismethod(obj) and instance is not None:
         return obj.__get__(instance, instance.__class__)  # type: ignore[attr-defined]
     if inspect.ismethod(obj) or inspect.isfunction(obj):
         return obj
-    raise ValueError(f"Invalid function name '{name}'")
+    msg = f"Invalid function name '{name}'"
+    raise ValueError(msg)
 
 
 def load_object(fullname: str) -> Any:
-    """Load an object from a fully qualified name."""
+    """Load an object from a fully qualified name.
+
+    The longest importable module prefix of the name is loaded and the remainder is resolved through attribute
+    access on it.
+
+    :param fullname: the fully qualified name of the object, e.g. ``module.submodule.Class.attribute``
+    :return: the loaded object
+    :raises ValueError: if the module or any of the remaining attributes cannot be loaded
+    """
     obj, remainder = load_module(fullname)
     for name in remainder:
         try:
             obj = getattr(obj, name)
         except AttributeError as exception:
-            raise ValueError(f"Could not load object corresponding to '{fullname}'") from exception
+            msg = f"Could not load object corresponding to '{fullname}'"
+            raise ValueError(msg) from exception
     return obj
 
 
 def load_module(fullname: str) -> tuple[types.ModuleType, deque[str]]:
-    """Load the longest importable module prefix from a fully qualified name."""
+    """Load the longest importable module prefix from a fully qualified name.
+
+    :param fullname: the fully qualified name of the object, e.g. ``module.submodule.Class.attribute``
+    :return: a two-tuple of the loaded module and the remaining name parts that are not part of the module name
+    :raises ValueError: if no importable module prefix could be found
+    """
     parts = fullname.split('.')
     remainder: deque[str] = deque()
     for _ in range(len(parts)):
@@ -101,4 +148,5 @@ def load_module(fullname: str) -> tuple[types.ModuleType, deque[str]]:
             return importlib.import_module('.'.join(parts)), remainder
         except ImportError:
             remainder.appendleft(parts.pop())
-    raise ValueError(f"Could not load a module corresponding to '{fullname}'")
+    msg = f"Could not load a module corresponding to '{fullname}'"
+    raise ValueError(msg)

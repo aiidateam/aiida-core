@@ -14,6 +14,8 @@
 #                                                                         #
 # The Plumpy license is reproduced in open_source_licenses.txt.         #
 ###########################################################################
+"""Callbacks for the lifecycle events of a process."""
+
 import abc
 from typing import TYPE_CHECKING, Any
 
@@ -28,16 +30,34 @@ if TYPE_CHECKING:
 
 @persistence.auto_persist('_params')
 class ProcessListener(persistence.Savable, metaclass=abc.ABCMeta):
+    """Base class for objects that want to be notified of the events of a process.
+
+    All methods are no-ops by default, so subclasses only have to implement the events they care about.
+    """
+
     # region Persistence methods
 
     def __init__(self) -> None:
+        """Construct the listener with an empty set of initialization parameters."""
         super().__init__()
         self._params: dict[str, Any] = {}
 
     def init(self, **kwargs: Any) -> None:
+        """Store the keyword arguments with which the listener was created.
+
+        The parameters are persisted and passed back to this method when the listener is recreated from its saved
+        state.
+
+        :param kwargs: the initialization parameters of the listener
+        """
         self._params = kwargs
 
     def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+        """Load the saved state, reinitializing the listener with its stored parameters.
+
+        :param saved_state: the saved state of the instance
+        :param load_context: the context of the load operation
+        """
         super().load_instance_state(saved_state, load_context)
         self.init(**saved_state['_params'])
 
@@ -69,7 +89,7 @@ class ProcessListener(persistence.Savable, metaclass=abc.ABCMeta):
 
     def on_process_paused(self, process: 'Process') -> None:
         """
-        Called when the process is about to re-enter the RUNNING state
+        Called when the process is about to enter the PAUSED state
 
         :param process: The process
 
@@ -117,5 +137,6 @@ class ProcessListener(persistence.Savable, metaclass=abc.ABCMeta):
         Called when the process was killed
 
         :param process: The process
+        :param msg: The message explaining why the process was killed
 
         """

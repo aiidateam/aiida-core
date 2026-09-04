@@ -53,7 +53,12 @@ MethodType = TypeVar('MethodType', bound=Callable[..., Any])
 
 
 def super_check(wrapped: MethodType) -> MethodType:
-    """Decorate a method to require invocation through :func:`call_with_super_check`."""
+    """Decorate a method to require invocation through :func:`call_with_super_check`.
+
+    :param wrapped: the method to decorate
+    :return: the decorated method
+    :raises AssertionError: if the method is called directly instead of through :func:`call_with_super_check`
+    """
 
     @functools.wraps(wrapped)
     def wrapper(self: Any, *args: Any, **kwargs: Any) -> None:
@@ -66,7 +71,13 @@ def super_check(wrapped: MethodType) -> MethodType:
 
 
 def call_with_super_check(wrapped: MethodType, *args: Any, **kwargs: Any) -> None:
-    """Call a bound method and verify that every override calls ``super()``."""
+    """Call a bound method and verify that every override calls ``super()``.
+
+    :param wrapped: the bound method, decorated with :func:`super_check`, to invoke
+    :param args: positional arguments to pass to the method
+    :param kwargs: keyword arguments to pass to the method
+    :raises AssertionError: if an override in the method resolution chain did not call ``super()``
+    """
     self = wrapped.__self__  # type: ignore[attr-defined]
     call_count = getattr(self, '_called', 0)
     self._called = call_count + 1

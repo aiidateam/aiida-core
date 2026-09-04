@@ -35,7 +35,6 @@ class ProfileParamType(LabelStringType):
 
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         self._cannot_exist = kwargs.pop('cannot_exist', False)
-        self._load_profile = kwargs.pop('load_profile', False)  # If True, will load the profile converted from value
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -45,7 +44,7 @@ class ProfileParamType(LabelStringType):
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> Profile:  # type: ignore[override]
         """Attempt to match the given value to a valid profile."""
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage.configuration import Profile, load_profile
+        from aiida.manage.configuration import Profile
 
         try:
             config = ctx.obj.config  # type: ignore[union-attr]
@@ -73,9 +72,6 @@ class ProfileParamType(LabelStringType):
         else:
             if self._cannot_exist:
                 self.fail(str(f'the profile `{value}` already exists'))
-
-        if self._load_profile:
-            load_profile(profile.name)
 
         ctx.obj.profile = profile  # type: ignore[union-attr]
 

@@ -15,8 +15,28 @@ import pytest
 from aiida.common.processes import ProcessState
 from aiida.engine import Process, run
 from aiida.engine.persistence import AiiDAPersister
-from aiida.engine.processes.persistence import Bundle, LoadSaveContext, SavableFuture
+from aiida.engine.processes.persistence import Bundle, LoadSaveContext, Savable, SavableFuture
 from tests.utils.processes import DummyProcess
+
+
+class CustomSavable(Savable):
+    """Savable that can only be resolved by the custom object loader."""
+
+
+class CustomObjectLoader:
+    """Static custom loader compatible with persistence deserialization."""
+
+    @staticmethod
+    def load_object(identifier):
+        if identifier == 'custom-savable':
+            return CustomSavable
+        raise ImportError
+
+    @staticmethod
+    def identify_object(obj):
+        if obj is CustomSavable:
+            return 'custom-savable'
+        raise ImportError
 
 
 def test_cancelled_savable_future():
@@ -33,6 +53,15 @@ def test_cancelled_savable_future():
         assert restored.cancelled()
     finally:
         loop.close()
+
+
+def test_load_uses_saved_custom_object_loader():
+    """Test restoring a bundle uses the saved custom object loader metadata."""
+    saved_state = CustomSavable().save(LoadSaveContext(loader=CustomObjectLoader()))
+
+    restored = Savable.load(saved_state)
+
+    assert isinstance(restored, CustomSavable)
 
 
 @pytest.mark.requires_broker

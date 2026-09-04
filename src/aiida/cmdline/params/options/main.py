@@ -108,6 +108,7 @@ __all__ = (
     'PROCESS_STATE',
     'PROFILE',
     'PROFILE_ONLY_CONFIG',
+    'PROFILE_OPTION_NAME',
     'PROFILE_SET_DEFAULT',
     'PROJECT',
     'RAW',
@@ -248,10 +249,12 @@ VERBOSITY = OverridableOption(
     help='Set the verbosity of the output.',
 )
 
+PROFILE_OPTION_NAME = 'profile'
+
 PROFILE = OverridableOption(
     '-p',
     '--profile',
-    'profile',
+    PROFILE_OPTION_NAME,
     type=types.ProfileParamType(),
     default=defaults.get_default_profile,
     cls=CallableDefaultOption,

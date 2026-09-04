@@ -45,6 +45,45 @@ def test_verdi_shows_development_warning(monkeypatch, config_with_profile_factor
     assert 'You are using a development version of AiiDA (1.0.0.dev0).' in result.output
 
 
+def test_verdi_with_profile_loads_selected_profile(monkeypatch, empty_config, profile_factory, run_cli_command):
+    """Test ``verdi --profile`` loads the explicitly selected profile."""
+    default_profile = profile_factory('default')
+    explicit_profile = profile_factory('explicit')
+    empty_config.add_profile(default_profile)
+    empty_config.add_profile(explicit_profile)
+    empty_config.set_default_profile(default_profile.name, overwrite=True)
+    empty_config.set_option('warnings.development_version', False)
+    explicit_profile.set_option('warnings.development_version', True)
+    empty_config.store()
+    monkeypatch.setattr(aiida, '__version__', '1.0.0.dev0')
+
+    result = run_cli_command(
+        cmd_verdi.verdi,
+        ['--profile', explicit_profile.name, '--help'],
+        use_subprocess=False,
+        initialize_ctx_obj=False,
+    )
+
+    assert 'You are using a development version of AiiDA (1.0.0.dev0).' in result.output
+    assert 'Usage: verdi [OPTIONS] COMMAND [ARGS]...' in result.output
+
+
+def test_verdi_with_unknown_profile_fails(config_with_profile_factory, run_cli_command):
+    """Test ``verdi --profile`` fails for a profile that does not exist."""
+    config_with_profile_factory(load=False)
+
+    result = run_cli_command(
+        cmd_verdi.verdi,
+        ['--profile', 'profile-does-not-exist', '--help'],
+        use_subprocess=False,
+        initialize_ctx_obj=False,
+        raises=True,
+    )
+
+    assert result.exception is not None
+    assert 'profile `profile-does-not-exist` does not exist' in str(result.exception)
+
+
 @pytest.mark.usefixtures('config_with_profile')
 def test_invalid_cmd_matches(run_cli_command):
     """Test that verdi with an invalid command will return matches if somewhat close"""

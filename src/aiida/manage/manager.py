@@ -144,7 +144,7 @@ class Manager:
 
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
-        self.check_version()
+        self._check_version()
         self._setup_event_loop_in_ipython()
 
         return self._profile
@@ -520,9 +520,17 @@ class Manager:
 
         The ``aiida-core`` package maintains the protocol that the ``main`` branch carries a development version number,
         appending `.dev0` to the version of the next anticipated release. Support branches that backport fixes on top of
-        a release use a post release number, appending `.post0`. This method prints a warning whenever the currently
-        installed version is such a development or post release and not an actual release.
+        a release use a post release number, appending `.post0`. This method emits a warning whenever the currently
+        installed version is such a development or post release and not an actual release. The warning is emitted
+        through the CLI utilities when a ``verdi`` command is being executed and through the manager logger otherwise.
+
+        If no profile is currently loaded, the default profile is loaded first to ensure that logging is configured
+        before the warning is emitted, so it does not get lost.
         """
+        self.load_profile()
+        self._check_version()
+
+    def _check_version(self) -> None:
         from packaging.version import parse
 
         from aiida import __version__

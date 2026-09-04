@@ -515,7 +515,7 @@ class Manager:
 
         return runner
 
-    def check_version(self):
+    def check_version(self) -> None:
         """Check the currently installed version of ``aiida-core`` and warn if it is a development version.
 
         The ``aiida-core`` package maintains the protocol that the ``main`` branch carries a development version number,
@@ -526,14 +526,23 @@ class Manager:
         from packaging.version import parse
 
         from aiida import __version__
-        from aiida.cmdline.utils import echo
+        from aiida.common.log import CLI_ACTIVE
 
         # Showing of the warning can be turned off by setting the following option to false.
         show_warning = self.get_option('warnings.development_version')
         version = parse(__version__)
 
         if (version.is_prerelease or version.is_postrelease) and show_warning:
-            echo.echo_warning(f'You are currently using a development version of AiiDA: {version}')
-            echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
-            echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
-            echo.echo_warning('as you might not be able to automatically migrate your data.\n')
+            message = (
+                f'You are currently using a development version of AiiDA: {version}. '
+                'Be aware that this is not recommended for production and is not officially supported. '
+                'Databases used with this version may not be compatible with future releases of AiiDA '
+                'as you might not be able to automatically migrate your data.\n'
+            )
+
+            if CLI_ACTIVE:
+                from aiida.cmdline.utils import echo
+
+                echo.echo_warning(message)
+            else:
+                self.logger.warning(message)

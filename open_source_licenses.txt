@@ -8,8 +8,21 @@ Plumpy:
   * aiida/common/lang.py
   * aiida/common/loaders.py
   * aiida/common/processes.py
-  * aiida/engine/persistence.py
-  * aiida/engine/processes/
+  * aiida/engine/processes/communications.py
+  * aiida/engine/processes/event_helper.py
+  * aiida/engine/processes/events.py
+  * aiida/engine/processes/exceptions.py
+  * aiida/engine/processes/generic/futures.py
+  * aiida/engine/processes/generic/ports.py
+  * aiida/engine/processes/generic/process.py
+  * aiida/engine/processes/generic/spec.py
+  * aiida/engine/processes/greenback.py
+  * aiida/engine/processes/listener.py
+  * aiida/engine/processes/persistence.py
+  * aiida/engine/processes/settings.py
+  * aiida/engine/processes/state_machine.py
+  * aiida/engine/processes/states.py
+  * aiida/engine/processes/workchains/outline.py
 
 The respective copyright notices are reproduced below.
 

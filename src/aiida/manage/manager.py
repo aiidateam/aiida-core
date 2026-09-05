@@ -144,7 +144,7 @@ class Manager:
 
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
-        self.check_version()
+        self._check_version()
         self._setup_event_loop_in_ipython()
 
         return self._profile
@@ -515,26 +515,42 @@ class Manager:
 
         return runner
 
-    def check_version(self):
+    def check_version(self) -> None:
         """Check the currently installed version of ``aiida-core`` and warn if it is a development version.
 
         The ``aiida-core`` package maintains the protocol that the ``main`` branch carries a development version number,
         appending `.dev0` to the version of the next anticipated release. Support branches that backport fixes on top of
-        a release use a post release number, appending `.post0`. This method prints a warning whenever the currently
-        installed version is such a development or post release and not an actual release.
+        a release use a post release number, appending `.post0`. This method emits a warning whenever the currently
+        installed version is such a development or post release and not an actual release. The warning is emitted
+        through the CLI utilities when a ``verdi`` command is being executed and through the manager logger otherwise.
+
+        If no profile is currently loaded, the default profile is loaded first to ensure that logging is configured
+        before the warning is emitted, so it does not get lost.
         """
+        self.load_profile()
+        self._check_version()
+
+    def _check_version(self) -> None:
         from packaging.version import parse
 
         from aiida import __version__
-        from aiida.cmdline.utils import echo
+        from aiida.common.log import CLI_ACTIVE
 
         # Showing of the warning can be turned off by setting the following option to false.
-        assert self._profile is not None
-        show_warning = self._profile.get_option('warnings.development_version')
+        show_warning = self.get_option('warnings.development_version')
         version = parse(__version__)
 
         if (version.is_prerelease or version.is_postrelease) and show_warning:
-            echo.echo_warning(f'You are currently using a development version of AiiDA: {version}')
-            echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
-            echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
-            echo.echo_warning('as you might not be able to automatically migrate your data.\n')
+            message = (
+                f'You are using a development version of AiiDA ({version}). '
+                'Be aware that this is not recommended for production and is not officially supported. '
+                'Databases used with this version may not be compatible with future releases of AiiDA '
+                'as you might not be able to automatically migrate your data.\n'
+            )
+
+            if CLI_ACTIVE:
+                from aiida.cmdline.utils import echo
+
+                echo.echo_warning(message)
+            else:
+                self.logger.warning(message)

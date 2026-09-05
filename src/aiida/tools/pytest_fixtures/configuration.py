@@ -192,6 +192,10 @@ def aiida_config(tmp_path_factory, aiida_config_factory):
     :returns :class:`~aiida.manage.configuration.config.Config`: The loaded temporary config.
     """
     with aiida_config_factory(tmp_path_factory.mktemp(secrets.token_hex(16))) as config:
+        # Test suites should not emit development-version warnings by default. Individual tests can still enable the
+        # option explicitly when they need to assert the warning behavior.
+        config.set_option('warnings.development_version', False)
+        config.store()
         yield config
 
 

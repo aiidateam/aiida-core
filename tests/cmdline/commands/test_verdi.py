@@ -42,7 +42,7 @@ def test_verdi_shows_development_warning(monkeypatch, config_with_profile_factor
 
     result = run_cli_command(cmd_verdi.verdi, arguments, use_subprocess=False, initialize_ctx_obj=False)
 
-    assert 'You are currently using a development version of AiiDA: 1.0.0.dev0.' in result.output
+    assert 'You are using a development version of AiiDA (1.0.0.dev0).' in result.output
 
 
 @pytest.mark.usefixtures('config_with_profile')

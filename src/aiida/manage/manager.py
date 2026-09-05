@@ -542,7 +542,7 @@ class Manager:
 
         if (version.is_prerelease or version.is_postrelease) and show_warning:
             message = (
-                f'You are currently using a development version of AiiDA: {version}. '
+                f'You are using a development version of AiiDA ({version}). '
                 'Be aware that this is not recommended for production and is not officially supported. '
                 'Databases used with this version may not be compatible with future releases of AiiDA '
                 'as you might not be able to automatically migrate your data.\n'

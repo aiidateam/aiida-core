@@ -978,6 +978,28 @@ class TestNodeCaching:
         assert clone.base.caching.get_cache_source() == data.uuid
         assert data.base.caching.get_hash() == clone.base.caching.get_hash()
 
+    def test_store_from_cache_preserves_label_description(self):
+        """Test storing a node from cache preserves its own label and description."""
+        data = Data(label='source label', description='source description').store()
+        clone = data.clone()
+        clone.label = 'clone label'
+        clone.description = 'clone description'
+
+        clone._store_from_cache(data)
+
+        assert clone.label == 'clone label'
+        assert clone.description == 'clone description'
+
+    def test_store_from_cache_inherits_empty_label_description(self):
+        """Test storing a node from cache inherits the label and description if empty."""
+        data = Data(label='source label', description='source description').store()
+        clone = data.clone()
+
+        clone._store_from_cache(data)
+
+        assert clone.label == data.label
+        assert clone.description == data.description
+
     def test_hashing_errors(self, caplog, monkeypatch):
         """Tests that ``compute_hash`` fails in an expected manner."""
         from aiida.orm.nodes.caching import NodeCaching

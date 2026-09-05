@@ -1,0 +1,59 @@
+┌──────────────────────────────────────────────────────────────────────────┐
+          │           PYTHON DECLARATION LAYER   (poc/orm)                          │
+          └──────────────────────────────────────────────────────────────────────────┘
+
+ TrajectoryData                                       (orm/nodes/data/trajectory.py)
+   │  schema_name = 'TrajectoryMetadata'
+   │  schema_spec = SchemaSpec(name='TrajectoryMetadata', fields=(...))
+   ▼
+ SchemaSpec  ───────────── fields: tuple[FieldSpec, ...] ─────────────▶ FieldSpec
+   │  name: str                                                          │ name: str
+   │  fields: tuple[FieldSpec, ...]                                      │ scalar_type: int
+   │                                                                     │   0 string | 1 int | 2 float
+   │                                                                     │   3 bool  | 4 list[str]
+   │                                                                     │ required: bool
+   │                                                                     │ default_str / default_int: optional
+   │                                                                     │ validator_name: str | None
+   │                                                                     │ description: str
+   │                                                                     ▼
+   │                                                   lookup by name ──▶ VALIDATORS dict
+   │                                                                     'non_empty'    → _non_empty
+   │                                                                     'positive_int' → _positive_int
+   │
+   │  Data.store()                                     (orm/nodes/data/data.py)
+   │  └ values = {'label': self.label, **self.values}
+   │        └─▶ validate_values(schema, values)   (required | validator | default filling)
+   ▼
+          ┌──────────────────────────────────────────────────────────────────────────┐
+          │           PROTOBUF BINARY LAYER   (orm/_core/nodes/data/protobuf.py)     │
+          └──────────────────────────────────────────────────────────────────────────┘
+
+ encode_schema(SchemaSpec) ──▶ SchemaEnvelope ──bytes──▶      decode_schema(blob) ──▶ SchemaSpec
+                                ├  format_version : uint32 = 1
+                                └  schema : SchemaSpec
+                                     └  fields : repeated FieldSpec  ◀─ mirrors ── FieldSpec dataclass
+
+ encode_values(schema, dict) ──▶ NodePayload ──bytes──▶         decode_values(schema, blob) ──▶ dict
+                                    └  fields : repeated ValueField
+                                         ├  name : string
+                                         └  value : oneof
+                                              ├  string_value / int_value
+                                              ├  float_value / bool_value
+                                              └  (repeated) list_string_value
+ ▼
+          ┌──────────────────────────────────────────────────────────────────────────┐
+          │           SQLITE STORAGE LAYER   (storage/sqlite_temp/schema_store.py)  │
+          └──────────────────────────────────────────────────────────────────────────┘
+
+    ┌─ schemas ─────────────────────────────────────┐      ┌─ nodes ────────────────────────────────────┐
+    │ schema_name     TEXT     PRIMARY KEY          │      │ id            INTEGER   PK AUTOINCREMENT  │
+    │ format_version  INTEGER                       │      │ schema_name   TEXT   ──▶ schemas.schema_name
+    │ protobuf_blob   BLOB     = SchemaEnvelope     │      │ value_blob    BLOB    = NodePayload       │
+    │                   (171 B for 4-field schema)  │      │                (71 B small instance)      │
+    └───────────────────────────────────────────────┘      └────────────────────────────────────────────┘
+               ▲                                                    ▲
+               │ store_schema(conn, spec)                          │ store_node(conn, schema, values)
+               │ load_schema(conn, name)                           │ load_node_values(conn, node_id)
+               │   auto-installed on first use via                 │   used by public API:
+               │   Data._ensure_schema_installed()                 │   node.store(), load_node(id, cls)
+               └───────────────────────────────────────────────────┘

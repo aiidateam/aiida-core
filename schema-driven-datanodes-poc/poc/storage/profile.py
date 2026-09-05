@@ -19,16 +19,19 @@ def load_profile(database_url: str) -> sqlite3.Connection:
     """Open the configured database and keep it as the active storage backend."""
     global _connection
     _connection = sqlite3.connect(database_url)
+    _connection.execute('PRAGMA foreign_keys = ON')
     _connection.execute(
         'CREATE TABLE IF NOT EXISTS schemas ('
-        'schema_name TEXT PRIMARY KEY, '
+        'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+        'schema_name TEXT NOT NULL, '
         'format_version INTEGER NOT NULL, '
-        'protobuf_blob BLOB NOT NULL)'
+        'protobuf_blob BLOB NOT NULL, '
+        'UNIQUE(schema_name, format_version))'
     )
     _connection.execute(
         'CREATE TABLE IF NOT EXISTS nodes ('
         'id INTEGER PRIMARY KEY AUTOINCREMENT, '
-        'schema_name TEXT NOT NULL, '
+        'schema_id INTEGER NOT NULL REFERENCES schemas(id) ON DELETE RESTRICT, '
         'value_blob BLOB NOT NULL)'
     )
     _connection.commit()

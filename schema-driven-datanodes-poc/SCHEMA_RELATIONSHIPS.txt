@@ -45,15 +45,18 @@
           │           SQLITE STORAGE LAYER   (storage/sqlite_temp/schema_store.py)  │
           └──────────────────────────────────────────────────────────────────────────┘
 
-    ┌─ schemas ─────────────────────────────────────┐      ┌─ nodes ────────────────────────────────────┐
-    │ schema_name     TEXT     PRIMARY KEY          │      │ id            INTEGER   PK AUTOINCREMENT  │
-    │ format_version  INTEGER                       │      │ schema_name   TEXT   ──▶ schemas.schema_name
-    │ protobuf_blob   BLOB     = SchemaEnvelope     │      │ value_blob    BLOB    = NodePayload       │
-    │                   (171 B for 4-field schema)  │      │                (71 B small instance)      │
-    └───────────────────────────────────────────────┘      └────────────────────────────────────────────┘
+    ┌─ schemas ────────────────────────────────────────────┐      ┌─ nodes ────────────────────────────────────┐
+    │ id            INTEGER    PK AUTOINCREMENT            │      │ id          INTEGER    PK AUTOINCREMENT  │
+    │ schema_name   TEXT                                   │      │ schema_id   INTEGER    NOT NULL          │
+    │ format_version INTEGER                                │      │             REFERENCES schemas(id)      │
+    │ protobuf_blob  BLOB      = SchemaEnvelope             │      │             ON DELETE RESTRICT          │
+    │ UNIQUE(schema_name, format_version)                   │      │ value_blob   BLOB       = NodePayload   │
+    │                  (171 B for 4-field schema)          │      │                (71 B small instance)     │
+    └──────────────────────────────────────────────────────┘      └────────────────────────────────────────────┘
                ▲                                                    ▲
-               │ store_schema(conn, spec)                          │ store_node(conn, schema, values)
-               │ load_schema(conn, name)                           │ load_node_values(conn, node_id)
-               │   auto-installed on first use via                 │   used by public API:
-               │   Data._ensure_schema_installed()                 │   node.store(), load_node(id, cls)
-               └───────────────────────────────────────────────────┘
+               │ store_schema(conn, spec, format_version)           │ store_node(conn, schema, values,
+               │   upsert preserves id per (name, version)          │   format_version)  →  pins schema_id
+               │ load_schema(conn, name)  → latest version          │ load_node_values(conn, node_id)
+               │   auto-installed on first use via                  │   decodes blob against the pinned version
+               │   Data._ensure_schema_installed()                  │   used by public API:
+               └───────────────────────────────────────────────────┘   node.store(), load_node(id, cls)

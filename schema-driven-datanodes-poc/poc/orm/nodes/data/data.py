@@ -26,10 +26,12 @@ class Data(CoreData):
     schema_spec: t.ClassVar[SchemaSpec] = SchemaSpec(name='Data', fields=())
 
     def store(self) -> int:
-        """Store this node and return its database id."""
-        _, schema = type(self)._load_schema()
+        """Store this node against the current schema version and return its id."""
+        format_version, schema = type(self)._load_schema()
         values = {'label': self.label, **self.values}
-        return store_node(get_profile(), schema, validate_values(schema, values))
+        return store_node(
+            get_profile(), schema, validate_values(schema, values), format_version=format_version
+        )
 
     @classmethod
     def install_schema(cls, *, format_version: int = 1) -> None:

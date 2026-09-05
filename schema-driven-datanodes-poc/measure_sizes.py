@@ -7,9 +7,10 @@ import tempfile
 from pathlib import Path
 
 from poc.orm._core.nodes.data.protobuf import encode_schema, encode_values
-from poc.orm.nodes.data import TrajectoryData, load_node
+from poc.orm.nodes.data import FieldSpec, SchemaSpec, TrajectoryData, load_node
 from poc.storage import load_profile
 from poc.storage.profile import get_profile
+from poc.storage.sqlite_temp.schema_store import store_schema
 
 SCHEMA = TrajectoryData.schema_spec
 
@@ -67,10 +68,10 @@ def main() -> None:
     schema_col = conn.execute('SELECT length(protobuf_blob) FROM schemas').fetchone()[0]
     schema_name_col = conn.execute('SELECT length(schema_name) FROM schemas').fetchone()[0]
     print(f"schemas.protobuf_blob  : {schema_col} B (+ {schema_name_col} B schema_name key)")
-    rows = conn.execute('SELECT id, length(value_blob) FROM nodes').fetchall()
-    for node_id, length in rows:
-        print(f"nodes[{node_id}].value_blob: {length} B")
-    total_blobs = schema_col + sum(length for _, length in rows)
+    rows = conn.execute('SELECT id, schema_id, length(value_blob) FROM nodes').fetchall()
+    for node_id, schema_id, length in rows:
+        print(f"nodes[{node_id}].value_blob: {length} B (schema_id={schema_id})")
+    total_blobs = schema_col + sum(length for _, _, length in rows)
     print(f"sum of all blob columns: {total_blobs} B")
 
     # per-row/page accounting with dbstat (available in most SQLite builds)
@@ -91,7 +92,6 @@ def main() -> None:
     # 3. Scaling: cost per additional node
     # ------------------------------------------------------------------
     section("3. Marginal cost per stored instance")
-    before = rows[0][1]
     conn2 = get_profile()
     small = dict(label='water-md', nsteps=1000, tags=['production', 'nvt'])
     ids = [TrajectoryData(**small).store() for _ in range(100)]
@@ -99,10 +99,13 @@ def main() -> None:
         f'SELECT length(value_blob) FROM nodes WHERE id IN ({",".join("?" * len(ids))})',
         ids,
     ).fetchall()
-    print(f"100 identical small instances: {sizes[0][0]} B each (schema blob stored once: {schema_col} B)")
-    print("=> the schema is O(1) per type; each instance pays its own blob + a repeated 'TrajectoryMetadata' key")
-    key_len = conn2.execute('SELECT length(schema_name) FROM nodes LIMIT 1').fetchone()[0]
-    print(f"   (plus {key_len} B nodes.schema_name text per row in this PoC schema)")
+    print(f"100 identical small instances: {sizes[0][0]} B each (schema blob stored once per version: {schema_col} B)")
+    print("=> the schema is O(1) per type+version; each instance pays its own blob and a small int schema_id")
+    row_size = conn2.execute('SELECT schema_id FROM nodes LIMIT 1').fetchone()[0]
+    print(
+        f"   (schema_id={row_size} stores inline as a ~1-2 B varint in the record; "
+        'the old design repeated an 18 B text key per row)'
+    )
 
     # round-trip sanity: rebuild one and show it decodes
     rebuilt = load_node(ids[0], TrajectoryData)
@@ -111,6 +114,40 @@ def main() -> None:
     # file size growth
     conn2.commit()
     print(f"db file after 103 nodes: {tmp.stat().st_size} B")
+
+    # ------------------------------------------------------------------
+    # 4. Version pinning and FK enforcement
+    # ------------------------------------------------------------------
+    section("4. Version pinning & FK enforcement")
+    v1_id = TrajectoryData(label='v1-run', nsteps=10).store()
+
+    # publish a v2 of the same schema name: drops 'nsteps' to prove pinning
+    v2 = SchemaSpec(
+        name='TrajectoryMetadata',
+        fields=(FieldSpec('label', 0, validator_name='non_empty', description='Human-readable label'),),
+    )
+    store_schema(conn2, v2, format_version=2)
+    print(f"installed format_version=2 of {v2.name!r}; v1 node id {v1_id} still: {load_node(v1_id, TrajectoryData)}")
+
+    v2_id = TrajectoryData(label='v2-run', nsteps=20).store()
+    pinned = conn2.execute(
+        'SELECT n.id, s.schema_name, s.format_version FROM nodes n JOIN schemas s ON s.id = n.schema_id ORDER BY n.id'
+    ).fetchall()
+    by_version = {}
+    for node_id, name, version in pinned:
+        by_version.setdefault(version, []).append(node_id)
+    print("per-node pinned schema version (join over schemas.id):")
+    for version, ids in sorted(by_version.items()):
+        print(f"  format v{version}: {len(ids)} nodes, e.g. ids {ids[:3]}{'...' if len(ids) > 3 else ''}")
+    print(f"  v1 node {v1_id} decodes against v1: {load_node(v1_id, TrajectoryData)}")
+    print(f"  v2 node {v2_id} decodes against v2: {load_node(v2_id, TrajectoryData)}")
+
+    try:
+        conn2.execute("INSERT INTO nodes(schema_id, value_blob) VALUES (999, x'00')")
+        conn2.commit()
+        print('WARNING: bogus schema_id was accepted')
+    except sqlite3.IntegrityError as exc:
+        print(f"FK enforced on insert: {exc}")
 
 
 if __name__ == "__main__":

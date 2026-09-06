@@ -14,6 +14,7 @@ Plugin specific tests will be written in the corresponding test file.
 import io
 import os
 import re
+import shlex
 import shutil
 import signal
 import tempfile
@@ -243,36 +244,35 @@ def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote
         directory = tmp_path_remote / 'test'
 
         transport.makedirs(directory)
-        # change permissions
-        transport.chmod(directory, 0o777)
+        try:
+            # change permissions
+            transport.chmod(directory, 0o777)
 
-        # test if the security bits have changed
-        assert transport.get_mode(directory) == 0o777
+            # test if the security bits have changed
+            assert transport.get_mode(directory) == 0o777
 
-        # change permissions
-        transport.chmod(directory, 0o511)
+            # change permissions
+            transport.chmod(directory, 0o511)
 
-        # test if the security bits have changed
-        assert transport.get_mode(directory) == 0o511
-        transport.exec_command_wait(f'chmod 755 {directory}')
+            # test if the security bits have changed
+            assert transport.get_mode(directory) == 0o511
 
-        # TODO : bug in paramiko. When changing the directory to very low \
-        # I cannot set it back to higher permissions
+            # change permissions of an empty string, non existing folder.
+            with pytest.raises(OSError):
+                transport.chmod('', 0o777)
 
-        # TODO: probably here we should then check for
-        # the new directory modes. To see if we want a higher
-        # level function to ask for the mode, or we just
-        # use get_attribute
-
-        # change permissions of an empty string, non existing folder.
-        with pytest.raises(OSError):
-            transport.chmod('', 0o777)
-
-        # change permissions of a non existing folder.
-        fake_dir = 'pippo'
-        with pytest.raises(OSError):
-            # chmod to a non existing folder
-            transport.chmod(tmp_path_remote / fake_dir, 0o777)
+            # change permissions of a non existing folder.
+            fake_dir = 'pippo'
+            with pytest.raises(OSError):
+                # chmod to a non existing folder
+                transport.chmod(tmp_path_remote / fake_dir, 0o777)
+        finally:
+            # TODO: bug in paramiko. After lowering permissions via transport.chmod(),
+            # they cannot be restored to higher values the same way, so we restore
+            # via a raw shell command instead. This must run even if assertions above
+            # fail, so the directory doesn't get left behind with broken permissions.
+            retval, _stdout, stderr = transport.exec_command_wait(f'chmod 755 {shlex.quote(str(directory))}')
+            assert retval == 0, stderr
 
 
 def test_dir_reading_permissions(custom_transport, tmp_path_remote):
@@ -283,17 +283,20 @@ def test_dir_reading_permissions(custom_transport, tmp_path_remote):
         # create directory with non default permissions
         transport.mkdir(directory)
 
-        # change permissions to low ones
-        transport.chmod(directory, 0)
+        try:
+            # change permissions to low ones
+            transport.chmod(directory, 0)
 
-        # test if the security bits have changed
-        assert transport.get_mode(directory) == 0
-
-        # TODO : the test leaves a directory even if it is successful
-        #        The bug is in paramiko. After lowering the permissions,
-        #        I cannot restore them to higher values
-        transport.exec_command_wait(f'chmod 755 {directory}')
-        transport.rmdir(directory)
+            # test if the security bits have changed
+            assert transport.get_mode(directory) == 0
+        finally:
+            # TODO: bug in paramiko. After lowering the permissions via transport.chmod(),
+            # they cannot be restored to higher values the same way, so we restore via a
+            # raw shell command instead. This must run even if the assertion above fails,
+            # so cleanup below can proceed and the directory doesn't get left behind.
+            retval, _stdout, stderr = transport.exec_command_wait(f'chmod 755 {shlex.quote(str(directory))}')
+            assert retval == 0, stderr
+            transport.rmdir(directory)
 
 
 def test_isfile_isdir(custom_transport, tmp_path_remote):

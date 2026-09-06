@@ -49,6 +49,7 @@ __all__ = (
     'COMPUTER',
     'COMPUTERS',
     'CONFIG_FILE',
+    'CONFIG_FILES',
     'DATA',
     'DATUM',
     'DB_BACKEND',
@@ -735,6 +736,13 @@ CONFIG_FILE = ConfigFileOption(
     '--config',
     type=types.FileOrUrl(),
     help='Load option values from configuration file in yaml format (local path or URL).',
+)
+
+CONFIG_FILES = click.option(
+    '--config-files',
+    multiple=True,
+    type=click.Path(exists=True, path_type=pathlib.Path),
+    help='Load computer setup from multiple configuration files in YAML format. Can be specified multiple times.',
 )
 
 IDENTIFIER = OverridableOption(

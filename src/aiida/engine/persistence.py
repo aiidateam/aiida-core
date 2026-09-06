@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Definition of AiiDA's process persister and the necessary object loaders."""
+"""Definition of AiiDA's checkpoint repository and object loader helpers."""
 
 import logging
 import traceback
@@ -22,13 +22,13 @@ from aiida.orm.utils import serialize
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
-__all__ = ('AiiDAPersister', 'ObjectLoader', 'get_object_loader')
+__all__ = ('AiidaCheckpointPersister', 'ObjectLoader', 'get_object_loader')
 
 LOGGER = logging.getLogger(__name__)
 
 
-class AiiDAPersister(process_persistence.Persister):
-    """Persister to take saved process instance states and persisting them to the database."""
+class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
+    """Store process checkpoint payloads on process nodes."""
 
     def save_checkpoint(self, process: 'Process', tag: str | None = None):  # type: ignore[override]
         """Persist a Process instance.
@@ -43,27 +43,28 @@ class AiiDAPersister(process_persistence.Persister):
             raise NotImplementedError('Checkpoint tags not supported yet')
 
         try:
-            bundle = process_persistence.Bundle(
-                process, process_persistence.LoadSaveContext(loader=get_object_loader())
+            payload = process_persistence.CheckpointPayload.from_object(
+                process, process_persistence.CheckpointContext(loader=get_object_loader())
             )
         except ImportError:
-            # Couldn't create the bundle
-            raise PersistenceError(f"Failed to create a bundle for '{process}': {traceback.format_exc()}")
+            msg = f"Failed to create a checkpoint payload for '{process}': {traceback.format_exc()}"
+            raise PersistenceError(msg)
 
         try:
-            process.node.set_checkpoint(serialize.serialize(bundle))
+            process.node.set_checkpoint(serialize.serialize(payload))
         except Exception:
-            raise PersistenceError(f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}")
+            msg = f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}"
+            raise PersistenceError(msg)
 
-        return bundle
+        return payload
 
-    def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> process_persistence.Bundle:
+    def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> process_persistence.CheckpointPayload:
         """Load a process from a persisted checkpoint by its process id.
 
         :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
-        :return: a bundle with the process state
-        :rtype: :class:`aiida.engine.processes.persistence.Bundle`
+        :return: a checkpoint payload with the process state
+        :rtype: :class:`aiida.engine.processes.persistence.CheckpointPayload`
         :raises: :class:`PersistenceError` Raised if there was a problem loading the checkpoint
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -83,11 +84,12 @@ class AiiDAPersister(process_persistence.Persister):
             raise PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
 
         try:
-            bundle = serialize.deserialize_unsafe(checkpoint)
+            payload = serialize.deserialize_unsafe(checkpoint)
         except Exception:
-            raise PersistenceError(f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}')
+            msg = f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}'
+            raise PersistenceError(msg)
 
-        return bundle
+        return payload
 
     def get_checkpoints(self):
         """Return a list of all the current persisted process checkpoints

@@ -10,12 +10,11 @@
 
 from __future__ import annotations
 
-from typing import final
-
 import collections.abc
 import functools
 import logging
 import typing as t
+from typing import final
 
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
@@ -40,8 +39,6 @@ __all__ = ('WorkChain', 'if_', 'return_', 'while_')
 
 class WorkChainSpec(ProcessSpec, ProcessWorkChainSpec):
     pass
-
-
 
 
 @auto_persist('_awaitables')
@@ -99,7 +96,7 @@ class WorkChain(Process):
         :param out_state: state to save in
 
         :param save_context:
-        :type save_context: :class:`!aiida.engine.processes.persistence.LoadSaveContext`
+        :type save_context: :class:`!aiida.engine.processes.persistence.CheckpointContext`
 
         """
         super().save_instance_state(out_state, save_context)

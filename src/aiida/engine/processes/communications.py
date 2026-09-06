@@ -712,13 +712,13 @@ class ProcessLauncher:
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop | None = None,
-        persister: persistence.Persister | None = None,
-        load_context: persistence.LoadSaveContext | None = None,
+        persister: persistence.CheckpointPersister | None = None,
+        load_context: persistence.CheckpointContext | None = None,
         loader: loaders.ObjectLoader | None = None,
     ) -> None:
         self._loop = loop
         self._persister = persister
-        self._load_context = load_context if load_context is not None else persistence.LoadSaveContext()
+        self._load_context = load_context if load_context is not None else persistence.CheckpointContext()
         self._step_tasks: set[asyncio.Task[Any]] = set()
 
         if loader is not None:
@@ -803,7 +803,7 @@ class ProcessLauncher:
 
         # Do not catch exceptions here, because if these operations fail, the continue task should except and bubble up
         saved_state = self._persister.load_checkpoint(pid, tag)
-        proc = cast('Process', saved_state.unbundle(self._load_context))
+        proc = cast('Process', saved_state.decode(self._load_context))
 
         if nowait:
             # XXX: can return a reference and gracefully use task to cancel itself when the upper call stack fails

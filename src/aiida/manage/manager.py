@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from aiida.brokers.broker import Broker
     from aiida.engine.daemon.client import DaemonClient
-    from aiida.engine.persistence import AiiDAPersister
+    from aiida.engine.persistence import AiidaCheckpointPersister
     from aiida.engine.processes.communications import RemoteProcessThreadController
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
@@ -76,7 +76,7 @@ class Manager:
         self._profile_storage: StorageBackend | None = None
         self._daemon_client: DaemonClient | None = None
         self._process_controller: RemoteProcessThreadController | None = None
-        self._persister: AiiDAPersister | None = None
+        self._persister: AiidaCheckpointPersister | None = None
         self._runner: Runner | None = None
         self.logger = AIIDA_LOGGER.getChild(__name__)
 
@@ -364,7 +364,7 @@ class Manager:
 
         return self._broker
 
-    def get_persister(self) -> AiiDAPersister:
+    def get_persister(self) -> AiidaCheckpointPersister:
         """Return the persister
 
         :return: the current persister instance
@@ -373,7 +373,7 @@ class Manager:
         from aiida.engine import persistence
 
         if self._persister is None:
-            self._persister = persistence.AiiDAPersister()
+            self._persister = persistence.AiidaCheckpointPersister()
 
         return self._persister
 
@@ -497,7 +497,7 @@ class Manager:
         """
         from aiida.common.loaders import get_object_loader
         from aiida.engine.processes.launcher import ProcessLauncher
-        from aiida.engine.processes.persistence import LoadSaveContext
+        from aiida.engine.processes.persistence import CheckpointContext
 
         runner = self.create_runner(broker_submit=True, loop=loop)
         runner_loop = runner.loop
@@ -506,7 +506,7 @@ class Manager:
         task_receiver = ProcessLauncher(
             loop=runner_loop,
             persister=self.get_persister(),
-            load_context=LoadSaveContext(runner=runner),
+            load_context=CheckpointContext(runner=runner),
             loader=get_object_loader(),
         )
 

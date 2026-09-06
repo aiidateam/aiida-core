@@ -73,7 +73,7 @@ class PauseInterruption(Interruption):
 # region Commands
 
 
-class Command(persistence.Savable):
+class Command(persistence.CheckpointSerializable):
     pass
 
 
@@ -120,11 +120,11 @@ class Continue(Command):
         self.args = args
         self.kwargs = kwargs
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         out_state[self.CONTINUE_FN] = self.continue_fn.__name__
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         try:
             self.continue_fn = load_function(saved_state[self.CONTINUE_FN])
@@ -139,7 +139,7 @@ class Continue(Command):
 
 
 @auto_persist('in_state')
-class State(state_machine.State, persistence.Savable):
+class State(state_machine.State, persistence.CheckpointSerializable):
     @property
     def process(self) -> state_machine.StateMachine:
         """
@@ -147,7 +147,7 @@ class State(state_machine.State, persistence.Savable):
         """
         return self.state_machine
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self.state_machine = load_context.process
 
@@ -169,11 +169,11 @@ class Created(State):
         self.args = args
         self.kwargs = kwargs
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         out_state[self.RUN_FN] = self.run_fn.__name__
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self.run_fn = getattr(self.process, saved_state[self.RUN_FN])
 
@@ -214,17 +214,17 @@ class Running(State):
         self.kwargs = kwargs
         self._run_handle = None
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         out_state[self.RUN_FN] = self.run_fn.__name__
         if self._command is not None:
             out_state[self.COMMAND] = self._command.save()
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self.run_fn = ensure_coroutine(getattr(self.process, saved_state[self.RUN_FN]))
         if self.COMMAND in saved_state:
-            self._command = persistence.Savable.load(saved_state[self.COMMAND], load_context)  # type: ignore[assignment]
+            self._command = persistence.CheckpointSerializable.load(saved_state[self.COMMAND], load_context)  # type: ignore[assignment]
 
     def interrupt(self, reason: Any) -> None:
         pass
@@ -309,12 +309,12 @@ class Waiting(State):
         self.data = data
         self._waiting_future: futures.Future = process.loop.create_future()
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         if self.done_callback is not None:
             out_state[self.DONE_CALLBACK] = self.done_callback.__name__
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         callback_name = saved_state.get(self.DONE_CALLBACK, None)
         if callback_name is not None:
@@ -388,13 +388,13 @@ class Excepted(State):
         exception = traceback.format_exception_only(type(self.exception) if self.exception else None, self.exception)[0]
         return super().__str__() + f'({exception})'
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         out_state[self.EXC_VALUE] = yaml.dump(self.exception)
         if self.traceback_string is not None:
             out_state[self.TRACEBACK] = self.traceback_string
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         # Process checkpoints are trusted input; restoring arbitrary exception classes requires the unsafe loader.
         self.exception = yaml.load(saved_state[self.EXC_VALUE], Loader=Loader)

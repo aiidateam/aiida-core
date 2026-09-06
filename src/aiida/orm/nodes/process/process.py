@@ -547,21 +547,21 @@ class ProcessNode(Sealable, Node):
 
     @property
     def checkpoint(self) -> str | None:
-        """Return the checkpoint bundle set for the process
+        """Return the checkpoint payload for the process
 
-        :returns: checkpoint bundle if it exists, None otherwise
+        :returns: checkpoint payload if it exists, None otherwise
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
     def set_checkpoint(self, checkpoint: str) -> None:
-        """Set the checkpoint bundle set for the process
+        """Set the checkpoint payload for the process
 
         :param state: string representation of the stepper state info
         """
         return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
 
     def delete_checkpoint(self) -> None:
-        """Delete the checkpoint bundle set for the process"""
+        """Delete the checkpoint payload for the process"""
         try:
             self.base.attributes.delete(self.CHECKPOINT_KEY)
         except AttributeError:

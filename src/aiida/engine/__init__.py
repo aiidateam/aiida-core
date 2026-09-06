@@ -22,7 +22,7 @@ from aiida.engine.utils import *
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
-    'AiiDAPersister',
+    'AiidaCheckpointPersister',
     'Awaitable',
     'AwaitableAction',
     'AwaitableTarget',

@@ -23,7 +23,7 @@ from aiida.engine.persistence import ObjectLoader
 from aiida.engine.processes.exceptions import ClosedError, KilledError
 from aiida.engine.processes.generic.futures import Future
 from aiida.engine.processes.listener import ProcessListener
-from aiida.engine.processes.persistence import Bundle
+from aiida.engine.processes.persistence import CheckpointPayload
 from aiida.manage import enable_caching, get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
 
@@ -749,19 +749,19 @@ class TestWorkchain:
             assert workchain.ctx.s1
             assert not workchain.ctx.s2
 
-            # Now bundle the workchain
-            bundle = Bundle(workchain)
+            # Now encode the workchain checkpoint payload
+            payload = CheckpointPayload.from_object(workchain)
             # Need to close the process before recreating a new instance
             workchain.close()
 
             # Load from saved state
-            workchain2 = bundle.unbundle()
+            workchain2 = payload.decode()
             assert workchain2.ctx.s1
             assert not workchain2.ctx.s2
 
             # check bundling again creates the same saved state
-            bundle2 = Bundle(workchain2)
-            assert bundle == bundle2
+            payload2 = CheckpointPayload.from_object(workchain2)
+            assert payload == payload2
 
             # run the loaded workchain to completion
             runner.schedule(workchain2)

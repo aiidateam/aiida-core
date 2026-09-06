@@ -40,7 +40,7 @@ def test_excepted_state_restores_formatted_traceback():
         Excepted.EXC_VALUE: yaml.dump(exception),
         Excepted.TRACEBACK: state.traceback_string,
     }
-    load_context = persistence.LoadSaveContext(loader=Mock(), process=Mock())
+    load_context = persistence.CheckpointContext(loader=Mock(), process=Mock())
 
     restored = Excepted.recreate_from(saved_state, load_context)
 

@@ -28,7 +28,7 @@ from aiida.engine.processes.calcjobs import manager
 from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
 from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.engine.processes.greenback import run_until_complete
-from aiida.engine.processes.persistence import Persister
+from aiida.engine.processes.persistence import CheckpointPersister
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
 
@@ -55,7 +55,7 @@ TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
 class Runner:
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
-    _persister: Persister | None = None
+    _persister: CheckpointPersister | None = None
     _communicator: kiwipy.Communicator | None = None
     _controller: RemoteProcessThreadController | None = None
     _closed: bool = False
@@ -66,7 +66,7 @@ class Runner:
         loop: asyncio.AbstractEventLoop | None = None,
         communicator: kiwipy.Communicator | None = None,
         broker_submit: bool = False,
-        persister: Persister | None = None,
+        persister: CheckpointPersister | None = None,
     ):
         """Construct a new runner.
 
@@ -113,7 +113,7 @@ class Runner:
         return self._transport
 
     @property
-    def persister(self) -> Persister | None:
+    def persister(self) -> CheckpointPersister | None:
         """Get the persister used by this runner."""
         return self._persister
 

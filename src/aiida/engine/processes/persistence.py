@@ -28,7 +28,7 @@ import pickle
 import stat
 import uuid
 import warnings
-from collections.abc import Callable, Generator, Hashable, Iterable, MutableMapping
+from collections.abc import Callable, Generator, Hashable, Iterable, Mapping, MutableMapping
 from types import MethodType
 from typing import TYPE_CHECKING, Any, Optional, TypeVar, Union
 
@@ -63,54 +63,81 @@ yaml.add_representer(uuid.UUID, uuid_representer)
 yaml.add_constructor('!uuid', uuid_constructor)
 
 
-class Bundle(dict):
-    def __init__(self, savable: 'Savable', save_context: Optional['LoadSaveContext'] = None, dereference: bool = False):
-        """
-        Create a bundle from a savable.  Optionally keep information about the
-        class loader that can be used to load the classes in the bundle.
+class CheckpointPayload(dict):
+    """Mapping representation of an encoded process checkpoint."""
 
-        :param savable: The savable object to bundle
-        :param save_context: The optional save context to use
-        :param dereference: Remove refrences from the data, by deep copying
-
-        """
+    def __init__(self, saved_state: Mapping[str, Any] | None = None):
+        """Create a checkpoint payload from an already encoded saved state."""
         super().__init__()
+        if saved_state is not None:
+            self.update(saved_state)
+
+    @classmethod
+    def from_saved_state(cls, saved_state: Mapping[str, Any]) -> 'CheckpointPayload':
+        """Create a checkpoint payload from an already encoded saved state."""
+        return cls(saved_state)
+
+    @classmethod
+    def from_object(
+        cls,
+        serializable: 'CheckpointSerializable',
+        save_context: Optional['CheckpointContext'] = None,
+        dereference: bool = False,
+    ) -> 'CheckpointPayload':
+        """Encode a serializable object as a checkpoint payload."""
+        return CheckpointEncoder().encode(serializable, save_context, dereference=dereference)
+
+    def decode(self, load_context: Optional['CheckpointContext'] = None) -> 'CheckpointSerializable':
+        """Decode the checkpoint payload into a runtime object."""
+        return CheckpointDecoder().decode(self, load_context)
+
+
+class CheckpointEncoder:
+    """Encode runtime checkpoint objects into payloads."""
+
+    def encode(
+        self,
+        serializable: 'CheckpointSerializable',
+        save_context: Optional['CheckpointContext'] = None,
+        *,
+        dereference: bool = False,
+    ) -> CheckpointPayload:
+        """Encode a serializable object as a checkpoint payload."""
+        saved_state = serializable.save(save_context)
         if dereference:
-            self.update(copy.deepcopy(savable.save(save_context)))
-        else:
-            self.update(savable.save(save_context))
-
-    def unbundle(self, load_context: Optional['LoadSaveContext'] = None) -> 'Savable':
-        """
-        This method loads the class of the object and calls its recreate_from
-        method passing the positional and keyword arguments.
-
-        :param load_context: The optional load context
-        :return: An instance of the Savable
-
-        """
-        return Savable.load(self, load_context)
+            saved_state = copy.deepcopy(saved_state)
+        return CheckpointPayload.from_saved_state(saved_state)
 
 
-BUNDLE_TAG = '!aiida:bundle'
+class CheckpointDecoder:
+    """Decode checkpoint payloads into runtime objects."""
+
+    def decode(
+        self, payload: SAVED_STATE_TYPE, load_context: Optional['CheckpointContext'] = None
+    ) -> 'CheckpointSerializable':
+        """Decode a checkpoint payload into a runtime object."""
+        return CheckpointSerializable.load(payload, load_context)
 
 
-def _bundle_representer(dumper: yaml.Dumper, node: Any) -> Any:
-    return dumper.represent_mapping(BUNDLE_TAG, node)
+CHECKPOINT_PAYLOAD_TAG = '!aiida:bundle'
 
 
-def _bundle_constructor(loader: yaml.Loader, data: Any) -> Generator[Bundle, None, None]:
-    result = Bundle.__new__(Bundle)
+def _checkpoint_payload_representer(dumper: yaml.Dumper, node: Any) -> Any:
+    return dumper.represent_mapping(CHECKPOINT_PAYLOAD_TAG, node)
+
+
+def _checkpoint_payload_constructor(loader: yaml.Loader, data: Any) -> Generator[CheckpointPayload, None, None]:
+    result = CheckpointPayload.__new__(CheckpointPayload)
     yield result
     mapping = loader.construct_mapping(data)
     result.update(mapping)
 
 
-yaml.add_representer(Bundle, _bundle_representer)
-yaml.add_constructor(BUNDLE_TAG, _bundle_constructor)  # type: ignore[arg-type]
+yaml.add_representer(CheckpointPayload, _checkpoint_payload_representer)
+yaml.add_constructor(CHECKPOINT_PAYLOAD_TAG, _checkpoint_payload_constructor)  # type: ignore[arg-type]
 
 
-class Persister(metaclass=abc.ABCMeta):
+class CheckpointPersister(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def save_checkpoint(self, process: 'Process', tag: str | None = None) -> None:
         """
@@ -123,14 +150,14 @@ class Persister(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def load_checkpoint(self, pid: PID_TYPE, tag: str | None = None) -> Bundle:
+    def load_checkpoint(self, pid: PID_TYPE, tag: str | None = None) -> CheckpointPayload:
         """
         Load a process from a persisted checkpoint by its process id
 
         :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving
             a specific sub checkpoint for the corresponding process
-        :return: a bundle with the process state
+        :return: a checkpoint payload with the process state
 
         :raises: :class:`aiida.engine.processes.exceptions.PersistenceError` Raised if loading the checkpoint fails
         """
@@ -175,24 +202,24 @@ class Persister(metaclass=abc.ABCMeta):
         """
 
 
-PersistedPickle = collections.namedtuple('PersistedPickle', ['checkpoint', 'bundle'])
+PersistedPickle = collections.namedtuple('PersistedPickle', ['checkpoint', 'payload'])
 _PICKLE_SUFFIX = 'pickle'
 
 
-class PicklePersister(Persister):
+class PickleCheckpointPersister(CheckpointPersister):
     """Persist process states as pickles in a trusted, private directory."""
 
     def __init__(self, pickle_directory: str):
         """
-        Instantiate a PicklePersister object that will persist processes by
-        writing their bundles to a pickle in a directory specified by the
+        Instantiate a PickleCheckpointPersister object that will persist processes by
+        writing their checkpoint payloads to a pickle in a directory specified by the
         argument 'pickle_directory'
 
         :param pickle_directory: the full path to the directory where pickles will be written
         """
         super().__init__()
 
-        PicklePersister.ensure_pickle_directory(pickle_directory)
+        PickleCheckpointPersister.ensure_pickle_directory(pickle_directory)
 
         self._pickle_directory = pickle_directory
 
@@ -251,7 +278,7 @@ class PicklePersister(Persister):
         Returns the full filepath of the pickle for the given process id
         and optional checkpoint tag
         """
-        return os.path.join(self._pickle_directory, PicklePersister.pickle_filename(pid, tag))
+        return os.path.join(self._pickle_directory, PickleCheckpointPersister.pickle_filename(pid, tag))
 
     def save_checkpoint(self, process: 'Process', tag: str | None = None) -> None:
         """
@@ -261,27 +288,27 @@ class PicklePersister(Persister):
         :param tag: optional checkpoint identifier to allow distinguishing
             multiple checkpoints for the same process
         """
-        bundle = Bundle(process)
+        payload = CheckpointPayload.from_object(process)
         checkpoint = PersistedCheckpoint(process.pid, tag)
-        persisted_pickle = PersistedPickle(checkpoint, bundle)
+        persisted_pickle = PersistedPickle(checkpoint, payload)
 
         with open(self._pickle_filepath(process.pid, tag), 'w+b') as handle:
             pickle.dump(persisted_pickle, handle)
 
-    def load_checkpoint(self, pid: PID_TYPE, tag: str | None = None) -> Bundle:
+    def load_checkpoint(self, pid: PID_TYPE, tag: str | None = None) -> CheckpointPayload:
         """
         Load a process from a persisted checkpoint by its process id
 
         :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving
             a specific sub checkpoint for the corresponding process
-        :return: a bundle with the process state
+        :return: a checkpoint payload with the process state
 
         """
         filepath = self._pickle_filepath(pid, tag)
-        checkpoint = PicklePersister.load_pickle(filepath)
+        checkpoint = PickleCheckpointPersister.load_pickle(filepath)
 
-        return checkpoint.bundle
+        return checkpoint.payload
 
     def get_checkpoints(self) -> list[PersistedCheckpoint]:
         """
@@ -296,7 +323,7 @@ class PicklePersister(Persister):
         for _, _, files in os.walk(self._pickle_directory):
             for filename in fnmatch.filter(files, file_pattern):
                 filepath = os.path.join(self._pickle_directory, filename)
-                persisted_pickle = PicklePersister.load_pickle(filepath)
+                persisted_pickle = PickleCheckpointPersister.load_pickle(filepath)
                 checkpoints.append(persisted_pickle.checkpoint)
 
         return checkpoints
@@ -338,18 +365,20 @@ class PicklePersister(Persister):
             self.delete_checkpoint(checkpoint.pid, checkpoint.tag)
 
 
-class InMemoryPersister(Persister):
+class InMemoryCheckpointPersister(CheckpointPersister):
     """Mainly to be used in testing/debugging"""
 
     def __init__(self, loader: loaders.ObjectLoader | None = None) -> None:
         super().__init__()
-        self._checkpoints: dict[PID_TYPE, dict[str | None, Bundle]] = {}
-        self._save_context = LoadSaveContext(loader=loader)
+        self._checkpoints: dict[PID_TYPE, dict[str | None, CheckpointPayload]] = {}
+        self._save_context = CheckpointContext(loader=loader)
 
     def save_checkpoint(self, process: 'Process', tag: str | None = None) -> None:
-        self._checkpoints.setdefault(process.pid, {})[tag] = Bundle(process, self._save_context, dereference=True)
+        self._checkpoints.setdefault(process.pid, {})[tag] = CheckpointPayload.from_object(
+            process, self._save_context, dereference=True
+        )
 
-    def load_checkpoint(self, pid: PID_TYPE, tag: str | None = None) -> Bundle:
+    def load_checkpoint(self, pid: PID_TYPE, tag: str | None = None) -> CheckpointPayload:
         return self._checkpoints[pid][tag]
 
     def get_checkpoints(self) -> list[PersistedCheckpoint]:
@@ -378,24 +407,24 @@ class InMemoryPersister(Persister):
             del self._checkpoints[pid]
 
 
-SavableClsType = TypeVar('SavableClsType', bound='type[Savable]')
+CheckpointSerializableClsType = TypeVar('CheckpointSerializableClsType', bound='type[CheckpointSerializable]')
 
 
-def auto_persist(*members: str) -> Callable[[SavableClsType], SavableClsType]:
-    def wrapped(savable: SavableClsType) -> SavableClsType:
-        if savable._auto_persist is None:
-            savable._auto_persist = set()
+def auto_persist(*members: str) -> Callable[[CheckpointSerializableClsType], CheckpointSerializableClsType]:
+    def wrapped(serializable: CheckpointSerializableClsType) -> CheckpointSerializableClsType:
+        if serializable._auto_persist is None:
+            serializable._auto_persist = set()
         else:
-            savable._auto_persist = set(savable._auto_persist)
-        savable.auto_persist(*members)
-        return savable
+            serializable._auto_persist = set(serializable._auto_persist)
+        serializable.auto_persist(*members)
+        return serializable
 
     return wrapped
 
 
-def _ensure_object_loader(context: Optional['LoadSaveContext'], saved_state: SAVED_STATE_TYPE) -> 'LoadSaveContext':
+def _ensure_object_loader(context: Optional['CheckpointContext'], saved_state: SAVED_STATE_TYPE) -> 'CheckpointContext':
     """
-    Given a LoadSaveContext this method will ensure that it has a valid class loader
+    Given a CheckpointContext this method will ensure that it has a valid class loader
     using the following priorities:
     1) The one that is already in the context
     2) One that is found in the saved state
@@ -405,9 +434,9 @@ def _ensure_object_loader(context: Optional['LoadSaveContext'], saved_state: SAV
     :return:
     """
     if context is None:
-        context = LoadSaveContext()
+        context = CheckpointContext()
 
-    assert isinstance(context, LoadSaveContext)
+    assert isinstance(context, CheckpointContext)
 
     if context.loader is not None:
         return context
@@ -415,17 +444,19 @@ def _ensure_object_loader(context: Optional['LoadSaveContext'], saved_state: SAV
     # 2) Try getting from saved_state
     default_loader = loaders.get_object_loader()
     try:
-        loader_identifier = Savable.get_custom_meta(saved_state, META__OBJECT_LOADER)
+        loader_identifier = CheckpointSerializable.get_custom_meta(saved_state, META__OBJECT_LOADER)
     except ValueError:
         # 3) Fall back to default
         loader = default_loader
     else:
         loader = default_loader.load_object(loader_identifier)
+        if isinstance(loader, type):
+            loader = loader()
 
     return context.copyextend(loader=loader)
 
 
-class LoadSaveContext:
+class CheckpointContext:
     def __init__(self, loader: loaders.ObjectLoader | None = None, **kwargs: Any) -> None:
         self._values = dict(**kwargs)
         self.loader = loader
@@ -442,12 +473,12 @@ class LoadSaveContext:
     def __contains__(self, item: Any) -> bool:
         return self._values.__contains__(item)
 
-    def copyextend(self, **kwargs: Any) -> 'LoadSaveContext':
+    def copyextend(self, **kwargs: Any) -> 'CheckpointContext':
         """Add additional information to the context by making a copy with the new values"""
         extended = self._values.copy()
         extended.update(kwargs)
         loader = extended.pop('loader', self.loader)
-        return LoadSaveContext(loader=loader, **extended)
+        return CheckpointContext(loader=loader, **extended)
 
 
 META: str = '!!meta'
@@ -459,28 +490,73 @@ META__TYPE__METHOD: str = 'm'
 META__TYPE__SAVABLE: str = 'S'
 
 
-class Savable:
+class CheckpointMetadataView:
+    """View on the legacy checkpoint metadata dictionary."""
+
+    def __init__(self, state: SAVED_STATE_TYPE) -> None:
+        self._state = state
+
+    @property
+    def metadata(self) -> dict[str, Any]:
+        """Return the metadata namespace, creating it if needed."""
+        return self._state.setdefault(META, {})
+
+    def get_class_name(self) -> str:
+        """Return the persisted class name."""
+        return self._state[META][META__CLASS_NAME]
+
+    def set_class_name(self, name: str) -> None:
+        """Set the persisted class name."""
+        self.metadata[META__CLASS_NAME] = name
+
+    def get_member_type(self, name: str) -> Any:
+        """Return the persisted type of a member, if defined."""
+        try:
+            return self._state[META][META__TYPES][name]
+        except KeyError:
+            return None
+
+    def set_member_type(self, name: str, value: Any) -> None:
+        """Set the persisted type of a member."""
+        type_dict = self.metadata.setdefault(META__TYPES, {})
+        type_dict[name] = value
+
+    def get_user_value(self, name: str) -> Any:
+        """Return a value from the user metadata namespace."""
+        try:
+            return self._state[META][META__USER][name]
+        except KeyError:
+            msg = f"Unknown meta key '{name}'"
+            raise ValueError(msg)
+
+    def set_user_value(self, name: str, value: Any) -> None:
+        """Set a value in the user metadata namespace."""
+        user_dict = self.metadata.setdefault(META__USER, {})
+        user_dict[name] = value
+
+
+class CheckpointSerializable:
     CLASS_NAME: str = 'class_name'
 
     _auto_persist: set[str] | None = None
     _persist_configured = False
 
     @staticmethod
-    def load(saved_state: SAVED_STATE_TYPE, load_context: LoadSaveContext | None = None) -> 'Savable':
+    def load(saved_state: SAVED_STATE_TYPE, load_context: CheckpointContext | None = None) -> 'CheckpointSerializable':
         """
-        Load a `Savable` from a saved instance state.  The load context is a way of passing
+        Load a `CheckpointSerializable` from a saved instance state.  The load context is a way of passing
         runtime data to the object being loaded.
 
         :param saved_state: The saved state
         :param load_context: Additional runtime state that can be passed into when loading.
             The type and content (if any) is completely user defined
-        :return: The loaded Savable instance
+        :return: The loaded CheckpointSerializable instance
 
         """
         load_context = _ensure_object_loader(load_context, saved_state)
         assert load_context.loader is not None  # required for type checking
         try:
-            class_name = Savable._get_class_name(saved_state)
+            class_name = CheckpointSerializable._get_class_name(saved_state)
             load_cls = load_context.loader.load_object(class_name)
         except KeyError:
             raise ValueError('Class name not found in saved state')
@@ -498,9 +574,11 @@ class Savable:
         pass
 
     @classmethod
-    def recreate_from(cls, saved_state: SAVED_STATE_TYPE, load_context: LoadSaveContext | None = None) -> 'Savable':
+    def recreate_from(
+        cls, saved_state: SAVED_STATE_TYPE, load_context: CheckpointContext | None = None
+    ) -> 'CheckpointSerializable':
         """
-        Recreate a :class:`Savable` from a saved state using an optional load context.
+        Recreate a :class:`CheckpointSerializable` from a saved state using an optional load context.
 
         :param saved_state: The saved state
         :param load_context: An optional load context
@@ -514,35 +592,35 @@ class Savable:
         return obj
 
     @super_check
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: CheckpointContext) -> None:
         self._ensure_persist_configured()
         if self._auto_persist is not None:
             self.load_members(self._auto_persist, saved_state, load_context)
 
     @super_check
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: CheckpointContext) -> None:
         self._ensure_persist_configured()
         if self._auto_persist is not None:
             self.save_members(self._auto_persist, out_state)
 
-    def save(self, save_context: LoadSaveContext | None = None) -> SAVED_STATE_TYPE:
+    def save(self, save_context: CheckpointContext | None = None) -> SAVED_STATE_TYPE:
         out_state: SAVED_STATE_TYPE = {}
 
         if save_context is None:
-            save_context = LoadSaveContext()
+            save_context = CheckpointContext()
 
-        type_check(save_context, LoadSaveContext)
+        type_check(save_context, CheckpointContext)
 
         default_loader = loaders.get_object_loader()
         # If the user has specified a class loader, then save it in the saved state
         if save_context.loader is not None:
             loader_class = default_loader.identify_object(save_context.loader.__class__)
-            Savable.set_custom_meta(out_state, META__OBJECT_LOADER, loader_class)
+            CheckpointSerializable.set_custom_meta(out_state, META__OBJECT_LOADER, loader_class)
             loader = save_context.loader
         else:
             loader = default_loader
 
-        Savable._set_class_name(out_state, loader.identify_object(self.__class__))
+        CheckpointSerializable._set_class_name(out_state, loader.identify_object(self.__class__))
         call_with_super_check(self.save_instance_state, out_state, save_context)
         return out_state
 
@@ -552,17 +630,17 @@ class Savable:
             if inspect.ismethod(value):
                 if value.__self__ is not self:
                     raise TypeError('Cannot persist methods of other classes')
-                Savable._set_meta_type(out_state, member, META__TYPE__METHOD)
+                CheckpointSerializable._set_meta_type(out_state, member, META__TYPE__METHOD)
                 value = value.__name__
-            elif isinstance(value, Savable):
-                Savable._set_meta_type(out_state, member, META__TYPE__SAVABLE)
+            elif isinstance(value, CheckpointSerializable):
+                CheckpointSerializable._set_meta_type(out_state, member, META__TYPE__SAVABLE)
                 value = value.save()
             else:
                 value = copy.deepcopy(value)
             out_state[member] = value
 
     def load_members(
-        self, members: Iterable[str], saved_state: SAVED_STATE_TYPE, load_context: LoadSaveContext | None = None
+        self, members: Iterable[str], saved_state: SAVED_STATE_TYPE, load_context: CheckpointContext | None = None
     ) -> None:
         for member in members:
             setattr(self, member, self._get_value(saved_state, member, load_context))
@@ -576,73 +654,67 @@ class Savable:
 
     @staticmethod
     def set_custom_meta(out_state: SAVED_STATE_TYPE, name: str, value: Any) -> None:
-        user_dict = Savable._get_create_meta(out_state).setdefault(META__USER, {})
-        user_dict[name] = value
+        CheckpointMetadataView(out_state).set_user_value(name, value)
 
     @staticmethod
     def get_custom_meta(saved_state: SAVED_STATE_TYPE, name: str) -> Any:
-        try:
-            return saved_state[META][name]
-        except KeyError:
-            raise ValueError(f"Unknown meta key '{name}'")
+        return CheckpointMetadataView(saved_state).get_user_value(name)
 
     @staticmethod
     def _get_create_meta(out_state: SAVED_STATE_TYPE) -> dict[str, Any]:
-        return out_state.setdefault(META, {})
+        return CheckpointMetadataView(out_state).metadata
 
     @staticmethod
     def _set_class_name(out_state: SAVED_STATE_TYPE, name: str) -> None:
-        Savable._get_create_meta(out_state)[META__CLASS_NAME] = name
+        CheckpointMetadataView(out_state).set_class_name(name)
 
     @staticmethod
     def _get_class_name(saved_state: SAVED_STATE_TYPE) -> str:
-        return Savable._get_create_meta(saved_state)[META__CLASS_NAME]
+        return CheckpointMetadataView(saved_state).get_class_name()
 
     @staticmethod
     def _set_meta_type(out_state: SAVED_STATE_TYPE, name: str, type_spec: Any) -> None:
-        type_dict = Savable._get_create_meta(out_state).setdefault(META__TYPES, {})
-        type_dict[name] = type_spec
+        CheckpointMetadataView(out_state).set_member_type(name, type_spec)
 
     @staticmethod
     def _get_meta_type(saved_state: SAVED_STATE_TYPE, name: str) -> Any:
-        try:
-            return saved_state[META][META__TYPES][name]
-        except KeyError:
-            pass
+        return CheckpointMetadataView(saved_state).get_member_type(name)
 
     # endregion
 
     def _get_value(
-        self, saved_state: SAVED_STATE_TYPE, name: str, load_context: LoadSaveContext | None
-    ) -> Union[MethodType, 'Savable']:
+        self, saved_state: SAVED_STATE_TYPE, name: str, load_context: CheckpointContext | None
+    ) -> Union[MethodType, 'CheckpointSerializable']:
         value = saved_state[name]
 
-        typ = Savable._get_meta_type(saved_state, name)
+        typ = CheckpointSerializable._get_meta_type(saved_state, name)
         if typ == META__TYPE__METHOD:
             value = getattr(self, value)
         elif typ == META__TYPE__SAVABLE:
-            value = Savable.load(value, load_context)
+            value = CheckpointSerializable.load(value, load_context)
 
         return value
 
 
 @auto_persist('_state', '_result')
-class SavableFuture(futures.Future, Savable):
+class CheckpointFuture(futures.Future, CheckpointSerializable):
     """
-    A savable future.
+    A checkpointable future.
 
     .. note: This does not save any assigned done callbacks.
     """
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         if self.done() and not self.cancelled() and self.exception() is not None:
             out_state['exception'] = self.exception()
 
     @classmethod
-    def recreate_from(cls, saved_state: SAVED_STATE_TYPE, load_context: LoadSaveContext | None = None) -> 'Savable':
+    def recreate_from(
+        cls, saved_state: SAVED_STATE_TYPE, load_context: CheckpointContext | None = None
+    ) -> 'CheckpointSerializable':
         """
-        Recreate a :class:`Savable` from a saved state using an optional load context.
+        Recreate a :class:`CheckpointSerializable` from a saved state using an optional load context.
 
         :param saved_state: The saved state
         :param load_context: An optional load context
@@ -679,7 +751,7 @@ class SavableFuture(futures.Future, Savable):
 
         return obj
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         if self._callbacks:
             # typing says asyncio.Future._callbacks needs to be called, but in the python 3.7 code it is a simple list

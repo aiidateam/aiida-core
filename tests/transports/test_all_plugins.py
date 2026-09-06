@@ -254,6 +254,7 @@ def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote
 
         # test if the security bits have changed
         assert transport.get_mode(directory) == 0o511
+        transport.exec_command_wait(f'chmod 755 {directory}')
 
         # TODO : bug in paramiko. When changing the directory to very low \
         # I cannot set it back to higher permissions
@@ -291,7 +292,8 @@ def test_dir_reading_permissions(custom_transport, tmp_path_remote):
         # TODO : the test leaves a directory even if it is successful
         #        The bug is in paramiko. After lowering the permissions,
         #        I cannot restore them to higher values
-        # transport.rmdir(directory)
+        transport.exec_command_wait(f'chmod 755 {directory}')
+        transport.rmdir(directory)
 
 
 def test_isfile_isdir(custom_transport, tmp_path_remote):

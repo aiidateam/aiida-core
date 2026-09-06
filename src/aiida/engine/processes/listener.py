@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 @persistence.auto_persist('_params')
-class ProcessListener(persistence.Savable, metaclass=abc.ABCMeta):
+class ProcessListener(persistence.CheckpointSerializable, metaclass=abc.ABCMeta):
     # region Persistence methods
 
     def __init__(self) -> None:
@@ -37,7 +37,7 @@ class ProcessListener(persistence.Savable, metaclass=abc.ABCMeta):
     def init(self, **kwargs: Any) -> None:
         self._params = kwargs
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self.init(**saved_state['_params'])
 

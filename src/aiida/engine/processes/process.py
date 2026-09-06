@@ -72,7 +72,7 @@ class Process(ProcessBase):
     SINGLE_OUTPUT_LINKNAME: str = 'result'
 
     class SaveKeys(enum.Enum):
-        """Keys used to identify things in the saved instance state bundle."""
+        """Keys used to identify things in the saved instance state payload."""
 
         CALC_ID = 'calc_id'
 
@@ -275,7 +275,7 @@ class Process(ProcessBase):
 
     @override
     def save_instance_state(
-        self, out_state: MutableMapping[str, Any], save_context: process_persistence.LoadSaveContext
+        self, out_state: MutableMapping[str, Any], save_context: process_persistence.CheckpointContext
     ) -> None:
         """Save instance state.
 
@@ -297,7 +297,7 @@ class Process(ProcessBase):
 
     @override
     def load_instance_state(
-        self, saved_state: MutableMapping[str, Any], load_context: process_persistence.LoadSaveContext | None
+        self, saved_state: MutableMapping[str, Any], load_context: process_persistence.CheckpointContext | None
     ) -> None:
         """Load instance state.
 
@@ -307,7 +307,7 @@ class Process(ProcessBase):
         """
         from aiida.manage import manager
 
-        load_context = load_context or process_persistence.LoadSaveContext()
+        load_context = load_context or process_persistence.CheckpointContext()
         if 'runner' in load_context:
             self._runner = load_context.runner
         else:
@@ -687,7 +687,7 @@ class Process(ProcessBase):
 
     @override
     def _encode_input_args(self, inputs: dict[str, Any]) -> str:
-        """Encode input arguments such that they may be saved in a Bundle
+        """Encode input arguments such that they may be saved in a CheckpointPayload
 
         :param inputs: A mapping of the inputs as passed to the process
         :return: The encoded (serialized) inputs
@@ -696,7 +696,7 @@ class Process(ProcessBase):
 
     @override
     def _decode_input_args(self, encoded: str) -> dict[str, Any]:
-        """Decode saved input arguments as they came from the saved instance state Bundle
+        """Decode saved input arguments as they came from the saved instance state CheckpointPayload
 
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args

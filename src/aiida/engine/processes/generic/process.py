@@ -66,9 +66,9 @@ _LOGGER = logging.getLogger(__name__)
 PROCESS_STACK: ContextVar[list['Process']] = ContextVar('process stack', default=[])
 
 
-class BundleKeys:
+class CheckpointPayloadKeys:
     """
-    String keys used by the process to save its state in the state bundle.
+    String keys used by the process to save its state in the state payload.
 
     See :meth:`aiida.engine.processes.generic.process.Process.save_instance_state` and
     :meth:`aiida.engine.processes.generic.process.Process.load_instance_state`.
@@ -112,7 +112,7 @@ def ensure_not_closed(func: Callable[..., Any]) -> Callable[..., Any]:
     '_pre_paused_status',
     '_event_helper',
 )
-class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMeta):
+class Process(StateMachine, persistence.CheckpointSerializable, metaclass=ProcessStateMachineMeta):
     """
     The Process class is the base for any unit of work in the process engine.
 
@@ -155,7 +155,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
     # Default placeholders, will be populated in init()
     _stepping = False
     _pausing: futures.CancellableAction | None = None
-    _paused: persistence.SavableFuture | None = None
+    _paused: persistence.CheckpointFuture | None = None
     _killing: futures.CancellableAction | None = None
     _interrupt_action: futures.CancellableAction | None = None
     _closed = False
@@ -252,7 +252,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
     def recreate_from(
         cls,
         saved_state: SAVED_STATE_TYPE,
-        load_context: persistence.LoadSaveContext | None = None,
+        load_context: persistence.CheckpointContext | None = None,
     ) -> 'Process':
         """
         Recreate a process from a saved state, passing any positional and
@@ -309,7 +309,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         self._creation_time: float | None = None
 
         # Runtime variables
-        self._future = persistence.SavableFuture(loop=self._loop)
+        self._future = persistence.CheckpointFuture(loop=self._loop)
         self._event_helper = EventHelper(ProcessListener)
         self._logger = logger
         self._communicator = communicator
@@ -434,8 +434,8 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         """Return whether the process was being paused."""
         return self._paused is not None
 
-    def future(self) -> persistence.SavableFuture:
-        """Return a savable future representing an eventual result of an asynchronous operation.
+    def future(self) -> persistence.CheckpointFuture:
+        """Return a checkpointable future representing an eventual result of an asynchronous operation.
 
         The result is set at the terminal state.
         """
@@ -619,12 +619,12 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
     def save_instance_state(
         self,
         out_state: SAVED_STATE_TYPE,
-        save_context: persistence.LoadSaveContext,
+        save_context: persistence.CheckpointContext,
     ) -> None:
         """
         Ask the process to save its current instance state.
 
-        :param out_state: A bundle to save the state to
+        :param out_state: A payload to save the state to
         :param save_context: The save context
         """
         super().save_instance_state(out_state, save_context)
@@ -633,18 +633,18 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
 
         # Inputs/outputs
         if self.raw_inputs is not None:
-            out_state[BundleKeys.INPUTS_RAW] = self._encode_input_args(self.raw_inputs)
+            out_state[CheckpointPayloadKeys.INPUTS_RAW] = self._encode_input_args(self.raw_inputs)
 
         if self.inputs is not None:
-            out_state[BundleKeys.INPUTS_PARSED] = self._encode_input_args(self.inputs)
+            out_state[CheckpointPayloadKeys.INPUTS_PARSED] = self._encode_input_args(self.inputs)
 
         if self.outputs:
-            out_state[BundleKeys.OUTPUTS] = self._encode_input_args(self.outputs)
+            out_state[CheckpointPayloadKeys.OUTPUTS] = self._encode_input_args(self.outputs)
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         """Load the process from its saved instance state.
 
-        :param saved_state: A bundle to load the state from
+        :param saved_state: A payload to load the state from
         :param load_context: The load context
 
         """
@@ -659,7 +659,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
             self._loop = events.get_or_create_event_loop()
 
         # Runtime variables, set initial states
-        self._future = persistence.SavableFuture(loop=self._loop)
+        self._future = persistence.CheckpointFuture(loop=self._loop)
         self._event_helper = EventHelper(ProcessListener)
         self._logger = None
         self._communicator = None
@@ -678,19 +678,19 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
 
         # Inputs/outputs
         try:
-            decoded = self._decode_input_args(saved_state[BundleKeys.INPUTS_RAW])
+            decoded = self._decode_input_args(saved_state[CheckpointPayloadKeys.INPUTS_RAW])
             self._raw_inputs = AttributesFrozendict(decoded)
         except KeyError:
             self._raw_inputs = None
 
         try:
-            decoded = self._decode_input_args(saved_state[BundleKeys.INPUTS_PARSED])
+            decoded = self._decode_input_args(saved_state[CheckpointPayloadKeys.INPUTS_PARSED])
             self._parsed_inputs = AttributesFrozendict(decoded)
         except KeyError:
             self._parsed_inputs = None
 
         try:
-            decoded = self._decode_input_args(saved_state[BundleKeys.OUTPUTS])
+            decoded = self._decode_input_args(saved_state[CheckpointPayloadKeys.OUTPUTS])
             self._outputs = decoded
         except KeyError:
             self._outputs = {}
@@ -841,7 +841,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         self._pausing = None
 
         # Create a future to represent the duration of the paused state
-        self._paused = persistence.SavableFuture(loop=self._loop)
+        self._paused = persistence.CheckpointFuture(loop=self._loop)
 
         # Save the current status and potentially overwrite it with the passed message
         self._pre_paused_status = self.status
@@ -891,7 +891,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         future = self.future()
 
         if future.done():
-            self._future = persistence.SavableFuture(loop=self._loop)
+            self._future = persistence.CheckpointFuture(loop=self._loop)
         self.future().set_exception(exception)
 
     @super_check
@@ -1261,15 +1261,15 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
             self.get_state_class(ProcessState.CREATED)(self, self.run),
         )
 
-    def recreate_state(self, saved_state: persistence.Bundle) -> process_states.State:
+    def recreate_state(self, saved_state: persistence.CheckpointPayload) -> process_states.State:
         """
         Create a state object from a saved state
 
         :param saved_state: The saved state
         :return: An instance of the object with its state loaded from the save state.
         """
-        load_context = persistence.LoadSaveContext(process=self)
-        return cast(process_states.State, persistence.Savable.load(saved_state, load_context))
+        load_context = persistence.CheckpointContext(process=self)
+        return cast(process_states.State, persistence.CheckpointSerializable.load(saved_state, load_context))
 
     # endregion
 
@@ -1424,7 +1424,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
 
     def _encode_input_args(self, inputs: Any) -> Any:
         """
-        Encode input arguments such that they may be saved in a :class:`aiida.engine.processes.persistence.Bundle`.
+        Encode input arguments such that they may be saved in a checkpoint payload.
         The encoded inputs should contain no reference to the inputs that were passed in.
         This often will mean making a deepcopy of the input dictionary.
 
@@ -1436,7 +1436,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
     def _decode_input_args(self, encoded: Any) -> Any:
         """
         Decode saved input arguments as they came from the saved instance state
-        :class:`aiida.engine.processes.persistence.Bundle`.
+        :class:`aiida.engine.processes.persistence.CheckpointPayload`.
         The decoded inputs should contain no reference to the encoded inputs that were passed in.
         This often will mean making a deepcopy of the encoded input dictionary.
 

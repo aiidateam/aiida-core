@@ -71,11 +71,11 @@ class WorkChainSpec(ProcessSpec):
         return self._outline
 
 
-class Stepper(persistence.Savable, metaclass=abc.ABCMeta):
+class Stepper(persistence.CheckpointSerializable, metaclass=abc.ABCMeta):
     def __init__(self, workchain: WorkChain) -> None:
         self._workchain = workchain
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self._workchain = load_context.workchain
 
@@ -122,11 +122,11 @@ class _FunctionStepper(Stepper):
         super().__init__(workchain)
         self._fn = fn
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         out_state['_fn'] = self._fn.__name__
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self._fn = getattr(self._workchain.__class__, saved_state['_fn'])
 
@@ -152,7 +152,7 @@ class _FunctionCall(_Instruction):
         return _FunctionStepper(workchain, self._fn)
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _FunctionStepper:
-        load_context = persistence.LoadSaveContext(workchain=workchain, func_spec=self)
+        load_context = persistence.CheckpointContext(workchain=workchain, func_spec=self)
         return cast(_FunctionStepper, _FunctionStepper.recreate_from(saved_state, load_context))
 
     def get_description(self) -> str:
@@ -192,12 +192,12 @@ class _BlockStepper(Stepper):
     def finished(self) -> bool:
         return self._pos == len(self._block)
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         if self._child_stepper is not None:
             out_state[STEPPER_STATE] = self._child_stepper.save()
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self._block = load_context.block_instruction
         stepper_state = saved_state.get(STEPPER_STATE, None)
@@ -236,7 +236,7 @@ class _Block(_Instruction, collections.abc.Sequence):
         return _BlockStepper(self, workchain)
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _BlockStepper:
-        load_context = persistence.LoadSaveContext(workchain=workchain, block_instruction=self)
+        load_context = persistence.CheckpointContext(workchain=workchain, block_instruction=self)
         return cast(_BlockStepper, _BlockStepper.recreate_from(saved_state, load_context))
 
     def get_description(self) -> list[str]:
@@ -330,12 +330,12 @@ class _IfStepper(Stepper):
     def finished(self) -> bool:
         return self._pos == len(self._if_instruction)
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         if self._child_stepper is not None:
             out_state[STEPPER_STATE] = self._child_stepper.save()
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self._if_instruction = load_context.if_instruction
         stepper_state = saved_state.get(STEPPER_STATE, None)
@@ -390,7 +390,7 @@ class _If(_Instruction, collections.abc.Sequence):
         return _IfStepper(self, workchain)
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _IfStepper:
-        load_context = persistence.LoadSaveContext(workchain=workchain, if_instruction=self)
+        load_context = persistence.CheckpointContext(workchain=workchain, if_instruction=self)
         return cast(_IfStepper, _IfStepper.recreate_from(saved_state, load_context))
 
     def get_description(self) -> Mapping[str, Any]:
@@ -424,12 +424,12 @@ class _WhileStepper(Stepper):
 
         return False, result
 
-    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.LoadSaveContext) -> None:
+    def save_instance_state(self, out_state: SAVED_STATE_TYPE, save_context: persistence.CheckpointContext) -> None:
         super().save_instance_state(out_state, save_context)
         if self._child_stepper is not None:
             out_state[STEPPER_STATE] = self._child_stepper.save()
 
-    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.LoadSaveContext) -> None:
+    def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
         super().load_instance_state(saved_state, load_context)
         self._while_instruction = load_context.while_instruction
         stepper_state = saved_state.get(STEPPER_STATE, None)
@@ -460,7 +460,7 @@ class _While(_Conditional, _Instruction, collections.abc.Sequence):
         return _WhileStepper(self, workchain)
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _WhileStepper:
-        load_context = persistence.LoadSaveContext(workchain=workchain, while_instruction=self)
+        load_context = persistence.CheckpointContext(workchain=workchain, while_instruction=self)
         return cast(_WhileStepper, _WhileStepper.recreate_from(saved_state, load_context))
 
     def get_description(self) -> dict[str, Any]:

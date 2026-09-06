@@ -18,7 +18,7 @@ from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, WorkChain, run, run_get_node, run_get_pk
 from aiida.engine.processes.generic import process as process_core
 from aiida.engine.processes.greenback import has_portal
-from aiida.engine.processes.persistence import Bundle
+from aiida.engine.processes.persistence import CheckpointPayload
 from aiida.engine.processes.ports import PortNamespace
 from aiida.manage import get_manager
 from aiida.manage.caching import disable_caching, enable_caching
@@ -214,9 +214,9 @@ class TestProcess:
         """Test save instance's state."""
         proc = test_processes.DummyProcess()
         # Save the instance state
-        bundle = Bundle(proc)
+        payload = CheckpointPayload.from_object(proc)
         proc.close()
-        bundle.unbundle()
+        payload.decode()
 
     def test_exit_codes(self):
         """Test the properties to return various (sub) sets of existing exit codes."""

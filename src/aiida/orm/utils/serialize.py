@@ -19,7 +19,7 @@ import inspect
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol, overload
+from typing import Any, Protocol, cast, overload
 
 import yaml
 
@@ -27,7 +27,7 @@ from aiida import orm
 from aiida.common import AttributeDict
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.loaders import get_object_loader
-from aiida.engine.processes.persistence import BUNDLE_TAG, Bundle
+from aiida.engine.processes.persistence import CHECKPOINT_PAYLOAD_TAG, CheckpointPayload
 from aiida.orm.utils.managers import NodeLinksManager
 
 _ENUM_TAG = '!enum'
@@ -151,18 +151,15 @@ def mapping_constructor(
     return mapping_type(yaml_node)
 
 
-def represent_bundle(dumper: yaml.Dumper, bundle: Bundle) -> yaml.MappingNode:
-    """Represent a :class:`aiida.engine.processes.persistence.Bundle` in YAML."""
-    as_dict = dict(bundle)
-    return dumper.represent_mapping(BUNDLE_TAG, as_dict)
+def represent_checkpoint_payload(dumper: yaml.Dumper, payload: CheckpointPayload) -> yaml.MappingNode:
+    """Represent a :class:`aiida.engine.processes.persistence.CheckpointPayload` in YAML."""
+    return dumper.represent_mapping(CHECKPOINT_PAYLOAD_TAG, dict(payload))
 
 
-def bundle_constructor(loader: yaml.Loader, bundle: yaml.Node) -> Bundle:
-    """Construct an :class:`aiida.engine.processes.persistence.Bundle` from the representation."""
-    yaml_node = loader.construct_mapping(bundle)  # type: ignore[arg-type]
-    bundle_inst = Bundle.__new__(Bundle)
-    bundle_inst.update(yaml_node)
-    return bundle_inst
+def checkpoint_payload_constructor(loader: yaml.Loader, node: yaml.Node) -> CheckpointPayload:
+    """Construct an :class:`aiida.engine.processes.persistence.CheckpointPayload` from the representation."""
+    saved_state = loader.construct_mapping(node)  # type: ignore[arg-type]
+    return CheckpointPayload.from_saved_state(cast(dict[str, Any], saved_state))
 
 
 class AiiDADumper(yaml.Dumper):
@@ -195,12 +192,12 @@ class AiiDALoader(yaml.Loader):
 
 
 yaml.add_representer(Enum, represent_enum, Dumper=AiiDADumper)
-yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
+yaml.add_representer(CheckpointPayload, represent_checkpoint_payload, Dumper=AiiDADumper)
 yaml.add_representer(AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
 yaml.add_constructor(_ATTRIBUTE_DICT_TAG, partial(mapping_constructor, AttributeDict), Loader=AiiDALoader)
 yaml.add_representer(AttributesFrozendict, partial(represent_mapping, _ATTRIBUTES_FROZENDICT_TAG), Dumper=AiiDADumper)
 yaml.add_constructor(_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader)
-yaml.add_constructor(BUNDLE_TAG, bundle_constructor, Loader=AiiDALoader)
+yaml.add_constructor(CHECKPOINT_PAYLOAD_TAG, checkpoint_payload_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)

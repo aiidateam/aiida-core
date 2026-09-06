@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @persistence.auto_persist('_listeners', '_listener_type')
-class EventHelper(persistence.Savable):
+class EventHelper(persistence.CheckpointSerializable):
     def __init__(self, listener_type: 'type[ProcessListener]'):
         assert listener_type is not None, 'Must provide valid listener type'
 

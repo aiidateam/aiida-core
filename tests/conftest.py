@@ -25,6 +25,7 @@ import types
 import typing as t
 import warnings
 from enum import Enum
+from importlib import import_module
 from pathlib import Path
 
 import click
@@ -35,6 +36,16 @@ from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
+
+# Alembic loads migration version scripts under synthetic module names derived from the file names, which do not
+# match the ``aiida`` package coverage is run over with ``--cov aiida``, so the executed lines would never be
+# attributed in the coverage report. Each version package eagerly imports all its scripts in its ``__init__``;
+# importing the packages here under the canonical names first makes coverage trace the files, so that the migration
+# tests count towards the report.
+
+import_module('aiida.storage.psql_dos.migrations.versions')
+import_module('aiida.storage.sqlite_dos.migrations.versions')
+import_module('aiida.storage.sqlite_zip.migrations.versions')
 
 try:
     from typing import ParamSpec

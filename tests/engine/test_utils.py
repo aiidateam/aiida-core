@@ -18,6 +18,7 @@ from aiida.engine import calcfunction, workfunction
 from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.engine.utils import (
     InterruptableFuture,
+    ensure_coroutine,
     exponential_backoff_retry,
     get_process_state_change_timestamp,
     instantiate_process,
@@ -230,6 +231,64 @@ class TestInterruptableTask:
 
         result = await task_fut
         assert result == 'NOT ME!!!'
+
+
+class _AsyncCallable:
+    """Callable class for testing :func:`aiida.engine.utils.ensure_coroutine`."""
+
+    async def __call__(self, value: str) -> str:
+        return value
+
+
+class TestEnsureCoroutine:
+    """Tests for :func:`aiida.engine.utils.ensure_coroutine`."""
+
+    @pytest.mark.asyncio
+    async def test_coroutine_function_returned(self):
+        """A coroutine function is returned unchanged."""
+
+        async def callback(value: str) -> str:
+            return value
+
+        coro = ensure_coroutine(callback)
+
+        assert coro is callback
+        assert await coro('result') == 'result'
+
+    @pytest.mark.asyncio
+    async def test_sync_function_wrapped(self):
+        """A plain function is wrapped into a coroutine function."""
+
+        def callback(value: str) -> str:
+            return value
+
+        coro = ensure_coroutine(callback)
+
+        assert coro is not callback
+        assert await coro('result') == 'result'
+
+    @pytest.mark.asyncio
+    async def test_instance_with_async_call_returned(self):
+        """An instance with an ``async def __call__`` is returned unchanged."""
+        instance = _AsyncCallable()
+
+        coro = ensure_coroutine(instance)
+
+        assert coro is instance
+        assert await coro('result') == 'result'
+
+    @pytest.mark.asyncio
+    async def test_class_with_async_call_normalized(self):
+        """A class with an ``async def __call__`` is normalized to its ``__call__`` method."""
+        coro = ensure_coroutine(_AsyncCallable)
+
+        assert coro is not _AsyncCallable
+        assert await coro(_AsyncCallable(), 'result') == 'result'
+
+    def test_non_callable_raises(self):
+        """A non-callable raises a ``TypeError``."""
+        with pytest.raises(TypeError, match='fct must be callable'):
+            ensure_coroutine(object())
 
 
 @pytest.mark.parametrize('with_transaction', (True, False))

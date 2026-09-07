@@ -181,12 +181,15 @@ def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
         msg = 'fct must be callable'  # type: ignore[unreachable]
         raise TypeError(msg)
 
+    # Normalize a callable class to its ``__call__`` method before checking whether it is a coroutine function.
+    # Returning the class itself for an ``async def __call__`` would make callers await an instance, which is not
+    # awaitable.
+    if inspect.isclass(fct):
+        fct = fct.__call__
+
     # The second check catches instances of a class with an ``async def __call__``
     if inspect.iscoroutinefunction(fct) or inspect.iscoroutinefunction(fct.__call__):  # type: ignore[operator]
         return fct
-
-    if inspect.isclass(fct):
-        fct = fct.__call__
 
     from aiida.engine.processes.greenback import run_with_portal
 

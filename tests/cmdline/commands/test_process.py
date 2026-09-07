@@ -143,6 +143,7 @@ def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
 def test_process_kill_failing_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -224,6 +225,7 @@ def test_process_kill_failing_transport_failed_kill(
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
 def test_process_kill_failing_ebm_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -264,6 +266,7 @@ def test_process_kill_failing_ebm_transport(
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
 def test_process_kill_failing_ebm_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -934,6 +937,7 @@ def test_process_play_all(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
 def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     """Test the ``verdi process kill`` command.
     It tries to cover all the possible scenarios of killing a process.

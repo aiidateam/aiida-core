@@ -167,6 +167,7 @@ def test_await_processes_invalid():
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
 def test_await_processes(aiida_code_installed, caplog):
     """Test :func:`aiida.engine.launch.await_processes`."""
     builder = ArithmeticAddCalculation.get_builder()

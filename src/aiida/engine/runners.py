@@ -23,12 +23,10 @@ import kiwipy
 
 from aiida.common import exceptions
 from aiida.engine import transports, utils
-from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
+from aiida.engine.processes import Process, ProcessState, futures
 from aiida.engine.processes.calcjobs import manager
 from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
 from aiida.engine.processes.events import get_or_create_event_loop
-from aiida.engine.processes.functions import ProcessFunctionType
-from aiida.engine.processes.graph import GraphHandle
 from aiida.engine.processes.greenback import run_until_complete
 from aiida.engine.processes.persistence import CheckpointPersister
 from aiida.orm import ProcessNode, load_node
@@ -49,9 +47,8 @@ class ResultAndPk(NamedTuple):
     pk: int | None
 
 
-TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
-# run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder | ProcessFunctionType | GraphHandle
+TYPE_RUN_PROCESS = Process | type[Process] | utils.Launchable
+TYPE_SUBMIT_PROCESS = Process | type[Process] | utils.Launchable
 
 
 class Runner:

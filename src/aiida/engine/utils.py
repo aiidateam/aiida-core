@@ -17,18 +17,16 @@ import inspect
 import logging
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from aiida.engine.processes.events import get_or_create_event_loop
 
 if TYPE_CHECKING:
-    from aiida.engine.processes import Process, ProcessBuilder
-    from aiida.engine.processes.functions import ProcessFunctionType
-    from aiida.engine.processes.graph import GraphHandle
+    from aiida.engine.processes import Process
     from aiida.engine.runners import Runner
     from aiida.orm import ProcessNode
 
-__all__ = ('InterruptableFuture', 'interruptable_task', 'is_process_function')
+__all__ = ('InterruptableFuture', 'Launchable', 'interruptable_task', 'is_process_function')
 
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
@@ -55,49 +53,73 @@ def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[
     return inputs or {}
 
 
-def instantiate_process(
-    runner: Runner, process: Process | type[Process] | ProcessBuilder | ProcessFunctionType | GraphHandle, **inputs
-) -> Process:
+@runtime_checkable
+class Launchable(Protocol):
+    """Something that resolves to a process and the inputs to run it with.
+
+    This is what ``run`` and ``submit`` accept beside a process class, and implementing it is how a process
+    builder, a process function and a graph all reach the engine through the same door. Implementing it is also
+    what lets a plugin add a way of expressing work without the engine having to learn about the type.
+    """
+
+    @property
+    def process_class(self) -> type[Process]:
+        """Return the process class that will run."""
+        ...
+
+    def get_launch_inputs(self, **inputs: Any) -> dict[str, Any]:
+        """Return the inputs to instantiate :attr:`process_class` with.
+
+        Called once per launch, and allowed to store nodes, so it is not a preview of what would run.
+
+        :param inputs: the inputs given by the caller of ``run`` or ``submit``.
+        :return: the inputs for the process, which have to validate against its spec.
+        """
+        ...
+
+
+def instantiate_process(runner: Runner, process: Process | type[Process] | Launchable, **inputs) -> Process:
     """Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
 
         * Process instance: will simply return the instance
-        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
         * Process class: will instantiate with the specified inputs
-        * graph: will build the graph it declares for the inputs, and instantiate the process that runs it
+        * :class:`Launchable`: will ask it for the process class and the inputs to run it with, which covers a
+          process builder, a process function and a graph
 
     If anything else is passed, a ValueError will be raised
 
-    :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
+    :param process: Process instance or class, or anything that is :class:`Launchable`
     :param inputs: the inputs for the process to be instantiated with
     """
-    from aiida.engine.processes import Process, ProcessBuilder
-    from aiida.engine.processes.dag import GraphProcess
-    from aiida.engine.processes.graph import GraphHandle
+    from aiida.engine.processes import Process
 
     if isinstance(process, Process):
         assert not inputs
         assert runner is process.runner
         return process
 
-    if isinstance(process, ProcessBuilder):
-        builder = process
-        process_class = builder.process_class
-        inputs.update(**builder._inputs(prune=True))
-    elif isinstance(process, GraphHandle):
-        # A graph declares what to run for the given inputs, and that declaration is what the process takes.
-        inputs = process.get_inputs(**inputs)
-        process_class = GraphProcess
-    elif is_process_function(process):
-        process_class = process.process_class  # type: ignore[union-attr]
-    elif inspect.isclass(process) and issubclass(process, Process):
-        process_class = process
+    if isinstance(process, Launchable):
+        process_class = process.process_class
+        inputs = process.get_launch_inputs(**inputs)
     else:
-        raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
+        process_class = _process_class_of(process)
 
-    process = process_class(runner=runner, inputs=inputs)
+    return process_class(runner=runner, inputs=inputs)
 
-    return process
+
+def _process_class_of(process: object) -> type[Process]:
+    """Return the process class that was passed to be launched.
+
+    :param process: what the caller passed, which is only known to be a process class once checked.
+    :raises ValueError: if it is not a process class, which is where an unlaunchable argument is reported.
+    """
+    from aiida.engine.processes import Process
+
+    if inspect.isclass(process) and issubclass(process, Process):
+        return process
+
+    raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
 
 
 class InterruptableFuture(asyncio.Future):

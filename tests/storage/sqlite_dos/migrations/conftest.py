@@ -3,16 +3,14 @@
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
 # The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
-# For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 
-import collections
 import pathlib
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import inspect
 
 from aiida.manage.configuration import Profile
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
@@ -38,32 +36,51 @@ def uninitialised_profile(tmp_path):
 
 
 def _generate_schema(profile: Profile) -> dict:
-    """Create a dict containing indexes of AiiDA tables."""
-    with create_sqla_engine(pathlib.Path(profile.storage_config['filepath']) / 'database.sqlite').connect() as conn:
-        data = collections.defaultdict(list)
-        for type_, name, tbl_name, rootpage, sql in conn.execute(text('SELECT * FROM sqlite_master;')):
-            lines_sql = sql.strip().split('\n') if sql else []
+    """Create a semantic representation of the SQLite database schema."""
+    engine = create_sqla_engine(pathlib.Path(profile.storage_config['filepath']) / 'database.sqlite')
+    inspector = inspect(engine)
+    table_names = sorted(inspector.get_table_names())
 
-            # For an unknown reason, the ``sql`` is not deterministic as the order of the ``CONSTRAINTS`` rules seem to
-            # be in random order. To make sure they are always in the same order, they have to be ordered manually.
-            if type_ == 'table':
-                lines_constraints = []
-                lines_other = []
-                for line in lines_sql:
-                    stripped = line.strip().strip(',')
+    columns = {}
+    primary_keys = {}
+    unique_constraints = {}
+    check_constraints = {}
+    foreign_keys = {}
+    indexes = {}
 
-                    if 'CONSTRAINT' in stripped:
-                        lines_constraints.append(stripped)
-                    else:
-                        lines_other.append(stripped)
+    for table_name in table_names:
+        columns[table_name] = [
+            {
+                'name': column['name'],
+                'type': str(column['type']),
+                'nullable': column['nullable'],
+                'default': column['default'],
+            }
+            for column in inspector.get_columns(table_name)
+        ]
+        primary_keys[table_name] = inspector.get_pk_constraint(table_name)
+        unique_constraints[table_name] = sorted(
+            inspector.get_unique_constraints(table_name), key=lambda constraint: constraint['name'] or ''
+        )
+        check_constraints[table_name] = sorted(
+            inspector.get_check_constraints(table_name), key=lambda constraint: constraint['name'] or ''
+        )
+        foreign_keys[table_name] = sorted(
+            inspector.get_foreign_keys(table_name),
+            key=lambda constraint: (constraint['name'] or '', constraint['constrained_columns']),
+        )
+        indexes[table_name] = sorted(inspector.get_indexes(table_name), key=lambda index: index['name'])
 
-                lines_sql = lines_other + sorted(lines_constraints)
-            data[type_].append((name, tbl_name, lines_sql))
-
-    for key in data.keys():
-        data[key] = sorted(data[key], key=lambda v: v[0])
-
-    return dict(data)
+    return {
+        'columns': columns,
+        'constraints': {
+            'primary_keys': primary_keys,
+            'unique': unique_constraints,
+            'check': check_constraints,
+        },
+        'foreign_keys': foreign_keys,
+        'indexes': indexes,
+    }
 
 
 @pytest.fixture

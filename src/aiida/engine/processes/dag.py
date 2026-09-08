@@ -29,6 +29,20 @@ __all__ = ('Dependency', 'GraphProcess', 'GraphSpec', 'GraphTask')
 SPEC_VERSION: str = '1.0'
 """Version of the graph declaration format, stored with every serialized spec."""
 
+SUPPORTED_SPEC_VERSIONS: frozenset[str] = frozenset({SPEC_VERSION})
+"""Versions of the declaration format that can be read back, which a stored graph is checked against."""
+
+TaskKind = t.Literal['function']
+"""What a task in a graph is.
+
+A declaration is stored as provenance and read back by later versions of AiiDA, so every task says what kind it
+is even while there is only one. Control flow and nested graphs become further kinds as their execution lands,
+and recording the kind from the start is what keeps that addition from changing the format.
+"""
+
+SUPPORTED_TASK_KINDS: frozenset[str] = frozenset(t.get_args(TaskKind))
+"""Task kinds that can be read back, which a stored task is checked against."""
+
 
 @dataclass(frozen=True)
 class Dependency:
@@ -64,13 +78,34 @@ class GraphTask:
     name: str
     spec: TaskSpec
     inputs: dict[str, t.Any] = field(default_factory=dict)
+    kind: TaskKind = 'function'
 
     def to_dict(self) -> dict[str, t.Any]:
-        return {'name': self.name, 'spec': self.spec.to_dict(), 'inputs': self.inputs}
+        return {'name': self.name, 'kind': self.kind, 'spec': self.spec.to_dict(), 'inputs': self.inputs}
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> GraphTask:
-        return cls(name=data['name'], spec=TaskSpec.from_dict(data['spec']), inputs=data.get('inputs', {}))
+        """Return the task a serialized declaration describes.
+
+        :param data: the declaration of one task, as written by :meth:`to_dict`.
+        :raises ValueError: if the task is of a kind this version of AiiDA does not run.
+        """
+        kind = data.get('kind')
+
+        if kind not in SUPPORTED_TASK_KINDS:
+            supported = ', '.join(f'`{name}`' for name in sorted(SUPPORTED_TASK_KINDS))
+            msg = (
+                f'task `{data.get("name")}` is of kind `{kind}`, and this version of AiiDA runs tasks of kind '
+                f'{supported}. A graph stored by a newer version of AiiDA has to be run with that version.'
+            )
+            raise ValueError(msg)
+
+        return cls(
+            name=data['name'],
+            spec=TaskSpec.from_dict(data['spec']),
+            inputs=data.get('inputs', {}),
+            kind=t.cast(TaskKind, kind),
+        )
 
 
 @dataclass(frozen=True)
@@ -177,11 +212,26 @@ class GraphSpec:
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> GraphSpec:
+        """Return the graph a serialized declaration describes.
+
+        :param data: the declaration, as written by :meth:`to_dict`.
+        :raises ValueError: if the declaration is of a version this version of AiiDA does not read.
+        """
+        version = data.get('version')
+
+        if version not in SUPPORTED_SPEC_VERSIONS:
+            supported = ', '.join(f'`{name}`' for name in sorted(SUPPORTED_SPEC_VERSIONS))
+            msg = (
+                f'cannot read a graph declaration of version `{version}`, this version of AiiDA reads {supported}. '
+                f'A graph stored by a newer version of AiiDA has to be run with that version.'
+            )
+            raise ValueError(msg)
+
         return cls(
             tasks=tuple(GraphTask.from_dict(task) for task in data['tasks']),
             links=tuple(Dependency.from_dict(link) for link in data.get('links', [])),
             outputs={name: (target[0], target[1]) for name, target in data.get('outputs', {}).items()},
-            version=data.get('version', SPEC_VERSION),
+            version=version,
         )
 
 

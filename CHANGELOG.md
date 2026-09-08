@@ -37,6 +37,21 @@ The `core.shell` calculation job and parser entry points keep the names they had
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### Submit a process function from a running process
+
+A running process can submit a process function as a child and await it:
+
+```python
+class AdditionWorkChain(WorkChain):
+
+    def submit_addition(self):
+        child = self.submit(add, x=Int(1), y=Int(2), metadata={'call_link_label': 'addition'})
+        return ToContext(addition=child)
+```
+
+`Runner.submit` and `Runner.schedule` previously rejected a process function, while the top-level `aiida.engine.submit` accepted one, so the two entry points disagreed.
+The submitted function is recorded as a called child under its link label, and a daemon worker runs it as long as the function is importable.
+
 ### Behavior changes
 
 ### Fixes

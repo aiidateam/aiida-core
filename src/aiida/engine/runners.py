@@ -27,6 +27,7 @@ from aiida.engine.processes import Process, ProcessBuilder, ProcessState, future
 from aiida.engine.processes.calcjobs import manager
 from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
 from aiida.engine.processes.events import get_or_create_event_loop
+from aiida.engine.processes.functions import ProcessFunctionType
 from aiida.engine.processes.greenback import run_until_complete
 from aiida.engine.processes.persistence import CheckpointPersister
 from aiida.orm import ProcessNode, load_node
@@ -49,7 +50,7 @@ class ResultAndPk(NamedTuple):
 
 TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
+TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder | ProcessFunctionType
 
 
 class Runner:
@@ -168,7 +169,7 @@ class Runner:
             self._loop.close()
         self._closed = True
 
-    def instantiate_process(self, process: TYPE_RUN_PROCESS, **inputs):
+    def instantiate_process(self, process: TYPE_SUBMIT_PROCESS, **inputs):
         from aiida.engine.utils import instantiate_process
 
         return instantiate_process(self, process, **inputs)
@@ -178,11 +179,10 @@ class Runner:
 
         The return value will be the calculation node of the submitted process
 
-        :param process: the process class to submit
+        :param process: the process class, builder or process function to submit
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
-        assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
         inputs = utils.prepare_inputs(inputs, **kwargs)
@@ -212,11 +212,10 @@ class Runner:
     ) -> ProcessNode:
         """Schedule a process to be executed by this runner.
 
-        :param process: the process class to submit
+        :param process: the process class, builder or process function to schedule
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
-        assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
         inputs = utils.prepare_inputs(inputs, **kwargs)

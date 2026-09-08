@@ -18,6 +18,7 @@ from aiida.engine.processes.dag import *
 from aiida.engine.processes.exit_code import *
 from aiida.engine.processes.functions import *
 from aiida.engine.processes.futures import *
+from aiida.engine.processes.graph import *
 from aiida.engine.processes.ports import *
 from aiida.engine.processes.process import *
 from aiida.engine.processes.process_spec import *
@@ -39,6 +40,8 @@ __all__ = (
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',
+    'GraphBuilder',
+    'GraphHandle',
     'GraphProcess',
     'GraphSpec',
     'GraphTask',
@@ -54,6 +57,9 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'TaskHandle',
+    'TaskOutput',
+    'TaskOutputs',
     'TaskProcess',
     'TaskSpec',
     'ToContext',
@@ -64,6 +70,7 @@ __all__ = (
     'assign_',
     'calcfunction',
     'construct_awaitable',
+    'graph',
     'if_',
     'process_handler',
     'return_',

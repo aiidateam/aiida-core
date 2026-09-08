@@ -52,6 +52,33 @@ class AdditionWorkChain(WorkChain):
 `Runner.submit` and `Runner.schedule` previously rejected a process function, while the top-level `aiida.engine.submit` accepted one, so the two entry points disagreed.
 The submitted function is recorded as a called child under its link label, and a daemon worker runs it as long as the function is importable.
 
+#### `task`: declare a Python function as a task
+
+The `task` decorator declares a plain Python function as a task: a process that records its execution, that takes and returns plain Python values, and that carries a `TaskSpec` describing what it runs and the ports it takes and produces.
+
+```python
+from aiida.engine import submit, task
+
+
+@task(outputs=['total', 'product'])
+def sum_product(x, y):
+    return x + y, x * y
+
+
+node = submit(sum_product, x=2, y=3)
+list(sum_product.task_spec.outputs.keys())  # ['total', 'product']
+```
+
+The `TaskSpec` holds the name of the task and an importable reference to the process that realizes it, and derives its ports from that process, so it can be written out with `to_dict` and read back with `from_dict`.
+
+Output ports come from `outputs=` when given, otherwise from the return annotation, where a `TypedDict` declares one port per field.
+Without either, the output namespace stays dynamic, as it is for a calcfunction.
+A returned tuple is mapped onto the declared ports in order.
+
+A `calcfunction` requires its return value to be a `Data` node or a mapping of them.
+A task serializes what the function returns with `to_aiida_type`, the same way the input ports of a function process already serialize what is passed in.
+This is why a task records a calculation: creating data is something a workfunction may not do.
+
 ### Behavior changes
 
 ### Fixes

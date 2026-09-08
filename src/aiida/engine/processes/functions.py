@@ -130,10 +130,16 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType], FunctionType]:
+def process_function(
+    node_class: type[ProcessNode],
+    base_class: type[FunctionProcess] | None = None,
+    outputs: t.Sequence[str] | None = None,
+) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
+    :param base_class: the ``FunctionProcess`` subclass to build, which defaults to ``FunctionProcess`` itself
+    :param outputs: names of the output ports to declare, instead of a dynamic output namespace
     """
 
     def decorator(function: FunctionType) -> FunctionType:
@@ -142,7 +148,7 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
         """
-        process_class = FunctionProcess.build(function, node_class=node_class)
+        process_class = FunctionProcess.build(function, node_class=node_class, base_class=base_class, outputs=outputs)
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
@@ -276,6 +282,38 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
     return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
 
 
+def _declare_output_types(
+    outputs: t.Sequence[str] | None, return_annotation: t.Any
+) -> dict[str, tuple[t.Any, ...]] | None:
+    """Return the output ports to declare for a function process, or ``None`` to keep the namespace dynamic.
+
+    Explicit ``outputs`` take precedence over the return annotation. A ``TypedDict`` annotation declares one port
+    per field, any other annotation declares a single ``result`` port, and no annotation leaves the namespace
+    dynamic, since then the outputs are not known before the function has run.
+
+    :param outputs: names of the output ports to declare.
+    :param return_annotation: the return annotation of the wrapped function, if it has one.
+    :returns: a mapping of port name onto its valid types, or ``None`` if the namespace should stay dynamic.
+    :raises TypeError: if ``outputs`` is not a sequence of port names.
+    """
+    if outputs is not None:
+        if isinstance(outputs, str):
+            # A bare string is a sequence of strings, so it would silently declare one port per character.
+            raise TypeError(f'`outputs` should be a sequence of port names, got the string `{outputs}`.')
+        return {name: (Data,) for name in outputs}
+
+    if return_annotation is None or return_annotation is type(None):
+        return None
+
+    if t.is_typeddict(return_annotation):
+        return {
+            name: infer_valid_type_from_type_annotation(hint) or (Data,)
+            for name, hint in t.get_type_hints(return_annotation).items()
+        }
+
+    return {Process.SINGLE_OUTPUT_LINKNAME: infer_valid_type_from_type_annotation(return_annotation) or (Data,)}
+
+
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
 
@@ -291,7 +329,12 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func: FunctionType, node_class: type[ProcessNode]) -> type[FunctionProcess]:
+    def build(
+        func: FunctionType,
+        node_class: type[ProcessNode],
+        base_class: type[FunctionProcess] | None = None,
+        outputs: t.Sequence[str] | None = None,
+    ) -> type[FunctionProcess]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -411,14 +454,20 @@ class FunctionProcess(Process):
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
-            # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
-            # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
-            # the output namespace can be nested.
-            spec.outputs.valid_type = (Data, dict)
+            declared_outputs = _declare_output_types(outputs, annotations.get('return'))
+
+            if declared_outputs is None:
+                # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
+                # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
+                spec.outputs.valid_type = (Data, dict)
+            else:
+                for output_name, output_valid_type in declared_outputs.items():
+                    spec.output(output_name, valid_type=output_valid_type)
+                spec.outputs.dynamic = False
 
         return type(
             func.__qualname__,
-            (FunctionProcess,),
+            (base_class or FunctionProcess,),
             {
                 '__module__': func.__module__,
                 '__name__': func.__name__,
@@ -562,8 +611,18 @@ class FunctionProcess(Process):
         if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
             return result  # type: ignore[unreachable]
 
-        if isinstance(result, Data):  # type: ignore[unreachable]
-            self.out(self.SINGLE_OUTPUT_LINKNAME, result)  # type: ignore[unreachable]
+        self._out_result(result)
+
+        return ExitCode()
+
+    def _out_result(self, result: t.Any) -> None:
+        """Attach the value returned by the wrapped function to the output ports.
+
+        :param result: the value returned by the wrapped function.
+        :raises TypeError: if the value cannot be attached to an output port.
+        """
+        if isinstance(result, Data):
+            self.out(self.SINGLE_OUTPUT_LINKNAME, result)
         elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
                 self.out(name, value)
@@ -572,5 +631,3 @@ class FunctionProcess(Process):
                 f"Function process returned an output with unsupported type '{result.__class__}'\n"
                 'Must be a Data type or a mapping of {string: Data}'
             )
-
-        return ExitCode()

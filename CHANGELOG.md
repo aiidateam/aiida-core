@@ -79,6 +79,30 @@ A `calcfunction` requires its return value to be a `Data` node or a mapping of t
 A task serializes what the function returns with `to_aiida_type`, the same way the input ports of a function process already serialize what is passed in.
 This is why a task records a calculation: creating data is something a workfunction may not do.
 
+#### Run a graph of tasks
+
+A `GraphSpec` declares a graph of tasks: which tasks to run, which output of one feeds which input of another, and which of those the graph returns. `GraphProcess` runs it.
+
+```python
+from aiida.engine import GraphProcess, GraphSpec, Dependency, GraphTask, submit
+from aiida.orm import Dict
+
+graph = GraphSpec(
+    tasks=(
+        GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+        GraphTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
+    ),
+    links=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
+    outputs={'total': ('sum', 'total')},
+)
+
+node = submit(GraphProcess, dag=Dict(dict=graph.to_dict()))
+```
+
+Every task whose inputs are ready is submitted, so it is a process in its own right: it gets its own node, is scheduled like any other process, and is recorded as a called child under the name the graph gave it.
+The graph keeps only the names it dispatched and the ones that have finished, carried in its checkpoint.
+A graph whose links contain a cycle, or that refers to a port a task does not have, is refused where it is declared.
+
 ### Behavior changes
 
 ### Fixes

@@ -14,6 +14,7 @@
 
 from aiida.engine.processes.builder import *
 from aiida.engine.processes.calcjobs import *
+from aiida.engine.processes.dag import *
 from aiida.engine.processes.exit_code import *
 from aiida.engine.processes.functions import *
 from aiida.engine.processes.futures import *
@@ -33,10 +34,14 @@ __all__ = (
     'CalcJobImporter',
     'CalcJobOutputPort',
     'CalcJobProcessSpec',
+    'Dependency',
     'ExecutorReference',
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',
+    'GraphProcess',
+    'GraphSpec',
+    'GraphTask',
     'InputPort',
     'JobManager',
     'JobsList',

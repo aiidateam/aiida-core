@@ -10,11 +10,14 @@
 
 from __future__ import annotations
 
+import typing as t
+
 import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.engine import Dependency, GraphProcess, GraphSpec, GraphTask, run_get_node, task
+from aiida.engine import Dependency, GraphProcess, GraphSpec, GraphTask, MapTask, run_get_node, task
+from aiida.engine.processes.dag import TASK_KINDS, TaskKind
 
 pytestmark = pytest.mark.requires_broker
 
@@ -67,9 +70,9 @@ def test_round_trip_records_the_task_kind():
 def test_rejects_an_unknown_task_kind():
     """A graph carrying a kind this version cannot run is refused, so a newer format is never half-read."""
     serialized = linear_graph().to_dict()
-    serialized['tasks'][0]['kind'] = 'map'
+    serialized['tasks'][0]['kind'] = 'while'
 
-    with pytest.raises(ValueError, match='is of kind `map`'):
+    with pytest.raises(ValueError, match='is of kind `while`'):
         GraphSpec.from_dict(serialized)
 
 
@@ -87,6 +90,100 @@ def test_rejects_an_unreadable_version(mutate, expected):
 
     with pytest.raises(ValueError, match=expected):
         GraphSpec.from_dict(serialized)
+
+
+def test_node_kinds_cover_the_declared_kinds():
+    """Every kind the format allows can be read back, so the two cannot drift apart."""
+    assert set(TASK_KINDS) == set(t.get_args(TaskKind))
+
+
+def mapped_graph(collection) -> GraphSpec:
+    """Return a graph adding 10 to every item of ``collection``, one process per item."""
+    return GraphSpec(
+        tasks=(MapTask(name='shifted', spec=add.task_spec, inputs={'x': collection, 'y': 10}, item_port='x'),),
+        outputs={'total': ('shifted', 'total')},
+    )
+
+
+def test_map_node_round_trip():
+    """A map records what it maps over, and reads back as the kind of node that fans out."""
+    graph = mapped_graph([1, 2])
+    serialized = graph.to_dict()
+
+    assert serialized['tasks'][0]['kind'] == 'map'
+    assert serialized['tasks'][0]['item_port'] == 'x'
+
+    restored = GraphSpec.from_dict(serialized)
+
+    assert restored == graph
+    assert isinstance(restored.task('shifted'), MapTask)
+
+
+def test_map_rejects_an_unknown_item_port():
+    """A map over something that is not an input of the task is refused where the graph is declared."""
+    with pytest.raises(ValueError, match='maps over `nope`'):
+        GraphSpec(tasks=(MapTask(name='shifted', spec=add.task_spec, inputs={'y': 1}, item_port='nope'),))
+
+
+@pytest.mark.parametrize(
+    'collection, expected',
+    [
+        pytest.param([1, 2, 3], {'item_0': 11, 'item_1': 12, 'item_2': 13}, id='list'),
+        pytest.param({'a': 1, 'b': 2}, {'a': 11, 'b': 12}, id='dict'),
+    ],
+)
+def test_map_runs_once_per_item(collection, expected):
+    """Every item gets its own process, and the results are gathered under the key of the item."""
+    results, node = run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph(collection).to_dict()))
+
+    assert node.is_finished_ok, node.exit_message
+    assert {key: value.value for key, value in results['total'].items()} == expected
+
+    called = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert sorted(link.link_label for link in called) == sorted(f'shifted_{key}' for key in expected)
+
+
+def test_map_leaves_the_stored_graph_a_template():
+    """The expansion is runtime state, so a graph that ran a map still describes the one task it declared."""
+    results, node = run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph([1, 2, 3]).to_dict()))
+
+    assert node.is_finished_ok, node.exit_message
+    assert len(results['total']) == 3
+
+    stored = node.inputs.dag.get_dict()
+
+    assert [task['name'] for task in stored['tasks']] == ['shifted']
+    assert stored == mapped_graph([1, 2, 3]).to_dict()
+
+
+def test_map_over_an_empty_collection_runs_nothing():
+    """A collection that turns out to be empty leaves the graph with nothing to run and nothing to gather."""
+    _, node = run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph([]).to_dict()))
+
+    assert node.is_finished_ok, node.exit_message
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all() == []
+
+
+def test_map_reports_an_unmappable_collection():
+    """Mapping over something that is not a collection says so, naming the task and the port.
+
+    What a map runs over can come from another task, so this is only known once the graph is running.
+    """
+    with pytest.raises(ValueError, match='has to be a list or a dictionary'):
+        run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph(7).to_dict()))
+
+
+def test_map_results_cannot_be_taken_into_another_task_yet():
+    """A task taking the results of a map is refused where the graph is declared, since nothing has to run first."""
+    with pytest.raises(ValueError, match='runs once per item'):
+        GraphSpec(
+            tasks=(
+                MapTask(name='shifted', spec=add.task_spec, inputs={'x': [1, 2], 'y': 10}, item_port='x'),
+                GraphTask(name='after', spec=multiply.task_spec, inputs={'y': 2}),
+            ),
+            links=(Dependency(source='shifted', source_port='total', target='after', target_port='x'),),
+            outputs={'product': ('after', 'product')},
+        )
 
 
 def test_ready_returns_the_frontier():

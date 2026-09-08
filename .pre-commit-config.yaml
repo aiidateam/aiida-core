@@ -7,6 +7,8 @@ repos:
     exclude: uv.lock
   - id: check-yaml
   - id: double-quote-string-fixer
+    # Keep the vendored subtrees verbatim; a follow-up applies aiida-core style.
+    exclude: ^src/aiida/(node_graph)/
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
       (?x)^(
@@ -88,6 +90,7 @@ repos:
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
+        src/aiida/node_graph/.*|
         src/aiida/orm/nodes/data/cif.py|
         src/aiida/orm/nodes/data/remote/base.py|
         src/aiida/orm/nodes/data/structure.py|

@@ -35,10 +35,11 @@ dependencies = [
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
+  'cloudpickle',
   'dill>=0.3.6,<1',
   'disk-objectstore~=1.5.0',
   'docstring-parser',
-  'graphviz~=0.19',
+  'graphviz~=0.20',
   'greenback~=1.0',
   'greenlet>=3.2.4',
   'importlib-metadata~=6.0',
@@ -46,6 +47,7 @@ dependencies = [
   'jedi<0.19',
   'jinja2~=3.0',
   'kiwipy[rmq]~=0.9.0',
+  'node-graph-widget>=0.0.5',
   'numpy>=1.21,<3',
   'paramiko~=3.0',
   'pgsu~=0.3.0',
@@ -54,7 +56,9 @@ dependencies = [
   'pydantic~=2.12',
   'pytz~=2021.1',
   'pyyaml~=6.0',
+  'rdflib>=6.0',
   'requests~=2.0',
+  'scipy',
   'sqlalchemy>=2.0.20,<3',
   'tabulate>=0.9.0,<0.10.0',
   'tqdm~=4.45',
@@ -219,6 +223,51 @@ requires-python = '>=3.10'
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
 'core.arithmetic.multiply_add' = 'aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain'
 
+[project.entry-points.'node_graph.property']
+'node_graph.any' = 'aiida.node_graph.properties.builtins:PropertyAny'
+'node_graph.base_dict' = 'aiida.node_graph.properties.builtins:PropertyBaseDict'
+'node_graph.base_list' = 'aiida.node_graph.properties.builtins:PropertyBaseList'
+'node_graph.bool' = 'aiida.node_graph.properties.builtins:PropertyBool'
+'node_graph.bool_vector' = 'aiida.node_graph.properties.builtins:PropertyBoolVector'
+'node_graph.enum' = 'aiida.node_graph.properties.builtins:PropertyEnum'
+'node_graph.float' = 'aiida.node_graph.properties.builtins:PropertyFloat'
+'node_graph.float_matrix' = 'aiida.node_graph.properties.builtins:PropertyFloatMatrix'
+'node_graph.float_vector' = 'aiida.node_graph.properties.builtins:PropertyFloatVector'
+'node_graph.int' = 'aiida.node_graph.properties.builtins:PropertyInt'
+'node_graph.int_vector' = 'aiida.node_graph.properties.builtins:PropertyIntVector'
+'node_graph.string' = 'aiida.node_graph.properties.builtins:PropertyString'
+
+[project.entry-points.'node_graph.socket']
+'node_graph.annotated' = 'aiida.node_graph.sockets.builtins:SocketAnnotated'
+'node_graph.any' = 'aiida.node_graph.sockets.builtins:SocketAny'
+'node_graph.base_dict' = 'aiida.node_graph.sockets.builtins:SocketBaseDict'
+'node_graph.base_list' = 'aiida.node_graph.sockets.builtins:SocketBaseList'
+'node_graph.bool' = 'aiida.node_graph.sockets.builtins:SocketBool'
+'node_graph.float' = 'aiida.node_graph.sockets.builtins:SocketFloat'
+'node_graph.float_vector' = 'aiida.node_graph.sockets.builtins:SocketFloatVector'
+'node_graph.int' = 'aiida.node_graph.sockets.builtins:SocketInt'
+'node_graph.int_vector' = 'aiida.node_graph.sockets.builtins:SocketIntVector'
+'node_graph.namespace' = 'aiida.node_graph.socket:TaskSocketNamespace'
+'node_graph.string' = 'aiida.node_graph.sockets.builtins:SocketString'
+
+[project.entry-points.'node_graph.task']
+'node_graph.graph_level' = 'aiida.node_graph.tasks.builtins:GraphLevelTask'
+'node_graph.if_zone' = 'aiida.node_graph.tasks.builtins:If'
+'node_graph.task' = 'aiida.node_graph.task:Task'
+'node_graph.test_add' = 'aiida.node_graph.tasks.tests:test_add'
+'node_graph.test_enum' = 'aiida.node_graph.tasks.tests:TestEnum'
+'node_graph.test_enum_update' = 'aiida.node_graph.tasks.tests:TestEnumUpdate'
+'node_graph.test_float' = 'aiida.node_graph.tasks.tests:test_float'
+'node_graph.test_string' = 'aiida.node_graph.tasks.tests:test_string'
+'node_graph.while_zone' = 'aiida.node_graph.tasks.builtins:While'
+'node_graph.zone' = 'aiida.node_graph.tasks.builtins:Zone'
+
+[project.entry-points.'node_graph.type_mapping']
+'node_graph.builtins_mapping' = 'aiida.node_graph.orm.mapping:type_mapping'
+
+[project.entry-points.'node_graph.type_promotion']
+'node_graph.builtins_mapping' = 'aiida.node_graph.link:TYPE_PROMOTIONS'
+
 [project.optional-dependencies]
 atomic_tools = [
   'PyCifRW~=4.4',
@@ -311,6 +360,7 @@ tutorials = [
 ]
 
 [project.scripts]
+node-graph = 'aiida.node_graph.cli:cli'
 runaiida = 'aiida.cmdline.commands.cmd_run:run'
 verdi = 'aiida.cmdline.commands.cmd_verdi:verdi'
 
@@ -492,7 +542,10 @@ xfail_strict = true
 [tool.ruff]
 exclude = [
   'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
+  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py',
+  # Vendored subsystems, kept verbatim in the mechanical move; a follow-up applies aiida-core
+  # lint/format and removes these exclusions.
+  'src/aiida/node_graph/'
 ]
 line-length = 120
 

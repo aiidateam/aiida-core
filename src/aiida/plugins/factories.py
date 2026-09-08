@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from aiida.brokers import Broker
-    from aiida.engine import CalcJob, CalcJobImporter, WorkChain
+    from aiida.engine import CalcJob, CalcJobImporter, Process
     from aiida.orm import Data, Group
     from aiida.orm.implementation import StorageBackend
     from aiida.parsers import Parser
@@ -443,34 +443,38 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> EntryPoint | t
 
 
 @overload
-def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> type[WorkChain] | Callable: ...
+def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> type[Process] | Callable: ...
 
 
 @overload
 def WorkflowFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def WorkflowFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[WorkChain] | Callable:
-    """Return the `WorkChain` sub class registered under the given entry point.
+def WorkflowFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Process] | Callable:
+    """Return the workflow process class or `workfunction` registered under the given entry point.
+
+    A valid workflow entry point is a `workfunction` or any `Process` subclass that is not a `CalcJob`
+    (those belong in the `aiida.calculations` group). This includes `WorkChain` as well as standalone
+    workflow engines such as the WorkGraph engine, which are plain `Process` subclasses.
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
-    :return: sub class of :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain` or a `workfunction`
+    :return: a `Process` subclass or a `workfunction`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
-    from aiida.engine import WorkChain, is_process_function, workfunction
+    from aiida.engine import CalcJob, Process, is_process_function, workfunction
     from aiida.orm import WorkFunctionNode
 
     entry_point_group = 'aiida.workflows'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
-    valid_classes = (WorkChain, workfunction)
+    valid_classes = (Process, workfunction)
 
     if not load:
         return entry_point
 
-    if (isclass(entry_point) and issubclass(entry_point, WorkChain)) or (
+    if (isclass(entry_point) and issubclass(entry_point, Process) and not issubclass(entry_point, CalcJob)) or (
         is_process_function(entry_point) and entry_point.node_class is WorkFunctionNode  # type: ignore[union-attr]
     ):
         return entry_point

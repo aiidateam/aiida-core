@@ -211,6 +211,9 @@ class TaskHandle:
     def process_class(self) -> type[Process]:
         return self._function.process_class
 
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
+        return self._function.get_launch_inputs(**inputs)
+
     @property
     def node_class(self) -> t.Any:
         return self._function.node_class

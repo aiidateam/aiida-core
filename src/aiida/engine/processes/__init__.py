@@ -20,6 +20,7 @@ from aiida.engine.processes.futures import *
 from aiida.engine.processes.ports import *
 from aiida.engine.processes.process import *
 from aiida.engine.processes.process_spec import *
+from aiida.engine.processes.task import *
 from aiida.engine.processes.workchains import *
 
 __all__ = (
@@ -32,6 +33,7 @@ __all__ = (
     'CalcJobImporter',
     'CalcJobOutputPort',
     'CalcJobProcessSpec',
+    'ExecutorReference',
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',
@@ -47,6 +49,8 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'TaskProcess',
+    'TaskSpec',
     'ToContext',
     'WithNonDb',
     'WithSerialize',
@@ -58,6 +62,7 @@ __all__ = (
     'if_',
     'process_handler',
     'return_',
+    'task',
     'while_',
     'workfunction',
 )

@@ -11,6 +11,9 @@
 from __future__ import annotations
 
 import collections.abc
+import contextvars
+import functools
+import inspect
 import typing as t
 from dataclasses import dataclass
 
@@ -23,7 +26,16 @@ from aiida.engine.processes.process import Process
 from aiida.orm import CalcFunctionNode, Data
 from aiida.orm.nodes.data.base import to_aiida_type
 
-__all__ = ('ExecutorReference', 'TaskProcess', 'TaskSpec', 'task')
+__all__ = ('ExecutorReference', 'TaskHandle', 'TaskProcess', 'TaskSpec', 'task')
+
+ACTIVE_BUILDER: contextvars.ContextVar[t.Any | None] = contextvars.ContextVar(
+    'aiida_active_graph_builder', default=None
+)
+"""The graph being built, if any.
+
+While a graph is being built, calling a task records it in that graph instead of running it. This is what lets a
+graph be written as ordinary Python.
+"""
 
 P = t.ParamSpec('P')
 R_co = t.TypeVar('R_co', covariant=True)
@@ -166,6 +178,60 @@ class TaskProcess(FunctionProcess):
         super()._out_result(result)
 
 
+class TaskHandle:
+    """What the :func:`task` decorator returns: a task that can be run, launched, or placed in a graph.
+
+    Calling it runs the function, unless a graph is being built, in which case the call is recorded in that graph
+    and returns a reference to the outputs the task will produce. It carries the attributes of the process function
+    it wraps, so it can be passed to ``run`` and ``submit`` like any other.
+    """
+
+    is_process_function: bool = True
+
+    def __init__(self, function: t.Any, spec: TaskSpec) -> None:
+        self._function = function
+        self.task_spec = spec
+        functools.update_wrapper(self, function)
+
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        builder = ACTIVE_BUILDER.get()
+
+        if builder is None:
+            return self._function(*args, **kwargs)
+
+        return builder.add_task(self, self.bind_arguments(*args, **kwargs))
+
+    def bind_arguments(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+        """Return the arguments of a call to this task, by the name of the parameter each is bound to."""
+        bound = inspect.signature(self._function).bind(*args, **kwargs)
+        bound.apply_defaults()
+        return dict(bound.arguments)
+
+    @property
+    def process_class(self) -> type[Process]:
+        return self._function.process_class
+
+    @property
+    def node_class(self) -> t.Any:
+        return self._function.node_class
+
+    @property
+    def recreate_from(self) -> t.Any:
+        return self._function.recreate_from
+
+    def spec(self) -> t.Any:
+        return self._function.spec()
+
+    def run(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        return self._function.run(*args, **kwargs)
+
+    def run_get_node(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        return self._function.run_get_node(*args, **kwargs)
+
+    def run_get_pk(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        return self._function.run_get_pk(*args, **kwargs)
+
+
 def task(
     function: t.Callable[P, R_co] | None = None,
     *,
@@ -207,8 +273,8 @@ def task(
         # than when it is first launched.
         decorated.process_class.spec()  # type: ignore[attr-defined]
 
-        decorated.task_spec = TaskSpec.from_process(decorated, identifier=identifier)  # type: ignore[attr-defined]
-        return decorated  # type: ignore[return-value]
+        spec = TaskSpec.from_process(decorated, identifier=identifier)
+        return TaskHandle(decorated, spec)  # type: ignore[return-value]
 
     if function is not None:
         return decorator(function)

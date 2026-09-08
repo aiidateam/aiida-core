@@ -55,6 +55,40 @@ def test_spec_round_trip():
     assert restored.task('sum').spec.process_class is add.process_class
 
 
+def test_round_trip_records_the_task_kind():
+    """Every task records what kind it is, so a reader can tell a function task from one it does not know."""
+    graph = linear_graph()
+    serialized = graph.to_dict()
+
+    assert [task['kind'] for task in serialized['tasks']] == ['function', 'function']
+    assert GraphSpec.from_dict(serialized) == graph
+
+
+def test_rejects_an_unknown_task_kind():
+    """A graph carrying a kind this version cannot run is refused, so a newer format is never half-read."""
+    serialized = linear_graph().to_dict()
+    serialized['tasks'][0]['kind'] = 'map'
+
+    with pytest.raises(ValueError, match='is of kind `map`'):
+        GraphSpec.from_dict(serialized)
+
+
+@pytest.mark.parametrize(
+    'mutate, expected',
+    [
+        pytest.param(lambda data: data.pop('version'), 'version `None`', id='missing'),
+        pytest.param(lambda data: data.update(version='2.0'), 'version `2.0`', id='newer'),
+    ],
+)
+def test_rejects_an_unreadable_version(mutate, expected):
+    """A declaration is read only when its version is one this version of AiiDA understands."""
+    serialized = linear_graph().to_dict()
+    mutate(serialized)
+
+    with pytest.raises(ValueError, match=expected):
+        GraphSpec.from_dict(serialized)
+
+
 def test_ready_returns_the_frontier():
     """Only tasks whose predecessors have finished, and that were not dispatched, are ready."""
     graph = linear_graph()

@@ -44,4 +44,4 @@ def test_head_vs_orm(uninitialised_profile, reflect_schema, data_regression):
     with SqliteDosMigrator(uninitialised_profile) as migrator:
         head_version = migrator.get_schema_version_head()
         migrator.initialise()
-        data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_head_vs_orm_{head_version}_')
+        data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_main_{head_version}_')

@@ -67,6 +67,8 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
 
     def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]: ...
 
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]: ...
+
     is_process_function: bool
 
     node_class: type[N]
@@ -229,12 +231,17 @@ def process_function(
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        def get_launch_inputs(**inputs: t.Any) -> dict[str, t.Any]:
+            """Return the inputs to launch the process with, which a function takes as they are given."""
+            return inputs
+
         decorated_function.run = decorated_function  # type: ignore[attr-defined]
         decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
         decorated_function.run_get_node = run_get_node  # type: ignore[attr-defined]
         decorated_function.is_process_function = True  # type: ignore[attr-defined]
         decorated_function.node_class = node_class  # type: ignore[attr-defined]
         decorated_function.process_class = process_class  # type: ignore[attr-defined]
+        decorated_function.get_launch_inputs = get_launch_inputs  # type: ignore[attr-defined]
         decorated_function.recreate_from = process_class.recreate_from  # type: ignore[attr-defined]
         decorated_function.spec = process_class.spec  # type: ignore[attr-defined]
 

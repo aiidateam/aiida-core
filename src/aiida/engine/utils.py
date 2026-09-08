@@ -23,6 +23,7 @@ from aiida.engine.processes.events import get_or_create_event_loop
 
 if TYPE_CHECKING:
     from aiida.engine.processes import Process, ProcessBuilder
+    from aiida.engine.processes.functions import ProcessFunctionType
     from aiida.engine.runners import Runner
     from aiida.orm import ProcessNode
 
@@ -53,7 +54,9 @@ def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[
     return inputs or {}
 
 
-def instantiate_process(runner: Runner, process: Process | type[Process] | ProcessBuilder, **inputs) -> Process:
+def instantiate_process(
+    runner: Runner, process: Process | type[Process] | ProcessBuilder | ProcessFunctionType, **inputs
+) -> Process:
     """Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
 
@@ -78,8 +81,8 @@ def instantiate_process(runner: Runner, process: Process | type[Process] | Proce
         process_class = builder.process_class
         inputs.update(**builder._inputs(prune=True))
     elif is_process_function(process):
-        process_class = process.process_class  # type: ignore[attr-defined]
-    elif inspect.isclass(process) and issubclass(process, Process):  # type: ignore[redundant-expr]
+        process_class = process.process_class  # type: ignore[union-attr]
+    elif inspect.isclass(process) and issubclass(process, Process):
         process_class = process
     else:
         raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')

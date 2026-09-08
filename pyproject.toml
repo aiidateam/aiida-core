@@ -31,6 +31,7 @@ classifiers = [
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
+  'ase~=3.21',
   "asyncssh~=2.22.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
@@ -86,6 +87,7 @@ requires-python = '>=3.10'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
 'core.unstash' = 'aiida.calculations.unstash:UnstashCalculation'
+'pythonjob.pythonjob' = 'aiida.pythonjob.calculations.pythonjob:PythonJob'
 
 [project.entry-points.'aiida.calculations.importers']
 'core.arithmetic.add' = 'aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter'
@@ -146,6 +148,11 @@ requires-python = '>=3.10'
 'core.str' = 'aiida.orm.nodes.data.str:Str'
 'core.structure' = 'aiida.orm.nodes.data.structure:StructureData'
 'core.upf' = 'aiida.orm.nodes.data.upf:UpfData'
+'pythonjob.ase.atoms.Atoms' = 'aiida.pythonjob.data.atoms:AtomsData'
+'pythonjob.builtins.NoneType' = 'aiida.pythonjob.data.common_data:NoneData'
+'pythonjob.builtins.function' = 'aiida.pythonjob.data.common_data:FunctionData'
+'pythonjob.datetime.datetime' = 'aiida.pythonjob.data.common_data:DateTimeData'
+'pythonjob.jsonable_data' = 'aiida.pythonjob.data.jsonable_data:JsonableData'
 
 [project.entry-points.'aiida.groups']
 'core' = 'aiida.orm.groups:Group'
@@ -178,6 +185,7 @@ requires-python = '>=3.10'
 'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
 'core.shell' = 'aiida.parsers.plugins.shell.parser:ShellParser'
 'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'
+'pythonjob.pythonjob' = 'aiida.pythonjob.parsers.pythonjob:PythonJobParser'
 
 [project.entry-points.'aiida.schedulers']
 'core.direct' = 'aiida.schedulers.plugins.direct:DirectScheduler'
@@ -545,7 +553,8 @@ exclude = [
   'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py',
   # Vendored subsystems, kept verbatim in the mechanical move; a follow-up applies aiida-core
   # lint/format and removes these exclusions.
-  'src/aiida/node_graph/'
+  'src/aiida/node_graph/',
+  'src/aiida/pythonjob/'
 ]
 line-length = 120
 

@@ -34,6 +34,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "archive-path" },
+    { name = "ase" },
     { name = "asyncssh" },
     { name = "chardet", marker = "sys_platform == 'win32'" },
     { name = "circus" },
@@ -224,6 +225,7 @@ requires-dist = [
     { name = "aiida-workgraph", marker = "extra == 'tutorials'", specifier = ">=0.9.0" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
+    { name = "ase", specifier = "~=3.21" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.21" },
     { name = "asyncssh", specifier = "~=2.22.0" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.20" },

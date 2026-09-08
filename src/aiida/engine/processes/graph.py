@@ -168,8 +168,16 @@ class GraphHandle:
 
         return builder.finish(returned)
 
-    def get_inputs(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-        """Return the inputs with which to launch the graph declared for these arguments."""
+    @property
+    def process_class(self) -> type[GraphProcess]:
+        """Return the process that runs a graph."""
+        return GraphProcess
+
+    def get_launch_inputs(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+        """Return the inputs with which to launch the graph declared for these arguments.
+
+        A graph declares what to run for the given arguments, and that declaration is what the process takes.
+        """
         from aiida.orm import Dict
 
         return {GraphProcess._DAG: Dict(dict=self.build(*args, **kwargs).to_dict())}

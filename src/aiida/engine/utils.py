@@ -24,6 +24,7 @@ from aiida.engine.processes.events import get_or_create_event_loop
 if TYPE_CHECKING:
     from aiida.engine.processes import Process, ProcessBuilder
     from aiida.engine.processes.functions import ProcessFunctionType
+    from aiida.engine.processes.graph import GraphHandle
     from aiida.engine.runners import Runner
     from aiida.orm import ProcessNode
 
@@ -55,7 +56,7 @@ def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[
 
 
 def instantiate_process(
-    runner: Runner, process: Process | type[Process] | ProcessBuilder | ProcessFunctionType, **inputs
+    runner: Runner, process: Process | type[Process] | ProcessBuilder | ProcessFunctionType | GraphHandle, **inputs
 ) -> Process:
     """Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
@@ -63,6 +64,7 @@ def instantiate_process(
         * Process instance: will simply return the instance
         * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
         * Process class: will instantiate with the specified inputs
+        * graph: will build the graph it declares for the inputs, and instantiate the process that runs it
 
     If anything else is passed, a ValueError will be raised
 
@@ -70,6 +72,8 @@ def instantiate_process(
     :param inputs: the inputs for the process to be instantiated with
     """
     from aiida.engine.processes import Process, ProcessBuilder
+    from aiida.engine.processes.dag import GraphProcess
+    from aiida.engine.processes.graph import GraphHandle
 
     if isinstance(process, Process):
         assert not inputs
@@ -80,6 +84,10 @@ def instantiate_process(
         builder = process
         process_class = builder.process_class
         inputs.update(**builder._inputs(prune=True))
+    elif isinstance(process, GraphHandle):
+        # A graph declares what to run for the given inputs, and that declaration is what the process takes.
+        inputs = process.get_inputs(**inputs)
+        process_class = GraphProcess
     elif is_process_function(process):
         process_class = process.process_class  # type: ignore[union-attr]
     elif inspect.isclass(process) and issubclass(process, Process):

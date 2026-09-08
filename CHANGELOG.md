@@ -103,6 +103,33 @@ Every task whose inputs are ready is submitted, so it is a process in its own ri
 The graph keeps only the names it dispatched and the ones that have finished, carried in its checkpoint.
 A graph whose links contain a cycle, or that refers to a port a task does not have, is refused where it is declared.
 
+#### Write a graph of tasks as ordinary Python
+
+The `graph` decorator declares a graph by running its body once with the tasks recording themselves instead of running.
+
+```python
+from aiida.engine import graph, run_get_node, task
+
+
+@task(outputs=['total'])
+def add(x, y):
+    return x + y
+
+
+@graph
+def add_twice(x, y):
+    first = add(x=x, y=y)
+    return add(x=first.total, y=y)
+
+
+results, node = run_get_node(add_twice, x=1, y=2)
+```
+
+Passing the output of one task into another is what records the dependency between them, and what the function returns becomes the outputs of the graph.
+A graph is launched by passing it to `run` or `submit`, like any other process; use `.build(...)` for the declaration on its own.
+A task used twice gets a distinct name for each use, so both can be addressed and linked.
+A task with a single output can be passed whole; one with several asks for the output to be named.
+
 ### Behavior changes
 
 ### Fixes

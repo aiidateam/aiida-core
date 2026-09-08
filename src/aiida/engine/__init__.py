@@ -47,6 +47,7 @@ __all__ = (
     'JobManager',
     'JobsList',
     'Launchable',
+    'MapTask',
     'ObjectLoader',
     'OutputPort',
     'PastException',

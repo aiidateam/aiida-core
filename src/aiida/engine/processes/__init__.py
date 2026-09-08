@@ -48,6 +48,7 @@ __all__ = (
     'InputPort',
     'JobManager',
     'JobsList',
+    'MapTask',
     'OutputPort',
     'PortNamespace',
     'Process',

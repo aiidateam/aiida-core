@@ -16,7 +16,7 @@ import typing as t
 from collections import Counter
 from dataclasses import dataclass
 
-from aiida.engine.processes.dag import Dependency, GraphProcess, GraphSpec, GraphTask, MapTask
+from aiida.engine.processes.dag import Dependency, Endpoint, GraphProcess, GraphSpec, GraphTask, MapTask
 from aiida.engine.processes.task import ACTIVE_BUILDER, TaskHandle
 
 __all__ = (
@@ -247,32 +247,45 @@ class GraphBuilder:
             outputs=self._declared_outputs(returned),
         )
 
-    def _declared_outputs(self, returned: t.Any) -> dict[str, tuple[str, str]]:
+    def _declared_outputs(self, returned: t.Any) -> dict[str, Endpoint]:
         """Return the outputs of the graph, from what its function returned."""
         if returned is None:
             return {}
 
         if isinstance(returned, dict):
-            references = {}
+            return {name: self._output_source(value, name) for name, value in returned.items()}
 
-            for name, value in returned.items():
-                reference = _as_reference(value)
+        source = self._as_source(returned)
 
-                if reference is None:
-                    raise ValueError(f'graph output `{name}` is not the output of a task.')
-
-                references[name] = (reference.task, reference.port)
-
-            return references
-
-        reference = _as_reference(returned)
-
-        if reference is None:
+        if source is None:
             raise ValueError(
-                'a graph returns the outputs of its tasks, so it has to return an output, or a dictionary of them.'
+                'a graph returns the outputs of its tasks, or its own inputs, so it has to return one of those, '
+                'or a dictionary of them.'
             )
 
-        return {reference.port: (reference.task, reference.port)}
+        return {source.port: source}
+
+    def _output_source(self, value: t.Any, name: str) -> Endpoint:
+        """Return where one named output of the graph comes from.
+
+        :raises ValueError: if the value is neither the output of a task nor an input of the graph.
+        """
+        source = self._as_source(value)
+
+        if source is None:
+            raise ValueError(f'graph output `{name}` is not the output of a task, nor an input of the graph.')
+
+        return source
+
+    @staticmethod
+    def _as_source(value: t.Any) -> Endpoint | None:
+        """Return the output source a returned value stands for, or ``None`` if it stands for neither."""
+        if isinstance(value, GraphInput):
+            return Endpoint(task=None, port=value.name)
+
+        reference = _as_reference(value)
+
+        return None if reference is None else Endpoint(task=reference.task, port=reference.port)
 
 
 class GraphHandle:

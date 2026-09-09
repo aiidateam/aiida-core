@@ -212,13 +212,13 @@ class ZeromqBroker(Broker):
         return self._resources.communicator
 
     def iterate_tasks(self) -> t.Iterator[t.Any]:
-        queue_path = self._storage_path / 'tasks'
-        if not queue_path.exists():
-            return
-
-        queue = PersistentQueue(queue_path)
-        for task_id, task_data in queue.get_all_pending():
-            yield ZeromqIncomingTask(task_id, task_data, queue)
+        queue_paths = sorted(self._storage_path.glob('tasks*'))
+        for queue_path in queue_paths:
+            if not queue_path.is_dir():
+                continue
+            queue = PersistentQueue(queue_path)
+            for task_id, task_data in queue.get_all_pending():
+                yield ZeromqIncomingTask(task_id, task_data, queue)
 
     def close(self) -> None:
         self._resources.release()

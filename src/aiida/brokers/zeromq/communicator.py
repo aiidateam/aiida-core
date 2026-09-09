@@ -25,12 +25,13 @@ from concurrent.futures import Future
 from types import TracebackType
 from typing import Any, TypeVar
 
-import kiwipy
 import zmq
 import zmq.asyncio
 
+import kiwipy
 from aiida.brokers.zeromq.defaults import LOOP_JOIN_TIMEOUT, LOOP_TIMEOUT
 from aiida.brokers.zeromq.protocol import (
+    DEFAULT_TASK_QUEUE,
     MessageType,
     decode_message,
     encode_message,
@@ -92,6 +93,8 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
         # Subscribers (only accessed from the loop thread)
         self._task_subscribers: dict[str, Callable[..., Any]] = {}
+        # Task queue each local task subscriber consumes from
+        self._task_subscriber_queues: dict[str, str] = {}
         self._rpc_subscribers: dict[str, Callable[..., Any]] = {}
         self._broadcast_subscribers: dict[str, Callable[..., Any]] = {}
 
@@ -324,11 +327,16 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
     # Task operations (kiwipy interface)
     # ------------------------------------------------------------------
 
-    def task_send(self, task: Any, no_reply: bool = False) -> Future[Any] | None:
+    def task_send(self, task: Any, no_reply: bool = False, *, queue: str = DEFAULT_TASK_QUEUE) -> Future[Any] | None:
+        """Send a task to a named broker queue.
+
+        :param queue: name of the broker task queue to route this task to.
+            Subscribers only receive tasks from queues they subscribed to.
+        """
         self._ensure_open()
 
         def _do() -> Future[Any] | None:
-            msg = make_task_message(task, self._client_id, no_reply)
+            msg = make_task_message(task, self._client_id, no_reply, queue=queue)
             task_id = msg['id']
             pending: Future[Any] | None = None
             if not no_reply:
@@ -341,20 +349,32 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
         return self._run_on_loop(_do)
 
-    def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    def add_task_subscriber(
+        self,
+        subscriber: Callable[..., Any],
+        identifier: str | None = None,
+        *,
+        queue: str = DEFAULT_TASK_QUEUE,
+    ) -> str:
+        """Subscribe to tasks from a named broker queue.
+
+        :param queue: only tasks sent to this queue are delivered here.
+        """
         self._ensure_open()
 
         def _do() -> str:
             ident = identifier or f'task-{uuid.uuid4().hex[:8]}'
             self._task_subscribers[ident] = subscriber
+            self._task_subscriber_queues[ident] = queue
             msg = make_subscribe_message(
                 MessageType.SUBSCRIBE_TASK,
                 self._client_id,
                 ident,
                 prefetch_count=self._task_prefetch_count,
+                queue=queue,
             )
             self._send(msg)
-            _LOGGER.info('Added task subscriber: %s', ident)
+            _LOGGER.info('Added task subscriber: %s (queue: %s)', ident, queue)
             return ident
 
         return self._run_on_loop(_do)
@@ -363,6 +383,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         def _do() -> None:
             if identifier in self._task_subscribers:
                 del self._task_subscribers[identifier]
+                self._task_subscriber_queues.pop(identifier, None)
                 if not self._closed:
                     msg = make_subscribe_message(MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier)
                     self._send(msg)
@@ -524,10 +545,13 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         task_id = msg['id']
         body = msg.get('body')
         no_reply = msg.get('no_reply', False)
+        queue = msg.get('queue') or DEFAULT_TASK_QUEUE
 
         _LOGGER.debug('Handling task: %s', task_id)
 
         for identifier, subscriber in self._task_subscribers.items():
+            if self._task_subscriber_queues.get(identifier, DEFAULT_TASK_QUEUE) != queue:
+                continue
             try:
                 result = subscriber(self, body)
 

@@ -25,7 +25,6 @@ from collections.abc import Callable, Hashable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 import kiwipy
-
 from aiida.common import loaders
 from aiida.engine.processes import events, persistence
 from aiida.engine.processes.generic import futures
@@ -165,9 +164,13 @@ class LoopCommunicator(kiwipy.Communicator):
     def remove_rpc_subscriber(self, identifier: ID_TYPE) -> None:
         return self._communicator.remove_rpc_subscriber(identifier)
 
-    def add_task_subscriber(self, subscriber: TaskSubscriber, identifier: ID_TYPE | None = None) -> ID_TYPE:
+    def add_task_subscriber(
+        self, subscriber: TaskSubscriber, identifier: ID_TYPE | None = None, queue: str | None = None
+    ) -> ID_TYPE:
         converted = convert_to_comm(subscriber, self._loop)
-        return self._communicator.add_task_subscriber(converted, identifier)
+        if queue is None:
+            return self._communicator.add_task_subscriber(converted, identifier)
+        return self._communicator.add_task_subscriber(converted, identifier, queue=queue)
 
     def remove_task_subscriber(self, identifier: ID_TYPE) -> None:
         return self._communicator.remove_task_subscriber(identifier)
@@ -179,8 +182,10 @@ class LoopCommunicator(kiwipy.Communicator):
     def remove_broadcast_subscriber(self, identifier: ID_TYPE) -> None:
         return self._communicator.remove_broadcast_subscriber(identifier)
 
-    def task_send(self, task: Any, no_reply: bool = False) -> kiwipy.Future:
-        return self._communicator.task_send(task, no_reply)
+    def task_send(self, task: Any, no_reply: bool = False, queue: str | None = None) -> kiwipy.Future:
+        if queue is None:
+            return self._communicator.task_send(task, no_reply)
+        return self._communicator.task_send(task, no_reply, queue=queue)
 
     def rpc_send(self, recipient_id: ID_TYPE, msg: Any) -> kiwipy.Future:
         return self._communicator.rpc_send(recipient_id, msg)
@@ -526,14 +531,19 @@ class RemoteProcessThreadController:
     A class that can be used to control and launch remote processes
     """
 
-    def __init__(self, communicator: kiwipy.Communicator):
+    def __init__(self, communicator: kiwipy.Communicator, task_queue: str | None = None):
         """
         Create a new process controller
 
         :param communicator: the communicator to use
+        :param task_queue: default task queue for submitted tasks. ``None`` keeps the
+            broker default queue; set it to a scheduler queue so submissions are gated
+            by the scheduler instead of going straight to workers. Requires a broker
+            with named task queues (ZeroMQ).
 
         """
         self._communicator = communicator
+        self._task_queue = task_queue
 
     def get_status(self, pid: PID_TYPE) -> kiwipy.Future:
         """Get the status of a process with the given PID.
@@ -603,10 +613,15 @@ class RemoteProcessThreadController:
         self._communicator.broadcast_send(msg, subject=Intent.KILL)
 
     def continue_process(
-        self, pid: PID_TYPE, tag: str | None = None, nowait: bool = False, no_reply: bool = False
+        self,
+        pid: PID_TYPE,
+        tag: str | None = None,
+        nowait: bool = False,
+        no_reply: bool = False,
+        queue: str | None = None,
     ) -> None | PID_TYPE | ProcessResult:
         message = create_continue_body(pid=pid, tag=tag, nowait=nowait)
-        return self.task_send(message, no_reply=no_reply)
+        return self.task_send(message, no_reply=no_reply, queue=queue)
 
     def launch_process(
         self,
@@ -617,6 +632,7 @@ class RemoteProcessThreadController:
         loader: loaders.ObjectLoader | None = None,
         nowait: bool = False,
         no_reply: bool = False,
+        queue: str | None = None,
     ) -> None | PID_TYPE | ProcessResult:
         """
         Launch the process
@@ -628,10 +644,11 @@ class RemoteProcessThreadController:
         :param loader: the class loader to use
         :param nowait: if True only return when the process finishes
         :param no_reply: don't send a reply to the sender
+        :param queue: task queue to submit to, defaulting to the controller's ``task_queue``.
         :return: the pid of the created process or the outputs (if nowait=False)
         """
         message = create_launch_body(process_class, init_args, init_kwargs, persist, loader, nowait)
-        return self.task_send(message, no_reply=no_reply)
+        return self.task_send(message, no_reply=no_reply, queue=queue)
 
     def execute_process(
         self,
@@ -673,15 +690,19 @@ class RemoteProcessThreadController:
         create_future.add_done_callback(on_created)
         return execute_future
 
-    def task_send(self, message: Any, no_reply: bool = False) -> Any | None:
+    def task_send(self, message: Any, no_reply: bool = False, queue: str | None = None) -> Any | None:
         """
         Send a task to be performed using the communicator
 
         :param message: the task message
         :param no_reply: if True, this call will be fire-and-forget, i.e. no return value
+        :param queue: task queue to submit to, defaulting to the controller's ``task_queue``.
         :return: the response from the remote side (if no_reply=False)
         """
-        return self._communicator.task_send(message, no_reply=no_reply)
+        effective_queue = queue if queue is not None else self._task_queue
+        if effective_queue is None:
+            return self._communicator.task_send(message, no_reply=no_reply)
+        return self._communicator.task_send(message, no_reply=no_reply, queue=effective_queue)
 
 
 class ProcessLauncher:

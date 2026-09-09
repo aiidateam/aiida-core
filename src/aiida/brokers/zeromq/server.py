@@ -26,7 +26,7 @@ from typing import Any
 import zmq
 
 from aiida.brokers.zeromq.defaults import HEARTBEAT_IVL, HEARTBEAT_TIMEOUT, POLL_TIMEOUT
-from aiida.brokers.zeromq.protocol import MessageType, decode_message, encode_message
+from aiida.brokers.zeromq.protocol import DEFAULT_TASK_QUEUE, MessageType, decode_message, encode_message
 from aiida.brokers.zeromq.queue import PersistentQueue
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class ZeromqBrokerServer:
     Uses a single ROUTER socket for all communication (tasks, RPC, broadcasts).
 
     The server maintains:
-    - A persistent task queue for reliable task delivery
+    - Named persistent task queues for reliable task delivery
     - RPC subscriber registry for routing RPC calls
     - Task subscriber registry for distributing tasks
     - Per-worker prefetch limits and in flight task counts, which throttle dispatch
@@ -76,12 +76,21 @@ class ZeromqBrokerServer:
         self._poller: zmq.Poller | None = None
         self._monitor: zmq.Socket | None = None  # type: ignore[type-arg]
 
-        # Task queue with persistence
-        self._task_queue = PersistentQueue(self._storage_path / 'tasks')
+        # Named persistent task queues. The default queue keeps the legacy
+        # ``tasks`` storage directory; additional queues (e.g. a scheduler
+        # submission queue) get ``tasks-<name>`` directories on first use.
+        self._task_queues: dict[str, PersistentQueue] = {}
+        self._task_queue = self._get_queue(DEFAULT_TASK_QUEUE)
+        # task_id -> queue name, for routing ACKs/NACKs to the owning queue
+        self._task_queue_names: dict[str, str] = {}
 
         # Subscriber registries
         # task_subscribers: identifier -> client_identity (bytes)
         self._task_subscribers: dict[str, bytes] = {}
+        # task_subscription_queues: identifier -> queue name
+        self._task_subscription_queues: dict[str, str] = {}
+        # worker_queues: client_identity -> subscribed queue names
+        self._worker_queues: dict[bytes, set[str]] = {}
         # Available task workers (ready to receive tasks)
         self._available_workers: deque[bytes] = deque()
         # rpc_subscribers: identifier -> client_identity (bytes)
@@ -285,10 +294,27 @@ class ZeromqBrokerServer:
         except Exception as exc:
             _LOGGER.exception('Error handling router message: %s', exc)
 
+    def _get_queue(self, queue_name: str | None) -> PersistentQueue:
+        """Return the persistent queue for a name, creating it on first use.
+
+        :raises ValueError: If the queue name is not a safe directory fragment.
+        """
+        name = queue_name or DEFAULT_TASK_QUEUE
+        if name not in self._task_queues:
+            if name != DEFAULT_TASK_QUEUE and (
+                not name.replace('-', '').replace('_', '').isalnum() or name.startswith(('-', '_'))
+            ):
+                msg = f'Invalid task queue name: {name!r}'
+                raise ValueError(msg)
+            dirname = 'tasks' if name == DEFAULT_TASK_QUEUE else f'tasks-{name}'
+            self._task_queues[name] = PersistentQueue(self._storage_path / dirname)
+        return self._task_queues[name]
+
     def _handle_task(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle incoming task message.
 
-        Queue the task and try to dispatch to an available worker.
+        Queue the task on its named queue and try to dispatch to an available
+        worker subscribed to that queue.
 
         When the sender expects a reply (``no_reply=False``), an immediate
         acknowledgment response is sent back as soon as the task is persisted
@@ -301,6 +327,7 @@ class ZeromqBrokerServer:
         task_id = msg['id']
         sender = msg.get('sender', '')
         no_reply = msg.get('no_reply', False)
+        queue_name = msg.get('queue') or DEFAULT_TASK_QUEUE
 
         # Store task in persistent queue
         task_data = {
@@ -309,9 +336,16 @@ class ZeromqBrokerServer:
             'sender_identity': identity.hex(),
             'body': msg.get('body'),
             'no_reply': no_reply,
+            'queue': queue_name,
             'timestamp': time.time(),
         }
-        self._task_queue.push(task_id, task_data)
+        try:
+            queue = self._get_queue(queue_name)
+        except ValueError:
+            _LOGGER.warning('Dropping task %s with invalid queue name: %r', task_id, queue_name)
+            return
+        queue.push(task_id, task_data)
+        self._task_queue_names[task_id] = queue_name
 
         # Send an immediate acknowledgment to the sender so its Future
         # resolves without waiting for a worker (matches RabbitMQ semantics).
@@ -348,7 +382,9 @@ class ZeromqBrokerServer:
                     task_id,
                 )
                 return
-            self._task_queue.ack(task_id)
+            if not self._settle_task(task_id, requeue=False):
+                _LOGGER.warning('Cannot ack task %s: not found on any queue', task_id)
+                return
             self._release_task(task_id)
             _LOGGER.debug('Task acknowledged: %s', task_id)
 
@@ -368,7 +404,9 @@ class ZeromqBrokerServer:
                     task_id,
                 )
                 return
-            self._task_queue.nack(task_id, requeue=True)
+            if not self._settle_task(task_id, requeue=True):
+                _LOGGER.warning('Cannot nack task %s: not found on any queue', task_id)
+                return
             self._release_task(task_id)
             _LOGGER.debug('Task nacked and requeued: %s', task_id)
 
@@ -455,12 +493,20 @@ class ZeromqBrokerServer:
             return
 
         self._task_subscribers[identifier] = identity
+        queue_name = msg.get('queue') or DEFAULT_TASK_QUEUE
+        self._task_subscription_queues[identifier] = queue_name
+        self._worker_queues.setdefault(identity, set()).add(queue_name)
         # The prefetch limit applies to the connection, like AMQP's channel-level
         # ``basic.qos``, so the most recent declaration for this identity wins.
         prefetch = msg.get('prefetch_count')
         self._worker_prefetch[identity] = prefetch if prefetch and prefetch > 0 else None
         self._mark_worker_available(identity)
-        _LOGGER.info('Task subscriber registered: %s (prefetch: %s)', identifier, self._worker_prefetch[identity])
+        _LOGGER.info(
+            'Task subscriber registered: %s (queue: %s, prefetch: %s)',
+            identifier,
+            queue_name,
+            self._worker_prefetch[identity],
+        )
 
         # Try to dispatch any pending tasks
         self._dispatch_pending_tasks()
@@ -480,6 +526,17 @@ class ZeromqBrokerServer:
         identifier = msg.get('identifier') or msg.get('sender')
         if identifier and identifier in self._task_subscribers:
             worker_identity = self._task_subscribers.pop(identifier)
+            self._task_subscription_queues.pop(identifier, None)
+            # Recompute the connection's queues from its remaining subscriptions
+            remaining = {
+                self._task_subscription_queues[ident]
+                for ident, wid in self._task_subscribers.items()
+                if wid == worker_identity
+            }
+            if remaining:
+                self._worker_queues[worker_identity] = remaining
+            else:
+                self._worker_queues.pop(worker_identity, None)
             # Forget the prefetch limit once the connection has no task subscriptions left
             if worker_identity not in self._task_subscribers.values():
                 self._worker_prefetch.pop(worker_identity, None)
@@ -492,49 +549,100 @@ class ZeromqBrokerServer:
             del self._rpc_subscribers[identifier]
             _LOGGER.info('RPC subscriber removed: %s', identifier)
 
-    def _dispatch_pending_tasks(self) -> None:
-        """Dispatch pending tasks to workers that have a free slot."""
-        while self._available_workers and not self._task_queue.is_empty():
-            worker_identity = self._available_workers.popleft()
+    def _settle_task(self, task_id: str, *, requeue: bool) -> bool:
+        """Ack a task (or requeueing-nack it) on its owning queue.
 
-            # Verify worker is still subscribed
+        The recorded owner is tried first; remaining queues are probed as a
+        fallback. The fallback matters after a broker restart (in-flight
+        tasks are recovered from disk with an empty owner map) and keeps
+        direct queue manipulation working. ``ack``/``nack`` are side-effect
+        free on queues that do not hold the task, so probing is safe.
+
+        :return: True if a queue held (and settled) the task.
+        """
+        names = []
+        if (recorded := self._task_queue_names.get(task_id)) is not None:
+            names.append(recorded)
+        names.extend(name for name in self._task_queues if name not in names)
+        for name in names:
+            queue = self._task_queues[name]
+            settled = queue.nack(task_id, requeue=True) if requeue else queue.ack(task_id)
+            if settled:
+                if requeue:
+                    self._task_queue_names[task_id] = name
+                else:
+                    self._task_queue_names.pop(task_id, None)
+                return True
+        return False
+
+    def _find_worker(self, queue_name: str) -> bytes | None:
+        """Return an available worker subscribed to a queue, or ``None``.
+
+        Scans the availability deque once, preserving the order of workers
+        that cannot take work from this queue.
+        """
+        for _ in range(len(self._available_workers)):
+            worker_identity = self._available_workers.popleft()
+            # Verify worker is still subscribed (to anything at all)
             if worker_identity not in self._task_subscribers.values():
                 continue
-
+            queues = self._worker_queues.get(worker_identity)
+            if queues is None:
+                # Subscription predates queue tracking (e.g. registries poked
+                # directly in tests): assume the default queue.
+                queues = {DEFAULT_TASK_QUEUE}
+            if queue_name not in queues:
+                self._available_workers.append(worker_identity)
+                continue
             # Guard against stale entries for a worker that has since filled up
             if not self._has_capacity(worker_identity):
+                self._available_workers.append(worker_identity)
                 continue
+            return worker_identity
+        return None
 
-            # Get next task
-            result = self._task_queue.pop()
-            if not result:
-                self._available_workers.appendleft(worker_identity)
-                break
+    def _dispatch_pending_tasks(self) -> None:
+        """Dispatch pending tasks to workers subscribed to each queue."""
+        # One pass per call is enough: ``_poll_once`` invokes dispatch on
+        # every loop iteration, so no queue can starve.
+        for queue_name, task_queue in self._task_queues.items():
+            while not task_queue.is_empty():
+                worker_identity = self._find_worker(queue_name)
+                if worker_identity is None:
+                    break
 
-            task_id, task_data = result
+                # Get next task
+                result = task_queue.pop()
+                if not result:
+                    self._mark_worker_available(worker_identity)
+                    break
 
-            # Send task to worker
-            task_msg = {
-                'type': MessageType.TASK.value,
-                'id': task_id,
-                'body': task_data.get('body'),
-                'no_reply': task_data.get('no_reply', False),
-            }
-            try:
-                self._send_to_client(worker_identity, task_msg)
-            except zmq.ZMQError:
-                # Worker disconnected — requeue the task and remove the
-                # dead worker so we don't keep trying to reach it.
-                _LOGGER.warning('Worker %s disconnected, requeuing task %s', worker_identity.hex()[:8], task_id)
-                self._task_queue.nack(task_id, requeue=True)
-                self._remove_dead_worker(worker_identity)
-                continue
-            self._assign_task(task_id, worker_identity)
-            # Re-add the worker so it can receive more tasks concurrently, but
-            # only while it stays below its declared prefetch limit (matching
-            # RMQ's multi-prefetch behaviour).  The ACK frees the slot again.
-            self._mark_worker_available(worker_identity)
-            _LOGGER.debug('Dispatched task %s to worker', task_id)
+                task_id, task_data = result
+                self._task_queue_names[task_id] = queue_name
+
+                # Send task to worker
+                task_msg = {
+                    'type': MessageType.TASK.value,
+                    'id': task_id,
+                    'body': task_data.get('body'),
+                    'no_reply': task_data.get('no_reply', False),
+                    'queue': queue_name,
+                }
+                try:
+                    self._send_to_client(worker_identity, task_msg)
+                except zmq.ZMQError:
+                    # Worker disconnected — requeue the task and remove the
+                    # dead worker so we don't keep trying to reach it.
+                    _LOGGER.warning('Worker %s disconnected, requeuing task %s', worker_identity.hex()[:8], task_id)
+                    task_queue.nack(task_id, requeue=True)
+                    self._remove_dead_worker(worker_identity)
+                    continue
+                self._assign_task(task_id, worker_identity)
+                # Re-add the worker so it can receive more tasks concurrently, but
+                # only while it stays below its declared prefetch limit (matching
+                # RMQ's multi-prefetch behaviour).  The ACK frees the slot again.
+                self._mark_worker_available(worker_identity)
+                _LOGGER.debug('Dispatched task %s to worker on queue %s', task_id, queue_name)
 
     def _remove_dead_worker(self, identity: bytes) -> None:
         """Remove a disconnected worker from all registries and requeue its tasks."""
@@ -542,11 +650,12 @@ class ZeromqBrokerServer:
         dead_tasks = [tid for tid, wid in self._task_worker_assignments.items() if wid == identity]
         for task_id in dead_tasks:
             self._release_task(task_id)
-            self._task_queue.nack(task_id, requeue=True)
+            self._settle_task(task_id, requeue=True)
             _LOGGER.warning('Requeued task %s from dead worker %s', task_id, identity.hex()[:8])
 
         self._worker_prefetch.pop(identity, None)
         self._worker_load.pop(identity, None)
+        self._worker_queues.pop(identity, None)
 
         # Remove from task subscribers
         dead_keys = [k for k, v in self._task_subscribers.items() if v == identity]
@@ -674,19 +783,20 @@ class ZeromqBrokerServer:
         """Get current broker status."""
         return {
             'running': self._running,
-            'pending_tasks': self._task_queue.size(),
-            'processing_tasks': self._task_queue.processing_count(),
+            'pending_tasks': sum(queue.size() for queue in self._task_queues.values()),
+            'processing_tasks': sum(queue.processing_count() for queue in self._task_queues.values()),
             'task_subscribers': len(self._task_subscribers),
             'rpc_subscribers': len(self._rpc_subscribers),
             'available_workers': len(self._available_workers),
             'in_flight_tasks': len(self._task_worker_assignments),
             'pending_rpc_responses': len(self._pending_rpc_responses),
+            'task_queues': sorted(self._task_queues),
         }
 
     def get_pending_tasks(self) -> list[tuple[str, dict[str, Any]]]:
-        """Get all pending tasks."""
-        return self._task_queue.get_all_pending()
+        """Get all pending tasks across all queues."""
+        return [task for queue in self._task_queues.values() for task in queue.get_all_pending()]
 
     def get_processing_tasks(self) -> list[tuple[str, dict[str, Any]]]:
-        """Get all tasks currently being processed."""
-        return self._task_queue.get_all_processing()
+        """Get all tasks currently being processed across all queues."""
+        return [task for queue in self._task_queues.values() for task in queue.get_all_processing()]

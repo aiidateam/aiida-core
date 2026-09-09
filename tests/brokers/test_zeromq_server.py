@@ -706,3 +706,130 @@ class TestZeromqBrokerServerWithSockets:
         finally:
             dealer.close()
             ctx.term()
+
+
+class TestNamedTaskQueues:
+    """Tests for named task queue routing (scheduler queue vs worker queue)."""
+
+    @pytest.fixture
+    def server(self, tmp_path):
+        return ZeromqBrokerServer(storage_path=tmp_path / 'storage', sockets_path=tmp_path / 'sockets')
+
+    def _subscribe(self, server, identity: bytes, identifier: str, queue: str | None = None):
+        msg: dict = {'identifier': identifier, 'prefetch_count': 10}
+        if queue is not None:
+            msg['queue'] = queue
+        server._handle_subscribe_task(identity, msg)
+
+    def test_subscribe_records_queue(self, server):
+        """Test subscribing declares queue membership."""
+        self._subscribe(server, b'sched-1', 'sched', queue='scheduler')
+        assert server._task_subscription_queues['sched'] == 'scheduler'
+        assert server._worker_queues[b'sched-1'] == {'scheduler'}
+
+    def test_subscribe_defaults_to_default_queue(self, server):
+        """Test a subscription without a queue joins the default queue."""
+        self._subscribe(server, b'w-1', 'worker')
+        assert server._task_subscription_queues['worker'] == 'default'
+
+    def test_task_routed_to_subscribed_queue_only(self, server):
+        """Test a task on one queue is never dispatched to another queue's workers."""
+        self._subscribe(server, b'w-1', 'worker')  # default queue
+        self._subscribe(server, b'sched-1', 'sched', queue='scheduler')
+        server._available_workers.extend([b'w-1', b'sched-1'])
+        server._send_to_client = MagicMock()
+
+        server._handle_task(
+            b'client',
+            {
+                'type': MessageType.TASK.value,
+                'id': 'task-sched-1',
+                'sender': 'client',
+                'body': {'cmd': 'submit'},
+                'no_reply': True,
+                'queue': 'scheduler',
+            },
+        )
+
+        server._send_to_client.assert_called_once()
+        target, sent = server._send_to_client.call_args[0]
+        assert target == b'sched-1'
+        assert sent['id'] == 'task-sched-1'
+        assert sent['queue'] == 'scheduler'
+        assert server._task_queues['default'].size() == 0
+
+    def test_task_without_queue_goes_to_default(self, server):
+        """Test legacy tasks without a queue field land on the default queue."""
+        self._subscribe(server, b'w-1', 'worker')
+        server._available_workers.append(b'w-1')
+        server._send_to_client = MagicMock()
+
+        server._handle_task(
+            b'client',
+            {
+                'type': MessageType.TASK.value,
+                'id': 'task-legacy',
+                'sender': 'client',
+                'body': {'cmd': 'run'},
+                'no_reply': True,
+            },
+        )
+
+        server._send_to_client.assert_called_once()
+        assert server._task_queue.size() == 0  # dispatched, not pending
+        assert server._task_queue_names['task-legacy'] == 'default'
+
+    def test_ack_routes_to_owning_queue(self, server):
+        """Test an ACK completes the task on its own queue, not the default."""
+        self._subscribe(server, b'sched-1', 'sched', queue='scheduler')
+        server._available_workers.append(b'sched-1')
+        server._send_to_client = MagicMock()
+        server._handle_task(
+            b'client',
+            {
+                'type': MessageType.TASK.value,
+                'id': 'task-ack-1',
+                'sender': 'client',
+                'body': {},
+                'no_reply': True,
+                'queue': 'scheduler',
+            },
+        )
+        assert server._task_queues['scheduler'].processing_count() == 1
+
+        server._handle_task_ack(b'sched-1', {'task_id': 'task-ack-1', 'sender': 'sched'})
+        assert server._task_queues['scheduler'].processing_count() == 0
+        assert 'task-ack-1' not in server._task_queue_names
+
+    def test_invalid_queue_name_dropped(self, server):
+        """Test a task with an unsafe queue name is dropped, not dispatched."""
+        self._subscribe(server, b'w-1', 'worker')
+        server._available_workers.append(b'w-1')
+        server._send_to_client = MagicMock()
+
+        server._handle_task(
+            b'client',
+            {
+                'type': MessageType.TASK.value,
+                'id': 'task-evil',
+                'sender': 'client',
+                'body': {},
+                'no_reply': True,
+                'queue': '../../etc',
+            },
+        )
+
+        server._send_to_client.assert_not_called()
+        assert 'task-evil' not in server._task_queue_names
+
+    def test_unsubscribe_recomputes_membership(self, server):
+        """Test unsubscribing one identifier keeps the other's queue membership."""
+        self._subscribe(server, b'shared', 'sub-default')
+        self._subscribe(server, b'shared', 'sub-sched', queue='scheduler')
+        assert server._worker_queues[b'shared'] == {'default', 'scheduler'}
+
+        server._handle_unsubscribe_task(b'shared', {'identifier': 'sub-sched'})
+        assert server._worker_queues[b'shared'] == {'default'}
+
+        server._handle_unsubscribe_task(b'shared', {'identifier': 'sub-default'})
+        assert b'shared' not in server._worker_queues

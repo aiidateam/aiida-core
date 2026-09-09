@@ -18,14 +18,20 @@
 
 from aiida.common._core.progress_reporter import *
 from aiida.common._core.utils import *
+from aiida.common.constants import elements
 from aiida.common.datastructures import *
+from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import *
 from aiida.common.extendeddicts import *
+from aiida.common.folders import Folder, SandboxFolder, SubmitTestFolder
+from aiida.common.lang import classproperty, override, type_check
 from aiida.common.links import *
 from aiida.common.log import *
+from aiida.common.warnings import AiidaDeprecationWarning
 
 __all__ = (
     'AIIDA_LOGGER',
+    'AiidaDeprecationWarning',
     'AiidaException',
     'AttributeDict',
     'CalcInfo',
@@ -43,6 +49,7 @@ __all__ = (
     'FailedError',
     'FeatureDisabled',
     'FeatureNotAvailable',
+    'Folder',
     'HashingError',
     'IncompatibleStorageSchema',
     'InputValidationError',
@@ -68,10 +75,12 @@ __all__ = (
     'PluginInternalError',
     'ProfileConfigurationError',
     'RemoteOperationError',
+    'SandboxFolder',
     'StashMode',
     'StorageBackupError',
     'StorageMigrationError',
     'StoringNotAllowed',
+    'SubmitTestFolder',
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
@@ -79,6 +88,11 @@ __all__ = (
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',
+    'classproperty',
+    'elements',
+    'escape_for_bash',
+    'override',
+    'type_check',
     'url2pathname',
     'validate_link_label',
 )

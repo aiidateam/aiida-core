@@ -15,7 +15,7 @@ from typing import TypedDict
 import pytest
 
 from aiida import orm
-from aiida.engine import TaskSpec, ToContext, WorkChain, run_get_node, submit, task
+from aiida.engine import ExecutorReference, TaskSpec, ToContext, WorkChain, run_get_node, submit, task
 
 pytestmark = pytest.mark.requires_broker
 
@@ -122,6 +122,34 @@ def test_outputs_rejects_a_bare_string():
         @task(outputs='result')
         def bare_string(x):
             return x
+
+
+def _written_in_a_script(x, y):
+    """Stand in for a task defined where it cannot be imported, as in a script or a notebook."""
+    return x + y
+
+
+_written_in_a_script.__module__ = 'a_module_that_cannot_be_imported'
+scripted = task(outputs=['total'])(_written_in_a_script)
+
+
+def test_a_task_that_cannot_be_imported_still_runs_where_it_was_defined():
+    """A task written in a script has no importable name, and runs in the session that declared it."""
+    assert scripted.task_spec.executor.module == 'a_module_that_cannot_be_imported'
+    assert scripted.task_spec.executor.load() is scripted.process_class
+
+    results, node = run_get_node(scripted, x=2, y=3)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 5
+
+
+def test_a_task_that_was_never_declared_here_says_so():
+    """A task that neither imports nor was declared in this interpreter reports what to do about it."""
+    reference = ExecutorReference(module='a_module_that_cannot_be_imported', name='never_declared')
+
+    with pytest.raises(ImportError, match='define it in a module that can be imported'):
+        reference.load()
 
 
 def test_submit_standalone():

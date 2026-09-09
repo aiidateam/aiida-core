@@ -78,6 +78,36 @@ def _holds(condition: t.Any) -> bool:
     return bool(condition.value if isinstance(condition, BaseType) else condition)
 
 
+def _at(container: t.Any, path: str) -> t.Any:
+    """Return what sits at a path in something nested, which may name an output inside a namespace.
+
+    :param path: name of a port, or names separated by dots for one inside a nested namespace.
+    """
+    value = container
+
+    for name in path.split('.'):
+        value = value[name]
+
+    return value
+
+
+def _place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
+    """Put a value at a path in the inputs, making the namespaces the path names along the way.
+
+    :raises ValueError: if a name on the way is already a value, which would put an input inside a value.
+    """
+    *namespaces, name = path.split('.')
+    target = inputs
+
+    for namespace in namespaces:
+        target = target.setdefault(namespace, {})
+
+        if not isinstance(target, dict):
+            raise ValueError(f'`{path}` puts an input inside `{namespace}`, which is a value rather than a namespace.')
+
+    target[name] = value
+
+
 def _returned(node: Node) -> dict[str, t.Any]:
     """Return what a graph produced, by the name each output was returned under."""
     return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
@@ -360,11 +390,11 @@ class GraphProcess(Process):
 
             for target, port in targets:
                 if target == task.name:
-                    inputs[port] = given[name]
+                    _place(inputs, port, given[name])
 
         for edge in self.graph.dependencies:
             if edge.target == task.name:
-                inputs[edge.target_port] = self._produced_by(edge.source).outputs[edge.source_port]
+                _place(inputs, edge.target_port, _at(self._produced_by(edge.source).outputs, edge.source_port))
 
         return inputs
 
@@ -457,14 +487,14 @@ class GraphProcess(Process):
                 continue
 
             if not isinstance(self.graph.task(source.task), MapTask):
-                self.out(output, self._produced_by(source.task).outputs[source.port])
+                self.out(output, _at(self._produced_by(source.task).outputs, source.port))
                 continue
 
             # A map produced a result per item, so the output is a namespace holding one entry per item.
             for instance in self._instances[source.task]:
                 self.out(
                     f'{output}.{self._item_key(source.task, instance)}',
-                    load_node(self._done[instance]).outputs[source.port],
+                    _at(load_node(self._done[instance]).outputs, source.port),
                 )
 
         return None

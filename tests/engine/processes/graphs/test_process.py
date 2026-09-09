@@ -24,6 +24,7 @@ from aiida.engine import (
     MapTask,
     ProcessTask,
     SubgraphTask,
+    TaskSpec,
     ToContext,
     WorkChain,
     run_get_node,
@@ -58,6 +59,36 @@ def linear_graph() -> GraphSpec:
         ),
         dependencies=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
         outputs={'total': Endpoint(task='sum', port='total')},
+    )
+
+
+class Combine(WorkChain):
+    """Take two values in one namespace and return their sum in another.
+
+    Nested namespaces are what a `CalcJob` or a `WorkChain` declares, which is where a graph meets them.
+    """
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('pair.left', valid_type=orm.Int)
+        spec.input('pair.right', valid_type=orm.Int)
+        spec.outline(cls.combine)
+        spec.output('sums.total', valid_type=orm.Int)
+
+    def combine(self):
+        self.out('sums.total', orm.Int(self.inputs.pair.left + self.inputs.pair.right).store())
+
+
+def namespaced_graph() -> GraphSpec:
+    """Return a graph wiring a task into and out of the nested namespaces of another."""
+    return GraphSpec(
+        tasks=(
+            ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+            ProcessTask(name='combined', spec=TaskSpec.from_process(Combine), inputs={'pair': {'right': 5}}),
+        ),
+        dependencies=(Dependency(source='start', source_port='total', target='combined', target_port='pair.left'),),
+        outputs={'total': Endpoint(task='combined', port='sums.total')},
     )
 
 
@@ -167,6 +198,33 @@ def test_runs_a_diamond_graph():
 
     assert node.is_finished_ok, node.exit_message
     assert results['total'] == 9  # (2 + 1) + (2 * 3)
+
+
+def test_wires_into_and_out_of_a_nested_namespace():
+    """A dependency can name a port inside a namespace, on either end, which is what a workchain declares."""
+    results, node = run_get_node(GraphProcess, graph=orm.Dict(dict=namespaced_graph().to_dict()))
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 7  # (1 + 1) fed into `pair.left`, plus the 5 given as `pair.right`
+
+
+@pytest.mark.parametrize(
+    'port, expected',
+    [
+        pytest.param('pair.nope', 'not an input of `combined`', id='input'),
+        pytest.param('pair', 'not an input of `combined`', id='namespace-itself'),
+    ],
+)
+def test_a_port_that_is_not_in_a_namespace_is_refused(port, expected):
+    """Naming something a namespace does not declare is refused where the graph is declared."""
+    with pytest.raises(ValueError, match=expected):
+        GraphSpec(
+            tasks=(
+                ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+                ProcessTask(name='combined', spec=TaskSpec.from_process(Combine)),
+            ),
+            dependencies=(Dependency(source='start', source_port='total', target='combined', target_port=port),),
+        )
 
 
 def test_runs_a_graph_placed_in_a_graph():

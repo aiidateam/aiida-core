@@ -61,6 +61,7 @@ __all__ = (
     'ProcessBuilder',
     'ProcessBuilderNamespace',
     'ProcessFuture',
+    'ProcessHandle',
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',

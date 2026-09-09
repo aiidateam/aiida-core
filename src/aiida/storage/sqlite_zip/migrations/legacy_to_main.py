@@ -21,9 +21,9 @@ from archive_path import ZipPath
 from sqlalchemy import insert, select
 from sqlalchemy.exc import IntegrityError
 
+from aiida.common._core.hashing import chunked_file_hash
 from aiida.common._core.progress_reporter import get_progress_reporter
 from aiida.common.exceptions import CorruptStorage, StorageMigrationError
-from aiida.common.hashing import chunked_file_hash
 from aiida.repository.common import File, FileType
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.sqlite_zip.migrations.utils import update_metadata

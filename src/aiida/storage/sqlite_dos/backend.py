@@ -24,8 +24,8 @@ from sqlalchemy import insert, inspect, select
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.common import exceptions
+from aiida.common._core.pydantic import AiiDABaseModel, MetadataField
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity

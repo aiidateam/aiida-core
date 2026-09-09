@@ -21,7 +21,8 @@ from typing import TYPE_CHECKING
 import yaml
 
 from aiida import orm
-from aiida.common import LinkType, timezone
+from aiida.common import LinkType
+from aiida.common._core import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools._dumping.config import DumpMode

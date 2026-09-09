@@ -15,7 +15,7 @@ from typing import Any, Literal
 from tabulate import tabulate
 
 from aiida import orm
-from aiida.common import timezone
+from aiida.common._core import timezone
 from aiida.common._core.progress_reporter import get_progress_reporter
 from aiida.common._core.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
 from aiida.common.exceptions import IncompatibleStorageSchema

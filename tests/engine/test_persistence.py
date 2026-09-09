@@ -12,8 +12,8 @@ import asyncio
 
 import pytest
 
-from aiida.common import loaders
-from aiida.common.processes import ProcessState
+from aiida.common._core import loaders
+from aiida.common._core.processes import ProcessState
 from aiida.engine import Process, run
 from aiida.engine.persistence import AiidaCheckpointPersister
 from aiida.engine.processes.persistence import (

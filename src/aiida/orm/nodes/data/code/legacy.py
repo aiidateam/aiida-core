@@ -13,7 +13,7 @@ import pathlib
 
 from aiida.common import exceptions
 from aiida.common._core.log import override_log_level
-from aiida.common.warnings import warn_deprecation
+from aiida.common._core.warnings import warn_deprecation
 from aiida.orm import Computer
 from aiida.orm.nodes.data.code.abstract import AbstractCode
 from aiida.orm.pydantic import OrmMetadataField

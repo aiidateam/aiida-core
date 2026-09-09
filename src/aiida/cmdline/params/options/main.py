@@ -157,7 +157,7 @@ TRAVERSAL_RULE_HELP_STRING = {
 
 def valid_process_states() -> tuple[str, ...]:
     """Return a list of valid values for the ProcessState enum."""
-    from aiida.common.processes import ProcessState
+    from aiida.common._core.processes import ProcessState
 
     return tuple(state.value for state in ProcessState)
 
@@ -171,7 +171,7 @@ def valid_calc_job_states() -> tuple[str, ...]:
 
 def active_process_states() -> list[str]:
     """Return a list of process states that are considered active."""
-    from aiida.common.processes import ProcessState
+    from aiida.common._core.processes import ProcessState
 
     return [
         ProcessState.CREATED.value,

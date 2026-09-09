@@ -6,7 +6,7 @@ import typing as t
 from typing import cast
 
 from aiida.common import exceptions
-from aiida.common.escaping import sql_string_match
+from aiida.common._core.escaping import sql_string_match
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.orm.querybuilder import QueryBuilder

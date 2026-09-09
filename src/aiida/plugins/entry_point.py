@@ -16,8 +16,8 @@ import traceback
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
-from aiida.common.warnings import warn_deprecation
 from aiida.plugins import factories
 
 if TYPE_CHECKING:

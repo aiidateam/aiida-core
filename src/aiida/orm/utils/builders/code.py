@@ -12,7 +12,7 @@ import enum
 import pathlib
 
 from aiida.common._core.utils import ErrorAccumulator
-from aiida.common.warnings import warn_deprecation
+from aiida.common._core.warnings import warn_deprecation
 from aiida.orm import InstalledCode, PortableCode
 
 

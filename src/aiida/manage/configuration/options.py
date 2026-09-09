@@ -144,7 +144,7 @@ def resolve_deprecated_option_name(option_name: str, stacklevel: int = 4) -> str
     :param stacklevel: stacklevel forwarded to :func:`aiida.common.warnings.warn_deprecation`.
     :return: the name of the option that should actually be used.
     """
-    from aiida.common.warnings import warn_deprecation
+    from aiida.common._core.warnings import warn_deprecation
 
     option = get_option(option_name)
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._core.warnings import warn_deprecation
 from aiida.orm.nodes.data.array.array import ArrayData
 from aiida.orm.pydantic import OrmMetadataField
 

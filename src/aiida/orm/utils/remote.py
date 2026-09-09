@@ -109,7 +109,7 @@ def get_calcjob_remote_paths(
     """
     from datetime import timedelta
 
-    from aiida.common import timezone
+    from aiida.common._core import timezone
     from aiida.orm import CalcJobNode
 
     filters_calc: dict[str, t.Any] = {}

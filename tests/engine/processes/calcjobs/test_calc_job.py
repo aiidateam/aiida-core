@@ -23,7 +23,7 @@ import pytest
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common._core.datastructures import FileCopyOperation
-from aiida.common.processes import ProcessState
+from aiida.common._core.processes import ProcessState
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult

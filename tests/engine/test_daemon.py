@@ -12,7 +12,7 @@ import asyncio
 
 import pytest
 
-from aiida.common.processes import ProcessState
+from aiida.common._core.processes import ProcessState
 from aiida.manage import get_manager
 from tests.utils import processes as test_processes
 

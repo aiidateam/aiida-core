@@ -19,7 +19,7 @@ from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 if t.TYPE_CHECKING:
-    from aiida.common.typing import FilePath
+    from aiida.common._core.typing import FilePath
     from aiida.repository import File
 
 

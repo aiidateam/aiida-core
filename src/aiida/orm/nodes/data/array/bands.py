@@ -1782,7 +1782,7 @@ def get_bands_and_parents_structure(args, backend=None):
     import datetime
 
     from aiida import orm
-    from aiida.common import timezone
+    from aiida.common._core import timezone
 
     if backend:
         user = orm.User.get_collection(backend).get_default()

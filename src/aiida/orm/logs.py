@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from uuid import UUID
 
-from aiida.common import timezone
+from aiida.common._core import timezone
 from aiida.manage import get_manager
 from aiida.orm import entities
 from aiida.orm.pydantic import OrmMetadataField

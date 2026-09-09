@@ -13,8 +13,8 @@ from __future__ import annotations
 import inspect
 
 from aiida.common import exceptions
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.lang import classproperty, override, type_check
-from aiida.common.warnings import warn_deprecation
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 

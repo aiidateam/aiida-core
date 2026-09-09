@@ -270,7 +270,7 @@ class TestLaunchersDryRun:
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        from aiida.common.folders import CALC_JOB_DRY_RUN_BASE_PATH
+        from aiida.common._core.folders import CALC_JOB_DRY_RUN_BASE_PATH
 
         assert Process.current() is None
         self.computer = aiida_localhost

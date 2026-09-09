@@ -18,8 +18,8 @@ import click
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.escaping import escape_for_bash
-from aiida.common.warnings import warn_deprecation
 from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
 __all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')

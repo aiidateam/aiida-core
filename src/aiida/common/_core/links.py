@@ -11,7 +11,8 @@
 from collections import namedtuple
 from enum import Enum
 
-from aiida.common.lang import isidentifier, type_check
+from aiida.common._core.lang import isidentifier
+from aiida.common.lang import type_check
 
 __all__ = ('GraphTraversalRule', 'GraphTraversalRules', 'LinkType', 'validate_link_label')
 

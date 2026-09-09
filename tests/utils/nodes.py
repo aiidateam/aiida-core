@@ -11,7 +11,7 @@
 import uuid
 
 from aiida import orm
-from aiida.common import timezone
+from aiida.common._core import timezone
 from aiida.manage import get_manager
 
 

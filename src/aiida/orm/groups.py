@@ -21,8 +21,8 @@ from uuid import UUID
 from typing_extensions import Self
 
 from aiida.common import exceptions
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.lang import classproperty, type_check
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm import convert, entities, extras, users
 from aiida.orm.pydantic import OrmMetadataField

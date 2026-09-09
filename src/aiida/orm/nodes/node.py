@@ -32,11 +32,11 @@ import pydantic as pdt
 from typing_extensions import Self
 
 from aiida.common import exceptions
+from aiida.common._core.pydantic import get_metadata
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import get_metadata
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.computers import Computer
 from aiida.orm.entities import Collection as EntityCollection
@@ -504,7 +504,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         compat_model = cls.__dict__.get('_COMPAT_MODEL')
         if compat_model is not None and isinstance(model, compat_model):
-            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+            from aiida.common._core.docs import URL_CHANGELOG_ORM_MODELS
 
             class_name = cast(Any, cls).__name__
             msg = (
@@ -1291,7 +1291,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if repository_metadata:
             import hashlib
 
-            from aiida.common.hashing import chunked_file_hash
+            from aiida.common._core.hashing import chunked_file_hash
             from aiida.repository import Repository
 
             if not files:

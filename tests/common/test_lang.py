@@ -10,7 +10,7 @@
 
 import pytest
 
-from aiida.common.lang import call_with_super_check, super_check
+from aiida.common._core.lang import call_with_super_check, super_check
 
 
 class Root:

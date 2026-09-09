@@ -113,7 +113,7 @@ def process_list(
 
     from aiida.cmdline.commands.cmd_daemon import execute_client_command
     from aiida.cmdline.utils.common import print_last_process_state_change
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._core.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.orm import ProcessNode, QueryBuilder

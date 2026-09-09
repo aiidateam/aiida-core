@@ -299,7 +299,7 @@ class Manager:
 
         Deprecated: use `get_profile_storage` instead.
         """
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._core.warnings import warn_deprecation
 
         warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3, stacklevel=3)
         return self.get_profile_storage()
@@ -495,7 +495,7 @@ class Manager:
         :return: a runner configured to work in the daemon configuration
 
         """
-        from aiida.common.loaders import get_object_loader
+        from aiida.common._core.loaders import get_object_loader
         from aiida.engine.processes.launcher import ProcessLauncher
         from aiida.engine.processes.persistence import CheckpointContext
 

@@ -21,11 +21,11 @@ from typing import Any
 from aiida import orm
 from aiida.common import AttributeDict, exceptions
 from aiida.common._core.datastructures import FileCopyOperation
+from aiida.common._core.typing import FilePath
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-from aiida.common.typing import FilePath
 from aiida.engine.processes import states as process_states
 from aiida.engine.processes.calcjobs.importer import CalcJobImporter
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor

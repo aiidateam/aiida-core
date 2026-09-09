@@ -115,7 +115,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
 
     import yaml
 
-    from aiida.common import timezone
+    from aiida.common._core import timezone
 
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist

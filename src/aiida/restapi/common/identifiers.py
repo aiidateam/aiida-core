@@ -34,7 +34,7 @@ Examples of invalid full types:
 from collections.abc import MutableMapping
 from typing import Any
 
-from aiida.common.escaping import escape_for_sql_like
+from aiida.common._core.escaping import escape_for_sql_like
 
 FULL_TYPE_CONCATENATOR = '|'
 LIKE_OPERATOR_CHARACTER = '%'

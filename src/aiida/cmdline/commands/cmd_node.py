@@ -22,7 +22,8 @@ from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common import exceptions, timezone
+from aiida.common import exceptions
+from aiida.common._core import timezone
 from aiida.common._core.links import GraphTraversalRules
 
 if TYPE_CHECKING:

@@ -17,7 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from aiida.common import AIIDA_LOGGER, timezone
+from aiida.common import AIIDA_LOGGER
+from aiida.common._core import timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import DumpPaths, DumpTimes, RegistryNameType
 

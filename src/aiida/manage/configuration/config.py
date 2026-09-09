@@ -409,7 +409,7 @@ class Config:
         """
         import shutil
 
-        from aiida.common import timezone
+        from aiida.common._core import timezone
 
         filepath_backup = None
 
@@ -950,7 +950,7 @@ class Config:
         """
         import tempfile
 
-        from aiida.common.files import md5_file, md5_from_filelike
+        from aiida.common._core.files import md5_file, md5_from_filelike
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.

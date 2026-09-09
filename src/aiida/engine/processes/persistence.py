@@ -34,8 +34,9 @@ from typing import TYPE_CHECKING, Any, Optional, TypeVar, Union
 
 import yaml
 
-from aiida.common import loaders
-from aiida.common.lang import call_with_super_check, super_check, type_check
+from aiida.common._core import loaders
+from aiida.common._core.lang import call_with_super_check, super_check
+from aiida.common.lang import type_check
 from aiida.engine.processes import events
 from aiida.engine.processes.exceptions import PersistenceError
 from aiida.engine.processes.generic import futures

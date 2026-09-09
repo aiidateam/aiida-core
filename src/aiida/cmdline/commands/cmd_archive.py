@@ -25,10 +25,10 @@ from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
 from aiida.common._core.exceptions import UnreachableStorage
 from aiida.common._core.links import GraphTraversalRules
+from aiida.common._core.typing import FilePath
 from aiida.common._core.utils import DEFAULT_BATCH_SIZE
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.typing import FilePath
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none']
 EXTRAS_MODE_NEW = ['import', 'none']

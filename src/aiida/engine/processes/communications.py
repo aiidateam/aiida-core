@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import kiwipy
 
-from aiida.common import loaders
+from aiida.common._core import loaders
 from aiida.engine.processes import events, persistence
 from aiida.engine.processes.generic import futures
 from aiida.engine.processes.persistence import PID_TYPE

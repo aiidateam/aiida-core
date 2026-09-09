@@ -178,7 +178,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
         if not CliModel:
-            from aiida.common.warnings import warn_deprecation
+            from aiida.common._core.warnings import warn_deprecation
 
             warn_deprecation(
                 'Relying on `_get_cli_options` is deprecated. The options should be defined through a `CliModel`.',

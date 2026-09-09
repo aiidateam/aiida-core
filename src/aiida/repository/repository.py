@@ -5,9 +5,9 @@ import pathlib
 from collections.abc import Iterable, Iterator
 from typing import Any, BinaryIO
 
-from aiida.common.hashing import make_hash
+from aiida.common._core.hashing import make_hash
+from aiida.common._core.typing import FilePath
 from aiida.common.lang import type_check
-from aiida.common.typing import FilePath
 from aiida.repository.backend import AbstractRepositoryBackend, SandboxRepositoryBackend
 from aiida.repository.common import File, FileType
 

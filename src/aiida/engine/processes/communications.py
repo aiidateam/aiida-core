@@ -154,7 +154,10 @@ class LoopCommunicator(broker_communicator.Communicator):
         :param loop: The event loop to schedule callbacks on
 
         """
-        assert communicator is not None
+        # Defensive guard against untyped callers passing ``None``; unreachable per the annotation.
+        if communicator is None:
+            msg = 'Communicator must not be None.'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         self._communicator = communicator
         self._loop = loop or events.get_or_create_event_loop()

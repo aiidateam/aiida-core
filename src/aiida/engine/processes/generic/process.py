@@ -42,6 +42,7 @@ import yaml
 from aio_pika.exceptions import ChannelInvalidStateError, ConnectionClosed
 
 from aiida.brokers import communicator as broker_communicator
+from aiida.brokers import exceptions as broker_exceptions
 from aiida.brokers import futures as broker_futures
 from aiida.brokers.filters import BroadcastFilter
 from aiida.common.extendeddicts import AttributesFrozendict
@@ -329,7 +330,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             try:
                 identifier = self._communicator.add_rpc_subscriber(self.message_receive, identifier=str(self.pid))
                 self.add_cleanup(functools.partial(self._communicator.remove_rpc_subscriber, identifier))
-            except TimeoutError:
+            except broker_exceptions.TimeoutError:
                 self.logger.exception('Process<%s>: failed to register as an RPC subscriber', self.pid)
 
             try:
@@ -337,7 +338,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
                 subscriber = BroadcastFilter(self.broadcast_receive, subject=re.compile(r'^(?!state_changed).*'))
                 identifier = self._communicator.add_broadcast_subscriber(subscriber, identifier=str(self.pid))
                 self.add_cleanup(functools.partial(self._communicator.remove_broadcast_subscriber, identifier))
-            except TimeoutError:
+            except broker_exceptions.TimeoutError:
                 self.logger.exception(
                     'Process<%s>: failed to register as a broadcast subscriber',
                     self.pid,
@@ -762,7 +763,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             except (ConnectionClosed, ChannelInvalidStateError):
                 message = 'Process<%s>: no connection available to broadcast state change from %s to %s'
                 self.logger.warning(message, self.pid, from_label, self.state.value)
-            except TimeoutError:
+            except broker_exceptions.TimeoutError:
                 message = 'Process<%s>: sending broadcast of state change from %s to %s timed out'
                 self.logger.warning(message, self.pid, from_label, self.state.value)
 

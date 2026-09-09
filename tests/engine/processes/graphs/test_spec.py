@@ -20,6 +20,7 @@ from aiida.engine import (
     Endpoint,
     ExecutorReference,
     GraphSpec,
+    LoopTask,
     MapTask,
     ProcessTask,
     SubgraphTask,
@@ -226,13 +227,28 @@ def test_a_placed_graph_has_the_ports_its_body_declares(edge, expected):
         )
 
 
-def test_a_task_carrying_a_body_round_trips():
+def looping_graph() -> GraphSpec:
+    """Return a graph both taking and returning `again`, which is what a loop goes round on."""
+    return GraphSpec(
+        tasks=(ProcessTask(name='sum', spec=add.task_spec),),
+        inputs={'again': (), 'start': (('sum', 'x'), ('sum', 'y'))},
+        outputs={'again': Endpoint(task=None, port='again'), 'start': Endpoint(task='sum', port='total')},
+    )
+
+
+@pytest.mark.parametrize(
+    'task_, kind',
+    [
+        pytest.param(BranchTask(name='choice', body=shifting_graph()), 'branch', id='branch'),
+        pytest.param(LoopTask(name='again', body=looping_graph(), condition_port='again'), 'loop', id='loop'),
+    ],
+)
+def test_a_task_carrying_a_body_round_trips(task_, kind):
     """A task that runs a graph writes its body out with it, and reads back carrying the same declaration."""
-    task_ = BranchTask(name='choice', body=shifting_graph())
     graph = GraphSpec(tasks=(task_,))
     serialized = graph.to_dict()
 
-    assert serialized['tasks'][0]['kind'] == 'branch'
+    assert serialized['tasks'][0]['kind'] == kind
 
     restored = GraphSpec.from_dict(serialized)
 
@@ -261,6 +277,22 @@ def test_a_branch_sharing_a_name_between_its_condition_and_a_body_input_is_refus
     """The condition and an input of the same name would arrive on one port, so the clash is refused."""
     with pytest.raises(ValueError, match='which a branch also takes'):
         GraphSpec(tasks=(BranchTask(name='choice', body=shifting_graph(), condition_port='start'),))
+
+
+@pytest.mark.parametrize(
+    'condition, expected',
+    [
+        pytest.param('start', 'has to return `start`', id='not-returned'),
+        pytest.param('total', 'has to take `total`', id='not-taken'),
+    ],
+)
+def test_a_loop_body_that_does_not_carry_the_condition_is_refused(condition, expected):
+    """A loop goes round on what its body returns, so a body that cannot change the condition never ends.
+
+    ``shifting_graph`` takes `start` and returns `total`, so neither name is carried through it.
+    """
+    with pytest.raises(ValueError, match=expected):
+        GraphSpec(tasks=(LoopTask(name='again', body=shifting_graph(), condition_port=condition),))
 
 
 def test_ready_returns_the_frontier():

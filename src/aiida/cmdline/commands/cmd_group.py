@@ -655,6 +655,8 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 @options.SYMLINK_CALCS()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
+@options.INCLUDE_WORKFLOW_OUTPUTS()
+@options.INCLUDE_DATA_JSON()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.FLAT()
@@ -677,6 +679,8 @@ def group_dump(
     symlink_calcs,
     include_inputs,
     include_outputs,
+    include_workflow_outputs,
+    include_data_json,
     include_attributes,
     include_extras,
     flat,
@@ -728,6 +732,8 @@ def group_dump(
             symlink_calcs=symlink_calcs,
             include_inputs=include_inputs,
             include_outputs=include_outputs,
+            include_workflow_outputs=include_workflow_outputs,
+            include_data_json=include_data_json,
             include_attributes=include_attributes,
             include_extras=include_extras,
             flat=flat,

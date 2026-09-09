@@ -20,6 +20,8 @@ from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.process import Process
 
 __all__ = (
+    'BodyTask',
+    'BranchTask',
     'Dependency',
     'Endpoint',
     'ExecutorReference',
@@ -48,7 +50,10 @@ a notebook or a shell session has no importable name, so it is kept here as well
 declared it finds it. Submitting such a task still needs a module a worker can import.
 """
 
-TaskKind = t.Literal['process', 'map', 'graph']
+CONDITION_PORT: str = 'condition'
+"""Name of the input a branch takes the value deciding it on, kept apart from the inputs of its body."""
+
+TaskKind = t.Literal['process', 'map', 'graph', 'branch']
 """What a task in a graph is.
 
 A declaration is stored as provenance and read back by later versions of AiiDA, so every task says what kind it
@@ -334,18 +339,29 @@ class MapTask(ProcessTask):
 
 
 @dataclass(frozen=True, kw_only=True)
-class SubgraphTask(GraphTask):
+class BodyTask(GraphTask):
+    """A task that runs a graph of its own rather than a process.
+
+    Keeping the body a declaration of its own, rather than merging its tasks into the graph around it, is what
+    lets one body be written once and run a number of times only the run itself decides.
+    """
+
+    body: GraphSpec
+    """The graph to run."""
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {**super().to_dict(), 'body': self.body.to_dict()}
+
+
+@dataclass(frozen=True, kw_only=True)
+class SubgraphTask(BodyTask):
     """A graph placed inside another graph, run as one child process of its own.
 
     Its body is a declaration like any other, so what the task takes and produces are that body's inputs and
-    outputs. Keeping the body a declaration of its own, rather than merging its tasks into the graph around it, is
-    what lets one body be written once and run more than once.
+    outputs.
     """
 
     KIND: t.ClassVar[TaskKind] = 'graph'
-
-    body: GraphSpec
-    """The graph to run, whose inputs and outputs are the ports of this task."""
 
     def accepts(self, port: str) -> bool:
         return port in self.body.inputs
@@ -353,16 +369,57 @@ class SubgraphTask(GraphTask):
     def produces(self, port: str) -> bool:
         return port in self.body.outputs
 
-    def to_dict(self) -> dict[str, t.Any]:
-        return {**super().to_dict(), 'body': self.body.to_dict()}
-
     @classmethod
     def _from_payload(cls, data: dict[str, t.Any]) -> SubgraphTask:
         return cls(name=data['name'], inputs=data.get('inputs', {}), body=GraphSpec.from_dict(data['body']))
 
 
+@dataclass(frozen=True, kw_only=True)
+class BranchTask(BodyTask):
+    """One of two graphs, run depending on a value that only exists once the graph is running.
+
+    Both branches are declared, so the declaration still describes every run and only the choice is left to the
+    run. A branch that produces nothing, because the condition did not hold and there is no ``otherwise``, leaves
+    everything taking one of its outputs out of the run as well.
+    """
+
+    KIND: t.ClassVar[TaskKind] = 'branch'
+
+    condition_port: str = CONDITION_PORT
+    """Input port the value deciding between the branches arrives on."""
+
+    otherwise: GraphSpec | None = None
+    """The graph to run when the condition does not hold, which produces what the body produces."""
+
+    @property
+    def branches(self) -> tuple[GraphSpec, ...]:
+        """Return the graphs this task chooses between."""
+        return (self.body,) if self.otherwise is None else (self.body, self.otherwise)
+
+    def accepts(self, port: str) -> bool:
+        return port == self.condition_port or any(port in branch.inputs for branch in self.branches)
+
+    def produces(self, port: str) -> bool:
+        return port in self.body.outputs
+
+    def to_dict(self) -> dict[str, t.Any]:
+        otherwise = None if self.otherwise is None else self.otherwise.to_dict()
+        return {**super().to_dict(), 'condition_port': self.condition_port, 'otherwise': otherwise}
+
+    @classmethod
+    def _from_payload(cls, data: dict[str, t.Any]) -> BranchTask:
+        otherwise = data.get('otherwise')
+        return cls(
+            name=data['name'],
+            inputs=data.get('inputs', {}),
+            body=GraphSpec.from_dict(data['body']),
+            condition_port=data.get('condition_port', CONDITION_PORT),
+            otherwise=None if otherwise is None else GraphSpec.from_dict(otherwise),
+        )
+
+
 TASK_KINDS: dict[str, type[GraphTask]] = {
-    task_class.KIND: task_class for task_class in (ProcessTask, MapTask, SubgraphTask)
+    task_class.KIND: task_class for task_class in (ProcessTask, MapTask, SubgraphTask, BranchTask)
 }
 """The task class for each kind, which is what a stored task is read back as and checked against."""
 
@@ -451,6 +508,10 @@ class GraphSpec:
                     f'`{task.name}` maps over `{task.item_port}`, which is not an input of `{task.spec.identifier}`.'
                 )
 
+        for task in self.tasks:
+            if isinstance(task, BranchTask):
+                self._check_branches(task)
+
         for edge in self.dependencies:
             if isinstance(self.task(edge.source), MapTask):
                 raise ValueError(
@@ -460,6 +521,27 @@ class GraphSpec:
                 )
 
         self._check_acyclic()
+
+    @staticmethod
+    def _check_branches(task: BranchTask) -> None:
+        """Raise if the two sides of a branch would leave what it takes or produces up to the run.
+
+        :raises ValueError: if the condition shares a name with an input of a branch, or the branches produce
+            different outputs, which would leave a task after them taking something that may not be there.
+        """
+        for branch in task.branches:
+            if task.condition_port in branch.inputs:
+                raise ValueError(
+                    f'`{task.name}` takes its condition on `{task.condition_port}`, which a branch also takes as '
+                    f'an input, so the two would arrive on one port. Rename either of them.'
+                )
+
+        if task.otherwise is not None and set(task.otherwise.outputs) != set(task.body.outputs):
+            raise ValueError(
+                f'`{task.name}` produces {sorted(task.body.outputs)} when its condition holds and '
+                f'{sorted(task.otherwise.outputs)} when it does not, so what it produces would depend on which '
+                f'branch ran. Both branches have to return the same outputs.'
+            )
 
     def _check_endpoint(self, name: str, port: str, direction: t.Literal['input', 'output'], referrer: str) -> None:
         """Raise if a task referred to somewhere in the graph does not exist, or has no port under that name.

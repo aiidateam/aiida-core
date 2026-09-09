@@ -17,6 +17,7 @@ from aiida.common.links import LinkType
 from aiida.engine import (
     Endpoint,
     MapTask,
+    SubgraphTask,
     each,
     graph,
     run_get_node,
@@ -66,6 +67,36 @@ def shift_spread(n, by):
 def shift_and_echo(x, y):
     """Return a computed output beside one of the graph's own inputs, passed on unchanged."""
     return {'total': add(x=x, y=y).total, 'echo': x}
+
+
+@graph
+def add_four_times(x, y):
+    """Place a graph inside a graph, taking what the first produced into the second."""
+    once = add_twice(x=x, y=y)
+    return add_twice(x=once.total, y=y)
+
+
+@graph
+def reaches_for_an_outer_task(x, y):
+    """Write an inner graph that takes a value from a task in the graph around it."""
+    first = add(x=x, y=y)
+
+    @graph
+    def inner(z):
+        return add(x=z, y=first.total)
+
+    return inner(z=x)
+
+
+@graph
+def reaches_for_an_outer_input(x, y):
+    """Write an inner graph that takes an input of the graph around it."""
+
+    @graph
+    def inner(z):
+        return add(x=z, y=y)
+
+    return inner(z=x)
 
 
 def test_records_tasks_links_and_inputs():
@@ -278,6 +309,51 @@ def test_a_graph_can_pass_one_of_its_inputs_on():
     assert node.is_finished_ok, node.exit_message
     assert results['total'] == 3
     assert results['echo'] == 1
+
+
+def test_a_graph_inside_a_graph_is_placed_as_one_task():
+    """The inner graph is one task carrying its own declaration, so the two graphs stay separate."""
+    declaration = add_four_times.build()
+
+    assert [node.name for node in declaration.tasks] == ['add_twice', 'add_twice_2']
+    assert all(isinstance(node, SubgraphTask) for node in declaration.tasks)
+    assert [node.name for node in declaration.task('add_twice').body.tasks] == ['add', 'add_2']
+    assert declaration.outputs == {'total': Endpoint(task='add_twice_2', port='total')}
+
+
+def test_runs_a_graph_written_inside_a_graph():
+    """The inner graph runs as a child process of its own, and what it returns feeds the task after it."""
+    results, node = run_get_node(add_four_times, x=1, y=2)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 9  # ((1 + 2) + 2) + 2 + 2
+
+    called = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
+    assert sorted(entry.link_label for entry in called) == ['add_twice', 'add_twice_2']
+
+
+@pytest.mark.parametrize(
+    'declaration',
+    [
+        pytest.param(reaches_for_an_outer_task, id='task-output'),
+        pytest.param(reaches_for_an_outer_input, id='graph-input'),
+    ],
+)
+def test_a_graph_inside_another_reaches_nothing_outside_it(declaration):
+    """A value from the graph around it would never be passed in, so it is refused where the graph is written."""
+    with pytest.raises(ValueError, match='not part of this graph'):
+        declaration.build()
+
+
+def test_running_a_graph_once_per_item_is_refused():
+    """A graph cannot yet be the thing that fans out, and says so where the fan-out is written."""
+
+    @graph
+    def shift_all_twice(values, by):
+        return add_twice(x=each(values), y=by)
+
+    with pytest.raises(ValueError, match='Running a graph once per item'):
+        shift_all_twice.build()
 
 
 def test_calling_a_graph_is_refused():

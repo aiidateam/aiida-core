@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import abc
 import typing as t
 from dataclasses import dataclass, field
 
@@ -18,7 +19,17 @@ from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.process import Process
 
-__all__ = ('Dependency', 'Endpoint', 'ExecutorReference', 'GraphSpec', 'GraphTask', 'MapTask', 'TaskSpec')
+__all__ = (
+    'Dependency',
+    'Endpoint',
+    'ExecutorReference',
+    'GraphSpec',
+    'GraphTask',
+    'MapTask',
+    'ProcessTask',
+    'SubgraphTask',
+    'TaskSpec',
+)
 
 SPEC_VERSION: str = '1.0'
 """Version of the graph declaration format, stored with every serialized spec."""
@@ -37,13 +48,13 @@ a notebook or a shell session has no importable name, so it is kept here as well
 declared it finds it. Submitting such a task still needs a module a worker can import.
 """
 
-TaskKind = t.Literal['function', 'map']
+TaskKind = t.Literal['process', 'map', 'graph']
 """What a task in a graph is.
 
 A declaration is stored as provenance and read back by later versions of AiiDA, so every task says what kind it
-is. The kind is what a reader dispatches on, so it separates nodes the graph treats differently rather than
-executors that differ: a task running a `CalcJob` is still a `function` node, because it is still one process
-submitted with its inputs.
+is. The kind is what a reader dispatches on, so it separates tasks the graph treats differently rather than
+executors that differ: a task running a `CalcJob` is of kind `process` just as one running a process function is,
+because it is still one process submitted with its inputs.
 """
 
 
@@ -214,26 +225,34 @@ class Dependency:
 
 
 @dataclass(frozen=True, kw_only=True)
-class GraphTask:
+class GraphTask(abc.ABC):
     """A task placed in a graph, under a name, with the inputs that are given directly.
 
-    One node runs one process, which is what makes the graph a plain dependency graph. :class:`MapTask` is the
-    node that does not, and adding a kind is how a node that the graph has to treat differently arrives.
+    What runs a task is what its kind says, and the graph needs only the names it takes and produces to wire it to
+    the tasks around it. That is what lets kinds that run something other than a single process be placed in a
+    graph without the graph knowing what they run.
     """
 
-    KIND: t.ClassVar[TaskKind] = 'function'
+    KIND: t.ClassVar[TaskKind]
 
     name: str
-    spec: TaskSpec
     inputs: dict[str, t.Any] = field(default_factory=dict)
 
     @property
     def kind(self) -> TaskKind:
-        """Return what kind of node this is, which is what a reader of a stored graph dispatches on."""
+        """Return what kind of task this is, which is what a reader of a stored graph dispatches on."""
         return self.KIND
 
+    @abc.abstractmethod
+    def accepts(self, port: str) -> bool:
+        """Return whether this task takes an input under the given name."""
+
+    @abc.abstractmethod
+    def produces(self, port: str) -> bool:
+        """Return whether this task produces an output under the given name."""
+
     def to_dict(self) -> dict[str, t.Any]:
-        return {'name': self.name, 'kind': self.KIND, 'spec': self.spec.to_dict(), 'inputs': self.inputs}
+        return {'name': self.name, 'kind': self.KIND, 'inputs': self.inputs}
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> GraphTask:
@@ -243,9 +262,9 @@ class GraphTask:
         :raises ValueError: if the task is of a kind this version of AiiDA does not run.
         """
         kind = data.get('kind')
-        node_class = TASK_KINDS.get(t.cast(str, kind))
+        task_class = TASK_KINDS.get(t.cast(str, kind))
 
-        if node_class is None:
+        if task_class is None:
             supported = ', '.join(f'`{name}`' for name in sorted(TASK_KINDS))
             msg = (
                 f'task `{data.get("name")}` is of kind `{kind}`, and this version of AiiDA runs tasks of kind '
@@ -253,16 +272,42 @@ class GraphTask:
             )
             raise ValueError(msg)
 
-        return node_class._from_payload(data)
+        return task_class._from_payload(data)
 
     @classmethod
+    @abc.abstractmethod
     def _from_payload(cls, data: dict[str, t.Any]) -> GraphTask:
-        """Return a node of this kind, from a declaration already known to be of this kind."""
-        return cls(name=data['name'], spec=TaskSpec.from_dict(data['spec']), inputs=data.get('inputs', {}))
+        """Return a task of this kind, from a declaration already known to be of this kind."""
 
 
 @dataclass(frozen=True, kw_only=True)
-class MapTask(GraphTask):
+class ProcessTask(GraphTask):
+    """A task that runs one process, which is what makes the graph a plain dependency graph.
+
+    The ports it takes and produces are those of that process, so a graph of these alone needs nothing beyond the
+    declarations of the processes it wires together.
+    """
+
+    KIND: t.ClassVar[TaskKind] = 'process'
+
+    spec: TaskSpec
+
+    def accepts(self, port: str) -> bool:
+        return port in self.spec.inputs or self.spec.inputs.dynamic
+
+    def produces(self, port: str) -> bool:
+        return port in self.spec.outputs or self.spec.outputs.dynamic
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {**super().to_dict(), 'spec': self.spec.to_dict()}
+
+    @classmethod
+    def _from_payload(cls, data: dict[str, t.Any]) -> ProcessTask:
+        return cls(name=data['name'], inputs=data.get('inputs', {}), spec=TaskSpec.from_dict(data['spec']))
+
+
+@dataclass(frozen=True, kw_only=True)
+class MapTask(ProcessTask):
     """A task run once per item of a collection that only exists while the graph runs.
 
     How many items there are is not known when the graph is written, so the declaration says what to map over and
@@ -282,14 +327,44 @@ class MapTask(GraphTask):
     def _from_payload(cls, data: dict[str, t.Any]) -> MapTask:
         return cls(
             name=data['name'],
-            spec=TaskSpec.from_dict(data['spec']),
             inputs=data.get('inputs', {}),
+            spec=TaskSpec.from_dict(data['spec']),
             item_port=data['item_port'],
         )
 
 
-TASK_KINDS: dict[str, type[GraphTask]] = {node_class.KIND: node_class for node_class in (GraphTask, MapTask)}
-"""The node class for each kind, which is what a stored task is read back as and checked against."""
+@dataclass(frozen=True, kw_only=True)
+class SubgraphTask(GraphTask):
+    """A graph placed inside another graph, run as one child process of its own.
+
+    Its body is a declaration like any other, so what the task takes and produces are that body's inputs and
+    outputs. Keeping the body a declaration of its own, rather than merging its tasks into the graph around it, is
+    what lets one body be written once and run more than once.
+    """
+
+    KIND: t.ClassVar[TaskKind] = 'graph'
+
+    body: GraphSpec
+    """The graph to run, whose inputs and outputs are the ports of this task."""
+
+    def accepts(self, port: str) -> bool:
+        return port in self.body.inputs
+
+    def produces(self, port: str) -> bool:
+        return port in self.body.outputs
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {**super().to_dict(), 'body': self.body.to_dict()}
+
+    @classmethod
+    def _from_payload(cls, data: dict[str, t.Any]) -> SubgraphTask:
+        return cls(name=data['name'], inputs=data.get('inputs', {}), body=GraphSpec.from_dict(data['body']))
+
+
+TASK_KINDS: dict[str, type[GraphTask]] = {
+    task_class.KIND: task_class for task_class in (ProcessTask, MapTask, SubgraphTask)
+}
+"""The task class for each kind, which is what a stored task is read back as and checked against."""
 
 
 @dataclass(frozen=True)
@@ -344,8 +419,8 @@ class GraphSpec:
     def validate(self) -> None:
         """Check that the graph is well formed.
 
-        :raises ValueError: if task names are not unique, a link or output refers to an unknown task or port, or the
-            dependencies contain a cycle, which would leave the graph unable to start.
+        :raises ValueError: if task names are not unique, a dependency or output refers to an unknown task or port,
+            or the dependencies contain a cycle, which would leave the graph unable to start.
         """
         names = [task.name for task in self.tasks]
         duplicates = {name for name in names if names.count(name) > 1}
@@ -354,31 +429,12 @@ class GraphSpec:
             raise ValueError(f'task names have to be unique, got more than one of {sorted(duplicates)}.')
 
         for edge in self.dependencies:
-            endpoints = (
-                (edge.source, edge.source_port, 'outputs'),
-                (edge.target, edge.target_port, 'inputs'),
-            )
-
-            for name, port, direction in endpoints:
-                if name not in names:
-                    raise ValueError(f'dependency {edge} refers to unknown task `{name}`.')
-
-                ports = getattr(self.task(name).spec, direction)
-
-                if port not in ports and not ports.dynamic:
-                    raise ValueError(
-                        f'dependency {edge} refers to `{port}`, which is not a valid {direction} of `{name}`.'
-                    )
+            self._check_endpoint(edge.source, edge.source_port, 'output', f'dependency {edge}')
+            self._check_endpoint(edge.target, edge.target_port, 'input', f'dependency {edge}')
 
         for graph_input, targets in self.inputs.items():
             for name, port in targets:
-                if name not in names:
-                    raise ValueError(f'input `{graph_input}` refers to unknown task `{name}`.')
-
-                ports = self.task(name).spec.inputs
-
-                if port not in ports and not ports.dynamic:
-                    raise ValueError(f'input `{graph_input}` refers to `{port}`, which is not an input of `{name}`.')
+                self._check_endpoint(name, port, 'input', f'input `{graph_input}`')
 
         for output, source in self.outputs.items():
             if source.task is None:
@@ -387,18 +443,10 @@ class GraphSpec:
 
                 continue
 
-            if source.task not in names:
-                raise ValueError(f'output `{output}` refers to unknown task `{source.task}`.')
-
-            outputs = self.task(source.task).spec.outputs
-
-            if source.port not in outputs and not outputs.dynamic:
-                raise ValueError(
-                    f'output `{output}` refers to `{source.port}`, which is not an output of `{source.task}`.'
-                )
+            self._check_endpoint(source.task, source.port, 'output', f'output `{output}`')
 
         for task in self.tasks:
-            if isinstance(task, MapTask) and task.item_port not in task.spec.inputs and not task.spec.inputs.dynamic:
+            if isinstance(task, MapTask) and not task.accepts(task.item_port):
                 raise ValueError(
                     f'`{task.name}` maps over `{task.item_port}`, which is not an input of `{task.spec.identifier}`.'
                 )
@@ -412,6 +460,21 @@ class GraphSpec:
                 )
 
         self._check_acyclic()
+
+    def _check_endpoint(self, name: str, port: str, direction: t.Literal['input', 'output'], referrer: str) -> None:
+        """Raise if a task referred to somewhere in the graph does not exist, or has no port under that name.
+
+        :param referrer: what refers to the endpoint, which is what the error names.
+        :raises ValueError: if there is no such task, or no such port on it.
+        """
+        if name not in self.task_names:
+            raise ValueError(f'{referrer} refers to unknown task `{name}`.')
+
+        task = self.task(name)
+        known = task.accepts(port) if direction == 'input' else task.produces(port)
+
+        if not known:
+            raise ValueError(f'{referrer} refers to `{port}`, which is not an {direction} of `{name}`.')
 
     def _check_acyclic(self) -> None:
         """Raise if the dependencies contain a cycle, by peeling off tasks with nothing left to wait for."""

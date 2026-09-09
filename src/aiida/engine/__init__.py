@@ -34,6 +34,7 @@ __all__ = (
     'DaemonClient',
     'Dependency',
     'Each',
+    'Endpoint',
     'ExecutorReference',
     'ExitCode',
     'ExitCodesNamespace',

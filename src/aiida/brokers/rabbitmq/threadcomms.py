@@ -124,23 +124,29 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
         self._loop_scheduler.start()  # Start the loop scheduler (i.e. the event loop thread)
 
         # Establish the connection and get a communicator running on our thread
-        self._communicator: communicator.RmqCommunicator = self._loop_scheduler.await_(
-            communicator.async_connect(
-                connection_params=connection_params,
-                connection_factory=connection_factory,
-                # Messages
-                message_exchange=message_exchange,
-                queue_expires=queue_expires,
-                # Tasks
-                task_exchange=task_exchange,
-                task_queue=task_queue,
-                task_prefetch_size=task_prefetch_size,
-                task_prefetch_count=task_prefetch_count,
-                encoder=encoder,
-                decoder=decoder,
-                testing_mode=testing_mode,
+        try:
+            self._communicator: communicator.RmqCommunicator = self._loop_scheduler.await_(
+                communicator.async_connect(
+                    connection_params=connection_params,
+                    connection_factory=connection_factory,
+                    # Messages
+                    message_exchange=message_exchange,
+                    queue_expires=queue_expires,
+                    # Tasks
+                    task_exchange=task_exchange,
+                    task_queue=task_queue,
+                    task_prefetch_size=task_prefetch_size,
+                    task_prefetch_count=task_prefetch_count,
+                    encoder=encoder,
+                    decoder=decoder,
+                    testing_mode=testing_mode,
+                )
             )
-        )
+        except Exception:
+            self._closed = True
+            self._loop_scheduler.close()
+            self._loop.close()
+            raise
 
     @property
     def server_properties(self) -> dict[str, Any]:

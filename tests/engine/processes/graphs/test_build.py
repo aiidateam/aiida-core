@@ -17,11 +17,13 @@ from aiida.common.links import LinkType
 from aiida.engine import (
     BranchTask,
     Endpoint,
+    LoopTask,
     MapTask,
     SubgraphTask,
     branch,
     each,
     graph,
+    loop,
     run_get_node,
     submit,
     task,
@@ -100,6 +102,26 @@ def maybe_double(x, flag):
 def double_or_not(x, flag):
     """Run a branch that produces the same outputs whichever side is taken."""
     return branch(flag, then=doubled, otherwise=negated, x=x)
+
+
+@task(outputs=['value', 'again'])
+def step_down(value):
+    """Take one off the value, and say whether there is anything left to take off."""
+    return value - 1, value - 1 > 0
+
+
+@graph
+def one_step_down(value, again):
+    """Carry `again` through the loop, since a loop goes round on what its body returns."""
+    stepped = step_down(value=value)
+    return {'value': stepped.value, 'again': stepped.again}
+
+
+@graph
+def count_down(start, again):
+    """Run a graph again and again until nothing is left to take off."""
+    counted = loop(one_step_down, condition='again', value=start, again=again)
+    return {'value': counted.value}
 
 
 @graph
@@ -422,6 +444,81 @@ def test_calling_branch_outside_a_graph_is_refused():
     """A branch is part of a graph, so writing one anywhere else says what to do instead."""
     with pytest.raises(TypeError, match='written in the body of a `@graph`'):
         branch(True, then=doubled, x=1)
+
+
+def test_a_loop_is_placed_as_one_task_carrying_its_body():
+    """The body is declared once, and how many times it runs is left to the run."""
+    declaration = count_down.build()
+    (task_,) = declaration.tasks
+
+    assert isinstance(task_, LoopTask)
+    assert task_.name == 'loop_one_step_down'
+    assert task_.condition_port == 'again'
+    assert [node.name for node in task_.body.tasks] == ['step_down']
+    assert declaration.inputs == {
+        'start': (('loop_one_step_down', 'value'),),
+        'again': (('loop_one_step_down', 'again'),),
+    }
+
+
+def test_a_loop_runs_its_body_until_the_condition_turns():
+    """Each run starts from what the one before it returned, so the loop reaches the value it counted down to."""
+    results, node = run_get_node(count_down, start=3, again=True)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['value'] == 0
+
+    called = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
+
+    assert sorted(entry.link_label for entry in called) == [
+        'loop_one_step_down_iteration_0',
+        'loop_one_step_down_iteration_1',
+        'loop_one_step_down_iteration_2',
+    ]
+
+
+def test_a_loop_whose_condition_is_false_to_begin_with_runs_nothing():
+    """A loop checks before it runs, so one that never had reason to go round produces nothing."""
+    results, node = run_get_node(count_down, start=3, again=False)
+
+    assert node.is_finished_ok, node.exit_message
+    assert dict(results) == {}
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+
+
+def test_a_loop_stops_at_the_iterations_it_is_allowed():
+    """A condition that never turns would go round for ever, so the loop gives up and says it did."""
+
+    @graph
+    def count_down_briefly(start, again):
+        counted = loop(one_step_down, condition='again', max_iterations=2, value=start, again=again)
+        return {'value': counted.value}
+
+    results, node = run_get_node(count_down_briefly, start=10, again=True)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['value'] == 8  # 10, less one per run, of which it was allowed two
+    assert len(node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()) == 2
+
+
+def test_a_task_after_a_loop_waits_for_the_last_run():
+    """A loop is only done once its condition turns, so what comes after it takes the value it stopped on."""
+
+    @graph
+    def count_down_then_add(start, again):
+        counted = loop(one_step_down, condition='again', value=start, again=again)
+        return add(x=counted.value, y=100)
+
+    results, node = run_get_node(count_down_then_add, start=3, again=True)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 100  # the loop counted 3 down to 0, and only then was `add` given it
+
+
+def test_calling_loop_outside_a_graph_is_refused():
+    """A loop is part of a graph, so writing one anywhere else says what to do instead."""
+    with pytest.raises(TypeError, match='written in the body of a `@graph`'):
+        loop(one_step_down, condition='again', value=1, again=True)
 
 
 def test_running_a_graph_once_per_item_is_refused():

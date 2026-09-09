@@ -24,7 +24,7 @@ from aiida.engine.processes.states import Wait
 from aiida.engine.processes.task import TaskSpec
 from aiida.orm import Dict, List, WorkChainNode, load_node
 
-__all__ = ('Dependency', 'GraphProcess', 'GraphSpec', 'GraphTask', 'MapTask')
+__all__ = ('Dependency', 'Endpoint', 'GraphProcess', 'GraphSpec', 'GraphTask', 'MapTask')
 
 SPEC_VERSION: str = '1.0'
 """Version of the graph declaration format, stored with every serialized spec."""
@@ -40,6 +40,25 @@ is. The kind is what a reader dispatches on, so it separates nodes the graph tre
 executors that differ: a task running a `CalcJob` is still a `function` node, because it is still one process
 submitted with its inputs.
 """
+
+
+@dataclass(frozen=True)
+class Endpoint:
+    """Where one output of a graph comes from.
+
+    Usually a port of one of its tasks. A graph can also return one of its own inputs, unchanged, which is what
+    ``task`` being ``None`` records: the graph passes the value on rather than producing it.
+    """
+
+    port: str
+    task: str | None = None
+
+    def to_dict(self) -> dict[str, str | None]:
+        return {'task': self.task, 'port': self.port}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, t.Any]) -> Endpoint:
+        return cls(task=data['task'], port=data['port'])
 
 
 @dataclass(frozen=True)
@@ -199,7 +218,7 @@ class GraphSpec:
     tasks: tuple[GraphTask, ...]
     links: tuple[Dependency, ...] = ()
     inputs: dict[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
-    outputs: dict[str, tuple[str, str]] = field(default_factory=dict)
+    outputs: dict[str, Endpoint] = field(default_factory=dict)
     version: str = SPEC_VERSION
 
     def __post_init__(self) -> None:
@@ -269,14 +288,22 @@ class GraphSpec:
                 if port not in ports and not ports.dynamic:
                     raise ValueError(f'input `{graph_input}` refers to `{port}`, which is not an input of `{name}`.')
 
-        for output, (name, port) in self.outputs.items():
-            if name not in names:
-                raise ValueError(f'output `{output}` refers to unknown task `{name}`.')
+        for output, source in self.outputs.items():
+            if source.task is None:
+                if source.port not in self.inputs:
+                    raise ValueError(f'output `{output}` passes on `{source.port}`, which is not an input.')
 
-            outputs = self.task(name).spec.outputs
+                continue
 
-            if port not in outputs and not outputs.dynamic:
-                raise ValueError(f'output `{output}` refers to `{port}`, which is not an output of `{name}`.')
+            if source.task not in names:
+                raise ValueError(f'output `{output}` refers to unknown task `{source.task}`.')
+
+            outputs = self.task(source.task).spec.outputs
+
+            if source.port not in outputs and not outputs.dynamic:
+                raise ValueError(
+                    f'output `{output}` refers to `{source.port}`, which is not an output of `{source.task}`.'
+                )
 
         for task in self.tasks:
             if isinstance(task, MapTask) and task.item_port not in task.spec.inputs and not task.spec.inputs.dynamic:
@@ -312,7 +339,7 @@ class GraphSpec:
             'tasks': [task.to_dict() for task in self.tasks],
             'links': [link.to_dict() for link in self.links],
             'inputs': {name: [list(target) for target in targets] for name, targets in self.inputs.items()},
-            'outputs': {name: list(target) for name, target in self.outputs.items()},
+            'outputs': {name: source.to_dict() for name, source in self.outputs.items()},
             'version': self.version,
         }
 
@@ -340,7 +367,7 @@ class GraphSpec:
                 name: tuple((target[0], target[1]) for target in targets)
                 for name, targets in data.get('inputs', {}).items()
             },
-            outputs={name: (target[0], target[1]) for name, target in data.get('outputs', {}).items()},
+            outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
             version=version,
         )
 
@@ -534,13 +561,23 @@ class GraphProcess(Process):
         if self._failed:
             return self.exit_codes.ERROR_TASK_FAILED.format(task=self._failed[0])
 
-        for output, (name, port) in self.dag.outputs.items():
-            if not isinstance(self.dag.task(name), MapTask):
-                self.out(output, load_node(self._done[name]).outputs[port])
+        given = self.inputs.get(self._GRAPH_INPUTS, {})
+
+        for output, source in self.dag.outputs.items():
+            if source.task is None:
+                # The graph passes one of its own inputs on, so the value is already there and nothing produced it.
+                self.out(output, given[source.port])
+                continue
+
+            if not isinstance(self.dag.task(source.task), MapTask):
+                self.out(output, load_node(self._done[source.task]).outputs[source.port])
                 continue
 
             # A map produced a result per item, so the output is a namespace holding one entry per item.
-            for instance in self._instances[name]:
-                self.out(f'{output}.{self._item_key(name, instance)}', load_node(self._done[instance]).outputs[port])
+            for instance in self._instances[source.task]:
+                self.out(
+                    f'{output}.{self._item_key(source.task, instance)}',
+                    load_node(self._done[instance]).outputs[source.port],
+                )
 
         return None

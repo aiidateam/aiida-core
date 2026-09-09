@@ -16,7 +16,7 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.engine import Dependency, GraphProcess, GraphSpec, GraphTask, MapTask, run_get_node, task
+from aiida.engine import Dependency, Endpoint, GraphProcess, GraphSpec, GraphTask, MapTask, run_get_node, task
 from aiida.engine.processes.dag import TASK_KINDS, TaskKind
 
 pytestmark = pytest.mark.requires_broker
@@ -45,7 +45,7 @@ def linear_graph() -> GraphSpec:
             GraphTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
         ),
         links=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
-        outputs={'total': ('sum', 'total')},
+        outputs={'total': Endpoint(task='sum', port='total')},
     )
 
 
@@ -92,6 +92,27 @@ def test_rejects_an_unreadable_version(mutate, expected):
         GraphSpec.from_dict(serialized)
 
 
+def test_an_output_can_pass_on_an_input():
+    """An output the graph passes on comes from no task, and says so where a task name would be."""
+    graph = GraphSpec(
+        tasks=(GraphTask(name='sum', spec=add.task_spec, inputs={'x': 1, 'y': 2}),),
+        inputs={'echoed': (('sum', 'x'),)},
+        outputs={'total': Endpoint(task='sum', port='total'), 'echo': Endpoint(task=None, port='echoed')},
+    )
+
+    assert graph.to_dict()['outputs']['echo'] == {'task': None, 'port': 'echoed'}
+    assert GraphSpec.from_dict(graph.to_dict()) == graph
+
+
+def test_passing_on_something_that_is_not_an_input_is_refused():
+    """An output that passes on a name the graph does not take is refused where the graph is declared."""
+    with pytest.raises(ValueError, match='passes on `nope`'):
+        GraphSpec(
+            tasks=(GraphTask(name='sum', spec=add.task_spec, inputs={'x': 1, 'y': 2}),),
+            outputs={'echo': Endpoint(task=None, port='nope')},
+        )
+
+
 def test_node_kinds_cover_the_declared_kinds():
     """Every kind the format allows can be read back, so the two cannot drift apart."""
     assert set(TASK_KINDS) == set(t.get_args(TaskKind))
@@ -101,7 +122,7 @@ def mapped_graph(collection) -> GraphSpec:
     """Return a graph adding 10 to every item of ``collection``, one process per item."""
     return GraphSpec(
         tasks=(MapTask(name='shifted', spec=add.task_spec, inputs={'x': collection, 'y': 10}, item_port='x'),),
-        outputs={'total': ('shifted', 'total')},
+        outputs={'total': Endpoint(task='shifted', port='total')},
     )
 
 
@@ -182,7 +203,7 @@ def test_map_results_cannot_be_taken_into_another_task_yet():
                 GraphTask(name='after', spec=multiply.task_spec, inputs={'y': 2}),
             ),
             links=(Dependency(source='shifted', source_port='total', target='after', target_port='x'),),
-            outputs={'product': ('after', 'product')},
+            outputs={'product': Endpoint(task='after', port='product')},
         )
 
 
@@ -273,7 +294,7 @@ def test_runs_a_diamond_graph():
             Dependency(source='left', source_port='total', target='join', target_port='x'),
             Dependency(source='right', source_port='product', target='join', target_port='y'),
         ),
-        outputs={'total': ('join', 'total')},
+        outputs={'total': Endpoint(task='join', port='total')},
     )
 
     results, node = run_get_node(GraphProcess, dag=orm.Dict(dict=graph.to_dict()))

@@ -176,7 +176,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: True if the proposed link is allowed, False otherwise
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
-        :raise aiida.common.ModificationNotAllowed: if either source or target node is not stored
+        :raise aiida.common.exceptions.ModificationNotAllowed: if either source or target node is not stored
         """
 
     @abc.abstractmethod

@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER
+from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools._dumping.tracking import DumpTracker
 from aiida.tools._dumping.utils import DumpChanges, DumpPaths

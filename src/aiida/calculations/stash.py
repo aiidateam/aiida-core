@@ -14,8 +14,8 @@ import json
 from typing import Any
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
+from aiida.common.log import AIIDA_LOGGER
 from aiida.engine import CalcJob
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')

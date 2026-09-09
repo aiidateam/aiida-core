@@ -19,10 +19,11 @@ from collections.abc import Hashable
 from typing import Any
 
 from aiida import orm
-from aiida.common import AttributeDict, exceptions
+from aiida.common import exceptions
 from aiida.common._core.datastructures import FileCopyOperation
 from aiida.common._core.typing import FilePath
 from aiida.common.datastructures import CalcInfo
+from aiida.common.extendeddicts import AttributeDict
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType

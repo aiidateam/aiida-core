@@ -24,9 +24,9 @@ from typing import Any, Protocol, cast, overload
 import yaml
 
 from aiida import orm
-from aiida.common import AttributeDict
 from aiida.common._core.extendeddicts import AttributesFrozendict
 from aiida.common._core.loaders import get_object_loader
+from aiida.common.extendeddicts import AttributeDict
 from aiida.engine.processes.persistence import CHECKPOINT_PAYLOAD_TAG, CheckpointPayload
 from aiida.orm.utils.managers import NodeLinksManager
 

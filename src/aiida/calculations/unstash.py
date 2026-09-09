@@ -13,8 +13,8 @@ from pathlib import Path
 
 from aiida import orm
 from aiida.calculations.stash import StashCalculation
-from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, UnstashTargetMode
+from aiida.common.log import AIIDA_LOGGER
 from aiida.engine import CalcJob
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('UnstashCalculation')

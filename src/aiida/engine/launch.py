@@ -13,7 +13,7 @@ from __future__ import annotations
 import time
 import typing as t
 
-from aiida.common import InvalidOperation
+from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.processes.builder import ProcessBuilder

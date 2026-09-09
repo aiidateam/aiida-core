@@ -15,8 +15,9 @@ from io import BytesIO
 
 import pytest
 
-from aiida.common import LinkType, exceptions
+from aiida.common import exceptions
 from aiida.common._core import timezone
+from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Data, Int, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple

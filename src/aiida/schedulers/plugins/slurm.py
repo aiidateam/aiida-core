@@ -27,7 +27,7 @@ from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, Node
 from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
-    from aiida.common import AttributeDict
+    from aiida.common.extendeddicts import AttributeDict
     from aiida.engine.processes.exit_code import ExitCode
 
 

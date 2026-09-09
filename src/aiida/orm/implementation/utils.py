@@ -26,7 +26,7 @@ __all__ = ('clean_value', 'validate_attribute_extra_key')
 def validate_attribute_extra_key(key):
     """Validate the key for an entity attribute or extra.
 
-    :raise aiida.common.ValidationError: if the key is not a string or contains reserved separator character
+    :raise aiida.common.exceptions.ValidationError: if the key is not a string or contains reserved separator character
     """
     if not key or not isinstance(key, str):
         raise exceptions.ValidationError('key for attributes or extras should be a string')

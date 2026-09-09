@@ -111,7 +111,7 @@ class ModelWrapper:
 
         .. note:: If one is currently in a transaction, this method is a no-op.
 
-        :raises `aiida.common.IntegrityError`: if a database integrity error is raised during the save.
+        :raises `aiida.common.exceptions.IntegrityError`: if a database integrity error is raised during the save.
         """
         try:
             self.session.add(self._model)

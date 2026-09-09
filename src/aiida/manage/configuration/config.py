@@ -574,7 +574,7 @@ class Config:
         """Validate that a profile exists.
 
         :param name: name of the profile:
-        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the name is not found in the configuration file
         """
         from aiida.common import exceptions
 
@@ -585,7 +585,7 @@ class Config:
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
-        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the name is not found in the configuration file
         """
         from aiida.common import exceptions
 
@@ -708,7 +708,7 @@ class Config:
         """Remove a profile from the configuration.
 
         :param name: the name of the profile to remove
-        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the given profile does not exist
         :return: self
         """
         self.validate_profile(name)
@@ -823,7 +823,7 @@ class Config:
 
         :param name: name of the profile to set as new default
         :param overwrite: when True, set the profile as the new default even if a default profile is already defined
-        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the given profile does not exist
         :return: self
         """
         if self.default_profile_name and not overwrite:

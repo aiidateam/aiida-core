@@ -14,7 +14,7 @@ import pytest
 
 from aiida.cmdline.utils import common
 from aiida.cmdline.utils.common import validate_output_filename
-from aiida.common import LinkType
+from aiida.common.links import LinkType
 from aiida.engine import Process, calcfunction
 from aiida.orm import CalcFunctionNode, CalculationNode, WorkflowNode
 

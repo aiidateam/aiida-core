@@ -113,8 +113,8 @@ class NodeAttributes:
 
         :param key: name of the attribute
         :param value: value of the attribute
-        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
-        :raise aiida.common.ModificationNotAllowed: if the entity is stored
+        :raise aiida.common.exceptions.ValidationError: if the key is invalid, i.e. contains periods
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes([key])
         self._backend_node.set_attribute(key, value)
@@ -125,8 +125,8 @@ class NodeAttributes:
         .. note:: This will override any existing attributes that are present in the new dictionary.
 
         :param attributes: a dictionary with the attributes to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        :raise aiida.common.ModificationNotAllowed: if the entity is stored
+        :raise aiida.common.exceptions.ValidationError: if any of the keys are invalid, i.e. contain periods
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes(list(attributes))
         self._backend_node.set_attribute_many(attributes)
@@ -137,8 +137,8 @@ class NodeAttributes:
         .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
 
         :param attributes: a dictionary with the attributes to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        :raise aiida.common.ModificationNotAllowed: if the entity is stored
+        :raise aiida.common.exceptions.ValidationError: if any of the keys are invalid, i.e. contain periods
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes()
         self._backend_node.reset_attributes(attributes)
@@ -148,7 +148,7 @@ class NodeAttributes:
 
         :param key: name of the attribute
         :raises AttributeError: if the attribute does not exist
-        :raise aiida.common.ModificationNotAllowed: if the entity is stored
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes([key])
         self._backend_node.delete_attribute(key)
@@ -158,7 +158,7 @@ class NodeAttributes:
 
         :param keys: names of the attributes to delete
         :raises AttributeError: if at least one of the attribute does not exist
-        :raise aiida.common.ModificationNotAllowed: if the entity is stored
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes(keys)
         self._backend_node.delete_attribute_many(keys)

@@ -13,7 +13,7 @@ import io
 import pytest
 
 from aiida import orm
-from aiida.common import LinkType
+from aiida.common.links import LinkType
 from aiida.engine import CalcJob
 from aiida.parsers import Parser
 from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only

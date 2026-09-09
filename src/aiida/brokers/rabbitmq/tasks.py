@@ -205,7 +205,7 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
                 except exceptions.TaskRejected:
                     # Task was rejected by this subscriber, keep trying
                     continue
-                except futures.CancelledError:
+                except (futures.CancelledError, asyncio.CancelledError):
                     # The subscriber has cancelled their processing of the task
                     outcome.cancel()
                 except Exception as exc:  # pylint: disable=broad-except

@@ -268,7 +268,7 @@ class RmqSubscriber:
                 # Send out a message saying that we're waiting for a future to complete
                 await self._send_response(reply_to, correlation_id, utils.pending_response())
                 pending = await pending
-        except futures.CancelledError as exc:
+        except (futures.CancelledError, asyncio.CancelledError) as exc:
             # Send out a cancelled response
             await self._send_response(reply_to, correlation_id, utils.cancelled_response(str(exc)))
             return

@@ -37,6 +37,7 @@ __all__ = (
     'CalcJobProcessSpec',
     'Dependency',
     'Each',
+    'Endpoint',
     'ExecutorReference',
     'ExitCode',
     'ExitCodesNamespace',

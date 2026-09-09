@@ -14,7 +14,7 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.engine import MapTask, each, graph, run_get_node, submit, task
+from aiida.engine import Endpoint, MapTask, each, graph, run_get_node, submit, task
 
 pytestmark = pytest.mark.requires_broker
 
@@ -44,7 +44,7 @@ def test_records_tasks_links_and_inputs():
     assert [(link.source, link.source_port, link.target, link.target_port) for link in dag.links] == [
         ('add', 'total', 'add_2', 'x')
     ]
-    assert dag.outputs == {'total': ('add_2', 'total')}
+    assert dag.outputs == {'total': Endpoint(task='add_2', port='total')}
 
 
 def test_the_declaration_holds_no_values():
@@ -237,15 +237,37 @@ def test_returning_a_dictionary_names_the_graph_outputs():
 
 
 def test_returning_something_that_is_not_an_output_is_refused():
-    """A graph returns the outputs of its tasks, so a plain value cannot be one of them."""
+    """A graph returns the outputs of its tasks or its own inputs, so a plain value cannot be one of them."""
 
     @graph
     def returns_a_value(x, y):
         add(x=x, y=y)
         return 42
 
-    with pytest.raises(ValueError, match='has to return an output'):
+    with pytest.raises(ValueError, match='has to return one of those'):
         returns_a_value.build()
+
+
+@graph
+def shift_and_echo(x, y):
+    """Return a computed output beside one of the graph's own inputs, passed on unchanged."""
+    return {'total': add(x=x, y=y).total, 'echo': x}
+
+
+def test_a_graph_can_pass_one_of_its_inputs_on():
+    """An input can be an output of the graph, which nothing produces and which is recorded as such."""
+    dag = shift_and_echo.build()
+
+    assert dag.outputs == {
+        'total': Endpoint(task='add', port='total'),
+        'echo': Endpoint(task=None, port='x'),
+    }
+
+    results, node = run_get_node(shift_and_echo, x=1, y=2)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 3
+    assert results['echo'] == 1
 
 
 def test_calling_a_graph_is_refused():

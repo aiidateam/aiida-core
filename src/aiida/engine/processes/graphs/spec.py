@@ -64,6 +64,37 @@ because it is still one process submitted with its inputs.
 """
 
 
+def has_port(ports: PortNamespace, path: str) -> bool:
+    """Return whether a namespace has a port at the given path, which may name one inside a nested namespace.
+
+    A namespace that takes whatever it is given has every port under it, so the walk stops at the first one of
+    those it reaches rather than looking for a declaration that will never be there. A path that ends on a
+    namespace rather than a port has none, since one value cannot fill a namespace.
+
+    :param path: name of a port, or names separated by dots for one inside a nested namespace.
+    """
+    head, _, rest = path.partition(PortNamespace.NAMESPACE_SEPARATOR)
+
+    if head not in ports:
+        return ports.dynamic
+
+    port = ports[head]
+
+    if not rest:
+        return not isinstance(port, PortNamespace)
+
+    return has_port(port, rest) if isinstance(port, PortNamespace) else False
+
+
+def port_names(ports: PortNamespace) -> dict[str, t.Any]:
+    """Return the names a namespace declares, nested the way its namespaces are.
+
+    A port maps to ``None`` and a namespace to the names under it, which is what lets an output be referred to
+    before anything has run, one name at a time.
+    """
+    return {name: port_names(port) if isinstance(port, PortNamespace) else None for name, port in ports.items()}
+
+
 @dataclass(frozen=True)
 class ExecutorReference:
     """Importable reference to the process that realizes a task.
@@ -299,10 +330,10 @@ class ProcessTask(GraphTask):
     spec: TaskSpec
 
     def accepts(self, port: str) -> bool:
-        return port in self.spec.inputs or self.spec.inputs.dynamic
+        return has_port(self.spec.inputs, port)
 
     def produces(self, port: str) -> bool:
-        return port in self.spec.outputs or self.spec.outputs.dynamic
+        return has_port(self.spec.outputs, port)
 
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'spec': self.spec.to_dict()}

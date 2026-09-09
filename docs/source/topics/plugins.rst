@@ -411,12 +411,12 @@ The module provides the following fixtures:
 * :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
 * :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
 * :ref:`daemon_client <topics:plugins:testfixtures:daemon-client>`: Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance to control the daemon
-* :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points
+* :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.tools.pytest_fixtures.entry_points.EntryPointManager` instance to add and remove entry points
 
 .. note::
 
     Before v2.6, test fixtures were located in :mod:`aiida.manage.tests.pytest_fixtures`.
-    This module is now deprecated and will be removed in the future.
+    This module has been removed in v3.0.
     Some fixtures have analogs in :mod:`aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
 
 
@@ -509,7 +509,7 @@ Should be used for a test class:
     @pytest.mark.usefixtures('aiida_profile_clean_class')
     class TestClass:
 
-        def test():
+        def test(self):
             ...
 
 The storage is cleaned once when the class is initialized.
@@ -521,24 +521,23 @@ The storage is cleaned once when the class is initialized.
 -------------------------
 
 Create a temporary profile, add it to the config of the loaded AiiDA instance and load the profile.
-Can be useful to create a test profile for a custom storage backend:
+The factory is a context manager: on exit, the profile that was loaded before is restored.
+This can be useful to create a test profile for a custom storage backend:
 
 .. code-block:: python
 
     @pytest.fixture(scope='session')
-    def custom_storage_profile(aiida_profile_factory) -> Profile:
+    def custom_storage_profile(aiida_config, aiida_profile_factory) -> Profile:
         """Return a test profile for a custom :class:`~aiida.orm.implementation.storage_backend.StorageBackend`"""
-        from some_module import CustomStorage
-        configuration = {
-            'storage': {
-                'backend': 'plugin_package.custom_storage',
-                'config': {
-                    'username': 'joe'
-                    'api_key': 'super-secret-key'
-                }
-            }
-        }
-        yield aiida_profile_factory(configuration)
+        with aiida_profile_factory(
+            aiida_config,
+            storage_backend='plugin_package.custom_storage',
+            storage_config={
+                'username': 'joe',
+                'api_key': 'super-secret-key',
+            },
+        ) as profile:
+            yield profile
 
 Note that the configuration above is not actually functional and the actual configuration depends on the storage implementation that is used.
 
@@ -567,11 +566,15 @@ This can be used in combination with the ``aiida_profile_factory`` fixture to cr
 .. code-block:: python
 
     @pytest.fixture(scope='session')
-    def psql_dos_profile(aiida_profile_factory, config_psql_dos) -> Profile:
+    def psql_dos_profile(aiida_config, aiida_profile_factory, config_psql_dos) -> Profile:
         """Return a test profile configured for the :class:`~aiida.storage.psql_dos.PsqlDosStorage`."""
         configuration = config_psql_dos()
         configuration['repository_uri'] = '/some/custom/path'
-        with aiida_profile_factory(storage_backend='core.psql_dos', storage_config=configuration) as profile:
+        with aiida_profile_factory(
+            aiida_config,
+            storage_backend='core.psql_dos',
+            storage_config=configuration,
+        ) as profile:
             yield profile
 
 
@@ -589,8 +592,8 @@ Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup 
 .. code-block:: python
 
     @pytest.fixture()
-    def custom_postgres_cluster(postgres_cluster):
-        yield postgres_cluster(
+    def custom_postgres_database(postgres_cluster):
+        return postgres_cluster.create_database(
             database_name='some-database-name',
             database_username='guest',
             database_password='guest',
@@ -776,7 +779,9 @@ By default it will wait for the process to reach ``ProcessState.FINISHED``:
 .. code-block:: python
 
     def test(aiida_code_installed, submit_and_await):
-        code = aiida_code_installed(filepath_executable='core.arithmetic.add', filepath_executable='/usr/bin/bash')
+        from aiida import orm
+
+        code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/usr/bin/bash')
         builder = code.get_builder()
         builder.x = orm.Int(1)
         builder.y = orm.Int(1)
@@ -835,7 +840,7 @@ At the end of the test session, this fixture automatically shuts down the daemon
 ``entry_points``
 ----------------
 
-Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points.
+Return a :class:`~aiida.tools.pytest_fixtures.entry_points.EntryPointManager` instance to add and remove entry points.
 
 .. code-block:: python
 

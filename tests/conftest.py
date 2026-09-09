@@ -8,7 +8,7 @@
 ###########################################################################
 """Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
 
-Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
+Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.tools.pytest_fixtures`. They are
 loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
 """
 

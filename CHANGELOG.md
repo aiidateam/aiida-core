@@ -17,6 +17,13 @@ The process persistence primitives have been replaced with explicit checkpoint c
 - `Persister` is replaced by `CheckpointPersister`.
 - `AiiDAPersister` is replaced by `AiidaCheckpointPersister`.
 
+The `aiida.manage.tests.pytest_fixtures` module, deprecated since `aiida-core==2.6`, has been removed.
+Use `aiida.tools.pytest_fixtures` instead, which provides the fixtures for plugin packages and can be loaded with:
+```python
+pytest_plugins = 'aiida.tools.pytest_fixtures'
+```
+Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
+
 ### New features
 
 #### `ShellJob`: run any command without writing a plugin

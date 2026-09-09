@@ -14,7 +14,15 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.engine import Endpoint, MapTask, each, graph, run_get_node, submit, task
+from aiida.engine import (
+    Endpoint,
+    MapTask,
+    each,
+    graph,
+    run_get_node,
+    submit,
+    task,
+)
 
 pytestmark = pytest.mark.requires_broker
 
@@ -34,6 +42,30 @@ def add_twice(x, y):
     """Take the output of one task into the next."""
     first = add(x=x, y=y)
     return add(x=first.total, y=y)
+
+
+@graph
+def shift_all(values, by):
+    """Run one task per item of a collection, which is what `each` marks."""
+    return add(x=each(values), y=by)
+
+
+@task(outputs=['values'])
+def spread(n):
+    """Produce the collection that a later task is run over."""
+    return list(range(int(n)))
+
+
+@graph
+def shift_spread(n, by):
+    made = spread(n=n)
+    return add(x=each(made.values), y=by)
+
+
+@graph
+def shift_and_echo(x, y):
+    """Return a computed output beside one of the graph's own inputs, passed on unchanged."""
+    return {'total': add(x=x, y=y).total, 'echo': x}
 
 
 def test_records_tasks_links_and_inputs():
@@ -77,12 +109,6 @@ def test_runs_what_was_written():
     assert sorted(entry.link_label for entry in called) == ['add', 'add_2']
 
 
-@graph
-def shift_all(values, by):
-    """Run one task per item of a collection, which is what `each` marks."""
-    return add(x=each(values), y=by)
-
-
 def test_each_places_a_task_that_fans_out():
     """Marking an input with `each` declares a task run once per item, over that input."""
     declaration = shift_all.build()
@@ -103,18 +129,6 @@ def test_a_fan_out_runs_once_per_item():
         'item_1': 12,
         'item_2': 13,
     }
-
-
-@task(outputs=['values'])
-def spread(n):
-    """Produce the collection that a later task is run over."""
-    return list(range(int(n)))
-
-
-@graph
-def shift_spread(n, by):
-    made = spread(n=n)
-    return add(x=each(made.values), y=by)
 
 
 def test_a_fan_out_can_take_its_collection_from_a_task():
@@ -250,12 +264,6 @@ def test_returning_something_that_is_not_an_output_is_refused():
         returns_a_value.build()
 
 
-@graph
-def shift_and_echo(x, y):
-    """Return a computed output beside one of the graph's own inputs, passed on unchanged."""
-    return {'total': add(x=x, y=y).total, 'echo': x}
-
-
 def test_a_graph_can_pass_one_of_its_inputs_on():
     """An input can be an output of the graph, which nothing produces and which is recorded as such."""
     declaration = shift_and_echo.build()
@@ -291,3 +299,12 @@ def test_a_task_outside_a_graph_still_runs():
 
     assert node.is_finished_ok
     assert result['total'] == 3
+
+
+def test_outputs_rejects_a_bare_string():
+    """A bare string would silently declare one output port per character."""
+    with pytest.raises(TypeError, match='sequence of port names'):
+
+        @task(outputs='result')
+        def bare_string(x):
+            return x

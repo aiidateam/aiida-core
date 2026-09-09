@@ -112,6 +112,8 @@ __all__ = (
     'PROFILE_SET_DEFAULT',
     'PROJECT',
     'RAW',
+    'DESCENDANT',
+    'ANCESTOR',
     'RELABEL_GROUPS',
     'REPOSITORY_PATH',
     'SCHEDULER',
@@ -914,4 +916,14 @@ END_DATE = OverridableOption(
     default=None,
     show_default=True,
     help='End date for node mtime range selection for node collection dumping.',
+)
+
+
+DESCENDANT = OverridableOption(
+    '-d', '--descendant', type=types.NodeParamType(), help='Filter for nodes that are a descendant of this node.'
+)
+
+
+ANCESTOR = OverridableOption(
+    '-a', '--ancestor', type=types.NodeParamType(), help='Filter for nodes that are an ancestor of this node.'
 )

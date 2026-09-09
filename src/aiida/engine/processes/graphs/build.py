@@ -27,6 +27,7 @@ from aiida.engine.processes.graphs.spec import (
     Endpoint,
     GraphSpec,
     GraphTask,
+    LoopTask,
     MapTask,
     ProcessTask,
     SubgraphTask,
@@ -48,6 +49,7 @@ __all__ = (
     'branch',
     'each',
     'graph',
+    'loop',
     'task',
 )
 
@@ -279,6 +281,37 @@ class GraphBuilder:
         self._tasks.append(BranchTask(name=name, inputs=self._wire(name, wired), body=body, otherwise=other))
 
         return TaskOutputs(task=name, ports=tuple(body.outputs))
+
+    def add_loop(
+        self,
+        body: GraphHandle,
+        *,
+        condition: str,
+        max_iterations: int,
+        arguments: dict[str, t.Any],
+    ) -> TaskOutputs:
+        """Place a loop in the graph being built, and record where the values it starts from come from.
+
+        :param body: the graph to run again and again.
+        :param condition: name of the value deciding whether to go round again.
+        :param max_iterations: how many times the body may run before the loop gives up.
+        :param arguments: the values the loop starts from, by the name the body declares.
+        :return: references to the outputs the loop will produce.
+        :raises ValueError: if the call marks one of the values with :func:`each`.
+        """
+        self._refuse_each(body.identifier, 'loop', arguments)
+
+        name = self._unique_name(f'loop_{body.identifier}')
+        task = LoopTask(
+            name=name,
+            inputs=self._wire(name, arguments),
+            body=body.build(),
+            condition_port=condition,
+            max_iterations=max_iterations,
+        )
+        self._tasks.append(task)
+
+        return TaskOutputs(task=name, ports=tuple(task.body.outputs))
 
     @staticmethod
     def _refuse_each(identifier: str, kind: str, arguments: dict[str, t.Any]) -> None:
@@ -558,6 +591,55 @@ def branch(
         )
 
     return builder.add_branch(condition, then=then, otherwise=otherwise, arguments=inputs)
+
+
+def loop(
+    body: GraphHandle,
+    *,
+    condition: str = CONDITION_PORT,
+    max_iterations: int = 1000,
+    **inputs: t.Any,
+) -> TaskOutputs:
+    """Run a graph again and again, on what the run before it produced, while a condition holds.
+
+    Each run starts from what the one before it returned, with the values given here standing in for whatever the
+    body does not produce. One of those values decides whether to go round again, so the body both takes it and
+    returns it, which is what lets a loop be written without anything pointing backwards.
+
+    Example usage:
+
+    >>> @task(outputs=['value', 'again'])
+    >>> def step(value):
+    >>>     return value - 1, value - 1 > 0
+    >>>
+    >>> @graph
+    >>> def countdown(value, again):
+    >>>     stepped = step(value=value)
+    >>>     return {'value': stepped.value, 'again': stepped.again}
+    >>>
+    >>> @graph
+    >>> def count_down_to_zero(start):
+    >>>     return loop(countdown, condition='again', value=start, again=True).value
+
+    A condition that is false to begin with leaves the loop producing nothing, and every task that takes one of
+    its outputs is left out of the run as well.
+
+    :param body: the graph to run again and again.
+    :param condition: name of the value deciding whether to go round again, which the body takes and returns.
+    :param max_iterations: how many times the body may run before the loop gives up on the condition turning.
+    :param inputs: the values the loop starts from, by the name the body declares.
+    :return: references to the outputs the loop will produce, which are those of the run it stopped on.
+    :raises TypeError: if it is called outside the body of a graph, where there is nothing to place it in.
+    """
+    builder = ACTIVE_BUILDER.get()
+
+    if builder is None:
+        raise TypeError(
+            '`loop` places a loop in a graph, so it is written in the body of a `@graph` function. To run a graph '
+            'once outside of one, pass it to `run` or `submit`.'
+        )
+
+    return builder.add_loop(body, condition=condition, max_iterations=max_iterations, arguments=inputs)
 
 
 class TaskHandle:

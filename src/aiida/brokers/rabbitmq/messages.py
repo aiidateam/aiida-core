@@ -246,7 +246,11 @@ class BasePublisherWithReplyQueue:
 
         response_future: asyncio.Future[Any] = asyncio.Future()
         self._awaiting_response[correlation_id] = response_future
-        result = await self.publish(message, routing_key=routing_key, mandatory=mandatory)
+        try:
+            result = await self.publish(message, routing_key=routing_key, mandatory=mandatory)
+        except BaseException:
+            self._awaiting_response.pop(correlation_id, None)
+            raise
         return result, response_future
 
     def get_exchange_name(self) -> str:

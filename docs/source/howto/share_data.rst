@@ -169,7 +169,35 @@ To see what would be imported, before importing, you can use the ``--test-run`` 
 .. tip:: The AiiDA archive format has evolved over time, but you can still import archives created with previous AiiDA versions.
     If an outdated archive version is detected during import, the archive file will be automatically migrated to the newest version (within a temporary folder) and the import retried.
 
-    You can also use ``verdi archive migrate`` to create updated archive files from existing archive files (or update them in place).
+.. _how-to:share:migrate:
+
+Migrating an archive file
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The archive format version is tied to the version of AiiDA that created the archive.
+AiiDA can only read archive files whose version matches the one expected by the installed code, so an archive created by an older version of AiiDA has to be migrated before a newer version can read it.
+
+If you only want to import an outdated archive into your profile, you do not need to migrate it yourself, since ``verdi archive import`` migrates a temporary copy automatically (see the tip above).
+To obtain an updated archive file instead, for example to keep it readable by the current version of AiiDA for long-term storage, use ``verdi archive migrate``:
+
+.. code-block:: console
+
+    $ verdi archive migrate my-calculations.aiida my-calculations-updated.aiida
+
+To migrate the archive file in place, use the ``--in-place`` flag:
+
+.. code-block:: console
+
+    $ verdi archive migrate --in-place my-calculations.aiida
+
+By default, the archive is migrated to the newest version supported by the installed version of AiiDA.
+Use the ``--version`` option to migrate to a specific version instead.
+
+.. warning::
+
+    Migrating an archive is a one-way operation, just like migrating a profile database.
+    Once migrated, the archive file can no longer be read by versions of AiiDA older than the one that performed the migration.
+    Keep a copy of the original archive file if you still need to read it with an older version of AiiDA.
 
 .. _how-to:share:serve:
 

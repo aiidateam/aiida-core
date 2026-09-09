@@ -26,6 +26,8 @@ from aiida.engine.processes.graphs.spec import (
     GraphSpec,
     GraphTask,
     MapTask,
+    ProcessTask,
+    SubgraphTask,
     TaskSpec,
 )
 from aiida.engine.processes.process import Process
@@ -155,6 +157,13 @@ class MappedOutputs(TaskOutputs):
     _output_class: t.ClassVar[type[TaskOutput]] = MappedOutput
 
 
+def _arguments(function: t.Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+    """Return the arguments of a call, by the name of the parameter each is bound to."""
+    bound = inspect.signature(function).bind(*args, **kwargs)
+    bound.apply_defaults()
+    return dict(bound.arguments)
+
+
 def _as_reference(value: t.Any) -> TaskOutput | None:
     """Return the output reference the value stands for, or ``None`` if it is a plain value."""
     if isinstance(value, TaskOutput):
@@ -187,11 +196,16 @@ def _holds_reference(value: t.Any) -> bool:
 class GraphBuilder:
     """Collects the tasks and dependencies of a graph while its function runs."""
 
-    def __init__(self) -> None:
+    def __init__(self, parameters: t.Sequence[str] = ()) -> None:
         self._tasks: list[GraphTask] = []
         self._dependencies: list[Dependency] = []
-        self._inputs: dict[str, list[tuple[str, str]]] = {}
+        self._inputs: dict[str, list[tuple[str, str]]] = {name: [] for name in parameters}
         self._used: Counter[str] = Counter()
+
+    @property
+    def _placed(self) -> set[str]:
+        """Return the names of the tasks placed in the graph so far."""
+        return {task.name for task in self._tasks}
 
     def add_task(self, handle: TaskHandle, arguments: dict[str, t.Any]) -> TaskOutputs:
         """Place a task in the graph, and record where each of its inputs comes from.
@@ -202,17 +216,60 @@ class GraphBuilder:
         :raises ValueError: if more than one input is marked with :func:`each`.
         """
         name = self._unique_name(handle.task_spec.identifier)
+        item_ports = [key for key, argument in arguments.items() if isinstance(argument, Each)]
+        values = {
+            key: argument.collection if isinstance(argument, Each) else argument for key, argument in arguments.items()
+        }
+
+        task = self._task(name, handle, self._wire(name, values), item_ports)
+        self._tasks.append(task)
+        outputs_class = MappedOutputs if isinstance(task, MapTask) else TaskOutputs
+
+        return outputs_class(task=name, ports=tuple(handle.task_spec.outputs.keys()))
+
+    def add_graph(self, handle: GraphHandle, arguments: dict[str, t.Any]) -> TaskOutputs:
+        """Place a graph inside the graph being built, and record where each of its inputs comes from.
+
+        The body is built here, so what is placed is the declaration of that graph, and the inputs and outputs it
+        declares are the ports the graph around it wires to.
+
+        :param handle: the graph being placed.
+        :param arguments: the arguments of the call, by parameter name.
+        :return: references to the outputs the graph will produce.
+        :raises ValueError: if the call marks one of the inputs with :func:`each`.
+        """
+        mapped = sorted(key for key, argument in arguments.items() if isinstance(argument, Each))
+
+        if mapped:
+            raise ValueError(
+                f'`{handle.identifier}` is a graph and {mapped} marks it to run once per item. Running a graph '
+                f'once per item is not supported yet; place a task that fans out inside the graph.'
+            )
+
+        body = handle.build()
+        name = self._unique_name(handle.identifier)
+        self._tasks.append(SubgraphTask(name=name, inputs=self._wire(name, arguments), body=body))
+
+        return TaskOutputs(task=name, ports=tuple(body.outputs))
+
+    def _wire(self, name: str, arguments: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Return the arguments that are plain values, recording where each of the others comes from.
+
+        An argument that stands for an output of another task, or for an input of the graph, records a dependency
+        rather than a value, which is what wires the graph together.
+
+        :param name: the name the task is placed under, which the dependencies are recorded against.
+        :raises ValueError: if an argument comes from outside this graph, comes from a task that fans out, or
+            carries either of those inside a container.
+        """
         inputs = {}
-        item_ports = []
 
-        for key, argument in arguments.items():
-            if isinstance(argument, Each):
-                item_ports.append(key)
-
-            value = argument.collection if isinstance(argument, Each) else argument
-
+        for key, value in arguments.items():
             if isinstance(value, GraphInput):
-                self._inputs.setdefault(value.name, []).append((name, key))
+                if value.name not in self._inputs:
+                    self._refuse_foreign(name, key, value.name)
+
+                self._inputs[value.name].append((name, key))
                 continue
 
             reference = _as_reference(value)
@@ -225,6 +282,9 @@ class GraphBuilder:
                 )
 
             if reference is not None:
+                if reference.task not in self._placed:
+                    self._refuse_foreign(name, key, reference.task)
+
                 self._dependencies.append(
                     Dependency(source=reference.task, source_port=reference.port, target=name, target_port=key)
                 )
@@ -239,17 +299,22 @@ class GraphBuilder:
 
             inputs[key] = value
 
-        node = self._node(name, handle, inputs, item_ports)
-        self._tasks.append(node)
-        outputs_class = MappedOutputs if isinstance(node, MapTask) else TaskOutputs
-
-        return outputs_class(task=name, ports=tuple(handle.task_spec.outputs.keys()))
+        return inputs
 
     @staticmethod
-    def _node(name: str, handle: TaskHandle, inputs: dict[str, t.Any], item_ports: list[str]) -> GraphTask:
-        """Return the node for a call, which fans out when one of its inputs was marked with :func:`each`."""
+    def _refuse_foreign(name: str, key: str, origin: str) -> t.NoReturn:
+        """Raise for an argument standing for something that belongs to a graph around this one."""
+        raise ValueError(
+            f'`{name}` takes `{key}` from `{origin}`, which is not part of this graph. A graph written inside '
+            f'another reaches nothing outside itself, so take `{origin}` as a parameter of this graph and pass '
+            f'it in where the graph is placed.'
+        )
+
+    @staticmethod
+    def _task(name: str, handle: TaskHandle, inputs: dict[str, t.Any], item_ports: list[str]) -> ProcessTask:
+        """Return the task for a call, which fans out when one of its inputs was marked with :func:`each`."""
         if not item_ports:
-            return GraphTask(name=name, spec=handle.task_spec, inputs=inputs)
+            return ProcessTask(name=name, spec=handle.task_spec, inputs=inputs)
 
         if len(item_ports) > 1:
             raise ValueError(
@@ -324,10 +389,15 @@ class GraphHandle:
         functools.update_wrapper(self, function)
 
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        raise TypeError(
-            f'`{self.identifier}` declares a graph, so it is launched rather than called. Pass it to `run` or '
-            f'`submit`, as any other process, or use `.build(...)` for the declaration on its own.'
-        )
+        builder = ACTIVE_BUILDER.get()
+
+        if builder is None:
+            raise TypeError(
+                f'`{self.identifier}` declares a graph, so it is launched rather than called. Pass it to `run` or '
+                f'`submit`, as any other process, or use `.build(...)` for the declaration on its own.'
+            )
+
+        return builder.add_graph(self, _arguments(self._function, *args, **kwargs))
 
     def build(self) -> GraphSpec:
         """Return the graph that the function declares.
@@ -335,7 +405,7 @@ class GraphHandle:
         The body is traced once with each of its parameters standing for an input of the graph, so the result is
         the same declaration for every run and the values are what a run supplies.
         """
-        builder = GraphBuilder()
+        builder = GraphBuilder(self.parameters)
         token = ACTIVE_BUILDER.set(builder)
 
         try:
@@ -364,19 +434,7 @@ class GraphHandle:
         The declaration says what to run and the arguments are what to run it on, so they travel side by side and
         the same declaration serves every run.
         """
-        from aiida.orm import Data, Dict
-        from aiida.orm.nodes.data.base import to_aiida_type
-
-        bound = inspect.signature(self._function).bind(*args, **kwargs)
-        bound.apply_defaults()
-
-        return {
-            GraphProcess._GRAPH: Dict(dict=self.build().to_dict()),
-            GraphProcess._GRAPH_INPUTS: {
-                name: value if isinstance(value, Data) else to_aiida_type(value)
-                for name, value in bound.arguments.items()
-            },
-        }
+        return GraphProcess.launch_inputs(self.build(), _arguments(self._function, *args, **kwargs))
 
 
 def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
@@ -442,9 +500,7 @@ class TaskHandle:
 
     def bind_arguments(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
         """Return the arguments of a call to this task, by the name of the parameter each is bound to."""
-        bound = inspect.signature(self._function).bind(*args, **kwargs)
-        bound.apply_defaults()
-        return dict(bound.arguments)
+        return _arguments(self._function, *args, **kwargs)
 
     @property
     def process_class(self) -> type[Process]:

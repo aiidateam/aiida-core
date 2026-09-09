@@ -21,8 +21,9 @@ from aiida.engine import (
     Endpoint,
     GraphProcess,
     GraphSpec,
-    GraphTask,
     MapTask,
+    ProcessTask,
+    SubgraphTask,
     ToContext,
     WorkChain,
     run_get_node,
@@ -52,11 +53,28 @@ def linear_graph() -> GraphSpec:
     """Return ``add(add(1, 1), 3)``, so the second task waits on the first."""
     return GraphSpec(
         tasks=(
-            GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
-            GraphTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
+            ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+            ProcessTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
         ),
         dependencies=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
         outputs={'total': Endpoint(task='sum', port='total')},
+    )
+
+
+def nested_graph() -> GraphSpec:
+    """Return a graph that adds 3 to what its first task produced, in a graph of its own."""
+    body = GraphSpec(
+        tasks=(ProcessTask(name='sum', spec=add.task_spec, inputs={'y': 3}),),
+        inputs={'start': (('sum', 'x'),)},
+        outputs={'total': Endpoint(task='sum', port='total')},
+    )
+    return GraphSpec(
+        tasks=(
+            ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+            SubgraphTask(name='inner', body=body),
+        ),
+        dependencies=(Dependency(source='start', source_port='total', target='inner', target_port='start'),),
+        outputs={'total': Endpoint(task='inner', port='total')},
     )
 
 
@@ -131,10 +149,10 @@ def test_runs_a_diamond_graph():
     """Two tasks that only depend on the first are both dispatched, and their outputs join in the last."""
     graph = GraphSpec(
         tasks=(
-            GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
-            GraphTask(name='left', spec=add.task_spec, inputs={'y': 1}),
-            GraphTask(name='right', spec=multiply.task_spec, inputs={'y': 3}),
-            GraphTask(name='join', spec=add.task_spec),
+            ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+            ProcessTask(name='left', spec=add.task_spec, inputs={'y': 1}),
+            ProcessTask(name='right', spec=multiply.task_spec, inputs={'y': 3}),
+            ProcessTask(name='join', spec=add.task_spec),
         ),
         dependencies=(
             Dependency(source='start', source_port='total', target='left', target_port='x'),
@@ -151,9 +169,22 @@ def test_runs_a_diamond_graph():
     assert results['total'] == 9  # (2 + 1) + (2 * 3)
 
 
+def test_runs_a_graph_placed_in_a_graph():
+    """A graph inside a graph runs as a child process of its own, producing what its body declares."""
+    results, node = run_get_node(GraphProcess, graph=orm.Dict(dict=nested_graph().to_dict()))
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 5  # (1 + 1) + 3
+
+    called = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
+
+    assert [entry.link_label for entry in called] == ['inner']
+    assert isinstance(called[0].node, orm.WorkChainNode)
+
+
 def test_reports_a_failing_task():
     """A task that does not finish well stops the graph and names the task that failed."""
-    graph = GraphSpec(tasks=(GraphTask(name='doomed', spec=boom.task_spec),))
+    graph = GraphSpec(tasks=(ProcessTask(name='doomed', spec=boom.task_spec),))
 
     _, node = run_get_node(GraphProcess, graph=orm.Dict(dict=graph.to_dict()))
 
@@ -166,8 +197,8 @@ def test_a_failing_task_stops_what_depends_on_it():
     """A task downstream of a failure is never dispatched, since its inputs will never exist."""
     graph = GraphSpec(
         tasks=(
-            GraphTask(name='doomed', spec=boom.task_spec),
-            GraphTask(name='after', spec=add.task_spec, inputs={'y': 1}),
+            ProcessTask(name='doomed', spec=boom.task_spec),
+            ProcessTask(name='after', spec=add.task_spec, inputs={'y': 1}),
         ),
         dependencies=(Dependency(source='doomed', source_port='result', target='after', target_port='x'),),
     )

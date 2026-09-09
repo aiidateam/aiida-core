@@ -19,8 +19,9 @@ from aiida.engine import (
     Endpoint,
     ExecutorReference,
     GraphSpec,
-    GraphTask,
     MapTask,
+    ProcessTask,
+    SubgraphTask,
     TaskSpec,
     task,
 )
@@ -43,8 +44,8 @@ def linear_graph() -> GraphSpec:
     """Return ``add(add(1, 1), 3)``, so the second task waits on the first."""
     return GraphSpec(
         tasks=(
-            GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
-            GraphTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
+            ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+            ProcessTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
         ),
         dependencies=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
         outputs={'total': Endpoint(task='sum', port='total')},
@@ -56,6 +57,15 @@ def mapped_graph(collection) -> GraphSpec:
     return GraphSpec(
         tasks=(MapTask(name='shifted', spec=add.task_spec, inputs={'x': collection, 'y': 10}, item_port='x'),),
         outputs={'total': Endpoint(task='shifted', port='total')},
+    )
+
+
+def shifting_graph() -> GraphSpec:
+    """Return a graph that takes one input, adds 3 to it, and returns the result."""
+    return GraphSpec(
+        tasks=(ProcessTask(name='sum', spec=add.task_spec, inputs={'y': 3}),),
+        inputs={'start': (('sum', 'x'),)},
+        outputs={'total': Endpoint(task='sum', port='total')},
     )
 
 
@@ -75,20 +85,20 @@ def test_spec_round_trip():
 
 
 def test_round_trip_records_the_task_kind():
-    """Every task records what kind it is, so a reader can tell a function task from one it does not know."""
+    """Every task records what kind it is, so a reader can tell a task that runs a process from one it does not know."""
     graph = linear_graph()
     serialized = graph.to_dict()
 
-    assert [task['kind'] for task in serialized['tasks']] == ['function', 'function']
+    assert [task['kind'] for task in serialized['tasks']] == ['process', 'process']
     assert GraphSpec.from_dict(serialized) == graph
 
 
 def test_rejects_an_unknown_task_kind():
     """A graph carrying a kind this version cannot run is refused, so a newer format is never half-read."""
     serialized = linear_graph().to_dict()
-    serialized['tasks'][0]['kind'] = 'while'
+    serialized['tasks'][0]['kind'] = 'from_a_newer_aiida'
 
-    with pytest.raises(ValueError, match='is of kind `while`'):
+    with pytest.raises(ValueError, match='is of kind `from_a_newer_aiida`'):
         GraphSpec.from_dict(serialized)
 
 
@@ -111,7 +121,7 @@ def test_rejects_an_unreadable_version(mutate, expected):
 def test_an_output_can_pass_on_an_input():
     """An output the graph passes on comes from no task, and says so where a task name would be."""
     graph = GraphSpec(
-        tasks=(GraphTask(name='sum', spec=add.task_spec, inputs={'x': 1, 'y': 2}),),
+        tasks=(ProcessTask(name='sum', spec=add.task_spec, inputs={'x': 1, 'y': 2}),),
         inputs={'echoed': (('sum', 'x'),)},
         outputs={'total': Endpoint(task='sum', port='total'), 'echo': Endpoint(task=None, port='echoed')},
     )
@@ -124,7 +134,7 @@ def test_passing_on_something_that_is_not_an_input_is_refused():
     """An output that passes on a name the graph does not take is refused where the graph is declared."""
     with pytest.raises(ValueError, match='passes on `nope`'):
         GraphSpec(
-            tasks=(GraphTask(name='sum', spec=add.task_spec, inputs={'x': 1, 'y': 2}),),
+            tasks=(ProcessTask(name='sum', spec=add.task_spec, inputs={'x': 1, 'y': 2}),),
             outputs={'echo': Endpoint(task=None, port='nope')},
         )
 
@@ -160,10 +170,58 @@ def test_map_results_cannot_be_taken_into_another_task_yet():
         GraphSpec(
             tasks=(
                 MapTask(name='shifted', spec=add.task_spec, inputs={'x': [1, 2], 'y': 10}, item_port='x'),
-                GraphTask(name='after', spec=multiply.task_spec, inputs={'y': 2}),
+                ProcessTask(name='after', spec=multiply.task_spec, inputs={'y': 2}),
             ),
             dependencies=(Dependency(source='shifted', source_port='total', target='after', target_port='x'),),
             outputs={'product': Endpoint(task='after', port='product')},
+        )
+
+
+def test_a_graph_can_be_a_task_in_another_graph():
+    """A graph placed in another is a task of kind `graph`, and reads back carrying its body."""
+    graph = GraphSpec(
+        tasks=(
+            ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+            SubgraphTask(name='inner', body=shifting_graph()),
+        ),
+        dependencies=(Dependency(source='start', source_port='total', target='inner', target_port='start'),),
+        outputs={'total': Endpoint(task='inner', port='total')},
+    )
+    serialized = graph.to_dict()
+
+    assert [task['kind'] for task in serialized['tasks']] == ['process', 'graph']
+
+    restored = GraphSpec.from_dict(serialized)
+
+    assert restored == graph
+    assert restored.task('inner').body == shifting_graph()
+
+
+@pytest.mark.parametrize(
+    'edge, expected',
+    [
+        pytest.param(
+            Dependency(source='start', source_port='total', target='inner', target_port='nope'),
+            'not an input of `inner`',
+            id='input',
+        ),
+        pytest.param(
+            Dependency(source='inner', source_port='nope', target='after', target_port='x'),
+            'not an output of `inner`',
+            id='output',
+        ),
+    ],
+)
+def test_a_placed_graph_has_the_ports_its_body_declares(edge, expected):
+    """The body says what the task takes and produces, so wiring to anything else is refused where it is declared."""
+    with pytest.raises(ValueError, match=expected):
+        GraphSpec(
+            tasks=(
+                ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+                SubgraphTask(name='inner', body=shifting_graph()),
+                ProcessTask(name='after', spec=add.task_spec, inputs={'y': 1}),
+            ),
+            dependencies=(edge,),
         )
 
 
@@ -181,8 +239,8 @@ def test_rejects_duplicate_task_names():
     with pytest.raises(ValueError, match='task names have to be unique'):
         GraphSpec(
             tasks=(
-                GraphTask(name='same', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
-                GraphTask(name='same', spec=add.task_spec, inputs={'x': 2, 'y': 2}),
+                ProcessTask(name='same', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+                ProcessTask(name='same', spec=add.task_spec, inputs={'x': 2, 'y': 2}),
             )
         )
 
@@ -190,17 +248,17 @@ def test_rejects_duplicate_task_names():
 def test_rejects_link_to_unknown_task():
     with pytest.raises(ValueError, match='unknown task `nope`'):
         GraphSpec(
-            tasks=(GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),),
+            tasks=(ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),),
             dependencies=(Dependency(source='start', source_port='total', target='nope', target_port='x'),),
         )
 
 
 def test_rejects_link_to_unknown_port():
-    with pytest.raises(ValueError, match='not a valid inputs'):
+    with pytest.raises(ValueError, match='not an input of'):
         GraphSpec(
             tasks=(
-                GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
-                GraphTask(name='sum', spec=add.task_spec),
+                ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+                ProcessTask(name='sum', spec=add.task_spec),
             ),
             dependencies=(Dependency(source='start', source_port='total', target='sum', target_port='nope'),),
         )
@@ -211,8 +269,8 @@ def test_rejects_cycle():
     with pytest.raises(ValueError, match='contain a cycle'):
         GraphSpec(
             tasks=(
-                GraphTask(name='first', spec=add.task_spec, inputs={'y': 1}),
-                GraphTask(name='second', spec=add.task_spec, inputs={'y': 1}),
+                ProcessTask(name='first', spec=add.task_spec, inputs={'y': 1}),
+                ProcessTask(name='second', spec=add.task_spec, inputs={'y': 1}),
             ),
             dependencies=(
                 Dependency(source='first', source_port='total', target='second', target_port='x'),

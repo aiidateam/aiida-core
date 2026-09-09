@@ -19,7 +19,7 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
-from aiida.engine.processes.graphs.spec import GraphSpec, GraphTask, MapTask
+from aiida.engine.processes.graphs.spec import GraphSpec, GraphTask, MapTask, ProcessTask, SubgraphTask
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
@@ -137,6 +137,23 @@ class GraphProcess(Process):
             self._graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
         return self._graph
 
+    @classmethod
+    def launch_inputs(cls, body: GraphSpec, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Return the inputs with which to launch a graph: the declaration, and the values to run it on.
+
+        The two travel side by side, so one declaration serves every run. The values are serialized here because
+        they arrive in a dynamic namespace, which declares no ports of its own to do it.
+
+        :param body: the graph to run.
+        :param inputs: the values for the inputs the graph declares.
+        """
+        return {
+            cls._GRAPH: Dict(dict=body.to_dict()),
+            cls._GRAPH_INPUTS: {
+                name: value if isinstance(value, Data) else to_aiida_type(value) for name, value in inputs.items()
+            },
+        }
+
     @override
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         super().save_instance_state(out_state, save_context)
@@ -245,11 +262,27 @@ class GraphProcess(Process):
 
     def _submit_instance(self, task: GraphTask, instance: str, inputs: dict[str, t.Any]) -> None:
         """Submit one process of a task, under the name that its call link carries."""
-        inputs = {**inputs, 'metadata': {**inputs.get('metadata', {}), 'call_link_label': instance}}
-        node = self.submit(task.spec.process_class, **inputs)
+        process_class, launch_inputs = self._launch(task, inputs)
+        metadata = {**launch_inputs.get('metadata', {}), 'call_link_label': instance}
+        node = self.submit(process_class, **{**launch_inputs, 'metadata': metadata})
         assert node.pk is not None
         self._dispatched[instance] = node.pk
         self.report(f'dispatched task `{instance}` as {node.pk}')
+
+    @staticmethod
+    def _launch(task: GraphTask, inputs: dict[str, t.Any]) -> tuple[type[Process], dict[str, t.Any]]:
+        """Return the process that runs one instance of a task, and the inputs to submit it with.
+
+        :raises ValueError: if the task is of a kind that has no way to run here, which a kind added to the
+            declaration without one would be.
+        """
+        if isinstance(task, SubgraphTask):
+            return GraphProcess, GraphProcess.launch_inputs(task.body, inputs)
+
+        if isinstance(task, ProcessTask):
+            return task.spec.process_class, inputs
+
+        raise ValueError(f'`{task.name}` is of kind `{task.kind}`, which this version of AiiDA cannot run.')
 
     @staticmethod
     def _item_key(name: str, instance: str) -> str:

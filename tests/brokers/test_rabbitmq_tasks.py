@@ -35,3 +35,33 @@ def test_task_done_cancelled_requeues():
         assert incoming.state == rmq_tasks.TASK_REQUEUED
     finally:
         loop.close()
+
+
+def test_task_subscriber_cancellation_stops_dispatch():
+    """A cancelled subscriber must prevent subsequent subscribers from handling the task."""
+    loop = asyncio.new_event_loop()
+    try:
+        subscriber = rmq_tasks.RmqTaskSubscriber.__new__(rmq_tasks.RmqTaskSubscriber)
+        subscriber._decode = lambda body: ({'task': 'dummy'}, False)
+        subscriber._loop = loop
+        subscriber._subscribers = {}
+
+        message = AsyncMock()
+        message.body = b'body'
+        handled = False
+
+        async def cancelled_subscriber(_communicator, _task):
+            raise asyncio.CancelledError
+
+        async def subsequent_subscriber(_communicator, _task):
+            nonlocal handled
+            handled = True
+
+        subscriber._subscribers = {'cancelled': cancelled_subscriber, 'subsequent': subsequent_subscriber}
+
+        loop.run_until_complete(subscriber._on_task(message))
+
+        assert not handled
+        message.nack.assert_called_once_with(requeue=True)
+    finally:
+        loop.close()

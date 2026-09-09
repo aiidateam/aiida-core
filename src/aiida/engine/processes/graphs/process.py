@@ -19,12 +19,19 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
-from aiida.engine.processes.graphs.spec import GraphSpec, GraphTask, MapTask, ProcessTask, SubgraphTask
+from aiida.engine.processes.graphs.spec import (
+    BranchTask,
+    GraphSpec,
+    GraphTask,
+    MapTask,
+    ProcessTask,
+    SubgraphTask,
+)
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
 from aiida.orm import Data, Dict, List, WorkChainNode, load_node
-from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess')
 
@@ -58,6 +65,15 @@ class TaskProcess(FunctionProcess):
             result = to_aiida_type(result)
 
         super()._out_result(result)
+
+
+def _holds(condition: t.Any) -> bool:
+    """Return whether a condition holds, on the value inside whatever node it arrives in.
+
+    A stored value is not usefully truthy on its own, since a node is an object like any other and ``Int(0)`` is
+    as truthy as ``Int(1)``, so it is the value it holds that decides.
+    """
+    return bool(condition.value if isinstance(condition, BaseType) else condition)
 
 
 def _map_items(collection: t.Any, task: MapTask) -> dict[str, t.Any]:
@@ -129,6 +145,9 @@ class GraphProcess(Process):
         self._instances: dict[str, list[str]] = {}
         self._dispatched: dict[str, int] = {}
         self._done: dict[str, int] = {}
+        # Tasks that will never run, because a branch was not taken or because something they take an input from
+        # was itself skipped. They settle like a task that finished, but produce nothing.
+        self._skipped: set[str] = set()
 
     @property
     def graph(self) -> GraphSpec:
@@ -160,6 +179,7 @@ class GraphProcess(Process):
         out_state['instances'] = {name: list(instances) for name, instances in self._instances.items()}
         out_state['dispatched'] = dict(self._dispatched)
         out_state['done'] = dict(self._done)
+        out_state['skipped'] = sorted(self._skipped)
 
     @override
     def load_instance_state(self, saved_state: MutableMapping[str, t.Any], load_context: t.Any) -> None:
@@ -168,15 +188,21 @@ class GraphProcess(Process):
         self._instances = {name: list(instances) for name, instances in saved_state.get('instances', {}).items()}
         self._dispatched = dict(saved_state.get('dispatched', {}))
         self._done = dict(saved_state.get('done', {}))
+        self._skipped = set(saved_state.get('skipped', []))
 
     @override
     async def run(self) -> t.Any:
         return self._do_step()
 
     def _do_step(self) -> t.Any:
-        """Dispatch the tasks that are ready, and wait until something finishes."""
-        for name in self.graph.ready(self._succeeded, self._instances):
-            self._dispatch(name)
+        """Start the tasks that are ready, and wait until something finishes.
+
+        Starting a task can settle it without running anything, which makes the tasks after it ready in the
+        same step, so the frontier is taken again until it is empty.
+        """
+        while ready := self.graph.ready(self._settled, self._decided):
+            for name in ready:
+                self._start(name)
 
         if self._pending:
             return Wait(self._do_step, 'waiting for dispatched tasks')
@@ -214,10 +240,31 @@ class GraphProcess(Process):
         finished, succeeded = self._finished, self._succeeded
         return [task.name for task in self.graph.tasks if task.name in finished and task.name not in succeeded]
 
-    def _dispatch(self, name: str) -> None:
-        """Submit the processes one task needs, which is one per item for a map and one for anything else."""
+    @property
+    def _settled(self) -> set[str]:
+        """Return the tasks the ones after them can be decided on: those that succeeded, and those that will not run."""
+        return self._succeeded | self._skipped
+
+    @property
+    def _decided(self) -> set[str]:
+        """Return the tasks that have been started or skipped, which are the ones not to look at again."""
+        return set(self._instances) | self._skipped
+
+    def _start(self, name: str) -> None:
+        """Start one task, unless something it takes an input from never ran, which leaves it nothing to run on."""
+        missing = sorted(self.graph.predecessors(name) & self._skipped)
+
+        if missing:
+            self.report(f'task `{name}` will not run, since `{missing[0]}` did not')
+            self._skipped.add(name)
+            return
+
         task = self.graph.task(name)
         inputs = self._resolve_inputs(task)
+
+        if isinstance(task, BranchTask):
+            self._dispatch_branch(task, inputs)
+            return
 
         if isinstance(task, MapTask):
             self._dispatch_mapped(task, inputs)
@@ -225,6 +272,19 @@ class GraphProcess(Process):
 
         self._instances[name] = [name]
         self._submit_instance(task, name, inputs)
+
+    def _dispatch_branch(self, task: BranchTask, inputs: dict[str, t.Any]) -> None:
+        """Submit the branch the condition selects, and skip the task when it selects none."""
+        condition = inputs.pop(task.condition_port, None)
+        taken = task.body if _holds(condition) else task.otherwise
+
+        if taken is None:
+            self.report(f'task `{task.name}` will not run, since its condition is false and it has no `otherwise`')
+            self._skipped.add(task.name)
+            return
+
+        self._instances[task.name] = [task.name]
+        self._submit(GraphProcess, GraphProcess.launch_inputs(taken, inputs), task.name)
 
     def _resolve_inputs(self, task: GraphTask) -> dict[str, t.Any]:
         """Return the inputs of a task, with whatever comes from another task filled in.
@@ -261,10 +321,14 @@ class GraphProcess(Process):
             self.report(f'task `{task.name}` maps over an empty collection, so it runs nothing')
 
     def _submit_instance(self, task: GraphTask, instance: str, inputs: dict[str, t.Any]) -> None:
-        """Submit one process of a task, under the name that its call link carries."""
+        """Submit one process of a task, with whatever runs it."""
         process_class, launch_inputs = self._launch(task, inputs)
-        metadata = {**launch_inputs.get('metadata', {}), 'call_link_label': instance}
-        node = self.submit(process_class, **{**launch_inputs, 'metadata': metadata})
+        self._submit(process_class, launch_inputs, instance)
+
+    def _submit(self, process_class: type[Process], inputs: dict[str, t.Any], instance: str) -> None:
+        """Submit one process, under the name that its call link carries."""
+        metadata = {**inputs.get('metadata', {}), 'call_link_label': instance}
+        node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None
         self._dispatched[instance] = node.pk
         self.report(f'dispatched task `{instance}` as {node.pk}')
@@ -323,6 +387,10 @@ class GraphProcess(Process):
             if source.task is None:
                 # The graph passes one of its own inputs on, so the value is already there and nothing produced it.
                 self.out(output, given[source.port])
+                continue
+
+            if source.task in self._skipped:
+                self.report(f'output `{output}` is not returned, since `{source.task}` did not run')
                 continue
 
             if not isinstance(self.graph.task(source.task), MapTask):

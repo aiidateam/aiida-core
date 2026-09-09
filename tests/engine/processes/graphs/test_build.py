@@ -15,9 +15,11 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.engine import (
+    BranchTask,
     Endpoint,
     MapTask,
     SubgraphTask,
+    branch,
     each,
     graph,
     run_get_node,
@@ -74,6 +76,30 @@ def add_four_times(x, y):
     """Place a graph inside a graph, taking what the first produced into the second."""
     once = add_twice(x=x, y=y)
     return add_twice(x=once.total, y=y)
+
+
+@graph
+def doubled(x):
+    """Stand in for the branch a condition selects."""
+    return add(x=x, y=x)
+
+
+@graph
+def negated(x):
+    """Return the same output as `doubled`, so the two can be the sides of one branch."""
+    return add(x=x, y=0)
+
+
+@graph
+def maybe_double(x, flag):
+    """Run a branch that produces nothing when its condition does not hold."""
+    return branch(flag, then=doubled, x=x)
+
+
+@graph
+def double_or_not(x, flag):
+    """Run a branch that produces the same outputs whichever side is taken."""
+    return branch(flag, then=doubled, otherwise=negated, x=x)
 
 
 @graph
@@ -343,6 +369,59 @@ def test_a_graph_inside_another_reaches_nothing_outside_it(declaration):
     """A value from the graph around it would never be passed in, so it is refused where the graph is written."""
     with pytest.raises(ValueError, match='not part of this graph'):
         declaration.build()
+
+
+def test_a_branch_is_placed_as_one_task_carrying_both_sides():
+    """Both branches are declared, so the only thing a run decides is which of the two it takes."""
+    declaration = double_or_not.build()
+    (branch,) = declaration.tasks
+
+    assert isinstance(branch, BranchTask)
+    assert branch.name == 'branch_doubled'
+    assert [node.name for node in branch.body.tasks] == ['add']
+    assert [node.name for node in branch.otherwise.tasks] == ['add']
+    assert declaration.inputs == {'x': (('branch_doubled', 'x'),), 'flag': (('branch_doubled', 'condition'),)}
+
+
+@pytest.mark.parametrize('flag, expected', [pytest.param(True, 6, id='taken'), pytest.param(False, 3, id='not-taken')])
+def test_a_branch_runs_the_side_its_condition_selects(flag, expected):
+    """Which side runs is decided while the graph runs, and the branch produces what that side produced."""
+    results, node = run_get_node(double_or_not, x=3, flag=flag)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == expected
+
+
+@pytest.mark.parametrize(
+    'flag, expected',
+    [pytest.param(True, {'total': 6}, id='taken'), pytest.param(False, {}, id='not-taken')],
+)
+def test_a_branch_without_an_otherwise_produces_nothing_when_it_is_not_taken(flag, expected):
+    """A condition that does not hold leaves the branch with nothing to return, so the output stays off."""
+    results, node = run_get_node(maybe_double, x=3, flag=flag)
+
+    assert node.is_finished_ok, node.exit_message
+    assert {key: value.value for key, value in results.items()} == expected
+
+
+def test_a_branch_that_did_not_run_leaves_out_what_takes_its_outputs():
+    """A task after a branch that produced nothing has nothing to run on, so it is left out of the run too."""
+
+    @graph
+    def add_after_a_branch(x, flag):
+        return add(x=branch(flag, then=doubled, x=x).total, y=1)
+
+    results, node = run_get_node(add_after_a_branch, x=3, flag=False)
+
+    assert node.is_finished_ok, node.exit_message
+    assert dict(results) == {}
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all() == []
+
+
+def test_calling_branch_outside_a_graph_is_refused():
+    """A branch is part of a graph, so writing one anywhere else says what to do instead."""
+    with pytest.raises(TypeError, match='written in the body of a `@graph`'):
+        branch(True, then=doubled, x=1)
 
 
 def test_running_a_graph_once_per_item_is_refused():

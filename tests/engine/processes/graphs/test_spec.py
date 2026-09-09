@@ -15,6 +15,7 @@ import typing as t
 import pytest
 
 from aiida.engine import (
+    BranchTask,
     Dependency,
     Endpoint,
     ExecutorReference,
@@ -223,6 +224,43 @@ def test_a_placed_graph_has_the_ports_its_body_declares(edge, expected):
             ),
             dependencies=(edge,),
         )
+
+
+def test_a_task_carrying_a_body_round_trips():
+    """A task that runs a graph writes its body out with it, and reads back carrying the same declaration."""
+    task_ = BranchTask(name='choice', body=shifting_graph())
+    graph = GraphSpec(tasks=(task_,))
+    serialized = graph.to_dict()
+
+    assert serialized['tasks'][0]['kind'] == 'branch'
+
+    restored = GraphSpec.from_dict(serialized)
+
+    assert restored == graph
+    assert restored.task(task_.name).body == task_.body
+
+
+def test_a_branch_whose_sides_produce_different_outputs_is_refused():
+    """What a branch produces cannot depend on which side ran, so differing outputs are refused when declared."""
+    with pytest.raises(ValueError, match='which branch ran'):
+        GraphSpec(
+            tasks=(
+                BranchTask(
+                    name='choice',
+                    body=shifting_graph(),
+                    otherwise=GraphSpec(
+                        tasks=(ProcessTask(name='sum', spec=add.task_spec, inputs={'x': 1, 'y': 1}),),
+                        outputs={'other': Endpoint(task='sum', port='total')},
+                    ),
+                ),
+            )
+        )
+
+
+def test_a_branch_sharing_a_name_between_its_condition_and_a_body_input_is_refused():
+    """The condition and an input of the same name would arrive on one port, so the clash is refused."""
+    with pytest.raises(ValueError, match='which a branch also takes'):
+        GraphSpec(tasks=(BranchTask(name='choice', body=shifting_graph(), condition_port='start'),))
 
 
 def test_ready_returns_the_frontier():

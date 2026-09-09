@@ -27,6 +27,7 @@ __all__ = (
     'ExecutorReference',
     'GraphSpec',
     'GraphTask',
+    'LoopTask',
     'MapTask',
     'ProcessTask',
     'SubgraphTask',
@@ -53,7 +54,7 @@ declared it finds it. Submitting such a task still needs a module a worker can i
 CONDITION_PORT: str = 'condition'
 """Name of the input a branch takes the value deciding it on, kept apart from the inputs of its body."""
 
-TaskKind = t.Literal['process', 'map', 'graph', 'branch']
+TaskKind = t.Literal['process', 'map', 'graph', 'branch', 'loop']
 """What a task in a graph is.
 
 A declaration is stored as provenance and read back by later versions of AiiDA, so every task says what kind it
@@ -418,8 +419,53 @@ class BranchTask(BodyTask):
         )
 
 
+@dataclass(frozen=True, kw_only=True)
+class LoopTask(BodyTask):
+    """A graph run again and again, on what the run before it produced, while a condition holds.
+
+    The state the loop carries is the body's outputs: each run starts from what the one before it returned, with
+    the values the loop was given standing in for whatever the body does not produce. One of those values decides
+    whether to go round again, so it is both an input the body takes and an output it returns, which is what lets
+    a loop be written without an edge pointing backwards.
+
+    A loop that does not run at all, because its condition was false to begin with, produces nothing, and leaves
+    everything taking one of its outputs out of the run as well.
+    """
+
+    KIND: t.ClassVar[TaskKind] = 'loop'
+
+    condition_port: str = CONDITION_PORT
+    """Name of the value deciding whether to run the body again, which the body both takes and returns."""
+
+    max_iterations: int = 1000
+    """How many times the body may run before the loop gives up, so a condition that never turns false ends."""
+
+    def accepts(self, port: str) -> bool:
+        return port in self.body.inputs
+
+    def produces(self, port: str) -> bool:
+        return port in self.body.outputs
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {
+            **super().to_dict(),
+            'condition_port': self.condition_port,
+            'max_iterations': self.max_iterations,
+        }
+
+    @classmethod
+    def _from_payload(cls, data: dict[str, t.Any]) -> LoopTask:
+        return cls(
+            name=data['name'],
+            inputs=data.get('inputs', {}),
+            body=GraphSpec.from_dict(data['body']),
+            condition_port=data.get('condition_port', CONDITION_PORT),
+            max_iterations=data['max_iterations'],
+        )
+
+
 TASK_KINDS: dict[str, type[GraphTask]] = {
-    task_class.KIND: task_class for task_class in (ProcessTask, MapTask, SubgraphTask, BranchTask)
+    task_class.KIND: task_class for task_class in (ProcessTask, MapTask, SubgraphTask, BranchTask, LoopTask)
 }
 """The task class for each kind, which is what a stored task is read back as and checked against."""
 
@@ -512,6 +558,10 @@ class GraphSpec:
             if isinstance(task, BranchTask):
                 self._check_branches(task)
 
+        for task in self.tasks:
+            if isinstance(task, LoopTask):
+                self._check_loop(task)
+
         for edge in self.dependencies:
             if isinstance(self.task(edge.source), MapTask):
                 raise ValueError(
@@ -521,6 +571,24 @@ class GraphSpec:
                 )
 
         self._check_acyclic()
+
+    @staticmethod
+    def _check_loop(task: LoopTask) -> None:
+        """Raise if a loop has no way to reach its end.
+
+        :raises ValueError: if the body does not both take and return the value the loop goes round on, since
+            then nothing the body does could ever change it, or if it may run no times at all.
+        """
+        for direction, ports in (('take', task.body.inputs), ('return', task.body.outputs)):
+            if task.condition_port not in ports:
+                raise ValueError(
+                    f'`{task.name}` goes round while `{task.condition_port}` holds, so its body has to {direction} '
+                    f'`{task.condition_port}`, and it {direction}s {sorted(ports)}. A loop starts from the value '
+                    f'it was given and goes on from the one its body returned, so the body decides when to stop.'
+                )
+
+        if task.max_iterations < 1:
+            raise ValueError(f'`{task.name}` may run at most {task.max_iterations} times, which is never.')
 
     @staticmethod
     def _check_branches(task: BranchTask) -> None:

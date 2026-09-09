@@ -1659,9 +1659,11 @@ class BlockingTransport(Transport):
 
         copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
         # note: order of the flags is important
+        # COPYFILE_DISABLE=1 prevents macOS bsdtar from including AppleDouble (._) resource fork files
+        # See https://unix.stackexchange.com/a/9865
         tar_command = (
-            f'tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} -C {root_dir!s} '
-            + copy_items
+            f'COPYFILE_DISABLE=1 tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} '
+            f'-C {root_dir!s} ' + copy_items
         )
 
         retval, stdout, stderr = self.exec_command_wait(tar_command)

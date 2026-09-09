@@ -10,4 +10,4 @@ Run with MPI
 Wrap command line parameters  False
 Prepend script                text to prepend
 Append script                 text to append
-Filepath executable           /remote/abs/path
+Filepath executable           <FILEPATH_EXECUTABLE>

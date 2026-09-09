@@ -29,6 +29,14 @@ def daemon_client(aiida_profile):
     """
     from aiida.engine.daemon import get_daemon_client
     from aiida.engine.daemon.client import DaemonNotRunningException, DaemonTimeoutException
+    from aiida.manage.configuration import get_config
+
+    # The default ``daemon.timeout`` is too small for daemon lifecycle operations on slow CI runners, especially on
+    # macOS. Raise it to a minimum value here, without overriding a larger user-configured timeout.
+    minimum_daemon_timeout = 30
+    config = get_config()
+    if config.get_option('daemon.timeout', scope=aiida_profile.name) < minimum_daemon_timeout:
+        config.set_option('daemon.timeout', minimum_daemon_timeout, scope=aiida_profile.name)
 
     daemon_client = get_daemon_client(aiida_profile.name)
 

@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for the ``DirectScheduler`` plugin."""
 
+import sys
+
 import pytest
 
 from aiida.common.datastructures import CodeRunMode
@@ -77,6 +79,11 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
 _FORK_WARNING = 'This process .* is multi-threaded, use of fork\\(\\) may lead to deadlocks in the child'
 
 
+@pytest.mark.skipif(
+    sys.platform == 'darwin',
+    reason='Uses multiprocessing fork() which crashes xdist workers on macOS due to corrupted '
+    'multi-threaded state in the forked child',
+)
 @pytest.mark.timeout(timeout=10)
 @pytest.mark.filterwarnings(f'ignore:{_FORK_WARNING}:DeprecationWarning')
 def test_kill_job(scheduler, tmpdir):

@@ -20,7 +20,9 @@ from dataclasses import dataclass
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
 from aiida.engine.processes.graphs.spec import (
+    CONDITION_PORT,
     DEFINED_TASKS,
+    BranchTask,
     Dependency,
     Endpoint,
     GraphSpec,
@@ -43,6 +45,7 @@ __all__ = (
     'TaskHandle',
     'TaskOutput',
     'TaskOutputs',
+    'branch',
     'each',
     'graph',
     'task',
@@ -238,19 +241,55 @@ class GraphBuilder:
         :return: references to the outputs the graph will produce.
         :raises ValueError: if the call marks one of the inputs with :func:`each`.
         """
-        mapped = sorted(key for key, argument in arguments.items() if isinstance(argument, Each))
-
-        if mapped:
-            raise ValueError(
-                f'`{handle.identifier}` is a graph and {mapped} marks it to run once per item. Running a graph '
-                f'once per item is not supported yet; place a task that fans out inside the graph.'
-            )
+        self._refuse_each(handle.identifier, 'graph', arguments)
 
         body = handle.build()
         name = self._unique_name(handle.identifier)
         self._tasks.append(SubgraphTask(name=name, inputs=self._wire(name, arguments), body=body))
 
         return TaskOutputs(task=name, ports=tuple(body.outputs))
+
+    def add_branch(
+        self,
+        condition: t.Any,
+        *,
+        then: GraphHandle,
+        otherwise: GraphHandle | None,
+        arguments: dict[str, t.Any],
+    ) -> TaskOutputs:
+        """Place a branch in the graph being built, and record where its condition and inputs come from.
+
+        Both branches are built here, so the declaration still describes every run and the only thing left to a
+        run is which of the two it takes.
+
+        :param condition: what decides between the branches, from a task or an input of the graph.
+        :param then: the graph to run when the condition holds.
+        :param otherwise: the graph to run when it does not, if there is one.
+        :param arguments: the inputs of the branches, by parameter name.
+        :return: references to the outputs the branch will produce.
+        :raises ValueError: if the call marks the condition or one of the inputs with :func:`each`.
+        """
+        wired = {**arguments, CONDITION_PORT: condition}
+        self._refuse_each(then.identifier, 'branch', wired)
+
+        body = then.build()
+        other = None if otherwise is None else otherwise.build()
+        name = self._unique_name(f'branch_{then.identifier}')
+
+        self._tasks.append(BranchTask(name=name, inputs=self._wire(name, wired), body=body, otherwise=other))
+
+        return TaskOutputs(task=name, ports=tuple(body.outputs))
+
+    @staticmethod
+    def _refuse_each(identifier: str, kind: str, arguments: dict[str, t.Any]) -> None:
+        """Raise if a call that cannot fan out marks one of its inputs with :func:`each`."""
+        mapped = sorted(key for key, argument in arguments.items() if isinstance(argument, Each))
+
+        if mapped:
+            raise ValueError(
+                f'`{identifier}` is a {kind} and {mapped} marks it to run once per item. Running a {kind} once '
+                f'per item is not supported yet; place a task that fans out inside it.'
+            )
 
     def _wire(self, name: str, arguments: dict[str, t.Any]) -> dict[str, t.Any]:
         """Return the arguments that are plain values, recording where each of the others comes from.
@@ -473,6 +512,52 @@ def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | N
         return decorator(function)
 
     return decorator
+
+
+def branch(
+    condition: t.Any,
+    *,
+    then: GraphHandle,
+    otherwise: GraphHandle | None = None,
+    **inputs: t.Any,
+) -> TaskOutputs:
+    """Run one of two graphs, depending on a value that only exists once the graph is running.
+
+    Both branches are graphs, so what a branch takes and produces is what it declares, and the outputs of the
+    whole branch are those of the graph that ran. Both branches have to return the same outputs, so that what
+    comes after the branch does not depend on which side was taken.
+
+    Example usage:
+
+    >>> @graph
+    >>> def refine(structure):
+    >>>     return relax(structure=structure)
+    >>>
+    >>> @graph
+    >>> def workflow(structure, refine_it):
+    >>>     first = relax(structure=structure)
+    >>>     return branch(refine_it, then=refine, structure=first.structure)
+
+    Without an ``otherwise``, a condition that does not hold leaves the branch producing nothing, and every task
+    that takes one of its outputs is left out of the run as well, as is any output of the graph that comes from
+    one of them.
+
+    :param condition: what decides between the branches, from a task or from an input of the graph.
+    :param then: the graph to run when the condition holds.
+    :param otherwise: the graph to run when it does not.
+    :param inputs: the inputs of the branches, by the name each of them declares.
+    :return: references to the outputs the branch will produce.
+    :raises TypeError: if it is called outside the body of a graph, where there is nothing to place it in.
+    """
+    builder = ACTIVE_BUILDER.get()
+
+    if builder is None:
+        raise TypeError(
+            '`branch` places a branch in a graph, so it is written in the body of a `@graph` function. To pick '
+            'between two graphs outside of one, call the one you want.'
+        )
+
+    return builder.add_branch(condition, then=then, otherwise=otherwise, arguments=inputs)
 
 
 class TaskHandle:

@@ -14,7 +14,7 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.engine import graph, run_get_node, submit, task
+from aiida.engine import MapTask, each, graph, run_get_node, submit, task
 
 pytestmark = pytest.mark.requires_broker
 
@@ -57,6 +57,104 @@ def test_runs_what_was_written():
 
     called = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
     assert sorted(entry.link_label for entry in called) == ['add', 'add_2']
+
+
+@graph
+def shift_all(values, by):
+    """Run one task per item of a collection, which is what `each` marks."""
+    return add(x=each(values), y=by)
+
+
+def test_each_places_a_task_that_fans_out():
+    """Marking an input with `each` declares a task run once per item, over that input."""
+    dag = shift_all.build(values=[1, 2, 3], by=10)
+    (node,) = dag.tasks
+
+    assert isinstance(node, MapTask)
+    assert node.item_port == 'x'
+    assert node.inputs == {'x': [1, 2, 3], 'y': 10}
+
+
+def test_a_fan_out_runs_once_per_item():
+    """Every item gets a process of its own, and the results come back under the key of the item."""
+    results, node = run_get_node(shift_all, values=[1, 2, 3], by=10)
+
+    assert node.is_finished_ok, node.exit_message
+    assert {key: value.value for key, value in results['total'].items()} == {
+        'item_0': 11,
+        'item_1': 12,
+        'item_2': 13,
+    }
+
+
+@task(outputs=['values'])
+def spread(n):
+    """Produce the collection that a later task is run over."""
+    return list(range(int(n)))
+
+
+@graph
+def shift_spread(n, by):
+    made = spread(n=n)
+    return add(x=each(made.values), y=by)
+
+
+def test_a_fan_out_can_take_its_collection_from_a_task():
+    """How many items there are can depend on what another task produced, so it is only known while running."""
+    dag = shift_spread.build(n=3, by=100)
+
+    assert isinstance(dag.task('add'), MapTask)
+    assert [(link.source, link.source_port, link.target, link.target_port) for link in dag.links] == [
+        ('spread', 'values', 'add', 'x')
+    ]
+
+    results, node = run_get_node(shift_spread, n=3, by=100)
+
+    assert node.is_finished_ok, node.exit_message
+    assert {key: value.value for key, value in results['total'].items()} == {
+        'item_0': 100,
+        'item_1': 101,
+        'item_2': 102,
+    }
+
+
+def test_a_fan_out_result_passed_to_a_task_is_refused_where_it_is_written():
+    """A result per item handed to a task that takes one value fails at the call that wrote it.
+
+    What a fan-out returns carries that it is per item, so this is caught while the graph is being written
+    rather than when the finished declaration is validated.
+    """
+
+    @graph
+    def reduce_it(values):
+        mapped = add(x=each(values), y=1)
+        return add(x=mapped.total, y=2)
+
+    with pytest.raises(ValueError, match='runs once per item'):
+        reduce_it.build(values=[1, 2])
+
+
+def test_an_output_inside_a_container_is_refused():
+    """An output buried in a container would be stored as a value, leaving the task it comes from unwaited for."""
+
+    @graph
+    def buried(x, y):
+        first = divide(x=x, y=y)
+        return add(x=each([first.quotient, first.remainder]), y=100)
+
+    with pytest.raises(ValueError, match='inside a list'):
+        buried.build(x=7, y=2)
+
+
+def test_only_one_input_can_be_mapped_over():
+    """A task runs over one of its inputs, so marking two says which choice has to be made."""
+
+    @graph
+    def two_at_once(values, others):
+        return add(x=each(values), y=each(others))
+
+    with pytest.raises(ValueError, match='runs once per item of'):
+        two_at_once.build(values=[1], others=[2])
 
 
 def test_a_task_used_twice_keeps_the_uses_apart():

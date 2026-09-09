@@ -15,10 +15,20 @@ import typing as t
 from collections import Counter
 from dataclasses import dataclass
 
-from aiida.engine.processes.dag import Dependency, GraphProcess, GraphSpec, GraphTask
+from aiida.engine.processes.dag import Dependency, GraphProcess, GraphSpec, GraphTask, MapTask
 from aiida.engine.processes.task import ACTIVE_BUILDER, TaskHandle
 
-__all__ = ('GraphBuilder', 'GraphHandle', 'TaskOutput', 'TaskOutputs', 'graph')
+__all__ = (
+    'Each',
+    'GraphBuilder',
+    'GraphHandle',
+    'MappedOutput',
+    'MappedOutputs',
+    'TaskOutput',
+    'TaskOutputs',
+    'each',
+    'graph',
+)
 
 
 @dataclass(frozen=True)
@@ -33,8 +43,46 @@ class TaskOutput:
     port: str
 
 
+@dataclass(frozen=True)
+class MappedOutput(TaskOutput):
+    """Reference to one output of a task that runs once per item, which is one result per item.
+
+    A graph can return this, and gets a result per item under the key of the item. Passing it to another task is
+    refused, since that task would take a collection of results where it declares one value.
+    """
+
+
+@dataclass(frozen=True)
+class Each:
+    """A collection to run a task over one item at a time, as returned by :func:`each`."""
+
+    collection: t.Any
+
+
+def each(collection: t.Any) -> Each:
+    """Mark the input a task is run once per item of.
+
+    Passing this instead of a value is what turns a call into a fan-out, so the task runs once per item of the
+    collection and its results are gathered under the key of each item.
+
+    Example usage:
+
+    >>> @graph
+    >>> def shift_all(values):
+    >>>     return add(x=each(values), y=10)
+
+    The collection can be the output of another task, in which case how many items there are is only known once
+    that task has run.
+
+    :param collection: a list or a dictionary, or the output of a task that produces one.
+    """
+    return Each(collection=collection)
+
+
 class TaskOutputs:
     """References to the outputs that a task placed in a graph will produce."""
+
+    _output_class: t.ClassVar[type[TaskOutput]] = TaskOutput
 
     def __init__(self, task: str, ports: tuple[str, ...]) -> None:
         self.task = task
@@ -43,7 +91,7 @@ class TaskOutputs:
     def __getattr__(self, name: str) -> TaskOutput:
         # Only called for names that are not real attributes, so the ports cannot shadow ``task`` or ``ports``.
         if name in self.__dict__.get('ports', ()):
-            return TaskOutput(task=self.__dict__['task'], port=name)
+            return self._output_class(task=self.__dict__['task'], port=name)
 
         raise AttributeError(f'`{self.__dict__.get("task")}` has no output `{name}`.')
 
@@ -58,7 +106,13 @@ class TaskOutputs:
                 f'named, for example `{self.task}.{self.ports[0] if self.ports else "..."}`.'
             )
 
-        return TaskOutput(task=self.task, port=self.ports[0])
+        return self._output_class(task=self.task, port=self.ports[0])
+
+
+class MappedOutputs(TaskOutputs):
+    """References to the outputs of a task that runs once per item, each of them a result per item."""
+
+    _output_class: t.ClassVar[type[TaskOutput]] = MappedOutput
 
 
 def _as_reference(value: t.Any) -> TaskOutput | None:
@@ -70,6 +124,24 @@ def _as_reference(value: t.Any) -> TaskOutput | None:
         return value.sole()
 
     return None
+
+
+def _holds_reference(value: t.Any) -> bool:
+    """Return whether the output of a task is buried inside a container.
+
+    Only an argument that *is* an output records a dependency, so one inside a container would be stored as a
+    plain value and the task it comes from would never be waited for.
+    """
+    if isinstance(value, (TaskOutput, TaskOutputs)):
+        return True
+
+    if isinstance(value, (list, tuple, set)):
+        return any(_holds_reference(item) for item in value)
+
+    if isinstance(value, dict):
+        return any(_holds_reference(item) for item in value.values())
+
+    return False
 
 
 class GraphBuilder:
@@ -86,12 +158,32 @@ class GraphBuilder:
         :param handle: the task being placed.
         :param arguments: the arguments of the call, by parameter name.
         :return: references to the outputs the task will produce.
+        :raises ValueError: if more than one input is marked with :func:`each`.
         """
         name = self._unique_name(handle.task_spec.identifier)
         inputs = {}
+        item_ports = []
 
-        for key, value in arguments.items():
+        for key, argument in arguments.items():
+            if isinstance(argument, Each):
+                item_ports.append(key)
+
+            value = argument.collection if isinstance(argument, Each) else argument
             reference = _as_reference(value)
+
+            if reference is None and _holds_reference(value):
+                raise ValueError(
+                    f'`{name}` takes `{key}` with the output of another task inside a '
+                    f'{type(value).__name__}, which would be stored as a value and leave that task unwaited for. '
+                    f'Pass the output itself, or take the collection from a task that produces one.'
+                )
+
+            if isinstance(reference, MappedOutput):
+                raise ValueError(
+                    f'`{name}` takes `{key}` from `{reference.task}`, which runs once per item and so has a '
+                    f'result per item, where `{key}` takes one value. Taking the results of a fan-out into '
+                    f'another task is not supported yet; a graph can return them.'
+                )
 
             if reference is None:
                 inputs[key] = value
@@ -100,9 +192,25 @@ class GraphBuilder:
                     Dependency(source=reference.task, source_port=reference.port, target=name, target_port=key)
                 )
 
-        self._tasks.append(GraphTask(name=name, spec=handle.task_spec, inputs=inputs))
+        node = self._node(name, handle, inputs, item_ports)
+        self._tasks.append(node)
+        outputs_class = MappedOutputs if isinstance(node, MapTask) else TaskOutputs
 
-        return TaskOutputs(task=name, ports=tuple(handle.task_spec.outputs.keys()))
+        return outputs_class(task=name, ports=tuple(handle.task_spec.outputs.keys()))
+
+    @staticmethod
+    def _node(name: str, handle: TaskHandle, inputs: dict[str, t.Any], item_ports: list[str]) -> GraphTask:
+        """Return the node for a call, which fans out when one of its inputs was marked with :func:`each`."""
+        if not item_ports:
+            return GraphTask(name=name, spec=handle.task_spec, inputs=inputs)
+
+        if len(item_ports) > 1:
+            raise ValueError(
+                f'`{name}` runs once per item of {sorted(item_ports)}, and a task runs over one of its inputs. '
+                f'Combine them into one input, or place a task per input.'
+            )
+
+        return MapTask(name=name, spec=handle.task_spec, inputs=inputs, item_port=item_ports[0])
 
     def _unique_name(self, identifier: str) -> str:
         """Return a name for a task, keeping the second use of a task distinct from the first."""

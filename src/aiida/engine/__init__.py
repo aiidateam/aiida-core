@@ -40,6 +40,7 @@ __all__ = (
     'FunctionProcess',
     'GraphBuilder',
     'GraphHandle',
+    'GraphInput',
     'GraphProcess',
     'GraphSpec',
     'GraphTask',

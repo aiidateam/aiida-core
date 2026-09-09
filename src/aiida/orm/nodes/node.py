@@ -97,22 +97,28 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
         self._backend.nodes.delete(pk)
 
     def iter_repo_keys(
-        self, filters: dict | None = None, subclassing: bool = True, batch_size: int = 100
+        self,
+        filters: dict | None = None,
+        subclassing: bool = True,
+        batch_size: int = 100,
+        *,
+        include_deleted: bool = False,
     ) -> Iterator[str]:
-        """Iterate over all repository object keys for this ``Node`` class
+        """Iterate over all repository object keys for this ``Node`` class.
 
         .. note:: keys will not be deduplicated, wrap in a ``set`` to achieve this
 
         :param filters: Filters for the node query
         :param subclassing: Whether to include subclasses of the given class
         :param batch_size: The number of nodes to fetch data for at once
+        :param include_deleted: Whether to include entries marked with ``deleted: True``.
         """
         from aiida.repository import Repository
 
         query = QueryBuilder(backend=self.backend)
         query.append(self.entity_type, subclassing=subclassing, filters=filters, project=['repository_metadata'])
         for (metadata,) in query.iterall(batch_size=batch_size):
-            for key in Repository.flatten(metadata).values():
+            for key in Repository.flatten(metadata, include_deleted=include_deleted).values():
                 if key is not None:
                     yield key
 

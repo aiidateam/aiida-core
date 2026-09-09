@@ -16,6 +16,7 @@ from aiida.tools.graph.deletions import *
 
 __all__ = (
     'delete_group_nodes',
+    'delete_node_repositories',
     'delete_nodes',
 )
 

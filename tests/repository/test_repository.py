@@ -306,6 +306,12 @@ def test_list_objects(repository, generate_directory):
     assert all(isinstance(obj, File) for obj in objects)
     assert [obj.name for obj in objects] == ['file_b']
 
+    repository.mark_for_deletion('file_a')
+    repository.mark_for_deletion('path')
+
+    assert [obj.name for obj in repository.list_objects()] == ['relative']
+    assert repository.list_object_names() == ['relative']
+
 
 def test_list_object_names_raises(repository, generate_directory):
     """Test the ``Repository.list_object_names`` method when it is supposed to raise."""
@@ -499,6 +505,22 @@ def test_delete_object_hard(repository, generate_directory):
     assert not repository.backend.has_object(key)
 
 
+def test_unmark_for_deletion_hard_deleted(repository, generate_directory):
+    """Test ``Repository.unmark_for_deletion`` after hard deletion of the content."""
+    directory = generate_directory({'file_a': None})
+
+    with open(directory / 'file_a', 'rb') as handle:
+        repository.put_object_from_filelike(handle, 'file_a')
+
+    key = repository.get_object('file_a').key
+    repository.mark_for_deletion('file_a')
+    repository.delete_object('file_a', hard_delete=True)
+    repository.get_directory().objects['file_a'] = File('file_a', FileType.FILE, key, deleted=True)
+
+    with pytest.raises(FileNotFoundError, match='already been hard deleted'):
+        repository.unmark_for_deletion('file_a')
+
+
 def test_erase(repository, generate_directory):
     """Test the ``Repository.erase`` method."""
     directory = generate_directory(
@@ -666,15 +688,27 @@ def test_flatten(repository, generate_directory):
         }
     )
     repository.put_object_from_tree(str(directory))
+    repository.mark_for_deletion('relative/sub')
+    repository.mark_for_deletion('file_a')
     flattened = repository.flatten(repository.serialize())
+    flattened_without_deleted = repository.flatten(repository.serialize(), include_deleted=False)
     assert isinstance(flattened, dict)
-    if isinstance(repository.backend, DiskObjectStoreRepositoryBackend):
-        assert flattened == {
-            'empty/': None,
-            'relative/': None,
-            'file_a': 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73',
-            'relative/sub/': None,
-            'relative/file_b': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-            'relative/sub/file_c': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-            'relative/sub_empty/': None,
-        }
+    assert 'file_a' not in flattened_without_deleted
+    assert 'relative/sub/' not in flattened_without_deleted
+    assert 'relative/sub/file_c' not in flattened_without_deleted
+    assert set(flattened) == {
+        'empty/',
+        'relative/',
+        'file_a',
+        'relative/sub/',
+        'relative/file_b',
+        'relative/sub/file_c',
+        'relative/sub_empty/',
+    }
+    assert flattened['empty/'] is None
+    assert flattened['relative/'] is None
+    assert flattened['relative/sub/'] is None
+    assert flattened['relative/sub_empty/'] is None
+    assert isinstance(flattened['file_a'], str)
+    assert isinstance(flattened['relative/file_b'], str)
+    assert isinstance(flattened['relative/sub/file_c'], str)

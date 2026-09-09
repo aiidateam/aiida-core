@@ -561,6 +561,70 @@ class TestVerdiRehash:
         run_cli_command(cmd_node.rehash, options, raises=True)
 
 
+class TestVerdiDeleteRepository:
+    """Tests for the ``verdi node delete-repository`` command."""
+
+    def test_delete_repository_dry_run(self, run_cli_command):
+        """Test dry run does not mark repository entries for deletion."""
+        node = orm.Data()
+        node.base.repository.put_object_from_bytes(b'content', 'file.txt')
+        node.store()
+
+        result = run_cli_command(cmd_node.node_delete_repository, ['--dry-run', str(node.pk)])
+
+        node = orm.load_node(node.pk)
+        assert 'Report: 1 Node repository/repositories marked for deletion' in str(result.stdout_bytes)
+        assert 'Report: This was a dry run, exiting without deleting anything' in str(result.stdout_bytes)
+        assert node.base.repository.list_object_names() == ['file.txt']
+
+    def test_delete_repository_force(self, run_cli_command):
+        """Test force marks repository entries for deletion without prompting."""
+        node = orm.Data()
+        node.base.repository.put_object_from_bytes(b'content', 'folder/file.txt')
+        node.store()
+
+        result = run_cli_command(cmd_node.node_delete_repository, ['--force', str(node.pk)])
+
+        node = orm.load_node(node.pk)
+        assert 'YOU ARE ABOUT TO MARK THE REPOSITORIES' not in str(result.stdout_bytes)
+        assert 'Success: Finished marking repository entries for deletion.' in str(result.stdout_bytes)
+        assert 'Run `verdi storage maintain` afterwards to free disk space.' in str(result.stdout_bytes)
+        assert node.base.repository.list_object_names() == []
+
+    @pytest.mark.parametrize(
+        'options, user_input, was_marked',
+        [
+            ([], 'n', False),
+            ([], 'y', True),
+            (['--force'], '', True),
+        ],
+    )
+    def test_delete_repository_prompt_flow(self, run_cli_command, options, user_input, was_marked):
+        """Test prompt flow for repository deletion marking."""
+        node = orm.Data()
+        node.base.repository.put_object_from_bytes(b'content', 'file.txt')
+        node.store()
+
+        result = run_cli_command(
+            cmd_node.node_delete_repository,
+            options + [str(node.pk)],
+            user_input=user_input,
+            raises=user_input == 'n',
+        )
+
+        node = orm.load_node(node.pk)
+
+        if was_marked:
+            assert node.base.repository.list_object_names() == []
+        else:
+            assert node.base.repository.list_object_names() == ['file.txt']
+            assert 'Aborted!' in str(result.stderr_bytes)
+
+    def test_delete_repository_missing_pk(self, run_cli_command):
+        """Check that no exception is raised when a non-existent pk is given."""
+        run_cli_command(cmd_node.node_delete_repository, ['999'])
+
+
 class TestVerdiDelete:
     """Tests for the ``verdi node delete`` command."""
 

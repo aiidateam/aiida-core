@@ -13,9 +13,10 @@ import tempfile
 import pytest
 
 from aiida import get_profile, orm
+from aiida.manage import get_manager
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.tools import delete_group_nodes, delete_nodes
+from aiida.tools import delete_group_nodes, delete_node_repositories, delete_nodes
 
 
 class TestNodeIsStorable:
@@ -1523,6 +1524,60 @@ class TestNodeDeletion:
         with pytest.raises(NotExistent):
             orm.load_node(node_pk)
         assert callback_pks == [node_pk]
+
+    def test_delete_node_repositories_dry_run_true(self):
+        """Verify that a dry run should not mark repository entries for deletion."""
+        node = orm.Data()
+        node.base.repository.put_object_from_bytes(b'content', 'file.txt')
+        node.store()
+
+        deleted_pks, was_deleted = delete_node_repositories([node.pk], dry_run=True)
+
+        assert deleted_pks == {node.pk}
+        assert not was_deleted
+        assert node.base.repository.list_object_names() == ['file.txt']
+
+    def test_delete_node_repositories(self, caplog):
+        """Verify that repository entries are marked for deletion."""
+        import logging
+
+        node = orm.Data()
+        node.base.repository.put_object_from_bytes(b'content', 'folder/file.txt')
+        node.store()
+
+        with caplog.at_level(logging.REPORT):
+            deleted_pks, was_deleted = delete_node_repositories([node.pk], dry_run=False)
+
+        node = orm.load_node(node.pk)
+
+        assert deleted_pks == {node.pk}
+        assert was_deleted
+        assert node.base.repository.list_object_names() == []
+        assert node.base.repository.metadata['o']['folder']['deleted'] is True
+        assert any('Run `verdi storage maintain` afterwards to free disk space.' in record.message for record in caplog.records)
+
+    def test_delete_node_repositories_shared_content(self):
+        """Verify that marking a repository for deletion preserves shared content."""
+        node_deleted = orm.Data()
+        node_deleted.base.repository.put_object_from_bytes(b'same-content', 'file.txt')
+        node_deleted.store()
+
+        node_active = orm.Data()
+        node_active.base.repository.put_object_from_bytes(b'same-content', 'other.txt')
+        node_active.store()
+
+        key = next(iter(orm.Node.collection.iter_repo_keys()))
+
+        deleted_pks, was_deleted = delete_node_repositories([node_deleted.pk], dry_run=False)
+
+        node_deleted = orm.load_node(node_deleted.pk)
+        node_active = orm.load_node(node_active.pk)
+
+        assert deleted_pks == {node_deleted.pk}
+        assert was_deleted
+        assert node_deleted.base.repository.list_object_names() == []
+        assert node_active.base.repository.list_object_names() == ['other.txt']
+        assert get_manager().get_profile_storage().get_repository().has_object(key)
 
     #   TEST BASIC CASES
 

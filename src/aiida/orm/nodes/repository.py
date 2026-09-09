@@ -27,7 +27,9 @@ class NodeRepository:
 
     This is the compatibility layer between the `Node` class and the `Repository` class. The repository in principle has
     no concept of immutability, so it is implemented here. Any mutating operations will raise a `ModificationNotAllowed`
-    exception if the node is stored. Otherwise the operation is just forwarded to the repository instance.
+    exception if the node is stored. Otherwise the operation is just forwarded to the repository instance. The exception
+    is ``mark_for_deletion`` / ``unmark_for_deletion``, which only toggle a soft-deletion flag in the repository
+    metadata and are allowed on stored nodes.
 
     The repository instance keeps an internal mapping of the file hierarchy that it maintains, starting from an empty
     hierarchy if the instance was constructed normally, or from a specific hierarchy if reconstructed through the
@@ -393,6 +395,32 @@ class NodeRepository:
         :param path: optional relative path whose contents to copy.
         """
         self._repository.copy_tree(target, path)
+
+    def mark_for_deletion(self, path: FilePath) -> None:
+        """Mark the object at the given path for deletion.
+
+        Unlike other mutating repository methods, this is allowed on stored nodes. The object remains in the repository
+        metadata with ``deleted: True`` so that ``list_objects`` and ``list_object_names`` skip it. During storage
+        maintenance, objects that are only referenced through deleted entries can be hard-deleted from the backend.
+
+        :param path: the relative path of the object within the repository.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path.
+        """
+        self._repository.mark_for_deletion(path)
+        self._update_repository_metadata()
+
+    def unmark_for_deletion(self, path: FilePath) -> None:
+        """Remove the deletion mark from the object at the given path.
+
+        Unlike other mutating repository methods, this is allowed on stored nodes.
+
+        :param path: the relative path of the object within the repository.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path, or the content has already been hard deleted.
+        """
+        self._repository.unmark_for_deletion(path)
+        self._update_repository_metadata()
 
     def delete_object(self, path: str):
         """Delete the object from the repository.

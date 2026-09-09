@@ -464,6 +464,47 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
     _perform_delete()
 
 
+@verdi_node.command('delete-repository')
+@click.argument('identifier', nargs=-1, metavar='NODES')
+@options.DRY_RUN()
+@options.FORCE()
+@with_dbenv()
+def node_delete_repository(identifier, dry_run, force):
+    """Mark node repository entries for deletion.
+
+    This marks the top-level repository entries of the specified nodes for deletion.
+    The actual backend objects are only deleted when it is safe to do so during
+    ``verdi storage maintain``.
+    """
+    from aiida.orm.utils.loaders import NodeEntityLoader
+    from aiida.tools import delete_node_repositories
+
+    pks = []
+
+    for obj in identifier:
+        try:
+            pks.append(int(obj))
+        except ValueError:
+            pks.append(NodeEntityLoader.load_entity(obj).pk)
+
+    pks_set, _ = delete_node_repositories(pks, dry_run=True)
+
+    if dry_run:
+        return
+
+    if pks_set and not force:
+        echo.echo_warning(
+            f'YOU ARE ABOUT TO MARK THE REPOSITORIES OF {len(pks_set)} NODES FOR DELETION! THIS CANNOT BE UNDONE!'
+        )
+        echo.echo_info('The repositories of nodes with the following pks would be marked: ' + ' '.join(map(str, pks_set)))
+        click.confirm('Shall I continue?', abort=True)
+
+    _, was_deleted = delete_node_repositories(pks, dry_run=False)
+
+    if was_deleted:
+        echo.echo_success('Finished marking repository entries for deletion.')
+
+
 @verdi_node.command('rehash')
 @arguments.NODES()
 @click.option(

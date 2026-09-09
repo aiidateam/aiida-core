@@ -53,6 +53,7 @@ __all__ = (
     'default_node_styles',
     'default_node_sublabels',
     'delete_group_nodes',
+    'delete_node_repositories',
     'delete_nodes',
     'get_explicit_kpoints_path',
     'get_kpoints_path',

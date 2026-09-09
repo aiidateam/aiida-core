@@ -30,6 +30,8 @@ class File:
         file_type: FileType = FileType.DIRECTORY,
         key: str | None = None,
         objects: dict[str, 'File'] | None = None,
+        *,
+        deleted: bool = False,
     ) -> None:
         """Construct a new instance.
 
@@ -37,6 +39,7 @@ class File:
         :param file_type: Identifies whether the File is a file or a directory
         :param key: A key to map the file to its contents in the backend repository (file only)
         :param objects: Mapping of child names to child Files (directory only)
+        :param deleted: Whether the object is marked for deletion
 
         :raises ValueError: If a key is defined for a directory,
             or objects are defined for a file
@@ -53,6 +56,9 @@ class File:
         if objects is not None and any(not isinstance(obj, self.__class__) for obj in objects.values()):
             raise TypeError('objects should be `None` or a dictionary of `File` instances.')
 
+        if not isinstance(deleted, bool):
+            raise TypeError('deleted should be a boolean.')
+
         if file_type == FileType.DIRECTORY and key is not None:
             raise ValueError('an object of type `FileType.DIRECTORY` cannot define a key.')
 
@@ -63,6 +69,7 @@ class File:
         self._file_type = file_type
         self._key = key
         self._objects = objects or {}
+        self._deleted = deleted
 
     @classmethod
     def from_serialized(cls, serialized: dict[str, typing.Any], name: str = '') -> 'File':
@@ -71,6 +78,8 @@ class File:
         :param serialized: the serialized instance.
         :return: the reconstructed file object.
         """
+        deleted = bool(serialized.get('deleted', False))
+
         if 'k' in serialized:
             file_type = FileType.FILE
             key = serialized['k']
@@ -80,7 +89,7 @@ class File:
             key = None
             objects = {name: File.from_serialized(obj, name) for name, obj in serialized.get('o', {}).items()}
 
-        return cls(name, file_type, key, objects)
+        return cls(name, file_type, key, objects, deleted=deleted)
 
     def serialize(self) -> dict[str, typing.Any]:
         """Serialize the metadata into a JSON-serializable format.
@@ -91,9 +100,16 @@ class File:
         """
         if self.file_type == FileType.DIRECTORY:
             if self.objects:
-                return {'o': {key: obj.serialize() for key, obj in self.objects.items()}}
-            return {}
-        return {'k': self.key}
+                serialized = {'o': {key: obj.serialize() for key, obj in self.objects.items()}}
+            else:
+                serialized = {}
+        else:
+            serialized = {'k': self.key}
+
+        if self.deleted:
+            serialized['deleted'] = True
+
+        return serialized
 
     @property
     def name(self) -> str:
@@ -123,17 +139,31 @@ class File:
         """Return the objects of the file object."""
         return self._objects
 
+    @property
+    def deleted(self) -> bool:
+        """Return whether the file object is marked for deletion."""
+        return self._deleted
+
+    @deleted.setter
+    def deleted(self, value: bool) -> None:
+        """Set whether the file object is marked for deletion."""
+        if not isinstance(value, bool):
+            raise TypeError('deleted should be a boolean.')
+        self._deleted = value
+
     def __eq__(self, other: object) -> bool:
         """Return whether this instance is equal to another file object instance."""
         if not isinstance(other, self.__class__):
             return False
 
-        equal_attributes = all(getattr(self, key) == getattr(other, key) for key in ['name', 'file_type', 'key'])
+        equal_attributes = all(
+            getattr(self, key) == getattr(other, key) for key in ['name', 'file_type', 'key', 'deleted']
+        )
         equal_object_keys = sorted(self.objects) == sorted(other.objects)
         equal_objects = equal_object_keys and all(obj == other.objects[key] for key, obj in self.objects.items())
 
         return equal_attributes and equal_objects
 
     def __repr__(self) -> str:
-        args = (self.name, self.file_type.value, self.key, self.objects.items())
-        return 'File<name={}, file_type={}, key={}, objects={}>'.format(*args)
+        args = (self.name, self.file_type.value, self.key, self.deleted, self.objects.items())
+        return 'File<name={}, file_type={}, key={}, deleted={}, objects={}>'.format(*args)

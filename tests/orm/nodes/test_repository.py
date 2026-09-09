@@ -142,6 +142,21 @@ def test_sealed():
         node.base.repository.put_object_from_bytes(b'content', 'path')
 
 
+def test_mark_for_deletion():
+    """Test marking and unmarking a stored repository entry for deletion."""
+    node = Data()
+    node.base.repository.put_object_from_bytes(b'content', 'relative/path')
+    node.store()
+
+    node.base.repository.mark_for_deletion('relative/path')
+    assert node.base.repository.list_object_names('relative') == []
+    assert node.base.repository.metadata['o']['relative']['o']['path']['deleted'] is True
+
+    node.base.repository.unmark_for_deletion('relative/path')
+    assert node.base.repository.list_object_names('relative') == ['path']
+    assert 'deleted' not in node.base.repository.metadata['o']['relative']['o']['path']
+
+
 def test_get_object_raises():
     """Test the ``NodeRepository.get_object`` method when it is supposed to raise."""
     node = Data()

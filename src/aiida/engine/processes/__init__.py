@@ -61,6 +61,8 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'ProcessTask',
+    'SubgraphTask',
     'TaskHandle',
     'TaskOutput',
     'TaskOutputs',

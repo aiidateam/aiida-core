@@ -84,13 +84,13 @@ This is why a task records a calculation: creating data is something a workfunct
 A `GraphSpec` declares a graph of tasks: which tasks to run, which output of one feeds which input of another, and which of those the graph returns. `GraphProcess` runs it.
 
 ```python
-from aiida.engine import GraphProcess, GraphSpec, Dependency, GraphTask, submit
+from aiida.engine import GraphProcess, GraphSpec, Dependency, ProcessTask, submit
 from aiida.orm import Dict
 
 graph = GraphSpec(
     tasks=(
-        GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
-        GraphTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
+        ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+        ProcessTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
     ),
     links=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
     outputs={'total': ('sum', 'total')},

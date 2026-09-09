@@ -20,9 +20,9 @@ actually changes the schema.
 """
 
 import pytest
-from alembic.command import downgrade, upgrade
 
-from aiida.storage.sqlite_zip.migrator import _alembic_connect, list_versions
+from aiida.storage.sqlite_zip.migrator import alembic_migrator, list_versions
+from aiida.storage.sqlite_zip.utils import create_sqla_engine
 from tests.storage.sqlite.utils import reflect_schema
 
 # Revisions whose downgrade is not implemented: they raise ``NotImplementedError``.
@@ -34,8 +34,9 @@ def test_main(version, tmp_path, data_regression):
     """Test that each main migration produces the expected database schema."""
     database_path = tmp_path / 'database.sqlite'
 
-    with _alembic_connect(database_path) as config:
-        upgrade(config, version)
+    with create_sqla_engine(database_path).connect() as connection:
+        alembic_migrator.migrate_up(connection, version)
+        connection.commit()
 
     data_regression.check(reflect_schema(database_path), basename=f'test_{version}')
 
@@ -50,8 +51,9 @@ def test_legacy_downgrade_not_implemented(version, tmp_path):
     """
     database_path = tmp_path / 'database.sqlite'
 
-    with _alembic_connect(database_path) as config:
-        upgrade(config, version)
+    with create_sqla_engine(database_path).connect() as connection:
+        alembic_migrator.migrate_up(connection, version)
+        connection.commit()
 
         with pytest.raises(NotImplementedError):
-            downgrade(config, '-1')
+            alembic_migrator.migrate_down(connection, '-1')

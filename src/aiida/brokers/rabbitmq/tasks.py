@@ -325,8 +325,10 @@ class RmqIncomingTask:
         self._outcome_ref = None
 
         if outcome.cancelled():
-            # Whoever took the task decided not to process it
-            self._state = TASK_PENDING
+            # Whoever took the task decided not to process it: requeue so it is not left
+            # unacknowledged (which would consume a prefetch slot and leave the sender hanging).
+            await self.requeue()
+            return
         else:
             # Task is done or excepted
             # Permanently store the outcome

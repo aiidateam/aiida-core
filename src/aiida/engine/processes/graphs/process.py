@@ -16,6 +16,7 @@ import typing as t
 from collections.abc import MutableMapping
 
 from aiida.common.lang import override
+from aiida.common.links import LinkType
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
@@ -23,6 +24,7 @@ from aiida.engine.processes.graphs.spec import (
     BranchTask,
     GraphSpec,
     GraphTask,
+    LoopTask,
     MapTask,
     ProcessTask,
     SubgraphTask,
@@ -30,7 +32,7 @@ from aiida.engine.processes.graphs.spec import (
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Data, Dict, List, WorkChainNode, load_node
+from aiida.orm import Data, Dict, List, Node, WorkChainNode, load_node
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess')
@@ -74,6 +76,11 @@ def _holds(condition: t.Any) -> bool:
     as truthy as ``Int(1)``, so it is the value it holds that decides.
     """
     return bool(condition.value if isinstance(condition, BaseType) else condition)
+
+
+def _returned(node: Node) -> dict[str, t.Any]:
+    """Return what a graph produced, by the name each output was returned under."""
+    return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
 
 
 def _map_items(collection: t.Any, task: MapTask) -> dict[str, t.Any]:
@@ -197,9 +204,15 @@ class GraphProcess(Process):
     def _do_step(self) -> t.Any:
         """Start the tasks that are ready, and wait until something finishes.
 
-        Starting a task can settle it without running anything, which makes the tasks after it ready in the
-        same step, so the frontier is taken again until it is empty.
+        Loops go first: one whose last run finished has all of its processes done, and so would count as settled
+        and let the tasks after it start, when it has another run to go. Starting a task can also settle it
+        without running anything, which makes the tasks after it ready in the same step, so the frontier is taken
+        again until it is empty.
         """
+        for task in self.graph.tasks:
+            if isinstance(task, LoopTask) and task.name in self._instances:
+                self._continue_loop(task)
+
         while ready := self.graph.ready(self._settled, self._decided):
             for name in ready:
                 self._start(name)
@@ -266,12 +279,58 @@ class GraphProcess(Process):
             self._dispatch_branch(task, inputs)
             return
 
+        if isinstance(task, LoopTask):
+            self._dispatch_loop(task, inputs)
+            return
+
         if isinstance(task, MapTask):
             self._dispatch_mapped(task, inputs)
             return
 
         self._instances[name] = [name]
         self._submit_instance(task, name, inputs)
+
+    def _dispatch_loop(self, task: LoopTask, inputs: dict[str, t.Any]) -> None:
+        """Run the body a first time, and skip the loop when its condition does not hold to begin with."""
+        if not _holds(inputs.get(task.condition_port)):
+            self.report(f'task `{task.name}` will not run, since `{task.condition_port}` is false to begin with')
+            self._skipped.add(task.name)
+            return
+
+        self._instances[task.name] = []
+        self._submit_iteration(task, inputs)
+
+    def _continue_loop(self, task: LoopTask) -> None:
+        """Run the body once more, on what the run before it produced, while there is reason to."""
+        instances = self._instances[task.name]
+
+        if any(instance not in self._done for instance in instances):
+            return
+
+        last = load_node(self._done[instances[-1]])
+
+        if not last.is_finished_ok:
+            return
+
+        produced = _returned(last)
+
+        if not _holds(produced.get(task.condition_port)):
+            return
+
+        if len(instances) >= task.max_iterations:
+            self.report(
+                f'task `{task.name}` ran {task.max_iterations} times, which is as many as it may, so it stops '
+                f'with `{task.condition_port}` still true'
+            )
+            return
+
+        self._submit_iteration(task, {**self._resolve_inputs(task), **produced})
+
+    def _submit_iteration(self, task: LoopTask, state: dict[str, t.Any]) -> None:
+        """Submit one run of the body, on the state the loop has reached."""
+        instance = f'{task.name}_iteration_{len(self._instances[task.name])}'
+        self._instances[task.name].append(instance)
+        self._submit(GraphProcess, GraphProcess.launch_inputs(task.body, state), instance)
 
     def _dispatch_branch(self, task: BranchTask, inputs: dict[str, t.Any]) -> None:
         """Submit the branch the condition selects, and skip the task when it selects none."""
@@ -305,9 +364,13 @@ class GraphProcess(Process):
 
         for edge in self.graph.dependencies:
             if edge.target == task.name:
-                inputs[edge.target_port] = load_node(self._done[edge.source]).outputs[edge.source_port]
+                inputs[edge.target_port] = self._produced_by(edge.source).outputs[edge.source_port]
 
         return inputs
+
+    def _produced_by(self, name: str) -> t.Any:
+        """Return the node holding what a task produced, which for one that ran more than once is its last run."""
+        return load_node(self._done[self._instances[name][-1]])
 
     def _dispatch_mapped(self, task: MapTask, inputs: dict[str, t.Any]) -> None:
         """Submit one process per item of the collection the task maps over."""
@@ -394,7 +457,7 @@ class GraphProcess(Process):
                 continue
 
             if not isinstance(self.graph.task(source.task), MapTask):
-                self.out(output, load_node(self._done[source.task]).outputs[source.port])
+                self.out(output, self._produced_by(source.task).outputs[source.port])
                 continue
 
             # A map produced a result per item, so the output is a namespace holding one entry per item.

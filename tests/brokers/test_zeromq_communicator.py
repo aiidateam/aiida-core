@@ -114,6 +114,49 @@ class TestZeromqCommunicatorPrefetch:
 
         assert comm._send.call_args[0][0]['prefetch_count'] is None
 
+    def test_task_without_subscriber_sends_nack(self):
+        """Test a task without a subscriber is negatively acknowledged."""
+        comm = self.make_offline_communicator()
+
+        comm._handle_task({'id': 'task-id', 'body': 'task'})
+
+        message = comm._send.call_args[0][0]
+        assert message['type'] == MessageType.TASK_NACK.value
+        assert message['task_id'] == 'task-id'
+        assert message['sender'] == comm.client_id
+
+    def test_finalize_rpc_unwraps_completed_future(self):
+        """Test a deferred RPC response unwraps a completed nested future."""
+        comm = self.make_offline_communicator()
+        future = Future()
+        nested_future = Future()
+        nested_future.set_result('result')
+        future.set_result(nested_future)
+        comm._in_progress_rpcs['rpc-id'] = ('recipient', future)
+
+        comm._finalize_rpc('rpc-id', 'recipient', future)
+
+        message = comm._send.call_args[0][0]
+        assert message['type'] == MessageType.RPC_RESPONSE.value
+        assert message['rpc_id'] == 'rpc-id'
+        assert message['result'] == 'result'
+        assert message['error'] is None
+
+    def test_finalize_rpc_sends_error_for_failed_future(self):
+        """Test a deferred RPC failure sends an error response."""
+        comm = self.make_offline_communicator()
+        future = Future()
+        future.set_exception(RuntimeError('failed RPC'))
+        comm._in_progress_rpcs['rpc-id'] = ('recipient', future)
+
+        comm._finalize_rpc('rpc-id', 'recipient', future)
+
+        message = comm._send.call_args[0][0]
+        assert message['type'] == MessageType.RPC_RESPONSE.value
+        assert message['rpc_id'] == 'rpc-id'
+        assert message['result'] is None
+        assert message['error'] == 'failed RPC'
+
 
 class TestZeromqCommunicatorMessaging:
     """Tests for communicator messaging operations with a real zeromq_broker."""

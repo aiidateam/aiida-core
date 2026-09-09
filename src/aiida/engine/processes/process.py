@@ -27,9 +27,9 @@ from typing import (
 from uuid import UUID
 
 from aio_pika.exceptions import ConnectionClosed
-from kiwipy.communications import UnroutableError
 
 from aiida import orm
+from aiida.brokers.exceptions import UnroutableError
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
 from aiida.common.lang import classproperty, override
@@ -370,10 +370,12 @@ class Process(ProcessBase):
                     self.logger.info('no controller available to kill child<%s>', child.pk)
                     continue
                 try:
-                    result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
-                    result = asyncio.wrap_future(result)
-                    if asyncio.isfuture(result):
-                        killing.append(result)
+                    kill_request = self.runner.controller.kill_process(
+                        child.pk, msg_text=f'Killed by parent<{self.node.pk}>'
+                    )
+                    wrapped_kill = asyncio.wrap_future(kill_request)
+                    if asyncio.isfuture(wrapped_kill):
+                        killing.append(wrapped_kill)
                 except ConnectionClosed:
                     self.logger.info('no connection available to kill child<%s>', child.pk)
                 except UnroutableError:

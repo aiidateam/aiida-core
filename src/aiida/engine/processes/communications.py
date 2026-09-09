@@ -24,8 +24,10 @@ import logging
 from collections.abc import Callable, Hashable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
-import kiwipy
-
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers import exceptions as broker_exceptions
+from aiida.brokers import futures as broker_futures
+from aiida.brokers.filters import BroadcastFilter
 from aiida.common import loaders
 from aiida.engine.processes import events, persistence
 from aiida.engine.processes.generic import futures
@@ -34,10 +36,10 @@ from aiida.engine.utils import ensure_coroutine
 
 __all__: tuple[str, ...] = ()
 
-RemoteException = kiwipy.RemoteException
-DeliveryFailed = kiwipy.DeliveryFailed
-TaskRejected = kiwipy.TaskRejected
-Communicator = kiwipy.Communicator
+RemoteException = broker_exceptions.RemoteException
+DeliveryFailed = broker_exceptions.DeliveryFailed
+TaskRejected = broker_exceptions.TaskRejected
+Communicator = broker_communicator.Communicator
 
 if TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
@@ -46,25 +48,25 @@ if TYPE_CHECKING:
     ID_TYPE = Hashable
     Subscriber = Callable[..., Any]
     # RPC subscriber params: communicator, msg
-    RpcSubscriber = Callable[[kiwipy.Communicator, Any], Any]
+    RpcSubscriber = Callable[[broker_communicator.Communicator, Any], Any]
     # Task subscriber params: communicator, task
-    TaskSubscriber = Callable[[kiwipy.Communicator, Any], Any]
+    TaskSubscriber = Callable[[broker_communicator.Communicator, Any], Any]
     # Broadcast subscribers params: communicator, body, sender, subject, correlation id
-    BroadcastSubscriber = Callable[[kiwipy.Communicator, Any, Any, Any, ID_TYPE], Any]
+    BroadcastSubscriber = Callable[[broker_communicator.Communicator, Any, Any, Any, ID_TYPE], Any]
 
 
-def plum_to_kiwi_future(plum_future: futures.Future) -> kiwipy.Future:
+def plum_to_kiwi_future(plum_future: futures.Future) -> broker_futures.Future[Any]:
     """
     Return a kiwi future that resolves to the outcome of the plum future
 
     :param plum_future: the plum future
-    :return: the kiwipy future
+    :return: the broker future
 
     """
-    kiwi_future = kiwipy.Future()
+    kiwi_future: broker_futures.Future[Any] = broker_futures.Future()
 
     def on_done(_plum_future: futures.Future) -> None:
-        with kiwipy.capture_exceptions(kiwi_future):
+        with broker_futures.capture_exceptions(kiwi_future):
             if plum_future.cancelled():
                 kiwi_future.cancel()
             else:
@@ -80,7 +82,7 @@ def plum_to_kiwi_future(plum_future: futures.Future) -> kiwipy.Future:
 
 def convert_to_comm(
     callback: Subscriber, loop: asyncio.AbstractEventLoop | None = None
-) -> Callable[..., kiwipy.Future]:
+) -> Callable[..., broker_futures.Future]:
     """
     Take a callback function and converted it to one that will schedule a callback
     on the given even loop and return a kiwi future representing the future outcome
@@ -90,7 +92,7 @@ def convert_to_comm(
     :param loop: the even loop to schedule the callback in
     :return: a new callback function that returns a future
     """
-    if isinstance(callback, kiwipy.BroadcastFilter):
+    if isinstance(callback, BroadcastFilter):
         # if the broadcast is filtered for this callback,
         # we don't want to go through the (costly) process
         # of setting up async tasks and callbacks
@@ -106,9 +108,11 @@ def convert_to_comm(
 
     coro = ensure_coroutine(callback)
 
-    def converted(communicator: kiwipy.Communicator, *args: Any, **kwargs: Any) -> kiwipy.Future:
+    def converted(
+        communicator: broker_communicator.Communicator, *args: Any, **kwargs: Any
+    ) -> broker_futures.Future[Any]:
         if _passthrough(*args, **kwargs):
-            kiwi_future = kiwipy.Future()
+            kiwi_future: broker_futures.Future[Any] = broker_futures.Future()
             kiwi_future.set_result(None)
             return kiwi_future
 
@@ -120,7 +124,7 @@ def convert_to_comm(
 
 
 def wrap_communicator(
-    communicator: kiwipy.Communicator, loop: asyncio.AbstractEventLoop | None = None
+    communicator: broker_communicator.Communicator, loop: asyncio.AbstractEventLoop | None = None
 ) -> LoopCommunicator:
     """
     Wrap a communicator such that all callbacks made to any subscribers are scheduled on the
@@ -141,12 +145,12 @@ def wrap_communicator(
     return LoopCommunicator(communicator, loop)
 
 
-class LoopCommunicator(kiwipy.Communicator):
-    """Wrapper around a `kiwipy.Communicator` that schedules any subscriber messages on a given event loop."""
+class LoopCommunicator(broker_communicator.Communicator):
+    """Wrapper around a broker communicator scheduling subscriber messages on a given event loop."""
 
-    def __init__(self, communicator: kiwipy.Communicator, loop: asyncio.AbstractEventLoop | None = None):
+    def __init__(self, communicator: broker_communicator.Communicator, loop: asyncio.AbstractEventLoop | None = None):
         """
-        :param communicator: The kiwipy communicator
+        :param communicator: The broker communicator
         :param loop: The event loop to schedule callbacks on
 
         """
@@ -179,10 +183,10 @@ class LoopCommunicator(kiwipy.Communicator):
     def remove_broadcast_subscriber(self, identifier: ID_TYPE) -> None:
         return self._communicator.remove_broadcast_subscriber(identifier)
 
-    def task_send(self, task: Any, no_reply: bool = False) -> kiwipy.Future:
+    def task_send(self, task: Any, no_reply: bool = False) -> broker_futures.Future[Any] | None:
         return self._communicator.task_send(task, no_reply)
 
-    def rpc_send(self, recipient_id: ID_TYPE, msg: Any) -> kiwipy.Future:
+    def rpc_send(self, recipient_id: ID_TYPE, msg: Any) -> broker_futures.Future:
         return self._communicator.rpc_send(recipient_id, msg)
 
     def broadcast_send(
@@ -191,7 +195,7 @@ class LoopCommunicator(kiwipy.Communicator):
         sender: str | None = None,
         subject: str | None = None,
         correlation_id: ID_TYPE | None = None,
-    ) -> futures.Future:
+    ) -> bool:
         return self._communicator.broadcast_send(body, sender, subject, correlation_id)
 
     def is_closed(self) -> bool:
@@ -366,7 +370,7 @@ class RemoteProcessController:
     (in a non-blocking way) for their response
     """
 
-    def __init__(self, communicator: kiwipy.Communicator) -> None:
+    def __init__(self, communicator: broker_communicator.Communicator) -> None:
         self._communicator = communicator
 
     async def get_status(self, pid: PID_TYPE) -> ProcessStatus:
@@ -393,7 +397,7 @@ class RemoteProcessController:
         pause_future = self._communicator.rpc_send(pid, msg)
         # rpc_send return a thread future from communicator
         future = await asyncio.wrap_future(pause_future)
-        # future is just returned from rpc call which return a kiwipy future
+        # future is just returned from rpc call which return a broker future
         result = await asyncio.wrap_future(future)
         return result
 
@@ -439,6 +443,7 @@ class RemoteProcessController:
         message = create_continue_body(pid=pid, tag=tag, nowait=nowait)
         # Wait for the communication to go through
         continue_future = self._communicator.task_send(message, no_reply=no_reply)
+        assert continue_future is not None
         future = await asyncio.wrap_future(continue_future)
 
         if no_reply:
@@ -473,6 +478,7 @@ class RemoteProcessController:
 
         message = create_launch_body(process_class, init_args, init_kwargs, persist, loader, nowait)
         launch_future = self._communicator.task_send(message, no_reply=no_reply)
+        assert launch_future is not None
         future = await asyncio.wrap_future(launch_future)
 
         if no_reply:
@@ -507,11 +513,13 @@ class RemoteProcessController:
         message = create_create_body(process_class, init_args, init_kwargs, persist=True, loader=loader)
 
         create_future = self._communicator.task_send(message)
+        assert create_future is not None
         future = await asyncio.wrap_future(create_future)
         pid: PID_TYPE = await asyncio.wrap_future(future)
 
         message = create_continue_body(pid, nowait=nowait)
         continue_future = self._communicator.task_send(message, no_reply=no_reply)
+        assert continue_future is not None
         future = await asyncio.wrap_future(continue_future)
 
         if no_reply:
@@ -526,7 +534,7 @@ class RemoteProcessThreadController:
     A class that can be used to control and launch remote processes
     """
 
-    def __init__(self, communicator: kiwipy.Communicator):
+    def __init__(self, communicator: broker_communicator.Communicator):
         """
         Create a new process controller
 
@@ -535,7 +543,7 @@ class RemoteProcessThreadController:
         """
         self._communicator = communicator
 
-    def get_status(self, pid: PID_TYPE) -> kiwipy.Future:
+    def get_status(self, pid: PID_TYPE) -> broker_futures.Future:
         """Get the status of a process with the given PID.
 
         :param pid: the process id
@@ -543,7 +551,7 @@ class RemoteProcessThreadController:
         """
         return self._communicator.rpc_send(pid, MessageBuilder.status())
 
-    def pause_process(self, pid: PID_TYPE, msg_text: str | None = None) -> kiwipy.Future:
+    def pause_process(self, pid: PID_TYPE, msg_text: str | None = None) -> broker_futures.Future:
         """
         Pause the process
 
@@ -565,7 +573,7 @@ class RemoteProcessThreadController:
         msg = MessageBuilder.pause(text=msg_text)
         self._communicator.broadcast_send(msg, subject=Intent.PAUSE)
 
-    def play_process(self, pid: PID_TYPE) -> kiwipy.Future:
+    def play_process(self, pid: PID_TYPE) -> broker_futures.Future:
         """
         Play the process
 
@@ -581,7 +589,9 @@ class RemoteProcessThreadController:
         """
         self._communicator.broadcast_send(None, subject=Intent.PLAY)
 
-    def kill_process(self, pid: PID_TYPE, msg_text: str | None = None, force_kill: bool = False) -> kiwipy.Future:
+    def kill_process(
+        self, pid: PID_TYPE, msg_text: str | None = None, force_kill: bool = False
+    ) -> broker_futures.Future:
         """
         Kill the process
 
@@ -658,17 +668,20 @@ class RemoteProcessThreadController:
 
         message = create_create_body(process_class, init_args, init_kwargs, persist=True, loader=loader)
 
-        execute_future = kiwipy.Future()
-        create_future = futures.unwrap_kiwi_future(self._communicator.task_send(message))
+        execute_future: broker_futures.Future[Any] = broker_futures.Future()
+        create_task_future = self._communicator.task_send(message)
+        assert create_task_future is not None
+        create_future = futures.unwrap_kiwi_future(create_task_future)
 
         def on_created(_: Any) -> None:
-            with kiwipy.capture_exceptions(execute_future):
+            with broker_futures.capture_exceptions(execute_future):
                 pid: PID_TYPE = create_future.result()
                 continue_future = self.continue_process(pid, nowait=nowait, no_reply=no_reply)
                 if no_reply:
                     execute_future.set_result(None)
                 else:
-                    kiwipy.chain(continue_future, execute_future)
+                    assert isinstance(continue_future, broker_futures.Future)
+                    broker_futures.chain(continue_future, execute_future)
 
         create_future.add_done_callback(on_created)
         return execute_future
@@ -727,7 +740,9 @@ class ProcessLauncher:
         else:
             self._loader = loaders.get_object_loader()
 
-    async def __call__(self, communicator: kiwipy.Communicator, task: dict[str, Any]) -> PID_TYPE | ProcessResult:
+    async def __call__(
+        self, communicator: broker_communicator.Communicator, task: dict[str, Any]
+    ) -> PID_TYPE | ProcessResult:
         """
         Receive a task.
         :param task: The task message
@@ -744,7 +759,7 @@ class ProcessLauncher:
 
     async def _launch(
         self,
-        _communicator: kiwipy.Communicator,
+        _communicator: broker_communicator.Communicator,
         process_class: str,
         persist: bool,
         nowait: bool,
@@ -787,7 +802,7 @@ class ProcessLauncher:
         return proc.future().result()
 
     async def _continue(
-        self, _communicator: kiwipy.Communicator, pid: PID_TYPE, nowait: bool, tag: str | None = None
+        self, _communicator: broker_communicator.Communicator, pid: PID_TYPE, nowait: bool, tag: str | None = None
     ) -> PID_TYPE | ProcessResult:
         """
         Continue the process
@@ -818,7 +833,7 @@ class ProcessLauncher:
 
     async def _create(
         self,
-        _communicator: kiwipy.Communicator,
+        _communicator: broker_communicator.Communicator,
         process_class: str,
         persist: bool,
         init_args: Sequence[Any] | None = None,

@@ -2,17 +2,17 @@
 
 from unittest.mock import Mock
 
-import kiwipy
-
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers import futures as broker_futures
 from aiida.engine.processes.communications import RemoteProcessThreadController
 
 
 def test_execute_process_no_reply():
     """Test executing a process without a reply resolves the returned future."""
-    create_future = kiwipy.Future()
+    create_future = broker_futures.Future()
     create_future.set_result(1)
 
-    communicator = Mock(spec=kiwipy.Communicator)
+    communicator = Mock(spec=broker_communicator.Communicator)
     communicator.task_send.side_effect = [create_future, None]
 
     loader = Mock()

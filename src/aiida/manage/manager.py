@@ -15,9 +15,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import asyncio
 
-    from kiwipy.rmq import RmqThreadCommunicator
-
     from aiida.brokers.broker import Broker
+    from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
     from aiida.engine.daemon.client import DaemonClient
     from aiida.engine.persistence import AiidaCheckpointPersister
     from aiida.engine.processes.communications import RemoteProcessThreadController

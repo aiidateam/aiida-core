@@ -16,9 +16,9 @@ from collections.abc import Callable
 from concurrent.futures import Future
 from pathlib import Path
 
-import kiwipy
 import pytest
 
+from aiida.brokers import exceptions as broker_exceptions
 from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 from aiida.brokers.zeromq.protocol import MessageType
@@ -246,7 +246,7 @@ class TestZeromqCommunicatorMessaging:
     def test_duplicate_rpc_subscriber(self, zeromq_comm):
         """Test duplicate RPC subscriber raises."""
         zeromq_comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
-        with pytest.raises(kiwipy.DuplicateSubscriberIdentifier):
+        with pytest.raises(broker_exceptions.DuplicateSubscriberIdentifier):
             zeromq_comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
 
     def test_broadcast_send(self, zeromq_comm):

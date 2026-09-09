@@ -9,7 +9,7 @@
 """Application-level message protocol for the ZeroMQ broker.
 
 This protocol implements the subset of AMQP semantics that AiiDA requires
-(via kiwipy's ``Communicator`` interface, originally designed for RabbitMQ)
+(via the broker ``Communicator`` interface, originally designed for RabbitMQ)
 using ZeroMQ as the transport layer instead of raw TCP.
 
 Socket architecture:
@@ -49,7 +49,7 @@ AMQP concepts mapped to message types:
 
 Why not use an AMQP library directly: the goal is to eliminate the RabbitMQ
 server dependency. ZeroMQ provides the transport primitives; this module adds
-only the AMQP-like semantics that ``kiwipy.Communicator`` requires.
+only the AMQP-like semantics that ``aiida.brokers.communicator.Communicator`` requires.
 """
 
 from __future__ import annotations

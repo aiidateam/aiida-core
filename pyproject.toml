@@ -29,6 +29,7 @@ classifiers = [
 # you need to also update the versions of corresponding stub packages
 # in the 'pre-commit' group e.g. 'types-requests'
 dependencies = [
+  'aio-pika~=9.5.0',
   'alembic~=1.8',
   'archive-path~=0.4.2',
   "asyncssh~=2.22.0",
@@ -45,9 +46,10 @@ dependencies = [
   'ipython>=7.6',
   'jedi<0.19',
   'jinja2~=3.0',
-  'kiwipy[rmq]~=0.9.0',
   'numpy>=1.21,<3',
+  'pamqp~=3.2',
   'paramiko~=3.0',
+  'pytray>=0.3.4,<0.4.0',
   'pgsu~=0.3.0',
   'psutil~=7.0',
   'psycopg[binary]>=3.0.2,<4',
@@ -55,6 +57,7 @@ dependencies = [
   'pytz~=2021.1',
   'pyyaml~=6.0',
   'requests~=2.0',
+  'shortuuid',
   'sqlalchemy>=2.0.20,<3',
   'tabulate>=0.9.0,<0.10.0',
   'tqdm~=4.45',
@@ -427,7 +430,6 @@ module = [
   'dill.*',
   'flask_restful.*',
   'graphviz.*',
-  'kiwipy.*',
   'mayavi.*',
   'pgsu.*',
   'pgtest.*',
@@ -458,7 +460,7 @@ filterwarnings = [
   'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning:pytest_asyncio",
-  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio|kiwipy",
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio",
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
   # https://github.com/aiidateam/archive-path/issues/21

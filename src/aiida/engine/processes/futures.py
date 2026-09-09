@@ -10,8 +10,8 @@
 
 import asyncio
 
-import kiwipy
-
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers.filters import BroadcastFilter
 from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.orm import Node, load_node
 
@@ -28,7 +28,7 @@ class ProcessFuture(asyncio.Future):
         pk: int,
         loop: asyncio.AbstractEventLoop | None = None,
         poll_interval: None | int | float = None,
-        communicator: kiwipy.Communicator | None = None,
+        communicator: broker_communicator.Communicator | None = None,
     ):
         """Construct a future for a process node being finished.
 
@@ -64,7 +64,7 @@ class ProcessFuture(asyncio.Future):
                     if not self.done():
                         self.set_result(node)
 
-                broadcast_filter = kiwipy.BroadcastFilter(_subscriber, sender=pk)
+                broadcast_filter = BroadcastFilter(_subscriber, sender=pk)
                 for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
                     broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
                 self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_filter)

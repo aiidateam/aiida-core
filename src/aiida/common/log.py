@@ -142,6 +142,14 @@ def get_logging_config() -> dict[str, t.Any]:
                 'level': lambda: get_config_option('logging.kiwipy_loglevel'),
                 'propagate': False,
             },
+            # The in-tree broker implementation (formerly kiwipy) logs under `aiida.brokers.*`,
+            # which would otherwise fall under the `aiida` logger. Bind it to the same
+            # `logging.kiwipy_loglevel` option so existing user settings keep taking effect.
+            'aiida.brokers': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.kiwipy_loglevel'),
+                'propagate': False,
+            },
             'paramiko': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.paramiko_loglevel'),

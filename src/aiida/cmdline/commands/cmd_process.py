@@ -465,7 +465,7 @@ def process_watch(broker, processes, most_recent_node):
 
     from time import sleep
 
-    from kiwipy import BroadcastFilter
+    from aiida.brokers.filters import BroadcastFilter
 
     def _print(communicator, body, sender, subject, correlation_id):
         """Format the incoming broadcast data into a message and echo it to stdout."""

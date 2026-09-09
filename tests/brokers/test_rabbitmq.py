@@ -21,10 +21,11 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
+from aiida.brokers import futures as broker_futures
 from aiida.brokers.rabbitmq import RabbitmqBroker, client, utils
+from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
 from aiida.engine.processes import ProcessState, control
 from aiida.orm import Int
 
@@ -234,7 +235,7 @@ def test_get_url_redact_credentials_quotes_then_redacts_credentials():
 
 @pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))
 def test_communicator(url):
-    """Test the instantiation of a ``kiwipy.rmq.RmqThreadCommunicator``.
+    """Test the instantiation of a ``aiida.brokers.rabbitmq.threadcomms.RmqThreadCommunicator``.
 
     This class is used by all runners to communicate with the RabbitMQ server.
     """
@@ -251,12 +252,54 @@ def test_add_broadcast_subscriber(communicator):
     communicator.add_broadcast_subscriber(None)
 
 
+def _resolve_response(response, timeout=10.0):
+    """Resolve an RPC response, unwrapping nested futures like the engine does."""
+    result = response.result(timeout=timeout)
+    while isinstance(result, broker_futures.Future):
+        result = result.result(timeout=timeout)
+    return result
+
+
+def test_rpc_subscriber_returning_future(communicator):
+    """Test an RPC subscriber returning a pending future."""
+    result_future: broker_futures.Future[str] = broker_futures.Future()
+
+    def on_rpc(_communicator, _message):
+        return result_future
+
+    communicator.add_rpc_subscriber(on_rpc, 'rpc-future')
+    try:
+        response = communicator.rpc_send('rpc-future', 'hello')
+        result_future.set_result('world')
+        assert _resolve_response(response) == 'world'
+    finally:
+        communicator.remove_rpc_subscriber('rpc-future')
+
+
+def test_rpc_subscriber_returning_nested_future(communicator):
+    """Test an RPC subscriber returning a future that resolves to another future."""
+    outer_future: broker_futures.Future[object] = broker_futures.Future()
+    inner_future: broker_futures.Future[str] = broker_futures.Future()
+
+    def on_rpc(_communicator, _message):
+        return outer_future
+
+    communicator.add_rpc_subscriber(on_rpc, 'rpc-nested-future')
+    try:
+        response = communicator.rpc_send('rpc-nested-future', 'hello')
+        inner_future.set_result('nested')
+        outer_future.set_result(inner_future)
+        assert _resolve_response(response) == 'nested'
+    finally:
+        communicator.remove_rpc_subscriber('rpc-nested-future')
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.flaky(reruns=2)
 def test_duplicate_subscriber_identifier(aiida_code_installed, started_daemon_client, submit_and_await):
     """Test that a ``DuplicateSubscriberError`` in ``ProcessLauncher._continue`` does not except the process.
 
-    It is possible that when a daemon worker tries to continue a process, that a ``kiwipy.DuplicateSubscriberError`` is
+    It is possible that when a daemon worker tries to continue a process, that a ``DuplicateSubscriberIdentifier`` is
     raised, which means that it already subscribed itself to be running that process.
     This can occur for at least two reasons:
 

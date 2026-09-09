@@ -19,8 +19,8 @@ import uuid
 from collections.abc import Callable
 from typing import Any, NamedTuple
 
-import kiwipy
-
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers.filters import BroadcastFilter
 from aiida.common import exceptions
 from aiida.engine import transports, utils
 from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
@@ -56,7 +56,7 @@ class Runner:
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister: CheckpointPersister | None = None
-    _communicator: kiwipy.Communicator | None = None
+    _communicator: broker_communicator.Communicator | None = None
     _controller: RemoteProcessThreadController | None = None
     _closed: bool = False
 
@@ -64,7 +64,7 @@ class Runner:
         self,
         poll_interval: int | float = 0,
         loop: asyncio.AbstractEventLoop | None = None,
-        communicator: kiwipy.Communicator | None = None,
+        communicator: broker_communicator.Communicator | None = None,
         broker_submit: bool = False,
         persister: CheckpointPersister | None = None,
     ):
@@ -118,7 +118,7 @@ class Runner:
         return self._persister
 
     @property
-    def communicator(self) -> kiwipy.Communicator | None:
+    def communicator(self) -> broker_communicator.Communicator | None:
         """Get the communicator used by this runner."""
         return self._communicator
 
@@ -337,7 +337,7 @@ class Runner:
                 if self.communicator:
                     self.communicator.remove_broadcast_subscriber(subscriber_identifier)
 
-        broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
+        broadcast_filter = BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
             broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 

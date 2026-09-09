@@ -38,21 +38,21 @@ def add_twice(x, y):
 
 def test_records_tasks_links_and_inputs():
     """The body is not executed: it declares the tasks, what feeds them, and what the graph returns."""
-    dag = add_twice.build()
+    declaration = add_twice.build()
 
-    assert [node.name for node in dag.tasks] == ['add', 'add_2']
-    assert [(link.source, link.source_port, link.target, link.target_port) for link in dag.links] == [
+    assert [node.name for node in declaration.tasks] == ['add', 'add_2']
+    assert [(link.source, link.source_port, link.target, link.target_port) for link in declaration.dependencies] == [
         ('add', 'total', 'add_2', 'x')
     ]
-    assert dag.outputs == {'total': Endpoint(task='add_2', port='total')}
+    assert declaration.outputs == {'total': Endpoint(task='add_2', port='total')}
 
 
 def test_the_declaration_holds_no_values():
     """The graph names its inputs and records where each goes, so one declaration describes every run."""
-    dag = add_twice.build()
+    declaration = add_twice.build()
 
-    assert [node.inputs for node in dag.tasks] == [{}, {}]
-    assert dag.inputs == {'x': (('add', 'x'),), 'y': (('add', 'y'), ('add_2', 'y'))}
+    assert [node.inputs for node in declaration.tasks] == [{}, {}]
+    assert declaration.inputs == {'x': (('add', 'x'),), 'y': (('add', 'y'), ('add_2', 'y'))}
 
 
 def test_the_same_declaration_serves_every_run():
@@ -62,7 +62,7 @@ def test_the_same_declaration_serves_every_run():
 
     assert first['total'] == 5
     assert second['total'] == 50
-    assert first_node.inputs.dag.get_dict() == second_node.inputs.dag.get_dict()
+    assert first_node.inputs.graph.get_dict() == second_node.inputs.graph.get_dict()
     assert first_node.inputs.graph_inputs.x != second_node.inputs.graph_inputs.x
 
 
@@ -85,12 +85,12 @@ def shift_all(values, by):
 
 def test_each_places_a_task_that_fans_out():
     """Marking an input with `each` declares a task run once per item, over that input."""
-    dag = shift_all.build()
-    (node,) = dag.tasks
+    declaration = shift_all.build()
+    (node,) = declaration.tasks
 
     assert isinstance(node, MapTask)
     assert node.item_port == 'x'
-    assert dag.inputs == {'values': (('add', 'x'),), 'by': (('add', 'y'),)}
+    assert declaration.inputs == {'values': (('add', 'x'),), 'by': (('add', 'y'),)}
 
 
 def test_a_fan_out_runs_once_per_item():
@@ -119,10 +119,10 @@ def shift_spread(n, by):
 
 def test_a_fan_out_can_take_its_collection_from_a_task():
     """How many items there are can depend on what another task produced, so it is only known while running."""
-    dag = shift_spread.build()
+    declaration = shift_spread.build()
 
-    assert isinstance(dag.task('add'), MapTask)
-    assert [(link.source, link.source_port, link.target, link.target_port) for link in dag.links] == [
+    assert isinstance(declaration.task('add'), MapTask)
+    assert [(link.source, link.source_port, link.target, link.target_port) for link in declaration.dependencies] == [
         ('spread', 'values', 'add', 'x')
     ]
 
@@ -177,9 +177,9 @@ def test_only_one_input_can_be_mapped_over():
 
 def test_a_task_used_twice_keeps_the_uses_apart():
     """The second use of a task gets its own name, so both are addressable."""
-    dag = add_twice.build()
+    declaration = add_twice.build()
 
-    assert [node.name for node in dag.tasks] == ['add', 'add_2']
+    assert [node.name for node in declaration.tasks] == ['add', 'add_2']
 
 
 def test_independent_tasks_join_again():
@@ -205,9 +205,11 @@ def test_a_single_output_can_be_passed_without_naming_it():
     def chained(x, y):
         return add(x=add(x=x, y=y), y=y)
 
-    dag = chained.build()
+    declaration = chained.build()
 
-    assert [(link.source, link.source_port, link.target_port) for link in dag.links] == [('add', 'total', 'x')]
+    assert [(link.source, link.source_port, link.target_port) for link in declaration.dependencies] == [
+        ('add', 'total', 'x')
+    ]
 
 
 def test_several_outputs_have_to_be_named():
@@ -256,9 +258,9 @@ def shift_and_echo(x, y):
 
 def test_a_graph_can_pass_one_of_its_inputs_on():
     """An input can be an output of the graph, which nothing produces and which is recorded as such."""
-    dag = shift_and_echo.build()
+    declaration = shift_and_echo.build()
 
-    assert dag.outputs == {
+    assert declaration.outputs == {
         'total': Endpoint(task='add', port='total'),
         'echo': Endpoint(task=None, port='x'),
     }

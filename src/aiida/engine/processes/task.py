@@ -40,6 +40,14 @@ graph be written as ordinary Python.
 P = t.ParamSpec('P')
 R_co = t.TypeVar('R_co', covariant=True)
 
+DEFINED_TASKS: dict[str, t.Any] = {}
+"""Every task that has been declared in this interpreter, by the name it is referenced under.
+
+A task is stored by its ``module:name``, which is all a daemon worker can be given. A task written in a script,
+a notebook or a shell session has no importable name, so it is kept here as well and a run in the session that
+declared it finds it. Submitting such a task still needs a module a worker can import.
+"""
+
 SPEC_VERSION: str = '1.0'
 """Version of the task declaration format, stored with every serialized spec."""
 
@@ -76,8 +84,25 @@ class ExecutorReference:
         return cls(module=module, name=name)
 
     def load(self) -> type[Process]:
-        """Return the process class this reference points to."""
-        loaded = get_object_loader().load_object(f'{self.module}:{self.name}')
+        """Return the process class this reference points to.
+
+        :raises ImportError: if the task cannot be reached from here, which is the case for one defined where it
+            cannot be imported and run by a process that did not define it.
+        """
+        identifier = f'{self.module}:{self.name}'
+
+        try:
+            loaded: t.Any = get_object_loader().load_object(identifier)
+        except ImportError as exception:
+            loaded = DEFINED_TASKS.get(identifier)
+
+            if loaded is None:
+                msg = (
+                    f'task `{self.name}` is defined in `{self.module}`, which cannot be imported here. A task '
+                    f'runs where it was defined, so to run this one from a daemon worker, or from another '
+                    f'session, define it in a module that can be imported.'
+                )
+                raise ImportError(msg) from exception
 
         # A process function's name resolves to the decorated function, which carries the generated process class.
         if getattr(loaded, 'is_process_function', False):
@@ -277,6 +302,8 @@ def task(
         decorated.process_class.spec()  # type: ignore[attr-defined]
 
         spec = TaskSpec.from_process(decorated, identifier=identifier)
+        DEFINED_TASKS[f'{spec.executor.module}:{spec.executor.name}'] = decorated
+
         return TaskHandle(decorated, spec)  # type: ignore[return-value]
 
     if function is not None:

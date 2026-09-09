@@ -68,7 +68,7 @@ class Broker(abc.ABC):
     def get_communicator(self) -> t.Any:
         """Return a communicator instance for the broker.
 
-        :return: An instance of :class:`kiwipy.Communicator`.
+        :return: An instance of :class:`aiida.brokers.communicator.Communicator`.
         """
 
     @abc.abstractmethod

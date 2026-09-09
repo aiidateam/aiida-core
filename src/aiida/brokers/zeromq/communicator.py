@@ -6,12 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""ZeroMQ Communicator - client implementing kiwipy Communicator interface.
+"""ZeroMQ Communicator - client implementing the broker communicator interface.
 
 Uses an internal asyncio event loop on a background thread for all ZeroMQ I/O.
 Public methods schedule work onto the loop via ``call_soon_threadsafe``,
 eliminating the need for locks around shared state.  This follows the same
-pattern as kiwipy's ``RmqThreadCommunicator``.
+pattern as the RabbitMQ ``RmqThreadCommunicator``.
 """
 
 from __future__ import annotations
@@ -25,10 +25,12 @@ from concurrent.futures import Future
 from types import TracebackType
 from typing import Any, TypeVar
 
-import kiwipy
 import zmq
 import zmq.asyncio
 
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers import exceptions as broker_exceptions
+from aiida.brokers import futures as broker_futures
 from aiida.brokers.zeromq.defaults import LOOP_JOIN_TIMEOUT, LOOP_TIMEOUT
 from aiida.brokers.zeromq.protocol import (
     MessageType,
@@ -48,8 +50,8 @@ _LOGGER = logging.getLogger(__name__)
 _T = TypeVar('_T')
 
 
-class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
-    """ZeroMQ client implementing kiwipy Communicator interface.
+class ZeromqCommunicator(broker_communicator.Communicator):
+    """ZeroMQ client implementing the broker communicator interface.
 
     Connects to a ZeromqBrokerService to send/receive messages.
 
@@ -321,7 +323,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         return gate.result(timeout=LOOP_TIMEOUT)
 
     # ------------------------------------------------------------------
-    # Task operations (kiwipy interface)
+    # Task operations (communicator interface)
     # ------------------------------------------------------------------
 
     def task_send(self, task: Any, no_reply: bool = False) -> Future[Any] | None:
@@ -371,7 +373,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         self._run_on_loop(_do)
 
     # ------------------------------------------------------------------
-    # RPC operations (kiwipy interface)
+    # RPC operations (communicator interface)
     # ------------------------------------------------------------------
 
     def rpc_send(self, recipient_id: str, msg: Any) -> Future[Any]:
@@ -395,7 +397,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         def _do() -> str:
             ident = identifier or f'rpc-{uuid.uuid4().hex[:8]}'
             if ident in self._rpc_subscribers:
-                raise kiwipy.DuplicateSubscriberIdentifier(f"RPC identifier '{ident}'")
+                raise broker_exceptions.DuplicateSubscriberIdentifier(f"RPC identifier '{ident}'")
             self._rpc_subscribers[ident] = subscriber
             msg = make_subscribe_message(MessageType.SUBSCRIBE_RPC, self._client_id, ident)
             self._send(msg)
@@ -416,7 +418,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         self._run_on_loop(_do)
 
     # ------------------------------------------------------------------
-    # Broadcast operations (kiwipy interface)
+    # Broadcast operations (communicator interface)
     # ------------------------------------------------------------------
 
     def broadcast_send(
@@ -610,7 +612,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
             if error:
                 future.set_exception(Exception(error))
             else:
-                result_future = kiwipy.Future()
+                result_future: broker_futures.Future[Any] = broker_futures.Future()
                 result_future.set_result(msg.get('result'))
                 future.set_result(result_future)
 

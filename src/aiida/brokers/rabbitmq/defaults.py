@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 import os
 import typing as t
@@ -16,6 +17,47 @@ LOGGER = AIIDA_LOGGER.getChild('brokers.rabbitmq.defaults')
 LAUNCH_QUEUE = 'process.queue'
 MESSAGE_EXCHANGE = 'messages'
 TASK_EXCHANGE = 'tasks'
+TASK_QUEUE = LAUNCH_QUEUE
+
+# Messaging protocol defaults ported from kiwipy.
+SECONDS_TO_MILLISECONDS = 1000
+RPC_TOPIC = '[rpc]'
+BROADCAST_TOPIC = '[broadcast]'
+# MESSAGE_TTL is set to > 65535 because of a bug in aio-pika which fails when using RabbitMQ
+# 3.5 (as present in Ubuntu 16.04) and likely earlier. See:
+# https://github.com/mosquito/aio-pika/issues/165
+MESSAGE_TTL = 66 * SECONDS_TO_MILLISECONDS
+TEST_QUEUE_EXPIRES = 10 * SECONDS_TO_MILLISECONDS
+QUEUE_EXPIRES = 60 * SECONDS_TO_MILLISECONDS
+REPLY_QUEUE_EXPIRES = 60 * SECONDS_TO_MILLISECONDS
+TASK_MESSAGE_TTL = 60 * SECONDS_TO_MILLISECONDS * 60 * 24 * 7  # 7 days
+TASK_PREFETCH_SIZE = 0
+TASK_PREFETCH_COUNT = 0
+TASK_FETCH_TIMEOUT = 5.0
+
+
+def __getattr__(name: str) -> t.Any:
+    """Lazily construct the default message encoder/decoder.
+
+    Importing ``yaml`` at module load time would pull it into every ``verdi``
+    invocation (via ``BROKER_DEFAULTS``), but ``yaml`` is banned from the CLI
+    startup path, see ``verdi devel check-undesired-imports``. The constructed
+    partials are cached in the module namespace so this runs only once.
+    """
+    if name == 'ENCODER':
+        import yaml
+
+        encoder = functools.partial(yaml.dump, encoding='utf-8')
+    elif name == 'DECODER':
+        import yaml
+
+        encoder = functools.partial(yaml.load, Loader=yaml.FullLoader)
+    else:
+        msg = f'module {__name__!r} has no attribute {name!r}'
+        raise AttributeError(msg)
+    globals()[name] = encoder
+    return encoder
+
 
 BROKER_DEFAULTS = AttributeDict(
     {

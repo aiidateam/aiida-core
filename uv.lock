@@ -32,6 +32,7 @@ wheels = [
 name = "aiida-core"
 source = { editable = "." }
 dependencies = [
+    { name = "aio-pika" },
     { name = "alembic" },
     { name = "archive-path" },
     { name = "asyncssh" },
@@ -50,18 +51,20 @@ dependencies = [
     { name = "ipython", version = "9.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "jedi" },
     { name = "jinja2" },
-    { name = "kiwipy", extra = ["rmq"] },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pamqp" },
     { name = "paramiko" },
     { name = "pgsu" },
     { name = "psutil" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
+    { name = "pytray" },
     { name = "pytz" },
     { name = "pyyaml" },
     { name = "requests" },
+    { name = "shortuuid" },
     { name = "sqlalchemy" },
     { name = "tabulate" },
     { name = "tqdm" },
@@ -216,6 +219,7 @@ requires-dist = [
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
     { name = "aiida-shell", marker = "extra == 'tutorials'", specifier = ">=0.9.0" },
     { name = "aiida-workgraph", marker = "extra == 'tutorials'", specifier = ">=0.9.0" },
+    { name = "aio-pika", specifier = "~=9.5.0" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.21" },
@@ -233,9 +237,9 @@ requires-dist = [
     { name = "flask-cors", marker = "extra == 'rest'", specifier = "~=4.0" },
     { name = "flask-restful", marker = "extra == 'rest'", specifier = "~=0.3.10" },
     { name = "graphviz", specifier = "~=0.19" },
-    { name = "gsrd", marker = "extra == 'tutorials'", specifier = ">=0.2.0" },
     { name = "greenback", specifier = "~=1.0" },
     { name = "greenlet", specifier = ">=3.2.4" },
+    { name = "gsrd", marker = "extra == 'tutorials'", specifier = ">=0.2.0" },
     { name = "gssapi", marker = "extra == 'ssh-kerberos'", specifier = "~=1.6" },
     { name = "importlib-metadata", specifier = "~=6.0" },
     { name = "ipykernel", marker = "extra == 'tests'", specifier = "~=6.9" },
@@ -244,7 +248,6 @@ requires-dist = [
     { name = "jinja2", specifier = "~=3.0" },
     { name = "jupyter", marker = "extra == 'notebook'", specifier = "~=1.0" },
     { name = "jupyter-client", marker = "extra == 'notebook'", specifier = "~=8.0" },
-    { name = "kiwipy", extras = ["rmq"], specifier = "~=0.9.0" },
     { name = "matplotlib", marker = "extra == 'atomic-tools'", specifier = "~=3.3,>=3.3.4" },
     { name = "mypy", marker = "extra == 'pre-commit'", specifier = "~=2.3.0" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
@@ -253,6 +256,7 @@ requires-dist = [
     { name = "notebook", marker = "extra == 'notebook'", specifier = "~=6.1,>=6.1.5" },
     { name = "numpy", specifier = ">=1.21,<3" },
     { name = "packaging", marker = "extra == 'pre-commit'", specifier = "~=23.0" },
+    { name = "pamqp", specifier = "~=3.2" },
     { name = "paramiko", specifier = "~=3.0" },
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
@@ -278,11 +282,13 @@ requires-dist = [
     { name = "pytest-timeout", marker = "extra == 'tests'", specifier = "~=2.0" },
     { name = "pytest-xdist", marker = "extra == 'tests'", specifier = "~=3.6" },
     { name = "python-memcached", marker = "extra == 'rest'", specifier = "~=1.59" },
+    { name = "pytray", specifier = ">=0.3.4,<0.4.0" },
     { name = "pytz", specifier = "~=2021.1" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "requests", specifier = "~=2.0" },
     { name = "seekpath", marker = "extra == 'atomic-tools'", specifier = "~=1.9,>=1.9.3" },
     { name = "seekpath", marker = "extra == 'rest'", specifier = "~=1.9,>=1.9.3" },
+    { name = "shortuuid" },
     { name = "spglib", marker = "extra == 'atomic-tools'", specifier = ">=1.14,<3.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = "~=7.2.0" },
     { name = "sphinx", marker = "extra == 'tests'", specifier = "~=7.2.0" },
@@ -2406,7 +2412,7 @@ name = "jinxed"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon" },
+    { name = "ansicon", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/39/d7/6e6d474ec5eaeca6a61acc17766bb19563b3a372b4b9d92910078f5fe49f/jinxed-2.1.0.tar.gz", hash = "sha256:7e755b831faa2443d44fb4ce7c0202eb9c3ed39bd5bf1193365888f4f6092b54", size = 61287, upload-time = "2026-07-03T15:46:48.153Z" }
 wheels = [
@@ -2715,27 +2721,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/21/8b/e739cf9066ad5037a2d4b0a403f06da374fdccb9748221661c8b492d3dbc/jupyterlab_widgets-3.0.17.tar.gz", hash = "sha256:6e61fe21ca8a66039180a5cc52a433e07279d2fee79c8be963e00d55193f17a8", size = 213919, upload-time = "2026-08-18T08:52:17.511Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/33/ef/6d27fc118f58cb24886da413545a7efb0853d405fddbfd8b2d9ac09fbed4/jupyterlab_widgets-3.0.17-py3-none-any.whl", hash = "sha256:40ac1e9955acf116c4d995d9bfa082d86ad9ec6d91c4f134827cf5e0a5eb75e0", size = 217292, upload-time = "2026-08-18T08:52:15.47Z" },
-]
-
-[[package]]
-name = "kiwipy"
-version = "0.9.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "deprecation" },
-    { name = "pyyaml" },
-    { name = "shortuuid" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/41/d1/a56aea1ee27c9aa73c7c6c785f4eb0539799392566b758fc920397afea91/kiwipy-0.9.0.tar.gz", hash = "sha256:3dc5a2cbe4bf7127da2c8a6c20476ddad30849b32fa12b495c622059c633db4f", size = 242121, upload-time = "2025-10-21T05:58:10.836Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/c0/2ed83a3b88048db2504ddd67a419148e23a1cf2bc64ee0bbaacb46c80bbb/kiwipy-0.9.0-py3-none-any.whl", hash = "sha256:8d861310d64dc15de50667c1c7b7295f2dba50a5561284e8a889e3a6c2b197f9", size = 41865, upload-time = "2025-10-21T05:58:09.033Z" },
-]
-
-[package.optional-dependencies]
-rmq = [
-    { name = "aio-pika" },
-    { name = "pamqp" },
-    { name = "pytray" },
 ]
 
 [[package]]

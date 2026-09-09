@@ -8,14 +8,13 @@
 ###########################################################################
 """Tests for :mod:`aiida.engine.processes.generic.futures`."""
 
-import kiwipy
-
+from aiida.brokers import futures as broker_futures
 from aiida.engine.processes.generic.futures import unwrap_kiwi_future
 
 
 def test_unwrap_kiwi_future_cancelled():
     """A cancelled future should cancel the unwrapping future."""
-    future: kiwipy.Future = kiwipy.Future()
+    future: broker_futures.Future = broker_futures.Future()
     unwrapped = unwrap_kiwi_future(future)
 
     future.cancel()

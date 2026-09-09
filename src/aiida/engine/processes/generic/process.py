@@ -38,10 +38,12 @@ from typing import (
     cast,
 )
 
-import kiwipy
 import yaml
 from aio_pika.exceptions import ChannelInvalidStateError, ConnectionClosed
 
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers import futures as broker_futures
+from aiida.brokers.filters import BroadcastFilter
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import call_with_super_check, super_check
 from aiida.common.processes import ProcessState
@@ -273,7 +275,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         pid: PID_TYPE | None = None,
         logger: logging.Logger | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        communicator: kiwipy.Communicator | None = None,
+        communicator: broker_communicator.Communicator | None = None,
     ) -> None:
         """
         The signature of the constructor should not be changed by subclassing processes.
@@ -327,15 +329,15 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             try:
                 identifier = self._communicator.add_rpc_subscriber(self.message_receive, identifier=str(self.pid))
                 self.add_cleanup(functools.partial(self._communicator.remove_rpc_subscriber, identifier))
-            except kiwipy.TimeoutError:
+            except TimeoutError:
                 self.logger.exception('Process<%s>: failed to register as an RPC subscriber', self.pid)
 
             try:
                 # filter out state change broadcasts
-                subscriber = kiwipy.BroadcastFilter(self.broadcast_receive, subject=re.compile(r'^(?!state_changed).*'))
+                subscriber = BroadcastFilter(self.broadcast_receive, subject=re.compile(r'^(?!state_changed).*'))
                 identifier = self._communicator.add_broadcast_subscriber(subscriber, identifier=str(self.pid))
                 self.add_cleanup(functools.partial(self._communicator.remove_broadcast_subscriber, identifier))
-            except kiwipy.TimeoutError:
+            except TimeoutError:
                 self.logger.exception(
                     'Process<%s>: failed to register as a broadcast subscriber',
                     self.pid,
@@ -760,7 +762,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             except (ConnectionClosed, ChannelInvalidStateError):
                 message = 'Process<%s>: no connection available to broadcast state change from %s to %s'
                 self.logger.warning(message, self.pid, from_label, self.state.value)
-            except kiwipy.TimeoutError:
+            except TimeoutError:
                 message = 'Process<%s>: sending broadcast of state change from %s to %s timed out'
                 self.logger.warning(message, self.pid, from_label, self.state.value)
 
@@ -946,7 +948,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
     # region Communication
 
-    def message_receive(self, _comm: kiwipy.Communicator, msg: MessageType) -> Any:
+    def message_receive(self, _comm: broker_communicator.Communicator, msg: MessageType) -> Any:
         """
         Coroutine called when the process receives a message from the communicator
 
@@ -981,8 +983,8 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         raise RuntimeError('Unknown intent')
 
     def broadcast_receive(
-        self, _comm: kiwipy.Communicator, msg: MessageType, sender: Any, subject: Any, correlation_id: Any
-    ) -> kiwipy.Future | None:
+        self, _comm: broker_communicator.Communicator, msg: MessageType, sender: Any, subject: Any, correlation_id: Any
+    ) -> broker_futures.Future | None:
         """
         Coroutine called when the process receives a message from the communicator
 
@@ -1007,7 +1009,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             return self._schedule_rpc(self.kill, msg_text=msg.get(process_comms.MESSAGE_TEXT_KEY, None))
         return None
 
-    def _schedule_rpc(self, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> kiwipy.Future:
+    def _schedule_rpc(self, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> broker_futures.Future:
         """
         Schedule a call to a callback as a result of an RPC communication call, this will return
         a future that resolves to the final result (even after one or more layer of futures being
@@ -1022,10 +1024,10 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         :return: a kiwi future that resolves to the outcome of the callback
 
         """
-        kiwi_future = kiwipy.Future()
+        kiwi_future: broker_futures.Future[Any] = broker_futures.Future()
 
         async def run_callback() -> None:
-            with kiwipy.capture_exceptions(kiwi_future):
+            with broker_futures.capture_exceptions(kiwi_future):
                 try:
                     result = await run_with_portal(callback, *args, **kwargs)
                 except Exception:

@@ -202,7 +202,7 @@ py:class State
 py:class Stepper
 py:class utils.AttributesFrozendict
 
-py:class kiwipy.communications.Communicator
+py:class aiida.brokers.communicator.Communicator
 py:class RemoteProcessThreadController
 py:class RmqThreadCommunicator
 

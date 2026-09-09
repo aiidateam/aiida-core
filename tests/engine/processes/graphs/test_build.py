@@ -20,6 +20,9 @@ from aiida.engine import (
     LoopTask,
     MapTask,
     SubgraphTask,
+    TaskOutput,
+    TaskOutputs,
+    WorkChain,
     branch,
     each,
     graph,
@@ -122,6 +125,32 @@ def count_down(start, again):
     """Run a graph again and again until nothing is left to take off."""
     counted = loop(one_step_down, condition='again', value=start, again=again)
     return {'value': counted.value}
+
+
+class Combine(WorkChain):
+    """Take two values in one namespace and return their sum in another, as a workchain declares its ports."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('pair.left', valid_type=orm.Int)
+        spec.input('pair.right', valid_type=orm.Int)
+        spec.outline(cls.combine)
+        spec.output('sums.total', valid_type=orm.Int)
+
+    def combine(self):
+        self.out('sums.total', orm.Int(self.inputs.pair.left + self.inputs.pair.right).store())
+
+
+combine = task(Combine)
+
+
+@graph
+def combine_a_pair(x, y):
+    """Fill one entry of a namespace from a task, take the other from the graph, and read a nested output."""
+    first = add(x=x, y=y)
+    combined = combine(pair={'left': first.total, 'right': y})
+    return {'total': combined.sums.total}
 
 
 @graph
@@ -243,6 +272,56 @@ def test_a_fan_out_result_passed_to_a_task_is_refused_where_it_is_written():
 
     with pytest.raises(ValueError, match='runs once per item'):
         reduce_it.build()
+
+
+def test_an_output_inside_a_namespace_is_named_the_way_it_is_written():
+    """A namespace among the outputs is walked into, and what comes out is a reference to the one port."""
+    outputs = TaskOutputs(task='combined', ports={'sums': {'total': None}, 'flag': None})
+
+    assert outputs.sums.total == TaskOutput(task='combined', port='sums.total')
+    assert outputs.flag == TaskOutput(task='combined', port='flag')
+
+    with pytest.raises(AttributeError, match=r'has no output `sums\.nope`'):
+        outputs.sums.nope
+
+
+def test_a_process_class_is_placed_by_the_ports_it_declares():
+    """A workchain is a task like any other, wired through the namespaces it declares rather than a signature."""
+    declaration = combine_a_pair.build()
+
+    assert [node.name for node in declaration.tasks] == ['add', 'Combine']
+    assert [(link.source, link.source_port, link.target, link.target_port) for link in declaration.dependencies] == [
+        ('add', 'total', 'Combine', 'pair.left')
+    ]
+    assert declaration.inputs == {'x': (('add', 'x'),), 'y': (('add', 'y'), ('Combine', 'pair.right'))}
+    assert declaration.outputs == {'total': Endpoint(task='Combine', port='sums.total')}
+
+
+def test_a_graph_wired_through_namespaces_runs():
+    """What was wired one name at a time arrives as one namespace, and the nested output is read back out."""
+    results, node = run_get_node(combine_a_pair, x=1, y=2)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 5  # (1 + 2) as `pair.left`, plus the 2 the graph passed as `pair.right`
+
+
+def test_a_process_is_launched_rather_than_called_outside_a_graph():
+    """A process placed in a graph is still a process, so on its own it says how to run it."""
+    with pytest.raises(TypeError, match='launched rather than called'):
+        combine(pair={'left': orm.Int(1), 'right': orm.Int(2)})
+
+
+@pytest.mark.parametrize(
+    'subject, kwargs, expected',
+    [
+        pytest.param(dict, {}, 'only a process class can be a task', id='not-a-process'),
+        pytest.param(Combine, {'outputs': ['total']}, 'declares its own output ports', id='outputs-given'),
+    ],
+)
+def test_declaring_a_class_a_task_is_refused_when_it_cannot_be_one(subject, kwargs, expected):
+    """A class that is not a process, or one told what to output, is refused where it is declared."""
+    with pytest.raises(TypeError, match=expected):
+        task(subject, **kwargs)
 
 
 def test_an_output_inside_a_container_is_refused():

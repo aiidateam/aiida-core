@@ -32,6 +32,7 @@ from aiida.engine.processes.graphs.spec import (
     ProcessTask,
     SubgraphTask,
     TaskSpec,
+    port_names,
 )
 from aiida.engine.processes.process import Process
 from aiida.orm import CalcFunctionNode
@@ -43,6 +44,7 @@ __all__ = (
     'GraphInput',
     'MappedOutput',
     'MappedOutputs',
+    'ProcessHandle',
     'TaskHandle',
     'TaskOutput',
     'TaskOutputs',
@@ -127,33 +129,64 @@ def each(collection: t.Any) -> Each:
 
 
 class TaskOutputs:
-    """References to the outputs that a task placed in a graph will produce."""
+    """References to the outputs that a task placed in a graph will produce.
+
+    A namespace among them is another of these, so an output inside one is reached the way it is written, one
+    name at a time, and what comes out at the end is a reference to that one port.
+    """
 
     _output_class: t.ClassVar[type[TaskOutput]] = TaskOutput
 
-    def __init__(self, task: str, ports: tuple[str, ...]) -> None:
+    def __init__(self, task: str, ports: t.Mapping[str, t.Any], prefix: str = '') -> None:
         self.task = task
         self.ports = ports
+        self.prefix = prefix
 
-    def __getattr__(self, name: str) -> TaskOutput:
+    def __getattr__(self, name: str) -> t.Any:
         # Only called for names that are not real attributes, so the ports cannot shadow ``task`` or ``ports``.
-        if name in self.__dict__.get('ports', ()):
-            return self._output_class(task=self.__dict__['task'], port=name)
+        ports = self.__dict__.get('ports', {})
 
-        raise AttributeError(f'`{self.__dict__.get("task")}` has no output `{name}`.')
+        if name not in ports:
+            raise AttributeError(f'`{self.__dict__.get("task")}` has no output `{self._path(name)}`.')
+
+        return self._reference(name)
+
+    def _path(self, name: str) -> str:
+        """Return the full name of one of these outputs, which for one in a namespace names the way to it."""
+        return f'{self.__dict__.get("prefix", "")}{name}'
+
+    def _reference(self, name: str) -> t.Any:
+        """Return the reference to one of these outputs, which for a namespace is the outputs under it."""
+        task, under = self.__dict__['task'], self.__dict__['ports'][name]
+
+        if under is None:
+            return self._output_class(task=task, port=self._path(name))
+
+        return type(self)(task=task, ports=under, prefix=f'{self._path(name)}.')
 
     def sole(self) -> TaskOutput:
         """Return the only output of the task.
 
-        :raises ValueError: if the task does not declare exactly one output, since then there is nothing to pick.
+        :raises ValueError: if the task does not declare exactly one output, or if the one it declares is a
+            namespace, since in neither case is there a single port to take.
         """
         if len(self.ports) != 1:
+            named = f'{self.task}.{self._path(next(iter(self.ports)))}' if self.ports else f'{self.task}....'
             raise ValueError(
                 f'`{self.task}` declares {len(self.ports)} outputs {list(self.ports)}, so one of them has to be '
-                f'named, for example `{self.task}.{self.ports[0] if self.ports else "..."}`.'
+                f'named, for example `{named}`.'
             )
 
-        return self._output_class(task=self.task, port=self.ports[0])
+        (name,) = self.ports
+        only = self._reference(name)
+
+        if isinstance(only, TaskOutputs):
+            raise ValueError(
+                f'`{self.task}` declares `{self._path(name)}`, which is a namespace, so a port inside it has to '
+                f'be named, for example `{self.task}.{only._path(next(iter(only.ports), "..."))}`.'
+            )
+
+        return only
 
 
 class MappedOutputs(TaskOutputs):
@@ -230,7 +263,7 @@ class GraphBuilder:
         self._tasks.append(task)
         outputs_class = MappedOutputs if isinstance(task, MapTask) else TaskOutputs
 
-        return outputs_class(task=name, ports=tuple(handle.task_spec.outputs.keys()))
+        return outputs_class(task=name, ports=port_names(handle.task_spec.outputs))
 
     def add_graph(self, handle: GraphHandle, arguments: dict[str, t.Any]) -> TaskOutputs:
         """Place a graph inside the graph being built, and record where each of its inputs comes from.
@@ -249,7 +282,7 @@ class GraphBuilder:
         name = self._unique_name(handle.identifier)
         self._tasks.append(SubgraphTask(name=name, inputs=self._wire(name, arguments), body=body))
 
-        return TaskOutputs(task=name, ports=tuple(body.outputs))
+        return TaskOutputs(task=name, ports=dict.fromkeys(body.outputs))
 
     def add_branch(
         self,
@@ -280,7 +313,7 @@ class GraphBuilder:
 
         self._tasks.append(BranchTask(name=name, inputs=self._wire(name, wired), body=body, otherwise=other))
 
-        return TaskOutputs(task=name, ports=tuple(body.outputs))
+        return TaskOutputs(task=name, ports=dict.fromkeys(body.outputs))
 
     def add_loop(
         self,
@@ -311,7 +344,7 @@ class GraphBuilder:
         )
         self._tasks.append(task)
 
-        return TaskOutputs(task=name, ports=tuple(task.body.outputs))
+        return TaskOutputs(task=name, ports=dict.fromkeys(task.body.outputs))
 
     @staticmethod
     def _refuse_each(identifier: str, kind: str, arguments: dict[str, t.Any]) -> None:
@@ -324,47 +357,55 @@ class GraphBuilder:
                 f'per item is not supported yet; place a task that fans out inside it.'
             )
 
-    def _wire(self, name: str, arguments: dict[str, t.Any]) -> dict[str, t.Any]:
+    def _wire(self, name: str, arguments: dict[str, t.Any], prefix: str = '') -> dict[str, t.Any]:
         """Return the arguments that are plain values, recording where each of the others comes from.
 
         An argument that stands for an output of another task, or for an input of the graph, records a dependency
-        rather than a value, which is what wires the graph together.
+        rather than a value, which is what wires the graph together. A dictionary holding one of those is a
+        namespace being filled in, so it is walked into and its entries are wired under their own names.
 
         :param name: the name the task is placed under, which the dependencies are recorded against.
+        :param prefix: the namespace the arguments sit in, which their names are recorded under.
         :raises ValueError: if an argument comes from outside this graph, comes from a task that fans out, or
-            carries either of those inside a container.
+            carries either of those inside something that is not a namespace.
         """
         inputs = {}
 
         for key, value in arguments.items():
+            port = f'{prefix}{key}'
+
             if isinstance(value, GraphInput):
                 if value.name not in self._inputs:
-                    self._refuse_foreign(name, key, value.name)
+                    self._refuse_foreign(name, port, value.name)
 
-                self._inputs[value.name].append((name, key))
+                self._inputs[value.name].append((name, port))
                 continue
 
             reference = _as_reference(value)
 
             if isinstance(reference, MappedOutput):
                 raise ValueError(
-                    f'`{name}` takes `{key}` from `{reference.task}`, which runs once per item and so has a '
-                    f'result per item, where `{key}` takes one value. Taking the results of a fan-out into '
+                    f'`{name}` takes `{port}` from `{reference.task}`, which runs once per item and so has a '
+                    f'result per item, where `{port}` takes one value. Taking the results of a fan-out into '
                     f'another task is not supported yet; a graph can return them.'
                 )
 
             if reference is not None:
                 if reference.task not in self._placed:
-                    self._refuse_foreign(name, key, reference.task)
+                    self._refuse_foreign(name, port, reference.task)
 
                 self._dependencies.append(
-                    Dependency(source=reference.task, source_port=reference.port, target=name, target_port=key)
+                    Dependency(source=reference.task, source_port=reference.port, target=name, target_port=port)
                 )
+                continue
+
+            if isinstance(value, dict) and _holds_reference(value):
+                inputs[key] = self._wire(name, value, prefix=f'{port}.')
                 continue
 
             if _holds_reference(value):
                 raise ValueError(
-                    f'`{name}` takes `{key}` with the output of another task inside a '
+                    f'`{name}` takes `{port}` with the output of another task inside a '
                     f'{type(value).__name__}, which would be stored as a value and leave that task unwaited for. '
                     f'Pass the output itself, or take the collection from a task that produces one.'
                 )
@@ -642,6 +683,36 @@ def loop(
     return builder.add_loop(body, condition=condition, max_iterations=max_iterations, arguments=inputs)
 
 
+class ProcessHandle:
+    """What :func:`task` returns for a process class: a task that can be placed in a graph.
+
+    A process is already launchable on its own, so this adds only what a graph needs: calling it while one is
+    being written places it, under the ports the process declares. Those ports are the ones it is given, without
+    a signature to bind them to, since a process takes its inputs by name.
+    """
+
+    def __init__(self, process_class: type[Process], spec: TaskSpec) -> None:
+        self._process_class = process_class
+        self.task_spec = spec
+        self.__name__ = process_class.__name__
+        self.__doc__ = process_class.__doc__
+
+    def __call__(self, **inputs: t.Any) -> TaskOutputs:
+        builder = ACTIVE_BUILDER.get()
+
+        if builder is None:
+            raise TypeError(
+                f'`{self.task_spec.identifier}` is a process, so on its own it is launched rather than called. '
+                f'Pass it to `run` or `submit`, or call it while writing a graph to place it in one.'
+            )
+
+        return builder.add_task(self, inputs)
+
+    @property
+    def process_class(self) -> type[Process]:
+        return self._process_class
+
+
 class TaskHandle:
     """What the :func:`task` decorator returns: a task that can be run, launched, or placed in a graph.
 
@@ -725,11 +796,36 @@ def task(
     declares one port per field, any other annotation a single ``result`` port. Without either, the output
     namespace stays dynamic, as it is for a calcfunction.
 
-    :param function: The function to decorate.
+    A process class can be declared a task as well, which is how a ``CalcJob`` or a ``WorkChain`` is placed in a
+    graph. It already declares its own ports, so ``outputs`` does not apply to one:
+
+    >>> relaxed = task(PwRelaxWorkChain)
+    >>>
+    >>> @graph
+    >>> def relax_and_report(structure):
+    >>>     return report(structure=relaxed(structure=structure).output_structure)
+
+    :param function: The function to decorate, or the process class to declare a task.
     :param outputs: Names of the output ports to declare.
-    :param identifier: Name of the task, which defaults to the name of the function.
-    :return: The decorated function, carrying its ``task_spec``.
+    :param identifier: Name of the task, which defaults to the name of the function or class.
+    :return: The decorated function, carrying its ``task_spec``, or a handle placing the process in a graph.
+    :raises TypeError: if ``outputs`` is given for a process class, which declares its own.
     """
+
+    if isinstance(function, type):
+        if not issubclass(function, Process):
+            raise TypeError(
+                f'`{function.__name__}` is a class rather than a function, and only a process class can be a '
+                f'task on its own. Decorate a function, or pass a `CalcJob` or `WorkChain`.'
+            )
+
+        if outputs is not None:
+            raise TypeError(
+                f'`{function.__name__}` is a process and declares its own output ports, so `outputs` does not '
+                f'apply to it.'
+            )
+
+        return ProcessHandle(function, TaskSpec.from_process(function, identifier=identifier))
 
     def decorator(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, CalcFunctionNode]:
         decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess, outputs=outputs)(function)

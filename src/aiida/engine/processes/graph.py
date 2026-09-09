@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import typing as t
 from collections import Counter
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ __all__ = (
     'Each',
     'GraphBuilder',
     'GraphHandle',
+    'GraphInput',
     'MappedOutput',
     'MappedOutputs',
     'TaskOutput',
@@ -50,6 +52,17 @@ class MappedOutput(TaskOutput):
     A graph can return this, and gets a result per item under the key of the item. Passing it to another task is
     refused, since that task would take a collection of results where it declares one value.
     """
+
+
+@dataclass(frozen=True)
+class GraphInput:
+    """Stands for one input of the graph while its body is traced.
+
+    The body is traced once, without values, so wherever this reaches a task the graph records that the input
+    feeds that port. The value itself arrives as an input of the process that runs the graph.
+    """
+
+    name: str
 
 
 @dataclass(frozen=True)
@@ -132,7 +145,7 @@ def _holds_reference(value: t.Any) -> bool:
     Only an argument that *is* an output records a dependency, so one inside a container would be stored as a
     plain value and the task it comes from would never be waited for.
     """
-    if isinstance(value, (TaskOutput, TaskOutputs)):
+    if isinstance(value, (TaskOutput, TaskOutputs, GraphInput)):
         return True
 
     if isinstance(value, (list, tuple, set)):
@@ -150,6 +163,7 @@ class GraphBuilder:
     def __init__(self) -> None:
         self._tasks: list[GraphTask] = []
         self._links: list[Dependency] = []
+        self._inputs: dict[str, list[tuple[str, str]]] = {}
         self._used: Counter[str] = Counter()
 
     def add_task(self, handle: TaskHandle, arguments: dict[str, t.Any]) -> TaskOutputs:
@@ -169,14 +183,12 @@ class GraphBuilder:
                 item_ports.append(key)
 
             value = argument.collection if isinstance(argument, Each) else argument
-            reference = _as_reference(value)
 
-            if reference is None and _holds_reference(value):
-                raise ValueError(
-                    f'`{name}` takes `{key}` with the output of another task inside a '
-                    f'{type(value).__name__}, which would be stored as a value and leave that task unwaited for. '
-                    f'Pass the output itself, or take the collection from a task that produces one.'
-                )
+            if isinstance(value, GraphInput):
+                self._inputs.setdefault(value.name, []).append((name, key))
+                continue
+
+            reference = _as_reference(value)
 
             if isinstance(reference, MappedOutput):
                 raise ValueError(
@@ -185,12 +197,20 @@ class GraphBuilder:
                     f'another task is not supported yet; a graph can return them.'
                 )
 
-            if reference is None:
-                inputs[key] = value
-            else:
+            if reference is not None:
                 self._links.append(
                     Dependency(source=reference.task, source_port=reference.port, target=name, target_port=key)
                 )
+                continue
+
+            if _holds_reference(value):
+                raise ValueError(
+                    f'`{name}` takes `{key}` with the output of another task inside a '
+                    f'{type(value).__name__}, which would be stored as a value and leave that task unwaited for. '
+                    f'Pass the output itself, or take the collection from a task that produces one.'
+                )
+
+            inputs[key] = value
 
         node = self._node(name, handle, inputs, item_ports)
         self._tasks.append(node)
@@ -220,7 +240,12 @@ class GraphBuilder:
 
     def finish(self, returned: t.Any) -> GraphSpec:
         """Return the graph that was built, taking what the function returned as the graph's outputs."""
-        return GraphSpec(tasks=tuple(self._tasks), links=tuple(self._links), outputs=self._declared_outputs(returned))
+        return GraphSpec(
+            tasks=tuple(self._tasks),
+            links=tuple(self._links),
+            inputs={name: tuple(targets) for name, targets in self._inputs.items()},
+            outputs=self._declared_outputs(returned),
+        )
 
     def _declared_outputs(self, returned: t.Any) -> dict[str, tuple[str, str]]:
         """Return the outputs of the graph, from what its function returned."""
@@ -264,17 +289,29 @@ class GraphHandle:
             f'`submit`, as any other process, or use `.build(...)` for the declaration on its own.'
         )
 
-    def build(self, *args: t.Any, **kwargs: t.Any) -> GraphSpec:
-        """Return the graph that the function declares for these arguments."""
+    def build(self) -> GraphSpec:
+        """Return the graph that the function declares.
+
+        The body is traced once with each of its parameters standing for an input of the graph, so the result is
+        the same declaration for every run and the values are what a run supplies.
+        """
         builder = GraphBuilder()
         token = ACTIVE_BUILDER.set(builder)
 
         try:
-            returned = self._function(*args, **kwargs)
+            returned = self._function(**{name: GraphInput(name=name) for name in self.parameters})
         finally:
             ACTIVE_BUILDER.reset(token)
 
         return builder.finish(returned)
+
+    @property
+    def parameters(self) -> tuple[str, ...]:
+        """Return the names of the inputs the graph takes, which are the parameters of its function."""
+        kinds = (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        return tuple(
+            name for name, parameter in inspect.signature(self._function).parameters.items() if parameter.kind in kinds
+        )
 
     @property
     def process_class(self) -> type[GraphProcess]:
@@ -282,13 +319,24 @@ class GraphHandle:
         return GraphProcess
 
     def get_launch_inputs(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-        """Return the inputs with which to launch the graph declared for these arguments.
+        """Return the inputs with which to launch the graph for these arguments.
 
-        A graph declares what to run for the given arguments, and that declaration is what the process takes.
+        The declaration says what to run and the arguments are what to run it on, so they travel side by side and
+        the same declaration serves every run.
         """
-        from aiida.orm import Dict
+        from aiida.orm import Data, Dict
+        from aiida.orm.nodes.data.base import to_aiida_type
 
-        return {GraphProcess._DAG: Dict(dict=self.build(*args, **kwargs).to_dict())}
+        bound = inspect.signature(self._function).bind(*args, **kwargs)
+        bound.apply_defaults()
+
+        return {
+            GraphProcess._DAG: Dict(dict=self.build().to_dict()),
+            GraphProcess._GRAPH_INPUTS: {
+                name: value if isinstance(value, Data) else to_aiida_type(value)
+                for name, value in bound.arguments.items()
+            },
+        }
 
 
 def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:

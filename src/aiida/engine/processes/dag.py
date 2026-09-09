@@ -189,10 +189,16 @@ class GraphSpec:
 
     The graph is a template: it records which tasks to run, which output of one feeds which input of another, and
     which of those outputs the graph itself returns. It runs nothing, and holds no results.
+
+    Its own inputs are named rather than filled in, so the same declaration describes every run of the graph and
+    the values arrive as inputs of the process that runs it. That is what lets one graph be placed inside
+    another, and what keeps a stored declaration from being a record of one particular run. Their types are not
+    recorded either, since an input has the type of the ports it feeds.
     """
 
     tasks: tuple[GraphTask, ...]
     links: tuple[Dependency, ...] = ()
+    inputs: dict[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
     outputs: dict[str, tuple[str, str]] = field(default_factory=dict)
     version: str = SPEC_VERSION
 
@@ -253,6 +259,16 @@ class GraphSpec:
                 if port not in ports and not ports.dynamic:
                     raise ValueError(f'link {link} refers to `{port}`, which is not a valid {direction} of `{name}`.')
 
+        for graph_input, targets in self.inputs.items():
+            for name, port in targets:
+                if name not in names:
+                    raise ValueError(f'input `{graph_input}` refers to unknown task `{name}`.')
+
+                ports = self.task(name).spec.inputs
+
+                if port not in ports and not ports.dynamic:
+                    raise ValueError(f'input `{graph_input}` refers to `{port}`, which is not an input of `{name}`.')
+
         for output, (name, port) in self.outputs.items():
             if name not in names:
                 raise ValueError(f'output `{output}` refers to unknown task `{name}`.')
@@ -295,6 +311,7 @@ class GraphSpec:
         return {
             'tasks': [task.to_dict() for task in self.tasks],
             'links': [link.to_dict() for link in self.links],
+            'inputs': {name: [list(target) for target in targets] for name, targets in self.inputs.items()},
             'outputs': {name: list(target) for name, target in self.outputs.items()},
             'version': self.version,
         }
@@ -319,6 +336,10 @@ class GraphSpec:
         return cls(
             tasks=tuple(GraphTask.from_dict(task) for task in data['tasks']),
             links=tuple(Dependency.from_dict(link) for link in data.get('links', [])),
+            inputs={
+                name: tuple((target[0], target[1]) for target in targets)
+                for name, targets in data.get('inputs', {}).items()
+            },
             outputs={name: (target[0], target[1]) for name, target in data.get('outputs', {}).items()},
             version=version,
         )
@@ -335,11 +356,18 @@ class GraphProcess(Process):
     _node_class = WorkChainNode
 
     _DAG = 'dag'
+    _GRAPH_INPUTS = 'graph_inputs'
 
     @classmethod
     def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
         super().define(spec)
         spec.input(cls._DAG, valid_type=Dict, help='The declaration of the graph to run.')
+        spec.input_namespace(
+            cls._GRAPH_INPUTS,
+            dynamic=True,
+            required=False,
+            help='The inputs the graph declares, which are passed on to the tasks that take them.',
+        )
         spec.outputs.dynamic = True
         spec.exit_code(400, 'ERROR_TASK_FAILED', message='The task `{task}` did not finish successfully.')
 
@@ -438,6 +466,15 @@ class GraphProcess(Process):
         one process and has one result to pass on.
         """
         inputs = dict(task.inputs)
+        given = self.inputs.get(self._GRAPH_INPUTS, {})
+
+        for name, targets in self.dag.inputs.items():
+            if name not in given:
+                continue
+
+            for target, port in targets:
+                if target == task.name:
+                    inputs[port] = given[name]
 
         for link in self.dag.links:
             if link.target == task.name:

@@ -341,7 +341,7 @@ def get_config_option(option_name: str) -> Any:
     :return: the value of the option
     :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
     """
-    from aiida.common import log
+    from aiida.common._core import log
     from aiida.manage import get_manager
 
     if (

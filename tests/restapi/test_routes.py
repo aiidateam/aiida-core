@@ -85,7 +85,7 @@ class TestRestApi:
         # create log message for calcjob
         import logging
 
-        from aiida.common.log import LOG_LEVEL_REPORT
+        from aiida.common._core.log import LOG_LEVEL_REPORT
         from aiida.common.timezone import now
         from aiida.orm import Log
 

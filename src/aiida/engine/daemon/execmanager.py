@@ -25,8 +25,10 @@ from typing import TYPE_CHECKING, Any
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
 
-from aiida.common import AIIDA_LOGGER, exceptions
-from aiida.common.datastructures import CalcInfo, FileCopyOperation
+from aiida.common import AIIDA_LOGGER
+from aiida.common._core import exceptions
+from aiida.common._core.datastructures import FileCopyOperation
+from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.typing import FilePath

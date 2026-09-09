@@ -31,10 +31,11 @@ from kiwipy.communications import UnroutableError
 
 from aiida import orm
 from aiida.common import exceptions
-from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
+from aiida.common._core.extendeddicts import AttributesFrozendict
+from aiida.common._core.log import LOG_LEVEL_REPORT
+from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.processes import ProcessState
 from aiida.engine.processes import exceptions as process_exceptions
 from aiida.engine.processes import persistence as process_persistence

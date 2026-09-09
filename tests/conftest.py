@@ -194,7 +194,7 @@ def capture_aiida_and_verdi_logs(request, monkeypatch):
         yield
         return
 
-    from aiida.common import log as common_log
+    from aiida.common._core import log as common_log
 
     caplog = request.getfixturevalue('caplog')
 
@@ -472,7 +472,7 @@ def empty_config(tmp_path) -> Config:
 
     :return: a new empty config instance.
     """
-    from aiida.common.utils import Capturing
+    from aiida.common._core.utils import Capturing
     from aiida.manage import configuration
     from aiida.manage.configuration.settings import AiiDAConfigDir
 
@@ -666,7 +666,7 @@ def override_logging(isolated_config):
     ``logging.database_handler``. To ensure the changes are temporary, they are made on an isolated
     temporary configuration.
     """
-    from aiida.common.log import configure_logging
+    from aiida.common._core.log import configure_logging
 
     try:
         isolated_config.set_option('logging.aiida_loglevel', 'DEBUG')
@@ -929,7 +929,7 @@ def reset_log_level():
     This fixture should be used by tests that will change these globals, for example, through the
     :class:`~aiida.cmdline.params.options.main.VERBOSITY` option in a CLI command invocation.
     """
-    from aiida.common import log
+    from aiida.common._core import log
 
     try:
         yield

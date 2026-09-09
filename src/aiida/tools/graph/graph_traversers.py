@@ -17,8 +17,9 @@ from typing_extensions import TypedDict
 
 from aiida import orm
 from aiida.common import exceptions
-from aiida.common.links import GraphTraversalRules, LinkType
-from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common._core.links import GraphTraversalRules
+from aiida.common._core.progress_reporter import get_progress_reporter
+from aiida.common.links import LinkType
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 

@@ -32,8 +32,9 @@ from pydantic import (
     field_validator,
 )
 
+from aiida.common._core.log import AdvancedLogLevels, LogLevels
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
-from aiida.common.log import AIIDA_LOGGER, AdvancedLogLevels, LogLevels
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.options import (
     Option,
     get_option,

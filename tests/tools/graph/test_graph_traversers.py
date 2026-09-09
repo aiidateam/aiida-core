@@ -10,8 +10,8 @@
 
 import pytest
 
+from aiida.common._core.progress_reporter import ProgressReporterAbstract, set_progress_reporter
 from aiida.common.links import LinkType
-from aiida.common.progress_reporter import ProgressReporterAbstract, set_progress_reporter
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
 

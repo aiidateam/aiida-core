@@ -13,7 +13,8 @@ from __future__ import annotations
 import abc
 import typing as t
 
-from aiida.common import exceptions, log, warnings
+from aiida.common import exceptions, warnings
+from aiida.common._core import log
 from aiida.common.datastructures import CodeRunMode
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty

@@ -325,7 +325,7 @@ class StorageBackend(abc.ABC):
         import tempfile
 
         from aiida.common import exceptions
-        from aiida.common.log import override_log_level
+        from aiida.common._core.log import override_log_level
         from aiida.manage.configuration import get_config
         from aiida.manage.configuration.config import Config
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME

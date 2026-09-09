@@ -130,8 +130,8 @@ py:class aiida.cmdline.params.types.choice.T
 py:class aiida.common.lang.T
 py:class aiida.engine.processes.functions.N
 py:class aiida.engine.processes.functions.R_co
-py:class aiida.common.utils.T
-py:class aiida.common.utils.R
+py:class aiida.common._core.utils.T
+py:class aiida.common._core.utils.R
 
 ### third-party packages
 # Note: These exceptions are needed if
@@ -192,7 +192,7 @@ py:class FieldInfo
 
 # These can be removed once they are properly included in the `__all__` of the engine process modules
 py:class aiida.engine.processes.generic.ports.PortNamespace
-py:class aiida.common.extendeddicts.AttributesFrozendict
+py:class aiida.common._core.extendeddicts.AttributesFrozendict
 py:class aiida.engine.processes.states.State
 py:class aiida.engine.processes.workchains.outline._If
 py:class aiida.engine.processes.workchains.outline._While

@@ -16,7 +16,8 @@ import secrets
 import shlex
 import typing as t
 
-from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
+from aiida.common._core.datastructures import FileCopyOperation
+from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.folders import Folder
 from aiida.engine import CalcJob, CalcJobProcessSpec
 from aiida.orm import (

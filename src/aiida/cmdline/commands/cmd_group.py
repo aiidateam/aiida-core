@@ -16,8 +16,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common._core.links import GraphTraversalRules
 from aiida.common.exceptions import UniquenessError
-from aiida.common.links import GraphTraversalRules
 
 
 @verdi.group('group')
@@ -364,7 +364,7 @@ def group_show(group, raw, limit, uuid):
     from tabulate import tabulate
 
     from aiida.common import timezone
-    from aiida.common.utils import str_timedelta
+    from aiida.common._core.utils import str_timedelta
 
     if limit:
         node_iterator = group.nodes[:limit]

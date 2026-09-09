@@ -14,8 +14,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from aiida.common import log
-from aiida.common.log import capture_logging
+from aiida.common._core import log
+from aiida.common._core.log import capture_logging
 
 
 def test_logging_before_dbhandler_loaded(caplog):

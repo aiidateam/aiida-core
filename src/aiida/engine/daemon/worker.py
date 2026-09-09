@@ -13,7 +13,7 @@ import logging
 import signal
 import sys
 
-from aiida.common.log import configure_logging
+from aiida.common._core.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.runners import Runner
 from aiida.manage import get_config_option, get_manager

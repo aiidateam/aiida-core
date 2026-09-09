@@ -15,7 +15,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 from aiida.common import exceptions
-from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
+from aiida.common._core.log import AiidaLoggerType
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
 from aiida.orm import entities, users
 from aiida.orm.pydantic import OrmMetadataField

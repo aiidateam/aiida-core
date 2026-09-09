@@ -13,7 +13,7 @@ import threading
 import pytest
 
 from aiida import orm
-from aiida.common.extendeddicts import AttributesFrozendict
+from aiida.common._core.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, WorkChain, run, run_get_node, run_get_pk
 from aiida.engine.processes.generic import process as process_core

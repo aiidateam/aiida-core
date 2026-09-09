@@ -111,8 +111,8 @@ class Manager:
         :raises `aiida.common.exceptions.InvalidOperation`:
             if another profile has already been loaded and allow_switch is False
         """
+        from aiida.common._core.log import configure_logging
         from aiida.common.exceptions import InvalidOperation
-        from aiida.common.log import configure_logging
         from aiida.manage.configuration.profile import Profile
 
         # If a profile is already loaded and no explicit profile is specified, we do nothing
@@ -307,7 +307,7 @@ class Manager:
     def get_profile_storage(self) -> StorageBackend:
         """Return the current profile's storage backend, loading it if necessary."""
         from aiida.common import ConfigurationError
-        from aiida.common.log import configure_logging
+        from aiida.common._core.log import configure_logging
         from aiida.manage.profile_access import ProfileAccessManager
 
         # if loaded, return the current storage backend (which is "synced" with the global profile)
@@ -534,7 +534,7 @@ class Manager:
         from packaging.version import parse
 
         from aiida import __version__
-        from aiida.common.log import CLI_ACTIVE
+        from aiida.common._core.log import CLI_ACTIVE
 
         # Showing of the warning can be turned off by setting the following option to false.
         show_warning = self.get_option('warnings.development_version')

@@ -14,7 +14,7 @@ import pytest
 
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage
-from aiida.common import exceptions
+from aiida.common._core import exceptions
 
 
 def tests_storage_version(run_cli_command):

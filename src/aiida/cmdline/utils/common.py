@@ -93,7 +93,7 @@ def print_last_process_state_change(process_type: Literal['work'] | Literal['cal
     """
     from aiida.cmdline.utils.echo import echo_report
     from aiida.common import timezone
-    from aiida.common.utils import str_timedelta
+    from aiida.common._core.utils import str_timedelta
     from aiida.engine.utils import get_process_state_change_timestamp
 
     timestamp = get_process_state_change_timestamp(process_type)
@@ -340,7 +340,7 @@ def get_workchain_report(
     import itertools
 
     from aiida import orm
-    from aiida.common.log import LOG_LEVELS
+    from aiida.common._core.log import LOG_LEVELS
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""

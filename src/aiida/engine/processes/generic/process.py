@@ -42,7 +42,7 @@ import kiwipy
 import yaml
 from aio_pika.exceptions import ChannelInvalidStateError, ConnectionClosed
 
-from aiida.common.extendeddicts import AttributesFrozendict
+from aiida.common._core.extendeddicts import AttributesFrozendict
 from aiida.common.lang import call_with_super_check, super_check
 from aiida.common.processes import ProcessState
 from aiida.engine.processes import communications as process_comms

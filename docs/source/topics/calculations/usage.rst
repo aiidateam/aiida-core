@@ -580,14 +580,15 @@ Input files can come from three sources in a calculations job:
 #. Remote: files of ``RemoteData`` input nodes that are defined through the ``remote_copy_list``
 
 By default, these files are copied in the order of sandbox, local, and finally remote.
-The order can be controlled through the ``file_copy_operation_order`` attribute of the :class:`~aiida.common.datastructures.CalcInfo` which takes a list of :class:`~aiida.common.datastructures.FileCopyOperation` instances, for example:
+The order can be controlled through the ``file_copy_operation_order`` attribute of the :class:`~aiida.common.datastructures.CalcInfo` which takes a list of :class:`~aiida.common._core.datastructures.FileCopyOperation` instances, for example:
 
 .. code-block:: python
 
     class CustomFileCopyOrder(CalcJob)
 
         def prepare_for_submission(self, _):
-            from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
+            from aiida.common.datastructures import CalcInfo, CodeInfo
+            from aiida.common._core.datastructures import FileCopyOperation
 
             code_info = CodeInfo()
             code_info.code_uuid = self.inputs.code.uuid

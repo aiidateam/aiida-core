@@ -182,7 +182,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
     # Warn if a handler-side filter was set more verbose than any logger level, in which case it has no effect until
     # a logger level is lowered as well.
-    from aiida.common.log import validate_handler
+    from aiida.common._core.log import validate_handler
 
     if warning := validate_handler(config, option.name, scope):
         echo.echo_warning(warning)

@@ -59,7 +59,7 @@ from aiida.orm.utils.node import (
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
-    from aiida.common.log import AiidaLoggerType
+    from aiida.common._core.log import AiidaLoggerType
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.nodes import BackendNode
     from aiida.orm.nodes.repository import NodeRepository

@@ -11,7 +11,7 @@ import click
 
 from aiida.cmdline.params import options
 from aiida.cmdline.utils.echo import echo_deprecated
-from aiida.common import log
+from aiida.common._core import log
 from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
 from aiida.common.extendeddicts import AttributeDict
 from aiida.manage.configuration import get_config

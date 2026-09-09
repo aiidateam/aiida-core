@@ -64,7 +64,7 @@ def test_check_version_development(monkeypatch, suppress_warning, version, manag
     """
     from unittest.mock import MagicMock
 
-    from aiida.common import log
+    from aiida.common._core import log
 
     monkeypatch.setattr(aiida, '__version__', version)
 

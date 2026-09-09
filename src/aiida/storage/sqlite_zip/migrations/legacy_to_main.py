@@ -21,9 +21,9 @@ from archive_path import ZipPath
 from sqlalchemy import insert, select
 from sqlalchemy.exc import IntegrityError
 
+from aiida.common._core.progress_reporter import get_progress_reporter
 from aiida.common.exceptions import CorruptStorage, StorageMigrationError
 from aiida.common.hashing import chunked_file_hash
-from aiida.common.progress_reporter import get_progress_reporter
 from aiida.repository.common import File, FileType
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.sqlite_zip.migrations.utils import update_metadata
@@ -131,7 +131,7 @@ def _json_to_sqlite(
     outpath: Path, data: dict, node_repos: dict[str, list[tuple[str, str | None]]], batch_size: int = 100
 ) -> None:
     """Convert a JSON archive format to SQLite."""
-    from aiida.common.utils import batch_iter
+    from aiida.common._core.utils import batch_iter
     from aiida.storage.sqlite_zip.migrations import v1_db_schema as v1_schema
 
     aiida_orm_to_backend = {

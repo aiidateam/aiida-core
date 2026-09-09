@@ -15,7 +15,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.log import LOG_LEVELS, capture_logging
+from aiida.common._core.log import LOG_LEVELS, capture_logging
 
 REPAIR_INSTRUCTIONS = """\
 If one ore more processes are unreachable, you can run the following commands to try and repair them:

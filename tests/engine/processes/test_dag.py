@@ -17,7 +17,7 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.engine import Dependency, Endpoint, GraphProcess, GraphSpec, GraphTask, MapTask, run_get_node, task
-from aiida.engine.processes.dag import TASK_KINDS, TaskKind
+from aiida.engine.processes.graphs.spec import TASK_KINDS, TaskKind
 
 pytestmark = pytest.mark.requires_broker
 
@@ -44,7 +44,7 @@ def linear_graph() -> GraphSpec:
             GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
             GraphTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
         ),
-        links=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
+        dependencies=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
         outputs={'total': Endpoint(task='sum', port='total')},
     )
 
@@ -155,7 +155,7 @@ def test_map_rejects_an_unknown_item_port():
 )
 def test_map_runs_once_per_item(collection, expected):
     """Every item gets its own process, and the results are gathered under the key of the item."""
-    results, node = run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph(collection).to_dict()))
+    results, node = run_get_node(GraphProcess, graph=orm.Dict(dict=mapped_graph(collection).to_dict()))
 
     assert node.is_finished_ok, node.exit_message
     assert {key: value.value for key, value in results['total'].items()} == expected
@@ -166,12 +166,12 @@ def test_map_runs_once_per_item(collection, expected):
 
 def test_map_leaves_the_stored_graph_a_template():
     """The expansion is runtime state, so a graph that ran a map still describes the one task it declared."""
-    results, node = run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph([1, 2, 3]).to_dict()))
+    results, node = run_get_node(GraphProcess, graph=orm.Dict(dict=mapped_graph([1, 2, 3]).to_dict()))
 
     assert node.is_finished_ok, node.exit_message
     assert len(results['total']) == 3
 
-    stored = node.inputs.dag.get_dict()
+    stored = node.inputs.graph.get_dict()
 
     assert [task['name'] for task in stored['tasks']] == ['shifted']
     assert stored == mapped_graph([1, 2, 3]).to_dict()
@@ -179,7 +179,7 @@ def test_map_leaves_the_stored_graph_a_template():
 
 def test_map_over_an_empty_collection_runs_nothing():
     """A collection that turns out to be empty leaves the graph with nothing to run and nothing to gather."""
-    _, node = run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph([]).to_dict()))
+    _, node = run_get_node(GraphProcess, graph=orm.Dict(dict=mapped_graph([]).to_dict()))
 
     assert node.is_finished_ok, node.exit_message
     assert node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all() == []
@@ -191,7 +191,7 @@ def test_map_reports_an_unmappable_collection():
     What a map runs over can come from another task, so this is only known once the graph is running.
     """
     with pytest.raises(ValueError, match='has to be a list or a dictionary'):
-        run_get_node(GraphProcess, dag=orm.Dict(dict=mapped_graph(7).to_dict()))
+        run_get_node(GraphProcess, graph=orm.Dict(dict=mapped_graph(7).to_dict()))
 
 
 def test_map_results_cannot_be_taken_into_another_task_yet():
@@ -202,7 +202,7 @@ def test_map_results_cannot_be_taken_into_another_task_yet():
                 MapTask(name='shifted', spec=add.task_spec, inputs={'x': [1, 2], 'y': 10}, item_port='x'),
                 GraphTask(name='after', spec=multiply.task_spec, inputs={'y': 2}),
             ),
-            links=(Dependency(source='shifted', source_port='total', target='after', target_port='x'),),
+            dependencies=(Dependency(source='shifted', source_port='total', target='after', target_port='x'),),
             outputs={'product': Endpoint(task='after', port='product')},
         )
 
@@ -231,7 +231,7 @@ def test_rejects_link_to_unknown_task():
     with pytest.raises(ValueError, match='unknown task `nope`'):
         GraphSpec(
             tasks=(GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),),
-            links=(Dependency(source='start', source_port='total', target='nope', target_port='x'),),
+            dependencies=(Dependency(source='start', source_port='total', target='nope', target_port='x'),),
         )
 
 
@@ -242,7 +242,7 @@ def test_rejects_link_to_unknown_port():
                 GraphTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
                 GraphTask(name='sum', spec=add.task_spec),
             ),
-            links=(Dependency(source='start', source_port='total', target='sum', target_port='nope'),),
+            dependencies=(Dependency(source='start', source_port='total', target='sum', target_port='nope'),),
         )
 
 
@@ -254,7 +254,7 @@ def test_rejects_cycle():
                 GraphTask(name='first', spec=add.task_spec, inputs={'y': 1}),
                 GraphTask(name='second', spec=add.task_spec, inputs={'y': 1}),
             ),
-            links=(
+            dependencies=(
                 Dependency(source='first', source_port='total', target='second', target_port='x'),
                 Dependency(source='second', source_port='total', target='first', target_port='x'),
             ),
@@ -263,7 +263,7 @@ def test_rejects_cycle():
 
 def test_runs_a_linear_graph():
     """Each task runs once its input is available, and the declared graph output is returned."""
-    results, node = run_get_node(GraphProcess, dag=orm.Dict(dict=linear_graph().to_dict()))
+    results, node = run_get_node(GraphProcess, graph=orm.Dict(dict=linear_graph().to_dict()))
 
     assert node.is_finished_ok, node.exit_message
     assert results['total'] == 5
@@ -271,7 +271,7 @@ def test_runs_a_linear_graph():
 
 def test_tasks_are_called_under_their_graph_names():
     """Every task is a child process in its own right, recorded under the name the graph gave it."""
-    _, node = run_get_node(GraphProcess, dag=orm.Dict(dict=linear_graph().to_dict()))
+    _, node = run_get_node(GraphProcess, graph=orm.Dict(dict=linear_graph().to_dict()))
 
     called = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
 
@@ -288,7 +288,7 @@ def test_runs_a_diamond_graph():
             GraphTask(name='right', spec=multiply.task_spec, inputs={'y': 3}),
             GraphTask(name='join', spec=add.task_spec),
         ),
-        links=(
+        dependencies=(
             Dependency(source='start', source_port='total', target='left', target_port='x'),
             Dependency(source='start', source_port='total', target='right', target_port='x'),
             Dependency(source='left', source_port='total', target='join', target_port='x'),
@@ -297,7 +297,7 @@ def test_runs_a_diamond_graph():
         outputs={'total': Endpoint(task='join', port='total')},
     )
 
-    results, node = run_get_node(GraphProcess, dag=orm.Dict(dict=graph.to_dict()))
+    results, node = run_get_node(GraphProcess, graph=orm.Dict(dict=graph.to_dict()))
 
     assert node.is_finished_ok, node.exit_message
     assert results['total'] == 9  # (2 + 1) + (2 * 3)
@@ -307,7 +307,7 @@ def test_reports_a_failing_task():
     """A task that does not finish well stops the graph and names the task that failed."""
     graph = GraphSpec(tasks=(GraphTask(name='doomed', spec=boom.task_spec),))
 
-    _, node = run_get_node(GraphProcess, dag=orm.Dict(dict=graph.to_dict()))
+    _, node = run_get_node(GraphProcess, graph=orm.Dict(dict=graph.to_dict()))
 
     assert not node.is_finished_ok
     assert node.exit_status == GraphProcess.exit_codes.ERROR_TASK_FAILED.status
@@ -321,10 +321,10 @@ def test_a_failing_task_stops_what_depends_on_it():
             GraphTask(name='doomed', spec=boom.task_spec),
             GraphTask(name='after', spec=add.task_spec, inputs={'y': 1}),
         ),
-        links=(Dependency(source='doomed', source_port='result', target='after', target_port='x'),),
+        dependencies=(Dependency(source='doomed', source_port='result', target='after', target_port='x'),),
     )
 
-    _, node = run_get_node(GraphProcess, dag=orm.Dict(dict=graph.to_dict()))
+    _, node = run_get_node(GraphProcess, graph=orm.Dict(dict=graph.to_dict()))
 
     assert not node.is_finished_ok
     assert node.exit_status == GraphProcess.exit_codes.ERROR_TASK_FAILED.status

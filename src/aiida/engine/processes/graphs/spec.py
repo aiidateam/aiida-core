@@ -6,31 +6,36 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Declaration and execution of a graph of tasks."""
+"""Declaration of a graph of tasks: what to run, and how the pieces are wired."""
 
 from __future__ import annotations
 
-import functools
 import typing as t
-from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 
-from aiida.common.lang import override
-from aiida.common.processes import ProcessState
-from aiida.engine.processes.exit_code import ExitCode
+from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.builder import ProcessBuilder
+from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec
-from aiida.engine.processes.states import Wait
-from aiida.engine.processes.task import TaskSpec
-from aiida.orm import Dict, List, WorkChainNode, load_node
 
-__all__ = ('Dependency', 'Endpoint', 'GraphProcess', 'GraphSpec', 'GraphTask', 'MapTask')
+__all__ = ('Dependency', 'Endpoint', 'ExecutorReference', 'GraphSpec', 'GraphTask', 'MapTask', 'TaskSpec')
 
 SPEC_VERSION: str = '1.0'
 """Version of the graph declaration format, stored with every serialized spec."""
 
 SUPPORTED_SPEC_VERSIONS: frozenset[str] = frozenset({SPEC_VERSION})
 """Versions of the declaration format that can be read back, which a stored graph is checked against."""
+
+TASK_SPEC_VERSION: str = '1.0'
+"""Version of the task declaration format, stored with every serialized spec."""
+
+DEFINED_TASKS: dict[str, t.Any] = {}
+"""Every task that has been declared in this interpreter, by the name it is referenced under.
+
+A task is stored by its ``module:name``, which is all a daemon worker can be given. A task written in a script,
+a notebook or a shell session has no importable name, so it is kept here as well and a run in the session that
+declared it finds it. Submitting such a task still needs a module a worker can import.
+"""
 
 TaskKind = t.Literal['function', 'map']
 """What a task in a graph is.
@@ -40,6 +45,126 @@ is. The kind is what a reader dispatches on, so it separates nodes the graph tre
 executors that differ: a task running a `CalcJob` is still a `function` node, because it is still one process
 submitted with its inputs.
 """
+
+
+@dataclass(frozen=True)
+class ExecutorReference:
+    """Importable reference to the process that realizes a task.
+
+    The reference is stored instead of the process class itself, so that a declaration can be written to the
+    database and read back. A process function is referenced through the decorated function, since that is the
+    importable name; the generated process class is recovered from it on load.
+    """
+
+    module: str
+    name: str
+
+    @classmethod
+    def from_process(cls, process: t.Any) -> ExecutorReference:
+        """Return the reference for a process class or a decorated process function.
+
+        The name is recorded without checking that it can be imported, so that a task defined next to the code
+        that runs it stays usable. Whether it truly is importable only matters once the reference is loaded, which
+        is where a daemon worker would need it anyway.
+
+        :param process: the process class or process function to reference.
+        :raises ValueError: if the process carries no module and name to reference it by.
+        """
+        module = getattr(process, '__module__', None)
+        name = getattr(process, '__name__', None)
+
+        if module is None or name is None:
+            raise ValueError(f'`{process}` cannot be referenced because it has no module and name.')
+
+        return cls(module=module, name=name)
+
+    def load(self) -> type[Process]:
+        """Return the process class this reference points to.
+
+        :raises ImportError: if the task cannot be reached from here, which is the case for one defined where it
+            cannot be imported and run by a process that did not define it.
+        """
+        identifier = f'{self.module}:{self.name}'
+
+        try:
+            loaded: t.Any = get_object_loader().load_object(identifier)
+        except ImportError as exception:
+            loaded = DEFINED_TASKS.get(identifier)
+
+            if loaded is None:
+                msg = (
+                    f'task `{self.name}` is defined in `{self.module}`, which cannot be imported here. A task '
+                    f'runs where it was defined, so to run this one from a daemon worker, or from another '
+                    f'session, define it in a module that can be imported.'
+                )
+                raise ImportError(msg) from exception
+
+        # A process function's name resolves to the decorated function, which carries the generated process class.
+        if getattr(loaded, 'is_process_function', False):
+            return loaded.process_class
+
+        return loaded
+
+    def to_dict(self) -> dict[str, str]:
+        return {'module': self.module, 'name': self.name}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> ExecutorReference:
+        return cls(module=data['module'], name=data['name'])
+
+
+@dataclass(frozen=True)
+class TaskSpec:
+    """Declarative description of a task.
+
+    A task declares what should run, without running anything itself. The ports it takes and produces are those of
+    the process that realizes it, so they are derived from the executor rather than stored alongside it, which
+    keeps the declaration a small value that can be written to the database and read back.
+    """
+
+    identifier: str
+    executor: ExecutorReference
+    version: str = TASK_SPEC_VERSION
+
+    @classmethod
+    def from_process(cls, process: t.Any, identifier: str | None = None) -> TaskSpec:
+        """Return the declaration of a task that runs the given process.
+
+        :param process: the process class or process function that realizes the task.
+        :param identifier: name of the task, which defaults to the name of the process.
+        """
+        reference = ExecutorReference.from_process(process)
+        return cls(identifier=identifier or reference.name, executor=reference)
+
+    @property
+    def process_class(self) -> type[Process]:
+        """Return the process that realizes this task."""
+        return self.executor.load()
+
+    @property
+    def inputs(self) -> PortNamespace:
+        """Return the input ports this task takes."""
+        return self.process_class.spec().inputs
+
+    @property
+    def outputs(self) -> PortNamespace:
+        """Return the output ports this task produces."""
+        return self.process_class.spec().outputs
+
+    def get_builder(self) -> ProcessBuilder:
+        """Return a builder with which to populate the inputs of this task."""
+        return self.process_class.get_builder()
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {'identifier': self.identifier, 'executor': self.executor.to_dict(), 'version': self.version}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, t.Any]) -> TaskSpec:
+        return cls(
+            identifier=data['identifier'],
+            executor=ExecutorReference.from_dict(data['executor']),
+            version=data.get('version', TASK_SPEC_VERSION),
+        )
 
 
 @dataclass(frozen=True)
@@ -167,41 +292,6 @@ TASK_KINDS: dict[str, type[GraphTask]] = {node_class.KIND: node_class for node_c
 """The node class for each kind, which is what a stored task is read back as and checked against."""
 
 
-def _map_items(collection: t.Any, task: MapTask) -> dict[str, t.Any]:
-    """Return the items a map runs over, by the key each of its results is gathered under.
-
-    :param collection: what the task maps over, as a list or a dictionary, stored or plain.
-    :param task: the task being expanded, named in the errors.
-    :raises ValueError: if the collection is of a type that cannot be mapped over, or is keyed by something that
-        cannot name a result.
-    """
-    if isinstance(collection, List):
-        collection = collection.get_list()
-    elif isinstance(collection, Dict):
-        collection = collection.get_dict()
-
-    if isinstance(collection, (list, tuple)):
-        return {f'item_{index}': value for index, value in enumerate(collection)}
-
-    if not isinstance(collection, dict):
-        msg = (
-            f'`{task.name}` maps over `{task.item_port}`, which has to be a list or a dictionary (or the `List` '
-            f'or `Dict` node of one), got `{type(collection).__name__}`.'
-        )
-        raise ValueError(msg)
-
-    unusable = sorted(key for key in collection if not str(key).isidentifier())
-
-    if unusable:
-        msg = (
-            f'`{task.name}` maps over a dictionary keyed by {unusable}, and each result is stored under its key, '
-            f'so the keys have to be usable as names.'
-        )
-        raise ValueError(msg)
-
-    return dict(collection)
-
-
 @dataclass(frozen=True)
 class GraphSpec:
     """Declarative description of a graph of tasks.
@@ -216,7 +306,7 @@ class GraphSpec:
     """
 
     tasks: tuple[GraphTask, ...]
-    links: tuple[Dependency, ...] = ()
+    dependencies: tuple[Dependency, ...] = ()
     inputs: dict[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
     outputs: dict[str, Endpoint] = field(default_factory=dict)
     version: str = SPEC_VERSION
@@ -237,7 +327,7 @@ class GraphSpec:
 
     def predecessors(self, name: str) -> set[str]:
         """Return the names of the tasks whose outputs the given task takes."""
-        return {link.source for link in self.links if link.target == name}
+        return {edge.source for edge in self.dependencies if edge.target == name}
 
     def ready(self, done: t.Container[str], dispatched: t.Container[str]) -> list[str]:
         """Return the tasks whose predecessors have all finished and that have not been dispatched yet.
@@ -255,7 +345,7 @@ class GraphSpec:
         """Check that the graph is well formed.
 
         :raises ValueError: if task names are not unique, a link or output refers to an unknown task or port, or the
-            links contain a cycle, which would leave the graph unable to start.
+            dependencies contain a cycle, which would leave the graph unable to start.
         """
         names = [task.name for task in self.tasks]
         duplicates = {name for name in names if names.count(name) > 1}
@@ -263,20 +353,22 @@ class GraphSpec:
         if duplicates:
             raise ValueError(f'task names have to be unique, got more than one of {sorted(duplicates)}.')
 
-        for link in self.links:
+        for edge in self.dependencies:
             endpoints = (
-                (link.source, link.source_port, 'outputs'),
-                (link.target, link.target_port, 'inputs'),
+                (edge.source, edge.source_port, 'outputs'),
+                (edge.target, edge.target_port, 'inputs'),
             )
 
             for name, port, direction in endpoints:
                 if name not in names:
-                    raise ValueError(f'link {link} refers to unknown task `{name}`.')
+                    raise ValueError(f'dependency {edge} refers to unknown task `{name}`.')
 
                 ports = getattr(self.task(name).spec, direction)
 
                 if port not in ports and not ports.dynamic:
-                    raise ValueError(f'link {link} refers to `{port}`, which is not a valid {direction} of `{name}`.')
+                    raise ValueError(
+                        f'dependency {edge} refers to `{port}`, which is not a valid {direction} of `{name}`.'
+                    )
 
         for graph_input, targets in self.inputs.items():
             for name, port in targets:
@@ -311,10 +403,10 @@ class GraphSpec:
                     f'`{task.name}` maps over `{task.item_port}`, which is not an input of `{task.spec.identifier}`.'
                 )
 
-        for link in self.links:
-            if isinstance(self.task(link.source), MapTask):
+        for edge in self.dependencies:
+            if isinstance(self.task(edge.source), MapTask):
                 raise ValueError(
-                    f'`{link.target}` takes `{link.target_port}` from `{link.source}`, which runs once per item and '
+                    f'`{edge.target}` takes `{edge.target_port}` from `{edge.source}`, which runs once per item and '
                     f'so produces a result per item. Taking the results of a map into another task is not supported '
                     f'yet; a graph can return them as an output.'
                 )
@@ -322,14 +414,14 @@ class GraphSpec:
         self._check_acyclic()
 
     def _check_acyclic(self) -> None:
-        """Raise if the links contain a cycle, by peeling off tasks that have nothing left to wait for."""
+        """Raise if the dependencies contain a cycle, by peeling off tasks with nothing left to wait for."""
         remaining = {task.name: self.predecessors(task.name) for task in self.tasks}
 
         while remaining:
             free = [name for name, waiting in remaining.items() if not waiting & remaining.keys()]
 
             if not free:
-                raise ValueError(f'the links contain a cycle between {sorted(remaining)}.')
+                raise ValueError(f'the dependencies contain a cycle between {sorted(remaining)}.')
 
             for name in free:
                 del remaining[name]
@@ -337,7 +429,7 @@ class GraphSpec:
     def to_dict(self) -> dict[str, t.Any]:
         return {
             'tasks': [task.to_dict() for task in self.tasks],
-            'links': [link.to_dict() for link in self.links],
+            'dependencies': [edge.to_dict() for edge in self.dependencies],
             'inputs': {name: [list(target) for target in targets] for name, targets in self.inputs.items()},
             'outputs': {name: source.to_dict() for name, source in self.outputs.items()},
             'version': self.version,
@@ -362,7 +454,7 @@ class GraphSpec:
 
         return cls(
             tasks=tuple(GraphTask.from_dict(task) for task in data['tasks']),
-            links=tuple(Dependency.from_dict(link) for link in data.get('links', [])),
+            dependencies=tuple(Dependency.from_dict(edge) for edge in data.get('dependencies', [])),
             inputs={
                 name: tuple((target[0], target[1]) for target in targets)
                 for name, targets in data.get('inputs', {}).items()
@@ -370,214 +462,3 @@ class GraphSpec:
             outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
             version=version,
         )
-
-
-class GraphProcess(Process):
-    """Run a graph of tasks, dispatching each as a child process.
-
-    Every task that is ready is submitted, so it is a process in its own right: it gets its own node, its own entry
-    in the provenance graph under the name the graph gave it, and it is scheduled like any other process. The graph
-    keeps only the bookkeeping of what it dispatched and what has finished, which travels with its checkpoint.
-    """
-
-    _node_class = WorkChainNode
-
-    _DAG = 'dag'
-    _GRAPH_INPUTS = 'graph_inputs'
-
-    @classmethod
-    def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
-        super().define(spec)
-        spec.input(cls._DAG, valid_type=Dict, help='The declaration of the graph to run.')
-        spec.input_namespace(
-            cls._GRAPH_INPUTS,
-            dynamic=True,
-            required=False,
-            help='The inputs the graph declares, which are passed on to the tasks that take them.',
-        )
-        spec.outputs.dynamic = True
-        spec.exit_code(400, 'ERROR_TASK_FAILED', message='The task `{task}` did not finish successfully.')
-
-    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._dag: GraphSpec | None = None
-        # What each task dispatched, which is one process for most tasks and one per item for a map. The processes
-        # are tracked under an instance name, so a task that fans out needs no second kind of bookkeeping.
-        self._instances: dict[str, list[str]] = {}
-        self._dispatched: dict[str, int] = {}
-        self._done: dict[str, int] = {}
-
-    @property
-    def dag(self) -> GraphSpec:
-        """Return the declaration of the graph being run."""
-        if self._dag is None:
-            self._dag = GraphSpec.from_dict(self.inputs[self._DAG].get_dict())
-        return self._dag
-
-    @override
-    def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
-        super().save_instance_state(out_state, save_context)
-        out_state['instances'] = {name: list(instances) for name, instances in self._instances.items()}
-        out_state['dispatched'] = dict(self._dispatched)
-        out_state['done'] = dict(self._done)
-
-    @override
-    def load_instance_state(self, saved_state: MutableMapping[str, t.Any], load_context: t.Any) -> None:
-        super().load_instance_state(saved_state, load_context)
-        self._dag = None
-        self._instances = {name: list(instances) for name, instances in saved_state.get('instances', {}).items()}
-        self._dispatched = dict(saved_state.get('dispatched', {}))
-        self._done = dict(saved_state.get('done', {}))
-
-    @override
-    async def run(self) -> t.Any:
-        return self._do_step()
-
-    def _do_step(self) -> t.Any:
-        """Dispatch the tasks that are ready, and wait until something finishes."""
-        for name in self.dag.ready(self._succeeded, self._instances):
-            self._dispatch(name)
-
-        if self._pending:
-            return Wait(self._do_step, 'waiting for dispatched tasks')
-
-        return self._finish()
-
-    @property
-    def _pending(self) -> dict[str, int]:
-        """Return the processes that have been dispatched but have not finished."""
-        return {instance: pk for instance, pk in self._dispatched.items() if instance not in self._done}
-
-    @property
-    def _finished(self) -> set[str]:
-        """Return the tasks all of whose processes have finished, however they finished."""
-        return {
-            name for name, instances in self._instances.items() if all(instance in self._done for instance in instances)
-        }
-
-    @property
-    def _succeeded(self) -> set[str]:
-        """Return the tasks that finished successfully, which are the only ones a next task can take inputs from.
-
-        A task that fanned out counts as successful once every one of its processes did, so one failed item stops
-        what comes after it just as a single failed task does.
-        """
-        return {
-            name
-            for name in self._finished
-            if all(load_node(self._done[instance]).is_finished_ok for instance in self._instances[name])
-        }
-
-    @property
-    def _failed(self) -> list[str]:
-        """Return the tasks that finished without success, in the order in which they were declared."""
-        finished, succeeded = self._finished, self._succeeded
-        return [task.name for task in self.dag.tasks if task.name in finished and task.name not in succeeded]
-
-    def _dispatch(self, name: str) -> None:
-        """Submit the processes one task needs, which is one per item for a map and one for anything else."""
-        task = self.dag.task(name)
-        inputs = self._resolve_inputs(task)
-
-        if isinstance(task, MapTask):
-            self._dispatch_mapped(task, inputs)
-            return
-
-        self._instances[name] = [name]
-        self._submit_instance(task, name, inputs)
-
-    def _resolve_inputs(self, task: GraphTask) -> dict[str, t.Any]:
-        """Return the inputs of a task, with whatever comes from another task filled in.
-
-        A link never has a map as its source, since the declaration refuses that, so every source has run exactly
-        one process and has one result to pass on.
-        """
-        inputs = dict(task.inputs)
-        given = self.inputs.get(self._GRAPH_INPUTS, {})
-
-        for name, targets in self.dag.inputs.items():
-            if name not in given:
-                continue
-
-            for target, port in targets:
-                if target == task.name:
-                    inputs[port] = given[name]
-
-        for link in self.dag.links:
-            if link.target == task.name:
-                inputs[link.target_port] = load_node(self._done[link.source]).outputs[link.source_port]
-
-        return inputs
-
-    def _dispatch_mapped(self, task: MapTask, inputs: dict[str, t.Any]) -> None:
-        """Submit one process per item of the collection the task maps over."""
-        items = _map_items(inputs.pop(task.item_port, None), task)
-        self._instances[task.name] = [f'{task.name}_{key}' for key in items]
-
-        for key, item in items.items():
-            self._submit_instance(task, f'{task.name}_{key}', {**inputs, task.item_port: item})
-
-        if not items:
-            self.report(f'task `{task.name}` maps over an empty collection, so it runs nothing')
-
-    def _submit_instance(self, task: GraphTask, instance: str, inputs: dict[str, t.Any]) -> None:
-        """Submit one process of a task, under the name that its call link carries."""
-        inputs = {**inputs, 'metadata': {**inputs.get('metadata', {}), 'call_link_label': instance}}
-        node = self.submit(task.spec.process_class, **inputs)
-        assert node.pk is not None
-        self._dispatched[instance] = node.pk
-        self.report(f'dispatched task `{instance}` as {node.pk}')
-
-    @staticmethod
-    def _item_key(name: str, instance: str) -> str:
-        """Return the item a process ran for, which its instance name carries after the name of the task."""
-        return instance[len(name) + 1 :]
-
-    @override
-    def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:
-        """Ask to be woken when a dispatched task finishes.
-
-        The callbacks are registered on entering the wait, so a task that finished while the graph was still
-        dispatching is picked up rather than lost.
-        """
-        super().on_wait(awaitables)
-
-        for name, pk in self._pending.items():
-            self.runner.call_on_process_finish(pk, functools.partial(self.call_soon, self._on_task_finished, name, pk))
-
-    def _on_task_finished(self, name: str, pk: int) -> None:
-        """Record that a task finished and continue, which is what advances the graph."""
-        self._done[name] = pk
-
-        if self.state == ProcessState.WAITING:
-            self.resume()
-
-    def _finish(self) -> ExitCode | None:
-        """Attach the declared outputs, or report the task that kept the graph from completing.
-
-        A task that did not finish well leaves everything downstream of it unable to run, so the graph stops with
-        the name of that task rather than dispatching a task whose inputs will never exist.
-        """
-        if self._failed:
-            return self.exit_codes.ERROR_TASK_FAILED.format(task=self._failed[0])
-
-        given = self.inputs.get(self._GRAPH_INPUTS, {})
-
-        for output, source in self.dag.outputs.items():
-            if source.task is None:
-                # The graph passes one of its own inputs on, so the value is already there and nothing produced it.
-                self.out(output, given[source.port])
-                continue
-
-            if not isinstance(self.dag.task(source.task), MapTask):
-                self.out(output, load_node(self._done[source.task]).outputs[source.port])
-                continue
-
-            # A map produced a result per item, so the output is a namespace holding one entry per item.
-            for instance in self._instances[source.task]:
-                self.out(
-                    f'{output}.{self._item_key(source.task, instance)}',
-                    load_node(self._done[instance]).outputs[source.port],
-                )
-
-        return None

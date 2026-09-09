@@ -10,14 +10,26 @@
 
 from __future__ import annotations
 
+import contextvars
 import functools
 import inspect
 import typing as t
 from collections import Counter
 from dataclasses import dataclass
 
-from aiida.engine.processes.dag import Dependency, Endpoint, GraphProcess, GraphSpec, GraphTask, MapTask
-from aiida.engine.processes.task import ACTIVE_BUILDER, TaskHandle
+from aiida.engine.processes.functions import ProcessFunctionType, process_function
+from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
+from aiida.engine.processes.graphs.spec import (
+    DEFINED_TASKS,
+    Dependency,
+    Endpoint,
+    GraphSpec,
+    GraphTask,
+    MapTask,
+    TaskSpec,
+)
+from aiida.engine.processes.process import Process
+from aiida.orm import CalcFunctionNode
 
 __all__ = (
     'Each',
@@ -26,11 +38,26 @@ __all__ = (
     'GraphInput',
     'MappedOutput',
     'MappedOutputs',
+    'TaskHandle',
     'TaskOutput',
     'TaskOutputs',
     'each',
     'graph',
+    'task',
 )
+
+ACTIVE_BUILDER: contextvars.ContextVar[t.Any | None] = contextvars.ContextVar(
+    'aiida_active_graph_builder', default=None
+)
+"""The graph being built, if any.
+
+While a graph is being built, calling a task records it in that graph instead of running it. This is what lets a
+graph be written as ordinary Python.
+"""
+
+P = t.ParamSpec('P')
+
+R_co = t.TypeVar('R_co', covariant=True)
 
 
 @dataclass(frozen=True)
@@ -162,7 +189,7 @@ class GraphBuilder:
 
     def __init__(self) -> None:
         self._tasks: list[GraphTask] = []
-        self._links: list[Dependency] = []
+        self._dependencies: list[Dependency] = []
         self._inputs: dict[str, list[tuple[str, str]]] = {}
         self._used: Counter[str] = Counter()
 
@@ -198,7 +225,7 @@ class GraphBuilder:
                 )
 
             if reference is not None:
-                self._links.append(
+                self._dependencies.append(
                     Dependency(source=reference.task, source_port=reference.port, target=name, target_port=key)
                 )
                 continue
@@ -242,7 +269,7 @@ class GraphBuilder:
         """Return the graph that was built, taking what the function returned as the graph's outputs."""
         return GraphSpec(
             tasks=tuple(self._tasks),
-            links=tuple(self._links),
+            dependencies=tuple(self._dependencies),
             inputs={name: tuple(targets) for name, targets in self._inputs.items()},
             outputs=self._declared_outputs(returned),
         )
@@ -344,7 +371,7 @@ class GraphHandle:
         bound.apply_defaults()
 
         return {
-            GraphProcess._DAG: Dict(dict=self.build().to_dict()),
+            GraphProcess._GRAPH: Dict(dict=self.build().to_dict()),
             GraphProcess._GRAPH_INPUTS: {
                 name: value if isinstance(value, Data) else to_aiida_type(value)
                 for name, value in bound.arguments.items()
@@ -383,6 +410,115 @@ def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | N
 
     def decorator(function: t.Callable[..., t.Any]) -> GraphHandle:
         return GraphHandle(function, identifier=identifier)
+
+    if function is not None:
+        return decorator(function)
+
+    return decorator
+
+
+class TaskHandle:
+    """What the :func:`task` decorator returns: a task that can be run, launched, or placed in a graph.
+
+    Calling it runs the function, unless a graph is being built, in which case the call is recorded in that graph
+    and returns a reference to the outputs the task will produce. It carries the attributes of the process function
+    it wraps, so it can be passed to ``run`` and ``submit`` like any other.
+    """
+
+    is_process_function: bool = True
+
+    def __init__(self, function: t.Any, spec: TaskSpec) -> None:
+        self._function = function
+        self.task_spec = spec
+        functools.update_wrapper(self, function)
+
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        builder = ACTIVE_BUILDER.get()
+
+        if builder is None:
+            return self._function(*args, **kwargs)
+
+        return builder.add_task(self, self.bind_arguments(*args, **kwargs))
+
+    def bind_arguments(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+        """Return the arguments of a call to this task, by the name of the parameter each is bound to."""
+        bound = inspect.signature(self._function).bind(*args, **kwargs)
+        bound.apply_defaults()
+        return dict(bound.arguments)
+
+    @property
+    def process_class(self) -> type[Process]:
+        return self._function.process_class
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
+        return self._function.get_launch_inputs(**inputs)
+
+    @property
+    def node_class(self) -> t.Any:
+        return self._function.node_class
+
+    @property
+    def recreate_from(self) -> t.Any:
+        return self._function.recreate_from
+
+    def spec(self) -> t.Any:
+        return self._function.spec()
+
+    def run(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        return self._function.run(*args, **kwargs)
+
+    def run_get_node(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        return self._function.run_get_node(*args, **kwargs)
+
+    def run_get_pk(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        return self._function.run_get_pk(*args, **kwargs)
+
+
+def task(
+    function: t.Callable[P, R_co] | None = None,
+    *,
+    outputs: t.Sequence[str] | None = None,
+    identifier: str | None = None,
+) -> t.Any:
+    """Declare a standard python function as a task.
+
+    A task records its execution like a :func:`~aiida.engine.processes.functions.calcfunction` does, and
+    additionally takes and returns plain Python values. It can be launched on its own, including by a running
+    process that dispatches it as a called child, as long as the function is importable by the daemon worker.
+
+    The declaration is available as ``task_spec``, and is what a graph places and links against.
+
+    Example usage:
+
+    >>> from aiida.engine import submit, task
+    >>>
+    >>> @task(outputs=['total', 'product'])
+    >>> def sum_product(x, y):
+    >>>     return x + y, x * y
+    >>>
+    >>> node = submit(sum_product, x=2, y=3)
+
+    Output ports are taken from ``outputs`` when given, otherwise from the return annotation: a ``TypedDict``
+    declares one port per field, any other annotation a single ``result`` port. Without either, the output
+    namespace stays dynamic, as it is for a calcfunction.
+
+    :param function: The function to decorate.
+    :param outputs: Names of the output ports to declare.
+    :param identifier: Name of the task, which defaults to the name of the function.
+    :return: The decorated function, carrying its ``task_spec``.
+    """
+
+    def decorator(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, CalcFunctionNode]:
+        decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess, outputs=outputs)(function)
+
+        # Build the process spec eagerly, so an invalid declaration is reported where the task is defined rather
+        # than when it is first launched.
+        decorated.process_class.spec()  # type: ignore[attr-defined]
+
+        spec = TaskSpec.from_process(decorated, identifier=identifier)
+        DEFINED_TASKS[f'{spec.executor.module}:{spec.executor.name}'] = decorated
+
+        return TaskHandle(decorated, spec)  # type: ignore[return-value]
 
     if function is not None:
         return decorator(function)

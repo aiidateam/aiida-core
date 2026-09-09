@@ -226,6 +226,9 @@ class RmqSubscriber:
             try:
                 receiver = utils.ensure_coroutine(subscriber)
                 result = await receiver(self, msg)
+            except (futures.CancelledError, asyncio.CancelledError) as exc:
+                # The receiver cancelled directly: report cancellation so the caller does not hang.
+                await self._send_response(message.reply_to, message.correlation_id, utils.cancelled_response(str(exc)))
             except Exception as exc:  # pylint: disable=broad-except
                 # We had an exception in calling the receiver
                 await self._send_response(message.reply_to, message.correlation_id, utils.exception_response(exc))

@@ -17,6 +17,22 @@ This is the production landing of the ``broker-scheduler-split`` spike, which
 contains the full design discussion.
 """
 
-from aiida.scheduler.scheduler import COMPLETED_SUBJECT, FAILED_SUBJECT, SCHEDULER_QUEUE, Scheduler
+from aiida.scheduler.event_listener import SchedulerEventListener
+from aiida.scheduler.scheduler import (
+    COMPLETED_SUBJECT,
+    FAILED_SUBJECT,
+    KIND_WORKGRAPH,
+    SCHEDULER_COMPLETIONS,
+    SCHEDULER_QUEUE,
+    Scheduler,
+)
 
-__all__ = ('COMPLETED_SUBJECT', 'FAILED_SUBJECT', 'SCHEDULER_QUEUE', 'Scheduler')
+__all__ = (
+    'COMPLETED_SUBJECT',
+    'FAILED_SUBJECT',
+    'KIND_WORKGRAPH',
+    'SCHEDULER_COMPLETIONS',
+    'SCHEDULER_QUEUE',
+    'Scheduler',
+    'SchedulerEventListener',
+)

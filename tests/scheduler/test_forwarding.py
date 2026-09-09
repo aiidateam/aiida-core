@@ -72,7 +72,9 @@ def test_submission_flows_through_scheduler(endpoint):
     try:
         controller.task_send({'process': 'launch', 'x': 1}, no_reply=True)
         _wait_until(lambda: len(received) == 1)
-        assert received == [{'process': 'launch', 'x': 1}]
+        body = dict(received[0])
+        assert body.pop('scheduler_task_id')
+        assert body == {'process': 'launch', 'x': 1}
     finally:
         submitter_comm.close()
         worker_comm.close()

@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
-import pathlib
+import contextlib
+import shutil
+from collections.abc import Iterator
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
@@ -18,9 +20,11 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from alembic.config import Config
+from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from disk_objectstore import Container, backup_utils
 from pydantic import field_validator
-from sqlalchemy import insert, inspect, select
+from sqlalchemy import Connection, Engine, MetaData, insert, inspect, select
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.common import exceptions
@@ -31,15 +35,17 @@ from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.migrations import TEMPLATE_INVALID_SCHEMA_VERSION
+from aiida.storage.migrator import AlembicMigrator
 from aiida.storage.psql_dos import PsqlDosBackend
-from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.backend import validate_sqlite_version
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
 if TYPE_CHECKING:
-    from disk_objectstore import Container
+    from types import TracebackType
+
+    from typing_extensions import Self
 
     from aiida.orm.entities import EntityTypes
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
@@ -51,22 +57,24 @@ FILENAME_DATABASE = 'database.sqlite'
 FILENAME_CONTAINER = 'container'
 
 
-ALEMBIC_REL_PATH = 'migrations'
-
 REPOSITORY_UUID_KEY = 'repository|uuid'
 
 
-class SqliteDosMigrator(PsqlDosMigrator):
+def _get_sqlite_metadata() -> MetaData:
+    """Return the SQLite ORM metadata."""
+    return models.SqliteBase.metadata
+
+
+_ALEMBIC_MIGRATOR = AlembicMigrator(Path(__file__).resolve().parent / 'migrations', _get_sqlite_metadata)
+
+
+class SqliteDosMigrator:
     """Class for validating and migrating `sqlite_dos` storage instances.
 
     .. important:: This class should only be accessed via the storage backend class (apart from for test purposes)
 
-    The class subclasses the ``PsqlDosMigrator``. It essentially changes two things in the implementation:
-
-    * Changes the path to the migration version files. This allows custom migrations to be written for SQLite-based
-      storage plugins, which is necessary since the PSQL-based migrations may use syntax that is not compatible.
-    * The logic for validating the storage is significantly simplified since the SQLite-based storage plugins do not
-      have to take legacy Django-based implementations into account.
+    SQLite uses its own migration graph and validation policy, without the
+    legacy Django and SQLAlchemy branches supported by ``psql_dos``.
     """
 
     alembic_version_tbl_name = 'alembic_version'
@@ -74,10 +82,67 @@ class SqliteDosMigrator(PsqlDosMigrator):
     def __init__(self, profile: Profile) -> None:
         filepath_database = Path(profile.storage_config['filepath']) / FILENAME_DATABASE
         filepath_database.touch()
-
         self.profile = profile
-        self._engine = create_sqla_engine(filepath_database)
-        self._connection = None
+        self._engine: Engine | None = create_sqla_engine(filepath_database)
+        self._connection: Connection | None = None
+
+    def close(self) -> None:
+        """Close the connection if it was opened and dispose of the engine."""
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
+        if self._engine is not None:
+            self._engine.dispose()
+            self._engine = None
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
+    ) -> None:
+        self.close()
+
+    @property
+    def connection(self) -> Connection:
+        """Return an open connection to the SQLite database."""
+        if self._connection is None:
+            if self._engine is None:
+                filepath_database = Path(self.profile.storage_config['filepath']) / FILENAME_DATABASE
+                self._engine = create_sqla_engine(filepath_database)
+            self._connection = self._engine.connect()
+        return self._connection
+
+    @classmethod
+    def _alembic_config(cls) -> Config:
+        """Return the Alembic configuration for the SQLite migration graph."""
+        return _ALEMBIC_MIGRATOR._alembic_config()
+
+    @classmethod
+    def _alembic_script(cls) -> ScriptDirectory:
+        """Return the Alembic script directory for the SQLite migration graph."""
+        return _ALEMBIC_MIGRATOR._alembic_script()
+
+    @classmethod
+    def get_schema_versions(cls) -> dict[str, str]:
+        """Return all available schema versions, from oldest to latest."""
+        return _ALEMBIC_MIGRATOR.get_schema_versions()
+
+    @classmethod
+    def get_schema_version_head(cls) -> str:
+        """Return the latest schema version available for this storage."""
+        return _ALEMBIC_MIGRATOR.get_schema_version_head()
+
+    @contextlib.contextmanager
+    def _migration_context(self) -> Iterator[MigrationContext]:
+        with _ALEMBIC_MIGRATOR.migration_context(self.connection, profile=self.profile) as context:
+            yield context
+
+    def migrate_up(self, version: str) -> None:
+        _ALEMBIC_MIGRATOR.migrate_up(self.connection, version, profile=self.profile)
+
+    def migrate_down(self, version: str) -> None:
+        _ALEMBIC_MIGRATOR.migrate_down(self.connection, version, profile=self.profile)
 
     def get_container(self) -> Container:
         """Return the disk-object store container.
@@ -86,6 +151,73 @@ class SqliteDosMigrator(PsqlDosMigrator):
         """
         filepath_container = Path(self.profile.storage_config['filepath']) / FILENAME_CONTAINER
         return Container(str(filepath_container))
+
+    def get_repository_uuid(self) -> str:
+        """Return the UUID of the configured disk-objectstore container."""
+        try:
+            return self.get_container().container_id
+        except Exception as exception:
+            raise exceptions.UnreachableStorage(
+                f'Could not access disk-objectstore {self.get_container()}: {exception}'
+            ) from exception
+
+    def initialise(self, reset: bool = False) -> bool:
+        """Initialise the repository and database, then migrate to the head."""
+        if reset:
+            self.reset_repository()
+            self.reset_database()
+
+        initialised = False
+        if not self.is_initialised:
+            self.initialise_repository()
+            self.initialise_database()
+            initialised = True
+
+        self.migrate()
+        return initialised
+
+    @property
+    def is_initialised(self) -> bool:
+        """Return whether both the repository and database are initialised."""
+        return self.is_repository_initialised and self.is_database_initialised
+
+    @property
+    def is_repository_initialised(self) -> bool:
+        """Return whether the disk-objectstore container is initialised."""
+        return self.get_container().is_initialised
+
+    def reset_repository(self) -> None:
+        """Delete the disk-objectstore container contents."""
+        try:
+            shutil.rmtree(self.get_container().get_folder())
+        except FileNotFoundError:
+            pass
+
+    def reset_database(self) -> None:
+        """Delete all database contents except the Alembic version table."""
+        self.delete_all_tables(exclude_tables=[self.alembic_version_tbl_name])
+
+    def initialise_repository(self) -> None:
+        """Initialise the disk-objectstore container."""
+        self.get_container().init_container(
+            clear=True,
+            pack_size_target=4 * 1024 * 1024 * 1024,
+            loose_prefix_len=2,
+            hash_type='sha256',
+            compression_algorithm='zlib+1',
+        )
+
+    def delete_all_tables(self, *, exclude_tables: list[str] | None = None) -> None:
+        """Delete all reflected schema tables except the requested exclusions."""
+        if not inspect(self.connection).has_table(self.alembic_version_tbl_name):
+            return
+
+        metadata = MetaData()
+        metadata.reflect(bind=self.connection)
+        for schema_table in reversed(metadata.sorted_tables):
+            if schema_table.name not in (exclude_tables or []):
+                self.connection.execute(schema_table.delete())
+        self.connection.commit()
 
     def initialise_database(self) -> None:
         """Initialise the database.
@@ -109,21 +241,13 @@ class SqliteDosMigrator(PsqlDosMigrator):
             context.stamp(context.script, 'main@head')  # type: ignore[arg-type]
             self.connection.commit()
 
-    def get_schema_version_profile(self) -> str | None:  # type: ignore[override]
+    def get_schema_version_profile(self) -> str | None:
         """Return the schema version of the backend instance for this profile.
 
         Note, the version will be None if the database is empty or is a legacy django database.
         """
         with self._migration_context() as context:
             return context.get_current_revision()
-
-    @staticmethod
-    def _alembic_config() -> Config:
-        """Return an instance of an Alembic `Config`."""
-        dirpath = pathlib.Path(__file__).resolve().parent
-        config = Config()
-        config.set_main_option('script_location', str(dirpath / ALEMBIC_REL_PATH))
-        return config
 
     def validate_storage(self) -> None:
         """Validate that the storage for this profile
@@ -197,7 +321,7 @@ class SqliteDosStorage(PsqlDosBackend):
     such, this storage plugin does not require any services, making it easy to install and use on most systems.
     """
 
-    migrator = SqliteDosMigrator
+    migrator = SqliteDosMigrator  # type: ignore[assignment]
 
     class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""

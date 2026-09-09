@@ -158,7 +158,9 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
                 message = await self._task_queue.get(no_ack=no_ack, fail=True, timeout=timeout)
             else:
                 message = await self._task_queue.get(no_ack=no_ack, fail=False, timeout=timeout)
-            assert message is not None
+            if message is None:
+                msg = 'No task available in the queue within the timeout.'
+                raise exceptions.QueueEmpty(msg)
         except aio_pika.exceptions.QueueEmpty as exc:
             raise exceptions.QueueEmpty(str(exc))
         else:

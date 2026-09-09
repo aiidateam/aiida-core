@@ -59,6 +59,18 @@ def test_aiida_profile_tmp(aiida_profile, aiida_profile_tmp):
     assert aiida_profile_tmp.uuid != aiida_profile.uuid
 
 
+@pytest.mark.requires_psql
+def test_aiida_profile_factory_psql_dos(aiida_config, aiida_profile_factory, config_psql_dos):
+    """Test that the factory creates and resets a ``core.psql_dos`` profile."""
+    with aiida_profile_factory(
+        aiida_config,
+        storage_backend='core.psql_dos',
+        storage_config=config_psql_dos(),
+    ) as profile:
+        assert profile.storage_backend == 'core.psql_dos'
+        assert profile.storage_cls.version_profile(profile) == profile.storage_cls.version_head()
+
+
 def test_aiida_profile_factory_unsupported_broker(aiida_config_tmp, aiida_profile_factory):
     """Test that ``aiida_profile_factory`` raises for a broker backend without a default configuration."""
     with pytest.raises(ValueError, match='Unsupported broker backend: core\\.unsupported'):

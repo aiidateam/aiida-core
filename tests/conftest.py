@@ -274,6 +274,32 @@ def aiida_profile(
         yield profile
 
 
+@pytest.fixture(scope='session')
+def archive_main_0002(tmp_path_factory, aiida_config_factory, aiida_profile_factory):
+    """Generate the ``main_0002`` reference simple archive on demand."""
+    from tests.utils.archives import generate_archive_main_0002
+
+    with aiida_config_factory(tmp_path_factory.mktemp('gen_archive_main_0002_config')) as config:
+        with aiida_profile_factory(config):
+            return generate_archive_main_0002(tmp_path_factory.mktemp('archive_main_0002'))
+
+
+@pytest.fixture(scope='session')
+def archive_main_head(tmp_path_factory, aiida_config_factory, aiida_profile_factory):
+    """Generate the reference simple archive at the current head version on demand."""
+    from tests.utils.archives import generate_archive_head
+
+    with aiida_config_factory(tmp_path_factory.mktemp('gen_archive_head_config')) as config:
+        with aiida_profile_factory(config):
+            return generate_archive_head(tmp_path_factory.mktemp('archive_main_head'))
+
+
+@pytest.fixture(scope='session')
+def archive_head(archive_main_head):
+    """Return the head archive fixture under its former name."""
+    return archive_main_head
+
+
 @pytest.fixture()
 def non_interactive_editor(request):
     """Fixture to patch default editor.

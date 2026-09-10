@@ -44,7 +44,12 @@ from aiida.orm.utils.mixins import FunctionCalculationMixin
 if TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
 
-__all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
+__all__ = (
+    'FunctionProcess',
+    'Many',
+    'calcfunction',
+    'workfunction',
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -250,6 +255,28 @@ def process_function(
     return decorator
 
 
+_ManyType = t.TypeVar('_ManyType')
+
+
+class Many(dict[str, _ManyType]):
+    """Annotates a parameter that takes many values at once, keyed by name.
+
+    A parameter holds one value, so a task cannot be handed the results of a fan-out, which arrive one per item.
+    Annotating it with this declares a namespace instead, and the function is given a mapping:
+
+    >>> @task(outputs=['total'])
+    >>> def total_of(parts: Many[int]) -> int:
+    >>>     return sum(part.value for part in parts.values())
+
+    The keys are whatever named the results, which for a fan-out is the key of each item.
+    """
+
+
+def _takes_many(annotation: t.Any) -> bool:
+    """Return whether a parameter is annotated as taking many values at once."""
+    return annotation is Many or t.get_origin(annotation) is Many
+
+
 def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
     """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
 
@@ -441,6 +468,15 @@ class FunctionProcess(Process):
                         return to_aiida_type(value)
                 else:
                     indirect_default = default  # type: ignore[assignment]
+
+                if _takes_many(annotation):
+                    spec.input_namespace(
+                        parameter.name,
+                        valid_type=valid_type,
+                        required=default is UNSPECIFIED,
+                        help=help_string,
+                    )
+                    continue
 
                 spec.input(
                     parameter.name,

@@ -10,7 +10,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiida.brokers.rabbitmq import communicator as rmq_communicator
 from aiida.brokers.rabbitmq import utils as rmq_utils
@@ -25,7 +25,6 @@ def test_on_rpc_cancelled_sends_cancelled_response():
     async def fake_send(reply_to, correlation_id, response):
         sent['response'] = response
 
-    subscriber._send_response = fake_send  # type: ignore[method-assign]
     message = MagicMock()
     message.body = b'body'
     message.reply_to = 'reply'
@@ -43,7 +42,8 @@ def test_on_rpc_cancelled_sends_cancelled_response():
 
     loop = asyncio.new_event_loop()
     try:
-        loop.run_until_complete(subscriber._on_rpc(cancelled_receiver, message))
+        with patch.object(subscriber, '_send_response', fake_send):
+            loop.run_until_complete(subscriber._on_rpc(cancelled_receiver, message))
     finally:
         loop.close()
 

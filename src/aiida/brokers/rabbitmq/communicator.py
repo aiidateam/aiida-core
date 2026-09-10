@@ -456,6 +456,9 @@ class RmqCommunicator:
     async def disconnect(self) -> None:
         """Disconnect from the connection if connected."""
         if not self.connected():
+            self._message_publisher = None
+            self._message_subscriber = None
+            self._default_task_queue = None
             return
 
         if self._message_publisher is not None:

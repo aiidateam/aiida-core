@@ -275,9 +275,11 @@ class BasePublisherWithReplyQueue:
         else:
             try:
                 response = self._response_decode(message.body)
-            except Exception:
+            except Exception as exception:
                 _LOGGER.error('Failed to decode message body:\n%s%s', message.body, traceback.format_exc())
-                raise
+                if not response_future.done():
+                    response_future.set_exception(exception)
+                return
             else:
                 utils.response_to_future(response, response_future)
                 try:

@@ -16,26 +16,16 @@ import typing as t
 from collections.abc import MutableMapping
 
 from aiida.common.lang import override
-from aiida.common.links import LinkType
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
-from aiida.engine.processes.graphs.spec import (
-    BranchTask,
-    Dependency,
-    GraphSpec,
-    GraphTask,
-    LoopTask,
-    MapGraphTask,
-    MappedTask,
-    ProcessTask,
-    SubgraphTask,
-)
+from aiida.engine.processes.graphs.run import GraphRun, Start
+from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Data, Dict, List, Node, WorkChainNode, load_node
-from aiida.orm.nodes.data.base import BaseType, to_aiida_type
+from aiida.orm import Data, Dict, WorkChainNode
+from aiida.orm.nodes.data.base import to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess')
 
@@ -71,91 +61,13 @@ class TaskProcess(FunctionProcess):
         super()._out_result(result)
 
 
-def holds(condition: t.Any) -> bool:
-    """Return whether a condition holds, on the value inside whatever node it arrives in.
-
-    A stored value is not usefully truthy on its own, since a node is an object like any other and ``Int(0)`` is
-    as truthy as ``Int(1)``, so it is the value it holds that decides.
-    """
-    return bool(condition.value if isinstance(condition, BaseType) else condition)
-
-
-def _at(container: t.Any, path: str) -> t.Any:
-    """Return what sits at a path in something nested, which may name an output inside a namespace.
-
-    :param path: name of a port, or names separated by dots for one inside a nested namespace.
-    """
-    value = container
-
-    for name in path.split('.'):
-        value = value[name]
-
-    return value
-
-
-def _place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
-    """Put a value at a path in the inputs, making the namespaces the path names along the way.
-
-    :raises ValueError: if a name on the way is already a value, which would put an input inside a value.
-    """
-    *namespaces, name = path.split('.')
-    target = inputs
-
-    for namespace in namespaces:
-        target = target.setdefault(namespace, {})
-
-        if not isinstance(target, dict):
-            raise ValueError(f'`{path}` puts an input inside `{namespace}`, which is a value rather than a namespace.')
-
-    target[name] = value
-
-
-def _returned(node: Node) -> dict[str, t.Any]:
-    """Return what a graph produced, by the name each output was returned under."""
-    return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
-
-
-def _map_items(collection: t.Any, task: MappedTask) -> dict[str, t.Any]:
-    """Return the items a map runs over, by the key each of its results is gathered under.
-
-    :param collection: what the task maps over, as a list or a dictionary, stored or plain.
-    :param task: the task being expanded, named in the errors.
-    :raises ValueError: if the collection is of a type that cannot be mapped over, or is keyed by something that
-        cannot name a result.
-    """
-    if isinstance(collection, List):
-        collection = collection.get_list()
-    elif isinstance(collection, Dict):
-        collection = collection.get_dict()
-
-    if isinstance(collection, (list, tuple)):
-        return {f'item_{index}': value for index, value in enumerate(collection)}
-
-    if not isinstance(collection, dict):
-        msg = (
-            f'`{task.name}` maps over `{task.item_port}`, which has to be a list or a dictionary (or the `List` '
-            f'or `Dict` node of one), got `{type(collection).__name__}`.'
-        )
-        raise ValueError(msg)
-
-    unusable = sorted(key for key in collection if not str(key).isidentifier())
-
-    if unusable:
-        msg = (
-            f'`{task.name}` maps over a dictionary keyed by {unusable}, and each result is stored under its key, '
-            f'so the keys have to be usable as names.'
-        )
-        raise ValueError(msg)
-
-    return dict(collection)
-
-
 class GraphProcess(Process):
     """Run a graph of tasks, dispatching each as a child process.
 
-    Every task that is ready is submitted, so it is a process in its own right: it gets its own node, its own entry
-    in the provenance graph under the name the graph gave it, and it is scheduled like any other process. The graph
-    keeps only the bookkeeping of what it dispatched and what has finished, which travels with its checkpoint.
+    Every run that is ready is submitted, so it is a process in its own right: it gets its own node, its own entry
+    in the provenance graph under the name the graph gave it, and it is scheduled like any other process. What to
+    run next is decided by :class:`~aiida.engine.processes.graphs.run.GraphRun`, which knows of no engine, so this
+    holds the ports, submits what it is told to, waits, and attaches what came out.
     """
 
     _node_class = WorkChainNode
@@ -178,22 +90,8 @@ class GraphProcess(Process):
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         super().__init__(*args, **kwargs)
-        self._graph: GraphSpec | None = None
-        # What each task dispatched, which is one process for most tasks and one per item for a map. The processes
-        # are tracked under an instance name, so a task that fans out needs no second kind of bookkeeping.
-        self._instances: dict[str, list[str]] = {}
-        self._dispatched: dict[str, int] = {}
-        self._done: dict[str, int] = {}
-        # Tasks that will never run, because a branch was not taken or because something they take an input from
-        # was itself skipped. They settle like a task that finished, but produce nothing.
-        self._skipped: set[str] = set()
-
-    @property
-    def graph(self) -> GraphSpec:
-        """Return the declaration of the graph being run."""
-        if self._graph is None:
-            self._graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
-        return self._graph
+        self._run: GraphRun | None = None
+        self._saved: dict[str, t.Any] = {}
 
     @classmethod
     def launch_inputs(cls, body: GraphSpec, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
@@ -212,257 +110,71 @@ class GraphProcess(Process):
             },
         }
 
+    @property
+    def run_state(self) -> GraphRun:
+        """Return how far the graph has got, read back from the declaration and what was checkpointed."""
+        if self._run is None:
+            self._run = GraphRun.from_dict(
+                graph=GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict()),
+                given=dict(self.inputs.get(self._GRAPH_INPUTS, {})),
+                data=self._saved,
+            )
+
+        return self._run
+
     @override
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         super().save_instance_state(out_state, save_context)
-        out_state['instances'] = {name: list(instances) for name, instances in self._instances.items()}
-        out_state['dispatched'] = dict(self._dispatched)
-        out_state['done'] = dict(self._done)
-        out_state['skipped'] = sorted(self._skipped)
+        out_state['run'] = self.run_state.to_dict()
 
     @override
     def load_instance_state(self, saved_state: MutableMapping[str, t.Any], load_context: t.Any) -> None:
         super().load_instance_state(saved_state, load_context)
-        self._graph = None
-        self._instances = {name: list(instances) for name, instances in saved_state.get('instances', {}).items()}
-        self._dispatched = dict(saved_state.get('dispatched', {}))
-        self._done = dict(saved_state.get('done', {}))
-        self._skipped = set(saved_state.get('skipped', []))
+        self._run = None
+        self._saved = dict(saved_state.get('run', {}))
 
     @override
     async def run(self) -> t.Any:
         return self._do_step()
 
     def _do_step(self) -> t.Any:
-        """Start the tasks that are ready, and wait until something finishes.
+        """Start what the graph says to start next, and wait until something finishes."""
+        step = self.run_state.step()
 
-        Loops go first: one whose last run finished has all of its processes done, and so would count as settled
-        and let the tasks after it start, when it has another run to go. Starting a task can also settle it
-        without running anything, which makes the tasks after it ready in the same step, so the frontier is taken
-        again until it is empty.
-        """
-        for task in self.graph.tasks:
-            if isinstance(task, LoopTask) and task.name in self._instances:
-                self._continue_loop(task)
+        for note in step.notes:
+            self.report(note)
 
-        while ready := self.graph.ready(self._settled, self._decided):
-            for name in ready:
-                self._start(name)
+        for start in step.starts:
+            self._submit(start)
 
-        if self._pending:
+        if self.run_state.pending:
             return Wait(self._do_step, 'waiting for dispatched tasks')
 
         return self._finish()
 
-    @property
-    def _pending(self) -> dict[str, int]:
-        """Return the processes that have been dispatched but have not finished."""
-        return {instance: pk for instance, pk in self._dispatched.items() if instance not in self._done}
-
-    @property
-    def _finished(self) -> set[str]:
-        """Return the tasks all of whose processes have finished, however they finished."""
-        return {
-            name for name, instances in self._instances.items() if all(instance in self._done for instance in instances)
-        }
-
-    @property
-    def _succeeded(self) -> set[str]:
-        """Return the tasks that finished successfully, which are the only ones a next task can take inputs from.
-
-        A task that fanned out counts as successful once every one of its processes did, so one failed item stops
-        what comes after it just as a single failed task does.
-        """
-        return {
-            name
-            for name in self._finished
-            if all(load_node(self._done[instance]).is_finished_ok for instance in self._instances[name])
-        }
-
-    @property
-    def _failed(self) -> list[str]:
-        """Return the tasks that finished without success, in the order in which they were declared."""
-        finished, succeeded = self._finished, self._succeeded
-        return [task.name for task in self.graph.tasks if task.name in finished and task.name not in succeeded]
-
-    @property
-    def _settled(self) -> set[str]:
-        """Return the tasks the ones after them can be decided on: those that succeeded, and those that will not run."""
-        return self._succeeded | self._skipped
-
-    @property
-    def _decided(self) -> set[str]:
-        """Return the tasks that have been started or skipped, which are the ones not to look at again."""
-        return set(self._instances) | self._skipped
-
-    def _start(self, name: str) -> None:
-        """Start one task, unless something it takes an input from never ran, which leaves it nothing to run on."""
-        missing = sorted(self.graph.predecessors(name) & self._skipped)
-
-        if missing:
-            self.report(f'task `{name}` will not run, since `{missing[0]}` did not')
-            self._skipped.add(name)
-            return
-
-        task = self.graph.task(name)
-        inputs = self._resolve_inputs(task)
-
-        if isinstance(task, BranchTask):
-            self._dispatch_branch(task, inputs)
-            return
-
-        if isinstance(task, LoopTask):
-            self._dispatch_loop(task, inputs)
-            return
-
-        if isinstance(task, MappedTask):
-            self._dispatch_mapped(task, inputs)
-            return
-
-        self._instances[name] = [name]
-        self._submit_instance(task, name, inputs)
-
-    def _dispatch_loop(self, task: LoopTask, inputs: dict[str, t.Any]) -> None:
-        """Run the body a first time, and skip the loop when its condition does not hold to begin with.
-
-        A loop given no value to start on goes round once and asks the body from then on, since a loop written
-        without one is a loop meant to run.
-        """
-        if not holds(inputs.get(task.condition_port, True)):
-            self.report(f'task `{task.name}` will not run, since `{task.condition_port}` is false to begin with')
-            self._skipped.add(task.name)
-            return
-
-        self._instances[task.name] = []
-        self._submit_iteration(task, inputs)
-
-    def _continue_loop(self, task: LoopTask) -> None:
-        """Run the body once more, on what the run before it produced, while there is reason to."""
-        instances = self._instances[task.name]
-
-        if any(instance not in self._done for instance in instances):
-            return
-
-        last = load_node(self._done[instances[-1]])
-
-        if not last.is_finished_ok:
-            return
-
-        produced = _returned(last)
-
-        if not holds(produced.get(task.condition_port)):
-            return
-
-        if len(instances) >= task.max_iterations:
-            self.report(
-                f'task `{task.name}` ran {task.max_iterations} times, which is as many as it may, so it stops '
-                f'with `{task.condition_port}` still true'
-            )
-            return
-
-        self._submit_iteration(task, {**self._resolve_inputs(task), **produced})
-
-    def _submit_iteration(self, task: LoopTask, state: dict[str, t.Any]) -> None:
-        """Submit one run of the body, on the state the loop has reached."""
-        instance = f'{task.name}_iteration_{len(self._instances[task.name])}'
-        self._instances[task.name].append(instance)
-        self._submit(GraphProcess, GraphProcess.launch_inputs(task.body, state), instance)
-
-    def _dispatch_branch(self, task: BranchTask, inputs: dict[str, t.Any]) -> None:
-        """Submit the branch the condition selects, and skip the task when it selects none."""
-        condition = inputs.pop(task.condition_port, None)
-        taken = task.body if holds(condition) else task.otherwise
-
-        if taken is None:
-            self.report(f'task `{task.name}` will not run, since its condition is false and it has no `otherwise`')
-            self._skipped.add(task.name)
-            return
-
-        self._instances[task.name] = [task.name]
-        self._submit(GraphProcess, GraphProcess.launch_inputs(taken, inputs), task.name)
-
-    def _resolve_inputs(self, task: GraphTask) -> dict[str, t.Any]:
-        """Return the inputs of a task, with whatever comes from another task filled in.
-
-        A link never has a map as its source, since the declaration refuses that, so every source has run exactly
-        one process and has one result to pass on.
-        """
-        inputs = dict(task.inputs)
-        given = self.inputs.get(self._GRAPH_INPUTS, {})
-
-        for name, targets in self.graph.inputs.items():
-            if name not in given:
-                continue
-
-            for target, port in targets:
-                if target == task.name:
-                    _place(inputs, port, given[name])
-
-        for edge in self.graph.dependencies:
-            if edge.target != task.name:
-                continue
-
-            if isinstance(self.graph.task(edge.source), MappedTask):
-                _place(inputs, edge.target_port, self._gathered(edge))
-            else:
-                _place(inputs, edge.target_port, _at(self._produced_by(edge.source).outputs, edge.source_port))
-
-        return inputs
-
-    def _gathered(self, edge: Dependency) -> dict[str, t.Any]:
-        """Return what a task that ran once per item produced, under the key of the item each run was for."""
-        return {
-            self._item_key(edge.source, instance): _at(load_node(self._done[instance]).outputs, edge.source_port)
-            for instance in self._instances[edge.source]
-        }
-
-    def _produced_by(self, name: str) -> t.Any:
-        """Return the node holding what a task produced, which for one that ran more than once is its last run."""
-        return load_node(self._done[self._instances[name][-1]])
-
-    def _dispatch_mapped(self, task: MappedTask, inputs: dict[str, t.Any]) -> None:
-        """Submit one run per item of the collection the task maps over, of whatever it runs."""
-        items = _map_items(inputs.pop(task.item_port, None), task)
-        self._instances[task.name] = [f'{task.name}_{key}' for key in items]
-
-        for key, item in items.items():
-            self._submit_instance(task, f'{task.name}_{key}', {**inputs, task.item_port: item})
-
-        if not items:
-            self.report(f'task `{task.name}` maps over an empty collection, so it runs nothing')
-
-    def _submit_instance(self, task: GraphTask, instance: str, inputs: dict[str, t.Any]) -> None:
-        """Submit one process of a task, with whatever runs it."""
-        process_class, launch_inputs = self._launch(task, inputs)
-        self._submit(process_class, launch_inputs, instance)
-
-    def _submit(self, process_class: type[Process], inputs: dict[str, t.Any], instance: str) -> None:
-        """Submit one process, under the name that its call link carries."""
-        metadata = {**inputs.get('metadata', {}), 'call_link_label': instance}
+    def _submit(self, start: Start) -> None:
+        """Submit one run, under the name that its call link carries."""
+        process_class, inputs = self._launch(start)
+        metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
         node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None
-        self._dispatched[instance] = node.pk
-        self.report(f'dispatched task `{instance}` as {node.pk}')
+        self.run_state.started(start.instance, node.pk)
+        self.report(f'dispatched task `{start.instance}` as {node.pk}')
 
     @staticmethod
-    def _launch(task: GraphTask, inputs: dict[str, t.Any]) -> tuple[type[Process], dict[str, t.Any]]:
-        """Return the process that runs one instance of a task, and the inputs to submit it with.
+    def _launch(start: Start) -> tuple[type[Process], dict[str, t.Any]]:
+        """Return the process that runs one instance, and the inputs to submit it with.
 
         :raises ValueError: if the task is of a kind that has no way to run here, which a kind added to the
             declaration without one would be.
         """
-        if isinstance(task, (SubgraphTask, MapGraphTask)):
-            return GraphProcess, GraphProcess.launch_inputs(task.body, inputs)
+        if start.body is not None:
+            return GraphProcess, GraphProcess.launch_inputs(start.body, start.inputs)
 
-        if isinstance(task, ProcessTask):
-            return task.spec.process_class, inputs
+        if isinstance(start.task, ProcessTask):
+            return start.task.spec.process_class, start.inputs
 
-        raise ValueError(f'`{task.name}` is of kind `{task.kind}`, which this version of AiiDA cannot run.')
-
-    @staticmethod
-    def _item_key(name: str, instance: str) -> str:
-        """Return the item a process ran for, which its instance name carries after the name of the task."""
-        return instance[len(name) + 1 :]
+        raise ValueError(f'`{start.task.name}` is of kind `{start.task.kind}`, which this version of AiiDA cannot run.')
 
     @override
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:
@@ -473,46 +185,39 @@ class GraphProcess(Process):
         """
         super().on_wait(awaitables)
 
-        for name, pk in self._pending.items():
-            self.runner.call_on_process_finish(pk, functools.partial(self.call_soon, self._on_task_finished, name, pk))
+        for instance, pk in self.run_state.pending.items():
+            self.runner.call_on_process_finish(
+                pk, functools.partial(self.call_soon, self._on_task_finished, instance, pk)
+            )
 
-    def _on_task_finished(self, name: str, pk: int) -> None:
-        """Record that a task finished and continue, which is what advances the graph."""
-        self._done[name] = pk
+    def _on_task_finished(self, instance: str, pk: int) -> None:
+        """Record that a run finished and continue, which is what advances the graph."""
+        self.run_state.completed(instance, pk)
 
         if self.state == ProcessState.WAITING:
             self.resume()
 
     def _finish(self) -> ExitCode | None:
-        """Attach the declared outputs, or report the task that kept the graph from completing.
+        """Attach what the graph produced, or report the task that kept it from completing.
 
         A task that did not finish well leaves everything downstream of it unable to run, so the graph stops with
         the name of that task rather than dispatching a task whose inputs will never exist.
         """
-        if self._failed:
-            return self.exit_codes.ERROR_TASK_FAILED.format(task=self._failed[0])
+        state = self.run_state
 
-        given = self.inputs.get(self._GRAPH_INPUTS, {})
+        if state.failed:
+            return self.exit_codes.ERROR_TASK_FAILED.format(task=state.failed[0])
 
         for output, source in self.graph.outputs.items():
-            if source.task is None:
-                # The graph passes one of its own inputs on, so the value is already there and nothing produced it.
-                self.out(output, given[source.port])
-                continue
-
-            if source.task in self._skipped:
+            if source.task is not None and source.task in state.skipped:
                 self.report(f'output `{output}` is not returned, since `{source.task}` did not run')
-                continue
 
-            if not isinstance(self.graph.task(source.task), MappedTask):
-                self.out(output, _at(self._produced_by(source.task).outputs, source.port))
-                continue
-
-            # A map produced a result per item, so the output is a namespace holding one entry per item.
-            for instance in self._instances[source.task]:
-                self.out(
-                    f'{output}.{self._item_key(source.task, instance)}',
-                    _at(load_node(self._done[instance]).outputs, source.port),
-                )
+        for name, value in state.outputs().items():
+            self.out(name, value)
 
         return None
+
+    @property
+    def graph(self) -> GraphSpec:
+        """Return the declaration of the graph being run."""
+        return self.run_state.graph

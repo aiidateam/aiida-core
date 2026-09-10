@@ -168,9 +168,10 @@ def aiida_profile_factory():
                     except DaemonException:
                         pass
 
-            default_user_email = config.get_profile(profile.name).default_user_email or email
-            manager.get_profile_storage()._clear()
-            manager.reset_profile()
+            active_profile = manager.get_profile()
+            if active_profile is None or active_profile.name != profile.name:
+                active_profile = config.get_profile(profile.name)
+            default_user_email = active_profile.default_user_email or email
 
             User(email=default_user_email).store()
 

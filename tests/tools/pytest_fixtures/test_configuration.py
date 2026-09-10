@@ -60,12 +60,12 @@ def test_aiida_profile_tmp(aiida_profile, aiida_profile_tmp):
     assert aiida_profile_tmp.uuid != aiida_profile.uuid
 
 
-def test_profile_reset_storage_uses_configured_default_user(aiida_profile_tmp):
-    """Test that resetting a profile honours a default user changed through its configuration."""
-    config = get_config()
-    configured_profile = config.get_profile(aiida_profile_tmp.name)
-    configured_profile.default_user_email = 'updated@localhost'
-    config.store()
+def test_profile_reset_storage_uses_active_default_user(aiida_profile_tmp):
+    """Test that resetting a profile honours its active default user."""
+    from aiida.manage import get_manager
+
+    user = orm.User(email='updated@localhost').store()
+    get_manager().set_default_user_email(aiida_profile_tmp, user.email)
 
     aiida_profile_tmp.reset_storage()
 

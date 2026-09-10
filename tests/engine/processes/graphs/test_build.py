@@ -19,6 +19,7 @@ from aiida.engine import (
     BranchTask,
     Endpoint,
     LoopTask,
+    MapGraphTask,
     MapTask,
     OutputNames,
     SubgraphTask,
@@ -196,6 +197,48 @@ def count_down_from_a_task(x, y):
         counting.returns(value=stepped.value, keep_going=stepped.keep_going)
 
     return {'value': counting.value}
+
+
+class TotalOf(WorkChain):
+    """Reduce what a fan-out produced, which arrives as one namespace keyed by item.
+
+    A namespace input is what takes a result per item, and a `@task` function cannot declare one: every parameter
+    it has is a port holding one value.
+    """
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input_namespace('parts', valid_type=orm.Int, dynamic=True)
+        spec.outline(cls.total)
+        spec.output('total', valid_type=orm.Int)
+
+    def total(self):
+        self.out('total', orm.Int(sum(part.value for part in self.inputs.parts.values())).store())
+
+
+total_of = task(TotalOf)
+
+
+@graph
+def shift_and_double(value, by):
+    """A whole graph to run per item, rather than a single task."""
+    shifted = add(x=value, y=by)
+    return {'total': add(x=shifted.total, y=shifted.total).total}
+
+
+@graph
+def shift_and_double_all(values, by):
+    """Run a graph once per item, and reduce what every run produced."""
+    each_of_them = shift_and_double(value=each(values), by=by)
+    return {'total': total_of(parts=each_of_them.total).total}
+
+
+@graph
+def sum_of_shifted(values, by):
+    """Reduce what a fan-out over a single task produced."""
+    shifted = add(x=each(values), y=by)
+    return {'total': total_of(parts=shifted.total).total}
 
 
 @graph
@@ -390,6 +433,42 @@ def test_declaring_a_class_a_task_is_refused_when_it_cannot_be_one(subject, kwar
     """A class that is not a process, or one told what to output, is refused where it is declared."""
     with pytest.raises(TypeError, match=expected):
         task(subject, **kwargs)
+
+
+def test_a_graph_can_be_run_once_per_item():
+    """Marking an input of a graph with `each` fans out the whole body, not just one task."""
+    declaration = shift_and_double_all.build()
+
+    assert isinstance(declaration.task('shift_and_double'), MapGraphTask)
+    assert declaration.task('shift_and_double').item_port == 'value'
+    assert [node.name for node in declaration.task('shift_and_double').body.tasks] == ['add', 'add_2']
+
+
+@pytest.mark.parametrize(
+    'declaration, expected',
+    [
+        pytest.param(sum_of_shifted, 36, id='over-a-task'),
+        pytest.param(shift_and_double_all, 72, id='over-a-graph'),
+    ],
+)
+def test_what_a_fan_out_produced_can_be_reduced(declaration, expected):
+    """Every run produces a result, and they arrive at the next task as one namespace keyed by item."""
+    results, node = run_get_node(declaration, values=[1, 2, 3], by=10)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == expected  # (11 + 12 + 13), doubled where the whole graph ran
+
+
+def test_reducing_into_something_that_holds_one_value_is_refused():
+    """A result per item cannot go into a port that holds one, and the graph says so when it is declared."""
+
+    @graph
+    def reduce_into_a_port(values, by):
+        shifted = add(x=each(values), y=by)
+        return add(x=shifted.total, y=1)
+
+    with pytest.raises(ValueError, match='has to be a namespace'):
+        reduce_into_a_port.build()
 
 
 def test_an_output_inside_a_container_is_refused():
@@ -765,17 +844,6 @@ def test_calling_loop_outside_a_graph_is_refused():
     """A loop is part of a graph, so writing one anywhere else says what to do instead."""
     with pytest.raises(TypeError, match='written in the body of a `@graph`'):
         loop(one_step_down, condition='keep_going', value=1, keep_going=True)
-
-
-def test_running_a_graph_once_per_item_is_refused():
-    """A graph cannot yet be the thing that fans out, and says so where the fan-out is written."""
-
-    @graph
-    def shift_all_twice(values, by):
-        return add_twice(x=each(values), y=by)
-
-    with pytest.raises(ValueError, match='Running a graph once per item'):
-        shift_all_twice.build()
 
 
 def test_calling_a_graph_is_refused():

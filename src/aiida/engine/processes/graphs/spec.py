@@ -28,6 +28,7 @@ __all__ = (
     'GraphSpec',
     'GraphTask',
     'LoopTask',
+    'MapGraphTask',
     'MapTask',
     'ProcessTask',
     'SubgraphTask',
@@ -54,7 +55,7 @@ declared it finds it. Submitting such a task still needs a module a worker can i
 CONDITION_PORT: str = 'condition'
 """Name of the input a branch takes the value deciding it on, kept apart from the inputs of its body."""
 
-TaskKind = t.Literal['process', 'map', 'graph', 'branch', 'loop']
+TaskKind = t.Literal['process', 'map', 'graph', 'branch', 'loop', 'map_graph']
 """What a task in a graph is.
 
 A declaration is stored as provenance and read back by later versions of AiiDA, so every task says what kind it
@@ -84,6 +85,27 @@ def has_port(ports: PortNamespace, path: str) -> bool:
         return not isinstance(port, PortNamespace)
 
     return has_port(port, rest) if isinstance(port, PortNamespace) else False
+
+
+def has_namespace(ports: PortNamespace, path: str) -> bool:
+    """Return whether a namespace has another namespace at the given path, which is what a fan-out fills.
+
+    A namespace that takes whatever it is given takes a collection of results as readily as one value, so it
+    counts as one.
+
+    :param path: name of a namespace, or names separated by dots for one inside another.
+    """
+    head, _, rest = path.partition(PortNamespace.NAMESPACE_SEPARATOR)
+
+    if head not in ports:
+        return ports.dynamic
+
+    port = ports[head]
+
+    if not isinstance(port, PortNamespace):
+        return False
+
+    return has_namespace(port, rest) if rest else True
 
 
 @dataclass(frozen=True)
@@ -279,6 +301,10 @@ class GraphTask(abc.ABC):
     def produces(self, port: str) -> bool:
         """Return whether this task produces an output under the given name."""
 
+    def gathers(self, port: str) -> bool:
+        """Return whether this task takes a result per item under the given name, which a namespace does."""
+        return False
+
     def to_dict(self) -> dict[str, t.Any]:
         return {'name': self.name, 'kind': self.KIND, 'inputs': self.inputs}
 
@@ -325,6 +351,9 @@ class ProcessTask(GraphTask):
 
     def produces(self, port: str) -> bool:
         return has_port(self.spec.outputs, port)
+
+    def gathers(self, port: str) -> bool:
+        return has_namespace(self.spec.inputs, port)
 
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'spec': self.spec.to_dict()}
@@ -492,8 +521,44 @@ class LoopTask(BodyTask):
         )
 
 
+@dataclass(frozen=True, kw_only=True)
+class MapGraphTask(BodyTask):
+    """A graph run once per item of a collection that only exists while the graph runs.
+
+    What :class:`MapTask` is to :class:`ProcessTask`, this is to :class:`SubgraphTask`: the same fan-out over a
+    body rather than over a single process, which is what running a whole workflow per structure needs.
+    """
+
+    KIND: t.ClassVar[TaskKind] = 'map_graph'
+
+    item_port: str
+    """Input of the body that one item of the collection is bound to on each run."""
+
+    def accepts(self, port: str) -> bool:
+        return port in self.body.inputs
+
+    def produces(self, port: str) -> bool:
+        return port in self.body.outputs
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {**super().to_dict(), 'item_port': self.item_port}
+
+    @classmethod
+    def _from_payload(cls, data: dict[str, t.Any]) -> MapGraphTask:
+        return cls(
+            name=data['name'],
+            inputs=data.get('inputs', {}),
+            body=GraphSpec.from_dict(data['body']),
+            item_port=data['item_port'],
+        )
+
+
+MappedTask = MapTask | MapGraphTask
+"""A task that runs once per item, and so produces a result per item rather than one."""
+
 TASK_KINDS: dict[str, type[GraphTask]] = {
-    task_class.KIND: task_class for task_class in (ProcessTask, MapTask, SubgraphTask, BranchTask, LoopTask)
+    task_class.KIND: task_class
+    for task_class in (ProcessTask, MapTask, SubgraphTask, BranchTask, LoopTask, MapGraphTask)
 }
 """The task class for each kind, which is what a stored task is read back as and checked against."""
 
@@ -560,8 +625,14 @@ class GraphSpec:
             raise ValueError(f'task names have to be unique, got more than one of {sorted(duplicates)}.')
 
         for edge in self.dependencies:
-            self._check_endpoint(edge.source, edge.source_port, 'output', f'dependency {edge}')
-            self._check_endpoint(edge.target, edge.target_port, 'input', f'dependency {edge}')
+            referrer = f'dependency {edge}'
+            self._check_endpoint(edge.source, edge.source_port, 'output', referrer)
+
+            # What ran once per item arrives as a result per item, which a namespace takes and a port does not.
+            if isinstance(self.task(edge.source), MappedTask):
+                self._check_gathered(edge, referrer)
+            else:
+                self._check_endpoint(edge.target, edge.target_port, 'input', referrer)
 
         for graph_input, targets in self.inputs.items():
             for name, port in targets:
@@ -590,15 +661,26 @@ class GraphSpec:
             if isinstance(task, LoopTask):
                 self._check_loop(task)
 
-        for edge in self.dependencies:
-            if isinstance(self.task(edge.source), MapTask):
-                raise ValueError(
-                    f'`{edge.target}` takes `{edge.target_port}` from `{edge.source}`, which runs once per item and '
-                    f'so produces a result per item. Taking the results of a map into another task is not supported '
-                    f'yet; a graph can return them as an output.'
-                )
-
         self._check_acyclic()
+
+    def _check_gathered(self, edge: Dependency, referrer: str) -> None:
+        """Raise if what ran once per item is taken somewhere that holds one value.
+
+        Such a task produced a result per item, gathered under the key of each, so what takes them has to be a
+        namespace. A port holds one value and would be handed a collection of them.
+
+        :raises ValueError: if there is no such task, or the results are taken into something that is not a
+            namespace.
+        """
+        if edge.target not in self.task_names:
+            raise ValueError(f'{referrer} refers to unknown task `{edge.target}`.')
+
+        if not self.task(edge.target).gathers(edge.target_port):
+            raise ValueError(
+                f'`{edge.target}` takes `{edge.target_port}` from `{edge.source}`, which runs once per item and so '
+                f'produces one result per item, gathered under the key of each. `{edge.target_port}` holds one '
+                f'value, so it has to be a namespace to take them, or the graph can return them as an output.'
+            )
 
     @staticmethod
     def _check_loop(task: LoopTask) -> None:

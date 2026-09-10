@@ -31,6 +31,7 @@ from aiida.engine import (
     graph,
     loop,
     run_get_node,
+    select,
     submit,
     task,
 )
@@ -469,6 +470,67 @@ def test_reducing_into_something_that_holds_one_value_is_refused():
 
     with pytest.raises(ValueError, match='has to be a namespace'):
         reduce_into_a_port.build()
+
+
+def test_a_calcfunction_may_not_return_one_of_its_inputs():
+    """Why `select` is a workfunction: a calcfunction creates what it returns, and an input already exists."""
+    from aiida.engine import calcfunction
+
+    @calcfunction
+    def pick(flag, a, b):
+        return a if flag else b
+
+    with pytest.raises(ValueError, match='would generate a cycle in the graph'):
+        run_get_node(pick, flag=orm.Bool(True), a=orm.Int(1), b=orm.Int(2))
+
+
+def test_a_fan_out_written_in_place_runs_the_whole_block_per_item():
+    """Opening `each` as a block fans out everything written inside it, not just one call."""
+
+    @graph
+    def shift_and_double_in_place(values, by):
+        with each(values) as item:
+            shifted = add(x=item.value, y=by)
+            item.returns(total=add(x=shifted.total, y=shifted.total).total)
+
+        return {'total': total_of(parts=item.total).total}
+
+    declaration = shift_and_double_in_place.build()
+
+    assert isinstance(declaration.task('each'), MapGraphTask)
+    assert [node.name for node in declaration.task('each').body.tasks] == ['add', 'add_2']
+
+    results, node = run_get_node(shift_and_double_in_place, values=[1, 2, 3], by=10)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 72  # (11 + 12 + 13), each doubled
+
+
+def test_select_picks_one_of_two_values():
+    """A conditional over values costs one task, where a branch over graphs costs a process for each side."""
+
+    @graph
+    def best_of(first, second, prefer_first):
+        return {'chosen': select(condition=prefer_first, then=first, otherwise=second).value}
+
+    for prefer, expected in ((True, 1), (False, 2)):
+        results, node = run_get_node(best_of, first=1, second=2, prefer_first=prefer)
+
+        assert node.is_finished_ok, node.exit_message
+        assert results['chosen'] == expected
+
+
+def test_select_returns_the_node_it_was_given():
+    """It picks between values that already exist, so it returns one rather than making a new one."""
+
+    @graph
+    def pick(first, second, prefer_first):
+        return {'chosen': select(condition=prefer_first, then=first, otherwise=second).value}
+
+    results, node = run_get_node(pick, first=1, second=2, prefer_first=True)
+    chosen = results['chosen']
+
+    assert chosen.uuid == node.inputs.graph_inputs.first.uuid, 'the very node it was handed, not a copy'
 
 
 def test_an_output_inside_a_container_is_refused():

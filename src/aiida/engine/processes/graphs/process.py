@@ -71,7 +71,7 @@ class TaskProcess(FunctionProcess):
         super()._out_result(result)
 
 
-def _holds(condition: t.Any) -> bool:
+def holds(condition: t.Any) -> bool:
     """Return whether a condition holds, on the value inside whatever node it arrives in.
 
     A stored value is not usefully truthy on its own, since a node is an object like any other and ``Int(0)`` is
@@ -328,7 +328,7 @@ class GraphProcess(Process):
         A loop given no value to start on goes round once and asks the body from then on, since a loop written
         without one is a loop meant to run.
         """
-        if not _holds(inputs.get(task.condition_port, True)):
+        if not holds(inputs.get(task.condition_port, True)):
             self.report(f'task `{task.name}` will not run, since `{task.condition_port}` is false to begin with')
             self._skipped.add(task.name)
             return
@@ -350,7 +350,7 @@ class GraphProcess(Process):
 
         produced = _returned(last)
 
-        if not _holds(produced.get(task.condition_port)):
+        if not holds(produced.get(task.condition_port)):
             return
 
         if len(instances) >= task.max_iterations:
@@ -371,7 +371,7 @@ class GraphProcess(Process):
     def _dispatch_branch(self, task: BranchTask, inputs: dict[str, t.Any]) -> None:
         """Submit the branch the condition selects, and skip the task when it selects none."""
         condition = inputs.pop(task.condition_port, None)
-        taken = task.body if _holds(condition) else task.otherwise
+        taken = task.body if holds(condition) else task.otherwise
 
         if taken is None:
             self.report(f'task `{task.name}` will not run, since its condition is false and it has no `otherwise`')

@@ -56,6 +56,7 @@ __all__ = (
     'Launchable',
     'Loop',
     'LoopTask',
+    'Many',
     'MapGraphTask',
     'MapTask',
     'MappedOutput',

@@ -72,6 +72,17 @@ def test_profile_reset_storage_uses_active_default_user(aiida_profile_tmp):
     assert orm.User.collection.get_default().email == 'updated@localhost'
 
 
+def test_profile_reset_storage_isolates_inactive_profile(aiida_config, aiida_profile_factory):
+    """Test that resetting an inactive profile leaves the active storage unchanged."""
+    with aiida_profile_factory(aiida_config, email='active@localhost'):
+        with aiida_profile_factory(aiida_config, email='inactive@localhost') as inactive_profile:
+            pass
+
+        inactive_profile.reset_storage()
+
+        assert orm.User.collection.get_default().email == 'active@localhost'
+
+
 @pytest.mark.requires_psql
 def test_aiida_profile_factory_psql_dos(aiida_config, aiida_profile_factory, config_psql_dos):
     """Test that the factory creates and resets a ``core.psql_dos`` profile."""

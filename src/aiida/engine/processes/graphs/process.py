@@ -22,10 +22,12 @@ from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.graphs.spec import (
     BranchTask,
+    Dependency,
     GraphSpec,
     GraphTask,
     LoopTask,
-    MapTask,
+    MapGraphTask,
+    MappedTask,
     ProcessTask,
     SubgraphTask,
 )
@@ -113,7 +115,7 @@ def _returned(node: Node) -> dict[str, t.Any]:
     return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
 
 
-def _map_items(collection: t.Any, task: MapTask) -> dict[str, t.Any]:
+def _map_items(collection: t.Any, task: MappedTask) -> dict[str, t.Any]:
     """Return the items a map runs over, by the key each of its results is gathered under.
 
     :param collection: what the task maps over, as a list or a dictionary, stored or plain.
@@ -313,7 +315,7 @@ class GraphProcess(Process):
             self._dispatch_loop(task, inputs)
             return
 
-        if isinstance(task, MapTask):
+        if isinstance(task, MappedTask):
             self._dispatch_mapped(task, inputs)
             return
 
@@ -397,17 +399,29 @@ class GraphProcess(Process):
                     _place(inputs, port, given[name])
 
         for edge in self.graph.dependencies:
-            if edge.target == task.name:
+            if edge.target != task.name:
+                continue
+
+            if isinstance(self.graph.task(edge.source), MappedTask):
+                _place(inputs, edge.target_port, self._gathered(edge))
+            else:
                 _place(inputs, edge.target_port, _at(self._produced_by(edge.source).outputs, edge.source_port))
 
         return inputs
+
+    def _gathered(self, edge: Dependency) -> dict[str, t.Any]:
+        """Return what a task that ran once per item produced, under the key of the item each run was for."""
+        return {
+            self._item_key(edge.source, instance): _at(load_node(self._done[instance]).outputs, edge.source_port)
+            for instance in self._instances[edge.source]
+        }
 
     def _produced_by(self, name: str) -> t.Any:
         """Return the node holding what a task produced, which for one that ran more than once is its last run."""
         return load_node(self._done[self._instances[name][-1]])
 
-    def _dispatch_mapped(self, task: MapTask, inputs: dict[str, t.Any]) -> None:
-        """Submit one process per item of the collection the task maps over."""
+    def _dispatch_mapped(self, task: MappedTask, inputs: dict[str, t.Any]) -> None:
+        """Submit one run per item of the collection the task maps over, of whatever it runs."""
         items = _map_items(inputs.pop(task.item_port, None), task)
         self._instances[task.name] = [f'{task.name}_{key}' for key in items]
 
@@ -437,7 +451,7 @@ class GraphProcess(Process):
         :raises ValueError: if the task is of a kind that has no way to run here, which a kind added to the
             declaration without one would be.
         """
-        if isinstance(task, SubgraphTask):
+        if isinstance(task, (SubgraphTask, MapGraphTask)):
             return GraphProcess, GraphProcess.launch_inputs(task.body, inputs)
 
         if isinstance(task, ProcessTask):
@@ -490,7 +504,7 @@ class GraphProcess(Process):
                 self.report(f'output `{output}` is not returned, since `{source.task}` did not run')
                 continue
 
-            if not isinstance(self.graph.task(source.task), MapTask):
+            if not isinstance(self.graph.task(source.task), MappedTask):
                 self.out(output, _at(self._produced_by(source.task).outputs, source.port))
                 continue
 

@@ -284,7 +284,8 @@ class ZeromqCommunicator(broker_communicator.Communicator):
             self._timeout_handles.pop(msg_id, None)
             future = self._pending_futures.pop(msg_id, None)
             if future and not future.done():
-                future.set_exception(TimeoutError(f'Task/RPC {msg_id} timed out after {self._task_timeout}s'))
+                msg = f'Task/RPC {msg_id} timed out after {self._task_timeout}s'
+                future.set_exception(broker_exceptions.TimeoutError(msg))
 
         handle = self._loop.call_later(self._task_timeout, _on_timeout)
         self._timeout_handles[msg_id] = handle
@@ -465,7 +466,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
 
     def _ensure_open(self) -> None:
         if self._closed:
-            raise RuntimeError('Communicator is closed')
+            raise broker_exceptions.CommunicatorClosed
 
     def _send(self, msg: dict[str, Any]) -> None:
         """Send a message to the broker.  MUST be called from the loop thread."""

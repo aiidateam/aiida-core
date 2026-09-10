@@ -176,29 +176,28 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
 
 
 @pytest.mark.parametrize('version', [v for v in list_versions() if v not in ('main_0000a', 'main_0000b')])
-def test_version(run_cli_command, version):
+def test_version(run_cli_command, version, archive_main_head):
     """Test the functionality of `verdi archive version`."""
-    archive = f'export_{version}_simple.aiida'
-    filename_input = get_archive_file(archive, filepath='export/migrate')
+    if version == ArchiveFormatSqlZip().latest_version:
+        filename_input = archive_main_head
+    else:
+        archive = f'export_{version}_simple.aiida'
+        filename_input = get_archive_file(archive, filepath='export/migrate')
     options = [filename_input]
     result = run_cli_command(cmd_archive.archive_version, options)
     assert version in result.output
 
 
-def test_info(run_cli_command):
+def test_info(run_cli_command, archive_main_head):
     """Test the functionality of `verdi archive info`."""
-    archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
-    filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = [filename_input]
+    options = [archive_main_head]
     result = run_cli_command(cmd_archive.archive_info, options)
     assert 'export_version' in result.output
 
 
-def test_info_detailed(run_cli_command):
+def test_info_detailed(run_cli_command, archive_main_head):
     """Test the functionality of `verdi archive info --detailed`."""
-    archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
-    filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = ['--detailed', filename_input]
+    options = ['--detailed', archive_main_head]
     result = run_cli_command(cmd_archive.archive_info, options)
     assert 'Nodes:' in result.output
 

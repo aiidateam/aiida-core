@@ -218,6 +218,16 @@ class TestProcess:
         proc.close()
         payload.decode()
 
+    @staticmethod
+    def test_save_instance_state_with_outputs():
+        """Test save/load roundtrip preserves outputs."""
+        proc = test_processes.DummyProcess()
+        proc.out('result', orm.Int(5).store())
+        payload = CheckpointPayload.from_object(proc)
+        proc.close()
+        loaded = payload.decode()
+        assert loaded.outputs['result'].value == 5
+
     def test_exit_codes(self):
         """Test the properties to return various (sub) sets of existing exit codes."""
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806

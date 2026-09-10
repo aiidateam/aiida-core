@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from aiida import orm
 from aiida.manage.configuration import get_config, load_config
 from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
 
@@ -57,6 +58,18 @@ def test_aiida_profile_tmp(aiida_profile, aiida_profile_tmp):
     assert isinstance(aiida_profile_tmp, Profile)
     assert aiida_profile_tmp.is_test_profile
     assert aiida_profile_tmp.uuid != aiida_profile.uuid
+
+
+def test_profile_reset_storage_uses_configured_default_user(aiida_profile_tmp):
+    """Test that resetting a profile honours a default user changed through its configuration."""
+    config = get_config()
+    configured_profile = config.get_profile(aiida_profile_tmp.name)
+    configured_profile.default_user_email = 'updated@localhost'
+    config.store()
+
+    aiida_profile_tmp.reset_storage()
+
+    assert orm.User.collection.get_default().email == 'updated@localhost'
 
 
 @pytest.mark.requires_psql

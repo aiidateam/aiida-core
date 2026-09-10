@@ -35,7 +35,7 @@ TaskSubscriber = Callable[['Communicator', Any], Any]
 BroadcastSubscriber = Callable[['Communicator', Any, Any, Any, Any], Any]
 
 
-class Communicator:
+class Communicator(abc.ABC):
     """The interface for a communicator used to both send and receive various types of message."""
 
     def __enter__(self) -> Communicator:

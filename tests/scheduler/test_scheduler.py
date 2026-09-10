@@ -186,20 +186,20 @@ def test_process_counts_group_dispatched_tasks(communicator):
     """Test scheduler process counts do not depend on process implementations."""
     scheduler = Scheduler(
         communicator=communicator,
-        kind_by_identifier={'calc': 'calcjob', 'chain': 'workchain'},
+        kind_by_identifier={'calc': 'calcjob', 'graph': 'workgraph'},
     )
     scheduler.start()
     calcjob = scheduler._on_submitted(communicator, {'task': 'launch', 'args': {'process_class': 'calc'}})
-    workchain = scheduler._on_submitted(communicator, {'task': 'launch', 'args': {'process_class': 'chain'}})
+    workgraph = scheduler._on_submitted(communicator, {'task': 'launch', 'args': {'process_class': 'graph'}})
     scheduler._on_submitted(communicator, {'task': 'launch'})
 
-    assert scheduler.process_counts == {'calcjob': 1, 'workchain': 1, 'other': 1}
+    assert scheduler.process_counts == {'calcjob': 1, 'workgraph': 1, 'other': 1}
 
-    scheduler._on_completion_task(communicator, {'scheduler_task_id': workchain, 'terminal': 'FINISHED'})
-    assert scheduler.process_counts == {'calcjob': 1, 'workchain': 0, 'other': 1}
+    scheduler._on_completion_task(communicator, {'scheduler_task_id': workgraph, 'terminal': 'FINISHED'})
+    assert scheduler.process_counts == {'calcjob': 1, 'workgraph': 0, 'other': 1}
 
     scheduler._on_completion_task(communicator, {'scheduler_task_id': calcjob, 'terminal': 'FINISHED'})
-    assert scheduler.process_counts == {'calcjob': 0, 'workchain': 0, 'other': 1}
+    assert scheduler.process_counts == {'calcjob': 0, 'workgraph': 0, 'other': 1}
 
 
 def test_process_kind_launch_body_loads_class():

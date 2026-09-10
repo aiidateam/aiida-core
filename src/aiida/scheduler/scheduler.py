@@ -105,6 +105,10 @@ KIND_UNKNOWN = 'unknown'
 KIND_PROCESS = 'process'
 KIND_WORKCHAIN = 'workchain'
 KIND_CALCJOB = 'calcjob'
+#: Workgraph tasks are identified from node metadata or an explicit registry;
+#: the scheduler does not import their process implementation.
+KIND_WORKGRAPH = 'workgraph'
+
 
 def process_kind(body: t.Any, loader: t.Any | None = None, registry: dict[str, str] | None = None) -> str:
     """Classify a launch/create task body without necessarily loading its class.
@@ -275,6 +279,8 @@ class Scheduler:
         node_type = getattr(node, 'node_type', '') or ''
         if '.calculation.calcjob.' in node_type:
             return KIND_CALCJOB
+        if '.workflow.workgraph.' in node_type:
+            return KIND_WORKGRAPH
         if '.workflow.workchain.' in node_type:
             return KIND_WORKCHAIN
         if node_type.startswith('process.') or '.process.' in node_type:
@@ -393,10 +399,11 @@ class Scheduler:
     def process_counts(self) -> dict[str, int]:
         """Return dispatched-process counts for scheduler-level categories.
 
-        Only CalcJobs and WorkChains receive dedicated categories. Every other
-        process type is counted as ``'other'``.
+        Only CalcJobs and WorkGraphs receive dedicated categories. Every other
+        process type is counted as ``'other'``. Workgraph identification uses
+        only task metadata and the optional ``kind_by_identifier`` registry.
         """
-        counts = {KIND_CALCJOB: 0, KIND_WORKCHAIN: 0, 'other': 0}
+        counts = {KIND_CALCJOB: 0, KIND_WORKGRAPH: 0, 'other': 0}
         for record in self._tasks.values():
             if record['state'] != 'DISPATCHED':
                 continue

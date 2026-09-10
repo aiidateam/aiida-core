@@ -154,6 +154,49 @@ def combine_a_pair(x, y):
 
 
 @graph
+def double_or_not_in_place(x, flag):
+    """Write both sides of a branch where they are used, taking `x` from the graph around them."""
+    with branch(flag) as chosen:
+        chosen.returns(total=add(x=x, y=x).total)
+
+    with chosen.otherwise:
+        chosen.returns(total=add(x=x, y=0).total)
+
+    return {'total': chosen.total}
+
+
+@graph
+def maybe_double_in_place(x, flag):
+    """Write one side of a branch in place, leaving the other with nothing to run."""
+    with branch(flag) as chosen:
+        chosen.returns(total=add(x=x, y=x).total)
+
+    return {'total': chosen.total}
+
+
+@graph
+def count_down_in_place(start):
+    """Write a loop body where it is used, carrying its state through the block."""
+    with loop(condition='again', value=start, again=True) as counting:
+        stepped = step_down(value=counting.value)
+        counting.returns(value=stepped.value, again=stepped.again)
+
+    return {'value': counting.value}
+
+
+@graph
+def count_down_from_a_task(x, y):
+    """Take a value from a task outside the loop, which the body reaches by capturing it."""
+    start = add(x=x, y=y)
+
+    with loop(condition='again', value=start.total, again=True) as counting:
+        stepped = step_down(value=counting.value)
+        counting.returns(value=stepped.value, again=stepped.again)
+
+    return {'value': counting.value}
+
+
+@graph
 def reaches_for_an_outer_task(x, y):
     """Write an inner graph that takes a value from a task in the graph around it."""
     first = add(x=x, y=y)
@@ -517,6 +560,105 @@ def test_a_branch_that_did_not_run_leaves_out_what_takes_its_outputs():
     assert node.is_finished_ok, node.exit_message
     assert dict(results) == {}
     assert node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all() == []
+
+
+def test_a_branch_written_in_place_places_the_same_task():
+    """The block form is the same declaration as handing over two graphs, so it reads back as one branch task."""
+    declaration = double_or_not_in_place.build()
+    (chosen,) = declaration.tasks
+
+    assert isinstance(chosen, BranchTask)
+    assert chosen.name == 'branch'
+    assert sorted(chosen.body.outputs) == ['total']
+    assert chosen.otherwise is not None
+    assert sorted(chosen.otherwise.outputs) == ['total']
+
+
+def test_a_body_written_in_place_takes_what_it_reaches_for_as_an_input():
+    """A value from the graph around it cannot be reached at run time, so the body takes it as an input."""
+    declaration = double_or_not_in_place.build()
+    (chosen,) = declaration.tasks
+
+    assert sorted(chosen.body.inputs) == ['x']
+    assert declaration.inputs == {'x': (('branch', 'x'),), 'flag': (('branch', 'condition'),)}
+
+
+@pytest.mark.parametrize(
+    'declaration, flag, expected',
+    [
+        pytest.param(double_or_not_in_place, True, 6, id='taken'),
+        pytest.param(double_or_not_in_place, False, 3, id='not-taken'),
+        pytest.param(maybe_double_in_place, True, 6, id='one-sided-taken'),
+    ],
+)
+def test_a_branch_written_in_place_runs(declaration, flag, expected):
+    """What was written in the block runs as the branch the condition selects."""
+    results, node = run_get_node(declaration, x=3, flag=flag)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == expected
+
+
+def test_a_one_sided_branch_written_in_place_produces_nothing_when_it_is_not_taken():
+    """Without a second block there is nothing to run, so the graph returns none of what the branch would."""
+    results, node = run_get_node(maybe_double_in_place, x=3, flag=False)
+
+    assert node.is_finished_ok, node.exit_message
+    assert dict(results) == {}
+
+
+@pytest.mark.parametrize(
+    'declaration, inputs',
+    [
+        pytest.param(count_down_in_place, {'start': 3}, id='from-a-graph-input'),
+        pytest.param(count_down_from_a_task, {'x': 1, 'y': 2}, id='from-a-task'),
+    ],
+)
+def test_a_loop_written_in_place_runs(declaration, inputs):
+    """The state the block carries goes round with it, and what the loop stopped on is what it returns."""
+    results, node = run_get_node(declaration, **inputs)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['value'] == 0  # both count 3 down to nothing, one from an input and one from a task
+
+
+def test_the_state_a_loop_carries_is_what_the_block_names():
+    """Inside the block the region carries its state, and anything else says what it does carry."""
+    with pytest.raises(AttributeError, match="carries \\['again', 'value'\\]"):
+
+        @graph
+        def reaches_for_nothing(start):
+            with loop(condition='again', value=start, again=True) as counting:
+                counting.returns(value=counting.nope, again=True)
+
+        reaches_for_nothing.build()
+
+
+def test_an_output_of_a_region_is_there_once_its_block_is_closed():
+    """Before the block closes there is no task yet, so what it will produce is not there to take."""
+    with pytest.raises(AttributeError, match='there once the block is closed'):
+
+        @graph
+        def takes_it_too_early(x, flag):
+            with branch(flag) as chosen:
+                chosen.returns(total=add(x=x, y=x).total)
+                add(x=chosen.total, y=1)
+
+        takes_it_too_early.build()
+
+
+def test_otherwise_without_a_first_block_is_refused():
+    """The second side of a branch follows the first, so asking for it first says so."""
+    with pytest.raises(ValueError, match='follows the block writing the first'):
+
+        @graph
+        def other_side_first(x, flag):
+            chosen = branch(flag)
+
+            with chosen.otherwise:
+                chosen.returns(total=add(x=x, y=0).total)
+
+        other_side_first.build()
 
 
 def test_calling_branch_outside_a_graph_is_refused():

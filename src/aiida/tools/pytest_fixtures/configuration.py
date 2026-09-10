@@ -159,21 +159,28 @@ def aiida_profile_factory():
             from aiida.engine.daemon.client import DaemonException, get_daemon_client
             from aiida.orm import User
 
-            if broker_backend:
-                daemon_client = get_daemon_client()
-
-                if daemon_client.is_daemon_running:
-                    try:
-                        daemon_client.stop_daemon(wait=True)
-                    except DaemonException:
-                        pass
-
             active_profile = manager.get_profile()
-            if active_profile is None or active_profile.name != profile.name:
-                active_profile = config.get_profile(profile.name)
-            default_user_email = active_profile.default_user_email or email
+            target_profile = (
+                active_profile
+                if active_profile is not None and active_profile.name == profile.name
+                else config.get_profile(profile.name)
+            )
 
-            User(email=default_user_email).store()
+            with profile_context(target_profile, allow_switch=True):
+                if broker_backend:
+                    daemon_client = get_daemon_client()
+
+                    if daemon_client.is_daemon_running:
+                        try:
+                            daemon_client.stop_daemon(wait=True)
+                        except DaemonException:
+                            pass
+
+                default_user_email = target_profile.default_user_email or email
+                manager.get_profile_storage()._clear()
+                manager.reset_profile()
+
+                User(email=default_user_email).store()
 
         # Add the ``reset_storage`` method, such that users can empty the storage through the ``Profile`` instance that
         # is returned by this fixture.

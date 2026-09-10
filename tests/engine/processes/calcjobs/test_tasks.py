@@ -21,6 +21,7 @@ from unittest.mock import Mock
 import pytest
 
 from aiida.common.datastructures import CalcJobState
+from aiida.common.exceptions import TransportTaskException
 from aiida.engine.processes import states
 from aiida.engine.processes.calcjobs import tasks
 
@@ -41,8 +42,34 @@ class _InterruptingCancellable:
         raise states.Interruption('interrupted')
 
 
+class _PassthroughCancellable:
+    """A cancellable that returns the request unchanged."""
+
+    async def with_interrupt(self, request):
+        return request
+
+
 class TestTransportTasks:
     """Unit tests for the calcjob transport task coroutines."""
+
+    @pytest.mark.asyncio
+    async def test_submit_job_reraises_transport_task_exception(self, monkeypatch):
+        """Exhausted submit retries raise a ``TransportTaskException``."""
+        monkeypatch.setattr(tasks, 'get_config_option', _config)
+        monkeypatch.setattr(tasks.execmanager, 'submit_calculation', Mock(side_effect=RuntimeError('no connection')))
+
+        node = Mock()
+        node.get_authinfo.return_value = Mock()
+
+        @asynccontextmanager
+        async def request_transport(authinfo):
+            yield Mock()
+
+        transport_queue = Mock()
+        transport_queue.request_transport = request_transport
+
+        with pytest.raises(TransportTaskException, match='failed 2 times consecutively'):
+            await tasks.task_submit_job(node, transport_queue, _PassthroughCancellable())
 
     @pytest.mark.asyncio
     async def test_upload_job_reraises_interruption(self, monkeypatch):

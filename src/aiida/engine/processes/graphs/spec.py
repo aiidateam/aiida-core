@@ -466,13 +466,19 @@ class LoopTask(BodyTask):
     KIND: t.ClassVar[TaskKind] = 'loop'
 
     condition_port: str = CONDITION_PORT
-    """Name of the value deciding whether to run the body again, which the body both takes and returns."""
+    """Name of the value deciding whether to run the body again, which the body returns.
+
+    A loop given no value to start on runs once and asks the body from then on, so a loop meant to run needs
+    nothing said here.
+    """
 
     max_iterations: int = 1000
     """How many times the body may run before the loop gives up, so a condition that never turns false ends."""
 
     def accepts(self, port: str) -> bool:
-        return port in self.body.inputs
+        # The condition is an input of the loop whether or not the body takes one, since it is what decides
+        # whether the body runs at all.
+        return port == self.condition_port or port in self.body.inputs
 
     def produces(self, port: str) -> bool:
         return port in self.body.outputs
@@ -607,16 +613,17 @@ class GraphSpec:
     def _check_loop(task: LoopTask) -> None:
         """Raise if a loop has no way to reach its end.
 
-        :raises ValueError: if the body does not both take and return the value the loop goes round on, since
-            then nothing the body does could ever change it, or if it may run no times at all.
+        The body has to return the value the loop goes round on, since that is what ends it. Whether it takes one
+        is up to it: inside a run the answer is always yes, so there is rarely anything to read.
+
+        :raises ValueError: if the body does not return the value the loop goes round on, or may run no times.
         """
-        for direction, ports in (('take', task.body.inputs), ('return', task.body.outputs)):
-            if task.condition_port not in ports:
-                raise ValueError(
-                    f'`{task.name}` goes round while `{task.condition_port}` holds, so its body has to {direction} '
-                    f'`{task.condition_port}`, and it {direction}s {sorted(ports)}. A loop starts from the value '
-                    f'it was given and goes on from the one its body returned, so the body decides when to stop.'
-                )
+        if task.condition_port not in task.body.outputs:
+            raise ValueError(
+                f'`{task.name}` goes round while `{task.condition_port}` holds, so its body has to return '
+                f'`{task.condition_port}`, and it returns {sorted(task.body.outputs)}. A loop goes on from what '
+                f'its body returned, so the body is what decides when to stop.'
+            )
 
         if task.max_iterations < 1:
             raise ValueError(f'`{task.name}` may run at most {task.max_iterations} times, which is never.')

@@ -131,7 +131,7 @@ def exception_response(exception: Exception, trace: TracebackType | None = None)
     """
     msg = str(exception)
     if trace is not None:
-        msg += f'\n{"".join(traceback.format_tb(trace)[0])}'
+        msg += f'\n{"".join(traceback.format_tb(trace))}'
     return {EXCEPTION_KEY: msg}
 
 
@@ -143,13 +143,6 @@ def cancelled_response(msg: Any = None) -> dict[str, Any]:
 def pending_response(msg: Any = None) -> dict[str, Any]:
     """Create a pending response dictionary."""
     return {PENDING_KEY: msg}
-
-
-def response_result(response: dict[str, Any]) -> Any:
-    """Return the result of a response message, raising if it contains an exception."""
-    future: asyncio.Future[Any] = asyncio.Future()
-    response_to_future(response, future)
-    return future.result()
 
 
 def response_to_future(response: Any, future: asyncio.Future[Any] | None = None) -> asyncio.Future[Any]:

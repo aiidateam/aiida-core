@@ -8,8 +8,9 @@
 ###########################################################################
 """Define the current configuration version and migrations."""
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import Any, Protocol
+from typing import Any, ClassVar
 
 from aiida.common import exceptions
 from aiida.common.docs import URL_CONFIG_SCHEMA_COMPATIBILITY
@@ -41,24 +42,26 @@ MAXIMUM_DOWNGRADE_CONFIG_VERSION = 11
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
 
-class SingleMigration(Protocol):
-    """A single migration of the configuration."""
+class SingleMigration(ABC):
+    """Interface for a single migration of the configuration."""
 
-    down_revision: int
+    down_revision: ClassVar[int]
     """The initial configuration version."""
 
-    down_compatible: int
+    down_compatible: ClassVar[int]
     """The initial oldest backwards compatible configuration version"""
 
-    up_revision: int
+    up_revision: ClassVar[int]
     """The final configuration version."""
 
-    up_compatible: int
+    up_compatible: ClassVar[int]
     """The final oldest backwards compatible configuration version"""
 
+    @abstractmethod
     def upgrade(self, config: ConfigType) -> None:
         """Migrate the configuration in-place."""
 
+    @abstractmethod
     def downgrade(self, config: ConfigType) -> None:
         """Downgrade the configuration in-place."""
 

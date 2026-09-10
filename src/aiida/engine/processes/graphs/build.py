@@ -19,13 +19,14 @@ from dataclasses import dataclass, field, replace
 
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
-from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
+from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess, holds
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     DEFINED_TASKS,
     BranchTask,
     Dependency,
     Endpoint,
+    ExecutorReference,
     GraphSpec,
     GraphTask,
     LoopTask,
@@ -36,11 +37,12 @@ from aiida.engine.processes.graphs.spec import (
     TaskSpec,
 )
 from aiida.engine.processes.process import Process
-from aiida.orm import CalcFunctionNode
+from aiida.orm import CalcFunctionNode, WorkFunctionNode
 
 __all__ = (
     'Branch',
     'Each',
+    'Fanout',
     'GraphBuilder',
     'GraphHandle',
     'GraphInput',
@@ -57,6 +59,7 @@ __all__ = (
     'each',
     'graph',
     'loop',
+    'select',
     'task',
 )
 
@@ -72,6 +75,8 @@ graph be written as ordinary Python.
 P = t.ParamSpec('P')
 
 R_co = t.TypeVar('R_co', covariant=True)
+
+RegionType = t.TypeVar('RegionType', bound='Region')
 
 
 @dataclass(frozen=True)
@@ -90,8 +95,8 @@ class TaskOutput:
 class MappedOutput(TaskOutput):
     """Reference to one output of a task that runs once per item, which is one result per item.
 
-    A graph can return this, and gets a result per item under the key of the item. Passing it to another task is
-    refused, since that task would take a collection of results where it declares one value.
+    Every result arrives under the key of the item it came from, so a graph returning this gets a namespace of
+    them, and a task taking it has to declare a namespace rather than a port.
     """
 
 
@@ -106,11 +111,23 @@ class GraphInput:
     name: str
 
 
-@dataclass(frozen=True)
+@dataclass
 class Each:
-    """A collection to run a task over one item at a time, as returned by :func:`each`."""
+    """A collection to run something over one item at a time, as returned by :func:`each`.
+
+    Handed to a call it fans that call out; opened as a block it fans out whatever is written inside.
+    """
 
     collection: t.Any
+    region: Fanout | None = field(default=None, repr=False, compare=False)
+
+    def __enter__(self) -> Fanout:
+        self.region = Fanout(self.collection)
+        return self.region.__enter__()
+
+    def __exit__(self, *exception: t.Any) -> None:
+        assert self.region is not None
+        self.region.__exit__(*exception)
 
 
 def each(collection: t.Any) -> Each:
@@ -843,6 +860,8 @@ class Region:
     outputs the task will produce, which is what the rest of the graph takes.
     """
 
+    _outputs_class: t.ClassVar[type[TaskOutputs]] = TaskOutputs
+
     def __init__(self, state: t.Mapping[str, t.Any] | None = None) -> None:
         self._state = dict(state or {})
         self._outer: GraphBuilder | None = None
@@ -852,7 +871,7 @@ class Region:
         self._outputs: TaskOutputs | None = None
         self._name: str | None = None
 
-    def __enter__(self) -> Region:
+    def __enter__(self: RegionType) -> RegionType:
         outer = ACTIVE_BUILDER.get()
 
         if outer is None:
@@ -916,7 +935,7 @@ class Region:
         """Wire what the task takes from the graph around it, put it there, and hold on to what it produces."""
         assert self._outer is not None
         self._outer.place(replace(task, inputs=self._outer._wire(task.name, arguments)))
-        self._outputs = TaskOutputs(task=task.name, ports=OutputNames.named(outputs))
+        self._outputs = self._outputs_class(task=task.name, ports=OutputNames.named(outputs))
 
     def _named(self, word: str) -> str:
         """Return the name this region is placed under, which stays the same across its blocks."""
@@ -978,6 +997,27 @@ class Loop(Region):
             condition_port=self._condition,
             max_iterations=self._max_iterations,
         )
+
+        self._place(task, {**self._state, **builder.captures}, body.outputs)
+
+
+class Fanout(Region):
+    """A body run once per item of a collection, as returned by :func:`each` opened as a block.
+
+    The item is an input of the body like any other, so the collection is wired to it and each run is handed one
+    item in its place, exactly as a task marked with :func:`each` is.
+    """
+
+    ITEM: t.ClassVar[str] = 'value'
+
+    _outputs_class: t.ClassVar[type[TaskOutputs]] = MappedOutputs
+
+    def __init__(self, collection: t.Any) -> None:
+        super().__init__({self.ITEM: collection})
+
+    def _close(self, builder: GraphBuilder) -> None:
+        body = builder.finish(self._returned)
+        task = MapGraphTask(name=self._named('each'), body=body, item_port=self.ITEM)
 
         self._place(task, {**self._state, **builder.captures}, body.outputs)
 
@@ -1142,3 +1182,32 @@ def task(
         return decorator(function)
 
     return decorator
+
+
+def select(condition: t.Any, then: t.Any, otherwise: t.Any) -> t.Any:
+    """Return one of two values, whichever a condition picks.
+
+    This is the cheap conditional: where :func:`branch` decides which of two graphs to run, and so costs a process
+    of its own for each side, this decides between two values that already exist and costs one task.
+
+    Example usage:
+
+    >>> @graph
+    >>> def best_of(first, second, prefer_first):
+    >>>     return {'chosen': select(condition=prefer_first, then=first, otherwise=second).value}
+
+    :param condition: what picks between the two, read as true or false.
+    :param then: what to return when the condition holds.
+    :param otherwise: what to return when it does not.
+    """
+    return then if holds(condition) else otherwise
+
+
+# What it returns is one of the values it was given, which already exists, so this records that it returned a node
+# rather than created one. A calcfunction cannot: creating a node that is already its own input is a cycle.
+select = TaskHandle(
+    process_function(node_class=WorkFunctionNode, base_class=TaskProcess, outputs=['value'])(select),
+    TaskSpec(identifier='select', executor=ExecutorReference(module=__name__, name='select')),
+)
+
+DEFINED_TASKS[f'{__name__}:select'] = select

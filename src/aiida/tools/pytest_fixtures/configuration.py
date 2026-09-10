@@ -168,10 +168,11 @@ def aiida_profile_factory():
                     except DaemonException:
                         pass
 
+            default_user_email = config.get_profile(profile.name).default_user_email or email
             manager.get_profile_storage()._clear()
             manager.reset_profile()
 
-            User(email=profile.default_user_email or email).store()
+            User(email=default_user_email).store()
 
         # Add the ``reset_storage`` method, such that users can empty the storage through the ``Profile`` instance that
         # is returned by this fixture.

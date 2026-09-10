@@ -29,6 +29,7 @@ from aiida.engine.processes.graphs.spec import (
     GraphSpec,
     GraphTask,
     LoopTask,
+    MapGraphTask,
     MapTask,
     ProcessTask,
     SubgraphTask,
@@ -359,16 +360,28 @@ class GraphBuilder:
         The body is built here, so what is placed is the declaration of that graph, and the inputs and outputs it
         declares are the ports the graph around it wires to.
 
+        Marking one of its inputs with :func:`each` runs the whole graph once per item, which is how a workflow
+        runs per structure rather than a single step.
+
         :param handle: the graph being placed.
         :param arguments: the arguments of the call, by parameter name.
         :return: references to the outputs the graph will produce.
-        :raises ValueError: if the call marks one of the inputs with :func:`each`.
+        :raises ValueError: if more than one input is marked with :func:`each`.
         """
-        self._refuse_each(handle.identifier, 'graph', arguments)
-
         body = handle.build()
         name = self._unique_name(handle.identifier)
-        self._tasks.append(SubgraphTask(name=name, inputs=self._wire(name, arguments), body=body))
+        item_ports = [key for key, argument in arguments.items() if isinstance(argument, Each)]
+        values = {
+            key: argument.collection if isinstance(argument, Each) else argument for key, argument in arguments.items()
+        }
+        inputs = self._wire(name, values)
+
+        if item_ports:
+            item_port = self._sole_item_port(name, item_ports)
+            self._tasks.append(MapGraphTask(name=name, inputs=inputs, body=body, item_port=item_port))
+            return MappedOutputs(task=name, ports=OutputNames.named(body.outputs))
+
+        self._tasks.append(SubgraphTask(name=name, inputs=inputs, body=body))
 
         return TaskOutputs(task=name, ports=OutputNames.named(body.outputs))
 
@@ -470,13 +483,6 @@ class GraphBuilder:
 
             reference = _as_reference(value)
 
-            if isinstance(reference, MappedOutput):
-                raise ValueError(
-                    f'`{name}` takes `{port}` from `{reference.task}`, which runs once per item and so has a '
-                    f'result per item, where `{port}` takes one value. Taking the results of a fan-out into '
-                    f'another task is not supported yet; a graph can return them.'
-                )
-
             if reference is not None:
                 if reference.task not in self._placed:
                     taken = self._take_from_outside(reference, f'{reference.task}.{reference.port}', referrer)
@@ -520,19 +526,28 @@ class GraphBuilder:
             f'it in where the graph is placed.'
         )
 
-    @staticmethod
-    def _task(name: str, handle: TaskHandle, inputs: dict[str, t.Any], item_ports: list[str]) -> ProcessTask:
+    def _task(self, name: str, handle: TaskHandle, inputs: dict[str, t.Any], item_ports: list[str]) -> ProcessTask:
         """Return the task for a call, which fans out when one of its inputs was marked with :func:`each`."""
         if not item_ports:
             return ProcessTask(name=name, spec=handle.task_spec, inputs=inputs)
 
+        return MapTask(
+            name=name, spec=handle.task_spec, inputs=inputs, item_port=self._sole_item_port(name, item_ports)
+        )
+
+    @staticmethod
+    def _sole_item_port(name: str, item_ports: list[str]) -> str:
+        """Return the one input a fan-out runs over.
+
+        :raises ValueError: if more than one was marked, since what the items would be paired up as is not said.
+        """
         if len(item_ports) > 1:
             raise ValueError(
-                f'`{name}` runs once per item of {sorted(item_ports)}, and a task runs over one of its inputs. '
-                f'Combine them into one input, or place a task per input.'
+                f'`{name}` runs once per item of {sorted(item_ports)}, and a fan-out runs over one of its inputs. '
+                f'Combine them into one input, or place one per input.'
             )
 
-        return MapTask(name=name, spec=handle.task_spec, inputs=inputs, item_port=item_ports[0])
+        return item_ports[0]
 
     def _unique_name(self, identifier: str) -> str:
         """Return a name for a task, keeping the second use of a task distinct from the first."""

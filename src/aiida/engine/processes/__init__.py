@@ -54,6 +54,7 @@ __all__ = (
     'JobsList',
     'Loop',
     'LoopTask',
+    'MapGraphTask',
     'MapTask',
     'MappedOutput',
     'MappedOutputs',

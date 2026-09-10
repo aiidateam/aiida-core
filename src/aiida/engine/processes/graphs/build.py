@@ -727,24 +727,35 @@ def loop(
 
     Example usage:
 
-    >>> @task(outputs=['value', 'again'])
+    >>> @task(outputs=['value', 'keep_going'])
     >>> def step(value):
     >>>     return value - 1, value - 1 > 0
     >>>
     >>> @graph
-    >>> def countdown(value, again):
+    >>> def countdown(value):
     >>>     stepped = step(value=value)
-    >>>     return {'value': stepped.value, 'again': stepped.again}
+    >>>     return {'value': stepped.value, 'keep_going': stepped.keep_going}
     >>>
     >>> @graph
     >>> def count_down_to_zero(start):
-    >>>     return loop(countdown, condition='again', value=start, again=True).value
+    >>>     return {'value': loop(countdown, condition='keep_going', value=start).value}
+
+    The body can also be written where it is used, carrying its state through the block:
+
+    >>> @graph
+    >>> def count_down_to_zero(start):
+    >>>     with loop(condition='keep_going', value=start) as counting:
+    >>>         stepped = step(value=counting.value)
+    >>>         counting.returns(value=stepped.value, keep_going=stepped.keep_going)
+    >>>
+    >>>     return {'value': counting.value}
 
     A condition that is false to begin with leaves the loop producing nothing, and every task that takes one of
     its outputs is left out of the run as well.
 
     :param body: the graph to run again and again.
-    :param condition: name of the value deciding whether to go round again, which the body takes and returns.
+    :param condition: name of the value deciding whether to go round again, which the body returns. Give it a
+        starting value here to decide whether the loop runs at all; without one it runs at least once.
     :param max_iterations: how many times the body may run before the loop gives up on the condition turning.
     :param inputs: the values the loop starts from, by the name the body declares.
     :return: references to the outputs the loop will produce, which are those of the run it stopped on.

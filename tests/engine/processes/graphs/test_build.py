@@ -107,23 +107,23 @@ def double_or_not(x, flag):
     return branch(flag, then=doubled, otherwise=negated, x=x)
 
 
-@task(outputs=['value', 'again'])
+@task(outputs=['value', 'keep_going'])
 def step_down(value):
     """Take one off the value, and say whether there is anything left to take off."""
     return value - 1, value - 1 > 0
 
 
 @graph
-def one_step_down(value, again):
-    """Carry `again` through the loop, since a loop goes round on what its body returns."""
+def one_step_down(value):
+    """Return what the loop goes round on beside the value it carries."""
     stepped = step_down(value=value)
-    return {'value': stepped.value, 'again': stepped.again}
+    return {'value': stepped.value, 'keep_going': stepped.keep_going}
 
 
 @graph
-def count_down(start, again):
+def count_down(start, keep_going):
     """Run a graph again and again until nothing is left to take off."""
-    counted = loop(one_step_down, condition='again', value=start, again=again)
+    counted = loop(one_step_down, condition='keep_going', value=start, keep_going=keep_going)
     return {'value': counted.value}
 
 
@@ -177,9 +177,9 @@ def maybe_double_in_place(x, flag):
 @graph
 def count_down_in_place(start):
     """Write a loop body where it is used, carrying its state through the block."""
-    with loop(condition='again', value=start, again=True) as counting:
+    with loop(condition='keep_going', value=start) as counting:
         stepped = step_down(value=counting.value)
-        counting.returns(value=stepped.value, again=stepped.again)
+        counting.returns(value=stepped.value, keep_going=stepped.keep_going)
 
     return {'value': counting.value}
 
@@ -189,9 +189,9 @@ def count_down_from_a_task(x, y):
     """Take a value from a task outside the loop, which the body reaches by capturing it."""
     start = add(x=x, y=y)
 
-    with loop(condition='again', value=start.total, again=True) as counting:
+    with loop(condition='keep_going', value=start.total) as counting:
         stepped = step_down(value=counting.value)
-        counting.returns(value=stepped.value, again=stepped.again)
+        counting.returns(value=stepped.value, keep_going=stepped.keep_going)
 
     return {'value': counting.value}
 
@@ -624,12 +624,12 @@ def test_a_loop_written_in_place_runs(declaration, inputs):
 
 def test_the_state_a_loop_carries_is_what_the_block_names():
     """Inside the block the region carries its state, and anything else says what it does carry."""
-    with pytest.raises(AttributeError, match="carries \\['again', 'value'\\]"):
+    with pytest.raises(AttributeError, match="carries \\['value'\\]"):
 
         @graph
         def reaches_for_nothing(start):
-            with loop(condition='again', value=start, again=True) as counting:
-                counting.returns(value=counting.nope, again=True)
+            with loop(condition='keep_going', value=start) as counting:
+                counting.returns(value=counting.nope, keep_going=True)
 
         reaches_for_nothing.build()
 
@@ -674,17 +674,17 @@ def test_a_loop_is_placed_as_one_task_carrying_its_body():
 
     assert isinstance(task_, LoopTask)
     assert task_.name == 'loop_one_step_down'
-    assert task_.condition_port == 'again'
+    assert task_.condition_port == 'keep_going'
     assert [node.name for node in task_.body.tasks] == ['step_down']
     assert declaration.inputs == {
         'start': (('loop_one_step_down', 'value'),),
-        'again': (('loop_one_step_down', 'again'),),
+        'keep_going': (('loop_one_step_down', 'keep_going'),),
     }
 
 
 def test_a_loop_runs_its_body_until_the_condition_turns():
     """Each run starts from what the one before it returned, so the loop reaches the value it counted down to."""
-    results, node = run_get_node(count_down, start=3, again=True)
+    results, node = run_get_node(count_down, start=3, keep_going=True)
 
     assert node.is_finished_ok, node.exit_message
     assert results['value'] == 0
@@ -700,7 +700,7 @@ def test_a_loop_runs_its_body_until_the_condition_turns():
 
 def test_a_loop_whose_condition_is_false_to_begin_with_runs_nothing():
     """A loop checks before it runs, so one that never had reason to go round produces nothing."""
-    results, node = run_get_node(count_down, start=3, again=False)
+    results, node = run_get_node(count_down, start=3, keep_going=False)
 
     assert node.is_finished_ok, node.exit_message
     assert dict(results) == {}
@@ -711,11 +711,11 @@ def test_a_loop_stops_at_the_iterations_it_is_allowed():
     """A condition that never turns would go round for ever, so the loop gives up and says it did."""
 
     @graph
-    def count_down_briefly(start, again):
-        counted = loop(one_step_down, condition='again', max_iterations=2, value=start, again=again)
+    def count_down_briefly(start, keep_going):
+        counted = loop(one_step_down, condition='keep_going', max_iterations=2, value=start, keep_going=keep_going)
         return {'value': counted.value}
 
-    results, node = run_get_node(count_down_briefly, start=10, again=True)
+    results, node = run_get_node(count_down_briefly, start=10, keep_going=True)
 
     assert node.is_finished_ok, node.exit_message
     assert results['value'] == 8  # 10, less one per run, of which it was allowed two
@@ -726,11 +726,11 @@ def test_a_task_after_a_loop_waits_for_the_last_run():
     """A loop is only done once its condition turns, so what comes after it takes the value it stopped on."""
 
     @graph
-    def count_down_then_add(start, again):
-        counted = loop(one_step_down, condition='again', value=start, again=again)
+    def count_down_then_add(start, keep_going):
+        counted = loop(one_step_down, condition='keep_going', value=start, keep_going=keep_going)
         return add(x=counted.value, y=100)
 
-    results, node = run_get_node(count_down_then_add, start=3, again=True)
+    results, node = run_get_node(count_down_then_add, start=3, keep_going=True)
 
     assert node.is_finished_ok, node.exit_message
     assert results['total'] == 100  # the loop counted 3 down to 0, and only then was `add` given it
@@ -739,7 +739,7 @@ def test_a_task_after_a_loop_waits_for_the_last_run():
 def test_calling_loop_outside_a_graph_is_refused():
     """A loop is part of a graph, so writing one anywhere else says what to do instead."""
     with pytest.raises(TypeError, match='written in the body of a `@graph`'):
-        loop(one_step_down, condition='again', value=1, again=True)
+        loop(one_step_down, condition='keep_going', value=1, keep_going=True)
 
 
 def test_running_a_graph_once_per_item_is_refused():

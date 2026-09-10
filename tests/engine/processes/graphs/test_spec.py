@@ -228,11 +228,11 @@ def test_a_placed_graph_has_the_ports_its_body_declares(edge, expected):
 
 
 def looping_graph() -> GraphSpec:
-    """Return a graph both taking and returning `again`, which is what a loop goes round on."""
+    """Return a graph both taking and returning `keep_going`, which is what a loop goes round on."""
     return GraphSpec(
         tasks=(ProcessTask(name='sum', spec=add.task_spec),),
-        inputs={'again': (), 'start': (('sum', 'x'), ('sum', 'y'))},
-        outputs={'again': Endpoint(task=None, port='again'), 'start': Endpoint(task='sum', port='total')},
+        inputs={'keep_going': (), 'start': (('sum', 'x'), ('sum', 'y'))},
+        outputs={'keep_going': Endpoint(task=None, port='keep_going'), 'start': Endpoint(task='sum', port='total')},
     )
 
 
@@ -240,7 +240,7 @@ def looping_graph() -> GraphSpec:
     'task_, kind',
     [
         pytest.param(BranchTask(name='choice', body=shifting_graph()), 'branch', id='branch'),
-        pytest.param(LoopTask(name='again', body=looping_graph(), condition_port='again'), 'loop', id='loop'),
+        pytest.param(LoopTask(name='keep_going', body=looping_graph(), condition_port='keep_going'), 'loop', id='loop'),
     ],
 )
 def test_a_task_carrying_a_body_round_trips(task_, kind):
@@ -279,20 +279,21 @@ def test_a_branch_sharing_a_name_between_its_condition_and_a_body_input_is_refus
         GraphSpec(tasks=(BranchTask(name='choice', body=shifting_graph(), condition_port='start'),))
 
 
-@pytest.mark.parametrize(
-    'condition, expected',
-    [
-        pytest.param('start', 'has to return `start`', id='not-returned'),
-        pytest.param('total', 'has to take `total`', id='not-taken'),
-    ],
-)
-def test_a_loop_body_that_does_not_carry_the_condition_is_refused(condition, expected):
-    """A loop goes round on what its body returns, so a body that cannot change the condition never ends.
+def test_a_loop_whose_body_does_not_return_the_condition_is_refused():
+    """A loop goes on from what its body returned, so a body that never returns the condition cannot end.
 
-    ``shifting_graph`` takes `start` and returns `total`, so neither name is carried through it.
+    ``shifting_graph`` returns `total`, so a loop going round on anything else has nothing to read.
     """
-    with pytest.raises(ValueError, match=expected):
-        GraphSpec(tasks=(LoopTask(name='again', body=shifting_graph(), condition_port=condition),))
+    with pytest.raises(ValueError, match='has to return `start`'):
+        GraphSpec(tasks=(LoopTask(name='keep_going', body=shifting_graph(), condition_port='start'),))
+
+
+def test_a_loop_body_need_not_take_the_condition():
+    """Inside a run the answer is always yes, so a body has nothing to read and need not declare it."""
+    task_ = LoopTask(name='keep_going', body=shifting_graph(), condition_port='total')
+
+    assert GraphSpec(tasks=(task_,)).task('keep_going') is task_
+    assert task_.accepts('total'), 'the loop takes a starting value even where its body does not'
 
 
 def test_ready_returns_the_frontier():

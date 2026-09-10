@@ -166,8 +166,8 @@ def test_map_rejects_an_unknown_item_port():
         GraphSpec(tasks=(MapTask(name='shifted', spec=add.task_spec, inputs={'y': 1}, item_port='nope'),))
 
 
-def test_map_results_cannot_be_taken_into_another_task_yet():
-    """A task taking the results of a map is refused where the graph is declared, since nothing has to run first."""
+def test_map_results_need_a_namespace_to_go_into():
+    """A result per item cannot go into a port holding one value, which is refused where the graph is declared."""
     with pytest.raises(ValueError, match='runs once per item'):
         GraphSpec(
             tasks=(
@@ -294,6 +294,22 @@ def test_a_loop_body_need_not_take_the_condition():
 
     assert GraphSpec(tasks=(task_,)).task('keep_going') is task_
     assert task_.accepts('total'), 'the loop takes a starting value even where its body does not'
+
+
+@pytest.mark.parametrize(
+    'mutate, expected',
+    [
+        pytest.param(lambda data: data.pop('version'), 'version `None`', id='missing'),
+        pytest.param(lambda data: data.update(version='2.0'), 'version `2.0`', id='newer'),
+    ],
+)
+def test_a_task_of_an_unreadable_version_is_refused(mutate, expected):
+    """A stored task is read only when its version is one this version of AiiDA understands."""
+    serialized = sum_product.task_spec.to_dict()
+    mutate(serialized)
+
+    with pytest.raises(ValueError, match=f'cannot read a task declaration of {expected}'):
+        TaskSpec.from_dict(serialized)
 
 
 def test_ready_returns_the_frontier():

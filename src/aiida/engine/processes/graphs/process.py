@@ -321,8 +321,12 @@ class GraphProcess(Process):
         self._submit_instance(task, name, inputs)
 
     def _dispatch_loop(self, task: LoopTask, inputs: dict[str, t.Any]) -> None:
-        """Run the body a first time, and skip the loop when its condition does not hold to begin with."""
-        if not _holds(inputs.get(task.condition_port)):
+        """Run the body a first time, and skip the loop when its condition does not hold to begin with.
+
+        A loop given no value to start on goes round once and asks the body from then on, since a loop written
+        without one is a loop meant to run.
+        """
+        if not _holds(inputs.get(task.condition_port, True)):
             self.report(f'task `{task.name}` will not run, since `{task.condition_port}` is false to begin with')
             self._skipped.add(task.name)
             return

@@ -148,7 +148,9 @@ def wrap_communicator(
 class LoopCommunicator(broker_communicator.Communicator):
     """Wrapper around a broker communicator scheduling subscriber messages on a given event loop."""
 
-    def __init__(self, communicator: broker_communicator.Communicator, loop: asyncio.AbstractEventLoop | None = None):
+    def __init__(
+        self, communicator: broker_communicator.Communicator | None, loop: asyncio.AbstractEventLoop | None = None
+    ):
         """
         :param communicator: The broker communicator
         :param loop: The event loop to schedule callbacks on
@@ -156,7 +158,7 @@ class LoopCommunicator(broker_communicator.Communicator):
         """
         # Defensive guard against untyped callers passing ``None``; unreachable per the annotation.
         if communicator is None:
-            msg = 'Communicator must not be None.'  # type: ignore[unreachable]
+            msg = 'Communicator must not be None.'
             raise ValueError(msg)
 
         self._communicator = communicator

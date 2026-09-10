@@ -53,6 +53,7 @@ __all__ = (
     'OutputNames',
     'ProcessHandle',
     'Region',
+    'Subgraph',
     'TaskHandle',
     'TaskOutput',
     'TaskOutputs',
@@ -61,6 +62,7 @@ __all__ = (
     'graph',
     'loop',
     'select',
+    'subgraph',
     'task',
 )
 
@@ -861,6 +863,9 @@ class Region:
     outputs the task will produce, which is what the rest of the graph takes.
     """
 
+    WORD: t.ClassVar[str]
+    """What this region is written with, which names it in the graph and in what it says."""
+
     _outputs_class: t.ClassVar[type[TaskOutputs]] = TaskOutputs
 
     def __init__(self, state: t.Mapping[str, t.Any] | None = None) -> None:
@@ -877,7 +882,7 @@ class Region:
 
         if outer is None:
             raise TypeError(
-                f'`{self._word}` writes part of a graph, so it is used in the body of a `@graph` function. To run '
+                f'`{self.WORD}` writes part of a graph, so it is used in the body of a `@graph` function. To run '
                 f'a graph on its own, pass it to `run` or `submit`.'
             )
 
@@ -912,21 +917,16 @@ class Region:
                 return GraphInput(name=name)
 
             raise AttributeError(
-                f'`{self._word}` carries {sorted(state) or "nothing"} while its body is being written, not '
+                f'`{self.WORD}` carries {sorted(state) or "nothing"} while its body is being written, not '
                 f'`{name}`. The outputs it produces are there once the block is closed.'
             )
 
         outputs = self.__dict__.get('_outputs')
 
         if outputs is None:
-            raise AttributeError(f'`{self._word}` produces `{name}` once its block is closed, not before.')
+            raise AttributeError(f'`{self.WORD}` produces `{name}` once its block is closed, not before.')
 
         return getattr(outputs, name)
-
-    @property
-    def _word(self) -> str:
-        """Return what to call this region in a message, which is the word it is written with."""
-        return type(self).__name__.lower()
 
     def _close(self, builder: GraphBuilder) -> None:
         """Place the task this region stands for, now that its body has been written."""
@@ -938,18 +938,20 @@ class Region:
         self._outer.place(replace(task, inputs=self._outer._wire(task.name, arguments)))
         self._outputs = self._outputs_class(task=task.name, ports=OutputNames.named(outputs))
 
-    def _named(self, word: str) -> str:
+    def _named(self) -> str:
         """Return the name this region is placed under, which stays the same across its blocks."""
         assert self._outer is not None
 
         if self._name is None:
-            self._name = self._outer._unique_name(word)
+            self._name = self._outer._unique_name(self.WORD)
 
         return self._name
 
 
 class Branch(Region):
     """A branch whose sides are written in place, as returned by :func:`branch` without a graph to run."""
+
+    WORD: t.ClassVar[str] = 'branch'
 
     def __init__(self, condition: t.Any) -> None:
         super().__init__()
@@ -970,7 +972,7 @@ class Branch(Region):
 
     def _close(self, builder: GraphBuilder) -> None:
         body = builder.finish(self._returned)
-        name = self._named('branch')
+        name = self._named()
 
         if self._taking_the_other_side:
             assert self._body is not None
@@ -985,6 +987,8 @@ class Branch(Region):
 class Loop(Region):
     """A loop whose body is written in place, as returned by :func:`loop` without a graph to run."""
 
+    WORD: t.ClassVar[str] = 'loop'
+
     def __init__(self, condition: str, max_iterations: int, state: t.Mapping[str, t.Any]) -> None:
         super().__init__(state)
         self._condition = condition
@@ -993,7 +997,7 @@ class Loop(Region):
     def _close(self, builder: GraphBuilder) -> None:
         body = builder.finish(self._returned)
         task = LoopTask(
-            name=self._named('loop'),
+            name=self._named(),
             body=body,
             condition_port=self._condition,
             max_iterations=self._max_iterations,
@@ -1009,6 +1013,8 @@ class Fanout(Region):
     item in its place, exactly as a task marked with :func:`each` is.
     """
 
+    WORD: t.ClassVar[str] = 'each'
+
     ITEM: t.ClassVar[str] = 'value'
 
     _outputs_class: t.ClassVar[type[TaskOutputs]] = MappedOutputs
@@ -1018,9 +1024,48 @@ class Fanout(Region):
 
     def _close(self, builder: GraphBuilder) -> None:
         body = builder.finish(self._returned)
-        task = MapGraphTask(name=self._named('each'), body=body, item_port=self.ITEM)
+        task = MapGraphTask(name=self._named(), body=body, item_port=self.ITEM)
 
         self._place(task, {**self._state, **builder.captures}, body.outputs)
+
+
+class Subgraph(Region):
+    """A graph written in place, as returned by :func:`subgraph`.
+
+    What it groups runs as one child process, so the graph around it waits on the whole of it and takes what it
+    returns, rather than on each of the tasks inside.
+    """
+
+    WORD: t.ClassVar[str] = 'subgraph'
+
+    def _close(self, builder: GraphBuilder) -> None:
+        body = builder.finish(self._returned)
+
+        self._place(SubgraphTask(name=self._named(), body=body), builder.captures, body.outputs)
+
+
+def subgraph() -> Subgraph:
+    """Group what is written inside it into a graph of its own, run as one task.
+
+    A declared `@graph` is placed by calling it. This is the same thing for a body that has no name of its own:
+    what it groups becomes one task in the graph around it, with its own process and its own place in the
+    provenance.
+
+    Example usage:
+
+    >>> @graph
+    >>> def workflow(structure):
+    >>>     with subgraph() as prepared:
+    >>>         relaxed = relax(structure=structure)
+    >>>         prepared.returns(structure=relaxed.structure)
+    >>>
+    >>>     return {'energy': compute(structure=prepared.structure).energy}
+
+    A value belonging to the graph around it becomes an input of the body, wired where the block sits.
+
+    :return: the region to write the body in, which carries its outputs once the block is closed.
+    """
+    return Subgraph()
 
 
 class ProcessHandle:

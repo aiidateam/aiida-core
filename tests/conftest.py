@@ -228,7 +228,9 @@ def capture_aiida_and_verdi_logs(request, monkeypatch):
 
 
 @pytest.fixture(scope='session')
-def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
+def aiida_profile(
+    pytestconfig, tmp_path_factory, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos
+):
     """Create and load a profile with the specified storage and broker backends.
 
     This overrides the ``aiida_profile`` fixture provided by ``aiida-core`` which runs with ``core.sqlite_dos`` and
@@ -257,7 +259,8 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
 
     if db_backend is TestDbBackend.SQLITE:
         storage = 'core.sqlite_dos'
-        config = config_sqlite_dos()
+        worker_id = os.environ.get('PYTEST_XDIST_WORKER', 'master')
+        config = config_sqlite_dos(tmp_path_factory.mktemp(f'test_sqlite_dos_storage_{worker_id}'))
     elif db_backend is TestDbBackend.PSQL:
         storage = 'core.psql_dos'
         config = config_psql_dos()

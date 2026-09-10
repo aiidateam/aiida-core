@@ -30,7 +30,7 @@ from typing import Any
 
 import aio_pika
 import aio_pika.abc
-import pamqp
+import pamqp.commands
 from pytray import aiothreads  # type: ignore[import-untyped]
 
 from aiida.brokers import communicator as broker_communicator

@@ -121,7 +121,7 @@ class TestZeromqCommunicatorLifecycle:
     def test_ensure_open_raises_when_closed(self):
         """Test _ensure_open raises when communicator is closed."""
         comm = ZeromqCommunicator(router_endpoint='ipc:///tmp/fake')
-        with pytest.raises(RuntimeError, match='closed'):
+        with pytest.raises(broker_exceptions.CommunicatorClosed):
             comm.task_send({'x': 1})
 
 

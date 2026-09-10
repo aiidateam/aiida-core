@@ -105,10 +105,6 @@ KIND_UNKNOWN = 'unknown'
 KIND_PROCESS = 'process'
 KIND_WORKCHAIN = 'workchain'
 KIND_CALCJOB = 'calcjob'
-#: Reserved kind for workgraph processes. Like every other kind, these are
-#: dispatched or held solely according to the scheduler's concurrency caps.
-KIND_WORKGRAPH = 'workgraph'
-
 
 def process_kind(body: t.Any, loader: t.Any | None = None, registry: dict[str, str] | None = None) -> str:
     """Classify a launch/create task body without necessarily loading its class.
@@ -279,8 +275,6 @@ class Scheduler:
         node_type = getattr(node, 'node_type', '') or ''
         if '.calculation.calcjob.' in node_type:
             return KIND_CALCJOB
-        if '.workflow.workgraph.' in node_type:
-            return KIND_WORKGRAPH
         if '.workflow.workchain.' in node_type:
             return KIND_WORKCHAIN
         if node_type.startswith('process.') or '.process.' in node_type:
@@ -394,6 +388,21 @@ class Scheduler:
     def in_flight_for(self, kind: str) -> int:
         """Return the in-flight count for one process kind."""
         return sum(1 for record in self._tasks.values() if record['kind'] == kind and record['state'] == 'DISPATCHED')
+
+    @property
+    def process_counts(self) -> dict[str, int]:
+        """Return dispatched-process counts for scheduler-level categories.
+
+        Only CalcJobs and WorkChains receive dedicated categories. Every other
+        process type is counted as ``'other'``.
+        """
+        counts = {KIND_CALCJOB: 0, KIND_WORKCHAIN: 0, 'other': 0}
+        for record in self._tasks.values():
+            if record['state'] != 'DISPATCHED':
+                continue
+            kind = record['kind']
+            counts[kind if kind in counts else 'other'] += 1
+        return counts
 
     @property
     def duplicates(self) -> int:

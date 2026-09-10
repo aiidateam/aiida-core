@@ -35,7 +35,7 @@ def spread(n):
     return list(range(int(n)))
 
 
-@task(outputs=['value', 'again'])
+@task(outputs=['value', 'keep_going'])
 def step_down(value):
     """Take one off the value, and say whether there is anything left to take off."""
     return value - 1, value - 1 > 0
@@ -81,9 +81,9 @@ def pipeline(start, by, refine_it):
     with refined.otherwise:
         refined.returns(total=add(x=start, y=0).total)
 
-    with loop(condition='again', value=refined.total, again=True) as counting:
+    with loop(condition='keep_going', value=refined.total) as counting:
         stepped = step_down(value=counting.value)
-        counting.returns(value=stepped.value, again=stepped.again)
+        counting.returns(value=stepped.value, keep_going=stepped.keep_going)
 
     combined = combine(pair={'left': counting.value, 'right': doubled.total})
 

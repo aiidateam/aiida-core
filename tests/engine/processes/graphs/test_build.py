@@ -19,6 +19,7 @@ from aiida.engine import (
     BranchTask,
     Endpoint,
     LoopTask,
+    Many,
     MapGraphTask,
     MapTask,
     OutputNames,
@@ -201,25 +202,13 @@ def count_down_from_a_task(x, y):
     return {'value': counting.value}
 
 
-class TotalOf(WorkChain):
+@task(outputs=['total'])
+def total_of(parts: Many[int]) -> int:
     """Reduce what a fan-out produced, which arrives as one namespace keyed by item.
 
-    A namespace input is what takes a result per item, and a `@task` function cannot declare one: every parameter
-    it has is a port holding one value.
+    A parameter holds one value, so taking many needs `Many`, which declares a namespace instead of a port.
     """
-
-    @classmethod
-    def define(cls, spec):
-        super().define(spec)
-        spec.input_namespace('parts', valid_type=orm.Int, dynamic=True)
-        spec.outline(cls.total)
-        spec.output('total', valid_type=orm.Int)
-
-    def total(self):
-        self.out('total', orm.Int(sum(part.value for part in self.inputs.parts.values())).store())
-
-
-total_of = task(TotalOf)
+    return sum(part.value for part in parts.values())
 
 
 @graph
@@ -577,6 +566,18 @@ def test_a_region_says_the_word_it_was_written_with(region, word):
     with pytest.raises(TypeError, match=f'`{word}` writes part of a graph'):
         with region():
             pass
+
+
+def test_a_task_function_can_reduce_a_fan_out():
+    """`Many` is what lets a function take the results of a fan-out, which arrive one per item."""
+    spec = total_of.process_class.spec()
+
+    assert spec.inputs['parts'].dynamic, 'a namespace rather than a port, so it takes them all'
+
+    results, node = run_get_node(sum_of_shifted, values=[1, 2, 3], by=10)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 36  # 11 + 12 + 13
 
 
 def test_an_output_inside_a_container_is_refused():

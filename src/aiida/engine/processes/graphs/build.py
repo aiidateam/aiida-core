@@ -15,7 +15,7 @@ import functools
 import inspect
 import typing as t
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
@@ -38,13 +38,16 @@ from aiida.engine.processes.process import Process
 from aiida.orm import CalcFunctionNode
 
 __all__ = (
+    'Branch',
     'Each',
     'GraphBuilder',
     'GraphHandle',
     'GraphInput',
+    'Loop',
     'MappedOutput',
     'MappedOutputs',
     'ProcessHandle',
+    'Region',
     'TaskHandle',
     'TaskOutput',
     'TaskOutputs',
@@ -234,16 +237,59 @@ def _holds_reference(value: t.Any) -> bool:
 class GraphBuilder:
     """Collects the tasks and dependencies of a graph while its function runs."""
 
-    def __init__(self, parameters: t.Sequence[str] = ()) -> None:
+    def __init__(self, parameters: t.Sequence[str] = (), parent: GraphBuilder | None = None) -> None:
         self._tasks: list[GraphTask] = []
         self._dependencies: list[Dependency] = []
         self._inputs: dict[str, list[tuple[str, str]]] = {name: [] for name in parameters}
         self._used: Counter[str] = Counter()
+        # The graph this one is being written inside, if any. A graph written in place reaches values around it,
+        # and each of those becomes an input of this graph, wired where it is placed.
+        self._parent = parent
+        self._captures: dict[t.Any, str] = {}
 
     @property
     def _placed(self) -> set[str]:
         """Return the names of the tasks placed in the graph so far."""
         return {task.name for task in self._tasks}
+
+    @property
+    def captures(self) -> dict[str, t.Any]:
+        """Return the values this graph takes from the one around it, by the name it takes each under."""
+        return {name: value for value, name in self._captures.items()}
+
+    def place(self, task: GraphTask) -> None:
+        """Put a task in the graph, replacing whatever stands under its name.
+
+        Replacing rather than adding is what lets a region be written in more than one block, since the second
+        block knows more about the same task than the first one did.
+        """
+        for index, placed in enumerate(self._tasks):
+            if placed.name == task.name:
+                self._tasks[index] = task
+                return
+
+        self._tasks.append(task)
+
+    def _take_from_outside(self, value: t.Any, origin: str, referrer: str) -> GraphInput:
+        """Return the input this graph takes an outer value under, declaring it the first time it is seen.
+
+        :param origin: what the value is called where it comes from, which names the input taken for it.
+        :param referrer: what reaches for it, which is what an error names.
+        :raises ValueError: if there is no graph around this one, so nothing could ever supply the value.
+        """
+        if self._parent is None:
+            raise ValueError(
+                f'{referrer} `{origin}`, which is not part of this graph. A graph written inside another reaches '
+                f'nothing outside itself, so take `{origin}` as a parameter of this graph and pass it in where '
+                f'the graph is placed.'
+            )
+
+        if value not in self._captures:
+            taken = origin.replace('.', '__')
+            self._captures[value] = taken
+            self._inputs.setdefault(taken, [])
+
+        return GraphInput(name=self._captures[value])
 
     def add_task(self, handle: TaskHandle, arguments: dict[str, t.Any]) -> TaskOutputs:
         """Place a task in the graph, and record where each of its inputs comes from.
@@ -373,12 +419,11 @@ class GraphBuilder:
 
         for key, value in arguments.items():
             port = f'{prefix}{key}'
+            referrer = f'`{name}` takes `{port}` from'
 
             if isinstance(value, GraphInput):
-                if value.name not in self._inputs:
-                    self._refuse_foreign(name, port, value.name)
-
-                self._inputs[value.name].append((name, port))
+                taken = value if value.name in self._inputs else self._take_from_outside(value, value.name, referrer)
+                self._record_input(taken.name, name, port)
                 continue
 
             reference = _as_reference(value)
@@ -392,11 +437,16 @@ class GraphBuilder:
 
             if reference is not None:
                 if reference.task not in self._placed:
-                    self._refuse_foreign(name, port, reference.task)
+                    taken = self._take_from_outside(reference, f'{reference.task}.{reference.port}', referrer)
+                    self._record_input(taken.name, name, port)
+                    continue
 
-                self._dependencies.append(
-                    Dependency(source=reference.task, source_port=reference.port, target=name, target_port=port)
-                )
+                edge = Dependency(source=reference.task, source_port=reference.port, target=name, target_port=port)
+
+                # Wiring the same thing twice is what a region written in two blocks does, once per block.
+                if edge not in self._dependencies:
+                    self._dependencies.append(edge)
+
                 continue
 
             if isinstance(value, dict) and _holds_reference(value):
@@ -413,6 +463,11 @@ class GraphBuilder:
             inputs[key] = value
 
         return inputs
+
+    def _record_input(self, taken: str, name: str, port: str) -> None:
+        """Record that an input of the graph feeds one port of one task, once however often it is wired."""
+        if (name, port) not in self._inputs[taken]:
+            self._inputs[taken].append((name, port))
 
     @staticmethod
     def _refuse_foreign(name: str, key: str, origin: str) -> t.NoReturn:
@@ -445,11 +500,15 @@ class GraphBuilder:
 
     def finish(self, returned: t.Any) -> GraphSpec:
         """Return the graph that was built, taking what the function returned as the graph's outputs."""
+        # What is returned is worked out first: one of those may belong to the graph around this one, which this
+        # graph then takes as an input of its own, and the inputs have to be read after that has happened.
+        outputs = self._declared_outputs(returned)
+
         return GraphSpec(
             tasks=tuple(self._tasks),
             dependencies=tuple(self._dependencies),
             inputs={name: tuple(targets) for name, targets in self._inputs.items()},
-            outputs=self._declared_outputs(returned),
+            outputs=outputs,
         )
 
     def _declared_outputs(self, returned: t.Any) -> dict[str, Endpoint]:
@@ -460,7 +519,7 @@ class GraphBuilder:
         if isinstance(returned, dict):
             return {name: self._output_source(value, name) for name, value in returned.items()}
 
-        source = self._as_source(returned)
+        source = self._as_source(returned, 'it')
 
         if source is None:
             raise ValueError(
@@ -475,20 +534,30 @@ class GraphBuilder:
 
         :raises ValueError: if the value is neither the output of a task nor an input of the graph.
         """
-        source = self._as_source(value)
+        source = self._as_source(value, f'`{name}`')
 
         if source is None:
             raise ValueError(f'graph output `{name}` is not the output of a task, nor an input of the graph.')
 
         return source
 
-    @staticmethod
-    def _as_source(value: t.Any) -> Endpoint | None:
-        """Return the output source a returned value stands for, or ``None`` if it stands for neither."""
+    def _as_source(self, value: t.Any, output: str) -> Endpoint | None:
+        """Return the output source a returned value stands for, or ``None`` if it stands for neither.
+
+        A graph written inside another can return something belonging to the one around it, which it reaches the
+        only way it can: by taking it as an input and passing that straight back out.
+        """
+        referrer = f'this graph returns {output} from'
+
         if isinstance(value, GraphInput):
-            return Endpoint(task=None, port=value.name)
+            taken = value if value.name in self._inputs else self._take_from_outside(value, value.name, referrer)
+            return Endpoint(task=None, port=taken.name)
 
         reference = _as_reference(value)
+
+        if reference is not None and reference.task not in self._placed:
+            origin = f'{reference.task}.{reference.port}'
+            return Endpoint(task=None, port=self._take_from_outside(reference, origin, referrer).name)
 
         return None if reference is None else Endpoint(task=reference.task, port=reference.port)
 
@@ -591,10 +660,10 @@ def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | N
 def branch(
     condition: t.Any,
     *,
-    then: GraphHandle,
+    then: GraphHandle | None = None,
     otherwise: GraphHandle | None = None,
     **inputs: t.Any,
-) -> TaskOutputs:
+) -> t.Any:
     """Run one of two graphs, depending on a value that only exists once the graph is running.
 
     Both branches are graphs, so what a branch takes and produces is what it declares, and the outputs of the
@@ -631,16 +700,25 @@ def branch(
             'between two graphs outside of one, call the one you want.'
         )
 
-    return builder.add_branch(condition, then=then, otherwise=otherwise, arguments=inputs)
+    if then is not None:
+        return builder.add_branch(condition, then=then, otherwise=otherwise, arguments=inputs)
+
+    if otherwise is not None or inputs:
+        raise TypeError(
+            '`branch` writes its sides in place when it is given no `then`, and one written in place takes what '
+            'it needs from around it, so there is nothing to pass here.'
+        )
+
+    return Branch(condition)
 
 
 def loop(
-    body: GraphHandle,
+    body: GraphHandle | None = None,
     *,
     condition: str = CONDITION_PORT,
     max_iterations: int = 1000,
     **inputs: t.Any,
-) -> TaskOutputs:
+) -> t.Any:
     """Run a graph again and again, on what the run before it produced, while a condition holds.
 
     Each run starts from what the one before it returned, with the values given here standing in for whatever the
@@ -680,7 +758,160 @@ def loop(
             'once outside of one, pass it to `run` or `submit`.'
         )
 
+    if body is None:
+        return Loop(condition=condition, max_iterations=max_iterations, state=inputs)
+
     return builder.add_loop(body, condition=condition, max_iterations=max_iterations, arguments=inputs)
+
+
+class Region:
+    """Part of a graph written as a ``with`` block.
+
+    The body is traced into a graph of its own, exactly as a ``@graph`` function is, so a region places the same
+    task that handing over a declared graph would. A value belonging to the graph around it becomes an input of
+    that body, wired where the region sits, which is what lets the body be written where it is used.
+
+    Inside the block the region carries whatever state it declares; once the block is closed it carries the
+    outputs the task will produce, which is what the rest of the graph takes.
+    """
+
+    def __init__(self, state: t.Mapping[str, t.Any] | None = None) -> None:
+        self._state = dict(state or {})
+        self._outer: GraphBuilder | None = None
+        self._builder: GraphBuilder | None = None
+        self._token: t.Any = None
+        self._returned: dict[str, t.Any] = {}
+        self._outputs: TaskOutputs | None = None
+        self._name: str | None = None
+
+    def __enter__(self) -> Region:
+        outer = ACTIVE_BUILDER.get()
+
+        if outer is None:
+            raise TypeError(
+                f'`{self._word}` writes part of a graph, so it is used in the body of a `@graph` function. To run '
+                f'a graph on its own, pass it to `run` or `submit`.'
+            )
+
+        self._outer = outer
+        self._builder = GraphBuilder(parameters=tuple(self._state), parent=outer)
+        self._token = ACTIVE_BUILDER.set(self._builder)
+
+        return self
+
+    def __exit__(self, *exception: t.Any) -> None:
+        ACTIVE_BUILDER.reset(self._token)
+        builder, self._builder = self._builder, None
+
+        # A body left half written by an exception is not placed, so what escapes is the error itself.
+        if exception[0] is None:
+            assert builder is not None
+            self._close(builder)
+
+    def returns(self, **outputs: t.Any) -> None:
+        """Declare what this region produces, which is what the graph around it can take from it."""
+        self._returned.update(outputs)
+
+    def __getattr__(self, name: str) -> t.Any:
+        # Only called for names that are not real attributes, so nothing here can shadow the machinery above.
+        if name.startswith('_'):
+            raise AttributeError(name)
+
+        state, builder = self.__dict__.get('_state', {}), self.__dict__.get('_builder')
+
+        if builder is not None:
+            if name in state:
+                return GraphInput(name=name)
+
+            raise AttributeError(
+                f'`{self._word}` carries {sorted(state) or "nothing"} while its body is being written, not '
+                f'`{name}`. The outputs it produces are there once the block is closed.'
+            )
+
+        outputs = self.__dict__.get('_outputs')
+
+        if outputs is None:
+            raise AttributeError(f'`{self._word}` produces `{name}` once its block is closed, not before.')
+
+        return getattr(outputs, name)
+
+    @property
+    def _word(self) -> str:
+        """Return what to call this region in a message, which is the word it is written with."""
+        return type(self).__name__.lower()
+
+    def _close(self, builder: GraphBuilder) -> None:
+        """Place the task this region stands for, now that its body has been written."""
+        raise NotImplementedError
+
+    def _place(self, task: GraphTask, arguments: dict[str, t.Any], outputs: t.Iterable[str]) -> None:
+        """Wire what the task takes from the graph around it, put it there, and hold on to what it produces."""
+        assert self._outer is not None
+        self._outer.place(replace(task, inputs=self._outer._wire(task.name, arguments)))
+        self._outputs = TaskOutputs(task=task.name, ports=dict.fromkeys(outputs))
+
+    def _named(self, word: str) -> str:
+        """Return the name this region is placed under, which stays the same across its blocks."""
+        assert self._outer is not None
+
+        if self._name is None:
+            self._name = self._outer._unique_name(word)
+
+        return self._name
+
+
+class Branch(Region):
+    """A branch whose sides are written in place, as returned by :func:`branch` without a graph to run."""
+
+    def __init__(self, condition: t.Any) -> None:
+        super().__init__()
+        self._condition = condition
+        self._body: GraphSpec | None = None
+        self._taking_the_other_side = False
+
+    @property
+    def otherwise(self) -> Branch:
+        """Return the block to write the other side of the branch in, run when the condition does not hold."""
+        if self._body is None:
+            raise ValueError('`otherwise` is the second side of a branch, so it follows the block writing the first.')
+
+        self._taking_the_other_side = True
+        self._returned = {}
+
+        return self
+
+    def _close(self, builder: GraphBuilder) -> None:
+        body = builder.finish(self._returned)
+        name = self._named('branch')
+
+        if self._taking_the_other_side:
+            assert self._body is not None
+            task: GraphTask = BranchTask(name=name, body=self._body, otherwise=body)
+        else:
+            self._body = body
+            task = BranchTask(name=name, body=body)
+
+        self._place(task, {**builder.captures, CONDITION_PORT: self._condition}, self._body.outputs)
+
+
+class Loop(Region):
+    """A loop whose body is written in place, as returned by :func:`loop` without a graph to run."""
+
+    def __init__(self, condition: str, max_iterations: int, state: t.Mapping[str, t.Any]) -> None:
+        super().__init__(state)
+        self._condition = condition
+        self._max_iterations = max_iterations
+
+    def _close(self, builder: GraphBuilder) -> None:
+        body = builder.finish(self._returned)
+        task = LoopTask(
+            name=self._named('loop'),
+            body=body,
+            condition_port=self._condition,
+            max_iterations=self._max_iterations,
+        )
+
+        self._place(task, {**self._state, **builder.captures}, body.outputs)
 
 
 class ProcessHandle:

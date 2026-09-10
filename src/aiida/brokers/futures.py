@@ -83,4 +83,5 @@ def capture_exceptions(
         if isinstance(exception, ignore):
             raise
 
-        future.set_exception(exception)
+        with contextlib.suppress(asyncio.InvalidStateError, concurrent.futures.InvalidStateError):
+            future.set_exception(exception)

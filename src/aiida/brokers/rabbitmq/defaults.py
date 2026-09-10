@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import logging
 import os
 import typing as t
@@ -36,27 +35,23 @@ TASK_PREFETCH_COUNT = 0
 TASK_FETCH_TIMEOUT = 5.0
 
 
-def __getattr__(name: str) -> t.Any:
-    """Lazily construct the default message encoder/decoder.
+def _encode(*args: t.Any, **kwargs: t.Any) -> t.Any:
+    """Encode a message, importing YAML only when a message is sent."""
+    import yaml
 
-    Importing ``yaml`` at module load time would pull it into every ``verdi``
-    invocation (via ``BROKER_DEFAULTS``), but ``yaml`` is banned from the CLI
-    startup path, see ``verdi devel check-undesired-imports``. The constructed
-    partials are cached in the module namespace so this runs only once.
-    """
-    if name == 'ENCODER':
-        import yaml
+    return yaml.dump(*args, encoding='utf-8', **kwargs)
 
-        encoder = functools.partial(yaml.dump, encoding='utf-8')
-    elif name == 'DECODER':
-        import yaml
 
-        encoder = functools.partial(yaml.load, Loader=yaml.FullLoader)
-    else:
-        msg = f'module {__name__!r} has no attribute {name!r}'
-        raise AttributeError(msg)
-    globals()[name] = encoder
-    return encoder
+def _decode(*args: t.Any, **kwargs: t.Any) -> t.Any:
+    """Decode a message, importing YAML only when a message is received."""
+    import yaml
+
+    kwargs['Loader'] = yaml.FullLoader
+    return yaml.load(*args, **kwargs)
+
+
+ENCODER = _encode
+DECODER = _decode
 
 
 BROKER_DEFAULTS = AttributeDict(

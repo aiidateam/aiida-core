@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit
 
 __all__ = ('DEFAULT_COMM_URI', 'connect')
 
@@ -27,7 +28,7 @@ DEFAULT_COMM_URI = 'amqp://guest:guest@127.0.0.1/'
 
 def connect(uri: str = DEFAULT_COMM_URI, **kwargs: Any) -> Any:
     """Create a communicator connection using a URI."""
-    if uri.startswith('amqp'):
+    if urlsplit(uri).scheme in ('amqp', 'amqps'):
         from aiida.brokers.rabbitmq import threadcomms  # pylint: disable=import-outside-toplevel
 
         return threadcomms.connect(connection_params=uri, **kwargs)

@@ -19,7 +19,8 @@ from dataclasses import dataclass, field, replace
 
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
-from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess, holds
+from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
+from aiida.engine.processes.graphs.run import holds
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     DEFINED_TASKS,

@@ -32,6 +32,7 @@ from aiida.engine import (
     loop,
     run_get_node,
     select,
+    subgraph,
     submit,
     task,
 )
@@ -240,6 +241,16 @@ def sum_of_shifted(values, by):
     """Reduce what a fan-out over a single task produced."""
     shifted = add(x=each(values), y=by)
     return {'total': total_of(parts=shifted.total).total}
+
+
+@graph
+def group_two_steps(x, y):
+    """Group two tasks into a graph of their own, written where it is used."""
+    with subgraph() as grouped:
+        first = add(x=x, y=y)
+        grouped.returns(total=add(x=first.total, y=y).total)
+
+    return {'total': add(x=grouped.total, y=100).total}
 
 
 @graph
@@ -531,6 +542,41 @@ def test_select_returns_the_node_it_was_given():
     chosen = results['chosen']
 
     assert chosen.uuid == node.inputs.graph_inputs.first.uuid, 'the very node it was handed, not a copy'
+
+
+def test_a_graph_written_in_place_is_placed_as_one_task():
+    """What the block groups becomes one task, so the graph around it waits on the whole of it."""
+    declaration = group_two_steps.build()
+
+    assert [node.name for node in declaration.tasks] == ['subgraph', 'add']
+    assert isinstance(declaration.task('subgraph'), SubgraphTask)
+    assert [node.name for node in declaration.task('subgraph').body.tasks] == ['add', 'add_2']
+    assert sorted(declaration.task('subgraph').body.inputs) == ['x', 'y']
+
+
+def test_a_graph_written_in_place_runs():
+    """It runs as a child process of its own, and what it returns feeds the task after it."""
+    results, node = run_get_node(group_two_steps, x=1, y=2)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 105  # ((1 + 2) + 2) grouped, then + 100
+
+    called = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
+    assert [entry.link_label for entry in called] == ['subgraph']
+
+
+@pytest.mark.parametrize(
+    'region, word',
+    [
+        pytest.param(lambda: each([1, 2]), 'each', id='each'),
+        pytest.param(subgraph, 'subgraph', id='subgraph'),
+    ],
+)
+def test_a_region_says_the_word_it_was_written_with(region, word):
+    """A region names itself by what the reader typed, which for `each` is not the name of its class."""
+    with pytest.raises(TypeError, match=f'`{word}` writes part of a graph'):
+        with region():
+            pass
 
 
 def test_an_output_inside_a_container_is_refused():

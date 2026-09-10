@@ -44,6 +44,9 @@ SUPPORTED_SPEC_VERSIONS: frozenset[str] = frozenset({SPEC_VERSION})
 TASK_SPEC_VERSION: str = '1.0'
 """Version of the task declaration format, stored with every serialized spec."""
 
+SUPPORTED_TASK_SPEC_VERSIONS: frozenset[str] = frozenset({TASK_SPEC_VERSION})
+"""Versions of the task format that can be read back, which a stored task is checked against."""
+
 DEFINED_TASKS: dict[str, t.Any] = {}
 """Every task that has been declared in this interpreter, by the name it is referenced under.
 
@@ -63,6 +66,26 @@ is. The kind is what a reader dispatches on, so it separates tasks the graph tre
 executors that differ: a task running a `CalcJob` is of kind `process` just as one running a process function is,
 because it is still one process submitted with its inputs.
 """
+
+
+def readable_version(version: t.Any, supported: frozenset[str], what: str) -> str:
+    """Return the version a stored declaration says it is, refusing one that cannot be read back.
+
+    A declaration is stored as provenance and read by later versions of AiiDA, so one written by a newer version
+    is refused rather than read as though it were this one.
+
+    :param what: what is being read, which the error names.
+    :raises ValueError: if the version is not one this version of AiiDA reads.
+    """
+    if version not in supported:
+        readable = ', '.join(f'`{name}`' for name in sorted(supported))
+        msg = (
+            f'cannot read a {what} declaration of version `{version}`, this version of AiiDA reads {readable}. '
+            f'A {what} stored by a newer version of AiiDA has to be run with that version.'
+        )
+        raise ValueError(msg)
+
+    return t.cast(str, version)
 
 
 def has_port(ports: PortNamespace, path: str) -> bool:
@@ -221,10 +244,15 @@ class TaskSpec:
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> TaskSpec:
+        """Return the task a serialized declaration describes.
+
+        :param data: the declaration, as written by :meth:`to_dict`.
+        :raises ValueError: if the declaration is of a version this version of AiiDA does not read.
+        """
         return cls(
             identifier=data['identifier'],
             executor=ExecutorReference.from_dict(data['executor']),
-            version=data.get('version', TASK_SPEC_VERSION),
+            version=readable_version(data.get('version'), SUPPORTED_TASK_SPEC_VERSIONS, 'task'),
         )
 
 
@@ -766,15 +794,7 @@ class GraphSpec:
         :param data: the declaration, as written by :meth:`to_dict`.
         :raises ValueError: if the declaration is of a version this version of AiiDA does not read.
         """
-        version = data.get('version')
-
-        if version not in SUPPORTED_SPEC_VERSIONS:
-            supported = ', '.join(f'`{name}`' for name in sorted(SUPPORTED_SPEC_VERSIONS))
-            msg = (
-                f'cannot read a graph declaration of version `{version}`, this version of AiiDA reads {supported}. '
-                f'A graph stored by a newer version of AiiDA has to be run with that version.'
-            )
-            raise ValueError(msg)
+        version = readable_version(data.get('version'), SUPPORTED_SPEC_VERSIONS, 'graph')
 
         return cls(
             tasks=tuple(GraphTask.from_dict(task) for task in data['tasks']),

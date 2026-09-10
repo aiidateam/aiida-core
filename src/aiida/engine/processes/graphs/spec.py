@@ -86,15 +86,6 @@ def has_port(ports: PortNamespace, path: str) -> bool:
     return has_port(port, rest) if isinstance(port, PortNamespace) else False
 
 
-def port_names(ports: PortNamespace) -> dict[str, t.Any]:
-    """Return the names a namespace declares, nested the way its namespaces are.
-
-    A port maps to ``None`` and a namespace to the names under it, which is what lets an output be referred to
-    before anything has run, one name at a time.
-    """
-    return {name: port_names(port) if isinstance(port, PortNamespace) else None for name, port in ports.items()}
-
-
 @dataclass(frozen=True)
 class ExecutorReference:
     """Importable reference to the process that realizes a task.

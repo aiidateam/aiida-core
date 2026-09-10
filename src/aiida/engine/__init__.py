@@ -59,6 +59,7 @@ __all__ = (
     'MappedOutput',
     'MappedOutputs',
     'ObjectLoader',
+    'OutputNames',
     'OutputPort',
     'PastException',
     'PortNamespace',

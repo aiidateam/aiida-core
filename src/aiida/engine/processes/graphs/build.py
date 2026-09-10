@@ -15,9 +15,10 @@ import functools
 import inspect
 import typing as t
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
+from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
@@ -32,7 +33,6 @@ from aiida.engine.processes.graphs.spec import (
     ProcessTask,
     SubgraphTask,
     TaskSpec,
-    port_names,
 )
 from aiida.engine.processes.process import Process
 from aiida.orm import CalcFunctionNode
@@ -46,6 +46,7 @@ __all__ = (
     'Loop',
     'MappedOutput',
     'MappedOutputs',
+    'OutputNames',
     'ProcessHandle',
     'Region',
     'TaskHandle',
@@ -131,6 +132,47 @@ def each(collection: t.Any) -> Each:
     return Each(collection=collection)
 
 
+@dataclass(frozen=True)
+class OutputNames:
+    """Which names may be written after the dot on a task's outputs, before anything has run.
+
+    This is read off a task's port namespace, and is not a second one: a graph, a branch and a loop declare
+    output names with no ports behind them, and this is the one shape both of those arrive in.
+
+    A namespace that takes whatever it is given has names nobody declared, such as the outputs a `ShellJob`
+    gets from its parser, so naming one of those is allowed rather than checked.
+    """
+
+    names: dict[str, OutputNames | None] = field(default_factory=dict)
+    dynamic: bool = False
+
+    def __contains__(self, name: str) -> bool:
+        return name in self.names or self.dynamic
+
+    def __len__(self) -> int:
+        return len(self.names)
+
+    def __iter__(self) -> t.Iterator[str]:
+        return iter(self.names)
+
+    def under(self, name: str) -> OutputNames | None:
+        """Return the names inside one of these, or ``None`` where it is a port rather than a namespace."""
+        return self.names.get(name)
+
+    @classmethod
+    def of(cls, ports: PortNamespace) -> OutputNames:
+        """Return the names a port namespace has, nested the way its namespaces are."""
+        return cls(
+            names={name: cls.of(port) if isinstance(port, PortNamespace) else None for name, port in ports.items()},
+            dynamic=ports.dynamic,
+        )
+
+    @classmethod
+    def named(cls, names: t.Iterable[str]) -> OutputNames:
+        """Return exactly these names, which is what a graph declares as its outputs."""
+        return cls(names=dict.fromkeys(names))
+
+
 class TaskOutputs:
     """References to the outputs that a task placed in a graph will produce.
 
@@ -140,16 +182,16 @@ class TaskOutputs:
 
     _output_class: t.ClassVar[type[TaskOutput]] = TaskOutput
 
-    def __init__(self, task: str, ports: t.Mapping[str, t.Any], prefix: str = '') -> None:
+    def __init__(self, task: str, ports: OutputNames, prefix: str = '') -> None:
         self.task = task
         self.ports = ports
         self.prefix = prefix
 
     def __getattr__(self, name: str) -> t.Any:
         # Only called for names that are not real attributes, so the ports cannot shadow ``task`` or ``ports``.
-        ports = self.__dict__.get('ports', {})
+        ports = self.__dict__.get('ports')
 
-        if name not in ports:
+        if ports is None or name not in ports:
             raise AttributeError(f'`{self.__dict__.get("task")}` has no output `{self._path(name)}`.')
 
         return self._reference(name)
@@ -160,7 +202,7 @@ class TaskOutputs:
 
     def _reference(self, name: str) -> t.Any:
         """Return the reference to one of these outputs, which for a namespace is the outputs under it."""
-        task, under = self.__dict__['task'], self.__dict__['ports'][name]
+        task, under = self.__dict__['task'], self.__dict__['ports'].under(name)
 
         if under is None:
             return self._output_class(task=task, port=self._path(name))
@@ -309,7 +351,7 @@ class GraphBuilder:
         self._tasks.append(task)
         outputs_class = MappedOutputs if isinstance(task, MapTask) else TaskOutputs
 
-        return outputs_class(task=name, ports=port_names(handle.task_spec.outputs))
+        return outputs_class(task=name, ports=OutputNames.of(handle.task_spec.outputs))
 
     def add_graph(self, handle: GraphHandle, arguments: dict[str, t.Any]) -> TaskOutputs:
         """Place a graph inside the graph being built, and record where each of its inputs comes from.
@@ -328,7 +370,7 @@ class GraphBuilder:
         name = self._unique_name(handle.identifier)
         self._tasks.append(SubgraphTask(name=name, inputs=self._wire(name, arguments), body=body))
 
-        return TaskOutputs(task=name, ports=dict.fromkeys(body.outputs))
+        return TaskOutputs(task=name, ports=OutputNames.named(body.outputs))
 
     def add_branch(
         self,
@@ -359,7 +401,7 @@ class GraphBuilder:
 
         self._tasks.append(BranchTask(name=name, inputs=self._wire(name, wired), body=body, otherwise=other))
 
-        return TaskOutputs(task=name, ports=dict.fromkeys(body.outputs))
+        return TaskOutputs(task=name, ports=OutputNames.named(body.outputs))
 
     def add_loop(
         self,
@@ -390,7 +432,7 @@ class GraphBuilder:
         )
         self._tasks.append(task)
 
-        return TaskOutputs(task=name, ports=dict.fromkeys(task.body.outputs))
+        return TaskOutputs(task=name, ports=OutputNames.named(task.body.outputs))
 
     @staticmethod
     def _refuse_each(identifier: str, kind: str, arguments: dict[str, t.Any]) -> None:
@@ -859,7 +901,7 @@ class Region:
         """Wire what the task takes from the graph around it, put it there, and hold on to what it produces."""
         assert self._outer is not None
         self._outer.place(replace(task, inputs=self._outer._wire(task.name, arguments)))
-        self._outputs = TaskOutputs(task=task.name, ports=dict.fromkeys(outputs))
+        self._outputs = TaskOutputs(task=task.name, ports=OutputNames.named(outputs))
 
     def _named(self, word: str) -> str:
         """Return the name this region is placed under, which stays the same across its blocks."""

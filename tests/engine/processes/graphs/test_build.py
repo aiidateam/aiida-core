@@ -13,12 +13,14 @@ from __future__ import annotations
 import pytest
 
 from aiida import orm
+from aiida.calculations.shell import ShellJob
 from aiida.common.links import LinkType
 from aiida.engine import (
     BranchTask,
     Endpoint,
     LoopTask,
     MapTask,
+    OutputNames,
     SubgraphTask,
     TaskOutput,
     TaskOutputs,
@@ -319,13 +321,36 @@ def test_a_fan_out_result_passed_to_a_task_is_refused_where_it_is_written():
 
 def test_an_output_inside_a_namespace_is_named_the_way_it_is_written():
     """A namespace among the outputs is walked into, and what comes out is a reference to the one port."""
-    outputs = TaskOutputs(task='combined', ports={'sums': {'total': None}, 'flag': None})
+    names = OutputNames(names={'sums': OutputNames.named(['total']), 'flag': None})
+    outputs = TaskOutputs(task='combined', ports=names)
 
     assert outputs.sums.total == TaskOutput(task='combined', port='sums.total')
     assert outputs.flag == TaskOutput(task='combined', port='flag')
 
     with pytest.raises(AttributeError, match=r'has no output `sums\.nope`'):
         outputs.sums.nope
+
+
+def test_an_output_a_task_only_declares_once_it_runs_can_still_be_named():
+    """A namespace taking whatever it is given has outputs nobody declared, so naming one is allowed."""
+    outputs = TaskOutputs(task='shell', ports=OutputNames(names={'retrieved': None}, dynamic=True))
+
+    assert outputs.retrieved == TaskOutput(task='shell', port='retrieved')
+    assert outputs.stdout == TaskOutput(task='shell', port='stdout'), 'a parser decides this one, not the spec'
+
+
+def test_a_shell_job_is_placed_like_any_other_process():
+    """`ShellJob` is a process in core, so a graph runs one with no shell-specific code of its own."""
+    shell = task(ShellJob)
+
+    @graph
+    def run_a_command(code, arguments):
+        return {'out': shell(code=code, arguments=arguments).stdout}
+
+    declaration = run_a_command.build()
+
+    assert [node.name for node in declaration.tasks] == ['ShellJob']
+    assert declaration.outputs == {'out': Endpoint(task='ShellJob', port='stdout')}
 
 
 def test_a_process_class_is_placed_by_the_ports_it_declares():

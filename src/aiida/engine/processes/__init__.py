@@ -57,6 +57,7 @@ __all__ = (
     'MapTask',
     'MappedOutput',
     'MappedOutputs',
+    'OutputNames',
     'OutputPort',
     'PortNamespace',
     'Process',

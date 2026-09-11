@@ -432,6 +432,58 @@ class TestProcess:
         )
         assert exposed_outputs == expected
 
+    def test_exposed_outputs_dynamic(self):
+        """Test the ``Process.exposed_outputs`` method for a process class with a dynamic output namespace.
+
+        A dynamic namespace declares no port for the outputs it accepts, so there are no names to match the emitted
+        outputs against, and every output the node emitted was exposed by it.
+        """
+        from aiida.common import AttributeDict
+        from aiida.common.links import LinkType
+        from aiida.engine.utils import instantiate_process
+        from aiida.manage import get_manager
+
+        runner = get_manager().get_runner()
+
+        class ChildProcess(Process):
+            """Dummy process that declares one output and accepts any other."""
+
+            _node_class = orm.WorkflowNode
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('input', valid_type=orm.Int)
+                spec.output('output', valid_type=orm.Int)
+                spec.outputs.dynamic = True
+                spec.outputs.valid_type = orm.Int
+
+        class ParentProcess(Process):
+            """Dummy process that exposes the outputs of ``ChildProcess``."""
+
+            _node_class = orm.WorkflowNode
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('input', valid_type=orm.Int)
+                spec.expose_outputs(ChildProcess)
+
+        node_child = orm.WorkflowNode().store()
+        node_output = orm.Int(1).store()
+        node_output.base.links.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
+        node_undeclared = orm.Int(2).store()
+        node_undeclared.base.links.add_incoming(node_child, link_label='undeclared', link_type=LinkType.RETURN)
+
+        class OtherProcess(ChildProcess):
+            """Dummy process that takes any name as well, and whose outputs were never exposed."""
+
+        process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
+
+        expected = AttributeDict({'output': node_output, 'undeclared': node_undeclared})
+        assert process.exposed_outputs(node_child, ChildProcess) == expected
+        assert process.exposed_outputs(node_child, OtherProcess) == AttributeDict({})
+
     def test_exposed_outputs_non_existing_namespace(self):
         """Test the ``Process.exposed_outputs`` method for non-existing namespace."""
         from aiida.common.links import LinkType

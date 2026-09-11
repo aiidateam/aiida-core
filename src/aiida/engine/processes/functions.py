@@ -44,7 +44,12 @@ from aiida.orm.utils.mixins import FunctionCalculationMixin
 if TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
 
-__all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
+__all__ = (
+    'FunctionProcess',
+    'Many',
+    'calcfunction',
+    'workfunction',
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +71,8 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
     def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]: ...
 
     def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]: ...
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]: ...
 
     is_process_function: bool
 
@@ -130,10 +137,16 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType], FunctionType]:
+def process_function(
+    node_class: type[ProcessNode],
+    base_class: type[FunctionProcess] | None = None,
+    outputs: t.Sequence[str] | None = None,
+) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
+    :param base_class: the ``FunctionProcess`` subclass to build, which defaults to ``FunctionProcess`` itself
+    :param outputs: names of the output ports to declare, instead of a dynamic output namespace
     """
 
     def decorator(function: FunctionType) -> FunctionType:
@@ -142,7 +155,7 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
         """
-        process_class = FunctionProcess.build(function, node_class=node_class)
+        process_class = FunctionProcess.build(function, node_class=node_class, base_class=base_class, outputs=outputs)
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
@@ -223,18 +236,45 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        def get_launch_inputs(**inputs: t.Any) -> dict[str, t.Any]:
+            """Return the inputs to launch the process with, which a function takes as they are given."""
+            return inputs
+
         decorated_function.run = decorated_function  # type: ignore[attr-defined]
         decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
         decorated_function.run_get_node = run_get_node  # type: ignore[attr-defined]
         decorated_function.is_process_function = True  # type: ignore[attr-defined]
         decorated_function.node_class = node_class  # type: ignore[attr-defined]
         decorated_function.process_class = process_class  # type: ignore[attr-defined]
+        decorated_function.get_launch_inputs = get_launch_inputs  # type: ignore[attr-defined]
         decorated_function.recreate_from = process_class.recreate_from  # type: ignore[attr-defined]
         decorated_function.spec = process_class.spec  # type: ignore[attr-defined]
 
         return decorated_function  # type: ignore[return-value]
 
     return decorator
+
+
+_ManyType = t.TypeVar('_ManyType')
+
+
+class Many(dict[str, _ManyType]):
+    """Annotates a parameter that takes many values at once, keyed by name.
+
+    A parameter holds one value, so a task cannot be handed the results of a fan-out, which arrive one per item.
+    Annotating it with this declares a namespace instead, and the function is given a mapping:
+
+    >>> @task(outputs=['total'])
+    >>> def total_of(parts: Many[int]) -> int:
+    >>>     return sum(part.value for part in parts.values())
+
+    The keys are whatever named the results, which for a fan-out is the key of each item.
+    """
+
+
+def _takes_many(annotation: t.Any) -> bool:
+    """Return whether a parameter is annotated as taking many values at once."""
+    return annotation is Many or t.get_origin(annotation) is Many
 
 
 def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
@@ -276,6 +316,38 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
     return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
 
 
+def _declare_output_types(
+    outputs: t.Sequence[str] | None, return_annotation: t.Any
+) -> dict[str, tuple[t.Any, ...]] | None:
+    """Return the output ports to declare for a function process, or ``None`` to keep the namespace dynamic.
+
+    Explicit ``outputs`` take precedence over the return annotation. A ``TypedDict`` annotation declares one port
+    per field, any other annotation declares a single ``result`` port, and no annotation leaves the namespace
+    dynamic, since then the outputs are not known before the function has run.
+
+    :param outputs: names of the output ports to declare.
+    :param return_annotation: the return annotation of the wrapped function, if it has one.
+    :returns: a mapping of port name onto its valid types, or ``None`` if the namespace should stay dynamic.
+    :raises TypeError: if ``outputs`` is not a sequence of port names.
+    """
+    if outputs is not None:
+        if isinstance(outputs, str):
+            # A bare string is a sequence of strings, so it would silently declare one port per character.
+            raise TypeError(f'`outputs` should be a sequence of port names, got the string `{outputs}`.')
+        return {name: (Data,) for name in outputs}
+
+    if return_annotation is None or return_annotation is type(None):
+        return None
+
+    if t.is_typeddict(return_annotation):
+        return {
+            name: infer_valid_type_from_type_annotation(hint) or (Data,)
+            for name, hint in t.get_type_hints(return_annotation).items()
+        }
+
+    return {Process.SINGLE_OUTPUT_LINKNAME: infer_valid_type_from_type_annotation(return_annotation) or (Data,)}
+
+
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
 
@@ -291,7 +363,12 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func: FunctionType, node_class: type[ProcessNode]) -> type[FunctionProcess]:
+    def build(
+        func: FunctionType,
+        node_class: type[ProcessNode],
+        base_class: type[FunctionProcess] | None = None,
+        outputs: t.Sequence[str] | None = None,
+    ) -> type[FunctionProcess]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -350,11 +427,16 @@ class FunctionProcess(Process):
             if parameter.kind is parameter.VAR_KEYWORD:
                 var_keyword = key
 
+        # Filled in once the class below exists, so that `define` can name it and reach what comes after it. A
+        # bare `super()` here is `super(FunctionProcess, cls)`, since this sits inside a method of that class,
+        # which would walk past whatever `base_class` has to say.
+        generated: type[FunctionProcess] | None = None
+
         def define(cls, spec):
             """Define the spec dynamically"""
             from aiida.engine.processes.generic.ports import UNSPECIFIED
 
-            super().define(spec)
+            super(generated, cls).define(spec)  # type: ignore[arg-type]
 
             for parameter in signature.parameters.values():
                 if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
@@ -392,6 +474,15 @@ class FunctionProcess(Process):
                 else:
                     indirect_default = default  # type: ignore[assignment]
 
+                if _takes_many(annotation):
+                    spec.input_namespace(
+                        parameter.name,
+                        valid_type=valid_type,
+                        required=default is UNSPECIFIED,
+                        help=help_string,
+                    )
+                    continue
+
                 spec.input(
                     parameter.name,
                     valid_type=valid_type,
@@ -411,14 +502,20 @@ class FunctionProcess(Process):
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
-            # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
-            # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
-            # the output namespace can be nested.
-            spec.outputs.valid_type = (Data, dict)
+            declared_outputs = _declare_output_types(outputs, annotations.get('return'))
 
-        return type(
+            if declared_outputs is None:
+                # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
+                # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
+                spec.outputs.valid_type = (Data, dict)
+            else:
+                for output_name, output_valid_type in declared_outputs.items():
+                    spec.output(output_name, valid_type=output_valid_type)
+                spec.outputs.dynamic = False
+
+        generated = type(
             func.__qualname__,
-            (FunctionProcess,),
+            (base_class or FunctionProcess,),
             {
                 '__module__': func.__module__,
                 '__name__': func.__name__,
@@ -431,6 +528,8 @@ class FunctionProcess(Process):
                 '_node_class': node_class,
             },
         )
+
+        return generated
 
     @classmethod
     def validate_inputs(cls, *args: t.Any, **kwargs: t.Any) -> None:
@@ -533,10 +632,26 @@ class FunctionProcess(Process):
         if self.node.exit_status is not None:
             return ExitCode(self.node.exit_status, self.node.exit_message)
 
-        # Now the original functions arguments need to be reconstructed from the inputs to the process, as they were
-        # passed to the original function call. To do so, all positional parameters are popped from the inputs
-        # dictionary and added to the positional arguments list.
-        args = []
+        args, kwargs = self._function_arguments()
+
+        from aiida.engine.processes.greenback import run_with_portal
+
+        result = await run_with_portal(self._func, *args, **kwargs)
+
+        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
+            return result  # type: ignore[unreachable]
+
+        self._out_result(result)
+
+        return ExitCode()
+
+    def _function_arguments(self) -> tuple[list[t.Any], dict[str, Data]]:
+        """Return the arguments of the wrapped function, rebuilt from the inputs of the process.
+
+        They were passed as they are written in the call, so all positional parameters are popped from the inputs
+        and added to the positional arguments, and what is left over is passed by keyword.
+        """
+        args: list[t.Any] = []
         kwargs: dict[str, Data] = {}
         inputs = dict(self.inputs or {})
 
@@ -555,15 +670,16 @@ class FunctionProcess(Process):
         # The remaining inputs have to be keyword arguments.
         kwargs.update(**inputs)
 
-        from aiida.engine.processes.greenback import run_with_portal
+        return args, kwargs
 
-        result = await run_with_portal(self._func, *args, **kwargs)
+    def _out_result(self, result: t.Any) -> None:
+        """Attach the value returned by the wrapped function to the output ports.
 
-        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
-            return result  # type: ignore[unreachable]
-
-        if isinstance(result, Data):  # type: ignore[unreachable]
-            self.out(self.SINGLE_OUTPUT_LINKNAME, result)  # type: ignore[unreachable]
+        :param result: the value returned by the wrapped function.
+        :raises TypeError: if the value cannot be attached to an output port.
+        """
+        if isinstance(result, Data):
+            self.out(self.SINGLE_OUTPUT_LINKNAME, result)
         elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
                 self.out(name, value)
@@ -572,5 +688,3 @@ class FunctionProcess(Process):
                 f"Function process returned an output with unsupported type '{result.__class__}'\n"
                 'Must be a Data type or a mapping of {string: Data}'
             )
-
-        return ExitCode()

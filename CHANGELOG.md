@@ -44,6 +44,99 @@ The `core.shell` calculation job and parser entry points keep the names they had
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### Submit a process function from a running process
+
+A running process can submit a process function as a child and await it:
+
+```python
+class AdditionWorkChain(WorkChain):
+
+    def submit_addition(self):
+        child = self.submit(add, x=Int(1), y=Int(2), metadata={'call_link_label': 'addition'})
+        return ToContext(addition=child)
+```
+
+`Runner.submit` and `Runner.schedule` previously rejected a process function, while the top-level `aiida.engine.submit` accepted one, so the two entry points disagreed.
+The submitted function is recorded as a called child under its link label, and a daemon worker runs it as long as the function is importable.
+
+#### `task`: declare a Python function as a task
+
+The `task` decorator declares a plain Python function as a task: a process that records its execution, that takes and returns plain Python values, and that carries a `TaskSpec` describing what it runs and the ports it takes and produces.
+
+```python
+from aiida.engine import submit, task
+
+
+@task(outputs=['total', 'product'])
+def sum_product(x, y):
+    return x + y, x * y
+
+
+node = submit(sum_product, x=2, y=3)
+list(sum_product.task_spec.outputs.keys())  # ['total', 'product']
+```
+
+The `TaskSpec` holds the name of the task and an importable reference to the process that realizes it, and derives its ports from that process, so it can be written out with `to_dict` and read back with `from_dict`.
+
+Output ports come from `outputs=` when given, otherwise from the return annotation, where a `TypedDict` declares one port per field.
+Without either, the output namespace stays dynamic, as it is for a calcfunction.
+A returned tuple is mapped onto the declared ports in order.
+
+A `calcfunction` requires its return value to be a `Data` node or a mapping of them.
+A task serializes what the function returns with `to_aiida_type`, the same way the input ports of a function process already serialize what is passed in.
+This is why a task records a calculation: creating data is something a workfunction may not do.
+
+#### Run a graph of tasks
+
+A `GraphSpec` declares a graph of tasks: which tasks to run, which output of one feeds which input of another, and which of those the graph returns. `GraphProcess` runs it.
+
+```python
+from aiida.engine import GraphProcess, GraphSpec, Dependency, ProcessTask, submit
+from aiida.orm import Dict
+
+graph = GraphSpec(
+    tasks=(
+        ProcessTask(name='start', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+        ProcessTask(name='sum', spec=add.task_spec, inputs={'y': 3}),
+    ),
+    links=(Dependency(source='start', source_port='total', target='sum', target_port='x'),),
+    outputs={'total': ('sum', 'total')},
+)
+
+node = submit(GraphProcess, dag=Dict(dict=graph.to_dict()))
+```
+
+Every task whose inputs are ready is submitted, so it is a process in its own right: it gets its own node, is scheduled like any other process, and is recorded as a called child under the name the graph gave it.
+The graph keeps only the names it dispatched and the ones that have finished, carried in its checkpoint.
+A graph whose links contain a cycle, or that refers to a port a task does not have, is refused where it is declared.
+
+#### Write a graph of tasks as ordinary Python
+
+The `graph` decorator declares a graph by running its body once with the tasks recording themselves instead of running.
+
+```python
+from aiida.engine import graph, run_get_node, task
+
+
+@task(outputs=['total'])
+def add(x, y):
+    return x + y
+
+
+@graph
+def add_twice(x, y):
+    first = add(x=x, y=y)
+    return add(x=first.total, y=y)
+
+
+results, node = run_get_node(add_twice, x=1, y=2)
+```
+
+Passing the output of one task into another is what records the dependency between them, and what the function returns becomes the outputs of the graph.
+A graph is launched by passing it to `run` or `submit`, like any other process; use `.build(...)` for the declaration on its own.
+A task used twice gets a distinct name for each use, so both can be addressed and linked.
+A task with a single output can be passed whole; one with several asks for the output to be named.
+
 ### Behavior changes
 
 ### Fixes

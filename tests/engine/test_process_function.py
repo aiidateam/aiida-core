@@ -24,7 +24,8 @@ import re
 import pytest
 
 from aiida import orm
-from aiida.engine import ExitCode, calcfunction, run, run_get_node, submit, workfunction
+from aiida.common.links import LinkType
+from aiida.engine import ExitCode, ToContext, WorkChain, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 
@@ -70,6 +71,11 @@ def function_args(data_a):
 @workfunction
 def function_args_with_default(data_a=lambda: orm.Int(DEFAULT_INT)):
     return data_a
+
+
+@calcfunction
+def function_add(int_a, int_b):
+    return int_a + int_b
 
 
 @calcfunction
@@ -452,6 +458,43 @@ def test_submit_launchers():
     # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
     node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))
     assert isinstance(node, orm.WorkFunctionNode)
+
+
+def test_submit_from_process():
+    """A running process can submit a process function as a child, await it, and use its result.
+
+    A workflow could previously only run a function inline on its own worker, which is what keeps
+    the function steps of a workflow from being distributed. The submitted function is recorded as
+    a called child under its own link label, so the workflow can address the task it dispatched.
+    """
+
+    class ParentWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.outline(cls.submit_child, cls.collect)
+            spec.outputs.dynamic = True
+
+        def submit_child(self):
+            child = self.submit(
+                function_add,
+                int_a=orm.Int(1),
+                int_b=orm.Int(2),
+                metadata={'call_link_label': 'addition'},
+            )
+            return ToContext(child=child)
+
+        def collect(self):
+            self.out('result', self.ctx.child.outputs.result)
+
+    results, node = run_get_node(ParentWorkChain)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['result'] == 3
+
+    called = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert [entry.link_label for entry in called] == ['addition']
+    assert isinstance(called[0].node, orm.CalcFunctionNode)
 
 
 def test_return_exit_code():

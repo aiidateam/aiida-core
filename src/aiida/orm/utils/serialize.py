@@ -20,7 +20,8 @@ import inspect
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol, cast, overload
+from types import ModuleType
+from typing import TYPE_CHECKING, Any, Protocol, cast, overload
 
 import yaml
 
@@ -28,8 +29,11 @@ from aiida import orm
 from aiida.common import AttributeDict, callables
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.loaders import get_object_loader
-from aiida.engine.processes.persistence import CHECKPOINT_PAYLOAD_TAG, CheckpointPayload
+from aiida.engine.processes.persistence import CHECKPOINT_PAYLOAD_TAG, CheckpointPayload, carried_modules
 from aiida.orm.utils.managers import NodeLinksManager
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 _ENUM_TAG = '!enum'
 _DATACLASS_TAG = '!dataclass'
@@ -42,19 +46,9 @@ _ATTRIBUTES_FROZENDICT_TAG = '!aiida:attributes_frozendict'
 _CALLABLE_TAG = '!aiida_callable'
 
 
-def _requires_callable_payload(data: Any) -> bool:
-    """Return whether ``data`` is a callable that a ``!!python/name:`` reference cannot recover.
-
-    PyYAML represents any callable as a reference to its ``__module__`` and ``__name__``. For a lambda, a closure, a
-    ``functools.partial`` or anything defined in ``__main__``, that name resolves to nothing, or worse, to a different
-    object that happens to share it. Those have to be represented by the callable itself.
-    """
-    return callable(data) and not callables.is_importable(data)
-
-
-def represent_callable(dumper: yaml.Dumper, value: Any) -> yaml.ScalarNode:
+def represent_callable(dumper: yaml.Dumper, value: Any, carry: Collection[ModuleType] = ()) -> yaml.ScalarNode:
     """Represent a callable in yaml by serializing it, including the state it closes over."""
-    return dumper.represent_scalar(_CALLABLE_TAG, base64.b64encode(callables.dumps(value)).decode('ascii'))
+    return dumper.represent_scalar(_CALLABLE_TAG, base64.b64encode(callables.dumps(value, carry=carry)).decode('ascii'))
 
 
 def callable_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Any:
@@ -202,8 +196,8 @@ class AiiDADumper(yaml.Dumper):
             return represent_group(self, data)
         if is_dataclass(data) and not inspect.isclass(data):
             return represent_dataclass(self, data)
-        if _requires_callable_payload(data):
-            return represent_callable(self, data)
+        if callable(data) and (carry := carried_modules(data)) is not None:
+            return represent_callable(self, data, carry.values())
 
         return super().represent_data(data)
 

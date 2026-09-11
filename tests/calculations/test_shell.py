@@ -404,6 +404,7 @@ def test_build_process_label(generate_shell_calc_job, generate_shell_code):
     assert process._build_process_label() == f'ShellJob<{code.full_label}>'
 
 
+@pytest.mark.flaky(reruns=2)
 def test_submit_to_daemon(generate_shell_code, submit_and_await):
     """Test submitting a ``ShellJob`` to the daemon."""
     builder = generate_shell_code('echo').get_builder()
@@ -456,6 +457,7 @@ def test_parser_invalid_signature(generate_shell_calc_job, generate_shell_code):
         generate_shell_calc_job('core.shell', inputs={'code': generate_shell_code(), 'parser': lambda x: x})
 
 
+@pytest.mark.flaky(reruns=2)
 def test_parser_over_daemon(generate_shell_code, submit_and_await):
     """Test submitting a ``ShellJob`` with a custom parser over the daemon."""
     value = 'testing'

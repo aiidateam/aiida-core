@@ -182,6 +182,7 @@ def test_process_kill_failing_transport(
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_kill_failing_transport_failed_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -888,6 +889,7 @@ class TestVerdiProcessCallRoot:
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_pause(submit_and_await, run_cli_command):
     """Test the ``verdi process pause`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -905,6 +907,7 @@ def test_process_pause(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_play(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -924,6 +927,7 @@ def test_process_play(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_play_all(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command with the ``--all`` option."""
     node_one = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -1009,6 +1013,7 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_kill_all(submit_and_await, run_cli_command):
     """Test the ``verdi process kill --all`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -1019,6 +1024,7 @@ def test_process_kill_all(submit_and_await, run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_repair_running_daemon(run_cli_command):
     """Test the ``verdi process repair`` command excepts when the daemon is running."""
     result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)

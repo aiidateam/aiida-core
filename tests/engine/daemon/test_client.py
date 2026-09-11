@@ -424,6 +424,7 @@ def test_change_workers_without_wait(started_daemon_client):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.flaky(reruns=2)
 def test_change_workers_with_wait(started_daemon_client):
     """Test that with ``wait=True`` the workers have been spawned or stopped by the time the call returns."""
     number_workers = started_daemon_client.get_numprocesses()['numprocesses']

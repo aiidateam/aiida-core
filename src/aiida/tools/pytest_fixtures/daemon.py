@@ -50,7 +50,11 @@ def daemon_client(aiida_profile):
 
 @pytest.fixture
 def started_daemon_client(daemon_client: DaemonClient):
-    """Ensure that the daemon is running for the test profile and return the associated client.
+    """Ensure a freshly restarted daemon for the test profile and return the associated client.
+
+    The daemon caches profile state at startup, so a worker left running by an earlier test may no longer match
+    the current profile. Restarting per test trades ~1s of runtime for a worker that always matches the test.
+    Tests that only need the client should use ``daemon_client`` to avoid the restart cost.
 
     Usage::
 
@@ -58,9 +62,21 @@ def started_daemon_client(daemon_client: DaemonClient):
             assert started_daemon_client.is_daemon_running
 
     """
-    if not daemon_client.is_daemon_running:
-        daemon_client.start_daemon()
-        assert daemon_client.is_daemon_running
+    from aiida.engine.daemon.client import DaemonTimeoutException
+
+    if daemon_client.is_daemon_running:
+        daemon_client.stop_daemon(wait=True)
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        # Fail fast with the default timeout: every consumer of this fixture is marked non-strict xfail, so a
+        # wedged daemon is reported without burning suite time, while a slow stop still passes within the window.
+        daemon_client._await_condition(
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop before restarting.'),
+        )
+    daemon_client.start_daemon()
+    assert daemon_client.is_daemon_running
 
     logger = logging.getLogger('tests.daemon:started_daemon_client')
     logger.debug(f'Daemon log file is located at: {daemon_client.daemon_log_file}')

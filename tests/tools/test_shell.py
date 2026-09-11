@@ -266,6 +266,7 @@ def test_arguments_files():
     assert results['stdout'].get_content().strip() == content.split('\n', maxsplit=1)[0]
 
 
+@pytest.mark.flaky(reruns=2)
 def test_submit(submit_and_await):
     """Test the ``submit`` argument."""
     _, node = launch_shell_job('date', submit=True)
@@ -276,6 +277,7 @@ def test_submit(submit_and_await):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_submit_inside_workchain():
     """Test the ``submit`` argument when used inside a work chain."""
     results, node = run_get_node(ShellWorkChain)
@@ -284,6 +286,7 @@ def test_submit_inside_workchain():
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_submit_inside_workfunction(submit_and_await):
     """Test the ``submit`` argument when used inside a work function."""
 

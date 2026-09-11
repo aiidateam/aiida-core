@@ -45,6 +45,17 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 
 ### Behavior changes
 
+#### `ShellJob` records the parser it is given
+
+The `parser` input of a `ShellJob` no longer stores the callable as a pickled node.
+It is recorded in a `CallableData` node, which holds the source text, where it came from, and either the module and name that can import it or a fingerprint that tells it apart from callables that share a name.
+The callable itself travels with the running process, in its checkpoint, and is gone once the process terminates.
+
+A parser that can be imported is therefore still re-runnable from an archive, and one that cannot, a lambda or a closure, is not: the archive shows what ran, without carrying code that executes when the node is read.
+
+An entry point string is recorded the same way, so the `parser` input is a `CallableData` whichever form it was given in.
+Passing an `EntryPointData` node to it directly no longer validates; pass the entry point string, which is the documented form.
+
 #### Checkpoints carry callables that no name can recover
 
 A checkpoint can now carry a lambda, a closure or a `functools.partial`, which are serialized in full, while anything importable keeps the name reference it had.

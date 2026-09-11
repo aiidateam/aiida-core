@@ -897,6 +897,19 @@ class CalcJob(Process):
 
         return exit_code
 
+    def _get_parse_kwargs(self, retrieved_temporary_folder: str | None) -> dict[str, Any]:
+        """Return the keyword arguments for :meth:`~aiida.parsers.parser.Parser.parse` that the node cannot provide.
+
+        A parser is constructed from the node alone, so whatever the process holds has to be passed here instead.
+        What this returns is applied last, so it wins over the outputs the parser collects from the node.
+
+        :param retrieved_temporary_folder: Path to the folder holding the retrieved temporary files, if there is one.
+        """
+        if not retrieved_temporary_folder:
+            return {}
+
+        return {'retrieved_temporary_folder': retrieved_temporary_folder}
+
     def parse_retrieved_output(self, retrieved_temporary_folder: str | None = None) -> ExitCode | None:
         """Parse the retrieved data by calling the parser plugin if it was defined in the inputs."""
         parser_class = self.node.get_parser_class()
@@ -906,9 +919,7 @@ class CalcJob(Process):
 
         parser = parser_class(self.node)
         parse_kwargs = parser.get_outputs_for_parsing()
-
-        if retrieved_temporary_folder:
-            parse_kwargs['retrieved_temporary_folder'] = retrieved_temporary_folder
+        parse_kwargs.update(self._get_parse_kwargs(retrieved_temporary_folder))
 
         exit_code = parser.parse(**parse_kwargs)
 

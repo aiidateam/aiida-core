@@ -692,7 +692,21 @@ which should print
     If you find yourself reusing the same parser often, you can also register it with an entry point and use that for the ``parser`` input.
     See the `AiiDA documentation <https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugins_develop.html?highlight=entry%20point#registering-plugins-through-entry-points>`_ for details on how to register entry points.
     For example, if the parser is registered with the name ``some.parser`` in the group ``aiida.parsers``, the ``parser`` input will accept ``aiida.parsers:some.parser``.
-    The entry point will automatically be validated and wrapped in a :class:`~aiida.orm.nodes.data.entry_point.EntryPointData`.
+    The entry point will automatically be validated and recorded in a :class:`~aiida.orm.nodes.data.callable.CallableData`, the same node type a callable is recorded in.
+
+.. note::
+
+    A parser passed as a callable is recorded in a :class:`~aiida.orm.nodes.data.callable.CallableData` node, which
+    holds its source text and enough to identify it, while the callable itself travels with the running process and is
+    gone once that process terminates.
+    So the provenance graph shows what parsed the job, and reading it never runs the parser.
+
+    The consequence is that a parser defined in a module you import is still callable from a stored node, while one
+    defined in a script you run directly, in a notebook, or inside another function is not.
+    Those all live in ``__main__``, which names a different module in the interpreter that would have to import it, so
+    the name identifies nothing there.
+    If you want to re-run a parser later, from an archive or on another machine, put it in a module you import and make
+    sure that module travels with the data.
 
 
 .. _how-to:keep-command-path-relative:

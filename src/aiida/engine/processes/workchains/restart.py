@@ -446,19 +446,19 @@ class BaseRestartWorkChain(WorkChain):
         existing_outputs = self.node.base.links.get_outgoing(link_type=LinkType.RETURN).all_link_labels()
 
         for name, port in self.spec().outputs.items():
-            try:
-                output = outputs[name]
-            except KeyError:
-                if port.required:
-                    self.report(
-                        f'required output `{name}` was not an output of {self.ctx.process_name}<{node.pk}> '
-                        f'(or an incorrect class/output is being exposed).'
-                    )
+            if port.required and name not in outputs:
+                self.report(
+                    f'required output `{name}` was not an output of {self.ctx.process_name}<{node.pk}> '
+                    f'(or an incorrect class/output is being exposed).'
+                )
+
+        # A dynamic output namespace declares no ports, so the names to attach can only come from what was
+        # exposed.
+        for name, output in outputs.items():
+            if name in existing_outputs:
+                self.logger.info(f'output `{name}` was already attached, skipping.')
             else:
-                if name in existing_outputs:
-                    self.logger.info(f'output `{name}` was already attached, skipping.')
-                else:
-                    self.out(name, output)
+                self.out(name, output)
 
         return outputs
 

@@ -401,3 +401,27 @@ def test_a_task_that_was_never_declared_here_says_so():
 
     with pytest.raises(ImportError, match='define it in a module that can be imported'):
         reference.load()
+
+
+def test_a_task_waits_for_one_it_takes_nothing_from():
+    """A dependency that names no ports orders two tasks, which is what waiting on a task alone is."""
+    tasks = (
+        ProcessTask(name='first', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+        ProcessTask(name='second', spec=add.task_spec, inputs={'x': 2, 'y': 2}),
+    )
+
+    on_its_own = GraphSpec(tasks=tasks)
+    ordered = GraphSpec(tasks=tasks, dependencies=(Dependency(source='first', target='second'),))
+
+    assert on_its_own.ready(done=set(), dispatched=set()) == ['first', 'second']
+    assert ordered.ready(done=set(), dispatched=set()) == ['first']
+    assert ordered.ready(done={'first'}, dispatched={'first'}) == ['second']
+
+
+def test_a_dependency_naming_one_port_is_refused():
+    """A value comes from a port and arrives at one, so naming a port at one end alone says nothing."""
+    with pytest.raises(ValueError, match='names a source port and no target port'):
+        Dependency(source='first', target='second', source_port='total')
+
+    with pytest.raises(ValueError, match='names a target port and no source port'):
+        Dependency(source='first', target='second', target_port='x')

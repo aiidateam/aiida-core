@@ -527,7 +527,7 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
 
     # Verify files were stashed
     if stash_mode == StashMode.COPY.value:
-        expected_base = Path(target_base) / source_node.uuid[0:2] / source_node.uuid[2:4] / source_node.uuid[4:]
+        expected_base = Path(stash_data_node.target_basepath)
     else:
         temp_for_extract = tmp_path / 'extract'
         temp_for_extract.mkdir()

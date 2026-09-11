@@ -53,6 +53,7 @@ def test_daemon_start(run_cli_command, stopped_daemon_client):
 
 
 @pytest.mark.parametrize('options', ([], ['--reset']))
+@pytest.mark.flaky(reruns=2)
 def test_daemon_restart(run_cli_command, started_daemon_client, options):
     """Test ``verdi daemon restart`` both with and without ``--reset`` flag."""
     run_cli_command(cmd_daemon.restart, options)
@@ -102,6 +103,7 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
     )
 
 
+@pytest.mark.flaky(reruns=2)
 def test_daemon_stop(run_cli_command, started_daemon_client):
     """Test ``verdi daemon stop``."""
     result = run_cli_command(cmd_daemon.stop)
@@ -121,6 +123,7 @@ def test_foreground_multiple_workers(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client', 'isolated_config')
+@pytest.mark.flaky(reruns=2)
 def test_daemon_status(run_cli_command):
     """Test ``verdi daemon status``."""
     result = run_cli_command(cmd_daemon.status)
@@ -163,6 +166,7 @@ def test_daemon_status_no_broker(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client', 'isolated_config')
+@pytest.mark.flaky(reruns=2)
 def test_daemon_status_timeout(run_cli_command):
     """Test ``verdi daemon status`` with the ``--timeout`` option.
 

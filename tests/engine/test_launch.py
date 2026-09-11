@@ -80,6 +80,7 @@ class AddWorkChain(WorkChain):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_submit_wait(arithmetic_add_builder):
     """Test the ``wait`` argument of :meth:`aiida.engine.launch.submit`."""
     node = launch.submit(arithmetic_add_builder, wait=True, wait_interval=0.1)

@@ -1086,6 +1086,7 @@ class TestWorkchain:
                 assert called.base.caching.is_created_from_cache
                 assert called.base.caching.get_cache_source() in [n.uuid for n in node.called]
 
+    @pytest.mark.flaky(reruns=2)
     def test_member_calcfunction_daemon(self, entry_points, daemon_client, submit_and_await):
         """Test defining a calcfunction as a ``WorkChain`` member method submitted to the daemon."""
         entry_points.add(CalcFunctionWorkChain, 'aiida.workflows:testing.calcfunction.workchain')

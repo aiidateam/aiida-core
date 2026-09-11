@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import enum
+import functools
 import json
 import os
 import pathlib
@@ -64,11 +65,17 @@ class PackageVersionInfo(_PackageVersionInfoRequired, total=False):
 PackageVersionSnapshot: t.TypeAlias = dict[str, PackageVersionInfo]
 
 
-class DaemonEnvInfo(t.TypedDict):
-    """Content written to the daemon version file."""
+class _DaemonEnvInfoRequired(t.TypedDict):
+    """Fields every daemon version file carries."""
 
     packages: PackageVersionSnapshot
     python_binary: str
+
+
+class DaemonEnvInfo(_DaemonEnvInfoRequired, total=False):
+    """Content written to the daemon version file."""
+
+    sys_path: list[str]
 
 
 class _VcsInfo(t.TypedDict, total=False):
@@ -212,6 +219,43 @@ def get_daemon_client(profile_name: str | None = None) -> DaemonClient:
         profile = get_config().get_profile(profile_name)
 
     return DaemonClient(profile)
+
+
+@functools.lru_cache(maxsize=16)
+def _daemon_env_info_path(profile_name: str) -> str:
+    """Return the env info file of a profile. Assembling it walks the whole configuration, so it is cached."""
+    return get_daemon_client(profile_name)._daemon_env_info_file
+
+
+@functools.lru_cache(maxsize=16)
+def _read_daemon_import_paths(profile_name: str, stamp: float) -> tuple[str, ...] | None:
+    """Read the daemon's import paths from its env info file. Keyed on ``stamp`` so a restart invalidates the entry."""
+    env_info = get_daemon_client(profile_name)._get_daemon_env_info()
+
+    if env_info is None or 'sys_path' not in env_info:
+        return None
+
+    return tuple(env_info['sys_path'])
+
+
+def get_daemon_import_paths(profile_name: str | None = None) -> tuple[str, ...] | None:
+    """Return the ``sys.path`` the daemon's workers import from, as captured when the daemon was started.
+
+    A name persisted for a worker to resolve later is only recoverable if that path finds it, and a submitting
+    interpreter can extend its own ``sys.path`` long after the daemon froze this one. Reading the file is cached per
+    profile and re-read only when the daemon writes it again, since the alternative is a stat and a parse on every
+    state transition of every process.
+
+    :param profile_name: Optional profile name, defaulting to the currently loaded profile.
+    :returns: The daemon's import paths, or ``None`` if the daemon is not running or predates this being recorded.
+    """
+    try:
+        name = get_daemon_client(profile_name).profile.name
+        stamp = pathlib.Path(_daemon_env_info_path(name)).stat().st_mtime
+    except (ConfigurationError, OSError):
+        return None
+
+    return _read_daemon_import_paths(name, stamp)
 
 
 class DaemonClient:
@@ -717,12 +761,28 @@ class DaemonClient:
 
         return validated
 
-    def _write_version_file(self) -> None:
-        """Write the current package version snapshot to the daemon version file."""
+    def _write_version_file(self, *, launched_workers: bool = True) -> None:
+        """Write the current package version snapshot to the daemon version file.
+
+        :param launched_workers: Whether this process launched the workers. Only then does its ``sys.path`` describe
+            theirs; a circus restart re-execs them with the environment the watcher already holds, so the paths of
+            whoever asked for the restart say nothing about the workers and must not replace what is recorded.
+        """
         env_info: DaemonEnvInfo = {
             'packages': self._get_package_version_snapshot(),
             'python_binary': sys.executable,
         }
+
+        if launched_workers:
+            # The workers inherit this as ``PYTHONPATH`` (see ``get_env``), so it is the set of paths against which a
+            # name persisted in a checkpoint will be resolved, frozen at the moment the daemon was started. A relative
+            # entry, ``''`` above all, means the directory of whoever is asking, which is a different one there.
+            env_info['sys_path'] = [entry for entry in sys.path if pathlib.Path(entry).is_absolute()]
+        else:
+            recorded = self._get_daemon_env_info()
+
+            if recorded is not None and 'sys_path' in recorded:
+                env_info['sys_path'] = recorded['sys_path']
         try:
             pathlib.Path(self._daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
         except ConfigurationError:
@@ -748,7 +808,13 @@ class DaemonClient:
         if not isinstance(python_binary, str):
             return None
 
-        return DaemonEnvInfo(packages=packages, python_binary=python_binary)
+        env_info = DaemonEnvInfo(packages=packages, python_binary=python_binary)
+
+        sys_path = data.get('sys_path')
+        if isinstance(sys_path, list) and all(isinstance(entry, str) for entry in sys_path):
+            env_info['sys_path'] = sys_path
+
+        return env_info
 
     def increase_workers(self, number: int, timeout: int | None = None, wait: bool = False) -> dict[str, t.Any]:
         """Increase the number of workers.
@@ -835,7 +901,7 @@ class DaemonClient:
         command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
         response = self.call_client(command, timeout=timeout)
         if response.get('status') == 'ok':
-            self._write_version_file()
+            self._write_version_file(launched_workers=False)
         return response
 
     def stop_daemon(self, wait: bool = True, timeout: int | None = None) -> dict[str, t.Any]:

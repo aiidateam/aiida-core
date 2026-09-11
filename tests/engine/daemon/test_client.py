@@ -9,7 +9,9 @@
 """Unit tests for the `DaemonClient` class."""
 
 import json
+import os
 import pathlib
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -22,6 +24,7 @@ from aiida.engine.daemon.client import (
     _get_dist_commit_hash,
     _get_dist_editable_path,
     get_daemon_client,
+    get_daemon_import_paths,
 )
 
 pytestmark = pytest.mark.requires_broker
@@ -148,6 +151,52 @@ class TestDaemonEnvInfo:
         monkeypatch.setattr(stopped_daemon_client._config, 'filepaths', lambda profile: modified_filepaths)
 
         assert stopped_daemon_client._get_daemon_env_info() is None
+
+    @staticmethod
+    def test_write_version_file_records_the_import_paths(stopped_daemon_client, monkeypatch):
+        """Test that the paths the workers import from are written down, since they are what a name resolves against.
+
+        A relative entry is left out. It means the directory of whoever is asking, and the workers ask from another
+        one, so recording it would answer questions about this process as though they were about them.
+        """
+        monkeypatch.setattr(sys, 'path', ['', 'a/relative/dir', '/an/absolute/dir'])
+        stopped_daemon_client._write_version_file()
+
+        assert stopped_daemon_client._get_daemon_env_info()['sys_path'] == ['/an/absolute/dir']
+
+    @staticmethod
+    def test_get_daemon_env_info_without_import_paths(stopped_daemon_client):
+        """Test that a file written before the import paths were recorded still reads, without them."""
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
+        version_file.parent.mkdir(parents=True, exist_ok=True)
+        version_file.write_text(json.dumps({'packages': {}, 'python_binary': sys.executable}), encoding='utf8')
+
+        env_info = stopped_daemon_client._get_daemon_env_info()
+
+        assert env_info is not None
+        assert 'sys_path' not in env_info
+
+    @staticmethod
+    def test_get_daemon_import_paths_without_a_daemon(stopped_daemon_client):
+        """Test that nothing is claimed about the reader when no daemon has written a file."""
+        pathlib.Path(stopped_daemon_client._daemon_env_info_file).unlink(missing_ok=True)
+
+        assert get_daemon_import_paths(stopped_daemon_client.profile.name) is None
+
+    @staticmethod
+    def test_get_daemon_import_paths_rereads_after_a_restart(stopped_daemon_client):
+        """Test that the cached paths follow the file, so a daemon started elsewhere is not read from a stale entry."""
+        stopped_daemon_client._write_version_file()
+        assert get_daemon_import_paths(stopped_daemon_client.profile.name) == tuple(sys.path)
+
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
+        version_file.write_text(
+            json.dumps({'packages': {}, 'python_binary': sys.executable, 'sys_path': ['/somewhere/else']}),
+            encoding='utf8',
+        )
+        os.utime(version_file, (0, 0))
+
+        assert get_daemon_import_paths(stopped_daemon_client.profile.name) == ('/somewhere/else',)
 
     @staticmethod
     def test_get_daemon_env_info_corrupt_file(stopped_daemon_client):
@@ -376,6 +425,35 @@ class TestDaemonEnvInfo:
         written = json.loads(version_file.read_text(encoding='utf8'))
         assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
         assert 'python_binary' in written
+
+    @staticmethod
+    def test_restart_daemon_keeps_the_workers_own_paths(stopped_daemon_client):
+        """Test that a restart does not replace the recorded paths with those of whoever asked for it.
+
+        Circus re-execs the workers with the environment its watcher already holds, so their ``sys.path`` is the one
+        frozen when the daemon started. A caller with a different one would otherwise record paths the workers do not
+        have, and a name resolved against those is a name the worker cannot import.
+        """
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
+        version_file.parent.mkdir(parents=True, exist_ok=True)
+        recorded = {
+            'packages': {'aiida-core': {'version': '2.6.0'}},
+            'python_binary': sys.executable,
+            'sys_path': ['/what/the/workers/have'],
+        }
+        version_file.write_text(json.dumps(recorded), encoding='utf8')
+
+        with (
+            patch.object(DaemonClient, 'call_client', return_value={'status': 'ok'}),
+            patch.object(
+                DaemonClient, '_get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
+            ),
+            patch.object(sys, 'path', ['/what/the/caller/has']),
+        ):
+            stopped_daemon_client.restart_daemon()
+
+        written = json.loads(version_file.read_text(encoding='utf8'))
+        assert written['sys_path'] == ['/what/the/workers/have']
 
     @staticmethod
     def test_restart_daemon_missing_version_file_configuration(stopped_daemon_client, monkeypatch):

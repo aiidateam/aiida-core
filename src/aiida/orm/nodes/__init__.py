@@ -36,6 +36,7 @@ __all__ = (
     'EnumData',
     'Float',
     'FolderData',
+    'GraphNode',
     'InstalledCode',
     'Int',
     'JsonableData',

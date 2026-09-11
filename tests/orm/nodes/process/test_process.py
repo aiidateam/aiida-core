@@ -29,8 +29,7 @@ def test_exit_code():
 
 
 @pytest.fixture
-@pytest.mark.usefixtures('aiida_profile')
-def process_nodes():
+def process_nodes(aiida_profile):
     """Return a list of tuples of a process node and whether they should be a valid cache source."""
     entry_point = 'aiida.calculations:core.arithmetic.add'
 

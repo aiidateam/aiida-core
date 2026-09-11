@@ -336,6 +336,22 @@ class GraphRun:
         """Return the tasks that have been started or skipped, which are the ones not to look at again."""
         return set(self.instances) | self.skipped
 
+    def frontier(self) -> list[str]:
+        """Return the tasks that could start now, deciding nothing.
+
+        This is what something ordering several graphs against each other asks each of them, since it has to know
+        what every one of them could do before saying which of them may. :meth:`step` is what decides, and it may
+        begin more than this named: beginning a task can settle it without running anything, which makes the tasks
+        after it ready in the same step.
+        """
+        going_round = [
+            task.name
+            for task in self.graph.tasks
+            if isinstance(task, LoopTask) and task.name in self.instances and self._loop_may_run_again(task)
+        ]
+
+        return going_round + self.graph.ready(self.settled, self.decided)
+
     def step(self) -> Step:
         """Return the runs to begin now, recording what was decided on the way.
 
@@ -468,29 +484,33 @@ class GraphRun:
 
     def _continue_loop(self, task: LoopTask, step: Step) -> None:
         """Run the body once more, on what the run before it produced, while there is reason to."""
-        runs = self.instances[task.name]
-
-        if any(instance not in self.done for instance in runs):
+        if not self._loop_wants_another_run(task):
             return
 
-        last = load_node(self.done[runs[-1]])
-
-        if not last.is_finished_ok:
-            return
-
-        produced = returned(last)
-
-        if not holds(produced.get(task.condition_port)):
-            return
-
-        if len(runs) >= task.max_iterations:
+        if len(self.instances[task.name]) >= task.max_iterations:
             step.note(
                 f'task `{task.name}` ran {task.max_iterations} times, which is as many as it may, so it stops '
                 f'with `{task.condition_port}` still true'
             )
             return
 
+        produced = returned(load_node(self.done[self.instances[task.name][-1]]))
         self._begin_iteration(task, {**self._inputs_for(task), **produced}, step)
+
+    def _loop_wants_another_run(self, task: LoopTask) -> bool:
+        """Return whether the value a loop goes round on still holds, so that its body would run again."""
+        runs = self.instances[task.name]
+
+        if any(instance not in self.done for instance in runs):
+            return False
+
+        last = load_node(self.done[runs[-1]])
+
+        return last.is_finished_ok and holds(returned(last).get(task.condition_port))
+
+    def _loop_may_run_again(self, task: LoopTask) -> bool:
+        """Return whether a loop has a run left to make, which it may though it has run before."""
+        return self._loop_wants_another_run(task) and len(self.instances[task.name]) < task.max_iterations
 
     def _begin_iteration(self, task: LoopTask, state: dict[str, t.Any], step: Step) -> None:
         """Begin one run of the body, on the state the loop has reached."""

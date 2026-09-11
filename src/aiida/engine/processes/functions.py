@@ -427,11 +427,16 @@ class FunctionProcess(Process):
             if parameter.kind is parameter.VAR_KEYWORD:
                 var_keyword = key
 
+        # Filled in once the class below exists, so that `define` can name it and reach what comes after it. A
+        # bare `super()` here is `super(FunctionProcess, cls)`, since this sits inside a method of that class,
+        # which would walk past whatever `base_class` has to say.
+        generated: type[FunctionProcess] | None = None
+
         def define(cls, spec):
             """Define the spec dynamically"""
             from aiida.engine.processes.generic.ports import UNSPECIFIED
 
-            super().define(spec)
+            super(generated, cls).define(spec)  # type: ignore[arg-type]
 
             for parameter in signature.parameters.values():
                 if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
@@ -508,7 +513,7 @@ class FunctionProcess(Process):
                     spec.output(output_name, valid_type=output_valid_type)
                 spec.outputs.dynamic = False
 
-        return type(
+        generated = type(
             func.__qualname__,
             (base_class or FunctionProcess,),
             {
@@ -523,6 +528,8 @@ class FunctionProcess(Process):
                 '_node_class': node_class,
             },
         )
+
+        return generated
 
     @classmethod
     def validate_inputs(cls, *args: t.Any, **kwargs: t.Any) -> None:
@@ -625,10 +632,26 @@ class FunctionProcess(Process):
         if self.node.exit_status is not None:
             return ExitCode(self.node.exit_status, self.node.exit_message)
 
-        # Now the original functions arguments need to be reconstructed from the inputs to the process, as they were
-        # passed to the original function call. To do so, all positional parameters are popped from the inputs
-        # dictionary and added to the positional arguments list.
-        args = []
+        args, kwargs = self._function_arguments()
+
+        from aiida.engine.processes.greenback import run_with_portal
+
+        result = await run_with_portal(self._func, *args, **kwargs)
+
+        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
+            return result  # type: ignore[unreachable]
+
+        self._out_result(result)
+
+        return ExitCode()
+
+    def _function_arguments(self) -> tuple[list[t.Any], dict[str, Data]]:
+        """Return the arguments of the wrapped function, rebuilt from the inputs of the process.
+
+        They were passed as they are written in the call, so all positional parameters are popped from the inputs
+        and added to the positional arguments, and what is left over is passed by keyword.
+        """
+        args: list[t.Any] = []
         kwargs: dict[str, Data] = {}
         inputs = dict(self.inputs or {})
 
@@ -647,16 +670,7 @@ class FunctionProcess(Process):
         # The remaining inputs have to be keyword arguments.
         kwargs.update(**inputs)
 
-        from aiida.engine.processes.greenback import run_with_portal
-
-        result = await run_with_portal(self._func, *args, **kwargs)
-
-        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
-            return result  # type: ignore[unreachable]
-
-        self._out_result(result)
-
-        return ExitCode()
+        return args, kwargs
 
     def _out_result(self, result: t.Any) -> None:
         """Attach the value returned by the wrapped function to the output ports.

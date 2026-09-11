@@ -1031,12 +1031,19 @@ class Process(ProcessBase):
             top_namespace = port_name.split(namespace_separator)[0]
             top_namespace_map[top_namespace].append(port_name)
 
+        # A dynamic output namespace declares no ports, so there are no names to match the emitted outputs against.
+        # Where such a namespace was exposed, everything the node emitted belongs to it.
+        takes_any_name = process_class.spec().outputs.dynamic
+
         for port_namespace in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
             # only the top-level key is stored in _exposed_outputs
+            exposed = self.spec()._exposed_outputs[port_namespace]
+            exposed_dynamically = takes_any_name and process_class in exposed
+
             for top_name in top_namespace_map:
                 if namespace is not None and namespace not in self.spec()._exposed_outputs:
                     raise KeyError(f'the namespace `{namespace}` is not an exposed namespace.')
-                if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:
+                if top_name in exposed[process_class] or exposed_dynamically:
                     output_key_map[top_name] = port_namespace
 
         result = {}

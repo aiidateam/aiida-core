@@ -1058,10 +1058,27 @@ def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
 
+    acknowledged = []
+
+    class FakeOutcome:
+        def set_result(self, value):
+            acknowledged.append(value)
+
+    class FakeTask:
+        body = {'args': {'pid': 3}}
+
+        @contextmanager
+        def processing(self):
+            yield FakeOutcome()
+
+    monkeypatch.setattr(process_control, 'iterate_process_tasks', lambda *args: [FakeTask()])
+
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are process tasks for terminated processes:' in result.output
     assert 'Inconsistencies detected between database and broker.' in result.output
     assert 'Attempting to fix inconsistencies' in result.output
+    assert 'Acknowledged task `3`' in result.output
+    assert acknowledged == [False]
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')

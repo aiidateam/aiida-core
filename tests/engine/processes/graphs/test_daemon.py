@@ -19,7 +19,18 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.engine import WorkChain, branch, each, graph, loop, submit, task
+from aiida.engine import (
+    ExitCode,
+    ProcessHandlerReport,
+    WorkChain,
+    branch,
+    each,
+    graph,
+    handler,
+    loop,
+    submit,
+    task,
+)
 
 pytestmark = pytest.mark.requires_broker
 
@@ -127,3 +138,35 @@ def test_a_task_is_loaded_from_the_module_it_names(submit_and_await):
     stored = node.inputs.graph.get_dict()
 
     assert stored['tasks'][1]['spec']['executor'] == {'module': __name__, 'name': 'spread'}
+
+
+@handler(exit_codes=ExitCode(410))
+def push_further(node, inputs):
+    """Ask for one more step than the run that gave up took."""
+    inputs['steps'] = orm.Int(inputs['steps'].value + 1)
+    return ProcessHandlerReport(do_break=True)
+
+
+@task(outputs=['value'], handlers=[push_further])
+def converge(steps):
+    """Converge only once it is given enough steps, which is what the handler gives it."""
+    if steps < 3:
+        return ExitCode(410, 'did not converge')
+    return {'value': steps * 10}
+
+
+@graph
+def converge_and_add(steps, by):
+    return {'total': add(x=converge(steps=steps).value, y=by).total}
+
+
+def test_a_handled_task_is_retried_by_the_worker(submit_and_await):
+    """A worker reads the handlers off the task it imports, so a run that failed is fixed where the graph runs."""
+    node = submit_and_await(submit(converge_and_add, steps=1, by=5), timeout=180)
+
+    assert node.is_finished_ok, node.exit_message
+    assert node.outputs.total == 35
+
+    handled = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).get_node_by_label('converge')
+
+    assert [child.exit_status for child in sorted(handled.called, key=lambda child: child.pk)] == [410, 410, 0]

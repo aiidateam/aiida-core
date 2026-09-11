@@ -19,6 +19,7 @@ from dataclasses import dataclass, field, replace
 
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
+from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
 from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
 from aiida.engine.processes.graphs.run import holds
 from aiida.engine.processes.graphs.spec import (
@@ -1108,18 +1109,26 @@ class TaskHandle:
 
     is_process_function: bool = True
 
-    def __init__(self, function: t.Any, spec: TaskSpec) -> None:
+    def __init__(self, function: t.Any, spec: TaskSpec, handlers: t.Sequence[TaskHandler] = ()) -> None:
         self._function = function
         self.task_spec = spec
-        functools.update_wrapper(self, function)
+        self._handled = handled(function.process_class, handlers, function) if handlers else None
+
+        # Only the name and the docstring are taken over. Copying the attributes of the process function as well
+        # would put them in this instance's dictionary, where they shadow everything this handle defines to run
+        # a task through the work chain that handles it.
+        functools.update_wrapper(self, function, updated=())
 
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         builder = ACTIVE_BUILDER.get()
 
-        if builder is None:
+        if builder is not None:
+            return builder.add_task(self, self.bind_arguments(*args, **kwargs))
+
+        if self._handled is None:
             return self._function(*args, **kwargs)
 
-        return builder.add_task(self, self.bind_arguments(*args, **kwargs))
+        return self.run(*args, **kwargs)
 
     def bind_arguments(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
         """Return the arguments of a call to this task, by the name of the parameter each is bound to."""
@@ -1127,10 +1136,12 @@ class TaskHandle:
 
     @property
     def process_class(self) -> type[Process]:
-        return self._function.process_class
+        """Return the process that runs this task, which for one declaring handlers is what applies them."""
+        return self._handled if self._handled is not None else self._function.process_class
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
-        return self._function.get_launch_inputs(**inputs)
+        launch = self._function.get_launch_inputs(**inputs)
+        return launch if self._handled is None else launch_under_namespace(launch)
 
     @property
     def node_class(self) -> t.Any:
@@ -1138,19 +1149,43 @@ class TaskHandle:
 
     @property
     def recreate_from(self) -> t.Any:
+        # A worker reaches this to pick up a run of the task itself, which is what the name of the task resolves
+        # to. The work chain that handles the task is reached by a name of its own.
         return self._function.recreate_from
 
     def spec(self) -> t.Any:
         return self._function.spec()
 
     def run(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        return self._function.run(*args, **kwargs)
+        if self._handled is None:
+            return self._function.run(*args, **kwargs)
+
+        return self.run_get_node(*args, **kwargs)[0]
 
     def run_get_node(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        return self._function.run_get_node(*args, **kwargs)
+        """Run the task and return what it produced and the node of the run.
+
+        A task that declares handlers produces what the work chain that handles it returns, which is its outputs
+        by name, where an unhandled one produces what its function returns.
+        """
+        if self._handled is None:
+            return self._function.run_get_node(*args, **kwargs)
+
+        from aiida.engine.launch import run_get_node
+
+        return run_get_node(self._handled, **self._launch_inputs(*args, **kwargs))
 
     def run_get_pk(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        return self._function.run_get_pk(*args, **kwargs)
+        if self._handled is None:
+            return self._function.run_get_pk(*args, **kwargs)
+
+        results, node = self.run_get_node(*args, **kwargs)
+
+        return results, node.pk
+
+    def _launch_inputs(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+        """Return the inputs of a call to this task, as the process that runs it takes them."""
+        return self.get_launch_inputs(**self.bind_arguments(*args, **kwargs))
 
 
 def task(
@@ -1158,6 +1193,7 @@ def task(
     *,
     outputs: t.Sequence[str] | None = None,
     identifier: str | None = None,
+    handlers: t.Sequence[TaskHandler] = (),
 ) -> t.Any:
     """Declare a standard python function as a task.
 
@@ -1190,11 +1226,25 @@ def task(
     >>> def relax_and_report(structure):
     >>>     return report(structure=relaxed(structure=structure).output_structure)
 
+    A task can say how to recover from a run that failed, with :func:`~aiida.engine.handler`. Such a task is run
+    by a :class:`~aiida.engine.processes.workchains.restart.BaseRestartWorkChain`, which is what retries it and
+    calls the handlers. A task is called the same way whether or not it handles, so that work chain's own inputs,
+    ``max_iterations`` and ``handler_overrides`` among them, are left at their defaults:
+
+    >>> @handler(exit_codes=converge.exit_codes.ERROR_DID_NOT_CONVERGE)
+    >>> def push_further(node, inputs):
+    >>>     inputs['steps'] = inputs['steps'] * 2
+    >>>     return ProcessHandlerReport(do_break=True)
+    >>>
+    >>> converging = task(converge, handlers=[push_further])
+
     :param function: The function to decorate, or the process class to declare a task.
     :param outputs: Names of the output ports to declare.
     :param identifier: Name of the task, which defaults to the name of the function or class.
+    :param handlers: Ways to recover from a run that failed, as declared by :func:`~aiida.engine.handler`.
     :return: The decorated function, carrying its ``task_spec``, or a handle placing the process in a graph.
-    :raises TypeError: if ``outputs`` is given for a process class, which declares its own.
+    :raises TypeError: if ``outputs`` is given for a process class, which declares its own, or if ``handlers``
+        is given for one, which has no importable name to reach the generated work chain by.
     """
 
     if isinstance(function, type):
@@ -1210,6 +1260,13 @@ def task(
                 f'apply to it.'
             )
 
+        if handlers:
+            raise TypeError(
+                f'`{function.__name__}` is a process, and a task is reached by the name it is declared under, '
+                f'which a process already has and a handled one would need a second of. Write a '
+                f'`BaseRestartWorkChain` around it and place that as the task.'
+            )
+
         return ProcessHandle(function, TaskSpec.from_process(function, identifier=identifier))
 
     def decorator(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, CalcFunctionNode]:
@@ -1220,9 +1277,10 @@ def task(
         decorated.process_class.spec()  # type: ignore[attr-defined]
 
         spec = TaskSpec.from_process(decorated, identifier=identifier)
-        DEFINED_TASKS[f'{spec.executor.module}:{spec.executor.name}'] = decorated
+        handle = TaskHandle(decorated, spec, handlers=handlers)
+        DEFINED_TASKS[f'{spec.executor.module}:{spec.executor.name}'] = handle
 
-        return TaskHandle(decorated, spec)  # type: ignore[return-value]
+        return handle  # type: ignore[return-value]
 
     if function is not None:
         return decorator(function)

@@ -48,6 +48,24 @@ The `core.shell` calculation job and parser entry points keep the names they had
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### `CallableData`: record a Python callable without storing it
+
+A new data plugin, registered under the `core.callable` entry point, records what a Python callable is, so that its bytes stay out of the graph.
+
+```python
+from aiida.orm import CallableData
+
+record = CallableData(my_parser)
+record.name, record.module, record.distribution, record.version
+record.get_source()
+record.load()
+```
+
+It holds the source text, where that source came from, and one of three identifiers: the entry point a plugin registers it under, the module and qualified name that import it, or a fingerprint of its serialized form for a lambda or a closure that no name identifies.
+Reading the record executes nothing, where reading a pickled node meant running the code inside it, and `load()` reconstructs the callable only where its recorded name reaches it.
+
+Where a distribution provides the callable, the record names that distribution and its version, and, for one installed from a repository, the commit it was built from.
+
 ### Behavior changes
 
 ### Fixes

@@ -1,0 +1,43 @@
+attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.callable.CallableData.AttributesModel'>,
+  doc='The node attributes')
+callable_entry_point: QbStrField('attributes.callable_entry_point', dtype=str | None,
+  doc='The entry point the callable is registered under')
+commit: QbStrField('attributes.commit', dtype=str | None, doc='The commit that distribution
+  was installed from, if it came from a repository')
+computer: QbNumericField('computer', dtype=int | None, doc='The PK of the computer')
+ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
+  time of the node')
+description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
+distribution: QbStrField('attributes.distribution', dtype=str | None, doc='The distribution
+  that provides the callable')
+extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
+fingerprint: QbStrField('attributes.fingerprint', dtype=str | None, doc='Identifies
+  a callable that no name recovers, including the state it closes over')
+importable: QbBoolField('attributes.importable', dtype=<class 'bool'>, doc='Whether
+  the interpreter that recorded the callable could import it by name')
+label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
+module: QbStrField('attributes.module', dtype=str | None, doc='The module the callable
+  was defined in')
+mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
+  time of the node')
+name: QbStrField('attributes.name', dtype=<class 'str'>, doc='The qualified name of
+  the callable')
+node_type: QbStrField('node_type', dtype=typing.Literal['data.core.callable.CallableData.'],
+  doc='The type of the node.')
+parameters: QbArrayField('attributes.parameters', dtype=list[list[str]] | None, doc='The
+  parameters the callable accepts, as `[name, kind]` pairs')
+pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
+process_type: QbStrField('process_type', dtype=str | None, doc='The process type of
+  the node')
+repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.Any],
+  doc='Virtual hierarchy of the file repository')
+source: QbDictField('attributes.source', dtype=dict | None, doc='Source of the data')
+source_line: QbNumericField('attributes.source_line', dtype=int | None, doc='The line
+  in `source_path` at which the definition starts')
+source_path: QbStrField('attributes.source_path', dtype=str | None, doc='The path
+  of the file the callable was defined in')
+user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
+  the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+version: QbStrField('attributes.version', dtype=str | None, doc='The version of that
+  distribution')

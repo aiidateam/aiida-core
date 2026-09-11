@@ -115,7 +115,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
             for entry_point in self._entry_points:
                 try:
-                    sub_class = entry_point.load()  # type: ignore[no-untyped-call]
+                    sub_class = entry_point.load()
                 except ImportError as exception:
                     msg = f'failed to load the entry point {entry_point}: {exception}'
                     raise RuntimeError(msg)

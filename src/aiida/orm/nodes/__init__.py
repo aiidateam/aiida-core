@@ -27,6 +27,7 @@ __all__ = (
     'CalcFunctionNode',
     'CalcJobNode',
     'CalculationNode',
+    'CallableData',
     'CifData',
     'Code',
     'ContainerizedCode',

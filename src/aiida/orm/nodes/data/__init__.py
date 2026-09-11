@@ -15,6 +15,7 @@
 from aiida.orm.nodes.data.array import *
 from aiida.orm.nodes.data.base import *
 from aiida.orm.nodes.data.bool import *
+from aiida.orm.nodes.data.callable import *
 from aiida.orm.nodes.data.cif import *
 from aiida.orm.nodes.data.code import *
 from aiida.orm.nodes.data.data import *
@@ -41,6 +42,7 @@ __all__ = (
     'BandsData',
     'BaseType',
     'Bool',
+    'CallableData',
     'CifData',
     'Code',
     'ContainerizedCode',

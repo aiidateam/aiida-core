@@ -43,6 +43,7 @@ __all__ = (
     'CalcJobResultManager',
     'CalculationEntityLoader',
     'CalculationNode',
+    'CallableData',
     'CifData',
     'Code',
     'CodeEntityLoader',

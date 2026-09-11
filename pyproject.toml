@@ -36,13 +36,14 @@ dependencies = [
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
+  'cloudpickle>=3,<4',
   'dill>=0.3.6,<1',
   'disk-objectstore~=1.5.0',
   'docstring-parser',
   'graphviz~=0.19',
   'greenback~=1.0',
   'greenlet>=3.2.4',
-  'importlib-metadata~=6.0',
+  'importlib-metadata>=6.11,<10',
   'ipython>=7.6',
   'jedi<0.19',
   'jinja2~=3.0',
@@ -118,6 +119,7 @@ requires-python = '>=3.10'
 'core.array.xy' = 'aiida.orm.nodes.data.array.xy:XyData'
 'core.base' = 'aiida.orm.nodes.data:BaseType'
 'core.bool' = 'aiida.orm.nodes.data.bool:Bool'
+'core.callable' = 'aiida.orm.nodes.data.callable:CallableData'
 'core.cif' = 'aiida.orm.nodes.data.cif:CifData'
 'core.code' = 'aiida.orm.nodes.data.code.legacy:Code'
 'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
@@ -408,6 +410,7 @@ module = [
   'aiida.cmdline.params.*',
   'aiida.cmdline.commands.cmd_status',
   'aiida.common.*',
+  'aiida.orm.nodes.data.callable',
   'aiida.orm.nodes.data.code.shell',
   'aiida.orm.nodes.data.entry_point',
   'aiida.orm.nodes.data.pickled',
@@ -432,6 +435,7 @@ module = [
   'bpython.*',
   'bs4.*',
   'circus.*',
+  'cloudpickle.*',
   'dill.*',
   'flask_restful.*',
   'graphviz.*',

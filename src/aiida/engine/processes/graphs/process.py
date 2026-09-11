@@ -25,7 +25,7 @@ from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Data, Dict, WorkChainNode
+from aiida.orm import Data, Dict, GraphNode
 from aiida.orm.nodes.data.base import to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess')
@@ -71,7 +71,7 @@ class GraphProcess(Process):
     holds the ports, submits what it is told to, waits, and attaches what came out.
     """
 
-    _node_class = WorkChainNode
+    _node_class = GraphNode
 
     _GRAPH = 'graph'
     _GRAPH_INPUTS = 'graph_inputs'

@@ -22,7 +22,7 @@ from aiida.cmdline.params.options.config import ConfigFileOption
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import defaults, echo
-from aiida.common.log import LOG_LEVELS, configure_logging
+from aiida.common._core.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
 
 if t.TYPE_CHECKING:
@@ -157,7 +157,7 @@ TRAVERSAL_RULE_HELP_STRING = {
 
 def valid_process_states() -> tuple[str, ...]:
     """Return a list of valid values for the ProcessState enum."""
-    from aiida.common.processes import ProcessState
+    from aiida.common._core.processes import ProcessState
 
     return tuple(state.value for state in ProcessState)
 
@@ -171,7 +171,7 @@ def valid_calc_job_states() -> tuple[str, ...]:
 
 def active_process_states() -> list[str]:
     """Return a list of process states that are considered active."""
-    from aiida.common.processes import ProcessState
+    from aiida.common._core.processes import ProcessState
 
     return [
         ProcessState.CREATED.value,
@@ -210,7 +210,7 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
     is not the cleanest, but given that other module code can undo the logging configuration by calling that method,
     there seems no easy way around this approach.
     """
-    from aiida.common import log
+    from aiida.common._core import log
 
     if log.CLI_ACTIVE:
         return value

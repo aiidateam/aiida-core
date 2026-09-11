@@ -11,7 +11,7 @@
 import hashlib
 from typing import BinaryIO
 
-from aiida.common.typing import FilePath
+from aiida.common._core.typing import FilePath
 
 
 def md5_from_filelike(filelike: BinaryIO, block_size_factor: int = 128) -> str:

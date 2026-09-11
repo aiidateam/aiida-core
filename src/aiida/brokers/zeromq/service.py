@@ -18,7 +18,7 @@ from pathlib import Path
 
 from aiida.brokers.zeromq.defaults import POLL_TIMEOUT, STATUS_INTERVAL
 from aiida.brokers.zeromq.server import ZeromqBrokerServer
-from aiida.common.log import configure_logging
+from aiida.common._core.log import configure_logging
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -12,8 +12,8 @@ import os
 import pathlib
 
 from aiida.common import exceptions
-from aiida.common.log import override_log_level
-from aiida.common.warnings import warn_deprecation
+from aiida.common._core.log import override_log_level
+from aiida.common._core.warnings import warn_deprecation
 from aiida.orm import Computer
 from aiida.orm.nodes.data.code.abstract import AbstractCode
 from aiida.orm.pydantic import OrmMetadataField
@@ -208,8 +208,8 @@ class Code(AbstractCode):
         """:param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise aiida.common.NotExistent: if no code identified by the given string is found
-        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.exceptions.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.exceptions.MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -248,8 +248,8 @@ class Code(AbstractCode):
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise aiida.common.NotExistent: if no code identified by the given string is found
-        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely a code
+        :raise aiida.common.exceptions.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.exceptions.MultipleObjectsError: if the string cannot identify uniquely a code
         :raise ValueError: if neither a pk nor a label was passed in
         """
         from aiida.orm.utils import load_code
@@ -286,8 +286,8 @@ class Code(AbstractCode):
 
         :param code_string: the code string identifying the code to load
 
-        :raise aiida.common.NotExistent: if no code identified by the given string is found
-        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.exceptions.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.exceptions.MultipleObjectsError: if the string cannot identify uniquely
             a code
         :raise TypeError: if code_string is not of string type
 

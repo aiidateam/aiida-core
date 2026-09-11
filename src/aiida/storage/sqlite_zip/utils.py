@@ -16,7 +16,8 @@ from typing import Any
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
 
-from aiida.common.exceptions import AiidaException, CorruptStorage, UnreachableStorage
+from aiida.common._core.exceptions import UnreachableStorage
+from aiida.common.exceptions import AiidaException, CorruptStorage
 
 META_FILENAME = 'metadata.json'
 """The filename containing meta information about the storage instance."""

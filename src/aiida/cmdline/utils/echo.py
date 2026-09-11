@@ -20,7 +20,7 @@ from typing import Any, NoReturn
 
 import click
 
-from aiida.common.log import AiidaLoggerType
+from aiida.common._core.log import AiidaLoggerType
 
 CMDLINE_LOGGER: AiidaLoggerType = logging.getLogger('verdi')  # type: ignore[assignment]
 
@@ -244,7 +244,7 @@ def _format_dictionary_json_date(dictionary: dict | list, sort_keys: bool = True
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""
         import datetime
 
-        from aiida.common import timezone
+        from aiida.common._core import timezone
 
         if isinstance(data, datetime.datetime):
             return timezone.localtime(data).strftime('%Y-%m-%dT%H:%M:%S.%f%z')

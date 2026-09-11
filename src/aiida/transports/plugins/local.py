@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._core.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
@@ -58,7 +58,7 @@ class LocalTransport(BlockingTransport):
     def open(self):
         """Opens a local transport channel
 
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raise aiida.common.exceptions.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 
@@ -72,7 +72,7 @@ class LocalTransport(BlockingTransport):
     def close(self):
         """Closes the local transport channel
 
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raise aiida.common.exceptions.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 
@@ -243,7 +243,7 @@ class LocalTransport(BlockingTransport):
         """
         localpath = str(localpath)
         remotepath = str(remotepath)
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._core.warnings import warn_deprecation
 
         if 'ignore_noexisting' in kwargs:
             # Backwards compatibility check for old keyword that was misspelled

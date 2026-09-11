@@ -29,11 +29,13 @@ from typing import (
 import pydantic as pdt
 from typing_extensions import Self
 
-from aiida.common import exceptions, log
+from aiida.common import exceptions
+from aiida.common._core import log
+from aiida.common._core.lang import call_with_super_check, super_check
+from aiida.common._core.pydantic import get_metadata
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.exceptions import InvalidOperation
-from aiida.common.lang import call_with_super_check, classproperty, super_check, type_check
-from aiida.common.pydantic import get_metadata
-from aiida.common.warnings import warn_deprecation
+from aiida.common.lang import classproperty, type_check
 from aiida.manage import get_manager
 from aiida.orm.fields import QbFields, add_field
 from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
@@ -254,7 +256,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         )
         compat_model = cls.__dict__.get('_COMPAT_MODEL')
         if compat_model is not None and isinstance(model, compat_model):
-            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+            from aiida.common._core.docs import URL_CHANGELOG_ORM_MODELS
 
             class_name = cast(Any, cls).__name__
             msg = (
@@ -300,7 +302,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         """
         compat_model = cls.__dict__.get('_COMPAT_MODEL')
         if compat_model is not None and isinstance(model, compat_model):
-            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+            from aiida.common._core.docs import URL_CHANGELOG_ORM_MODELS
 
             class_name = cast(Any, cls).__name__
             msg = (

@@ -12,7 +12,7 @@ import time
 
 from paramiko import ProxyCommand
 
-from aiida.common.extendeddicts import FixedFieldsAttributeDict
+from aiida.common._core.extendeddicts import FixedFieldsAttributeDict
 
 
 class FileAttribute(FixedFieldsAttributeDict):

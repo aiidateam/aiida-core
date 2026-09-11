@@ -370,7 +370,7 @@ def test_high_level_workflow_links(aiida_profile_clean, tmp_path, aiida_localhos
 
 def prepare_link_flags_export(nodes_to_export, test_data):
     """Helper function"""
-    from aiida.common.links import GraphTraversalRules
+    from aiida.common._core.links import GraphTraversalRules
 
     export_rules = GraphTraversalRules.EXPORT.value
     traversal_rules = {name: rule.default for name, rule in export_rules.items() if rule.toggleable}

@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from aiida.common import exceptions
-from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common._core.log import LOG_LEVEL_REPORT
 from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
 from aiida.manage.configuration import Profile, settings
 from aiida.manage.configuration.config import Config

@@ -114,7 +114,7 @@ class EntityExtras:
 
         :param key: name of the extra
         :param value: value of the extra
-        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
+        :raise aiida.common.exceptions.ValidationError: if the key is invalid, i.e. contains periods
         """
         self._backend_entity.set_extra(key, value)
 
@@ -124,7 +124,7 @@ class EntityExtras:
         .. note:: This will override any existing extras that are present in the new dictionary.
 
         :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
+        :raise aiida.common.exceptions.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
         self._backend_entity.set_extra_many(extras)
 
@@ -134,7 +134,7 @@ class EntityExtras:
         .. note:: This will completely clear any existing extras and replace them with the new dictionary.
 
         :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
+        :raise aiida.common.exceptions.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
         self._backend_entity.reset_extras(extras)
 

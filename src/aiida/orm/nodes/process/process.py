@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from aiida.common import exceptions
+from aiida.common._core.processes import ProcessState
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
-from aiida.common.processes import ProcessState
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.orm.nodes.links import NodeLinks
 from aiida.orm.nodes.node import Node
@@ -132,7 +132,7 @@ class ProcessNodeLinks(NodeLinks):
         :param target: the node to which the link is going
         :param link_type: the link type
         :param link_label: the link label
-        :raise aiida.common.ModificationNotAllowed: if the source node (self) is sealed
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the source node (self) is sealed
         """
         if self._node.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')

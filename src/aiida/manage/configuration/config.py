@@ -32,8 +32,9 @@ from pydantic import (
     field_validator,
 )
 
+from aiida.common._core.log import AdvancedLogLevels, LogLevels
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
-from aiida.common.log import AIIDA_LOGGER, AdvancedLogLevels, LogLevels
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.options import (
     Option,
     get_option,
@@ -408,7 +409,7 @@ class Config:
         """
         import shutil
 
-        from aiida.common import timezone
+        from aiida.common._core import timezone
 
         filepath_backup = None
 
@@ -573,7 +574,7 @@ class Config:
         """Validate that a profile exists.
 
         :param name: name of the profile:
-        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the name is not found in the configuration file
         """
         from aiida.common import exceptions
 
@@ -584,7 +585,7 @@ class Config:
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
-        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the name is not found in the configuration file
         """
         from aiida.common import exceptions
 
@@ -707,7 +708,7 @@ class Config:
         """Remove a profile from the configuration.
 
         :param name: the name of the profile to remove
-        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the given profile does not exist
         :return: self
         """
         self.validate_profile(name)
@@ -822,7 +823,7 @@ class Config:
 
         :param name: name of the profile to set as new default
         :param overwrite: when True, set the profile as the new default even if a default profile is already defined
-        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.exceptions.ProfileConfigurationError: if the given profile does not exist
         :return: self
         """
         if self.default_profile_name and not overwrite:
@@ -949,7 +950,7 @@ class Config:
         """
         import tempfile
 
-        from aiida.common.files import md5_file, md5_from_filelike
+        from aiida.common._core.files import md5_file, md5_from_filelike
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.

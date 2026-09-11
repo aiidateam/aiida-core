@@ -15,7 +15,7 @@ from aiida.common import exceptions
 from aiida.manage import get_config_option
 
 if t.TYPE_CHECKING:
-    from aiida.common.typing import FilePath
+    from aiida.common._core.typing import FilePath
     from aiida.orm.nodes.node import Node
     from aiida.repository import File, Repository
 

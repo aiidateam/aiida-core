@@ -16,7 +16,7 @@ from io import StringIO
 
 import pytest
 
-from aiida.common import NotExistent
+from aiida.common.exceptions import NotExistent
 from aiida.orm import Data, load_node
 
 GROUP_NAME = 'node'

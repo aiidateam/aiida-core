@@ -84,7 +84,8 @@ def load_config(create=False) -> 'Config':
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
+    :raises aiida.common.exceptions.MissingConfigurationError: if the configuration file could not be found and
+        create=False
     """
     from aiida.common import exceptions
     from aiida.manage.configuration.config import Config
@@ -115,7 +116,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
 
     import yaml
 
-    from aiida.common import timezone
+    from aiida.common._core import timezone
 
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist
@@ -306,7 +307,8 @@ def get_config(create=False) -> 'Config':
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
+    :raises aiida.common.exceptions.ConfigurationError: if the configuration file could not be found, read or
+        deserialized
     """
     global CONFIG  # noqa: PLW0603
 
@@ -341,7 +343,7 @@ def get_config_option(option_name: str) -> Any:
     :return: the value of the option
     :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
     """
-    from aiida.common import log
+    from aiida.common._core import log
     from aiida.manage import get_manager
 
     if (

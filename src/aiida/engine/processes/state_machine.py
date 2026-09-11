@@ -31,7 +31,7 @@ from typing import (
     Optional,
 )
 
-from aiida.common.lang import call_with_super_check, super_check
+from aiida.common._core.lang import call_with_super_check, super_check
 from aiida.engine.processes.exceptions import InvalidStateError
 from aiida.engine.processes.generic.futures import Future
 

@@ -13,7 +13,7 @@ import re
 import pytest
 
 from aiida import orm
-from aiida.common import AttributeDict
+from aiida.common.extendeddicts import AttributeDict
 from aiida.common.links import LinkType
 from aiida.engine import ProcessState
 from aiida.orm.utils.links import LinkPair

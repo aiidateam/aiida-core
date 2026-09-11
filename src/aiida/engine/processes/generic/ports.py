@@ -27,7 +27,7 @@ import warnings
 from collections.abc import Callable, Iterator, Mapping, MutableMapping, Sequence
 from typing import Any, cast
 
-from aiida.common.extendeddicts import AttributesFrozendict
+from aiida.common._core.extendeddicts import AttributesFrozendict
 from aiida.common.lang import type_check
 
 __all__: tuple[str, ...] = ()

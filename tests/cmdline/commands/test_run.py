@@ -14,7 +14,7 @@ import textwrap
 import pytest
 
 from aiida.cmdline.commands import cmd_run
-from aiida.common.log import override_log_level
+from aiida.common._core.log import override_log_level
 
 
 class TestVerdiRun:

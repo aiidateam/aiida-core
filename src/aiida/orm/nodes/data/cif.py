@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from aiida.common.utils import Capturing
+from aiida.common._core.utils import Capturing
 from aiida.orm.nodes.data.singlefile import SinglefileData
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -364,7 +364,7 @@ class CifData(SinglefileData):
         """
         import os
 
-        from aiida.common.files import md5_file
+        from aiida.common._core.files import md5_file
 
         if not os.path.abspath(filename):
             raise ValueError('filename must be an absolute path')
@@ -737,7 +737,7 @@ class CifData(SinglefileData):
 
     def generate_md5(self):
         """Computes and returns MD5 hash of the CIF file."""
-        from aiida.common.files import md5_from_filelike
+        from aiida.common._core.files import md5_from_filelike
 
         # Open in binary mode which is required for generating the md5 checksum
         with self.open(mode='rb') as handle:

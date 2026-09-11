@@ -151,7 +151,7 @@ class CalculationQueryBuilder:
         import datetime
 
         from aiida import orm
-        from aiida.common import timezone
+        from aiida.common._core import timezone
 
         # Define the list of projections for the QueryBuilder, which are all valid minus the compound projections
         projected_attributes = [

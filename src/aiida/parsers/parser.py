@@ -88,7 +88,8 @@ class Parser(ABC):
 
         :param link_label: the name of the link label
         :param node: the node to register as an output
-        :raises aiida.common.ModificationNotAllowed: if an output node was already registered with the same link label
+        :raises aiida.common.exceptions.ModificationNotAllowed: if an output node was already registered with the same
+            link label
         """
         if link_label in self._outputs:
             raise exceptions.ModificationNotAllowed(f'the output {link_label} already exists')

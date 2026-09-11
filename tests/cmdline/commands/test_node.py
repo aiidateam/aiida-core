@@ -22,7 +22,7 @@ import pytest
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode
-from aiida.common import timezone
+from aiida.common._core import timezone
 from aiida.common.exceptions import NotExistent
 from aiida.common.links import LinkType
 from aiida.orm import CalcJobNode, RemoteData, WorkflowNode

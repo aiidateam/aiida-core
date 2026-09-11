@@ -27,8 +27,8 @@ from typing import TYPE_CHECKING, Any, cast
 import yaml
 from yaml.loader import Loader
 
-from aiida.common.loaders import load_function
-from aiida.common.processes import ProcessState
+from aiida.common._core.loaders import load_function
+from aiida.common._core.processes import ProcessState
 from aiida.engine.processes import exceptions, persistence, state_machine
 from aiida.engine.processes.communications import MessageBuilder, MessageType
 from aiida.engine.processes.generic import futures

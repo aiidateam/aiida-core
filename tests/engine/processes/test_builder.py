@@ -15,7 +15,7 @@ import pytest
 from IPython.lib.pretty import pretty
 
 from aiida import orm
-from aiida.common import LinkType
+from aiida.common.links import LinkType
 from aiida.engine import Process, WorkChain, run_get_node
 from aiida.engine.processes.builder import ProcessBuilderNamespace
 from aiida.plugins import CalculationFactory

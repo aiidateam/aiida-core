@@ -19,9 +19,10 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.echo import ExitCode
-from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
-from aiida.common.log import override_log_level
-from aiida.common.warnings import warn_deprecation
+from aiida.common._core.exceptions import UnreachableStorage
+from aiida.common._core.log import override_log_level
+from aiida.common._core.warnings import warn_deprecation
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema
 
 
 class ServiceStatus(enum.IntEnum):
@@ -60,7 +61,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     """Print status of AiiDA services."""
     from aiida import __version__
     from aiida.cmdline.utils.daemon import validate_daemon_env
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._core.docs import URL_NO_BROKER
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
     from aiida.manage.configuration.settings import AiiDAConfigDir
     from aiida.manage.manager import get_manager

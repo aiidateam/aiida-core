@@ -5,7 +5,7 @@ import pathlib
 import pytest
 from pydantic_core import ValidationError
 
-from aiida.common.exceptions import IncompatibleExternalDependencies
+from aiida.common._core.exceptions import IncompatibleExternalDependencies
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend, validate_sqlite_version
 from aiida.storage.sqlite_zip.migrator import validate_storage
 

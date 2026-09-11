@@ -28,14 +28,10 @@ from pydantic import field_validator
 from sqlalchemy.orm import Session
 
 from aiida import __version__
-from aiida.common.exceptions import (
-    ClosedStorage,
-    CorruptStorage,
-    IncompatibleExternalDependencies,
-    StorageMigrationError,
-)
+from aiida.common._core.exceptions import IncompatibleExternalDependencies
+from aiida.common._core.pydantic import AiiDABaseModel, MetadataField
+from aiida.common.exceptions import ClosedStorage, CorruptStorage, StorageMigrationError
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend

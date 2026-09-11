@@ -7,7 +7,7 @@ import pytest
 from pydantic_core import PydanticUndefined
 
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
+from aiida.common._core.pydantic import AiiDABaseModel, MetadataField
 
 
 class CustomClass:

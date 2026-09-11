@@ -19,12 +19,14 @@ from collections.abc import Hashable
 from typing import Any
 
 from aiida import orm
-from aiida.common import AttributeDict, exceptions
-from aiida.common.datastructures import CalcInfo, FileCopyOperation
+from aiida.common import exceptions
+from aiida.common._core.datastructures import FileCopyOperation
+from aiida.common._core.typing import FilePath
+from aiida.common.datastructures import CalcInfo
+from aiida.common.extendeddicts import AttributeDict
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-from aiida.common.typing import FilePath
 from aiida.engine.processes import states as process_states
 from aiida.engine.processes.calcjobs.importer import CalcJobImporter
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
@@ -934,9 +936,9 @@ class CalcJob(Process):
         :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
 
         """
+        from aiida.common._core.utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
-        from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import AbstractCode, Computer, load_code
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 

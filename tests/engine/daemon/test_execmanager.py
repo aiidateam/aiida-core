@@ -13,8 +13,9 @@ import pathlib
 
 import pytest
 
-from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
-from aiida.common.exceptions import StashingError
+from aiida.common._core.datastructures import FileCopyOperation
+from aiida.common._core.exceptions import StashingError
+from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData

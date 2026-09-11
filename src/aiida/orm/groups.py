@@ -21,8 +21,8 @@ from uuid import UUID
 from typing_extensions import Self
 
 from aiida.common import exceptions
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.lang import classproperty, type_check
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm import convert, entities, extras, users
 from aiida.orm.pydantic import OrmMetadataField
@@ -270,7 +270,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         :param label: the new group label
         :type label: str
 
-        :raises aiida.common.UniquenessError: if another group of same type and label already exists
+        :raises aiida.common.exceptions.UniquenessError: if another group of same type and label already exists
         """
         self._backend_entity.label = label
 

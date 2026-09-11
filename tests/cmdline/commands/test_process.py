@@ -22,8 +22,8 @@ import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.cmdline.utils.echo import ExitCode
+from aiida.common._core.log import LOG_LEVEL_REPORT
 from aiida.common.links import LinkType
-from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.engine.utils import exponential_backoff_retry

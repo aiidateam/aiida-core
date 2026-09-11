@@ -59,12 +59,12 @@ def command_create_profile(
     """
     # Handle deprecated --use-rabbitmq/--no-use-rabbitmq option
     if use_rabbitmq is not None:
-        from aiida.common.warnings import warn_deprecation
+        from aiida.common._core.warnings import warn_deprecation
 
         warn_deprecation('The `--use-rabbitmq` option is deprecated. Use `--broker` instead.', version=3)
         if not use_rabbitmq:
             broker = 'none'
-    from aiida.common import docs
+    from aiida.common._core import docs
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if not storage_cls.read_only and email is None:
@@ -255,7 +255,7 @@ def _configure_profile_broker(
         return
 
     if backend == 'none':
-        from aiida.common import docs
+        from aiida.common._core import docs
 
         _update_profile_broker_configuration(ctx, profile, backend=None, config=None)
         echo.echo_report(f'Broker disabled for `{profile.name}`.')

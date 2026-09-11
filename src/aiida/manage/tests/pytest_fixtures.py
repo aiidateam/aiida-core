@@ -38,11 +38,11 @@ import wrapt
 from importlib_metadata import EntryPoint, EntryPoints
 
 from aiida import plugins
+from aiida.common._core.processes import ProcessState
+from aiida.common._core.warnings import warn_deprecation
 from aiida.common.exceptions import NotExistent
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.processes import ProcessState
-from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
 from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
 from aiida.engine.processes.events import get_or_create_event_loop

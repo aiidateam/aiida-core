@@ -15,7 +15,7 @@ import pytest
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
-from aiida.common import log
+from aiida.common._core import log
 
 
 @pytest.fixture

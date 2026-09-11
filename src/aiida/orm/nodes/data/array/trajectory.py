@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.common.warnings import warn_deprecation
+from aiida.common._core.warnings import warn_deprecation
 from aiida.orm.nodes.data.array.array import ArrayData
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -509,7 +509,7 @@ class TrajectoryData(ArrayData):
         self, trajectory_index: int | None = None, main_file_name: str = ''
     ) -> tuple[bytes, dict[str, t.Any]]:
         """Write the given trajectory to a string of format CIF."""
-        from aiida.common.utils import Capturing
+        from aiida.common._core.utils import Capturing
         from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
 
         cif = ''

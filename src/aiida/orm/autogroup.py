@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import re
 
-from aiida.common import exceptions, timezone
-from aiida.common.escaping import escape_for_sql_like, get_regex_pattern_from_sql
+from aiida.common import exceptions
+from aiida.common._core import timezone
+from aiida.common._core.escaping import escape_for_sql_like, get_regex_pattern_from_sql
 from aiida.orm import AutoGroup, QueryBuilder
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 

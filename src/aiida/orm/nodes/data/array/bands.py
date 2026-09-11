@@ -19,8 +19,8 @@ from string import Template
 
 import numpy
 
+from aiida.common._core.utils import join_labels, prettify_labels
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import join_labels, prettify_labels
 from aiida.orm.nodes.data.array.kpoints import KpointsData
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -1782,7 +1782,7 @@ def get_bands_and_parents_structure(args, backend=None):
     import datetime
 
     from aiida import orm
-    from aiida.common import timezone
+    from aiida.common._core import timezone
 
     if backend:
         user = orm.User.get_collection(backend).get_default()

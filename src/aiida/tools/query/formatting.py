@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from aiida.common import timezone
-from aiida.common.utils import str_timedelta
+from aiida.common._core import timezone
+from aiida.common._core.utils import str_timedelta
 
 
 def format_relative_time(value: datetime) -> str:

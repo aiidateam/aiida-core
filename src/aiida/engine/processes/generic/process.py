@@ -42,9 +42,9 @@ import kiwipy
 import yaml
 from aio_pika.exceptions import ChannelInvalidStateError, ConnectionClosed
 
-from aiida.common.extendeddicts import AttributesFrozendict
-from aiida.common.lang import call_with_super_check, super_check
-from aiida.common.processes import ProcessState
+from aiida.common._core.extendeddicts import AttributesFrozendict
+from aiida.common._core.lang import call_with_super_check, super_check
+from aiida.common._core.processes import ProcessState
 from aiida.engine.processes import communications as process_comms
 from aiida.engine.processes import events, exceptions, persistence, state_machine
 from aiida.engine.processes import states as process_states

@@ -15,7 +15,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 from aiida.common import exceptions
-from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
+from aiida.common._core.log import AiidaLoggerType
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
 from aiida.orm import entities, users
 from aiida.orm.pydantic import OrmMetadataField
@@ -569,7 +570,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         :param user: a User instance.
         :return: a AuthInfo instance
-        :raise aiida.common.NotExistent: if the computer is not configured for the given
+        :raise aiida.common.exceptions.NotExistent: if the computer is not configured for the given
             user.
         """
         from aiida.orm import authinfos

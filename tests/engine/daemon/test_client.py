@@ -396,7 +396,8 @@ class TestDaemonEnvInfo:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_change_workers_without_wait(started_daemon_client):
     """Test that by default the calls return on acknowledgement, before the workers have been spawned or stopped."""
     client = started_daemon_client

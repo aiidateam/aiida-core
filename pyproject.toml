@@ -36,7 +36,6 @@ dependencies = [
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
   'cloudpickle>=3,<4',
-  'dill>=0.3.6,<1',
   'disk-objectstore~=1.5.0',
   'docstring-parser',
   'graphviz~=0.19',
@@ -125,7 +124,6 @@ requires-python = '>=3.10'
 'core.code.installed.shell' = 'aiida.orm.nodes.data.code.shell:ShellCode'
 'core.code.portable' = 'aiida.orm.nodes.data.code.portable:PortableCode'
 'core.dict' = 'aiida.orm.nodes.data.dict:Dict'
-'core.entry_point' = 'aiida.orm.nodes.data.entry_point:EntryPointData'
 'core.enum' = 'aiida.orm.nodes.data.enum:EnumData'
 'core.float' = 'aiida.orm.nodes.data.float:Float'
 'core.folder' = 'aiida.orm.nodes.data.folder:FolderData'
@@ -134,7 +132,6 @@ requires-python = '>=3.10'
 'core.list' = 'aiida.orm.nodes.data.list:List'
 'core.numeric' = 'aiida.orm.nodes.data.numeric:NumericType'
 'core.orbital' = 'aiida.orm.nodes.data.orbital:OrbitalData'
-'core.pickled' = 'aiida.orm.nodes.data.pickled:PickledData'
 'core.remote' = 'aiida.orm.nodes.data.remote.base:RemoteData'
 'core.remote.stash' = 'aiida.orm.nodes.data.remote.stash.base:RemoteStashData'
 'core.remote.stash.compress' = 'aiida.orm.nodes.data.remote.stash.compress:RemoteStashCompressedData'
@@ -404,8 +401,6 @@ module = [
   'aiida.common.*',
   'aiida.orm.nodes.data.callable',
   'aiida.orm.nodes.data.code.shell',
-  'aiida.orm.nodes.data.entry_point',
-  'aiida.orm.nodes.data.pickled',
   'aiida.orm.utils.data',
   'aiida.parsers.plugins.shell.parser',
   'aiida.repository.*',
@@ -428,7 +423,6 @@ module = [
   'bs4.*',
   'circus.*',
   'cloudpickle.*',
-  'dill.*',
   'flask_restful.*',
   'graphviz.*',
   'kiwipy.*',

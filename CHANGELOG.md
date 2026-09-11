@@ -39,6 +39,7 @@ print(results['stdout'].get_content())
 ```
 
 The `core.shell` calculation job and parser entry points keep the names they had in `aiida-shell`, so existing nodes, archives and scripts that refer to them are unaffected.
+`launch_shell_job` is importable from `aiida.tools`, and the `CallableData` data plugin from `aiida.orm`.
 
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
@@ -55,6 +56,10 @@ A parser that can be imported is therefore still re-runnable from an archive, an
 
 An entry point string is recorded the same way, so the `parser` input is a `CallableData` whichever form it was given in.
 Passing an `EntryPointData` node to it directly no longer validates; pass the entry point string, which is the documented form.
+`EntryPointData` and `PickledData`, which `aiida-shell` used for this input, are removed.
+A node either of them wrote keeps its type string and loads as a plain `Data`, so its attributes and its repository contents stay readable and no migration is needed.
+What such a node loses is `load()`, the method that ran the code in the pickle.
+`dill` is no longer a dependency; callables are serialized with `cloudpickle`.
 
 #### Checkpoints carry callables that no name can recover
 

@@ -33,6 +33,23 @@ def test_load_node_class_fallback():
     with pytest.raises(exceptions.DbContentError, match='invalid'):
         load_node_class('data.dict')
 
+
+@pytest.mark.parametrize(
+    'node_type',
+    (
+        'data.core.pickled.PickledData.',
+        'data.core.entry_point.EntryPointData.',
+    ),
+)
+def test_load_node_class_removed_plugins(node_type):
+    """Verify that nodes written by a plugin that no longer exists still resolve to a class that can read them.
+
+    This is why removing `PickledData` and `EntryPointData` needs no migration: a node `aiida-shell` wrote keeps its
+    type string, loads as `Data`, and its attributes and repository stay readable. What it loses is the method that
+    unpickled its contents.
+    """
+    assert load_node_class(node_type) is Data
+
     # Test process plugin fallback
     loaded_class = load_node_class('process.some.non.existing.plugin.')
     assert loaded_class == ProcessNode

@@ -13,7 +13,6 @@ dependencies:
 - click-spinner~=0.1.8
 - click<8.3,>=8.1.0
 - cloudpickle<4,>=3
-- dill<1,>=0.3.6
 - disk-objectstore~=1.5.0
 - docstring_parser
 - python-graphviz~=0.19

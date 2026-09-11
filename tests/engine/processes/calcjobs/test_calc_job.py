@@ -1363,7 +1363,8 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
 
 
 @pytest.mark.requires_broker
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
     """Test that a job can be restarted when it is launched and the daemon is restarted.
 

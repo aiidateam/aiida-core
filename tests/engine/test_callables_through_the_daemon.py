@@ -165,6 +165,40 @@ def test_an_installed_plugin_still_travels_by_name(submit_and_await, aiida_code_
     assert node.process_type == 'aiida.calculations:core.arithmetic.add'
 
 
+def test_shelljob_parser_from_a_module_the_daemon_cannot_import(
+    submit_and_await, unreachable_module, aiida_code_installed
+):
+    """Test that a parser hook reaches the worker together with the module it calls into.
+
+    This is the input case the record model was built for: the node records what the parser is, and the callable
+    itself rides the checkpoint, along with a module only the submitting interpreter can import.
+    """
+    import unreachable_helper
+
+    def parse(dirpath):
+        from aiida.orm import Str
+
+        return {'shouted': Str(unreachable_helper.shout((dirpath / 'stdout').read_text().strip()))}
+
+    assert 'unreachable_helper' in persistence.carried_modules(parse)
+
+    code = aiida_code_installed(default_calc_job_plugin='core.shell', filepath_executable='/bin/bash')
+    builder = code.get_builder()
+    builder.arguments = ['-c', 'echo quiet']
+    builder.parser = parse
+    builder.metadata = {'options': {'resources': {'num_machines': 1}}}
+
+    # Assigning it to the builder already turned it into an inert record, holding no executable bytes.
+    assert isinstance(builder.parser, orm.CallableData)
+    assert builder.parser.is_importable is False
+    assert 'live_callable' not in builder.parser.base.attributes.all
+
+    node = submit_and_await(builder, timeout=60)
+
+    assert node.is_finished_ok, node.exception
+    assert node.outputs.shouted.value == 'QUIET'
+
+
 def test_calcjob_defined_in_main(submit_and_await, defined_in_main, aiida_code_installed):
     """Test that a calculation job whose module is ``__main__`` runs, and that its outputs are parsed.
 

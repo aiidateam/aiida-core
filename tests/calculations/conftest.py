@@ -27,9 +27,17 @@ def generate_shell_code(aiida_computer_local, aiida_code_installed):
     default_command = shutil.which('true')
     assert default_command is not None, 'The `true` command must be available on the system for the tests to run.'
 
-    def factory(command: str = default_command, computer_label: str = 'localhost', label: str | None = None):
-        """Return a code for ``command``, resolving it to an absolute path on the computer."""
-        computer = aiida_computer_local(label=computer_label)
+    def factory(
+        command: str = default_command,
+        computer_label: str = 'localhost',
+        label: str | None = None,
+        computer=None,
+    ):
+        """Return a code for ``command``, resolving it to an absolute path on the computer.
+
+        :param computer: The computer to install the code on. Defaults to a local one labelled ``computer_label``.
+        """
+        computer = computer if computer is not None else aiida_computer_local(label=computer_label)
 
         with computer.get_transport() as transport:
             status, stdout, stderr = transport.exec_command_wait(f'which {command}')

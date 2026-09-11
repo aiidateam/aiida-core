@@ -227,3 +227,8 @@ class GraphProcess(Process):
     def graph(self) -> GraphSpec:
         """Return the declaration of the graph being run."""
         return self.run_state.graph
+
+    @override
+    def _build_process_label(self) -> str:
+        """Return the name of the graph, so that a run of one is told apart from a run of another."""
+        return self.graph.identifier or super()._build_process_label()

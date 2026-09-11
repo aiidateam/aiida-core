@@ -104,14 +104,25 @@ def decode_message(data: bytes) -> dict[str, Any]:
     return json.loads(data.decode('utf-8'))  # type: ignore[no-any-return]
 
 
-def make_task_message(body: Any, sender: str, no_reply: bool = False) -> dict[str, Any]:
-    """Create a task message dictionary."""
+#: Name of the default task queue. Tasks sent without an explicit ``queue`` land
+#: here, preserving the single-queue behaviour for existing clients.
+DEFAULT_TASK_QUEUE = 'default'
+
+
+def make_task_message(
+    body: Any, sender: str, no_reply: bool = False, queue: str = DEFAULT_TASK_QUEUE
+) -> dict[str, Any]:
+    """Create a task message dictionary.
+
+    :param queue: name of the task queue the broker should route this task to.
+    """
     return {
         'type': MessageType.TASK.value,
         'id': uuid.uuid4().hex,
         'sender': sender,
         'body': body,
         'no_reply': no_reply,
+        'queue': queue,
     }
 
 
@@ -198,6 +209,7 @@ def make_subscribe_message(
     sender: str,
     identifier: str | None = None,
     prefetch_count: int | None = None,
+    queue: str | None = None,
 ) -> dict[str, Any]:
     """Create a subscription message dictionary.
 
@@ -208,6 +220,8 @@ def make_subscribe_message(
     :param prefetch_count: Maximum number of tasks the subscriber accepts in flight at once.
         ``None`` or a non-positive value means unlimited. Only meaningful for ``SUBSCRIBE_TASK``;
         ignored for other message types.
+    :param queue: Name of the task queue to subscribe to. Only meaningful for ``SUBSCRIBE_TASK``;
+        ``None`` selects the default queue. Ignored for other message types.
     :return: Dictionary containing the subscription message.
     """
     return {
@@ -216,4 +230,5 @@ def make_subscribe_message(
         'sender': sender,
         'identifier': identifier,
         'prefetch_count': prefetch_count,
+        'queue': queue,
     }

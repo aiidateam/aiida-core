@@ -20,7 +20,6 @@ from collections.abc import Callable
 from typing import Any, NamedTuple
 
 import kiwipy
-
 from aiida.common import exceptions
 from aiida.engine import transports, utils
 from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
@@ -67,6 +66,7 @@ class Runner:
         communicator: kiwipy.Communicator | None = None,
         broker_submit: bool = False,
         persister: CheckpointPersister | None = None,
+        task_queue: str | None = None,
     ):
         """Construct a new runner.
 
@@ -75,6 +75,9 @@ class Runner:
         :param communicator: the communicator to use
         :param broker_submit: if True, processes will be submitted to the broker, otherwise they will be scheduled here
         :param persister: the persister to use to persist processes
+        :param task_queue: default task queue for broker submissions. ``None`` keeps the broker
+            default queue; set it to a scheduler queue so submissions are gated by the scheduler
+            instead of going straight to workers.
 
         """
         assert not (broker_submit and persister is None), (
@@ -92,7 +95,7 @@ class Runner:
 
         if communicator is not None:
             self._communicator = wrap_communicator(communicator, self._loop)
-            self._controller = RemoteProcessThreadController(communicator)
+            self._controller = RemoteProcessThreadController(communicator, task_queue=task_queue)
         elif self._broker_submit:
             LOGGER.warning('Disabling broker submission, no communicator provided')
             self._broker_submit = False

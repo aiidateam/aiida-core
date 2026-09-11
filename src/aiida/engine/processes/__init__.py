@@ -21,6 +21,7 @@ from aiida.engine.processes.ports import *
 from aiida.engine.processes.process import *
 from aiida.engine.processes.process_spec import *
 from aiida.engine.processes.workchains import *
+from aiida.engine.processes.workgraphs import *
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -51,6 +52,7 @@ __all__ = (
     'WithNonDb',
     'WithSerialize',
     'WorkChain',
+    'WorkGraphProcess',
     'append_',
     'assign_',
     'calcfunction',

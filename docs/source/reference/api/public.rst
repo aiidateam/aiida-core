@@ -73,6 +73,12 @@ Since some ``click`` argument and option decorators clash, these may be imported
 .. autoattribute:: aiida.plugins.__all__
 
 
+``aiida.scheduler``
+...................
+
+.. autoattribute:: aiida.scheduler.__all__
+
+
 ``aiida.schedulers``
 ....................
 

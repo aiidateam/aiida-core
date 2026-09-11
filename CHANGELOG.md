@@ -83,6 +83,13 @@ Its checkpoint records the class itself rather than a name, chosen by the same q
 Previously such a process was created and then excepted in the worker with `ImportError: object 'NotebookWorkChain' from identifier '__main__:NotebookWorkChain' could not be loaded`.
 A class that cannot be serialized, such as one defined inside a function that closes over a node, keeps the name it had and behaves as it did before.
 
+A `CalcJob` works too, which took one thing beyond carrying the class.
+`Parser` used to ask the *node* for the process class, to read the output spec and the exit codes from it, and a node only knows the name its class was recorded under.
+The running process now supplies its own class, and `Parser.process_class` prefers that over resolving the name.
+
+What such a calculation cannot do is be parsed again later from the stored node, with `Parser.parse_from_node`.
+There is no running process to ask by then, and the checkpoint that carried the class is deleted when the node seals.
+
 `process_type` still records `__main__.NotebookWorkChain` for such a class, since that is the module it ran in.
 That string identifies nothing in another interpreter, so the source of the class and a fingerprint of it are now kept on the process node, readable through `ProcessNode.class_source` once the checkpoint carrying the class is gone.
 `ProcessNode.process_class` says so instead of raising an import error about a module that does exist.

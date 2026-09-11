@@ -231,6 +231,17 @@ class TaskOutputs:
 
         return type(self)(task=task, ports=under, prefix=f'{self._path(name)}.')
 
+    def whole(self) -> TaskOutput:
+        """Return the reference to this namespace itself, which passes on everything under it.
+
+        :raises ValueError: if these are the outputs of the task rather than a namespace among them, since which
+            of several outputs is meant would be left unsaid.
+        """
+        if not self.prefix:
+            return self.sole()
+
+        return self._output_class(task=self.task, port=self.prefix.rstrip('.'))
+
     def sole(self) -> TaskOutput:
         """Return the only output of the task.
 
@@ -275,7 +286,8 @@ def _as_reference(value: t.Any) -> TaskOutput | None:
         return value
 
     if isinstance(value, TaskOutputs):
-        return value.sole()
+        # A namespace is passed on whole, which is what carries outputs whose names a run is what decides.
+        return value.whole()
 
     return None
 

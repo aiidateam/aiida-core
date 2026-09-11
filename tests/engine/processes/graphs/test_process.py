@@ -224,7 +224,7 @@ def test_wires_into_and_out_of_a_nested_namespace():
     'port, expected',
     [
         pytest.param('pair.nope', 'not an input of `combined`', id='input'),
-        pytest.param('pair', 'not an input of `combined`', id='namespace-itself'),
+        pytest.param('pair', 'which is a namespace, onto `total`', id='namespace-onto-a-value'),
     ],
 )
 def test_a_port_that_is_not_in_a_namespace_is_refused(port, expected):
@@ -237,6 +237,16 @@ def test_a_port_that_is_not_in_a_namespace_is_refused(port, expected):
             ),
             dependencies=(Dependency(source='start', source_port='total', target='combined', target_port=port),),
         )
+
+
+def test_a_graph_returns_a_whole_namespace():
+    """A namespace is passed on whole, which is the only way to carry what a run is what names."""
+    graph = replace(namespaced_graph(), outputs={'sums': Endpoint(task='combined', port='sums')})
+
+    results, node = run_get_node(GraphProcess, graph=orm.Dict(dict=graph.to_dict()))
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['sums']['total'] == 7
 
 
 def test_runs_a_graph_placed_in_a_graph():

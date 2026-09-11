@@ -14,7 +14,20 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.engine import branch, each, graph, run_get_node, task, tasks
+from aiida.engine import (
+    Dependency,
+    Endpoint,
+    GraphRun,
+    GraphSpec,
+    LoopTask,
+    ProcessTask,
+    branch,
+    each,
+    graph,
+    run_get_node,
+    task,
+    tasks,
+)
 
 
 @task(outputs=['total'])
@@ -105,3 +118,109 @@ def test_a_name_standing_for_more_than_one_process_says_so():
 
     with pytest.raises(ValueError, match='called 2 processes `CALL`'):
         ran['CALL']
+
+
+def linear() -> GraphSpec:
+    """Return `add(add(1, 1), 3)`, so that the second task waits for the first."""
+    return GraphSpec(
+        tasks=(
+            ProcessTask(name='first', spec=add.task_spec, inputs={'x': 1, 'y': 1}),
+            ProcessTask(name='second', spec=add.task_spec, inputs={'y': 3}),
+        ),
+        dependencies=(Dependency(source='first', source_port='total', target='second', target_port='x'),),
+        outputs={'total': Endpoint(task='second', port='total')},
+    )
+
+
+def test_the_frontier_is_what_could_start_now():
+    """What orders several graphs against each other asks each of them this before saying which of them may."""
+    run = GraphRun(graph=linear(), given={})
+
+    assert run.frontier() == ['first'], 'the second waits for what the first produces'
+
+
+def test_asking_for_the_frontier_decides_nothing():
+    """It is a question, so a graph that is asked twice answers the same, and has started nothing either time."""
+    run = GraphRun(graph=linear(), given={})
+
+    assert run.frontier() == run.frontier() == ['first']
+    assert run.decided == set()
+    assert not run.pending
+
+
+def test_the_frontier_is_what_a_step_begins():
+    """A step decides what the frontier named, so the two agree on what a graph is able to do."""
+    run = GraphRun(graph=linear(), given={})
+    named = run.frontier()
+
+    assert [start.instance for start in run.step().starts] == named
+    assert run.frontier() == [], 'what has been decided is not on the frontier again'
+
+
+def test_the_frontier_moves_on_once_what_it_named_has_finished():
+    """A task settles the ones after it, which is what carries a graph from one frontier to the next."""
+    _, node = run_get_node(add, x=1, y=1)
+
+    run = GraphRun(graph=linear(), given={})
+    run.step()
+    run.started('first', node.pk)
+
+    assert run.frontier() == [], 'nothing may start while the first is still running'
+
+    run.completed('first', node.pk)
+
+    assert run.frontier() == ['second']
+
+
+@task(outputs=['value', 'keep_going'])
+def step_down(value):
+    """Take one off the value, and say whether there is anything left to take off."""
+    return value - 1, value - 1 > 0
+
+
+@graph
+def stepping(value):
+    stepped = step_down(value=value)
+    return {'value': stepped.value, 'keep_going': stepped.keep_going}
+
+
+def going_round(max_iterations: int = 10) -> GraphSpec:
+    """Return a graph whose one task is a loop over `stepping`."""
+    return GraphSpec(
+        tasks=(
+            LoopTask(
+                name='loop',
+                body=stepping.build(),
+                condition_port='keep_going',
+                max_iterations=max_iterations,
+                inputs={'value': 3},
+            ),
+        )
+    )
+
+
+def after_one_run(spec: GraphSpec, value: int) -> GraphRun:
+    """Return a run of the graph whose loop has been round once, on a real run of the body."""
+    run = GraphRun(graph=spec, given={})
+    run.step()
+
+    _, node = run_get_node(stepping, value=value)
+    run.started('loop_iteration_0', node.pk)
+    run.completed('loop_iteration_0', node.pk)
+
+    return run
+
+
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    ((3, ['loop']), (1, [])),
+    ids=('goes-round-again', 'condition-turned'),
+)
+def test_a_loop_is_on_the_frontier_while_it_has_a_run_to_go(value, expected):
+    """A loop that has run before can start again, which is something the tasks it waits for cannot."""
+    assert after_one_run(going_round(), value).frontier() == expected
+
+
+def test_a_loop_that_has_run_as_often_as_it_may_is_not_on_the_frontier():
+    """A loop stops where it is told to, so there is nothing it could start however its condition reads."""
+    assert after_one_run(going_round(max_iterations=1), value=3).frontier() == []

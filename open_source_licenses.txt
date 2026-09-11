@@ -27,8 +27,6 @@ Plumpy:
 aiida-shell:
   * aiida/calculations/shell.py
   * aiida/orm/nodes/data/code/shell.py
-  * aiida/orm/nodes/data/entry_point.py
-  * aiida/orm/nodes/data/pickled.py
   * aiida/orm/utils/data.py (the `convert_nodes_single_file_data` function)
   * aiida/parsers/plugins/shell/parser.py
   * aiida/tools/shell.py (the `launch_shell_job` function and its helpers)

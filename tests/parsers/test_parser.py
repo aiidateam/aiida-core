@@ -167,3 +167,28 @@ class TestParser:
 
         with pytest.raises(ValueError, match=r'Error validating output .* for port .*: Unexpected ports .*'):
             BrokenArithmeticAddParser.parse_from_node(node)
+
+
+def test_process_class_comes_from_the_process_when_there_is_one(generate_calculation_node):
+    """Test that a running process supplies its own class, rather than the parser resolving it from the node.
+
+    A node knows only the name its class was recorded under, and a class defined where no name reaches it, such as
+    in a notebook, cannot be recovered from that. The process itself can always say.
+    """
+
+    class AnyParser(Parser):
+        """A parser like any plugin's."""
+
+        def parse(self, **kwargs):
+            pass
+
+    other = CalculationFactory('core.templatereplacer')
+    node = generate_calculation_node(entry_point='aiida.calculations:core.arithmetic.add')
+    parser = AnyParser(node)
+
+    assert parser.process_class is ArithmeticAddCalculation
+
+    parser.process_class = other
+
+    assert parser.process_class is other
+    assert parser.exit_codes is other.exit_codes, 'the members should follow what the process said, not the node'

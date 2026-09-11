@@ -275,6 +275,23 @@ class ProcessNode(Sealable, Node):
         builder._update(inputs)
         return builder
 
+    KEY_ATTRIBUTES_CLASS_FINGERPRINT: str = 'class_fingerprint'
+    """Attribute holding the fingerprint of the process class, for a class no name identifies."""
+
+    KEY_OBJECT_CLASS_SOURCE: str = 'class_source.py'
+    """Repository file holding the source of the process class, for a class no name identifies."""
+
+    @property
+    def class_source(self) -> str | None:
+        """Return the source of the process class, recorded when no name identifies it.
+
+        :return: The source text, or ``None`` for a process whose class its ``process_type`` can import.
+        """
+        try:
+            return self.base.repository.get_object_content(self.KEY_OBJECT_CLASS_SOURCE, mode='r')
+        except FileNotFoundError:
+            return None
+
     @property
     def process_class(self) -> type[Process]:
         """Return the process class that was used to create this node.
@@ -287,6 +304,16 @@ class ProcessNode(Sealable, Node):
 
         if not self.process_type:
             raise ValueError(f'no process type for Node<{self.pk}>: cannot recreate process class')
+
+        # A class defined where no name reaches it, such as a notebook cell, is recorded under the module it ran in.
+        # That module is a different one in every interpreter, so the class cannot be recovered, and saying which
+        # attribute holds what was kept beats an import error naming a module the reader did import successfully.
+        if self.base.attributes.get(self.KEY_ATTRIBUTES_CLASS_FINGERPRINT, None) is not None:
+            raise ValueError(
+                f'the process class of Node<{self.pk}> was defined in `{self.process_type.rsplit(".", 1)[0]}`, which '
+                f'identifies nothing outside the interpreter that ran it, so it cannot be loaded. Its source is kept '
+                f'on the node: see the `class_source` property.'
+            )
 
         try:
             process_class = load_entry_point_from_string(self.process_type)

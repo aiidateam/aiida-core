@@ -30,7 +30,7 @@ from aio_pika.exceptions import ConnectionClosed
 from kiwipy.communications import UnroutableError
 
 from aiida import orm
-from aiida.common import exceptions
+from aiida.common import callables, exceptions
 from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
@@ -771,6 +771,7 @@ class Process(ProcessBase):
 
         self._setup_metadata(copy.copy(dict(self.inputs.metadata)))
         self._setup_version_info()
+        self._setup_class_record()
         self._setup_inputs()
 
     def _setup_version_info(self) -> dict[str, Any]:
@@ -778,6 +779,36 @@ class Process(ProcessBase):
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
         self.node.base.attributes.set_many(version_info)
         return version_info
+
+    def _setup_class_record(self) -> None:
+        """Record the class itself on the node when no name identifies it.
+
+        ``process_type`` records a class that no entry point registers under the module it was defined in, which for a
+        notebook cell or a script is ``__main__``. That name resolves to a different module in every other
+        interpreter, so it can neither load the class later nor tell two classes that share a name apart. The source
+        and a fingerprint are kept instead, so that what ran stays readable once the checkpoint carrying it is gone.
+        """
+        # ``build_process_type`` records the module the class was defined in whenever no entry point registers it.
+        # ``__main__`` is the entry point of whichever interpreter is running, so that string names a different module
+        # everywhere else, permanently. Any other module may or may not be installed later, which is no different from
+        # a plugin that was uninstalled, so it is left alone.
+        if self.__class__.__module__ != '__main__':
+            return
+
+        try:
+            fingerprint = callables.fingerprint(self.__class__)
+        except TypeError:
+            # A class that cannot be serialized cannot be fingerprinted, and nothing here is worth failing a run for.
+            return
+
+        self.node.base.attributes.set(orm.ProcessNode.KEY_ATTRIBUTES_CLASS_FINGERPRINT, fingerprint)
+
+        source = callables.source_of(self.__class__)
+
+        if source is None:
+            return
+
+        self.node.base.repository.put_object_from_bytes(source.encode('utf-8'), orm.ProcessNode.KEY_OBJECT_CLASS_SOURCE)
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""

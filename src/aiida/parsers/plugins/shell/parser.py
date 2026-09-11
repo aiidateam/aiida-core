@@ -14,7 +14,7 @@ import pathlib
 import re
 import typing as t
 
-from aiida.calculations.shell import ShellJob
+from aiida.calculations.shell import ParserFunctionType, ShellJob
 from aiida.engine import ExitCode
 from aiida.orm import Data, FolderData, SinglefileData
 from aiida.parsers.parser import Parser
@@ -32,7 +32,7 @@ class ShellParser(Parser):
 
         if 'parser' in self.node.inputs:
             try:
-                self.call_parser_hook(dirpath)
+                self.call_parser_hook(dirpath, kwargs.get('parser_hook'))
             except Exception as exception:
                 return self.exit_code('ERROR_PARSER_HOOK_EXCEPTED', exception=exception)
 
@@ -134,20 +134,29 @@ class ShellParser(Parser):
 
         return missing_filepaths
 
-    def call_parser_hook(self, dirpath: pathlib.Path) -> None:
-        """Execute the ``parser`` custom parser hook that was passed as input to the ``ShellJob``."""
+    def call_parser_hook(self, dirpath: pathlib.Path, parser_hook: ParserFunctionType | None = None) -> None:
+        """Execute the ``parser`` custom parser hook that was passed as input to the ``ShellJob``.
+
+        :param dirpath: The directory holding the retrieved files.
+        :param parser_hook: The callable itself, as the running process carries it. Without it, the callable is
+            reconstructed from the ``parser`` input node, which records an importable one by name and any other only
+            by fingerprint and source.
+        """
         from inspect import signature
 
-        unpickled_parser = self.node.inputs.parser.load()
-        parser_signature = signature(unpickled_parser)
+        if parser_hook is None:
+            parser_hook = self.node.inputs.parser.load()
 
-        if 'parser' in parser_signature.parameters:
-            results = unpickled_parser(dirpath, self) or {}
+        # The hook is user code that takes one of two arities and returns whatever it likes, which is checked below.
+        hook: t.Any = parser_hook
+
+        if 'parser' in signature(parser_hook).parameters:
+            results = hook(dirpath, self) or {}
         else:
-            results = unpickled_parser(dirpath) or {}
+            results = hook(dirpath) or {}
 
         if not isinstance(results, dict) or any(not isinstance(value, Data) for value in results.values()):
-            msg = f'{unpickled_parser} did not return a dictionary of `Data` nodes but: {results}'
+            msg = f'{parser_hook} did not return a dictionary of `Data` nodes but: {results}'
             raise TypeError(msg)
 
         for key, value in results.items():

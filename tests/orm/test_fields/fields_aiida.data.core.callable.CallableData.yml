@@ -1,16 +1,14 @@
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.pickled.PickledData.AttributesModel'>,
+attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.callable.CallableData.AttributesModel'>,
   doc='The node attributes')
 computer: QbNumericField('computer', dtype=int | None, doc='The PK of the computer')
 ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
   time of the node')
 description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
 extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
-filename: QbStrField('attributes.filename', dtype=<class 'str'>, doc='The name of
-  the stored file')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
   time of the node')
-node_type: QbStrField('node_type', dtype=typing.Literal['data.core.pickled.PickledData.'],
+node_type: QbStrField('node_type', dtype=typing.Literal['data.core.callable.CallableData.'],
   doc='The type of the node.')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 process_type: QbStrField('process_type', dtype=str | None, doc='The process type of

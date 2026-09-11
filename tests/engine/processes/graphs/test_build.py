@@ -151,6 +151,39 @@ class Combine(WorkChain):
 combine = task(Combine)
 
 
+class Scatter(WorkChain):
+    """Produce values under a namespace that declares none of them, as a task with dynamic outputs does."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('value', valid_type=orm.Int)
+        spec.outline(cls.spread)
+        spec.output_namespace('parts', valid_type=orm.Int)
+
+    def spread(self):
+        for offset, name in enumerate(('a', 'b')):
+            self.out(f'parts.{name}', orm.Int(self.inputs.value + offset).store())
+
+
+class TakeMany(WorkChain):
+    """Take a namespace of values without naming any of them."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input_namespace('given', valid_type=orm.Int, dynamic=True)
+        spec.outline(cls.total)
+        spec.output('total', valid_type=orm.Int)
+
+    def total(self):
+        self.out('total', orm.Int(sum(value.value for value in self.inputs.given.values())).store())
+
+
+scatter = task(Scatter)
+take_many = task(TakeMany)
+
+
 @graph
 def combine_a_pair(x, y):
     """Fill one entry of a namespace from a task, take the other from the graph, and read a nested output."""
@@ -1006,3 +1039,40 @@ def test_a_graph_and_the_bodies_inside_it_carry_the_names_they_are_written_under
     assert declaration.identifier == 'refine'
     assert declaration.task('branch').body.identifier == 'branch'
     assert declaration.task('subgraph').body.identifier == 'subgraph'
+
+
+def test_a_namespace_is_passed_on_whole():
+    """A namespace that declares nothing under it can only be carried whole, which is what a graph returns."""
+
+    @graph
+    def scatter_and_pass(value):
+        return {'parts': scatter(value=value).parts}
+
+    results, node = run_get_node(scatter_and_pass, value=10)
+
+    assert node.is_finished_ok, node.exit_message
+    assert {name: part.value for name, part in results['parts'].items()} == {'a': 10, 'b': 11}
+
+
+def test_a_namespace_is_wired_onto_a_namespace():
+    """What one task produced under a namespace fills the namespace another takes, without naming either."""
+
+    @graph
+    def scatter_and_total(value):
+        return {'total': take_many(given=scatter(value=value).parts).total}
+
+    results, node = run_get_node(scatter_and_total, value=10)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 21
+
+
+def test_a_namespace_is_refused_where_one_value_is_taken():
+    """A port holds one value, so a namespace wired onto it would arrive as a collection it cannot take."""
+
+    @graph
+    def scatter_and_add(value):
+        return {'total': add(x=scatter(value=value).parts, y=1).total}
+
+    with pytest.raises(ValueError, match='which is a namespace, onto `x`'):
+        scatter_and_add.build()

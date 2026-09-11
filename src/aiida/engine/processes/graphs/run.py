@@ -29,7 +29,7 @@ from aiida.engine.processes.graphs.spec import (
 from aiida.orm import Dict, List, Node, ProcessNode, load_node
 from aiida.orm.nodes.data.base import BaseType
 
-__all__ = ('GraphRun', 'Start', 'Step', 'TaskNodes', 'tasks')
+__all__ = ('GraphRun', 'Start', 'Step', 'TaskNodes', 'rerun_from', 'tasks')
 
 
 def holds(condition: t.Any) -> bool:
@@ -162,6 +162,54 @@ def tasks(node: ProcessNode) -> TaskNodes:
     :param node: the node of the graph, or of any process, whose called processes to reach.
     """
     return TaskNodes(node)
+
+
+def rerun_from(node: ProcessNode, *names: str) -> list[ProcessNode]:
+    """Make the named tasks of a graph run again the next time the graph is run.
+
+    Running a graph again takes every task from the cache, so nothing that has not changed is computed twice.
+    This is what says which of them should be: the runs named here stop being usable as a cache source, so they
+    run again, and so does anything downstream whose own inputs change as a result. Anything unaffected stays
+    cached, which is what makes this a restart from a task rather than a rerun of everything after it.
+
+    Naming nothing takes every task that did not finish well, at any depth, which is the common case: a graph
+    that stopped somewhere is run again after the reason is fixed. That has to be said, because a task that
+    failed is as valid a cache source as one that worked, so a graph run again would otherwise take the failure
+    from the cache and stop in the same place.
+
+    Caching has to be on for any of this to do anything, which is `verdi config set caching.default_enabled`.
+
+    >>> from aiida.engine import rerun_from, submit
+    >>>
+    >>> rerun_from(node)                 # everything that did not finish well
+    >>> rerun_from(node, 'relax')        # and this one as well, though it worked
+    >>> submit(pipeline, **inputs)
+
+    :param node: the node of the graph that ran.
+    :param names: the tasks to run again, by the name the graph gave each of them, or none for those that did
+        not finish well.
+    :return: the nodes that will no longer be taken from the cache, which is every run the cache would have
+        answered with rather than only the ones named.
+    :raises KeyError: if a name is not a task of the graph.
+    """
+    ran = TaskNodes(node)
+    chosen = [ran[name] for name in names] if names else _did_not_finish_well(node)
+    forgotten: list[ProcessNode] = []
+
+    for task in chosen:
+        # Every run the cache would answer with, rather than this one alone: an earlier run of the same task on
+        # the same inputs would be found in its place and the task would not run again after all.
+        for same in [task, *t.cast(list[ProcessNode], task.base.caching.get_all_same_nodes())]:
+            if same.pk not in {one.pk for one in forgotten}:
+                same.base.caching.is_valid_cache = False
+                forgotten.append(same)
+
+    return forgotten
+
+
+def _did_not_finish_well(node: ProcessNode) -> list[ProcessNode]:
+    """Return every process under this one that did not finish well, however deep it sits."""
+    return [called for called in node.called_descendants if not called.is_finished_ok]
 
 
 def map_items(collection: t.Any, task: MappedTask) -> dict[str, t.Any]:

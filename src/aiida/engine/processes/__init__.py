@@ -101,6 +101,7 @@ __all__ = (
     'loop',
     'monitor',
     'process_handler',
+    'rerun_from',
     'return_',
     'select',
     'subgraph',

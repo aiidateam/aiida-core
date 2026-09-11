@@ -18,7 +18,7 @@ import click
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.cmdline.params import types
 from aiida.cmdline.params.options.callable import CallableDefaultOption
-from aiida.cmdline.params.options.config import ConfigFileOption
+from aiida.cmdline.params.options.config import TemplateAwareConfigFileOption
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import defaults, echo
@@ -119,6 +119,7 @@ __all__ = (
     'SORT',
     'START_DATE',
     'SYMLINK_CALCS',
+    'TEMPLATE_VARS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -732,10 +733,23 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
     help='Only select objects containing only these and no other elements.',
 )
 
-CONFIG_FILE = ConfigFileOption(
+
+# The value is consumed by the ``--config`` option (see ``TemplateAwareConfigFileOption``), which is the only
+# parameter that can resolve it regardless of the order the two options were typed in, so this one carries no
+# callback of its own and is always declared alongside ``CONFIG_FILE``.
+TEMPLATE_VARS = OverridableOption(
+    '--template-vars',
+    type=click.STRING,
+    is_eager=True,
+    expose_value=False,
+    help='Values for the Jinja2 template variables in the file passed to `--config`: an inline JSON string, a local '
+    'YAML/JSON file path, or a URL. Example: \'{"account": "my_account"}\' or path/to/vars.yaml.',
+)
+
+CONFIG_FILE = TemplateAwareConfigFileOption(
     '--config',
-    type=types.FileOrUrl(),
-    help='Load option values from configuration file in yaml format (local path or URL).',
+    help='Load option values from configuration file in YAML format (local path or URL). '
+    'Supports Jinja2 templates with interactive prompting for placeholders.',
 )
 
 IDENTIFIER = OverridableOption(

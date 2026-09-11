@@ -399,6 +399,7 @@ module = [
   'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
   'aiida.cmdline.commands.cmd_status',
+  'aiida.cmdline.utils.template_config',
   'aiida.common.*',
   'aiida.orm.nodes.data.code.shell',
   'aiida.orm.nodes.data.entry_point',

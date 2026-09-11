@@ -2,16 +2,85 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import pathlib
 import typing as t
 
+import psutil
 import pytest
 
 if t.TYPE_CHECKING:
     from aiida.engine import Process, ProcessBuilder
     from aiida.engine.daemon.client import DaemonClient
     from aiida.orm import ProcessNode
+
+LOGGER = logging.getLogger('tests.daemon')
+
+
+def _kill_daemon_processes(daemon_client: DaemonClient) -> None:
+    """Forcefully terminate leftover daemon processes after a graceful stop failed.
+
+    A wedged circus keeps its PID file, so ``is_daemon_running`` stays ``True`` and every later stop, start or
+    status call fails, poisoning all remaining tests on the worker. SIGKILL the circus process tree identified
+    through the PID file and clean up its runtime files best-effort, so the next start begins from scratch.
+    Never raises: callers fall through to a fresh start or report the original timeout.
+    """
+    from aiida.engine.daemon.client import DaemonException
+
+    pid = daemon_client.get_daemon_pid()
+    process = None
+    if pid is not None:
+        try:
+            # Raises if the PID is stale or recycled, in which case it must never be killed.
+            daemon_client._check_pid_file()
+            process = psutil.Process(pid)
+        except DaemonException:
+            process = None
+        except psutil.NoSuchProcess:
+            process = None
+
+    if process is not None:
+        try:
+            targets = [process, *process.children(recursive=True)]
+            for target in targets:
+                with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                    target.kill()
+            _, alive = psutil.wait_procs(targets, timeout=10)
+            for target in alive:
+                with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                    LOGGER.warning('Daemon process survived SIGKILL: pid=%s cmdline=%s', target.pid, target.cmdline())
+        except Exception as exception:  # best-effort cleanup must never raise
+            LOGGER.warning('Failed to kill leftover daemon processes: %s', exception)
+
+    with contextlib.suppress(OSError):
+        pathlib.Path(daemon_client.circus_pid_file).unlink(missing_ok=True)
+    with contextlib.suppress(OSError):
+        daemon_client.delete_circus_socket_directory()
+
+
+def _stop_daemon(daemon_client: DaemonClient, message: str) -> None:
+    """Stop the daemon, forcefully killing leftovers if graceful shutdown fails.
+
+    A wedged circus keeps its PID file, so without the kill fallback every later stop, start or status call on
+    the worker fails and poisons all remaining tests. Fail fast with the default timeout: consumers are marked
+    non-strict xfail where flakiness is expected, so a slow stop still passes within the window.
+    """
+    from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
+
+    if not daemon_client.is_daemon_running:
+        return
+    try:
+        daemon_client.stop_daemon(wait=True)
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException(message),
+        )
+    except DaemonException:
+        _kill_daemon_processes(daemon_client)
 
 
 @pytest.fixture(scope='session')
@@ -28,24 +97,13 @@ def daemon_client(aiida_profile):
 
     """
     from aiida.engine.daemon import get_daemon_client
-    from aiida.engine.daemon.client import DaemonNotRunningException, DaemonTimeoutException
 
     daemon_client = get_daemon_client(aiida_profile.name)
 
     try:
         yield daemon_client
     finally:
-        try:
-            daemon_client.stop_daemon(wait=True)
-        except DaemonNotRunningException:
-            pass
-        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
-        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
-        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
-        daemon_client._await_condition(
-            lambda: not daemon_client.is_daemon_running,
-            DaemonTimeoutException('The daemon failed to stop.'),
-        )
+        _stop_daemon(daemon_client, 'The daemon failed to stop.')
 
 
 @pytest.fixture
@@ -62,19 +120,7 @@ def started_daemon_client(daemon_client: DaemonClient):
             assert started_daemon_client.is_daemon_running
 
     """
-    from aiida.engine.daemon.client import DaemonTimeoutException
-
-    if daemon_client.is_daemon_running:
-        daemon_client.stop_daemon(wait=True)
-        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
-        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
-        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
-        # Fail fast with the default timeout: every consumer of this fixture is marked non-strict xfail, so a
-        # wedged daemon is reported without burning suite time, while a slow stop still passes within the window.
-        daemon_client._await_condition(
-            lambda: not daemon_client.is_daemon_running,
-            DaemonTimeoutException('The daemon failed to stop before restarting.'),
-        )
+    _stop_daemon(daemon_client, 'The daemon failed to stop before restarting.')
     daemon_client.start_daemon()
     assert daemon_client.is_daemon_running
 
@@ -94,17 +140,7 @@ def stopped_daemon_client(daemon_client: DaemonClient):
             assert not stopped_daemon_client.is_daemon_running
 
     """
-    from aiida.engine.daemon.client import DaemonTimeoutException
-
-    if daemon_client.is_daemon_running:
-        daemon_client.stop_daemon(wait=True)
-        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
-        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
-        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
-        daemon_client._await_condition(
-            lambda: not daemon_client.is_daemon_running,
-            DaemonTimeoutException('The daemon failed to stop.'),
-        )
+    _stop_daemon(daemon_client, 'The daemon failed to stop.')
 
     yield daemon_client
 

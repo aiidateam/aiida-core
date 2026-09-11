@@ -613,9 +613,9 @@ From the command line interface:
     Group description  <no description>
     -----------------  ----------------
     # Nodes:
-    PK    Type    Created
-    ----  ------  ---------------
-     1    Code    26D:21h:45m ago
+    PK    Type            Created
+    ----  --------------  ---------------
+     1    InstalledCode   26D:21h:45m ago
 
 Remove nodes from a group
 ^^^^^^^^^^^^^^^^^^^^^^^^^

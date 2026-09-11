@@ -355,3 +355,47 @@ class TestVisGraph:
         string = re.sub(r'N\d+', 'NODE', string)
         string = '\n'.join(sorted(string.strip().split('\n')))
         file_regression.check(string)
+
+    def test_default_node_styles_codes(self, bash_path, tmp_path):
+        """Test the default node styles for the code data plugins."""
+        expected = {
+            'shape': 'ellipse',
+            'style': 'filled',
+            'fillcolor': '#4ca4b9aa',  # blue
+            'penwidth': 0,
+        }
+
+        installed = orm.InstalledCode(computer=self.computer, filepath_executable=str(bash_path))
+        containerized = orm.ContainerizedCode(
+            computer=self.computer,
+            filepath_executable='bash',
+            image_name='image',
+            engine_command='docker {image_name}',
+        )
+        shell = orm.ShellCode(computer=self.computer, filepath_executable='bash')
+        (tmp_path / 'bash').touch()
+        portable = orm.PortableCode(filepath_executable='bash', filepath_files=tmp_path)
+
+        assert graph_mod.default_node_styles(installed) == expected
+        assert graph_mod.default_node_styles(containerized) == expected
+        assert graph_mod.default_node_styles(portable) == expected
+        assert graph_mod.default_node_styles(shell) == expected
+
+    def test_default_node_sublabels_codes(self, bash_path, tmp_path):
+        """Test the default node sublabels for the code data plugins."""
+        installed = orm.InstalledCode(computer=self.computer, filepath_executable=str(bash_path))
+        containerized = orm.ContainerizedCode(
+            computer=self.computer,
+            filepath_executable='bash',
+            image_name='image',
+            engine_command='docker {image_name}',
+        )
+        shell = orm.ShellCode(computer=self.computer, filepath_executable='bash')
+        (tmp_path / 'bash').touch()
+        portable = orm.PortableCode(filepath_executable='bash', filepath_files=tmp_path)
+
+        label = self.computer.label
+        assert graph_mod.default_node_sublabels(installed) == f'{bash_path.name}@{label}'
+        assert graph_mod.default_node_sublabels(containerized) == f'bash@{label}'
+        assert graph_mod.default_node_sublabels(portable) == 'bash'
+        assert graph_mod.default_node_sublabels(shell) == f'bash@{label}'

@@ -514,7 +514,7 @@ class DumpChangeDetector:
         elif self.config.codes:
             code_pks = [code.pk for code in self.config.codes if code.pk is not None]
             if code_pks:
-                qb.append(orm.Code, filters={'id': {'in': code_pks}}, tag=self.CODE_TAG)
+                qb.append(orm.AbstractCode, filters={'id': {'in': code_pks}}, tag=self.CODE_TAG)
                 relationships_to_add['with_incoming'] = self.CODE_TAG
             elif self.config.codes:
                 logger.warning('Code filter provided, but no valid/loaded Code objects found. Skipping.')

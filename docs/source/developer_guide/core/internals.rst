@@ -124,7 +124,7 @@ In the following example, we load a specific node and we list its incoming and o
   In [2]: c.get_incoming().all()
   Out[2]:
   [
-    LinkTriple(link_type='inputlink', label='code', node=<Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>),
+    LinkTriple(link_type='inputlink', label='code', node=<InstalledCode: uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4 (pk: 75709)>),
     LinkTriple(link_type='inputlink', label='parameters', node=<Dict: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>)
     LinkTriple(link_type='inputlink', label='parent_calc_folder', node=<RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>)
     LinkTriple(link_type='inputlink', label='pseudo_Ba', node=<UpfData: uuid: 5e53b22d-5757-4d50-bbe0-51f3b9ac8b7c (pk: 1905)>)

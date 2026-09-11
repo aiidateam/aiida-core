@@ -83,6 +83,10 @@ Its checkpoint records the class itself rather than a name, chosen by the same q
 Previously such a process was created and then excepted in the worker with `ImportError: object 'NotebookWorkChain' from identifier '__main__:NotebookWorkChain' could not be loaded`.
 A class that cannot be serialized, such as one defined inside a function that closes over a node, keeps the name it had and behaves as it did before.
 
+`process_type` still records `__main__.NotebookWorkChain` for such a class, since that is the module it ran in.
+That string identifies nothing in another interpreter, so the source of the class and a fingerprint of it are now kept on the process node, readable through `ProcessNode.class_source` once the checkpoint carrying the class is gone.
+`ProcessNode.process_class` says so instead of raising an import error about a module that does exist.
+
 ### Fixes
 
 ### Deprecations

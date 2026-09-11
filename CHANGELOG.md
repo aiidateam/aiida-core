@@ -39,12 +39,17 @@ print(results['stdout'].get_content())
 ```
 
 The `core.shell` calculation job and parser entry points keep the names they had in `aiida-shell`, so existing nodes, archives and scripts that refer to them are unaffected.
-`launch_shell_job` is importable from `aiida.tools`, and the `PickledData` and `EntryPointData` data plugins from `aiida.orm`.
 
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
 ### Behavior changes
+
+#### Checkpoints carry callables that no name can recover
+
+A checkpoint can now carry a lambda, a closure or a `functools.partial`, which are serialized in full, while anything importable keeps the name reference it had.
+Previously these were written as a reference to a name that resolves to something else, or to nothing at all.
+Nothing in `aiida-core` put a callable in a checkpoint, so that was a latent defect rather than a failure anyone could reach.
 
 ### Fixes
 

@@ -8,6 +8,10 @@
 ###########################################################################
 """Tests for the :mod:`aiida.orm.utils.serialize` module."""
 
+import base64
+import functools
+import operator
+import re
 import types
 import uuid
 from dataclasses import dataclass
@@ -16,6 +20,7 @@ import numpy as np
 import pytest
 
 from aiida import orm
+from aiida.common import callables
 from aiida.common.links import LinkType
 from aiida.orm.utils import serialize
 
@@ -190,3 +195,59 @@ def test_serialize_node_links_manager():
     assert deserialized._node.uuid == node.uuid
     assert deserialized._link_type == LinkType.CREATE
     assert deserialized._incoming is False
+
+
+def make_adder(offset):
+    """Return a closure, which no name identifies, over the provided offset."""
+    return lambda value: value + offset
+
+
+class Adder:
+    """A callable object, which a name reference resolves to its class rather than to this instance."""
+
+    def __init__(self, offset):
+        self.offset = offset
+
+    def __call__(self, value):
+        return value + self.offset
+
+
+def test_importable_callable_stays_a_name_reference():
+    """Test that a callable that can be imported is still represented by name, and not by its bytes."""
+    serialized = serialize.serialize({'callable': serialize.serialize})
+
+    assert serialized.strip() == "callable: !!python/name:aiida.orm.utils.serialize.serialize ''"
+    assert serialize.deserialize_unsafe(serialized)['callable'] is serialize.serialize
+
+
+def test_callable_representation():
+    """Test what a callable no name refers to actually looks like in a checkpoint.
+
+    The whole callable is written out under a tag of ours, base64 encoded so that it stays printable text, which is
+    what someone reading a checkpoint by hand will find where a `!!python/name:` reference used to be.
+    """
+    offset = 10
+    dumped = serialize.serialize({'callable': lambda value: value + offset})
+
+    match = re.fullmatch(r"callable: !aiida_callable '([A-Za-z0-9+/=]+)'\n", dumped)
+    assert match is not None, dumped
+
+    payload = base64.b64decode(match.group(1))
+
+    assert payload.startswith(b'\x80'), 'the payload should be a pickle stream'
+    assert callables.loads(payload)(1) == 11
+
+
+@pytest.mark.parametrize(
+    'value',
+    (
+        pytest.param(make_adder(10), id='closure'),
+        pytest.param(functools.partial(operator.add, 10), id='partial'),
+        pytest.param(Adder(10), id='callable-object'),
+    ),
+)
+def test_callable_round_trip(value):
+    """Test that a callable no name identifies survives a round trip, including the state it carries."""
+    deserialized = serialize.deserialize_unsafe(serialize.serialize({'callable': value}))['callable']
+
+    assert deserialized(1) == 11

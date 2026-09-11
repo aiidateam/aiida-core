@@ -259,7 +259,7 @@ def test_runs_a_graph_placed_in_a_graph():
     called = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()
 
     assert [entry.link_label for entry in called] == ['inner']
-    assert isinstance(called[0].node, orm.WorkChainNode)
+    assert isinstance(called[0].node, orm.GraphNode)
 
 
 def test_reports_a_failing_task():

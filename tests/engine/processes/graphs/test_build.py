@@ -999,7 +999,7 @@ def test_a_graph_can_be_submitted():
     """A graph is handed to the launchers like any other process."""
     node = submit(add_twice, x=1, y=2)
 
-    assert isinstance(node, orm.WorkChainNode)
+    assert isinstance(node, orm.GraphNode)
 
 
 def test_a_task_outside_a_graph_still_runs():

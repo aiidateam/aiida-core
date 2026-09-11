@@ -6,6 +6,7 @@ import contextlib
 import os
 import pathlib
 import secrets
+import time
 import typing as t
 
 import pytest
@@ -156,7 +157,7 @@ def aiida_profile_factory():
             This ensures that the contents of the profile are reset as well as the ``Manager``, which may hold
             references to data that will be destroyed. The daemon will also be stopped if it was running.
             """
-            from aiida.engine.daemon.client import DaemonException, get_daemon_client
+            from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException, get_daemon_client
             from aiida.orm import User
 
             active_profile = manager.get_profile()
@@ -175,6 +176,17 @@ def aiida_profile_factory():
                             daemon_client.stop_daemon(wait=True)
                         except DaemonException:
                             pass
+
+                        # ``stop_daemon(wait=True)`` returns once the stop is requested, but the
+                        # daemon process may still be shutting down and briefly report as running.
+                        # Wait until it is confirmed stopped so reset does not clear storage
+                        # underneath a live worker that retains the old default user.
+                        start_time = time.monotonic()
+                        while daemon_client.is_daemon_running:
+                            if time.monotonic() - start_time > 5:
+                                msg = 'The daemon failed to stop before resetting storage.'
+                                raise DaemonTimeoutException(msg)
+                            time.sleep(0.1)
 
                 default_user_email = target_profile.default_user_email or email
                 manager.get_profile_storage()._clear()

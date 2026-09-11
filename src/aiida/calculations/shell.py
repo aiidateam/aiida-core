@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import inspect
 import pathlib
 import secrets
 import shlex
@@ -18,15 +17,16 @@ import typing as t
 
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
 from aiida.common.folders import Folder
+from aiida.common.lang import override
 from aiida.engine import CalcJob, CalcJobProcessSpec
+from aiida.engine.processes.persistence import auto_persist
 from aiida.orm import (
+    CallableData,
     Computer,
     Data,
     Dict,
-    EntryPointData,
     FolderData,
     List,
-    PickledData,
     RemoteData,
     SinglefileData,
     to_aiida_type,
@@ -36,8 +36,12 @@ from aiida.parsers import Parser
 ParserFunctionType = t.Callable[[pathlib.Path, Parser], dict[str, Data]] | t.Callable[[pathlib.Path], dict[str, Data]]
 
 
+@auto_persist('_parser_hook')
 class ShellJob(CalcJob):
     """Implementation of :class:`aiida.engine.CalcJob` to run a simple shell command."""
+
+    _parser_hook: ParserFunctionType | None = None
+    """The custom parser callable, which the ``parser`` input node records but does not store."""
 
     FILENAME_STATUS: str = 'status'
     FILENAME_STDERR: str = 'stderr'
@@ -63,7 +67,7 @@ class ShellJob(CalcJob):
         spec.input('outputs', valid_type=List, required=False, serializer=to_aiida_type, validator=cls.validate_outputs)
         spec.input(
             'parser',
-            valid_type=(EntryPointData, PickledData),
+            valid_type=CallableData,
             required=False,
             serializer=cls.serialize_parser,
             validator=cls.validate_parser,
@@ -158,20 +162,27 @@ class ShellJob(CalcJob):
         raise TypeError(f'`arguments` should be a string or a list of strings but got: {type(value)}')
 
     @classmethod
-    def serialize_parser(cls, value: t.Any) -> EntryPointData | PickledData:
-        """Convert the ``value`` to a ``PickledData`` or ``EntryPointData`` instance if possible.
+    def serialize_parser(cls, value: t.Any) -> CallableData:
+        """Convert the ``value`` to a ``CallableData`` instance if possible.
 
-        :param value: The object to serialize to a ``EntryPointData`` or ``PickledData`` instance.
+        :param value: The callable to record, or the entry point string of a registered one.
         :raises TypeError: If the object is not a string or callable.
+        :raises ValueError: If the entry point string does not resolve to a callable.
         """
         if callable(value):
-            return PickledData(value, recurse=True)
+            return CallableData(value)
 
         if isinstance(value, str):
-            from aiida.plugins.entry_point import get_entry_point_from_string
+            from aiida.common.exceptions import EntryPointError
+            from aiida.plugins.entry_point import load_entry_point_from_string
 
-            entry_point = get_entry_point_from_string(value)
-            return EntryPointData(entry_point=entry_point)
+            try:
+                loaded = load_entry_point_from_string(value)
+            except EntryPointError as exception:
+                msg = f'the parser specified in the `parser` could not be loaded: {exception}'
+                raise ValueError(msg) from exception
+
+            return CallableData(loaded, entry_point=value)
 
         msg = f'`value` should be a string or callable but got: {type(value)}'
         raise TypeError(msg)
@@ -195,23 +206,19 @@ class ShellJob(CalcJob):
 
     @classmethod
     def validate_parser(cls, value: t.Any, _: t.Any) -> str | None:
-        """Validate the ``parser`` input."""
+        """Validate the ``parser`` input.
+
+        The record carries the parameter names, written when the callable was recorded, so nothing has to be
+        reconstructed or executed to validate the signature.
+        """
         if not value:
             return None
 
-        try:
-            deserialized_parser = value.load()
-        except ValueError as exception:
-            return f'The parser specified in the `parser` could not be loaded: {exception}.'
+        if value.positional_parameters is None:
+            return 'The signature of the `parser` could not be determined, so it cannot be validated.'
 
-        try:
-            signature = inspect.signature(deserialized_parser)
-        except TypeError as exception:
-            return f'The `parser` is not a callable function: {exception}'
-
-        parameters = list(signature.parameters.keys())
-
-        if sorted(parameters) not in (['dirpath'], ['dirpath', 'parser']):
+        # The hook is called positionally, so a parameter that can only be passed by keyword cannot be supplied.
+        if sorted(value.positional_parameters) not in (['dirpath'], ['dirpath', 'parser']):
             correct_signature = (
                 '(dirpath: pathlib.Path) -> dict[str, Data]: or '
                 '(dirpath: pathlib.Path, parser: Parser) -> dict[str, Data]:'
@@ -268,6 +275,28 @@ class ShellJob(CalcJob):
                 return f'`{reserved}` is a reserved output filename and cannot be used in `outputs`.'
 
         return None
+
+    @override
+    def on_create(self) -> None:
+        """Take the custom parser callable off the ``parser`` input, which records it but does not store it."""
+        super().on_create()
+
+        parser = self.inputs.get('parser')
+        self._parser_hook = parser.live_callable if isinstance(parser, CallableData) else None
+
+    @override
+    def _get_parse_kwargs(self, retrieved_temporary_folder: str | None) -> dict[str, t.Any]:
+        """Add the custom parser callable, which the ``parser`` input node records but does not store.
+
+        It is persisted with the process, so it is still here when a job that finished while the daemon was down is
+        parsed by a worker that had to rebuild the process from its checkpoint.
+        """
+        kwargs = super()._get_parse_kwargs(retrieved_temporary_folder)
+
+        if self._parser_hook is not None:
+            kwargs['parser_hook'] = self._parser_hook
+
+        return kwargs
 
     def _build_process_label(self) -> str:
         """Construct the process label that should be set on ``ProcessNode`` instances for this process class.

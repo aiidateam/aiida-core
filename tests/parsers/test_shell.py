@@ -14,7 +14,7 @@ import pathlib
 import pytest
 
 from aiida.calculations.shell import ShellJob
-from aiida.orm import FolderData, List, SinglefileData
+from aiida.orm import CallableData, FolderData, List, SinglefileData
 
 
 @pytest.fixture
@@ -172,3 +172,70 @@ def test_outputs_directory(parse_calc_job, create_retrieved_temporary):
 
     for filename, content in files.items():
         assert node.base.repository.get_object_content(pathlib.Path(filename).name) == content
+
+
+def reparse_parser(dirpath):
+    """A parser defined where a name can find it, so a stored record can reconstruct it."""
+    from aiida.orm import Str
+
+    return {'string': Str((dirpath / ShellJob.FILENAME_STDOUT).read_text().strip())}
+
+
+def raising_parser(dirpath):
+    """A parser that raises, to reach the exit code the job defines for it."""
+    raise RuntimeError('the parser blew up')
+
+
+def non_dict_parser(dirpath):
+    """A parser that returns something other than a mapping of ``Data`` nodes."""
+    return 'not a dictionary'
+
+
+def test_reparse_importable_parser(parse_calc_job, create_retrieved_temporary):
+    """Test that a finished job can be parsed again from its node when the parser can be imported.
+
+    Re-parsing goes through :meth:`~aiida.parsers.parser.Parser.parse_from_node`, so no process is running to hand
+    the callable over and the record has to reconstruct it. This is the half of the trade that still works.
+    """
+    retrieved_temporary = create_retrieved_temporary({ShellJob.FILENAME_STDOUT: 'content stdout'})
+    _, results, calcfunction = parse_calc_job(
+        filepath_retrieved_temporary=retrieved_temporary, inputs={'parser': CallableData(reparse_parser)}
+    )
+
+    assert calcfunction.is_finished_ok, calcfunction.exit_status
+    assert results['string'] == 'content stdout'
+
+
+def test_reparse_parser_no_name_can_recover(parse_calc_job, create_retrieved_temporary):
+    """Test that re-parsing a job whose parser was a closure fails with the exit code, rather than an exception.
+
+    This is the other half of the trade: the record identifies the callable and shows its source, and cannot rebuild
+    it, so the job says so through the exit code it defines for a failing parser.
+    """
+
+    def closure(dirpath):
+        return {}
+
+    node, _, calcfunction = parse_calc_job(
+        filepath_retrieved_temporary=create_retrieved_temporary(), inputs={'parser': CallableData(closure)}
+    )
+
+    assert calcfunction.exit_status == node.process_class.exit_codes.ERROR_PARSER_HOOK_EXCEPTED.status
+    assert 'was not importable when it was recorded' in calcfunction.exit_message
+
+
+@pytest.mark.parametrize(
+    'parser, expected',
+    (
+        pytest.param(raising_parser, 'the parser blew up', id='raises'),
+        pytest.param(non_dict_parser, 'did not return a dictionary', id='returns-a-non-dict'),
+    ),
+)
+def test_parser_hook_excepted(parse_calc_job, create_retrieved_temporary, parser, expected):
+    """Test that a parser which misbehaves gives the exit code the job defines, with the reason in the message."""
+    node, _, calcfunction = parse_calc_job(
+        filepath_retrieved_temporary=create_retrieved_temporary(), inputs={'parser': CallableData(parser)}
+    )
+
+    assert calcfunction.exit_status == node.process_class.exit_codes.ERROR_PARSER_HOOK_EXCEPTED.status
+    assert expected in calcfunction.exit_message

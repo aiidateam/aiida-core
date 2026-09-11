@@ -15,6 +15,7 @@ for new types though.
 
 from __future__ import annotations
 
+import base64
 import inspect
 from dataclasses import asdict, is_dataclass
 from enum import Enum
@@ -24,7 +25,7 @@ from typing import Any, Protocol, cast, overload
 import yaml
 
 from aiida import orm
-from aiida.common import AttributeDict
+from aiida.common import AttributeDict, callables
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.persistence import CHECKPOINT_PAYLOAD_TAG, CheckpointPayload
@@ -38,6 +39,28 @@ _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
 _ATTRIBUTES_FROZENDICT_TAG = '!aiida:attributes_frozendict'
+_CALLABLE_TAG = '!aiida_callable'
+
+
+def _requires_callable_payload(data: Any) -> bool:
+    """Return whether ``data`` is a callable that a ``!!python/name:`` reference cannot recover.
+
+    PyYAML represents any callable as a reference to its ``__module__`` and ``__name__``. For a lambda, a closure, a
+    ``functools.partial`` or anything defined in ``__main__``, that name resolves to nothing, or worse, to a different
+    object that happens to share it. Those have to be represented by the callable itself.
+    """
+    return callable(data) and not callables.is_importable(data)
+
+
+def represent_callable(dumper: yaml.Dumper, value: Any) -> yaml.ScalarNode:
+    """Represent a callable in yaml by serializing it, including the state it closes over."""
+    return dumper.represent_scalar(_CALLABLE_TAG, base64.b64encode(callables.dumps(value)).decode('ascii'))
+
+
+def callable_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Any:
+    """Construct a callable from the serialized representation."""
+    payload: str = loader.construct_scalar(serialized)  # type: ignore[arg-type]
+    return callables.loads(base64.b64decode(payload))
 
 
 def represent_enum(dumper: yaml.Dumper, enum: Enum) -> yaml.ScalarNode:
@@ -179,6 +202,8 @@ class AiiDADumper(yaml.Dumper):
             return represent_group(self, data)
         if is_dataclass(data) and not inspect.isclass(data):
             return represent_dataclass(self, data)
+        if _requires_callable_payload(data):
+            return represent_callable(self, data)
 
         return super().represent_data(data)
 
@@ -204,6 +229,7 @@ yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_DATACLASS_TAG, dataclass_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_CALLABLE_TAG, callable_constructor, Loader=AiiDALoader)
 
 
 @overload

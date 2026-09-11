@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for the :mod:`aiida.calculations.shell` module."""
 
+import inspect
 import pathlib
 import shlex
 
@@ -17,14 +18,13 @@ from aiida.calculations.shell import ShellJob
 from aiida.common.datastructures import CodeInfo
 from aiida.engine import run_get_node
 from aiida.orm import (
+    CallableData,
     Data,
-    EntryPointData,
     Float,
     FolderData,
     Int,
     List,
     Log,
-    PickledData,
     RemoteData,
     SinglefileData,
     Str,
@@ -419,7 +419,7 @@ def test_parser(generate_shell_calc_job, generate_shell_code):
     process = generate_shell_calc_job(
         'core.shell', inputs={'code': generate_shell_code(), 'parser': custom_parser}, return_process=True
     )
-    assert isinstance(process.inputs.parser, PickledData)
+    assert isinstance(process.inputs.parser, CallableData)
 
 
 def test_parser_with_parser_argument(generate_shell_calc_job, generate_shell_code):
@@ -429,7 +429,7 @@ def test_parser_with_parser_argument(generate_shell_calc_job, generate_shell_cod
         inputs={'code': generate_shell_code(), 'parser': custom_parser_with_parser_argument},
         return_process=True,
     )
-    assert isinstance(process.inputs.parser, PickledData)
+    assert isinstance(process.inputs.parser, CallableData)
 
 
 def test_parser_entry_point(generate_shell_calc_job, generate_shell_code, entry_points):
@@ -440,15 +440,79 @@ def test_parser_entry_point(generate_shell_calc_job, generate_shell_code, entry_
     process = generate_shell_calc_job(
         'core.shell', inputs={'code': generate_shell_code(), 'parser': entry_point_name}, return_process=True
     )
-    assert isinstance(process.inputs.parser, EntryPointData)
+    record = process.inputs.parser
+
+    assert isinstance(record, CallableData)
+    assert record.callable_entry_point == entry_point_name
+    assert record.load() is custom_parser
 
 
-def test_parser_invalid_not_callable(generate_shell_calc_job, generate_shell_code):
-    """Test the ``parser`` validation when input is not callable."""
-    with pytest.raises(ValueError, match=r'The `parser` is not a callable function: .* is not a callable object'):
+def test_parser_entry_point_invalid(generate_shell_calc_job, generate_shell_code):
+    """Test the ``parser`` input when the entry point string does not name a registered parser."""
+    with pytest.raises(ValueError, match=r'the parser specified in the `parser` could not be loaded: .*'):
         generate_shell_calc_job(
-            'core.shell', inputs={'code': generate_shell_code(), 'parser': PickledData('not-callable')}
+            'core.shell', inputs={'code': generate_shell_code(), 'parser': 'aiida.parsers:nope.not.here'}
         )
+
+
+def test_parser_invalid_type(generate_shell_calc_job, generate_shell_code):
+    """Test the ``parser`` input when it is neither a callable nor an entry point string."""
+    with pytest.raises(TypeError, match=r'`value` should be a string or callable but got: .*int.*'):
+        generate_shell_calc_job('core.shell', inputs={'code': generate_shell_code(), 'parser': 42})
+
+
+def test_parser_invalid_signature_keyword_only(generate_shell_calc_job, generate_shell_code):
+    """Test that a parser whose ``dirpath`` can only be passed by keyword is refused at submission.
+
+    The hook is called positionally, so accepting this would defer the failure to after the job has run.
+    """
+
+    def keyword_only(*, dirpath):
+        return {}
+
+    with pytest.raises(ValueError, match=r'The `parser` has an invalid function signature'):
+        generate_shell_calc_job('core.shell', inputs={'code': generate_shell_code(), 'parser': keyword_only})
+
+
+def test_parser_invalid_signature_not_inspectable(generate_shell_calc_job, generate_shell_code):
+    """Test the ``parser`` validation when the callable has no signature that can be inspected."""
+    with pytest.raises(ValueError, match=r'The signature of the `parser` could not be determined'):
+        generate_shell_calc_job('core.shell', inputs={'code': generate_shell_code(), 'parser': iter})
+
+
+def test_parser_records_without_storing_the_callable(generate_shell_calc_job, generate_shell_code):
+    """Test that the ``parser`` input records the callable rather than storing it.
+
+    The record has to identify a closure that a name cannot, and must not carry anything that runs when it is read.
+    """
+
+    def make_parser(threshold):
+        def parse(dirpath):
+            return {'above': threshold}
+
+        return parse
+
+    def build(parser):
+        process = generate_shell_calc_job(
+            'core.shell', inputs={'code': generate_shell_code(), 'parser': parser}, return_process=True
+        )
+        return process.inputs.parser
+
+    record = build(make_parser(10))
+
+    assert record.is_importable is False
+    assert record.name == 'test_parser_records_without_storing_the_callable.<locals>.make_parser.<locals>.parse'
+    assert "return {'above': threshold}" in record.get_source()
+    assert record.base.repository.list_object_names() == [CallableData.FILENAME_SOURCE]
+
+    # Two closures off the same factory share a name and a source, so only what they capture tells them apart.
+    assert record.fingerprint != build(make_parser(20)).fingerprint
+
+    # An importable callable is recorded by name instead, with no fingerprint that a pickler version could shift.
+    importable = build(custom_parser)
+    assert importable.is_importable is True
+    assert importable.module == __name__
+    assert importable.fingerprint is None
 
 
 def test_parser_invalid_signature(generate_shell_calc_job, generate_shell_code):
@@ -474,6 +538,95 @@ def test_parser_over_daemon(generate_shell_code, submit_and_await):
     node = submit_and_await(builder)
     assert node.is_finished_ok, (node.exit_status, node.exit_message)
     assert node.outputs.string == value
+
+    # The parser ran from the callable the process carried, and the input node holds a record of it, not the callable.
+    assert isinstance(node.inputs.parser, CallableData)
+    assert node.inputs.parser.is_importable is False
+
+    with pytest.raises(ValueError, match=r'.*was not importable when it was recorded.*'):
+        node.inputs.parser.load()
+
+
+def test_nothing_executable_survives_the_process(generate_shell_code, submit_and_await):
+    """Test that a terminated job leaves a record to read and nothing to run.
+
+    This is the point of the whole model, so it is asserted on a job that actually ran rather than on a constructed
+    node: the payload that carried the callable is deleted with the process, and what stays in the repository is the
+    source text, not a pickle stream.
+    """
+    value = 'testing'
+
+    def parser(dirpath):
+        from aiida.orm import Str
+
+        return {'string': Str((dirpath / 'stdout').read_text().strip())}
+
+    builder = generate_shell_code('/bin/echo').get_builder()
+    builder.arguments = [value]
+    builder.parser = parser
+
+    node = submit_and_await(builder)
+    assert node.is_finished_ok, (node.exit_status, node.exit_message)
+    assert node.outputs.string == value
+
+    record = node.inputs.parser
+    stored = record.base.repository.get_object_content(CallableData.FILENAME_SOURCE, mode='rb')
+
+    assert node.checkpoint is None, 'the checkpoint that carried the callable outlived the process'
+    assert record.base.repository.list_object_names() == [CallableData.FILENAME_SOURCE]
+    assert not stored.startswith(b'\x80'), 'a pickle stream was stored where the source should be'
+    assert stored.decode('utf-8') == inspect.getsource(parser)
+
+    with pytest.raises(ValueError, match=r'.*was not importable when it was recorded.*'):
+        record.load()
+
+
+def test_parser_over_ssh(aiida_computer_ssh, generate_shell_code, submit_and_await):
+    """Test a parser that no name can recover, on a job run through a real SSH connection.
+
+    Everything the model needs has to hold at once here: the record is stored, the callable reaches the daemon worker
+    in the checkpoint, the job runs through a transport that is not this process, and the parser is called with the
+    callable the process carried rather than with anything loaded from the node.
+    """
+    computer = aiida_computer_ssh(label='localhost-ssh', configure=True)
+    value = 'testing'
+
+    def parser(dirpath):
+        from aiida.orm import Str
+
+        return {'string': Str((dirpath / 'stdout').read_text().strip())}
+
+    builder = generate_shell_code('/bin/echo', computer=computer).get_builder()
+    builder.arguments = [value]
+    builder.parser = parser
+
+    node = submit_and_await(builder)
+
+    assert node.is_finished_ok, (node.exit_status, node.exit_message)
+    assert node.outputs.string == value
+    assert node.computer.transport_type == 'core.ssh'
+    assert node.inputs.parser.is_importable is False
+
+
+def test_parser_travels_in_the_checkpoint(generate_shell_calc_job, generate_shell_code):
+    """Test that a parser no name can recover is carried by the checkpoint, since the input node does not hold it.
+
+    This is the path a daemon restart takes between submitting a job and parsing it.
+    """
+    from aiida.engine.processes.persistence import CheckpointPayload
+    from aiida.orm.utils import serialize
+
+    threshold = 10
+
+    def parser(dirpath):
+        return {'above': threshold}
+
+    process = generate_shell_calc_job(
+        'core.shell', inputs={'code': generate_shell_code(), 'parser': parser}, return_process=True
+    )
+    checkpoint = serialize.deserialize_unsafe(serialize.serialize(CheckpointPayload.from_object(process)))
+
+    assert checkpoint['_parser_hook'](None) == {'above': threshold}
 
 
 def test_input_output_filename_overlap(generate_shell_calc_job, generate_shell_code, tmp_path):

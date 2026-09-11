@@ -39,12 +39,33 @@ print(results['stdout'].get_content())
 ```
 
 The `core.shell` calculation job and parser entry points keep the names they had in `aiida-shell`, so existing nodes, archives and scripts that refer to them are unaffected.
-`launch_shell_job` is importable from `aiida.tools`, and the `PickledData` and `EntryPointData` data plugins from `aiida.orm`.
+`launch_shell_job` is importable from `aiida.tools`, and the `CallableData` data plugin from `aiida.orm`.
 
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
 ### Behavior changes
+
+#### `ShellJob` records the parser it is given
+
+The `parser` input of a `ShellJob` no longer stores the callable as a pickled node.
+It is recorded in a `CallableData` node, which holds the source text, where it came from, and either the module and name that can import it or a fingerprint that tells it apart from callables that share a name.
+The callable itself travels with the running process, in its checkpoint, and is gone once the process terminates.
+
+A parser that can be imported is therefore still re-runnable from an archive, and one that cannot, a lambda or a closure, is not: the archive shows what ran, without carrying code that executes when the node is read.
+
+An entry point string is recorded the same way, so the `parser` input is a `CallableData` whichever form it was given in.
+Passing an `EntryPointData` node to it directly no longer validates; pass the entry point string, which is the documented form.
+`EntryPointData` and `PickledData`, which `aiida-shell` used for this input, are removed.
+A node either of them wrote keeps its type string and loads as a plain `Data`, so its attributes and its repository contents stay readable and no migration is needed.
+What such a node loses is `load()`, the method that ran the code in the pickle.
+`dill` is no longer a dependency; callables are serialized with `cloudpickle`.
+
+#### Checkpoints carry callables that no name can recover
+
+A checkpoint can now carry a lambda, a closure or a `functools.partial`, which are serialized in full, while anything importable keeps the name reference it had.
+Previously these were written as a reference to a name that resolves to something else, or to nothing at all.
+Nothing in `aiida-core` put a callable in a checkpoint, so that was a latent defect rather than a failure anyone could reach.
 
 ### Fixes
 

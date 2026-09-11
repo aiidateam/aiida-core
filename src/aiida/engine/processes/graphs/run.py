@@ -474,20 +474,24 @@ class GraphRun:
                     place(inputs, port, self.given[name])
 
         for edge in self.graph.dependencies:
-            if edge.target != task.name:
+            carried = edge.carried_between
+
+            if edge.target != task.name or carried is None:
                 continue
 
+            source_port, target_port = carried
+
             if isinstance(self.graph.task(edge.source), MappedTask):
-                place(inputs, edge.target_port, self._gathered(edge))
+                place(inputs, target_port, self._gathered(edge, source_port))
             else:
-                place(inputs, edge.target_port, at(self._produced_by(edge.source).outputs, edge.source_port))
+                place(inputs, target_port, at(self._produced_by(edge.source).outputs, source_port))
 
         return inputs
 
-    def _gathered(self, edge: Dependency) -> dict[str, t.Any]:
+    def _gathered(self, edge: Dependency, source_port: str) -> dict[str, t.Any]:
         """Return what a task that ran once per item produced, under the key of the item each run was for."""
         return {
-            self._item_key(edge.source, instance): at(load_node(self.done[instance]).outputs, edge.source_port)
+            self._item_key(edge.source, instance): at(load_node(self.done[instance]).outputs, source_port)
             for instance in self.instances[edge.source]
         }
 

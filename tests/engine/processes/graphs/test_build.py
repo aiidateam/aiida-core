@@ -36,6 +36,7 @@ from aiida.engine import (
     subgraph,
     submit,
     task,
+    tasks,
 )
 
 pytestmark = pytest.mark.requires_broker
@@ -1076,3 +1077,35 @@ def test_a_namespace_is_refused_where_one_value_is_taken():
 
     with pytest.raises(ValueError, match='which is a namespace, onto `x`'):
         scatter_and_add.build()
+
+
+def test_a_task_is_told_to_wait_for_one_it_takes_nothing_from():
+    """Ordering a task against another is what carries a dependency nothing is passed along."""
+
+    @graph
+    def ordered():
+        first = add(x=1, y=1)
+        return {'total': add(x=2, y=2).after(first).total}
+
+    declaration = ordered.build()
+    (edge,) = declaration.dependencies
+
+    assert (edge.source, edge.target) == ('add', 'add_2')
+    assert edge.carried_between is None
+
+    results, node = run_get_node(ordered)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['total'] == 4
+    assert tasks(node)['add'].pk < tasks(node)['add_2'].pk
+
+
+def test_waiting_for_something_that_is_not_a_task_is_refused():
+    """A task waits for another task, so anything else says nothing about when it may run."""
+
+    @graph
+    def waits_for_a_number():
+        return {'total': add(x=1, y=1).after(3).total}
+
+    with pytest.raises(TypeError, match='wait for a int'):
+        waits_for_a_number.build()

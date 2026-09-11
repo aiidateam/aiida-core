@@ -20,6 +20,7 @@ from dataclasses import dataclass, field, replace
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
+from aiida.engine.processes.graphs.monitors import MonitorProcess, WaitProcess
 from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
 from aiida.engine.processes.graphs.run import holds
 from aiida.engine.processes.graphs.spec import (
@@ -62,9 +63,11 @@ __all__ = (
     'each',
     'graph',
     'loop',
+    'monitor',
     'select',
     'subgraph',
     'task',
+    'wait_for',
 )
 
 ACTIVE_BUILDER: contextvars.ContextVar[t.Any | None] = contextvars.ContextVar(
@@ -1194,8 +1197,19 @@ class TaskHandle:
         return self.run(*args, **kwargs)
 
     def bind_arguments(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-        """Return the arguments of a call to this task, by the name of the parameter each is bound to."""
-        return _arguments(self._function, *args, **kwargs)
+        """Return the arguments of a call to this task, by the name of the port each is given on.
+
+        A task takes what the process running it declares beyond the parameters of its function, such as how long
+        a monitor waits between looks. Those are not parameters to bind, so they are set aside and put back once
+        the rest have been bound.
+        """
+        beside = {name: kwargs.pop(name) for name in list(kwargs) if self._is_a_port_alone(name)}
+
+        return {**_arguments(self._function, *args, **kwargs), **beside}
+
+    def _is_a_port_alone(self, name: str) -> bool:
+        """Return whether the name is an input of the process running this task and not a parameter of it."""
+        return name in self.process_class.spec().inputs and name not in inspect.signature(self._function).parameters
 
     @property
     def process_class(self) -> type[Process]:
@@ -1349,6 +1363,69 @@ def task(
         return decorator(function)
 
     return decorator
+
+
+def monitor(function: t.Callable[P, t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
+    """Declare a function a condition a graph waits for.
+
+    The function returns whether the condition is met, and is called again every ``interval`` seconds until it
+    says it is, or until ``timeout`` seconds have gone by and the task fails. Waiting is awaited rather than
+    slept through, so the worker carries on with everything else in the meantime.
+
+    A monitor is a task like any other, so what should wait for it says so:
+
+    >>> from aiida.engine import graph, monitor, task
+    >>>
+    >>> @monitor
+    >>> def structure_was_imported(label):
+    >>>     return orm.QueryBuilder().append(orm.StructureData, filters={'label': label.value}).count() > 0
+    >>>
+    >>> @graph
+    >>> def relax_what_arrives(label):
+    >>>     arrived = structure_was_imported(label=label, interval=60)
+    >>>     return {'energy': relax(structure=load(label=label).node).after(arrived).energy}
+
+    A monitor waits resident, holding one of the ``daemon.worker_process_slots`` a worker has, so give it a
+    ``timeout`` it should never reach rather than leaving it at a day. A monitor waiting on something that needs
+    a free slot to be produced waits for a slot that waiting is what took, and only the timeout ends that.
+
+    What is waited for is looked at over and over, so it is for something the engine has no other way of
+    hearing about. A process finishing is not one of those: the engine is told, so waiting for one is an
+    ordinary dependency where a graph runs it, and what is left is a condition outside AiiDA altogether.
+
+    :param function: The function to decorate, which returns whether the condition is met.
+    :param identifier: Name of the task, which defaults to the name of the function.
+    :return: The decorated function, carrying its ``task_spec``, as :func:`task` returns one.
+    """
+
+    def decorator(function: t.Callable[P, t.Any]) -> t.Any:
+        decorated = process_function(node_class=WorkFunctionNode, base_class=MonitorProcess)(function)
+        decorated.process_class.spec()  # type: ignore[attr-defined]
+
+        spec = TaskSpec.from_process(decorated, identifier=identifier)
+        handle = TaskHandle(decorated, spec)
+        DEFINED_TASKS[f'{spec.executor.module}:{spec.executor.name}'] = handle
+
+        return handle
+
+    if function is not None:
+        return decorator(function)
+
+    return decorator
+
+
+wait_for = task(WaitProcess)
+"""Wait for a process this graph did not run to end, placed in a graph as a task of its own.
+
+The engine says when a process ends, so this is woken when it happens rather than looking on a timer. A process
+the graph runs itself is waited for by depending on it, so this is for one submitted elsewhere:
+
+>>> @graph
+>>> def carry_on(earlier):
+>>>     return {'total': add(x=1, y=2).after(wait_for(pk=earlier)).total}
+
+If what was waited for did not finish well, this fails, which stops whatever was waiting on it.
+"""
 
 
 def select(condition: t.Any, then: t.Any, otherwise: t.Any) -> t.Any:

@@ -19,6 +19,7 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
+from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.process import Process
@@ -172,7 +173,12 @@ class GraphProcess(Process):
             return GraphProcess, GraphProcess.launch_inputs(start.body, start.inputs)
 
         if isinstance(start.task, ProcessTask):
-            return start.task.spec.process_class, start.inputs
+            process_class = start.task.spec.process_class
+
+            if issubclass(process_class, TaskWorkChain):
+                return process_class, launch_under_namespace(start.inputs)
+
+            return process_class, start.inputs
 
         raise ValueError(f'`{start.task.name}` is of kind `{start.task.kind}`, which this version of AiiDA cannot run.')
 

@@ -295,14 +295,35 @@ class Endpoint:
 
 @dataclass(frozen=True)
 class Dependency:
-    """A dependency carrying one output of a task into one input of another."""
+    """A dependency of one task on another, carrying one of its outputs into one of its inputs.
+
+    A dependency may carry nothing, which names no ports on either end. That says only that one task runs after
+    another, which is what orders a task against one it takes no value from.
+    """
 
     source: str
-    source_port: str
     target: str
-    target_port: str
+    source_port: str | None = None
+    target_port: str | None = None
 
-    def to_dict(self) -> dict[str, str]:
+    @property
+    def carried_between(self) -> tuple[str, str] | None:
+        """Return the ports a value is carried between, or ``None`` where this only orders the two tasks."""
+        if self.source_port is None or self.target_port is None:
+            return None
+
+        return self.source_port, self.target_port
+
+    def __post_init__(self) -> None:
+        if (self.source_port is None) != (self.target_port is None):
+            named, missing = ('source', 'target') if self.source_port is not None else ('target', 'source')
+            msg = (
+                f'`{self.source}` to `{self.target}` names a {named} port and no {missing} port. A dependency '
+                f'carries a value from one port to another, or it names neither and orders the two tasks.'
+            )
+            raise ValueError(msg)
+
+    def to_dict(self) -> dict[str, str | None]:
         return {
             'source': self.source,
             'source_port': self.source_port,
@@ -311,11 +332,11 @@ class Dependency:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, str]) -> Dependency:
+    def from_dict(cls, data: dict[str, str | None]) -> Dependency:
         return cls(
-            source=data['source'],
+            source=t.cast(str, data['source']),
             source_port=data['source_port'],
-            target=data['target'],
+            target=t.cast(str, data['target']),
             target_port=data['target_port'],
         )
 
@@ -651,7 +672,7 @@ class GraphSpec:
         raise KeyError(f'no task named `{name}` in this graph.')
 
     def predecessors(self, name: str) -> set[str]:
-        """Return the names of the tasks whose outputs the given task takes."""
+        """Return the names of the tasks the given one waits for, whether it takes a value from them or not."""
         return {edge.source for edge in self.dependencies if edge.target == name}
 
     def ready(self, done: t.Container[str], dispatched: t.Container[str]) -> list[str]:
@@ -680,14 +701,21 @@ class GraphSpec:
 
         for edge in self.dependencies:
             referrer = f'dependency {edge}'
-            self._check_endpoint(edge.source, edge.source_port, 'output', referrer)
+            carried = edge.carried_between
+
+            if carried is None:
+                self._check_order(edge, referrer)
+                continue
+
+            source_port, target_port = carried
+            self._check_endpoint(edge.source, source_port, 'output', referrer)
 
             # What ran once per item arrives as a result per item, which a namespace takes and a port does not.
             if isinstance(self.task(edge.source), MappedTask):
-                self._check_gathered(edge, referrer)
+                self._check_gathered(edge, target_port, referrer)
             else:
-                self._check_endpoint(edge.target, edge.target_port, 'input', referrer)
-                self._check_shapes_match(edge, referrer)
+                self._check_endpoint(edge.target, target_port, 'input', referrer)
+                self._check_shapes_match(edge, source_port, target_port, referrer)
 
         for graph_input, targets in self.inputs.items():
             for name, port in targets:
@@ -718,7 +746,16 @@ class GraphSpec:
 
         self._check_acyclic()
 
-    def _check_shapes_match(self, edge: Dependency, referrer: str) -> None:
+    def _check_order(self, edge: Dependency, referrer: str) -> None:
+        """Raise if a dependency that only orders two tasks names one that is not in the graph.
+
+        :raises ValueError: if either end is unknown.
+        """
+        for name in (edge.source, edge.target):
+            if name not in self.task_names:
+                raise ValueError(f'{referrer} refers to unknown task `{name}`.')
+
+    def _check_shapes_match(self, edge: Dependency, source_port: str, target_port: str, referrer: str) -> None:
         """Raise if one end of a dependency is a namespace and the other holds a single value.
 
         A namespace can be passed on whole, which is the only way to carry outputs whose names are not known
@@ -727,23 +764,21 @@ class GraphSpec:
         :raises ValueError: if the two ends are of different shapes.
         """
         source, target = self.task(edge.source), self.task(edge.target)
-        produces = _shape(source.produces(edge.source_port), source.produces_namespace(edge.source_port))
-        takes = _shape(target.accepts(edge.target_port), target.takes_namespace(edge.target_port))
+        produces = _shape(source.produces(source_port), source.produces_namespace(source_port))
+        takes = _shape(target.accepts(target_port), target.takes_namespace(target_port))
 
         if produces is None or takes is None or produces == takes:
             return
 
         namespace, other = (edge.source, edge.target) if produces == 'namespace' else (edge.target, edge.source)
-        under, single = (
-            (edge.source_port, edge.target_port) if produces == 'namespace' else (edge.target_port, edge.source_port)
-        )
+        under, single = (source_port, target_port) if produces == 'namespace' else (target_port, source_port)
 
         raise ValueError(
             f'{referrer} wires `{under}` of `{namespace}`, which is a namespace, onto `{single}` of `{other}`, '
             f'which holds one value. Name a port inside the namespace, or wire it onto a namespace.'
         )
 
-    def _check_gathered(self, edge: Dependency, referrer: str) -> None:
+    def _check_gathered(self, edge: Dependency, target_port: str, referrer: str) -> None:
         """Raise if what ran once per item is taken somewhere that holds one value.
 
         Such a task produced a result per item, gathered under the key of each, so what takes them has to be a
@@ -755,10 +790,10 @@ class GraphSpec:
         if edge.target not in self.task_names:
             raise ValueError(f'{referrer} refers to unknown task `{edge.target}`.')
 
-        if not self.task(edge.target).takes_namespace(edge.target_port):
+        if not self.task(edge.target).takes_namespace(target_port):
             raise ValueError(
-                f'`{edge.target}` takes `{edge.target_port}` from `{edge.source}`, which runs once per item and so '
-                f'produces one result per item, gathered under the key of each. `{edge.target_port}` holds one '
+                f'`{edge.target}` takes `{target_port}` from `{edge.source}`, which runs once per item and so '
+                f'produces one result per item, gathered under the key of each. `{target_port}` holds one '
                 f'value, so it has to be a namespace to take them, or the graph can return them as an output.'
             )
 

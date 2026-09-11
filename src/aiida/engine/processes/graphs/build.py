@@ -231,6 +231,36 @@ class TaskOutputs:
 
         return type(self)(task=task, ports=under, prefix=f'{self._path(name)}.')
 
+    def after(self, *others: t.Any) -> TaskOutputs:
+        """Run this task only once the given ones have, though it takes nothing from them.
+
+        >>> ready = watch(path=path)
+        >>> total = add(x=1, y=2).after(ready).total
+
+        :param others: what to wait for, as the tasks themselves or any of their outputs.
+        :return: these outputs, so that one of them can be named straight after.
+        :raises TypeError: if something that is not the output of a task is given.
+        :raises ValueError: if called outside a graph, where there is nothing to record the waiting on.
+        """
+        builder = ACTIVE_BUILDER.get()
+
+        if builder is None:
+            raise ValueError(
+                f'`{self.task}` is told to wait for something, which orders it against another task, so it '
+                f'says nothing outside a graph.'
+            )
+
+        for other in others:
+            if not isinstance(other, (TaskOutput, TaskOutputs)):
+                raise TypeError(
+                    f'`{self.task}` is told to wait for a {type(other).__name__}, and a task waits for another '
+                    f'task. Pass what a call placing one returned.'
+                )
+
+            builder.order(source=other.task, target=self.task)
+
+        return self
+
     def whole(self) -> TaskOutput:
         """Return the reference to this namespace itself, which passes on everything under it.
 
@@ -490,6 +520,23 @@ class GraphBuilder:
                 f'`{identifier}` is a {kind} and {mapped} marks it to run once per item. Running a {kind} once '
                 f'per item is not supported yet; place a task that fans out inside it.'
             )
+
+    def order(self, source: str, target: str) -> None:
+        """Record that one task runs after another, though it takes nothing from it.
+
+        :raises ValueError: if either task was placed in another graph, which this one cannot wait for.
+        """
+        for name in (source, target):
+            if name not in self._placed:
+                raise ValueError(
+                    f'`{target}` is told to wait for `{source}`, and `{name}` is not a task of this graph. A task '
+                    f'waits for one placed beside it, so a task of the graph around this one cannot be named.'
+                )
+
+        edge = Dependency(source=source, target=target)
+
+        if edge not in self._dependencies:
+            self._dependencies.append(edge)
 
     def _wire(self, name: str, arguments: dict[str, t.Any], prefix: str = '') -> dict[str, t.Any]:
         """Return the arguments that are plain values, recording where each of the others comes from.

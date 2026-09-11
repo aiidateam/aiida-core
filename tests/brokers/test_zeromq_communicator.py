@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import time
+import typing as t
+from collections.abc import Callable
 from concurrent.futures import Future
 from pathlib import Path
 
@@ -40,6 +42,50 @@ def get_router_endpoint(broker: ZeromqBroker) -> str:
     """Construct the router endpoint from the broker service socket file."""
     sockets_path = Path((broker._service_dir / 'broker.sockets').read_text().strip())
     return f'ipc://{sockets_path}/router.sock'
+
+
+T = t.TypeVar('T')
+
+
+def await_condition(condition: Callable[[], T], *, timeout: float = 5.0, interval: float = 0.05) -> T:
+    """Poll ``condition`` until it returns a truthy value or raise on timeout.
+
+    Mirrors :meth:`aiida.engine.daemon.client.DaemonClient._await_condition` (which is
+    private and daemon-specific, so not reusable here) and the ``await_condition`` helper
+    in ``tests/cmdline/commands/test_process.py``.
+    """
+    start_time = time.monotonic()
+    while not (result := condition()):
+        if time.monotonic() - start_time > timeout:
+            raise TimeoutError(f'Condition {condition} did not become truthy within {timeout} seconds.')
+        time.sleep(interval)
+    return result
+
+
+def rpc_send_and_await(sender: ZeromqCommunicator, recipient: str, message: t.Any, *, timeout: float = 5.0) -> t.Any:
+    """Send an RPC and await the response, retrying while the broker registration is pending.
+
+    The ``SUBSCRIBE_RPC`` message is processed by the broker asynchronously, so an RPC sent
+    immediately after subscribing may fail with ``Recipient not found``. Retry until the broker
+    has registered the subscriber or the deadline expires. Other errors are re-raised immediately.
+    """
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    while True:
+        future = sender.rpc_send(recipient, message)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            msg = f'RPC to {recipient!r} did not succeed within {timeout} seconds.'
+            raise TimeoutError(msg) from last_error
+        try:
+            return future.result(timeout=remaining)
+        # The broker surfaces errors as a generic ``Exception`` with a string payload, so the payload
+        # must be inspected to distinguish a pending registration from a genuine handler failure.
+        except Exception as exc:
+            if not isinstance(exc, TimeoutError) and 'Recipient not found' not in str(exc):
+                raise
+            last_error = exc
+            time.sleep(0.05)
 
 
 class TestZeromqCommunicatorLifecycle:
@@ -240,8 +286,9 @@ class TestZeromqCommunicatorRoundTrip:
         """
         sender, worker = sender_and_worker
 
+        # No wait needed: the broker persists the task and acks immediately, dispatching
+        # to the worker once its subscription arrives.
         worker.add_task_subscriber(lambda comm, body: body.get('x', 0) * 2, identifier='worker')
-        time.sleep(0.5)
 
         future = sender.task_send({'x': 21})
         assert future is not None
@@ -258,10 +305,8 @@ class TestZeromqCommunicatorRoundTrip:
             return f'echo: {msg}'
 
         worker.add_rpc_subscriber(handle_rpc, identifier='echo-service')
-        time.sleep(0.5)
 
-        future = sender.rpc_send('echo-service', 'hello')
-        result = future.result(timeout=5.0)
+        result = rpc_send_and_await(sender, 'echo-service', 'hello')
         assert result == 'echo: hello'
 
     def test_broadcast_round_trip(self, sender_and_worker):
@@ -274,12 +319,15 @@ class TestZeromqCommunicatorRoundTrip:
 
         worker.add_broadcast_subscriber(on_broadcast, identifier='listener')
         worker.add_task_subscriber(lambda c, t: None, identifier='worker')
-        time.sleep(0.5)
 
-        sender.broadcast_send(body='ping', subject='test.ping')
-        time.sleep(1.0)
-
-        assert len(received) >= 1
+        # Broadcasts are fire-and-forget: if the worker's subscription has not reached the
+        # broker yet, a single send is dropped. Re-send until receipt or timeout.
+        deadline = time.monotonic() + 5.0
+        while not received:
+            sender.broadcast_send(body='ping', subject='test.ping')
+            time.sleep(0.1)
+            if time.monotonic() >= deadline:
+                raise TimeoutError('Broadcast was not received within 5 seconds.')
         assert received[0] == ('ping', 'test.ping')
 
     def test_task_with_deferred_future(self, sender_and_worker):
@@ -291,8 +339,8 @@ class TestZeromqCommunicatorRoundTrip:
             f.set_result(body.get('val', 0) + 100)
             return f
 
+        # No wait needed: the broker persists the task and acks immediately (see above).
         worker.add_task_subscriber(handle_task, identifier='worker')
-        time.sleep(0.5)
 
         future = sender.task_send({'val': 5})
         # Sender gets immediate zeromq_broker acknowledgment, not the worker's deferred result
@@ -309,10 +357,8 @@ class TestZeromqCommunicatorRoundTrip:
             return f
 
         worker.add_rpc_subscriber(handle_rpc, identifier='deferred-svc')
-        time.sleep(0.5)
 
-        future = sender.rpc_send('deferred-svc', 'test')
-        result = future.result(timeout=5.0)
+        result = rpc_send_and_await(sender, 'deferred-svc', 'test')
         assert result == 'deferred: test'
 
     def test_rpc_subscriber_exception(self, sender_and_worker):
@@ -323,8 +369,20 @@ class TestZeromqCommunicatorRoundTrip:
             raise ValueError('handler error')
 
         worker.add_rpc_subscriber(handle_rpc, identifier='error-svc')
-        time.sleep(0.5)
 
-        future = sender.rpc_send('error-svc', 'test')
-        with pytest.raises(Exception, match='handler error'):
-            future.result(timeout=5.0)
+        # Retry while the subscription is still propagating; only the handler error is expected.
+        # The inner timeout is deliberately shorter than the outer one to allow retries.
+        def rpc_raises_handler_error():
+            future = sender.rpc_send('error-svc', 'test')
+            try:
+                future.result(timeout=0.5)
+            # The broker surfaces errors as a generic ``Exception`` with a string payload.
+            except Exception as exc:
+                if 'Recipient not found' in str(exc):
+                    return False
+                if 'handler error' in str(exc):
+                    return True
+                raise
+            return False
+
+        await_condition(rpc_raises_handler_error, timeout=5.0)

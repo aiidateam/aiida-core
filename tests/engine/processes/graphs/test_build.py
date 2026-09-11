@@ -983,3 +983,26 @@ def test_outputs_rejects_a_bare_string():
         @task(outputs='result')
         def bare_string(x):
             return x
+
+
+def test_a_graph_and_the_bodies_inside_it_carry_the_names_they_are_written_under():
+    """A run is labelled with the name of its graph, which the declaration is what carries."""
+
+    @graph
+    def refine(value):
+        with branch(value) as refined:
+            refined.returns(total=add(x=value, y=1).total)
+
+        with refined.otherwise:
+            refined.returns(total=value)
+
+        with subgraph() as grouped:
+            grouped.returns(total=add(x=refined.total, y=2).total)
+
+        return {'total': grouped.total}
+
+    declaration = refine.build()
+
+    assert declaration.identifier == 'refine'
+    assert declaration.task('branch').body.identifier == 'branch'
+    assert declaration.task('subgraph').body.identifier == 'subgraph'

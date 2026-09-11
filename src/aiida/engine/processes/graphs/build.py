@@ -576,8 +576,11 @@ class GraphBuilder:
         count = self._used[identifier]
         return identifier if count == 1 else f'{identifier}_{count}'
 
-    def finish(self, returned: t.Any) -> GraphSpec:
-        """Return the graph that was built, taking what the function returned as the graph's outputs."""
+    def finish(self, returned: t.Any, identifier: str | None = None) -> GraphSpec:
+        """Return the graph that was built, taking what the function returned as the graph's outputs.
+
+        :param identifier: the name the graph is known by, which a run of it is labelled with.
+        """
         # What is returned is worked out first: one of those may belong to the graph around this one, which this
         # graph then takes as an input of its own, and the inputs have to be read after that has happened.
         outputs = self._declared_outputs(returned)
@@ -587,6 +590,7 @@ class GraphBuilder:
             dependencies=tuple(self._dependencies),
             inputs={name: tuple(targets) for name, targets in self._inputs.items()},
             outputs=outputs,
+            identifier=identifier,
         )
 
     def _declared_outputs(self, returned: t.Any) -> dict[str, Endpoint]:
@@ -673,7 +677,7 @@ class GraphHandle:
         finally:
             ACTIVE_BUILDER.reset(token)
 
-        return builder.finish(returned)
+        return builder.finish(returned, identifier=self.identifier)
 
     @property
     def parameters(self) -> tuple[str, ...]:
@@ -972,8 +976,8 @@ class Branch(Region):
         return self
 
     def _close(self, builder: GraphBuilder) -> None:
-        body = builder.finish(self._returned)
         name = self._named()
+        body = builder.finish(self._returned, identifier=name)
 
         if self._taking_the_other_side:
             assert self._body is not None
@@ -996,7 +1000,7 @@ class Loop(Region):
         self._max_iterations = max_iterations
 
     def _close(self, builder: GraphBuilder) -> None:
-        body = builder.finish(self._returned)
+        body = builder.finish(self._returned, identifier=self._named())
         task = LoopTask(
             name=self._named(),
             body=body,
@@ -1024,7 +1028,7 @@ class Fanout(Region):
         super().__init__({self.ITEM: collection})
 
     def _close(self, builder: GraphBuilder) -> None:
-        body = builder.finish(self._returned)
+        body = builder.finish(self._returned, identifier=self._named())
         task = MapGraphTask(name=self._named(), body=body, item_port=self.ITEM)
 
         self._place(task, {**self._state, **builder.captures}, body.outputs)
@@ -1040,7 +1044,7 @@ class Subgraph(Region):
     WORD: t.ClassVar[str] = 'subgraph'
 
     def _close(self, builder: GraphBuilder) -> None:
-        body = builder.finish(self._returned)
+        body = builder.finish(self._returned, identifier=self._named())
 
         self._place(SubgraphTask(name=self._named(), body=body), builder.captures, body.outputs)
 

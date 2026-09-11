@@ -132,6 +132,18 @@ def has_namespace(ports: PortNamespace, path: str) -> bool:
     return has_namespace(port, rest) if rest else True
 
 
+def _shape(is_port: bool, is_namespace: bool) -> t.Literal['value', 'namespace'] | None:
+    """Return what a name stands for, or ``None`` where it could be either.
+
+    A namespace that takes whatever it is given has every name under it, and any of those may itself be a
+    namespace, so nothing about the shape of one is settled until a run fills it in.
+    """
+    if is_port == is_namespace:
+        return None
+
+    return 'namespace' if is_namespace else 'value'
+
+
 @dataclass(frozen=True)
 class ExecutorReference:
     """Importable reference to the process that realizes a task.
@@ -335,8 +347,12 @@ class GraphTask(abc.ABC):
     def produces(self, port: str) -> bool:
         """Return whether this task produces an output under the given name."""
 
-    def gathers(self, port: str) -> bool:
-        """Return whether this task takes a result per item under the given name, which a namespace does."""
+    def takes_namespace(self, port: str) -> bool:
+        """Return whether the name stands for an input namespace, which takes everything under it at once."""
+        return False
+
+    def produces_namespace(self, port: str) -> bool:
+        """Return whether the name stands for an output namespace, which is passed on whole."""
         return False
 
     def to_dict(self) -> dict[str, t.Any]:
@@ -386,8 +402,11 @@ class ProcessTask(GraphTask):
     def produces(self, port: str) -> bool:
         return has_port(self.spec.outputs, port)
 
-    def gathers(self, port: str) -> bool:
+    def takes_namespace(self, port: str) -> bool:
         return has_namespace(self.spec.inputs, port)
+
+    def produces_namespace(self, port: str) -> bool:
+        return has_namespace(self.spec.outputs, port)
 
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'spec': self.spec.to_dict()}
@@ -668,6 +687,7 @@ class GraphSpec:
                 self._check_gathered(edge, referrer)
             else:
                 self._check_endpoint(edge.target, edge.target_port, 'input', referrer)
+                self._check_shapes_match(edge, referrer)
 
         for graph_input, targets in self.inputs.items():
             for name, port in targets:
@@ -698,6 +718,31 @@ class GraphSpec:
 
         self._check_acyclic()
 
+    def _check_shapes_match(self, edge: Dependency, referrer: str) -> None:
+        """Raise if one end of a dependency is a namespace and the other holds a single value.
+
+        A namespace can be passed on whole, which is the only way to carry outputs whose names are not known
+        until the task has run. What it is passed to has to be a namespace as well, since a port takes one value.
+
+        :raises ValueError: if the two ends are of different shapes.
+        """
+        source, target = self.task(edge.source), self.task(edge.target)
+        produces = _shape(source.produces(edge.source_port), source.produces_namespace(edge.source_port))
+        takes = _shape(target.accepts(edge.target_port), target.takes_namespace(edge.target_port))
+
+        if produces is None or takes is None or produces == takes:
+            return
+
+        namespace, other = (edge.source, edge.target) if produces == 'namespace' else (edge.target, edge.source)
+        under, single = (
+            (edge.source_port, edge.target_port) if produces == 'namespace' else (edge.target_port, edge.source_port)
+        )
+
+        raise ValueError(
+            f'{referrer} wires `{under}` of `{namespace}`, which is a namespace, onto `{single}` of `{other}`, '
+            f'which holds one value. Name a port inside the namespace, or wire it onto a namespace.'
+        )
+
     def _check_gathered(self, edge: Dependency, referrer: str) -> None:
         """Raise if what ran once per item is taken somewhere that holds one value.
 
@@ -710,7 +755,7 @@ class GraphSpec:
         if edge.target not in self.task_names:
             raise ValueError(f'{referrer} refers to unknown task `{edge.target}`.')
 
-        if not self.task(edge.target).gathers(edge.target_port):
+        if not self.task(edge.target).takes_namespace(edge.target_port):
             raise ValueError(
                 f'`{edge.target}` takes `{edge.target_port}` from `{edge.source}`, which runs once per item and so '
                 f'produces one result per item, gathered under the key of each. `{edge.target_port}` holds one '
@@ -767,7 +812,11 @@ class GraphSpec:
             raise ValueError(f'{referrer} refers to unknown task `{name}`.')
 
         task = self.task(name)
-        known = task.accepts(port) if direction == 'input' else task.produces(port)
+
+        if direction == 'input':
+            known = task.accepts(port) or task.takes_namespace(port)
+        else:
+            known = task.produces(port) or task.produces_namespace(port)
 
         if not known:
             raise ValueError(f'{referrer} refers to `{port}`, which is not an {direction} of `{name}`.')

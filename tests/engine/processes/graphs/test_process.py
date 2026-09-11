@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TypedDict
 
 import pytest
@@ -174,6 +175,17 @@ def test_tasks_are_called_under_their_graph_names():
 
     assert sorted(entry.link_label for entry in called) == ['start', 'sum']
     assert all(isinstance(entry.node, orm.CalcFunctionNode) for entry in called)
+
+
+def test_a_run_is_labelled_with_the_name_of_the_graph():
+    """Every graph is run by the same process class, so the name of the graph is what tells two runs apart."""
+    named_graph = replace(linear_graph(), identifier='sum_up')
+
+    _, named = run_get_node(GraphProcess, graph=orm.Dict(dict=named_graph.to_dict()))
+    _, anonymous = run_get_node(GraphProcess, graph=orm.Dict(dict=linear_graph().to_dict()))
+
+    assert named.process_label == 'sum_up'
+    assert anonymous.process_label == 'GraphProcess'
 
 
 def test_runs_a_diamond_graph():

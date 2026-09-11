@@ -81,6 +81,7 @@ __all__ = (
     'SubgraphTask',
     'TaskHandle',
     'TaskHandler',
+    'TaskNodes',
     'TaskOutput',
     'TaskOutputs',
     'TaskProcess',
@@ -114,6 +115,7 @@ __all__ = (
     'subgraph',
     'submit',
     'task',
+    'tasks',
     'while_',
     'workfunction',
 )

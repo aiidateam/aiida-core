@@ -614,6 +614,7 @@ class GraphSpec:
     dependencies: tuple[Dependency, ...] = ()
     inputs: dict[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
     outputs: dict[str, Endpoint] = field(default_factory=dict)
+    identifier: str | None = None
     version: str = SPEC_VERSION
 
     def __post_init__(self) -> None:
@@ -790,6 +791,7 @@ class GraphSpec:
             'dependencies': [edge.to_dict() for edge in self.dependencies],
             'inputs': {name: [list(target) for target in targets] for name, targets in self.inputs.items()},
             'outputs': {name: source.to_dict() for name, source in self.outputs.items()},
+            'identifier': self.identifier,
             'version': self.version,
         }
 
@@ -810,5 +812,6 @@ class GraphSpec:
                 for name, targets in data.get('inputs', {}).items()
             },
             outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
+            identifier=data.get('identifier'),
             version=version,
         )

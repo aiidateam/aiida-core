@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import typing as t
+from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from aiida.common.links import LinkType
@@ -24,10 +26,10 @@ from aiida.engine.processes.graphs.spec import (
     MappedTask,
     SubgraphTask,
 )
-from aiida.orm import Dict, List, Node, load_node
+from aiida.orm import Dict, List, Node, ProcessNode, load_node
 from aiida.orm.nodes.data.base import BaseType
 
-__all__ = ('GraphRun', 'Start', 'Step')
+__all__ = ('GraphRun', 'Start', 'Step', 'TaskNodes', 'tasks')
 
 
 def holds(condition: t.Any) -> bool:
@@ -72,6 +74,94 @@ def place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
 def returned(node: Node) -> dict[str, t.Any]:
     """Return what a graph produced, by the name each output was returned under."""
     return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
+
+
+class TaskNodes(Mapping[str, ProcessNode]):
+    """The processes a graph ran, by the name the graph gave each of them.
+
+    A task is addressed by its name, and one inside a graph that a task ran by the names on the way to it, joined
+    by dots. A task that ran once per item is addressed by the name of each run, which carries the item after the
+    name of the task.
+    """
+
+    def __init__(self, node: ProcessNode) -> None:
+        self._node = node
+
+    def __getitem__(self, path: str) -> ProcessNode:
+        node = self._node
+        reached: list[str] = []
+
+        for name in path.split('.'):
+            node = self._called(node, name, reached)
+            reached.append(name)
+
+        return node
+
+    def __iter__(self) -> t.Iterator[str]:
+        return iter(self._children(self._node))
+
+    def __len__(self) -> int:
+        return len(self._children(self._node))
+
+    @classmethod
+    def _called(cls, node: ProcessNode, name: str, reached: list[str]) -> ProcessNode:
+        """Return the process one task ran, named among what the given node called.
+
+        :raises KeyError: if nothing of that name ran, naming what did, since a task is left out of a run where
+            the branch it sits in was not taken.
+        :raises ValueError: if the name stands for more than one process, which a graph never does and a work
+            chain submitting without a call link label does.
+        """
+        called = cls._children(node)
+        where = f'`{".".join(reached)}`' if reached else f'<{node.pk}>'
+
+        if name not in called:
+            msg = f'{where} ran no task `{name}`. It ran {sorted(called)}.'
+            raise KeyError(msg)
+
+        if len(called[name]) > 1:
+            # A node reached through a link is stored, so it has a pk.
+            pks = sorted(t.cast(int, child.pk) for child in called[name])
+            msg = (
+                f'{where} called {len(pks)} processes `{name}`, {pks}, so the name does not say which. Give each '
+                f'of them a `metadata.call_link_label` of its own, which a graph does for every task it runs.'
+            )
+            raise ValueError(msg)
+
+        return called[name][0]
+
+    @staticmethod
+    def _children(node: ProcessNode) -> dict[str, list[ProcessNode]]:
+        """Return the processes a node called, by the name each was called under.
+
+        A name can stand for more than one process, since a work chain that submits without a call link label
+        leaves every one of them under the default.
+        """
+        link_types = (LinkType.CALL_CALC, LinkType.CALL_WORK)
+        called: dict[str, list[ProcessNode]] = defaultdict(list)
+
+        for entry in node.base.links.get_outgoing(link_type=link_types).all():
+            called[entry.link_label].append(t.cast(ProcessNode, entry.node))
+
+        return called
+
+
+def tasks(node: ProcessNode) -> TaskNodes:
+    """Return the processes a graph ran, by the name the graph gave each of them.
+
+    Every task of a graph is a process of its own, called under the name the graph knows it by, so this is what
+    reaches one after the fact: its result, and the process to pause, play or kill.
+
+    >>> from aiida.engine import tasks
+    >>>
+    >>> ran = tasks(node)
+    >>> ran['relax'].outputs.energy
+    >>> ran['refine.relax'].pk        # a task of a graph that a task ran
+    >>> sorted(ran)                   # the tasks this graph ran, leaving out any that were skipped
+
+    :param node: the node of the graph, or of any process, whose called processes to reach.
+    """
+    return TaskNodes(node)
 
 
 def map_items(collection: t.Any, task: MappedTask) -> dict[str, t.Any]:

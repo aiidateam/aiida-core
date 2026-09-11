@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.generic.ports import PortNamespace
+from aiida.engine.processes.graphs.handlers import TaskWorkChain
 from aiida.engine.processes.process import Process
 
 __all__ = (
@@ -227,8 +228,13 @@ class TaskSpec:
 
     @property
     def inputs(self) -> PortNamespace:
-        """Return the input ports this task takes."""
-        return self.process_class.spec().inputs
+        """Return the input ports this task takes.
+
+        A task that declares handlers is run by a work chain that takes those ports under a namespace of its own,
+        which is where the graph puts them as it launches, so what the task takes is the same either way.
+        """
+        process = self.process_class
+        return process.task_inputs() if issubclass(process, TaskWorkChain) else process.spec().inputs
 
     @property
     def outputs(self) -> PortNamespace:

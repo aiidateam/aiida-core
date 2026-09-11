@@ -44,6 +44,21 @@ The `core.shell` calculation job and parser entry points keep the names they had
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### `--config`: use configuration files from the AiiDA resource registry ([#7378](https://github.com/aiidateam/aiida-core/pull/7378))
+
+The YAML files in the [AiiDA resource registry](https://github.com/aiidateam/aiida-resource-registry) contain Jinja2 placeholders such as `{{ slurm_account }}`, described by a `metadata` section, and `--config` used to reject both.
+They can now be passed directly to `verdi computer setup`, `verdi computer configure`, `verdi code create` and any command built by a dynamic entry point group:
+
+```console
+$ verdi computer setup --config https://raw.githubusercontent.com/aiidateam/aiida-resource-registry/main/eiger.cscs.ch/mc/computer-setup.yml
+```
+
+Each placeholder is prompted for interactively, using the description and default from `metadata`; the new `--template-vars` option supplies the values instead, as inline JSON, a local YAML/JSON file, or a URL, which is what non-interactive (`-n`) use requires.
+Values given on the command line seed the prompts, so only the remaining placeholders are asked for.
+The `metadata` section is stripped before the values are applied.
+
+Plain YAML files without placeholders behave exactly as before, with one change worth noting: a top-level `metadata` key used to be rejected as an unsupported option and is now consumed.
+
 ### Behavior changes
 
 ### Fixes

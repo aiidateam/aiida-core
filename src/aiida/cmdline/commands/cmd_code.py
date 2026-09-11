@@ -116,6 +116,7 @@ def set_code_builder(ctx: click.Context, _param: Any, value: Any) -> Any:
 @options_code.PREPEND_TEXT()
 @options_code.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@options.TEMPLATE_VARS()
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()

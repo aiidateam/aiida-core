@@ -268,7 +268,7 @@ def process_report(processes, most_recent_node, levelname, indent_size, max_dept
 
     Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
-    from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
+    from aiida.orm import CalcFunctionNode, CalcJobNode, WorkflowNode, WorkFunctionNode
 
     if not processes and not most_recent_node:
         raise click.UsageError(
@@ -287,10 +287,10 @@ def process_report(processes, most_recent_node, levelname, indent_size, max_dept
     for process in processes:
         if isinstance(process, CalcJobNode):
             echo.echo(get_calcjob_report(process))
-        elif isinstance(process, WorkChainNode):
-            echo.echo(get_workchain_report(process, levelname, indent_size, max_depth))
         elif isinstance(process, (CalcFunctionNode, WorkFunctionNode)):
             echo.echo(get_process_function_report(process))
+        elif isinstance(process, WorkflowNode):
+            echo.echo(get_workchain_report(process, levelname, indent_size, max_depth))
         else:
             echo.echo(f'Nothing to show for node type {process.__class__}')
 

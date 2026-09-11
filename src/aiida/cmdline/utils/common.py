@@ -330,11 +330,11 @@ def get_process_function_report(node: orm.CalcFunctionNode | orm.WorkFunctionNod
 
 
 def get_workchain_report(
-    node: orm.WorkChainNode, levelname: str, indent_size: int = 4, max_depth: int | None = None
+    node: orm.WorkflowNode, levelname: str, indent_size: int = 4, max_depth: int | None = None
 ) -> str:
     """Return a multi line string representation of the log messages and output of a given workchain
 
-    :param node: the workchain node
+    :param node: the workflow node, which is a work chain or a graph of tasks
     :return: a nested string representation of the log messages
     """
     import itertools
@@ -356,9 +356,9 @@ def get_workchain_report(
         The result is a list of uuid of these nodes.
         """
         builder = orm.QueryBuilder(backend=node.backend)
-        builder.append(cls=orm.WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
+        builder.append(cls=orm.WorkflowNode, filters={'uuid': uuid}, tag='workcalculation')
         builder.append(
-            cls=orm.WorkChainNode,
+            cls=orm.WorkflowNode,
             project=['uuid'],
             # In the future, we should specify here the type of link
             # for now, CALL links are the only ones allowing calc-calc

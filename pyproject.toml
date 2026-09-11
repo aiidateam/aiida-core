@@ -156,6 +156,7 @@ requires-python = '>=3.10'
 'process.calculation.calcfunction' = 'aiida.orm.nodes.process.calculation.calcfunction:CalcFunctionNode'
 'process.calculation.calcjob' = 'aiida.orm.nodes.process.calculation.calcjob:CalcJobNode'
 'process.workflow' = 'aiida.orm.nodes.process.workflow.workflow:WorkflowNode'
+'process.workflow.graph' = 'aiida.orm.nodes.process.workflow.graph:GraphNode'
 'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'
 'process.workflow.workfunction' = 'aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode'
 

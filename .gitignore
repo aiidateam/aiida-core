@@ -21,7 +21,6 @@ __pycache__/
 .vscode
 pyrightconfig.json
 stubs/
-.tox
 Pipfile
 
 .aiida

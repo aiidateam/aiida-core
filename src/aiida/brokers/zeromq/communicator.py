@@ -398,7 +398,8 @@ class ZeromqCommunicator(broker_communicator.Communicator):
         def _do() -> str:
             ident = identifier or f'rpc-{uuid.uuid4().hex[:8]}'
             if ident in self._rpc_subscribers:
-                raise broker_exceptions.DuplicateSubscriberIdentifier(f"RPC identifier '{ident}'")
+                error_msg = f"RPC identifier '{ident}'"
+                raise broker_exceptions.DuplicateSubscriberIdentifier(error_msg)
             self._rpc_subscribers[ident] = subscriber
             msg = make_subscribe_message(MessageType.SUBSCRIBE_RPC, self._client_id, ident)
             self._send(msg)

@@ -37,7 +37,7 @@ from aiida.brokers import communicator as broker_communicator
 from aiida.brokers import exceptions, futures
 from aiida.brokers.rabbitmq import communicator, defaults, tasks
 
-__all__ = ('RmqThreadCommunicator', 'RmqThreadIncomingTask', 'RmqThreadTaskQueue', 'connect')
+__all__ = ('RmqThreadCommunicator', 'RmqThreadIncomingTask', 'RmqThreadTaskQueue')
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -350,32 +350,3 @@ class RmqThreadIncomingTask:
     def processing(self) -> Iterator[Any]:
         with self._loop_scheduler.async_ctx(self._task.processing()) as outcome:
             yield outcome
-
-
-def connect(
-    connection_params: str | dict[str, Any] | None = None,
-    connection_factory: Callable[..., Any] = aio_pika.connect_robust,
-    message_exchange: str = defaults.MESSAGE_EXCHANGE,
-    task_exchange: str = defaults.TASK_EXCHANGE,
-    task_queue: str = defaults.TASK_QUEUE,
-    task_prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
-    task_prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
-    encoder: Callable[..., Any] = defaults.ENCODER,
-    decoder: Callable[..., Any] = defaults.DECODER,
-    testing_mode: bool = False,
-) -> RmqThreadCommunicator:
-    """Establish a RabbitMQ communicator connection."""
-    # pylint: disable=too-many-arguments
-    _communicator = RmqThreadCommunicator.connect(
-        connection_params=connection_params,
-        connection_factory=connection_factory,
-        message_exchange=message_exchange,
-        task_exchange=task_exchange,
-        task_queue=task_queue,
-        task_prefetch_size=task_prefetch_size,
-        task_prefetch_count=task_prefetch_count,
-        encoder=encoder,
-        decoder=decoder,
-        testing_mode=testing_mode,
-    )
-    return _communicator

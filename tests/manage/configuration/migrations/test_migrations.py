@@ -322,8 +322,8 @@ def test_rename_rmq_and_logging_downgrade_resolves_inherit_levels():
     assert other_options['logging.circus_loglevel'] == 'ERROR'
 
 
-def test_merge_plumpy_log_level_round_trip():
-    """Upgrade should merge plumpy levels into aiida-core and downgrade should copy them back."""
+def test_aiida_v3_migration_round_trip():
+    """Upgrade should merge plumpy and kiwipy levels into aiida-core and downgrade should copy them back."""
     config = {
         'CONFIG_VERSION': {'CURRENT': 10, 'OLDEST_COMPATIBLE': 10},
         'profiles': {
@@ -331,7 +331,7 @@ def test_merge_plumpy_log_level_round_trip():
                 'options': {'logging.plumpy_loglevel': 'DEBUG'},
             }
         },
-        'options': {'logging.plumpy_loglevel': 'ERROR'},
+        'options': {'logging.kiwipy_loglevel': 'ERROR'},
     }
 
     migrated = upgrade_config(config, 11)
@@ -344,20 +344,23 @@ def test_merge_plumpy_log_level_round_trip():
     assert downgraded['options'] == {
         'logging.aiida_core_loglevel': 'ERROR',
         'logging.plumpy_loglevel': 'ERROR',
+        'logging.kiwipy_loglevel': 'ERROR',
     }
     assert downgraded['profiles']['default']['options'] == {
         'logging.aiida_core_loglevel': 'DEBUG',
         'logging.plumpy_loglevel': 'DEBUG',
+        'logging.kiwipy_loglevel': 'DEBUG',
     }
 
 
-def test_merge_plumpy_log_level_preserves_explicit_aiida_core_level():
-    """An existing aiida-core level should take precedence over the removed plumpy level."""
+def test_aiida_v3_migration_preserves_explicit_aiida_core_level():
+    """An existing aiida-core level should take precedence over the removed plumpy and kiwipy levels."""
     config = {
         'CONFIG_VERSION': {'CURRENT': 10, 'OLDEST_COMPATIBLE': 10},
         'options': {
             'logging.aiida_core_loglevel': 'CRITICAL',
             'logging.plumpy_loglevel': 'DEBUG',
+            'logging.kiwipy_loglevel': 'WARNING',
         },
     }
 

@@ -8,6 +8,8 @@ Process checkpoints created with earlier releases cannot be continued after upgr
 Finish or terminate all active processes before upgrading.
 The `logging.plumpy_loglevel` configuration option is removed because the Plumpy implementation is now part of aiida-core.
 Explicit values are migrated to `logging.aiida_core_loglevel` unless that option is already set, and all loggers under `aiida.engine` are governed by the aiida-core log level.
+The `logging.kiwipy_loglevel` configuration option is removed because the Kiwipy implementation is now part of aiida-core.
+Explicit values are migrated to `logging.aiida_core_loglevel` unless that option is already set, and all loggers under `aiida.brokers` are governed by the aiida-core log level.
 The process persistence primitives have been replaced with explicit checkpoint concepts:
 
 - `Bundle` is replaced by `CheckpointPayload`.

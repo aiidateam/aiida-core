@@ -198,14 +198,6 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
             'requires_daemon_restart': True,
         },
     )
-    logging__kiwipy_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
-        description=(
-            'Minimum level for the `aiida.brokers` loggers (formerly `kiwipy`). '
-            'If `INHERIT`, inherits `logging.aiida_loglevel`.'
-        ),
-        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
-    )
     logging__paramiko_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `paramiko` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',

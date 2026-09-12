@@ -275,6 +275,14 @@ def aiida_profile(
 
 
 @pytest.fixture(scope='session')
+def archive_main_0001():
+    """Return the path of the pinned ``main_0001`` reference archive."""
+    from tests.utils.archives import get_archive_file
+
+    return get_archive_file('export_main_0001_simple.aiida', filepath='export/migrate')
+
+
+@pytest.fixture(scope='session')
 def archive_main_0002(tmp_path_factory, aiida_config_factory, aiida_profile_factory):
     """Generate the ``main_0002`` reference simple archive on demand."""
     from tests.utils.archives import generate_archive_main_0002

@@ -224,8 +224,7 @@ def test_import_old_local_archives(version, run_cli_command):
     'archive_fixture, version, migrates',
     [
         ('archive_main_0001', 'main_0001', True),
-        # ``main_0002`` is the head here, so it imports directly without migration.
-        ('archive_main_0002', 'main_0002', False),
+        ('archive_main_0002', 'main_0002', True),
     ],
 )
 def test_import_main_reference(archive_fixture, version, migrates, run_cli_command, request):

@@ -448,11 +448,10 @@ class RemoteProcessController:
         message = create_continue_body(pid=pid, tag=tag, nowait=nowait)
         # Wait for the communication to go through
         continue_future = self._communicator.task_send(message, no_reply=no_reply)
-        assert continue_future is not None
-        future = await asyncio.wrap_future(continue_future)
-
         if no_reply:
             return None
+        assert continue_future is not None
+        future = await asyncio.wrap_future(continue_future)
 
         # Now wait for the result of the task
         result = await asyncio.wrap_future(future)
@@ -483,11 +482,10 @@ class RemoteProcessController:
 
         message = create_launch_body(process_class, init_args, init_kwargs, persist, loader, nowait)
         launch_future = self._communicator.task_send(message, no_reply=no_reply)
-        assert launch_future is not None
-        future = await asyncio.wrap_future(launch_future)
-
         if no_reply:
             return
+        assert launch_future is not None
+        future = await asyncio.wrap_future(launch_future)
 
         result = await asyncio.wrap_future(future)
         return result
@@ -524,11 +522,10 @@ class RemoteProcessController:
 
         message = create_continue_body(pid, nowait=nowait)
         continue_future = self._communicator.task_send(message, no_reply=no_reply)
-        assert continue_future is not None
-        future = await asyncio.wrap_future(continue_future)
-
         if no_reply:
             return
+        assert continue_future is not None
+        future = await asyncio.wrap_future(continue_future)
 
         result = await asyncio.wrap_future(future)
         return result

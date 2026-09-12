@@ -118,11 +118,23 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
             return
 
         await super().connect()
-        channel = self.channel()
-        assert channel is not None
-        await channel.set_qos(prefetch_count=self._prefetch_count, prefetch_size=self._prefetch_size)
+        try:
+            channel = self.channel()
+            assert channel is not None
+            await channel.set_qos(prefetch_count=self._prefetch_count, prefetch_size=self._prefetch_size)
 
-        await self._create_task_queue()
+            await self._create_task_queue()
+        except BaseException:
+            # Roll back the channel from ``super().connect()`` so a later ``connect()`` retries
+            # instead of seeing a truthy channel with ``_task_queue`` still ``None``.
+            with suppress(Exception):
+                await super().disconnect()
+            self._channel = None
+            self._exchange = None
+            self._task_queue = None
+            # ``BaseConnectionWithExchange.disconnect`` sets ``_is_closing``; allow future connects.
+            self._is_closing = False
+            raise
 
     async def __aiter__(self) -> AsyncIterator[RmqIncomingTask]:
         task_list: list[RmqIncomingTask] = []

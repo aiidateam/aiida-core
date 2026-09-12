@@ -25,6 +25,7 @@ import traceback
 import uuid
 from collections import deque
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any
 
 import aio_pika
@@ -108,10 +109,16 @@ class BaseConnectionWithExchange:
         if self._channel:
             return
 
-        # Create the channel
-        self._channel = await self._connection.channel()
-        # Create the exchange
-        self._exchange = await self._channel.declare_exchange(name=self.get_exchange_name(), **self._exchange_params)
+        # Declare into locals so a failed setup does not leave a truthy channel with no exchange.
+        channel = await self._connection.channel()
+        try:
+            exchange = await channel.declare_exchange(name=self.get_exchange_name(), **self._exchange_params)
+        except BaseException:
+            with suppress(Exception):
+                await channel.close()
+            raise
+        self._channel = channel
+        self._exchange = exchange
 
     async def disconnect(self) -> None:
         if not self.is_closing:
@@ -189,24 +196,29 @@ class BasePublisherWithReplyQueue:
         if self.is_connected:
             return
 
-        self._channel = await self._connection.channel(
-            publisher_confirms=self._confirm_deliveries, on_return_raises=True
-        )
-        self._channel.close_callbacks.add(self._on_channel_close)
+        channel = await self._connection.channel(publisher_confirms=self._confirm_deliveries, on_return_raises=True)
+        try:
+            channel.close_callbacks.add(self._on_channel_close)
+            exchange = await channel.declare_exchange(name=self.get_exchange_name(), **self._exchange_params)
 
-        self._exchange = await self._channel.declare_exchange(name=self.get_exchange_name(), **self._exchange_params)
+            # Declare the reply queue
+            reply_queue_name = f'{self._exchange_name}-reply-{uuid.uuid4()}'
+            reply_queue = await channel.declare_queue(
+                name=reply_queue_name,
+                exclusive=True,
+                auto_delete=self._testing_mode,
+                arguments={'x-expires': defaults.REPLY_QUEUE_EXPIRES},
+            )
 
-        # Declare the reply queue
-        reply_queue_name = f'{self._exchange_name}-reply-{uuid.uuid4()}'
-        self._reply_queue = await self._channel.declare_queue(
-            name=reply_queue_name,
-            exclusive=True,
-            auto_delete=self._testing_mode,
-            arguments={'x-expires': defaults.REPLY_QUEUE_EXPIRES},
-        )
-
-        await self._reply_queue.bind(self._exchange, routing_key=reply_queue_name)
-        await self._reply_queue.consume(self._on_response, no_ack=True)
+            await reply_queue.bind(exchange, routing_key=reply_queue_name)
+            await reply_queue.consume(self._on_response, no_ack=True)
+        except BaseException:
+            with suppress(Exception):
+                await channel.close()
+            raise
+        self._channel = channel
+        self._exchange = exchange
+        self._reply_queue = reply_queue
 
     async def disconnect(self) -> None:
         if not self.is_closing:

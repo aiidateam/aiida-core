@@ -2,7 +2,7 @@
 # currently active dependency manager (DM) to trigger an automatic review
 # request from the DM upon changes. Please see AEP-002 for details:
 # https://github.com/aiidateam/AEP/tree/master/002_dependency_management
-environment.yml                 @agoscinski @GeigerJ2
-pyproject.toml                  @agoscinski @GeigerJ2
-uv.lock                         @agoscinski @GeigerJ2
+aiida-core/environment.yml                 @agoscinski @GeigerJ2
+aiida-core/pyproject.toml                  @agoscinski @GeigerJ2
+aiida-core/uv.lock                         @agoscinski @GeigerJ2
 utils/dependency_management.py  @agoscinski @GeigerJ2

@@ -3,7 +3,7 @@
     "service": "daemon",
     "workspaceFolder": "/workspaces/aiida-core",
     "postCreateCommand": "/etc/init/aiida-prepare.sh",
-    "postStartCommand": "pip install -e /workspaces/aiida-core[tests,docs,rest,atomic_tools,pre-commit]",
+    "postStartCommand": "pip install -e /workspaces/aiida-core/aiida-core[tests,docs,rest,atomic_tools,pre-commit]",
     "postAttachCommand": "verdi daemon start",
     "waitFor": "postStartCommand",
     "containerUser": "aiida",

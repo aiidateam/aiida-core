@@ -13,8 +13,8 @@ on:
     paths-ignore:
     - '**.md'
     - '**.txt'
-    - docs/**
-    - tests/**
+    - aiida-core/docs/**
+    - aiida-core/tests/**
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:

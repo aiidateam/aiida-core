@@ -151,7 +151,7 @@ ENV PIP_USER=1
 # Install AiiDA from source code
 USER root
 COPY --from=src . /tmp/aiida-core
-RUN pip install /tmp/aiida-core --no-cache-dir && \
+RUN pip install /tmp/aiida-core/aiida-core --no-cache-dir && \
     rm -rf /tmp/aiida-core
 
 # Enable verdi autocompletion.

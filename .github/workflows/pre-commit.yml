@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v7
 
     - name: Install python dependencies
-      uses: ./.github/actions/install-aiida-core
+      uses: ./.github/actions/install-package
       with:
         python-version: '3.11'
         from-lock: 'true'

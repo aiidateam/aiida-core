@@ -1,10 +1,14 @@
-name: Install aiida-core
-description: Install aiida-core package and its Python dependencies
+name: Install Python package
+description: Install a Python subpackage and its Python dependencies
 
 inputs:
   python-version:
     description: Python version
     default: '3.10'             # Lowest supported version
+    required: false
+  package:
+    description: Subpackage directory containing the project
+    default: aiida-core
     required: false
   extras:
     description: list of optional dependencies
@@ -38,11 +42,11 @@ runs:
   - name: Install dependencies from uv lock
     if: ${{ inputs.from-lock == 'true' }}
     # NOTE: We're asserting that the lockfile is up to date
-    run: uv sync --locked ${{ inputs.extras && format('--extra {0}', inputs.extras) || '' }}
+    run: uv sync --project ${{ inputs.package }} --locked ${{ inputs.extras && format('--extra {0}', inputs.extras) || '' }}
     shell: bash
 
-  - name: Install aiida-core
+  - name: Install Python package
     if: ${{ inputs.from-lock != 'true' }}
     run: |
-      uv pip install --resolution ${{ inputs.resolution-strategy }} -e .${{ inputs.extras && format('[{0}]', inputs.extras) || '' }}
+      uv pip install --resolution ${{ inputs.resolution-strategy }} -e ./${{ inputs.package }}${{ inputs.extras && format('[{0}]', inputs.extras) || '' }}
     shell: bash

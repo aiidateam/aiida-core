@@ -1,0 +1,126 @@
+# Reusable workflow running a subpackage's pytest suite in the shared test
+# environment (PostgreSQL + RabbitMQ services, SSH, AiiDA test profile).
+#
+# A new subpackage gets its own CI with a thin caller workflow, e.g.:
+#
+# ```yaml
+# name: my-package-ci
+#
+# on:
+#   push:
+#     branches-ignore: [gh-pages]
+#   pull_request:
+#     paths: ['my-package/**']
+#
+# jobs:
+#   pytest:
+#     uses: ./.github/workflows/reusable-pytest.yml
+#     with:
+#       package: my-package
+#       python-version: '3.11'
+#       test-path: my-package/tests/
+# ```
+#
+# Jobs needing extra services (e.g. Slurm) or custom steps stay in the
+# package's own workflow file, reusing the `install-package` action.
+
+name: reusable-pytest
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Subpackage directory containing the project
+        default: aiida-core
+        required: false
+        type: string
+      python-version:
+        description: Python version
+        default: '3.10'
+        required: false
+        type: string
+      test-path:
+        description: Test path (relative to the repository root) passed to pytest
+        default: ''
+        required: false
+        type: string
+      pytest-args:
+        description: Extra pytest arguments
+        default: -m 'not nightly'
+        required: false
+        type: string
+      extras:
+        description: Optional dependencies to install
+        default: ''
+        required: false
+        type: string
+      from-lock:
+        description: Install dependencies from the uv lock file
+        default: 'true'
+        required: false
+        type: string
+      warn-v3:
+        description: Value of the AIIDA_WARN_v3 environment variable
+        default: '1'
+        required: false
+        type: string
+      setup-profile:
+        description: Provision the full AiiDA test profile instead of SSH only
+        default: false
+        required: false
+        type: boolean
+
+jobs:
+
+  pytest:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_aiida
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+        - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3.8.14-management
+        ports:
+        - 5672:5672
+        - 15672:15672
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install system dependencies
+      run: sudo apt update && sudo apt install postgresql graphviz
+
+    - name: Install package
+      uses: ./.github/actions/install-package
+      with:
+        package: ${{ inputs.package }}
+        python-version: ${{ inputs.python-version }}
+        extras: ${{ inputs.extras }}
+        from-lock: ${{ inputs.from-lock }}
+
+    - name: Setup SSH on localhost
+      if: ${{ !inputs.setup-profile }}
+      run: .github/workflows/setup_ssh.sh
+
+    - name: Setup environment
+      if: ${{ inputs.setup-profile }}
+      run: .github/workflows/setup.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_TEST_PROFILE: test_aiida
+        AIIDA_WARN_v3: ${{ inputs.warn-v3 }}
+      run: pytest -n auto ${{ inputs.pytest-args }} ${{ inputs.test-path }}

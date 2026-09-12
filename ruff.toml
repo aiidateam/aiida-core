@@ -6,8 +6,8 @@
 # an explicit `--config` flag.
 
 exclude = [
-  'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
+  'aiida-core/docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
+  'aiida-core/docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
 ]
 line-length = 120
 
@@ -47,6 +47,9 @@ select = [
 
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[lint.isort]
+known-first-party = ["aiida"]
 
 # Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
 # Needed due to https://github.com/astral-sh/ruff/issues/9298

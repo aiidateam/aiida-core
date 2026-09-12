@@ -14,7 +14,13 @@ import os
 import click
 
 SCRIPT_PATH = os.path.split(os.path.realpath(__file__))[0]
-ROOT_DIR = os.path.join(SCRIPT_PATH, os.pardir)
+REPO_ROOT = os.path.join(SCRIPT_PATH, os.pardir)
+# Monorepo layout: package files live under `aiida-core/`, dev tools stay at the repo root
+ROOT_DIR = (
+    os.path.join(REPO_ROOT, 'aiida-core')
+    if os.path.exists(os.path.join(REPO_ROOT, 'aiida-core', 'pyproject.toml'))
+    else REPO_ROOT
+)
 
 
 def determine_block_positions(lines, block_start_marker, block_end_marker):

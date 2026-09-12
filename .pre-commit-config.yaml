@@ -30,8 +30,9 @@ repos:
   rev: v0.15.21
   hooks:
   - id: ruff-format
+    args: [--config=ruff.toml]
   - id: ruff-check
-    args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+    args: [--config=ruff.toml, --fix, --exit-non-zero-on-fix, --show-fixes]
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
   rev: v2.14.0

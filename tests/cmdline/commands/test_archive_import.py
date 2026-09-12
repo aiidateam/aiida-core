@@ -221,17 +221,20 @@ def test_import_old_local_archives(version, run_cli_command):
 
 
 @pytest.mark.parametrize(
-    'archive_fixture, version',
+    'archive_fixture, version, migrates',
     [
-        ('archive_main_0001', 'main_0001'),
+        ('archive_main_0001', 'main_0001', True),
+        # ``main_0002`` is the head here, so it imports directly without migration.
+        ('archive_main_0002', 'main_0002', False),
     ],
 )
-def test_import_main_reference(archive_fixture, version, run_cli_command, request):
+def test_import_main_reference(archive_fixture, version, migrates, run_cli_command, request):
     """Explicitly requested ``main`` revisions import successfully.
 
     The fixture is proven to be at ``version`` by ``test_version_main``.
-    (``main_0001`` is the head here, so no migration is triggered yet.)
     """
     archive = request.getfixturevalue(archive_fixture)
     result = run_cli_command(cmd_archive.import_archive, [archive])
+    if migrates:
+        assert 'trying migration' in result.output, result.exception
     assert f'Success: imported archive {archive}' in result.output, result.exception

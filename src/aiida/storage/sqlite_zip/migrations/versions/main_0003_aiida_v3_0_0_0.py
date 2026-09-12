@@ -6,19 +6,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Bring schema inline with profile database ``main_0002``.
+"""Placeholder for future archive migrations.
 
-Currently empty: the profile database ``main_0002`` invalidates stale
-``CalcJobNode`` hashes, which does not apply to archives at the moment.
-Kept as a placeholder to be filled in by future PRs.
+Currently empty: kept as a placeholder to be filled in by future PRs.
 
-Revision ID: main_0001
-Revises: main_0000b
+Revision ID: main_0003
+Revises: main_0002
 
 """
 
-revision = 'main_0001'
-down_revision = 'main_0000b'
+revision = 'main_0003'
+down_revision = 'main_0002'
 branch_labels = None
 depends_on = None
 

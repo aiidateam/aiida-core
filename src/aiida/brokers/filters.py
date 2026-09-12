@@ -19,7 +19,6 @@
 from __future__ import annotations
 
 import re
-import typing
 from collections.abc import Callable
 from typing import Any
 
@@ -73,7 +72,7 @@ class BroadcastFilter:
     def _ensure_filter(cls, filter_value: Any) -> Callable[[Any], Any]:
         if isinstance(filter_value, str):
             return re.compile(filter_value.replace('.', '[.]').replace('*', '.*')).match
-        if isinstance(filter_value, typing.Pattern):
+        if isinstance(filter_value, re.Pattern):
             return filter_value.match
 
         return lambda val: val == filter_value

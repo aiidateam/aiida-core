@@ -29,9 +29,11 @@ DEFAULT_COMM_URI = 'amqp://guest:guest@127.0.0.1/'
 def connect(uri: str = DEFAULT_COMM_URI, **kwargs: Any) -> Any:
     """Create a communicator connection using a URI."""
     if urlsplit(uri).scheme in ('amqp', 'amqps'):
-        from aiida.brokers.rabbitmq import threadcomms  # pylint: disable=import-outside-toplevel
+        from aiida.brokers.rabbitmq.threadcomms import (  # pylint: disable=import-outside-toplevel
+            RmqThreadCommunicator,
+        )
 
-        return threadcomms.connect(connection_params=uri, **kwargs)
+        return RmqThreadCommunicator.connect(connection_params=uri, **kwargs)
 
     msg = f"Unknown communicator uri '{uri}'"
     raise ValueError(msg)

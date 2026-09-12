@@ -89,8 +89,6 @@ class RmqPublisher(messages.BasePublisherWithReplyQueue):
 class RmqSubscriber:
     """Subscriber for receiving a range of messages over RMQ."""
 
-    # pylint: disable=too-many-instance-attributes
-
     def __init__(
         self,
         connection: aio_pika.Connection,
@@ -100,7 +98,6 @@ class RmqSubscriber:
         encoder: Callable[..., Any] = defaults.ENCODER,
         testing_mode: bool = False,
     ) -> None:
-        # pylint: disable=too-many-arguments
         """Initialise the subscriber.
 
         :param connection: The aio-pika connection.
@@ -238,7 +235,7 @@ class RmqSubscriber:
             except (futures.CancelledError, asyncio.CancelledError) as exc:
                 # The receiver cancelled directly: report cancellation so the caller does not hang.
                 await self._send_response(message.reply_to, message.correlation_id, utils.cancelled_response(str(exc)))
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception as exc:
                 # We had an exception in calling the receiver
                 await self._send_response(message.reply_to, message.correlation_id, utils.exception_response(exc))
             else:
@@ -261,7 +258,7 @@ class RmqSubscriber:
                         msg[messages.BroadcastMessage.SUBJECT],
                         msg[messages.BroadcastMessage.CORRELATION_ID],
                     )
-                except Exception:  # pylint: disable=broad-except
+                except Exception:
                     _LOGGER.exception('Exception in broadcast receiver')
 
     async def _send_future_response(
@@ -284,7 +281,7 @@ class RmqSubscriber:
             # Send out a cancelled response
             await self._send_response(reply_to, correlation_id, utils.cancelled_response(str(exc)))
             return
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception as exc:
             # Send out an exception response
             await self._send_response(reply_to, correlation_id, utils.exception_response(exc))
             return
@@ -303,8 +300,6 @@ class RmqSubscriber:
 class RmqCommunicator:
     """An asynchronous communicator over a RabbitMQ server using aio-pika and an asyncio event loop."""
 
-    # pylint: disable=too-many-instance-attributes
-
     def __init__(
         self,
         connection: aio_pika.Connection,
@@ -320,7 +315,6 @@ class RmqCommunicator:
         decoder: Callable[..., Any] = defaults.DECODER,
         testing_mode: bool = False,
     ) -> None:
-        # pylint: disable=too-many-arguments
         """Create a new asynchronous communicator.
 
         .. note:: This communicator takes ownership of the connection and, therefore, it should not be shared as when
@@ -586,7 +580,6 @@ async def async_connect(
     decoder: Callable[..., Any] = defaults.DECODER,
     testing_mode: bool = False,
 ) -> RmqCommunicator:
-    # pylint: disable=too-many-arguments
     """Return a connected communicator.
 
     :param connection_params: Parameters passed to the connection factory to create the connection.

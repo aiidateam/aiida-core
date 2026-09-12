@@ -132,8 +132,6 @@ class BaseConnectionWithExchange:
 class BasePublisherWithReplyQueue:
     """A base class for any object that publishes a message and potentially expects a reply."""
 
-    # pylint: disable=too-many-instance-attributes
-
     DEFAULT_EXCHANGE_PARAMS: dict[str, Any] = {'type': aio_pika.ExchangeType.TOPIC}
 
     def __init__(
@@ -146,7 +144,6 @@ class BasePublisherWithReplyQueue:
         confirm_deliveries: bool = True,
         testing_mode: bool = False,
     ) -> None:
-        # pylint: disable=too-many-arguments
         """Initialise the publisher.
 
         :param connection: The aio-pika RMQ connection.
@@ -307,7 +304,7 @@ class BasePublisherWithReplyQueue:
                         nested: asyncio.Future[Any] = response_future.result()
                         self._awaiting_response[correlation_id] = nested
                         self._track_response_future(correlation_id, nested)
-                except Exception:  # pylint: disable=broad-except
+                except Exception:
                     pass
 
     def _track_response_future(self, correlation_id: str, future: asyncio.Future[Any]) -> None:

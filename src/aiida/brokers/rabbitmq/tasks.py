@@ -62,7 +62,6 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
         prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
         prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
     ) -> None:
-        # pylint: disable=too-many-arguments
         """Initialise the subscriber.
 
         :param connection: An RMQ connection.
@@ -243,7 +242,7 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
                     # The subscriber has cancelled their processing of the task.
                     outcome.cancel()
                     break
-                except Exception as exc:  # pylint: disable=broad-except
+                except Exception as exc:
                     # There was an exception during the processing of this task.
                     outcome.set_exception(exc)
                     _LOGGER.exception('Exception occurred while processing task.')
@@ -290,7 +289,7 @@ class RmqIncomingTask:
     def __init__(self, subscriber: RmqTaskSubscriber, message: aio_pika.abc.AbstractIncomingMessage) -> None:
         self._subscriber: RmqTaskSubscriber | None = subscriber
         self._message: aio_pika.abc.AbstractIncomingMessage | None = message
-        self._task_info = TaskInfo(*subscriber._decode(message.body))  # pylint: disable=protected-access
+        self._task_info = TaskInfo(*subscriber._decode(message.body))
         self._state = TASK_PENDING
         self._outcome_ref: weakref.ReferenceType[asyncio.Future[Any]] | None = None
         self._loop: asyncio.AbstractEventLoop = subscriber.loop()
@@ -380,13 +379,12 @@ class RmqIncomingTask:
             # python complains that it was never retrieved in case of exception
             try:
                 reply_body = utils.result_response(outcome.result())
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception as exc:
                 reply_body = utils.exception_response(exc)
 
             if not self.no_reply:
                 # Schedule a task to send the appropriate response
                 assert self._subscriber is not None
-                # pylint: disable=protected-access
                 await self._subscriber._send_response(reply_body, self._message)
 
         # Clean up
@@ -420,7 +418,6 @@ class RmqTaskPublisher(messages.BasePublisherWithReplyQueue):
         confirm_deliveries: bool = True,
         testing_mode: bool = False,
     ) -> None:
-        # pylint: disable=too-many-arguments
         super().__init__(
             connection,
             exchange_name=exchange_name,
@@ -486,7 +483,6 @@ class RmqTaskQueue:
         prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
         testing_mode: bool = False,
     ) -> None:
-        # pylint: disable=too-many-arguments
         self._publisher = RmqTaskPublisher(
             connection,
             exchange_name=exchange_name,
@@ -530,7 +526,6 @@ class RmqTaskQueue:
         self, no_ack: bool = False, fail: bool = True, timeout: float = defaults.TASK_FETCH_TIMEOUT
     ) -> AsyncIterator[RmqIncomingTask]:
         """Yield the next task from the queue."""
-        # pylint: disable=not-async-context-manager
         async with self._subscriber.next_task(no_ack=no_ack, fail=fail, timeout=timeout) as task:
             yield task
 

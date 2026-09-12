@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/aiidateam/aiida-workgraph/main/src/aiida_workgraph/schemas/aiida_workgraph.schema.json",
+  "title": "WorkGraph Export Schema",
+  "description": "A JSON Schema describing WorkGraph output data",
+  "type": "object",
+  "properties": {
+      "platform_version": {
+          "type": "string",
+          "description": "Version identifier for the aiida_workgraph. E.g. aiida_workgraph@0.0.1"
+      },
+      "uuid": {
+          "type": "string",
+          "description": "A unique identifier (UUID) for this top-level WorkGraph",
+          "format": "uuid"
+      },
+      "name": {
+          "type": "string",
+          "description": "Human-readable name for the WorkGraph"
+      },
+      "state": {
+          "type": "string",
+          "description": "State of the WorkGraph, e.g. CREATED, RUNNING, FINISHED, etc."
+      },
+      "action": {
+          "type": "string",
+          "description": "High-level command or request, e.g. NONE, STOP, etc."
+      },
+      "error": {
+          "type": "string",
+          "description": "Error message if the WorkGraph encountered an issue"
+      },
+      "metadata": {
+          "type": "object",
+          "description": "Metadata about this WorkGraph",
+          "properties": {
+              "graph_type": {
+                  "type": "string",
+                  "description": "Type of this graph, e.g. NORMAL"
+              }
+          },
+          "required": []
+      },
+      "links": {
+          "type": "array",
+          "description": "List of edges describing how node outputs link to other node inputs",
+          "items": {
+              "type": "object",
+              "properties": {
+                  "from_socket": { "type": "string" },
+                  "from_node": { "type": "string" },
+                  "to_socket": { "type": "string" },
+                  "to_node": { "type": "string" }
+              },
+              "required": ["from_socket", "from_node", "to_socket", "to_node"]
+          }
+      },
+      "description": {
+          "type": "string"
+      },
+      "context": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Any context or ephemeral state that might be needed"
+      },
+      "restart_process": {
+          "type": ["string", "null"],
+          "description": "If relevant, references a process to restart"
+      },
+      "max_iteration": {
+          "type": "integer",
+          "minimum": 0
+      },
+      "execution_count": {
+          "type": "integer",
+          "minimum": 0
+      },
+      "conditions": {
+          "type": "array",
+          "items": { "type": "string" }
+      },
+      "max_number_jobs": {
+          "type": "integer",
+          "minimum": 0
+      },
+      "error_handlers": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Holds any error handling instructions or metadata"
+      },
+      "tasks": {
+          "type": "object",
+          "description": "Collection of tasks keyed by name/ID",
+          "patternProperties": {
+              "^[A-Za-z0-9_-]+$": {
+                  "$ref": "#/definitions/task"
+              }
+          },
+          "additionalProperties": false
+      }
+  },
+  "required": ["version", "name", "metadata", "tasks"],
+  "definitions": {
+      "task": {
+          "type": "object",
+          "description": "A single task in the WorkGraph",
+          "properties": {
+              "version": {
+                  "type": "string",
+                  "description": "Version identifier of this node/task data format"
+              },
+              "identifier": {
+                  "type": "string",
+                  "description": "Underlying function or process this task references"
+              },
+              "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+              },
+              "name": {
+                  "type": "string"
+              },
+              "state": {
+                  "type": "string"
+              },
+              "action": {
+                  "type": "string"
+              },
+              "error": {
+                  "type": "string"
+              },
+              "metadata": {
+                  "type": "object",
+                  "description": "Metadata about the node/task",
+                  "additionalProperties": true
+              },
+              "properties": {
+                  "type": "object",
+                  "additionalProperties": true
+              },
+              "inputs": {
+                  "$ref": "#/definitions/socket",
+                  "description": "Inputs socket that contains sub-sockets."
+              },
+              "outputs": {
+                  "$ref": "#/definitions/socket",
+                  "description": "Output socket that contains sub-sockets."
+                },
+              "executor": {
+                  "type": "object",
+                  "description": "Information about how to execute this task (calcfunction, process, etc.)",
+                  "properties": {
+                    "mode":          { "type": "string" },
+                    "module_path":   { "type": ["string", "null"] },
+                    "callable_name": { "type": ["string", "null"] },
+                    "callable_kind": { "type": ["string", "null"] },
+                    "graph_data":    { "type": ["string", "null"] },
+                    "pickled_callable": { "type": "string" },
+                    "source_code":   { "type": "string" },
+                    "metadata":      { "type": ["string", "null"] }
+                  },
+                  "required": ["mode", "callable_name"]
+                },
+                "position": {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "description": "x,y position in a canvas or graph layout"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "log": {
+                  "type": "string"
+                },
+                "hash": {
+                  "type": "string"
+                },
+                "context_mapping": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "wait": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "children": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "execution_count": {
+                  "type": "integer"
+                },
+                "parent_task": {
+                  "type": "array",
+                  "items": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "process": {
+                  "type": "string"
+                },
+                "error_handlers": {
+                  "type": "object",
+                  "additionalProperties": true
+              }
+          },
+          "required": ["identifier", "name", "inputs", "outputs"]
+      },
+      "socket": {
+          "type": "object",
+          "description": "Represents an input or output socket, which may have properties and (optionally) links to other tasks",
+          "properties": {
+              "name": {
+                  "type": "string"
+              },
+              "identifier": {
+                  "type": "string"
+              },
+              "link_limit": {
+                  "type": ["number", "null"]
+              },
+              "links": {
+                  "type": "array",
+                  "items": {
+                      "type": "object",
+                      "properties": {
+                          "from_node": { "type": "string" },
+                          "from_socket": { "type": "string" }
+                      },
+                      "required": ["from_node", "from_socket"]
+                  }
+              },
+              "metadata": {
+                  "type": "object",
+                  "additionalProperties": true
+              },
+              "property": {
+                  "type": "object",
+                  "properties": {
+                      "value": {},
+                      "name": { "type": "string" },
+                      "identifier": { "type": "string" },
+                      "default": {},
+                      "metadata": { "type": "object" },
+                      "arg_type": { "type": "string" }
+                  },
+                  "required": ["value"]
+              },
+              "sockets": {
+                  "type": "object",
+                  "description": "Nested sockets within this namespace socket",
+                  "additionalProperties": {
+                      "$ref": "#/definitions/socket"
+                  }
+              }
+          },
+          "required": []
+      }
+  }
+}

@@ -8,14 +8,16 @@ dependencies:
 - python>=3.10
 - alembic~=1.8
 - archive-path~=0.4.2
+- ase~=3.21
 - asyncssh~=2.22.0
 - circus~=0.19.0
 - click-spinner~=0.1.8
 - click<8.3,>=8.1.0
+- cloudpickle
 - dill<1,>=0.3.6
 - disk-objectstore~=1.5.0
 - docstring_parser
-- python-graphviz~=0.19
+- python-graphviz~=0.20
 - greenback~=1.0
 - greenlet>=3.2.4
 - importlib-metadata~=6.0
@@ -23,6 +25,7 @@ dependencies:
 - jedi<0.19
 - jinja2~=3.0
 - kiwipy[rmq]~=0.9.0
+- node-graph-widget>=0.0.5
 - numpy<3,>=1.21
 - paramiko~=3.0
 - pgsu~=0.3.0
@@ -31,7 +34,9 @@ dependencies:
 - pydantic~=2.12
 - pytz~=2021.1
 - pyyaml~=6.0
+- rdflib>=6.0
 - requests~=2.0
+- scipy
 - sqlalchemy<3,>=2.0.20
 - tabulate<0.10.0,>=0.9.0
 - tqdm~=4.45

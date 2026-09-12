@@ -31,14 +31,16 @@ classifiers = [
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
+  'ase~=3.21',
   "asyncssh~=2.22.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
+  'cloudpickle',
   'dill>=0.3.6,<1',
   'disk-objectstore~=1.5.0',
   'docstring-parser',
-  'graphviz~=0.19',
+  'graphviz~=0.20',
   'greenback~=1.0',
   'greenlet>=3.2.4',
   'importlib-metadata~=6.0',
@@ -46,6 +48,7 @@ dependencies = [
   'jedi<0.19',
   'jinja2~=3.0',
   'kiwipy[rmq]~=0.9.0',
+  'node-graph-widget>=0.0.5',
   'numpy>=1.21,<3',
   'paramiko~=3.0',
   'pgsu~=0.3.0',
@@ -54,7 +57,9 @@ dependencies = [
   'pydantic~=2.12',
   'pytz~=2021.1',
   'pyyaml~=6.0',
+  'rdflib>=6.0',
   'requests~=2.0',
+  'scipy',
   'sqlalchemy>=2.0.20,<3',
   'tabulate>=0.9.0,<0.10.0',
   'tqdm~=4.45',
@@ -82,12 +87,16 @@ requires-python = '>=3.10'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
 'core.unstash' = 'aiida.calculations.unstash:UnstashCalculation'
+'pythonjob.pythonjob' = 'aiida.pythonjob.calculations.pythonjob:PythonJob'
 
 [project.entry-points.'aiida.calculations.importers']
 'core.arithmetic.add' = 'aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter'
 
 [project.entry-points.'aiida.calculations.monitors']
 'core.always_kill' = 'aiida.calculations.monitors.base:always_kill'
+
+[project.entry-points.'aiida.cmdline']
+'workgraph' = 'aiida.workgraph.cli.cmd_workgraph:workgraph'
 
 [project.entry-points.'aiida.cmdline.computer.configure']
 'core.local' = 'aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD'
@@ -142,6 +151,11 @@ requires-python = '>=3.10'
 'core.str' = 'aiida.orm.nodes.data.str:Str'
 'core.structure' = 'aiida.orm.nodes.data.structure:StructureData'
 'core.upf' = 'aiida.orm.nodes.data.upf:UpfData'
+'pythonjob.ase.atoms.Atoms' = 'aiida.pythonjob.data.atoms:AtomsData'
+'pythonjob.builtins.NoneType' = 'aiida.pythonjob.data.common_data:NoneData'
+'pythonjob.builtins.function' = 'aiida.pythonjob.data.common_data:FunctionData'
+'pythonjob.datetime.datetime' = 'aiida.pythonjob.data.common_data:DateTimeData'
+'pythonjob.jsonable_data' = 'aiida.pythonjob.data.jsonable_data:JsonableData'
 
 [project.entry-points.'aiida.groups']
 'core' = 'aiida.orm.groups:Group'
@@ -158,6 +172,7 @@ requires-python = '>=3.10'
 'process.workflow' = 'aiida.orm.nodes.process.workflow.workflow:WorkflowNode'
 'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'
 'process.workflow.workfunction' = 'aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode'
+'process.workflow.workgraph' = 'aiida.workgraph.orm.workgraph:WorkGraphNode'
 
 [project.entry-points.'aiida.orm']
 'core.auth_info' = 'aiida.orm.authinfos:AuthInfo'
@@ -174,6 +189,7 @@ requires-python = '>=3.10'
 'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
 'core.shell' = 'aiida.parsers.plugins.shell.parser:ShellParser'
 'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'
+'pythonjob.pythonjob' = 'aiida.pythonjob.parsers.pythonjob:PythonJobParser'
 
 [project.entry-points.'aiida.schedulers']
 'core.direct' = 'aiida.schedulers.plugins.direct:DirectScheduler'
@@ -218,6 +234,111 @@ requires-python = '>=3.10'
 [project.entry-points.'aiida.workflows']
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
 'core.arithmetic.multiply_add' = 'aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain'
+'workgraph.engine' = 'aiida.workgraph.engine.workgraph:WorkGraphEngine'
+
+[project.entry-points.'aiida_workgraph.property']
+'workgraph.aiida_float_vector' = 'aiida.workgraph.properties.builtins:PropertyAiiDAFloatVector'
+'workgraph.aiida_int_vector' = 'aiida.workgraph.properties.builtins:PropertyAiiDAIntVector'
+'workgraph.aiida_structuredata' = 'aiida.workgraph.properties.builtins:PropertyStructureData'
+'workgraph.any' = 'aiida.workgraph.properties.builtins:PropertyAny'
+'workgraph.bool' = 'aiida.workgraph.properties.builtins:PropertyBool'
+'workgraph.dict' = 'aiida.workgraph.properties.builtins:PropertyDict'
+'workgraph.float' = 'aiida.workgraph.properties.builtins:PropertyFloat'
+'workgraph.int' = 'aiida.workgraph.properties.builtins:PropertyInt'
+'workgraph.list' = 'aiida.workgraph.properties.builtins:PropertyList'
+'workgraph.string' = 'aiida.workgraph.properties.builtins:PropertyString'
+
+[project.entry-points.'aiida_workgraph.socket']
+'workgraph.aiida_float_vector' = 'aiida.workgraph.sockets.builtins:SocketAiiDAFloatVector'
+'workgraph.aiida_int_vector' = 'aiida.workgraph.sockets.builtins:SocketAiiDAIntVector'
+'workgraph.aiida_structuredata' = 'aiida.workgraph.sockets.builtins:SocketStructureData'
+'workgraph.annotated' = 'aiida.workgraph.sockets.builtins:SocketAnnotated'
+'workgraph.any' = 'aiida.workgraph.sockets.builtins:SocketAny'
+'workgraph.bool' = 'aiida.workgraph.sockets.builtins:SocketBool'
+'workgraph.dict' = 'aiida.workgraph.sockets.builtins:SocketDict'
+'workgraph.float' = 'aiida.workgraph.sockets.builtins:SocketFloat'
+'workgraph.int' = 'aiida.workgraph.sockets.builtins:SocketInt'
+'workgraph.list' = 'aiida.workgraph.sockets.builtins:SocketList'
+'workgraph.namespace' = 'aiida.workgraph.socket:TaskSocketNamespace'
+'workgraph.string' = 'aiida.workgraph.sockets.builtins:SocketString'
+
+[project.entry-points.'aiida_workgraph.task']
+'workgraph.aiida_dict' = 'aiida.workgraph.tasks.builtins:aiida_dict'
+'workgraph.aiida_float' = 'aiida.workgraph.tasks.builtins:aiida_float'
+'workgraph.aiida_int' = 'aiida.workgraph.tasks.builtins:aiida_int'
+'workgraph.aiida_list' = 'aiida.workgraph.tasks.builtins:aiida_list'
+'workgraph.aiida_process' = 'aiida.workgraph.tasks.aiida:AiiDAProcessTask'
+'workgraph.aiida_string' = 'aiida.workgraph.tasks.builtins:aiida_string'
+'workgraph.any' = 'aiida.workgraph.task:Task'
+'workgraph.gather_item' = 'aiida.workgraph.tasks.builtins:GatherItem'
+'workgraph.get_context' = 'aiida.workgraph.tasks.builtins:GetContext'
+'workgraph.graph_level' = 'aiida.workgraph.tasks.builtins:GraphLevelTask'
+'workgraph.if_zone' = 'aiida.workgraph.tasks.builtins:If'
+'workgraph.load_code' = 'aiida.workgraph.tasks.builtins:AiiDACode'
+'workgraph.load_node' = 'aiida.workgraph.tasks.builtins:AiiDANode'
+'workgraph.map_item' = 'aiida.workgraph.tasks.builtins:MapItem'
+'workgraph.map_zone' = 'aiida.workgraph.tasks.builtins:Map'
+'workgraph.monitor_file' = 'aiida.workgraph.tasks.monitors:monitor_file'
+'workgraph.monitor_task' = 'aiida.workgraph.tasks.monitors:monitor_task'
+'workgraph.monitor_time' = 'aiida.workgraph.tasks.monitors:monitor_time'
+'workgraph.select' = 'aiida.workgraph.tasks.builtins:Select'
+'workgraph.set_context' = 'aiida.workgraph.tasks.builtins:SetContext'
+'workgraph.subgraph_task' = 'aiida.workgraph.tasks.subgraph_task:SubGraphTask'
+'workgraph.test_add' = 'aiida.workgraph.executors.test:add'
+'workgraph.test_sum_diff' = 'aiida.workgraph.executors.test:sum_diff'
+'workgraph.while_zone' = 'aiida.workgraph.tasks.builtins:While'
+'workgraph.zone' = 'aiida.workgraph.tasks.builtins:Zone'
+
+[project.entry-points.'aiida_workgraph.type_mapping']
+'workgraph.builtins_mapping' = 'aiida.workgraph.orm.mapping:builtins_type_mapping'
+
+[project.entry-points.'aiida_workgraph.type_promotion']
+'workgraph.builtins_mapping' = 'aiida.workgraph.orm.mapping:TYPE_PROMOTIONS'
+
+[project.entry-points.'node_graph.property']
+'node_graph.any' = 'aiida.node_graph.properties.builtins:PropertyAny'
+'node_graph.base_dict' = 'aiida.node_graph.properties.builtins:PropertyBaseDict'
+'node_graph.base_list' = 'aiida.node_graph.properties.builtins:PropertyBaseList'
+'node_graph.bool' = 'aiida.node_graph.properties.builtins:PropertyBool'
+'node_graph.bool_vector' = 'aiida.node_graph.properties.builtins:PropertyBoolVector'
+'node_graph.enum' = 'aiida.node_graph.properties.builtins:PropertyEnum'
+'node_graph.float' = 'aiida.node_graph.properties.builtins:PropertyFloat'
+'node_graph.float_matrix' = 'aiida.node_graph.properties.builtins:PropertyFloatMatrix'
+'node_graph.float_vector' = 'aiida.node_graph.properties.builtins:PropertyFloatVector'
+'node_graph.int' = 'aiida.node_graph.properties.builtins:PropertyInt'
+'node_graph.int_vector' = 'aiida.node_graph.properties.builtins:PropertyIntVector'
+'node_graph.string' = 'aiida.node_graph.properties.builtins:PropertyString'
+
+[project.entry-points.'node_graph.socket']
+'node_graph.annotated' = 'aiida.node_graph.sockets.builtins:SocketAnnotated'
+'node_graph.any' = 'aiida.node_graph.sockets.builtins:SocketAny'
+'node_graph.base_dict' = 'aiida.node_graph.sockets.builtins:SocketBaseDict'
+'node_graph.base_list' = 'aiida.node_graph.sockets.builtins:SocketBaseList'
+'node_graph.bool' = 'aiida.node_graph.sockets.builtins:SocketBool'
+'node_graph.float' = 'aiida.node_graph.sockets.builtins:SocketFloat'
+'node_graph.float_vector' = 'aiida.node_graph.sockets.builtins:SocketFloatVector'
+'node_graph.int' = 'aiida.node_graph.sockets.builtins:SocketInt'
+'node_graph.int_vector' = 'aiida.node_graph.sockets.builtins:SocketIntVector'
+'node_graph.namespace' = 'aiida.node_graph.socket:TaskSocketNamespace'
+'node_graph.string' = 'aiida.node_graph.sockets.builtins:SocketString'
+
+[project.entry-points.'node_graph.task']
+'node_graph.graph_level' = 'aiida.node_graph.tasks.builtins:GraphLevelTask'
+'node_graph.if_zone' = 'aiida.node_graph.tasks.builtins:If'
+'node_graph.task' = 'aiida.node_graph.task:Task'
+'node_graph.test_add' = 'aiida.node_graph.tasks.tests:test_add'
+'node_graph.test_enum' = 'aiida.node_graph.tasks.tests:TestEnum'
+'node_graph.test_enum_update' = 'aiida.node_graph.tasks.tests:TestEnumUpdate'
+'node_graph.test_float' = 'aiida.node_graph.tasks.tests:test_float'
+'node_graph.test_string' = 'aiida.node_graph.tasks.tests:test_string'
+'node_graph.while_zone' = 'aiida.node_graph.tasks.builtins:While'
+'node_graph.zone' = 'aiida.node_graph.tasks.builtins:Zone'
+
+[project.entry-points.'node_graph.type_mapping']
+'node_graph.builtins_mapping' = 'aiida.node_graph.orm.mapping:type_mapping'
+
+[project.entry-points.'node_graph.type_promotion']
+'node_graph.builtins_mapping' = 'aiida.node_graph.link:TYPE_PROMOTIONS'
 
 [project.optional-dependencies]
 atomic_tools = [
@@ -311,8 +432,10 @@ tutorials = [
 ]
 
 [project.scripts]
+node-graph = 'aiida.node_graph.cli:cli'
 runaiida = 'aiida.cmdline.commands.cmd_run:run'
 verdi = 'aiida.cmdline.commands.cmd_verdi:verdi'
+workgraph = 'aiida.workgraph.cli.cmd_workgraph:workgraph'
 
 [project.urls]
 Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/CHANGELOG.md'
@@ -492,7 +615,12 @@ xfail_strict = true
 [tool.ruff]
 exclude = [
   'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
+  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py',
+  # Vendored subsystems, kept verbatim in the mechanical move; a follow-up applies aiida-core
+  # lint/format and removes these exclusions.
+  'src/aiida/node_graph/',
+  'src/aiida/pythonjob/',
+  'src/aiida/workgraph/'
 ]
 line-length = 120
 

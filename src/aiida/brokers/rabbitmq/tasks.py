@@ -294,6 +294,7 @@ class RmqIncomingTask:
         self._state = TASK_PENDING
         self._outcome_ref: weakref.ReferenceType[asyncio.Future[Any]] | None = None
         self._loop: asyncio.AbstractEventLoop = subscriber.loop()
+        self._done_task: asyncio.Task[Any] | None = None
 
     @property
     def body(self) -> Any:
@@ -354,7 +355,10 @@ class RmqIncomingTask:
 
     def _on_task_done(self, outcome: asyncio.Future[Any]) -> None:
         """Schedule a task to call ``_task_done`` when the outcome is done."""
-        self._loop.create_task(self._task_done(outcome))
+        # Keep a strong reference until completion: the loop only holds a weak reference
+        # and the task could otherwise be garbage-collected while pending.
+        self._done_task = self._loop.create_task(self._task_done(outcome))
+        self._done_task.add_done_callback(lambda _: setattr(self, '_done_task', None))
 
     async def _task_done(self, outcome: asyncio.Future[Any]) -> None:
         assert outcome.done()

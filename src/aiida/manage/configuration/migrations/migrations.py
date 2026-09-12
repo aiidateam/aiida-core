@@ -473,23 +473,30 @@ class RenameRmqAndLogging(SingleMigration):
             self._remove_v10_only_options(options)
 
 
-class MergePlumpyLogLevel(SingleMigration):
-    """Merge the plumpy log-level option into the aiida-core log level."""
+class AiidaV3Migration(SingleMigration):
+    """Merge the plumpy and kiwipy log-level options into the aiida-core log level."""
 
     down_revision = 10
     down_compatible = 10
     up_revision = 11
     up_compatible = 11
 
-    @staticmethod
-    def _upgrade_options(options: dict[str, Any]) -> None:
-        if (value := options.pop('logging.plumpy_loglevel', None)) is not None:
-            options.setdefault('logging.aiida_core_loglevel', value)
+    removed_options = (
+        'logging.plumpy_loglevel',
+        'logging.kiwipy_loglevel',
+    )
 
-    @staticmethod
-    def _downgrade_options(options: dict[str, Any]) -> None:
+    @classmethod
+    def _upgrade_options(cls, options: dict[str, Any]) -> None:
+        for removed_option in cls.removed_options:
+            if (value := options.pop(removed_option, None)) is not None:
+                options.setdefault('logging.aiida_core_loglevel', value)
+
+    @classmethod
+    def _downgrade_options(cls, options: dict[str, Any]) -> None:
         if (value := options.get('logging.aiida_core_loglevel')) is not None:
-            options.setdefault('logging.plumpy_loglevel', value)
+            for removed_option in cls.removed_options:
+                options.setdefault(removed_option, value)
 
     def upgrade(self, config: ConfigType) -> None:
         self._upgrade_options(config.get('options', {}))
@@ -513,7 +520,7 @@ MIGRATIONS = (
     AddTestProfileKey,
     AddPrefixToStorageBackendTypes,
     RenameRmqAndLogging,
-    MergePlumpyLogLevel,
+    AiidaV3Migration,
 )
 
 

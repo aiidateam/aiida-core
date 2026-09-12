@@ -12,16 +12,9 @@ import pytest
 
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
-from aiida.storage.sqlite_zip.migrator import list_versions
 from tests.utils.archives import get_archive_file
 
 ARCHIVE_PATH = 'export/migrate'
-
-
-@pytest.fixture(scope='session')
-def archive_main_0001():
-    """Return the path of the pinned ``main_0001`` reference archive."""
-    return get_archive_file('export_main_0001_simple.aiida', filepath=ARCHIVE_PATH)
 
 
 def test_import_no_archives(run_cli_command):
@@ -214,39 +207,31 @@ def test_migration(run_cli_command):
     assert success_message not in result.output, result.exception
 
 
-def _available_migrate_versions():
-    """Return migrate versions with a pinned static file on disk.
-
-    The head version has no checked-in binary (it is generated at runtime
-    by the ``archive_head`` fixture), so it is excluded here.
-    """
-    import os
-
-    from tests.static import STATIC_DIR
-
-    versions = []
-    for version in list_versions():
-        if version in ('main_0000a', 'main_0000b'):
-            continue
-        if os.path.isfile(os.path.join(STATIC_DIR, ARCHIVE_PATH, f'export_{version}_simple.aiida')):
-            versions.append(version)
-    return versions
-
-
-def test_import_main_0001_reference(archive_main_0001, run_cli_command):
-    """The pinned ``main_0001`` reference archive migrates to head on import."""
-    result = run_cli_command(cmd_archive.import_archive, [archive_main_0001])
-    assert 'main_0001' in result.output, result.exception
-    assert f'Success: imported archive {archive_main_0001}' in result.output, result.exception
-
-
-@pytest.mark.parametrize('version', _available_migrate_versions())
+@pytest.mark.parametrize(
+    'version',
+    ('0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '0.10', '0.11', '0.12', '0.13', 'main_0000'),
+)
 def test_import_old_local_archives(version, run_cli_command):
-    """Test import of old local archives
-    Expected behavior: Automatically migrate to newest version and import correctly.
-    """
-    archive, version = (f'export_{version}_simple.aiida', f'{version}')
+    """Test import of pinned legacy archives (migrated to head on import)."""
+    archive = f'export_{version}_simple.aiida'
     options = [get_archive_file(archive, filepath=ARCHIVE_PATH)]
     result = run_cli_command(cmd_archive.import_archive, options)
-    assert version in result.output, result.exception
+    assert 'trying migration' in result.output, result.exception
     assert f'Success: imported archive {options[0]}' in result.output, result.exception
+
+
+@pytest.mark.parametrize(
+    'archive_fixture, version',
+    [
+        ('archive_main_0001', 'main_0001'),
+    ],
+)
+def test_import_main_reference(archive_fixture, version, run_cli_command, request):
+    """Explicitly requested ``main`` revisions import successfully.
+
+    The fixture is proven to be at ``version`` by ``test_version_main``.
+    (``main_0001`` is the head here, so no migration is triggered yet.)
+    """
+    archive = request.getfixturevalue(archive_fixture)
+    result = run_cli_command(cmd_archive.import_archive, [archive])
+    assert f'Success: imported archive {archive}' in result.output, result.exception

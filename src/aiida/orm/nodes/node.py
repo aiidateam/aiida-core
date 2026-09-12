@@ -920,8 +920,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if cache_node.base.links.get_outgoing(link_type=LinkType.RETURN).all():
             raise ValueError('Cannot use cache from nodes with RETURN links.')
 
-        self.label = cache_node.label
-        self.description = cache_node.description
+        if not self.label:
+            self.label = cache_node.label
+        if not self.description:
+            self.description = cache_node.description
 
         # Make sure to reinitialize the repository instance of the clone to that of the source node.
         self.base.repository._copy(cache_node.base.repository)

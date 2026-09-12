@@ -22,8 +22,8 @@ import asyncio
 import logging
 import uuid
 import weakref
-from collections.abc import AsyncIterator, Callable
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable, Mapping
+from contextlib import asynccontextmanager, suppress
 from typing import Any, NamedTuple
 
 import aio_pika
@@ -90,7 +90,8 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
     async def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
         identifier = identifier or shortuuid.uuid()
         if identifier in self._subscribers:
-            raise exceptions.DuplicateSubscriberIdentifier(f"Task identifier '{identifier}'")
+            msg = f"Task identifier '{identifier}'"
+            raise exceptions.DuplicateSubscriberIdentifier(msg)
 
         self._subscribers[identifier] = subscriber
         if self._consumer_tag is None:
@@ -103,7 +104,8 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
         try:
             self._subscribers.pop(identifier)
         except KeyError as exception:
-            raise ValueError(f"Unknown task subscriber '{identifier}'") from exception
+            msg = f"Unknown task subscriber '{identifier}'"
+            raise ValueError(msg) from exception
         if not self._subscribers:
             assert self._task_queue is not None
             assert self._consumer_tag is not None
@@ -162,7 +164,8 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
                 msg = 'No task available in the queue within the timeout.'
                 raise exceptions.QueueEmpty(msg)
         except aio_pika.exceptions.QueueEmpty as exc:
-            raise exceptions.QueueEmpty(str(exc))
+            msg = str(exc)
+            raise exceptions.QueueEmpty(msg)
         else:
             task = RmqIncomingTask(self, message)
             try:

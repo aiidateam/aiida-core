@@ -230,9 +230,9 @@ class RmqSubscriber:
         async with message.process(ignore_processed=True):
             # Tell the sender that we've dealt with it
             await message.ack()
-            msg = self._decode(message.body)
 
             try:
+                msg = self._decode(message.body)
                 receiver = utils.ensure_coroutine(subscriber)
                 result = await receiver(self, msg)
             except (futures.CancelledError, asyncio.CancelledError) as exc:

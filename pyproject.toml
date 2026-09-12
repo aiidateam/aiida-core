@@ -351,6 +351,7 @@ exclude = [
   'docs/',
   'environment.yml',
   'mypy.toml',
+  'ruff.toml',
   'tests/',
   'utils/',
   'uv.lock'
@@ -409,55 +410,6 @@ testpaths = [
 timeout = 240
 timeout_method = "thread"
 xfail_strict = true
-
-[tool.ruff]
-exclude = [
-  'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
-]
-line-length = 120
-
-[tool.ruff.format]
-quote-style = 'single'
-
-[tool.ruff.lint]
-ignore = [
-  'F403',  # Star imports unable to detect undefined names
-  'F405',  # Import may be undefined or defined from star imports
-  'PLC0415',  # import-outside-top-level
-  'PLR0911',  # Too many return statements
-  'PLR0912',  # Too many branches
-  'PLR0913',  # Too many arguments in function definition
-  'PLR0915',  # Too many statements
-  'PLR2004',  # Magic value used in comparison
-  'PLW1641',  # Checks for classes that implement `__eq__` but not `__hash__`
-  'RUF005',  # Consider iterable unpacking instead of concatenation
-  'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
-]
-select = [
-  'E',  # pydocstyle
-  'W',  # pydocstyle
-  'F',  # pyflakes
-  'UP',  # pyupgrade
-  'I',  # isort
-  'N',  # pep8-naming
-  'PLC',  # pylint-convention
-  'PLE',  # pylint-error
-  'PLR',  # pylint-refactor
-  'PLW',  # pylint-warning
-  'RUF',  # ruff
-  'FLY',  # flynt
-  'NPY201',  # numpy compatibility
-  'TID'  # flake8-tidy-imports
-]
-
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
-
-# Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
-# Needed due to https://github.com/astral-sh/ruff/issues/9298
-[tool.ruff.lint.pyflakes]
-extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.Collection"]
 
 [tool.uv]
 # We specify a minimum uv version so that the format of uv.lock file

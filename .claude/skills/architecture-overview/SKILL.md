@@ -79,4 +79,4 @@ The generated `.pyi` files show only signatures, classes, and type annotations, 
 
 ## Project configuration
 
-`pyproject.toml` (dependencies, entry points, ruff config), `mypy.toml` (mypy config), `uv.lock`, `.pre-commit-config.yaml`, `.readthedocs.yml`, `.github/workflows/`, `.docker/`.
+`pyproject.toml` (dependencies, entry points), `ruff.toml` (ruff config), `mypy.toml` (mypy config), `uv.lock`, `.pre-commit-config.yaml`, `.readthedocs.yml`, `.github/workflows/`, `.docker/`.

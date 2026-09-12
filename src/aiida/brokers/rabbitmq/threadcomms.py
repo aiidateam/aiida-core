@@ -178,15 +178,17 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
         if self.is_closed():
             return
 
-        self._loop_scheduler.await_(self._communicator.disconnect())
-        self._loop_scheduler.close()
-        self._loop.close()
+        try:
+            self._loop_scheduler.await_(self._communicator.disconnect())
+        finally:
+            self._loop_scheduler.close()
+            self._loop.close()
 
-        # Clean up
-        del self._communicator
-        del self._loop_scheduler
-        del self._loop
-        self._closed = True
+            # Clean up
+            del self._communicator
+            del self._loop_scheduler
+            del self._loop
+            self._closed = True
 
     def add_close_callback(self, callback: aio_pika.abc.ConnectionCloseCallback, weak: bool = False) -> None:
         """Add a callable to be called each time (after) the connection is closed.

@@ -34,7 +34,7 @@ Each process class has a corresponding node class that records its execution:
 
 Code style is enforced via **pre-commit hooks** (`.pre-commit-config.yaml`). Always run `uv run pre-commit` before pushing.
 Formatting: `ruff`. Type checking: `mypy`. Write new code following ruff conventions with proper type hints.
-Typing is progressively strict: modules listed under `[[tool.mypy.overrides]]` in `pyproject.toml` require full annotations, and a module joins that list once it is fully typed.
+Typing is progressively strict: modules listed under `[[tool.mypy.overrides]]` in `mypy.toml` require full annotations, and a module joins that list once it is fully typed.
 Docstrings: Sphinx-style (`:param:`, `:return:`, `:raises:`) required for public API, types in annotations not docstrings.
 Comments and docstrings explain *why*, not *what*.
 New source files should include the standard copyright header (copy from any existing `.py` file).

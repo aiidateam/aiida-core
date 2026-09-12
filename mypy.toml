@@ -1,0 +1,88 @@
+# Mypy configuration for aiida-core.
+#
+# Referenced explicitly (mypy does not auto-discover `mypy.toml`):
+# mypy --config-file mypy.toml <files>
+# The pre-commit hook passes `--config-file=mypy.toml`.
+#
+# Keep this file free of path-valued settings (`mypy_path`, `files`, ...):
+# those resolve relative to the invoking working directory, not this file.
+
+[tool.mypy]
+disallow_any_generics = false
+disallow_incomplete_defs = false
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+# these options reduce the strictness and should eventually be removed
+disallow_untyped_defs = false
+enable_error_code = [
+  'ignore-without-code',
+  'redundant-expr',
+  'truthy-bool'
+]
+plugins = [
+  'pydantic.mypy',
+  'sqlalchemy.ext.mypy.plugin'
+]
+scripts_are_modules = true
+show_error_codes = true
+show_traceback = true
+# strictness
+strict = true
+warn_return_any = false
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+implicit_reexport = true
+module = 'aiida'
+
+[[tool.mypy.overrides]]
+disallow_untyped_decorators = false
+module = 'aiida.cmdline.commands.*'
+
+[[tool.mypy.overrides]]
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+module = [
+  'aiida.brokers.*',
+  'aiida.calculations.shell',
+  'aiida.cmdline.groups.*',
+  'aiida.cmdline.params.*',
+  'aiida.cmdline.commands.cmd_status',
+  'aiida.common.*',
+  'aiida.orm.nodes.data.code.shell',
+  'aiida.orm.nodes.data.entry_point',
+  'aiida.orm.nodes.data.pickled',
+  'aiida.orm.utils.data',
+  'aiida.parsers.plugins.shell.parser',
+  'aiida.repository.*',
+  'aiida.schedulers.*',
+  'aiida.storage.psql_dos.migrator',
+  'aiida.storage.psql_dos.utils',
+  'aiida.tools.graph.*',
+  'aiida.tools.query.*'
+]
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+check_untyped_defs = false
+module = 'tests.*'
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  'bpython.*',
+  'bs4.*',
+  'circus.*',
+  'dill.*',
+  'flask_restful.*',
+  'graphviz.*',
+  'kiwipy.*',
+  'mayavi.*',
+  'pgsu.*',
+  'pgtest.*',
+  'trogon.*',
+  'wrapt.*'
+]

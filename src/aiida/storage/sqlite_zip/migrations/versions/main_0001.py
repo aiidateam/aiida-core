@@ -6,11 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Bring schema inline with psql_dos main_0001
+"""Bring schema inline with profile database ``main_0002``.
+
+Currently empty: the profile database ``main_0002`` invalidates stale
+``CalcJobNode`` hashes, which does not apply to archives at the moment.
+Kept as a placeholder to be filled in by future PRs.
 
 Revision ID: main_0001
-Revises:
-Create Date: 2021-02-02
+Revises: main_0000b
 
 """
 
@@ -22,8 +25,9 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
+    pass
 
 
 def downgrade():
     """Migrations for the downgrade."""
-    raise NotImplementedError('Downgrade of main_0001.')
+    pass

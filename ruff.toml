@@ -1,4 +1,4 @@
-# Ruff configuration for aiida-core.
+# Shared Ruff configuration for the AiiDA monorepo.
 #
 # Auto-discovered by ruff (it looks for `ruff.toml`, `.ruff.toml` or
 # `pyproject.toml` in the current directory or its parents), so the
@@ -49,7 +49,7 @@ select = [
 ban-relative-imports = "all"
 
 [lint.isort]
-known-first-party = ["aiida"]
+known-first-party = ["aiida", "aiida_atomistic"]
 
 # Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
 # Needed due to https://github.com/astral-sh/ruff/issues/9298

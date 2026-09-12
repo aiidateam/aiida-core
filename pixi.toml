@@ -33,10 +33,12 @@ uv = ">=0.8.4"
 [tasks]
 lint = {cmd = "uv run --project aiida-core pre-commit run --all-files", description = "Run all lint/type hooks"}
 sync = {cmd = "uv sync --project aiida-core", description = "Sync the aiida-core dev environment"}
-test = {cmd = "uv run --project aiida-core pytest aiida-core/tests/ -x -q -m 'not nightly'", description = "Full aiida-core suite (needs PostgreSQL + RabbitMQ, see activation env)"}
-test-smoke = {cmd = "uv run --project aiida-core pytest aiida-core/tests/common/test_extendeddicts.py -x -q", description = "Fast smoke test (no external services needed)"}
+sync-all = {cmd = "uv sync --project aiida-core && uv sync --project aiida-atomistic", description = "Sync all subpackage dev environments"}
 sync-atomistic = {cmd = "uv sync --project aiida-atomistic", description = "Sync the aiida-atomistic dev environment"}
+test = {cmd = "uv run --project aiida-core pytest aiida-core/tests/ -x -q -m 'not nightly'", description = "Full aiida-core suite (needs PostgreSQL + RabbitMQ, see activation env)"}
+test-all = {cmd = "uv run --project aiida-core pytest aiida-core/tests/ -x -q -m 'not nightly' && uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -x -q -m 'not nightly'", description = "Full test suites of all subpackages (needs PostgreSQL + RabbitMQ)"}
 test-atomistic = {cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -x -q -m 'not nightly'", description = "Full aiida-atomistic suite (needs PostgreSQL + RabbitMQ)"}
+test-smoke = {cmd = "uv run --project aiida-core pytest aiida-core/tests/common/test_extendeddicts.py -x -q", description = "Fast smoke test (no external services needed)"}
 test-smoke-atomistic = {cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -q --collect-only", description = "Collect aiida-atomistic tests (no services needed)"}
 
 [workspace]

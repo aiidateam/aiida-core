@@ -1,10 +1,7 @@
+# Thin release flow for the ``aiida-core`` subpackage over the shared reusable
+# release workflow. Release mechanics (tag check, pre-commit, smoke tests,
+# PyPI/TestPyPI publish) are maintained in ``reusable-release.yml``.
 name: release
-
-# Automate publishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
-# the workflow will publish to PyPI. When the 'test-release' label is active on
-# a PR, the workflow will publish to TestPyPI on each update. In both cases it
-# is checked if pre-commit and the tests pass. When a release tag is pushed it
-# will in addition check if the tag and aiida-core version and tag match.
 
 on:
   # pull request event we use for test releases
@@ -16,119 +13,11 @@ on:
     tags:
     - v[0-9]+.[0-9]+.[0-9]+*
 
-env:
-  FORCE_COLOR: 1
-
 jobs:
-
-  check-release-tag:
-
-    if: github.repository == 'aiidateam/aiida-core' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
-
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v7
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v7
-      with:
-        python-version: '3.10'
-
-    - name: Check tag
-      run: python .github/workflows/check_release_tag.py $GITHUB_REF
-
-  pre-commit:
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
-
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v7
-
-    - name: Install aiida-core and pre-commit
-      uses: ./.github/actions/install-package
-      with:
-        python-version: '3.11'
-        extras: pre-commit
-        # Full pre-commit runs in locked CI; run mypy additionally here
-        # with latest compatible dependencies for release validation.
-        from-lock: 'false'
-
-    - name: Run mypy
-      run: pre-commit run mypy --all-files
-
-  tests:
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
-
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v7
-
-    - name: Install aiida-core
-      uses: ./.github/actions/install-package
-      with:
-        python-version: '3.10'
-
-    - name: Run sub-set of test suite
-      run: pytest -s -m requires_broker --broker-backend zmq --db-backend=sqlite aiida-core/tests/
-
-  publish-pypi:
-    if: startsWith(github.ref, 'refs/tags/')
-
-    name: Publish to PyPI
-
-    needs: [check-release-tag, pre-commit, tests]
-
-    runs-on: ubuntu-24.04
-
-    environment: release
-    permissions:
-      id-token: write
-
-    steps:
-    - name: Checkout source
-      uses: actions/checkout@v7
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v7
-      with:
-        python-version: '3.10'
-    - name: Install flit
-      run: pip install "flit>=4.0.2,<5"
-    - name: Build
-      run: flit build
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-
-
-  publish-testpypi:
-    if: github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')
-
-    name: Publish to test PyPI
-
-    needs: [pre-commit, tests]
-
-    runs-on: ubuntu-24.04
-
-    environment: release
-    permissions:
-      id-token: write
-
-    steps:
-    - name: Checkout source
-      uses: actions/checkout@v7
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v7
-      with:
-        python-version: '3.10'
-    - name: Install flit
-      run: pip install "flit>=4.0.2,<5"
-    - name: Build
-      run: flit build
-    - name: Publish to TestPyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
+  release:
+    uses: ./.github/workflows/reusable-release.yml
+    with:
+      package: aiida-core
+      tag-prefix: v
+      init-module: aiida-core/src/aiida/__init__.py
+      test-path: aiida-core/tests/

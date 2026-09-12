@@ -89,6 +89,7 @@ repos:
         aiida-core/docs/.*|
         utils/.*|
         aiida-core/tests/.*|
+        aiida-atomistic/tests/.*|
 
         aiida-core/src/aiida/calculations/arithmetic/add.py|
         aiida-core/src/aiida/calculations/diff_tutorial/calculations.py|
@@ -98,10 +99,10 @@ repos:
         aiida-core/src/aiida/manage/configuration/__init__.py|
         aiida-core/src/aiida/manage/configuration/config.py|
         aiida-core/src/aiida/manage/external/rmq/launcher.py|
-        aiida-core/src/aiida/orm/nodes/data/cif.py|
+        aiida-atomistic/src/aiida_atomistic/orm/nodes/data/cif.py|
         aiida-core/src/aiida/orm/nodes/data/remote/base.py|
-        aiida-core/src/aiida/orm/nodes/data/structure.py|
-        aiida-core/src/aiida/orm/nodes/data/upf.py|
+        aiida-atomistic/src/aiida_atomistic/orm/nodes/data/structure.py|
+        aiida-atomistic/src/aiida_atomistic/orm/nodes/data/upf.py|
         aiida-core/src/aiida/orm/nodes/process/calculation/calcjob.py|
         aiida-core/src/aiida/orm/nodes/process/process.py|
         aiida-core/src/aiida/orm/utils/builders/code.py|
@@ -115,6 +116,7 @@ repos:
         aiida-core/src/aiida/restapi/translator/computer.py|
         aiida-core/src/aiida/restapi/translator/group.py|
         aiida-core/src/aiida/restapi/translator/nodes/.*|
+        aiida-atomistic/src/aiida_atomistic/restapi/translator/nodes/.*|
         aiida-core/src/aiida/restapi/translator/user.py|
         aiida-core/src/aiida/storage/psql_dos/migrations/utils/integrity.py|
         aiida-core/src/aiida/storage/psql_dos/migrations/utils/legacy_workflows.py|
@@ -129,11 +131,11 @@ repos:
         aiida-core/src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
         aiida-core/src/aiida/storage/sqlite_zip/models.py|
         aiida-core/src/aiida/storage/sqlite_zip/orm.py|
-        aiida-core/src/aiida/tools/data/array/kpoints/legacy.py|
-        aiida-core/src/aiida/tools/data/array/kpoints/seekpath.py|
-        aiida-core/src/aiida/tools/data/orbital/orbital.py|
-        aiida-core/src/aiida/tools/data/orbital/realhydrogen.py|
-        aiida-core/src/aiida/tools/dbimporters/plugins/.*|
+        aiida-atomistic/src/aiida_atomistic/tools/data/array/kpoints/legacy.py|
+        aiida-atomistic/src/aiida_atomistic/tools/data/array/kpoints/seekpath.py|
+        aiida-atomistic/src/aiida_atomistic/tools/data/orbital/orbital.py|
+        aiida-atomistic/src/aiida_atomistic/tools/data/orbital/realhydrogen.py|
+        aiida-atomistic/src/aiida_atomistic/tools/dbimporters/plugins/.*|
         aiida-core/src/aiida/transports/cli.py|
         aiida-core/src/aiida/transports/plugins/local.py|
         aiida-core/src/aiida/transports/plugins/ssh.py|

@@ -4,7 +4,11 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-added-large-files
-    exclude: uv.lock
+    exclude: >-
+      (?x)(
+        uv.lock|
+        aiida-atomistic/tests/static/
+      )
   - id: check-yaml
   - id: double-quote-string-fixer
   - id: end-of-file-fixer
@@ -55,6 +59,9 @@ repos:
   - id: uv-lock
     args: [--project, aiida-core]
     files: ^aiida-core/(uv\.lock|pyproject\.toml)$
+  - id: uv-lock
+    args: [--project, aiida-atomistic]
+    files: ^aiida-atomistic/(uv\.lock|pyproject\.toml)$
 
 - repo: https://github.com/kynan/nbstripout
   rev: 0.8.1

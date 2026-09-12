@@ -1,0 +1,45 @@
+# Shared development environment for the AiiDA monorepo.
+#
+# Division of labour with uv (deliberate, do not duplicate):
+# pixi (conda)  -> interpreters, system services and binaries pip cannot
+# provide (PostgreSQL server binaries for pgtest, graphviz).
+# RabbitMQ is intentionally NOT vendored: the Erlang closure
+# is huge and tests need a managed server; run it via
+# docker (`docker run rabbitmq`) or a system package and
+# point RABBITMQ_* below at it, mirroring CI services.
+# uv            -> all Python dependencies, per subpackage
+# (`uv sync --project <pkg>` creates `<pkg>/.venv`).
+# UV_PYTHON pins uv onto this env's interpreter.
+#
+# Per-package pixi *tasks* compose the per-package uv commands below. If
+# subpackages ever need divergent system dependencies, add `[feature.<pkg>]`
+# sections plus an `[environments]` table instead of duplicating this file.
+
+[activation]
+# Isolate AiiDA state per developer machine; override in your shell as needed.
+# POSTGRES_* / RABBITMQ_* must match your locally running services.
+env = {AIIDA_PATH = "$CONDA_PREFIX/etc/", UV_PYTHON = "$CONDA_PREFIX/bin/python", RABBITMQ_NODE_PORT = "5672", POSTGRES_HOST = "127.0.0.1", POSTGRES_USER = "postgres", POSTGRES_PASSWORD = "postgres", POSTGRES_DB = "postgres", POSTGRES_PORT = "5434"}
+
+[dependencies]
+graphviz = "*"
+postgresql = ">=16"
+python = "3.11.*"
+
+[pypi-dependencies]
+# Floor matches `required-version` in aiida-core/pyproject.toml so the
+# uv.lock format never churns between developers.
+uv = ">=0.8.4"
+
+[tasks]
+lint = {cmd = "uv run --project aiida-core pre-commit run --all-files", description = "Run all lint/type hooks"}
+sync = {cmd = "uv sync --project aiida-core", description = "Sync the aiida-core dev environment"}
+test = {cmd = "uv run --project aiida-core pytest aiida-core/tests/ -x -q -m 'not nightly'", description = "Full aiida-core suite (needs PostgreSQL + RabbitMQ, see activation env)"}
+test-smoke = {cmd = "uv run --project aiida-core pytest aiida-core/tests/common/test_extendeddicts.py -x -q", description = "Fast smoke test (no external services needed)"}
+sync-atomistic = {cmd = "uv sync --project aiida-atomistic", description = "Sync the aiida-atomistic dev environment"}
+test-atomistic = {cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -x -q -m 'not nightly'", description = "Full aiida-atomistic suite (needs PostgreSQL + RabbitMQ)"}
+test-smoke-atomistic = {cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -q --collect-only", description = "Collect aiida-atomistic tests (no services needed)"}
+
+[workspace]
+channels = ["conda-forge"]
+name = "aiida"
+platforms = ["linux-64", "osx-arm64"]

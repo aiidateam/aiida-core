@@ -59,7 +59,6 @@ dependencies = [
   'tabulate>=0.9.0,<0.10.0',
   'tqdm~=4.45',
   'typing-extensions~=4.13',
-  'upf_to_json~=0.9.2',
   'wrapt~=1.11',
   'chardet~=5.2.0;platform_system=="Windows"'
 ]
@@ -95,27 +94,17 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.cmdline.data']
 'core.array' = 'aiida.cmdline.commands.cmd_data.cmd_array:array'
-'core.bands' = 'aiida.cmdline.commands.cmd_data.cmd_bands:bands'
-'core.cif' = 'aiida.cmdline.commands.cmd_data.cmd_cif:cif'
 'core.dict' = 'aiida.cmdline.commands.cmd_data.cmd_dict:dictionary'
 'core.remote' = 'aiida.cmdline.commands.cmd_data.cmd_remote:remote'
 'core.singlefile' = 'aiida.cmdline.commands.cmd_data.cmd_singlefile:singlefile'
-'core.structure' = 'aiida.cmdline.commands.cmd_data.cmd_structure:structure'
-'core.trajectory' = 'aiida.cmdline.commands.cmd_data.cmd_trajectory:trajectory'
-'core.upf' = 'aiida.cmdline.commands.cmd_data.cmd_upf:upf'
 
 [project.entry-points.'aiida.cmdline.data.structure.import']
 
 [project.entry-points.'aiida.data']
 'core.array' = 'aiida.orm.nodes.data.array.array:ArrayData'
-'core.array.bands' = 'aiida.orm.nodes.data.array.bands:BandsData'
-'core.array.kpoints' = 'aiida.orm.nodes.data.array.kpoints:KpointsData'
-'core.array.projection' = 'aiida.orm.nodes.data.array.projection:ProjectionData'
-'core.array.trajectory' = 'aiida.orm.nodes.data.array.trajectory:TrajectoryData'
 'core.array.xy' = 'aiida.orm.nodes.data.array.xy:XyData'
 'core.base' = 'aiida.orm.nodes.data:BaseType'
 'core.bool' = 'aiida.orm.nodes.data.bool:Bool'
-'core.cif' = 'aiida.orm.nodes.data.cif:CifData'
 'core.code' = 'aiida.orm.nodes.data.code.legacy:Code'
 'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
 'core.code.containerized' = 'aiida.orm.nodes.data.code.containerized:ContainerizedCode'
@@ -131,7 +120,6 @@ requires-python = '>=3.10'
 'core.jsonable' = 'aiida.orm.nodes.data.jsonable:JsonableData'
 'core.list' = 'aiida.orm.nodes.data.list:List'
 'core.numeric' = 'aiida.orm.nodes.data.numeric:NumericType'
-'core.orbital' = 'aiida.orm.nodes.data.orbital:OrbitalData'
 'core.pickled' = 'aiida.orm.nodes.data.pickled:PickledData'
 'core.remote' = 'aiida.orm.nodes.data.remote.base:RemoteData'
 'core.remote.stash' = 'aiida.orm.nodes.data.remote.stash.base:RemoteStashData'
@@ -140,14 +128,11 @@ requires-python = '>=3.10'
 'core.remote.stash.folder' = 'aiida.orm.nodes.data.remote.stash.folder:RemoteStashFolderData'
 'core.singlefile' = 'aiida.orm.nodes.data.singlefile:SinglefileData'
 'core.str' = 'aiida.orm.nodes.data.str:Str'
-'core.structure' = 'aiida.orm.nodes.data.structure:StructureData'
-'core.upf' = 'aiida.orm.nodes.data.upf:UpfData'
 
 [project.entry-points.'aiida.groups']
 'core' = 'aiida.orm.groups:Group'
 'core.auto' = 'aiida.orm.groups:AutoGroup'
 'core.import' = 'aiida.orm.groups:ImportGroup'
-'core.upf' = 'aiida.orm.groups:UpfFamily'
 
 [project.entry-points.'aiida.node']
 'data' = 'aiida.orm.nodes.data.data:Data'
@@ -191,22 +176,7 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.tools.calculations']
 
-[project.entry-points.'aiida.tools.data.orbitals']
-'core.orbital' = 'aiida.tools.data.orbital.orbital:Orbital'
-'core.realhydrogen' = 'aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital'
-
 [project.entry-points.'aiida.tools.dbexporters']
-
-[project.entry-points.'aiida.tools.dbimporters']
-'core.cod' = 'aiida.tools.dbimporters.plugins.cod:CodDbImporter'
-'core.icsd' = 'aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter'
-'core.materialsproject' = 'aiida.tools.dbimporters.plugins.materialsproject:MaterialsProjectImporter'
-'core.mpds' = 'aiida.tools.dbimporters.plugins.mpds:MpdsDbImporter'
-'core.mpod' = 'aiida.tools.dbimporters.plugins.mpod:MpodDbImporter'
-'core.nninc' = 'aiida.tools.dbimporters.plugins.nninc:NnincDbImporter'
-'core.oqmd' = 'aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter'
-'core.pcod' = 'aiida.tools.dbimporters.plugins.pcod:PcodDbImporter'
-'core.tcod' = 'aiida.tools.dbimporters.plugins.tcod:TcodDbImporter'
 
 [project.entry-points.'aiida.tools.workflows']
 

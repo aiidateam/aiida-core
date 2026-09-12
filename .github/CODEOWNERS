@@ -6,3 +6,6 @@ aiida-core/environment.yml                 @agoscinski @GeigerJ2
 aiida-core/pyproject.toml                  @agoscinski @GeigerJ2
 aiida-core/uv.lock                         @agoscinski @GeigerJ2
 utils/dependency_management.py  @agoscinski @GeigerJ2
+# Added by utils/extract_atomistic.py
+aiida-atomistic/pyproject.toml              @agoscinski @GeigerJ2
+aiida-atomistic/uv.lock                     @agoscinski @GeigerJ2

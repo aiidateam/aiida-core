@@ -22,6 +22,7 @@ import asyncio
 import copy
 import logging
 from collections.abc import Callable
+from contextlib import suppress
 from functools import partial
 from typing import Any
 
@@ -194,9 +195,17 @@ class RmqSubscriber:
             exchange_params.setdefault('auto_delete', self._testing_mode)
 
         self._channel = await self._connection.channel()
-        self._exchange = await self._channel.declare_exchange(name=self._exchange_name, **exchange_params)
-
-        await self._create_broadcast_queue()
+        try:
+            self._exchange = await self._channel.declare_exchange(name=self._exchange_name, **exchange_params)
+            await self._create_broadcast_queue()
+        except BaseException:
+            with suppress(Exception):
+                assert self._channel is not None
+                await self._channel.close()
+            self._channel = None
+            self._exchange = None
+            self._broadcast_queue = None
+            raise
 
     async def _create_broadcast_queue(self) -> None:
         """Create and bind the broadcast queue. One is used for all broadcasts on this exchange."""

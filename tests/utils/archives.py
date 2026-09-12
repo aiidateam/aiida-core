@@ -112,10 +112,27 @@ def generate_archive_main_0002(dest_dir) -> str:
     return _generate_archive(Path(dest_dir) / 'export_main_0002_simple.aiida', _build_main_0001_dataset)
 
 
+def generate_archive_main_0003(dest_dir) -> str:
+    """Natively build the ``main_0003`` reference dataset and export it.
+
+    The ``main_0003`` migration is an empty placeholder, so the reference
+    data is unchanged from ``main_0001``. Once a revision changes the
+    schema, give it its own builder instead of delegating here.
+
+    :param dest_dir: directory to write ``export_main_0003_simple.aiida`` into
+    :return: absolute filepath of the generated archive
+
+    Requires a loaded profile (e.g. via ``aiida_profile_tmp``).
+    """
+    from pathlib import Path
+
+    return _generate_archive(Path(dest_dir) / 'export_main_0003_simple.aiida', _build_main_0001_dataset)
+
+
 def generate_archive_head(dest_dir) -> str:
     """Generate the reference simple archive for the head version.
 
-    Currently redirects to :func:`generate_archive_main_0002`. Dispatches
+    Currently redirects to :func:`generate_archive_main_0003`. Dispatches
     explicitly per revision so a future head without a registered builder
     fails loudly instead of silently reusing stale content.
 
@@ -130,6 +147,7 @@ def generate_archive_head(dest_dir) -> str:
     builders = {
         'main_0001': generate_archive_main_0001,
         'main_0002': generate_archive_main_0002,
+        'main_0003': generate_archive_main_0003,
     }
     try:
         builder = builders[head]

@@ -223,6 +223,11 @@ class BasePublisherWithReplyQueue:
     async def disconnect(self) -> None:
         if not self.is_closing:
             self._is_closing = True
+            awaiting = list(self._awaiting_response.values())
+            self._awaiting_response.clear()
+            for pending in awaiting:
+                if not pending.done():
+                    pending.cancel()
             channel = self._channel
             if channel is not None and not channel.is_closed:
                 await channel.close()
@@ -258,6 +263,7 @@ class BasePublisherWithReplyQueue:
 
         response_future: asyncio.Future[Any] = asyncio.Future()
         self._awaiting_response[correlation_id] = response_future
+        self._track_response_future(correlation_id, response_future)
         try:
             result = await self.publish(message, routing_key=routing_key, mandatory=mandatory)
         except BaseException:
@@ -298,12 +304,28 @@ class BasePublisherWithReplyQueue:
                     # If the response was a future it means we should get another message that
                     # resolves that future
                     if asyncio.isfuture(response_future.result()):
-                        self._awaiting_response[correlation_id] = response_future.result()
+                        nested: asyncio.Future[Any] = response_future.result()
+                        self._awaiting_response[correlation_id] = nested
+                        self._track_response_future(correlation_id, nested)
                 except Exception:  # pylint: disable=broad-except
                     pass
+
+    def _track_response_future(self, correlation_id: str, future: asyncio.Future[Any]) -> None:
+        """Release the ``_awaiting_response`` registration once the future settles."""
+
+        def _done(settled: asyncio.Future[Any]) -> None:
+            if self._awaiting_response.get(correlation_id) is settled:
+                self._awaiting_response.pop(correlation_id, None)
+
+        future.add_done_callback(_done)
 
     def _on_channel_close(self, _closing_future: Any, *args: Any, **kwargs: Any) -> None:
         """Reset all channel specific members."""
         if self._confirm_deliveries:
             self._num_published = 0
             self._delivery_info = deque()
+        awaiting = list(self._awaiting_response.values())
+        self._awaiting_response.clear()
+        for pending in awaiting:
+            if not pending.done():
+                pending.cancel()

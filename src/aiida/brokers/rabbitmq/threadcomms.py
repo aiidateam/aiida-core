@@ -66,7 +66,6 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
         testing_mode: bool = False,
         async_task_timeout: float = TASK_TIMEOUT,
     ) -> RmqThreadCommunicator:
-        # pylint: disable=too-many-arguments
         comm = cls(
             connection_params,
             connection_factory,
@@ -99,7 +98,6 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
         testing_mode: bool = False,
         async_task_timeout: float = TASK_TIMEOUT,
     ) -> None:
-        # pylint: disable=too-many-arguments
         """Initialise the communicator.
 
         :param connection_params: Parameters passed to the connection factory to create the connection.
@@ -271,7 +269,7 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
                 result = kiwi_future.result()
             except concurrent.futures.CancelledError:
                 self._loop.call_soon_threadsafe(aio_future.cancel)
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception as exc:
                 self._loop.call_soon_threadsafe(aio_future.set_exception, exc)
             else:
                 if isinstance(result, futures.Future):

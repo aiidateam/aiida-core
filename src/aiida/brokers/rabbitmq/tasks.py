@@ -204,6 +204,23 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
 
     async def _on_task(self, message: aio_pika.abc.AbstractIncomingMessage) -> None:
         """:param message: The aio-pika RMQ message."""
+        try:
+            decoded = self._decode(message.body)
+        except Exception:
+            _LOGGER.exception('Failed to decode task message body.')
+            await message.nack(requeue=False)
+            return
+        # A mapping would unpack to its keys in ``TaskInfo(*decoded)``: reject explicitly.
+        if isinstance(decoded, Mapping):
+            _LOGGER.error('Rejecting malformed task message: expected sequence, got mapping.')
+            await message.nack(requeue=False)
+            return
+        try:
+            TaskInfo(*decoded)
+        except Exception:
+            _LOGGER.exception('Rejecting malformed task message: invalid task shape.')
+            await message.nack(requeue=False)
+            return
         # Decode the message tuple into a task body for easier use
         rmq_task = RmqIncomingTask(self, message)
         async with rmq_task.processing() as outcome:

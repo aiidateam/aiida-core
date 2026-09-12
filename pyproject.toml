@@ -354,7 +354,8 @@ exclude = [
   'ruff.toml',
   'tests/',
   'utils/',
-  'uv.lock'
+  'uv.lock',
+  'uv.toml'
 ]
 
 [tool.pytest.ini_options]
@@ -410,13 +411,3 @@ testpaths = [
 timeout = 240
 timeout_method = "thread"
 xfail_strict = true
-
-[tool.uv]
-# We specify a minimum uv version so that the format of uv.lock file
-# does not change depending on uv version that a particular developer has installed.
-# The uv.lock format is versioned, using the "version" and "revision" fields in uv.lock,
-# and the minimum version here should be the first one that introduced a given version/revision.
-# NOTE: When you bump the minimum uv version, you might also need to change it in:
-# .pre-commit-config.yaml
-# .github/actions/install-aiida-core/action.yml
-required-version = ">=0.8.4"

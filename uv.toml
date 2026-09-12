@@ -1,0 +1,14 @@
+# uv configuration for aiida-core.
+#
+# Auto-discovered by uv (it looks for `uv.toml` or `.uv.toml` in the
+# current directory or its parents), so no explicit `--config-file`
+# flag is needed wherever uv is run.
+
+# We specify a minimum uv version so that the format of uv.lock file
+# does not change depending on uv version that a particular developer has installed.
+# The uv.lock format is versioned, using the "version" and "revision" fields in uv.lock,
+# and the minimum version here should be the first one that introduced a given version/revision.
+# NOTE: When you bump the minimum uv version, you might also need to change it in:
+# .pre-commit-config.yaml
+# .github/actions/install-aiida-core/action.yml
+required-version = ">=0.8.4"

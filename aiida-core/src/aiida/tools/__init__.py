@@ -24,7 +24,6 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 from aiida.tools.archive import *
 from aiida.tools.calculations import *
-from aiida.tools.data import *
 from aiida.tools.graph import *
 from aiida.tools.groups import *
 from aiida.tools.shell import *
@@ -45,8 +44,6 @@ __all__ = (
     'ImportValidationError',
     'InvalidPath',
     'NoGroupsInPathError',
-    'Orbital',
-    'RealhydrogenOrbital',
     'WorkflowTools',
     'create_archive',
     'default_link_styles',
@@ -54,13 +51,39 @@ __all__ = (
     'default_node_sublabels',
     'delete_group_nodes',
     'delete_nodes',
-    'get_explicit_kpoints_path',
-    'get_kpoints_path',
     'import_archive',
     'launch_shell_job',
     'pstate_node_styles',
-    'spglib_tuple_to_structure',
-    'structure_to_spglib_tuple',
 )
 
 # fmt: on
+
+# Added by utils/extract_atomistic.py: names that moved to the ``aiida-atomistic`` package.
+# ``aiida-core`` must not hard-import the subpackage (see MONOREPO.md), so these
+# resolve lazily and raise a helpful error when it is not installed.
+import importlib as _importlib
+
+_ATOMISTIC_REDIRECTS = {
+    'Orbital': 'aiida_atomistic.tools.data.orbital.orbital:Orbital',
+    'RealhydrogenOrbital': 'aiida_atomistic.tools.data.orbital.realhydrogen:RealhydrogenOrbital',
+    'get_explicit_kpoints_path': 'aiida_atomistic.tools.data.array.kpoints.main:get_explicit_kpoints_path',
+    'get_kpoints_path': 'aiida_atomistic.tools.data.array.kpoints.main:get_kpoints_path',
+    'spglib_tuple_to_structure': 'aiida_atomistic.tools.data.structure:spglib_tuple_to_structure',
+    'structure_to_spglib_tuple': 'aiida_atomistic.tools.data.structure:structure_to_spglib_tuple',
+}
+
+
+def __getattr__(name: str):
+    """Lazily resolve names that moved to :mod:`aiida_atomistic`."""
+    if name in _ATOMISTIC_REDIRECTS:
+        modpath, attr = _ATOMISTIC_REDIRECTS[name].split(':')
+        try:
+            module = _importlib.import_module(modpath)
+        except ImportError as exc:
+            msg = (
+                f'{name!r} moved to the `aiida-atomistic` package, which is not installed. '
+                'Install it with `pip install aiida-atomistic` (or `uv sync --project aiida-atomistic`).'
+            )
+            raise AttributeError(msg) from exc
+        return getattr(module, attr)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

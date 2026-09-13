@@ -4,7 +4,11 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-added-large-files
-    exclude: uv.lock
+    exclude: >-
+      (?x)(
+        uv.lock|
+        aiida-atomistic/tests/static/
+      )
   - id: check-yaml
   - id: double-quote-string-fixer
   - id: end-of-file-fixer
@@ -55,6 +59,9 @@ repos:
   - id: uv-lock
     args: [--project, aiida-core]
     files: ^aiida-core/(uv\.lock|pyproject\.toml)$
+  - id: uv-lock
+    args: [--project, aiida-atomistic]
+    files: ^aiida-atomistic/(uv\.lock|pyproject\.toml)$
 
 - repo: https://github.com/kynan/nbstripout
   rev: 0.8.1
@@ -91,10 +98,7 @@ repos:
         aiida-core/src/aiida/manage/configuration/__init__.py|
         aiida-core/src/aiida/manage/configuration/config.py|
         aiida-core/src/aiida/manage/external/rmq/launcher.py|
-        aiida-core/src/aiida/orm/nodes/data/cif.py|
         aiida-core/src/aiida/orm/nodes/data/remote/base.py|
-        aiida-core/src/aiida/orm/nodes/data/structure.py|
-        aiida-core/src/aiida/orm/nodes/data/upf.py|
         aiida-core/src/aiida/orm/nodes/process/calculation/calcjob.py|
         aiida-core/src/aiida/orm/nodes/process/process.py|
         aiida-core/src/aiida/orm/utils/builders/code.py|
@@ -122,14 +126,18 @@ repos:
         aiida-core/src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
         aiida-core/src/aiida/storage/sqlite_zip/models.py|
         aiida-core/src/aiida/storage/sqlite_zip/orm.py|
-        aiida-core/src/aiida/tools/data/array/kpoints/legacy.py|
-        aiida-core/src/aiida/tools/data/array/kpoints/seekpath.py|
-        aiida-core/src/aiida/tools/data/orbital/orbital.py|
-        aiida-core/src/aiida/tools/data/orbital/realhydrogen.py|
-        aiida-core/src/aiida/tools/dbimporters/plugins/.*|
         aiida-core/src/aiida/transports/cli.py|
         aiida-core/src/aiida/transports/plugins/local.py|
         aiida-core/src/aiida/transports/plugins/ssh.py|
+        aiida-atomistic/src/aiida_atomistic/orm/nodes/data/cif.py|
+        aiida-atomistic/src/aiida_atomistic/orm/nodes/data/structure.py|
+        aiida-atomistic/src/aiida_atomistic/orm/nodes/data/upf.py|
+        aiida-atomistic/src/aiida_atomistic/tools/data/array/kpoints/legacy.py|
+        aiida-atomistic/src/aiida_atomistic/tools/data/array/kpoints/seekpath.py|
+        aiida-atomistic/src/aiida_atomistic/tools/data/orbital/orbital.py|
+        aiida-atomistic/src/aiida_atomistic/tools/data/orbital/realhydrogen.py|
+        aiida-atomistic/src/aiida_atomistic/tools/dbimporters/plugins/.*|
+        aiida-atomistic/tests/.*|
       )$
 
   - id: generate-conda-environment

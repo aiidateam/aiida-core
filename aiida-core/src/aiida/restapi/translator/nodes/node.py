@@ -368,6 +368,21 @@ class NodeTranslator(BaseTranslator):
             elif is_pkg and recursive:
                 results.update(self._get_subclasses(parent=app_module, parent_class=parent_class))
 
+        # Added by utils/extract_atomistic.py: translators contributed by
+        # distributions (e.g. ``aiida-atomistic``) via the
+        # ``aiida.restapi.translators`` entry-point group. An absent group
+        # simply contributes nothing.
+        if isinstance(parent_class, type):
+            from aiida.plugins.entry_point import get_entry_points
+
+            for translator_entry_point in get_entry_points('aiida.restapi.translators'):
+                try:
+                    translator = translator_entry_point.load()
+                except ImportError:
+                    continue
+                if inspect.isclass(translator) and issubclass(translator, parent_class):
+                    results[translator_entry_point.name] = translator
+
         return results
 
     def get_derived_properties(self, node):

@@ -66,7 +66,6 @@ dependencies = [
     { name = "tabulate" },
     { name = "tqdm" },
     { name = "typing-extensions" },
-    { name = "upf-to-json" },
     { name = "wrapt" },
 ]
 
@@ -233,9 +232,9 @@ requires-dist = [
     { name = "flask-cors", marker = "extra == 'rest'", specifier = "~=4.0" },
     { name = "flask-restful", marker = "extra == 'rest'", specifier = "~=0.3.10" },
     { name = "graphviz", specifier = "~=0.19" },
-    { name = "gsrd", marker = "extra == 'tutorials'", specifier = ">=0.2.0" },
     { name = "greenback", specifier = "~=1.0" },
     { name = "greenlet", specifier = ">=3.2.4" },
+    { name = "gsrd", marker = "extra == 'tutorials'", specifier = ">=0.2.0" },
     { name = "gssapi", marker = "extra == 'ssh-kerberos'", specifier = "~=1.6" },
     { name = "importlib-metadata", specifier = "~=6.0" },
     { name = "ipykernel", marker = "extra == 'tests'", specifier = "~=6.9" },
@@ -308,7 +307,6 @@ requires-dist = [
     { name = "types-tabulate", marker = "extra == 'pre-commit'", specifier = ">=0.9.0,<0.10.0" },
     { name = "types-tqdm", marker = "extra == 'pre-commit'", specifier = "~=4.45" },
     { name = "typing-extensions", specifier = "~=4.13" },
-    { name = "upf-to-json", specifier = "~=0.9.2" },
     { name = "wrapt", specifier = "~=1.11" },
 ]
 provides-extras = ["atomic-tools", "bpython", "docs", "notebook", "pre-commit", "rest", "ssh-kerberos", "tests", "tui", "tutorials"]
@@ -2406,7 +2404,7 @@ name = "jinxed"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon" },
+    { name = "ansicon", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/39/d7/6e6d474ec5eaeca6a61acc17766bb19563b3a372b4b9d92910078f5fe49f/jinxed-2.1.0.tar.gz", hash = "sha256:7e755b831faa2443d44fb4ce7c0202eb9c3ed39bd5bf1193365888f4f6092b54", size = 61287, upload-time = "2026-07-03T15:46:48.153Z" }
 wheels = [
@@ -7026,15 +7024,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fe/0c/cb09f33b26955399c675ab378e4063ed7e48422d3d49f96219ab0be5eba9/uncertainties-3.2.3.tar.gz", hash = "sha256:76a5653e686f617a42922d546a239e9efce72e6b35411b7750a1d12dcba03031", size = 160492, upload-time = "2025-04-21T19:58:28.63Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8f/5e/f1e1dd319e35e962a4e00b33150a8868b6329cc1d19fd533436ba5488f09/uncertainties-3.2.3-py3-none-any.whl", hash = "sha256:313353900d8f88b283c9bad81e7d2b2d3d4bcc330cbace35403faaed7e78890a", size = 60118, upload-time = "2025-04-21T19:58:26.864Z" },
-]
-
-[[package]]
-name = "upf-to-json"
-version = "0.9.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/01/a8/877a300aaa06ad18c33e1b9516ceef4089780a174d76bea2d9e482e179f6/upf_to_json-0.9.5.tar.gz", hash = "sha256:57614c4c8677f04f161679ce4eddb2f55b87984605b8a5253d3d288235f56e4a", size = 9214, upload-time = "2022-05-08T15:24:01.568Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/c3/e955711782ddd27410bd220e567fcafb0aeb816f9d1e3a04136f8cea09ff/upf_to_json-0.9.5-py3-none-any.whl", hash = "sha256:7a90948afbf3bbd79d520db94389c8c85627d528d0ac71cfb827066d2c8e7d18", size = 12672, upload-time = "2022-05-08T15:23:30.255Z" },
 ]
 
 [[package]]

@@ -10,8 +10,8 @@ repos:
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
       (?x)^(
-        tests/.*(?<!\.py)$|
-        docs/source/.+\.aiida/repo/.+|
+        aiida-core/tests/.*(?<!\.py)$|
+        aiida-core/docs/source/.+\.aiida/repo/.+|
         CHANGELOG.md|
       )$
   - id: fix-encoding-pragma
@@ -44,8 +44,8 @@ repos:
     args: [--autofix]
     exclude: >-
       (?x)^(
-        tests/.*|
-        environment.yml|
+        aiida-core/tests/.*|
+        aiida-core/environment.yml|
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
@@ -53,6 +53,8 @@ repos:
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
+    args: [--project, aiida-core]
+    files: ^aiida-core/(uv\.lock|pyproject\.toml)$
 
 - repo: https://github.com/kynan/nbstripout
   rev: 0.8.1
@@ -77,57 +79,57 @@ repos:
         .github/.*|
         .molecule/.*|
         .docker/.*|
-        docs/.*|
+        aiida-core/docs/.*|
         utils/.*|
-        tests/.*|
+        aiida-core/tests/.*|
 
-        src/aiida/calculations/arithmetic/add.py|
-        src/aiida/calculations/diff_tutorial/calculations.py|
-        src/aiida/calculations/templatereplacer.py|
-        src/aiida/calculations/transfer.py|
-        src/aiida/engine/daemon/execmanager.py|
-        src/aiida/manage/configuration/__init__.py|
-        src/aiida/manage/configuration/config.py|
-        src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/orm/nodes/data/cif.py|
-        src/aiida/orm/nodes/data/remote/base.py|
-        src/aiida/orm/nodes/data/structure.py|
-        src/aiida/orm/nodes/data/upf.py|
-        src/aiida/orm/nodes/process/calculation/calcjob.py|
-        src/aiida/orm/nodes/process/process.py|
-        src/aiida/orm/utils/builders/code.py|
-        src/aiida/orm/utils/builders/computer.py|
-        src/aiida/orm/utils/calcjob.py|
-        src/aiida/orm/utils/node.py|
-        src/aiida/restapi/common/utils.py|
-        src/aiida/restapi/resources.py|
-        src/aiida/restapi/run_api.py|
-        src/aiida/restapi/translator/base.py|
-        src/aiida/restapi/translator/computer.py|
-        src/aiida/restapi/translator/group.py|
-        src/aiida/restapi/translator/nodes/.*|
-        src/aiida/restapi/translator/user.py|
-        src/aiida/storage/psql_dos/migrations/utils/integrity.py|
-        src/aiida/storage/psql_dos/migrations/utils/legacy_workflows.py|
-        src/aiida/storage/psql_dos/migrations/utils/migrate_repository.py|
-        src/aiida/storage/psql_dos/migrations/utils/parity.py|
-        src/aiida/storage/psql_dos/migrations/utils/reflect.py|
-        src/aiida/storage/psql_dos/migrations/utils/utils.py|
-        src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
-        src/aiida/storage/psql_dos/models/.*|
-        src/aiida/storage/psql_dos/orm/.*.py|
-        src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
-        src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
-        src/aiida/storage/sqlite_zip/models.py|
-        src/aiida/storage/sqlite_zip/orm.py|
-        src/aiida/tools/data/array/kpoints/legacy.py|
-        src/aiida/tools/data/array/kpoints/seekpath.py|
-        src/aiida/tools/data/orbital/orbital.py|
-        src/aiida/tools/data/orbital/realhydrogen.py|
-        src/aiida/tools/dbimporters/plugins/.*|
-        src/aiida/transports/cli.py|
-        src/aiida/transports/plugins/local.py|
-        src/aiida/transports/plugins/ssh.py|
+        aiida-core/src/aiida/calculations/arithmetic/add.py|
+        aiida-core/src/aiida/calculations/diff_tutorial/calculations.py|
+        aiida-core/src/aiida/calculations/templatereplacer.py|
+        aiida-core/src/aiida/calculations/transfer.py|
+        aiida-core/src/aiida/engine/daemon/execmanager.py|
+        aiida-core/src/aiida/manage/configuration/__init__.py|
+        aiida-core/src/aiida/manage/configuration/config.py|
+        aiida-core/src/aiida/manage/external/rmq/launcher.py|
+        aiida-core/src/aiida/orm/nodes/data/cif.py|
+        aiida-core/src/aiida/orm/nodes/data/remote/base.py|
+        aiida-core/src/aiida/orm/nodes/data/structure.py|
+        aiida-core/src/aiida/orm/nodes/data/upf.py|
+        aiida-core/src/aiida/orm/nodes/process/calculation/calcjob.py|
+        aiida-core/src/aiida/orm/nodes/process/process.py|
+        aiida-core/src/aiida/orm/utils/builders/code.py|
+        aiida-core/src/aiida/orm/utils/builders/computer.py|
+        aiida-core/src/aiida/orm/utils/calcjob.py|
+        aiida-core/src/aiida/orm/utils/node.py|
+        aiida-core/src/aiida/restapi/common/utils.py|
+        aiida-core/src/aiida/restapi/resources.py|
+        aiida-core/src/aiida/restapi/run_api.py|
+        aiida-core/src/aiida/restapi/translator/base.py|
+        aiida-core/src/aiida/restapi/translator/computer.py|
+        aiida-core/src/aiida/restapi/translator/group.py|
+        aiida-core/src/aiida/restapi/translator/nodes/.*|
+        aiida-core/src/aiida/restapi/translator/user.py|
+        aiida-core/src/aiida/storage/psql_dos/migrations/utils/integrity.py|
+        aiida-core/src/aiida/storage/psql_dos/migrations/utils/legacy_workflows.py|
+        aiida-core/src/aiida/storage/psql_dos/migrations/utils/migrate_repository.py|
+        aiida-core/src/aiida/storage/psql_dos/migrations/utils/parity.py|
+        aiida-core/src/aiida/storage/psql_dos/migrations/utils/reflect.py|
+        aiida-core/src/aiida/storage/psql_dos/migrations/utils/utils.py|
+        aiida-core/src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
+        aiida-core/src/aiida/storage/psql_dos/models/.*|
+        aiida-core/src/aiida/storage/psql_dos/orm/.*.py|
+        aiida-core/src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
+        aiida-core/src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
+        aiida-core/src/aiida/storage/sqlite_zip/models.py|
+        aiida-core/src/aiida/storage/sqlite_zip/orm.py|
+        aiida-core/src/aiida/tools/data/array/kpoints/legacy.py|
+        aiida-core/src/aiida/tools/data/array/kpoints/seekpath.py|
+        aiida-core/src/aiida/tools/data/orbital/orbital.py|
+        aiida-core/src/aiida/tools/data/orbital/realhydrogen.py|
+        aiida-core/src/aiida/tools/dbimporters/plugins/.*|
+        aiida-core/src/aiida/transports/cli.py|
+        aiida-core/src/aiida/transports/plugins/local.py|
+        aiida-core/src/aiida/transports/plugins/ssh.py|
       )$
 
   - id: generate-conda-environment
@@ -137,21 +139,21 @@ repos:
     pass_filenames: false
     files: >-
       (?x)^(
-        pyproject.toml|
+        aiida-core/pyproject.toml|
         utils/dependency_management.py|
-        environment.yml|
+        aiida-core/environment.yml|
       )$
 
   - id: validate-conda-environment
-    name: Validate environment.yml
+    name: Validate aiida-core/environment.yml
     entry: python ./utils/dependency_management.py validate-environment-yml
     language: system
     pass_filenames: false
     files: >-
       (?x)^(
-        pyproject.toml|
+        aiida-core/pyproject.toml|
         utils/dependency_management.py|
-        environment.yml|
+        aiida-core/environment.yml|
       )$
 
   - id: verdi-autodocs
@@ -161,8 +163,8 @@ repos:
     pass_filenames: false
     files: >-
       (?x)^(
-        src/aiida/cmdline/commands/.*|
-        src/aiida/cmdline/params/.*|
-        src/aiida/cmdline/params/types/.*|
+        aiida-core/src/aiida/cmdline/commands/.*|
+        aiida-core/src/aiida/cmdline/params/.*|
+        aiida-core/src/aiida/cmdline/params/types/.*|
         utils/validate_consistency.py|
       )$

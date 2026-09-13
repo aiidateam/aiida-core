@@ -315,7 +315,7 @@ runaiida = 'aiida.cmdline.commands.cmd_run:run'
 verdi = 'aiida.cmdline.commands.cmd_verdi:verdi'
 
 [project.urls]
-Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/CHANGELOG.md'
+Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/aiida-core/CHANGELOG.md'
 Documentation = 'https://aiida.readthedocs.io'
 Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
@@ -334,26 +334,11 @@ name = 'aiida'
 [tool.flit.sdist]
 exclude = [
   '**/.mypy_cache/',
-  '.claude/',
-  '.devcontainer/',
-  '.docker/',
-  '.git-blame-ignore-revs',
-  '.github/',
-  '.gitignore',
-  '.molecule/',
-  '.pre-commit-config.yaml',
-  '.readthedocs.yml',
-  'AGENTS.md',
-  'AI_POLICY.md',
-  'CLAUDE.md',
-  'CODE_OF_CONDUCT.md',
-  'codecov.yml',
   'docs/',
   'environment.yml',
   'mypy.toml',
   'ruff.toml',
   'tests/',
-  'utils/',
   'uv.lock',
   'uv.toml'
 ]

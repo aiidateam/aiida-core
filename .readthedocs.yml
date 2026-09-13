@@ -12,7 +12,7 @@ python:
   install:
   - method: uv
     command: sync
-    path: .
+    path: aiida-core
     extras:
     - docs
     - tutorials
@@ -23,7 +23,7 @@ python:
 sphinx:
   builder: html
   fail_on_warning: true
-  configuration: docs/source/conf.py
+  configuration: aiida-core/docs/source/conf.py
 
 search:
   ranking:

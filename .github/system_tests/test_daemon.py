@@ -16,6 +16,7 @@ import sys
 import tempfile
 import time
 
+from tests.utils.memory import get_instances
 from workchains import (
     ArithmeticAddBaseWorkChain,
     CalcFunctionRunnerWorkChain,
@@ -39,7 +40,6 @@ from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add, add_multiply
-from tests.utils.memory import get_instances
 
 CODENAME_ADD = 'add@localhost'
 CODENAME_DOUBLER = 'doubler@localhost'

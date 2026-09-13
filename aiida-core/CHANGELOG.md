@@ -1345,7 +1345,7 @@ For an extensive overview of the implications see [AEP 010](https://github.com/a
 ### Miscellaneous
 
 - `aiida-core` is now compatible with Python 3.13 [#6600](https://github.com/aiidateam/aiida-core/pull/6600)
-- OpenSSH backend for transport `core.ssh_async` for multiplexing [#6795](https://github.com/aiidateam/aiida-core/pull/6795) 
+- OpenSSH backend for transport `core.ssh_async` for multiplexing [#6795](https://github.com/aiidateam/aiida-core/pull/6795)
 - Improved Windows support [#6715](https://github.com/aiidateam/aiida-core/pull/6715)
 - `RemoteData` extended by member function `get_size_on_disk` [#6584](https://github.com/aiidateam/aiida-core/pull/6584)
 - `SinglefileData` extended by constructor `from_bytes` [#6653](https://github.com/aiidateam/aiida-core/pull/6653)
@@ -1528,7 +1528,7 @@ For an extensive overview of the implications see [AEP 010](https://github.com/a
 
 ### Fixes
 - CLI: Fix exception for `verdi plugin list` (#6560) [[c3b10b7]](https://github.com/aiidateam/aiida-core/commit/c3b10b759a9cd062800ef120591d5c7fd0ae4ee7)
-- `DirectScheduler`: Ensure killing child processes (#6572) [[fddffca]](https://github.com/aiidateam/aiida-core/commit/fddffca67b4f7e3b76b19df7db8e1511c449d2d9)   
+- `DirectScheduler`: Ensure killing child processes (#6572) [[fddffca]](https://github.com/aiidateam/aiida-core/commit/fddffca67b4f7e3b76b19df7db8e1511c449d2d9)
 - Engine: Fix state change broadcast before process node is updated  (#6580) [[867353c]](https://github.com/aiidateam/aiida-core/commit/867353c415c61d94a2427d5225dd5224a1b95fb9)
 
 ### Devops

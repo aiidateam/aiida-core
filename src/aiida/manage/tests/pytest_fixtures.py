@@ -581,10 +581,10 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
                 label=label,
                 description=kwargs.pop('description', 'computer created by `aiida_computer` fixture'),
                 hostname=kwargs.pop('hostname', 'localhost'),
-                workdir=kwargs.pop('workdir', str(tmp_path)),
                 transport_type=kwargs.pop('transport_type', 'core.local'),
                 scheduler_type=kwargs.pop('scheduler_type', 'core.direct'),
             )
+            computer.set_workdir(kwargs.pop('workdir', str(tmp_path)))
             computer.store()
             computer.set_minimum_job_poll_interval(minimum_job_poll_interval)
             computer.set_default_mpiprocs_per_machine(default_mpiprocs_per_machine)

@@ -892,7 +892,7 @@ class CalcJob(Process):
             return None
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
-            args = (scheduler.__class__.__name__, type(exit_code))  # type: ignore[unreachable]
+            args = (scheduler.__class__.__name__, type(exit_code))
             raise ValueError('`{}.parse_output` returned neither an `ExitCode` nor None, but: {}'.format(*args))
 
         return exit_code

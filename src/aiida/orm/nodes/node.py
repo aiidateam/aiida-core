@@ -653,6 +653,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _add_outputs_from_cache(self, cache_node: Node) -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
         for entry in cache_node.base.links.get_outgoing(link_type=LinkType.CREATE):
-            new_node = entry.node.clone()
+            # TODO Node has no clone method, but Data does. Are we only expecting Data here?
+            new_node = entry.node.clone()  # type: ignore[attr-defined]
             new_node.base.links.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
             new_node.store()

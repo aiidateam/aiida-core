@@ -82,13 +82,19 @@ repos:
 
         src/aiida/calculations/arithmetic/add.py|
         src/aiida/calculations/diff_tutorial/calculations.py|
+        src/aiida/calculations/shell.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
         src/aiida/engine/daemon/execmanager.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
+        src/aiida/orm/nodes/data/array/bands.py|
+        src/aiida/orm/nodes/data/array/kpoints.py|
+        src/aiida/orm/nodes/data/array/trajectory.py|
+        src/aiida/orm/nodes/data/array/xy.py|
         src/aiida/orm/nodes/data/cif.py|
+        src/aiida/orm/nodes/data/code/legacy.py|
         src/aiida/orm/nodes/data/remote/base.py|
         src/aiida/orm/nodes/data/structure.py|
         src/aiida/orm/nodes/data/upf.py|

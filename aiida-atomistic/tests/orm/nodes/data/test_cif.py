@@ -9,7 +9,6 @@
 """Tests for cif related functions."""
 
 import pytest
-
 from aiida_atomistic.orm.nodes.data.cif import parse_formula
 
 

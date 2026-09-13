@@ -21,8 +21,8 @@ import numpy
 
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import join_labels, prettify_labels
-from aiida_atomistic.orm.nodes.data.array.kpoints import KpointsData
 from aiida.orm.pydantic import OrmMetadataField
+from aiida_atomistic.orm.nodes.data.array.kpoints import KpointsData
 
 __all__ = ('BandsData', 'find_bandgap')
 

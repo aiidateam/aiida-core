@@ -15,24 +15,26 @@ import tempfile
 
 import numpy as np
 import pytest
+from aiida_atomistic.cmdline.commands.cmd_data import (
+    cmd_bands,
+    cmd_cif,
+    cmd_structure,
+    cmd_trajectory,
+    cmd_upf,
+)
+from aiida_atomistic.orm.nodes.data.cif import has_pycifrw
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_group
 from aiida.cmdline.commands.cmd_data import (
     cmd_array,
-    cmd_bands,
-    cmd_cif,
     cmd_dict,
     cmd_remote,
     cmd_show,
     cmd_singlefile,
-    cmd_structure,
-    cmd_trajectory,
-    cmd_upf,
 )
 from aiida.engine import calcfunction
 from aiida.orm import ArrayData, BandsData, CifData, Dict, Group, KpointsData, RemoteData, StructureData, TrajectoryData
-from aiida.orm.nodes.data.cif import has_pycifrw
 from tests.static import STATIC_DIR
 
 
@@ -590,7 +592,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data core.structure."""
 
-    from aiida.orm.nodes.data.structure import has_ase  # type: ignore[misc]
+    from aiida_atomistic.orm.nodes.data.structure import has_ase  # type: ignore[misc]
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):

@@ -6,4 +6,4 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-'''aiida_atomistic.orm.nodes.data.array.'''
+"""aiida_atomistic.orm.nodes.data.array."""

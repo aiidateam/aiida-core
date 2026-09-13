@@ -244,8 +244,9 @@ class TestNnincDbImporter:
         """Tests the creation of NnincEntry from NnincSearchResults."""
         import os
 
-        from aiida.common.exceptions import ParsingError
         from aiida_atomistic.tools.dbimporters.plugins.nninc import NnincSearchResults
+
+        from aiida.common.exceptions import ParsingError
 
         upf = 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030'
 

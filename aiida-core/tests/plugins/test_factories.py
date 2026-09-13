@@ -9,6 +9,8 @@
 """Tests for the :py:mod:`~aiida.plugins.factories` module."""
 
 import pytest
+from aiida_atomistic.tools.data.orbital.orbital import Orbital
+from aiida_atomistic.tools.dbimporters import DbImporter
 
 from aiida.common.exceptions import InvalidEntryPointTypeError
 from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, workfunction
@@ -17,8 +19,6 @@ from aiida.orm.implementation.storage_backend import StorageBackend
 from aiida.parsers import Parser
 from aiida.plugins import entry_point, factories
 from aiida.schedulers import Scheduler
-from aiida.tools.data.orbital import Orbital
-from aiida.tools.dbimporters import DbImporter
 from aiida.transports import AsyncTransport, BlockingTransport, Transport
 
 

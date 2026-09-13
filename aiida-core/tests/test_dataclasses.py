@@ -14,12 +14,8 @@ import tempfile
 
 import numpy as np
 import pytest
-
-from aiida.common.exceptions import ModificationNotAllowed
-from aiida.common.utils import Capturing
-from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
-from aiida.orm.nodes.data.cif import has_pycifrw
-from aiida.orm.nodes.data.structure import (
+from aiida_atomistic.orm.nodes.data.cif import has_pycifrw
+from aiida_atomistic.orm.nodes.data.structure import (
     Kind,
     Site,
     _atomic_masses,
@@ -29,6 +25,10 @@ from aiida.orm.nodes.data.structure import (
     has_pymatgen,
     has_spglib,
 )
+
+from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.utils import Capturing
+from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
 
 
 def has_seekpath():
@@ -347,7 +347,7 @@ Te2 0.00000 0.00000 0.79030 0.01912
         """Tests CifData.pycifrw_from_cif()"""
         import re
 
-        from aiida.orm.nodes.data.cif import pycifrw_from_cif
+        from aiida_atomistic.orm.nodes.data.cif import pycifrw_from_cif
 
         datablocks = [
             {
@@ -407,7 +407,7 @@ _publ_section_title                     'Test CIF'
         """Tests CifData.pycifrw_from_cif() - check syntax pb in PyCifRW 3.6."""
         import re
 
-        from aiida.orm.nodes.data.cif import pycifrw_from_cif
+        from aiida_atomistic.orm.nodes.data.cif import pycifrw_from_cif
 
         datablocks = [
             {
@@ -481,7 +481,7 @@ _tag   {'a' * 5000}
 
     def test_symop_string_from_symop_matrix_tr(self):
         """Test symmetry operations."""
-        from aiida.tools.data.cif import symop_string_from_symop_matrix_tr
+        from aiida_atomistic.tools.data.cif import symop_string_from_symop_matrix_tr
 
         assert symop_string_from_symop_matrix_tr([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) == 'x,y,z'
 
@@ -553,7 +553,7 @@ _tag   {'a' * 5000}
         """Test case for refinement (space group determination) for a
         CifData object.
         """
-        from aiida.tools.data.cif import refine_inline
+        from aiida_atomistic.tools.data.cif import refine_inline
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
@@ -3294,7 +3294,7 @@ class TestKpointsData:
         calling the deprecated legacy implementation. This tests that the wrapper maintains
         the same behavior of the old implementation
         """
-        from aiida.tools.data.array.kpoints import get_explicit_kpoints_path
+        from aiida_atomistic.tools.data.array.kpoints import get_explicit_kpoints_path
 
         # Shouldn't get anything without having set the cell
         with pytest.raises(AttributeError):
@@ -3369,7 +3369,7 @@ class TestKpointsData:
         calling the deprecated legacy implementation. This tests that the wrapper maintains
         the same behavior of the old implementation
         """
-        from aiida.tools.data.array.kpoints import get_kpoints_path
+        from aiida_atomistic.tools.data.array.kpoints import get_kpoints_path
 
         alat = 1.5
         cell_x = [[1, 0, 0], [0, 1, 0], [0, 0, alat]]

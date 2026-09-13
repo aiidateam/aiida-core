@@ -6,4 +6,4 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-'''aiida_atomistic.restapi.translator.nodes.data.'''
+"""aiida_atomistic.restapi.translator.nodes.data."""

@@ -12,11 +12,10 @@ import uuid
 from argparse import Namespace
 
 import pytest
+from aiida_atomistic.orm.nodes.data.array.bands import BandsData, get_bands_and_parents_structure
 
 from aiida.common.exceptions import NotExistent
 from aiida.orm import Group, User
-from aiida_atomistic.orm.nodes.data.array.bands import BandsData
-from aiida_atomistic.orm.nodes.data.array.bands import get_bands_and_parents_structure
 
 
 @pytest.fixture

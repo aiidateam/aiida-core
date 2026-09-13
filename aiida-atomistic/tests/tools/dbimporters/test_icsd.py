@@ -11,9 +11,9 @@
 import urllib.request
 
 import pytest
+from aiida_atomistic.tools.dbimporters.plugins import icsd
 
 from aiida import get_profile
-from aiida_atomistic.tools.dbimporters.plugins import icsd
 
 
 def has_mysqldb():

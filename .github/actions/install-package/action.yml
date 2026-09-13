@@ -43,8 +43,13 @@ runs:
     if: ${{ inputs.from-lock == 'true' }}
     # NOTE: We're asserting that the lockfile is up to date
     run: uv sync --project ${{ inputs.package }} --locked ${{ inputs.extras && format('--extra {0}', inputs.extras) || '' }}
+    shell: bash
+
   - name: Add package venv to PATH
     if: ${{ inputs.from-lock == 'true' }}
+    # `uv sync --project <pkg>` creates `<pkg>/.venv`, while `setup-uv` with
+    # `activate-environment` only puts the root `.venv` on `PATH`, so bare
+    # `pytest`/`pre-commit`/`verdi` would resolve to the wrong environment.
     run: echo "${GITHUB_WORKSPACE}/${{ inputs.package }}/.venv/bin" >> $GITHUB_PATH
     shell: bash
 

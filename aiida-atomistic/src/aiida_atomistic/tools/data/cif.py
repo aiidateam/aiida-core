@@ -11,8 +11,8 @@
 import io
 
 from aiida.engine import calcfunction
-from aiida_atomistic.orm.nodes.data.cif import CifData
 from aiida.orm.implementation.utils import clean_value
+from aiida_atomistic.orm.nodes.data.cif import CifData
 
 
 class InvalidOccupationsError(Exception):

@@ -1,6 +1,6 @@
 array_labels: QbArrayField('attributes.array_labels', dtype=list[str] | None, doc='Labels
   associated with the band arrays')
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.array.bands.BandsData.AttributesModel'>,
+attributes: QbAttributesField('attributes', dtype=<class 'aiida_atomistic.orm.nodes.data.array.bands.BandsData.AttributesModel'>,
   doc='The node attributes')
 cell: QbArrayField('attributes.cell', dtype=list[list[float]] | None, doc='Unit cell
   of the crystal, in Angstroms')

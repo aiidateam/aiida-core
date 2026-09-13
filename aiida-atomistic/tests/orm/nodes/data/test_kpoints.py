@@ -10,10 +10,10 @@
 
 import numpy as np
 import pytest
-
-from aiida.orm import load_node
 from aiida_atomistic.orm.nodes.data.array.kpoints import KpointsData
 from aiida_atomistic.orm.nodes.data.structure import StructureData
+
+from aiida.orm import load_node
 
 
 class TestKpoints:

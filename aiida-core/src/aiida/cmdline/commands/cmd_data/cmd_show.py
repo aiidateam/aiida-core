@@ -144,7 +144,16 @@ def _show_xmgrace(exec_name, list_bands):
     import sys
     import tempfile
 
-    from aiida.orm.nodes.data.array.bands import MAX_NUM_AGR_COLORS
+    try:
+        from aiida_atomistic.orm.nodes.data.array.bands import (
+            MAX_NUM_AGR_COLORS,  # type: ignore[import-not-found, unused-ignore]
+        )
+    except ImportError as exc:
+        msg = (
+            "'BandsData' helpers moved to the `aiida-atomistic` package, which is not installed. "
+            'Install it with `pip install aiida-atomistic` (or `uv sync --project aiida-atomistic`).'
+        )
+        raise ImportError(msg) from exc
 
     list_files = []
     current_band_number = 0

@@ -10,7 +10,6 @@
 
 import numpy as np
 import pytest
-
 from aiida_atomistic.orm.nodes.data.structure import StructureData, get_formula
 
 

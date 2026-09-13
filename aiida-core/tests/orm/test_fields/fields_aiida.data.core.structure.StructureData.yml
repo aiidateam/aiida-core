@@ -1,4 +1,4 @@
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.structure.StructureData.AttributesModel'>,
+attributes: QbAttributesField('attributes', dtype=<class 'aiida_atomistic.orm.nodes.data.structure.StructureData.AttributesModel'>,
   doc='The node attributes')
 cell: QbArrayField('attributes.cell', dtype=list[list[float]] | None, doc='The cell
   parameters')

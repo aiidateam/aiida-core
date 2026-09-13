@@ -1,4 +1,4 @@
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.array.kpoints.KpointsData.AttributesModel'>,
+attributes: QbAttributesField('attributes', dtype=<class 'aiida_atomistic.orm.nodes.data.array.kpoints.KpointsData.AttributesModel'>,
   doc='The node attributes')
 cell: QbArrayField('attributes.cell', dtype=list[list[float]] | None, doc='Unit cell
   of the crystal, in Angstroms')

@@ -10,7 +10,7 @@ on:
   # pull request event we use for test releases
   pull_request:
     branches-ignore: [gh-pages]
-    paths: ['aiida-atomistic/**']
+    paths: [aiida-atomistic/**]
   # tag push event we use for the official release
   push:
     tags:

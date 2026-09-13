@@ -14,9 +14,9 @@ import numpy as np
 
 from aiida.common import exceptions
 from aiida.orm.nodes.data.array.array import ArrayData
+from aiida.plugins import OrbitalFactory
 from aiida_atomistic.orm.nodes.data.array.bands import BandsData
 from aiida_atomistic.orm.nodes.data.orbital import OrbitalData
-from aiida.plugins import OrbitalFactory
 
 __all__ = ('ProjectionData',)
 

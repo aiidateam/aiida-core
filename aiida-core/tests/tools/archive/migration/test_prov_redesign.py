@@ -193,7 +193,7 @@ def test_group_name_and_type_change(tmp_path, aiida_profile):
     above succeed, it is understood that "auto.run" is also correctly ex-/imported
     as the type_string content for the relevant Groups.
     """
-    from aiida.orm.nodes.data.upf import upload_upf_family
+    from aiida_atomistic.orm.nodes.data.upf import upload_upf_family
 
     aiida_profile.reset_storage()
 

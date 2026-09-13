@@ -442,7 +442,8 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must be a aiida_atomistic.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must be a '
+                        'aiida_atomistic.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):

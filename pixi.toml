@@ -18,7 +18,7 @@
 [activation]
 # Isolate AiiDA state per developer machine; override in your shell as needed.
 # POSTGRES_* / RABBITMQ_* must match your locally running services.
-env = {AIIDA_PATH = "$CONDA_PREFIX/etc/", UV_PYTHON = "$CONDA_PREFIX/bin/python", RABBITMQ_NODE_PORT = "5672", POSTGRES_HOST = "127.0.0.1", POSTGRES_USER = "postgres", POSTGRES_PASSWORD = "postgres", POSTGRES_DB = "postgres", POSTGRES_PORT = "5434"}
+env = { AIIDA_PATH = "$CONDA_PREFIX/etc/", UV_PYTHON = "$CONDA_PREFIX/bin/python", RABBITMQ_NODE_PORT = "5672", POSTGRES_HOST = "127.0.0.1", POSTGRES_USER = "postgres", POSTGRES_PASSWORD = "postgres", POSTGRES_DB = "postgres", POSTGRES_PORT = "5434" }
 
 [dependencies]
 graphviz = "*"
@@ -31,13 +31,13 @@ python = "3.11.*"
 uv = ">=0.8.4"
 
 [tasks]
-lint = {cmd = "uv run --project aiida-core pre-commit run --all-files", description = "Run all lint/type hooks"}
-sync = {cmd = "uv sync --project aiida-core", description = "Sync the aiida-core dev environment"}
-sync-atomistic = {cmd = "uv sync --project aiida-atomistic", description = "Sync the aiida-atomistic dev environment"}
-test = {cmd = "uv run --project aiida-core pytest aiida-core/tests/ -x -q -m 'not nightly'", description = "Full aiida-core suite (needs PostgreSQL + RabbitMQ, see activation env)"}
-test-atomistic = {cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -x -q -m 'not nightly'", description = "Full aiida-atomistic suite (needs PostgreSQL + RabbitMQ)"}
-test-smoke = {cmd = "uv run --project aiida-core pytest aiida-core/tests/common/test_extendeddicts.py -x -q", description = "Fast smoke test (no external services needed)"}
-test-smoke-atomistic = {cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -q --collect-only", description = "Collect aiida-atomistic tests (no services needed)"}
+lint = { cmd = "uv run --project aiida-core pre-commit run --all-files", description = "Run all lint/type hooks" }
+sync = { cmd = "uv sync --project aiida-core", description = "Sync the aiida-core dev environment" }
+sync-atomistic = { cmd = "uv sync --project aiida-atomistic", description = "Sync the aiida-atomistic dev environment" }
+test = { cmd = "uv run --project aiida-core pytest aiida-core/tests/ -x -q -m 'not nightly'", description = "Full aiida-core suite (needs PostgreSQL + RabbitMQ, see activation env)" }
+test-atomistic = { cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -x -q -m 'not nightly'", description = "Full aiida-atomistic suite (needs PostgreSQL + RabbitMQ)" }
+test-smoke = { cmd = "uv run --project aiida-core pytest aiida-core/tests/common/test_extendeddicts.py -x -q", description = "Fast smoke test (no external services needed)" }
+test-smoke-atomistic = { cmd = "uv run --project aiida-atomistic pytest aiida-atomistic/tests/ -q --collect-only", description = "Collect aiida-atomistic tests (no services needed)" }
 
 [workspace]
 channels = ["conda-forge"]

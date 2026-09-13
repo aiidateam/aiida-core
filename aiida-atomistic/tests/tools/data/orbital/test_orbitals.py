@@ -10,10 +10,10 @@
 """Test for the `Orbital` class and subclasses."""
 
 import pytest
+from aiida_atomistic.tools.data.orbital import Orbital
 
 from aiida.common.exceptions import ValidationError
 from aiida.plugins import OrbitalFactory
-from aiida_atomistic.tools.data.orbital import Orbital
 
 
 class TestOrbital:

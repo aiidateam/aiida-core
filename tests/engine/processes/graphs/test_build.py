@@ -1109,3 +1109,16 @@ def test_waiting_for_something_that_is_not_a_task_is_refused():
 
     with pytest.raises(TypeError, match='wait for a int'):
         waits_for_a_number.build()
+
+
+def test_a_task_is_handed_the_plain_values():
+    """A task is written the way the function would be written without a graph around it."""
+
+    @task(outputs=['kind'])
+    def kind_of(value, name):
+        return {'kind': f'{type(value).__name__} and {type(name).__name__}'}
+
+    results, node = run_get_node(kind_of, value=3, name='three')
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['kind'] == 'int and str'

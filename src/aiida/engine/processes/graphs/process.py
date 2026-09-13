@@ -26,18 +26,42 @@ from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
 from aiida.orm import Data, Dict, GraphNode
-from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess')
+
+
+def _plain(value: t.Any) -> t.Any:
+    """Return the plain Python value a node holds, where it holds one, and the node itself where it does not."""
+    return value.value if isinstance(value, BaseType) else value
 
 
 class TaskProcess(FunctionProcess):
     """A :class:`FunctionProcess` whose wrapped function takes and returns plain Python values.
 
-    Values that are not already a ``Data`` node are serialized with ``to_aiida_type``, mirroring the serialization
-    that the input ports of a function process already perform. When the task declares its output ports, a returned
-    tuple is mapped onto them in order.
+    A node holding one plain value is handed to the function as that value, and a value the function returns that
+    is not already a ``Data`` node is stored with ``to_aiida_type``, so a task is written the way the function
+    would be written without a graph around it. Everything else arrives as the node it is, since a structure or a
+    folder is not a value there is a plain Python spelling of.
+
+    When the task declares its output ports, a returned tuple is mapped onto them in order.
     """
+
+    TAKES_PLAIN_VALUES: t.ClassVar[bool] = True
+    """Whether a node holding one plain value is unwrapped before the function is called.
+
+    A task that passes one of the values it was given straight back has to be handed the nodes, since returning
+    the value would store a second node holding the same thing rather than saying it returned the first.
+    """
+
+    @override
+    def _function_arguments(self) -> tuple[list[t.Any], dict[str, t.Any]]:
+        args, kwargs = super()._function_arguments()
+
+        if not self.TAKES_PLAIN_VALUES:
+            return args, kwargs
+
+        return [_plain(value) for value in args], {name: _plain(value) for name, value in kwargs.items()}
 
     @override
     def _out_result(self, result: t.Any) -> None:

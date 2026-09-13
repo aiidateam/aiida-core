@@ -176,7 +176,7 @@ class GraphProcess(Process):
             process_class = start.task.spec.process_class
 
             if issubclass(process_class, TaskWorkChain):
-                return process_class, launch_under_namespace(start.inputs)
+                return process_class, launch_under_namespace(process_class, start.inputs)
 
             return process_class, start.inputs
 

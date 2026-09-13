@@ -1218,7 +1218,7 @@ class TaskHandle:
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
         launch = self._function.get_launch_inputs(**inputs)
-        return launch if self._handled is None else launch_under_namespace(launch)
+        return launch if self._handled is None else launch_under_namespace(self._handled, launch)
 
     @property
     def node_class(self) -> t.Any:

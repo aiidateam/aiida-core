@@ -179,6 +179,16 @@ def handled(process_class: type[Process], handlers: t.Sequence[TaskHandler], ref
         raise ValueError(msg)
 
     name = f'{reference.__name__}{HANDLED_SUFFIX}'
+    # A task input of the same name as one the work chain takes would be given to the wrong one of them.
+    clashing = sorted(set(process_class.spec().inputs) & _taken_beside_the_task(TaskWorkChain) - {'metadata'})
+
+    if clashing:
+        msg = (
+            f'`{reference.__name__}` takes {clashing}, which is what the work chain handling it takes for itself, '
+            f'so a value given there would not reach the task. Rename them.'
+        )
+        raise ValueError(msg)
+
     namespace: dict[str, t.Any] = {'__module__': reference.__module__, '_process_class': process_class}
 
     for one in handlers:
@@ -204,17 +214,23 @@ def handled(process_class: type[Process], handlers: t.Sequence[TaskHandler], ref
     return generated
 
 
-def launch_under_namespace(inputs: dict[str, t.Any]) -> dict[str, t.Any]:
+def launch_under_namespace(process_class: type[TaskWorkChain], inputs: dict[str, t.Any]) -> dict[str, t.Any]:
     """Return the inputs of a task as the work chain that handles it takes them.
 
-    The metadata stays outside the namespace, so that a label or a call link label names the run that was asked
-    for rather than the process inside it.
+    What the work chain itself takes stays outside the namespace: the metadata, so that a label or a call link
+    label names the run that was asked for rather than the process inside it, and the inputs that tune the
+    handling, such as how many times the task may run. Everything else is an input of the task.
     """
-    metadata = inputs.get('metadata')
-    task = {key: value for key, value in inputs.items() if key != 'metadata'}
-    under: dict[str, t.Any] = {TaskWorkChain.NAMESPACE: task}
+    beside = _taken_beside_the_task(process_class)
+    outside = {key: value for key, value in inputs.items() if key in beside}
+    under = {key: value for key, value in inputs.items() if key not in beside}
 
-    return under if metadata is None else {**under, 'metadata': metadata}
+    return {**outside, TaskWorkChain.NAMESPACE: under}
+
+
+def _taken_beside_the_task(process_class: type[TaskWorkChain]) -> set[str]:
+    """Return the names the work chain takes for itself, which are every input of it but the task's own."""
+    return set(process_class.spec().inputs) - {TaskWorkChain.NAMESPACE}
 
 
 def _as_method(task_handler: TaskHandler) -> t.Any:

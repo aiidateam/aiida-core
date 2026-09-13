@@ -152,3 +152,32 @@ def test_a_handled_task_and_its_own_process_are_reached_by_different_names():
     # such an attempt back up off its checkpoint is given.
     assert loader.load_object(f'{__name__}:converge') is converge
     assert converge.recreate_from.__self__ is handling._process_class
+
+
+def test_how_often_a_handled_task_is_retried_is_said_where_it_is_placed():
+    """A handled task is run by a work chain, and what tunes that work chain is an input of the task."""
+
+    @graph
+    def converge_twice_at_most(steps):
+        return {'value': converge(steps=steps, max_iterations=2).value}
+
+    @graph
+    def converge_until_it_does(steps):
+        return {'value': converge(steps=steps).value}
+
+    _, gave_up = run_get_node(converge_twice_at_most, steps=1)
+    results, got_there = run_get_node(converge_until_it_does, steps=1)
+
+    assert not gave_up.is_finished_ok, 'two runs are one short of what it takes'
+    assert got_there.is_finished_ok, got_there.exit_message
+    assert results['value'] == 30
+
+
+def test_a_task_taking_what_the_work_chain_takes_is_refused():
+    """Both would be given on the same call, so a value meant for one of them would reach the other."""
+
+    with pytest.raises(ValueError, match="takes \\['max_iterations'\\]"):
+
+        @task(handlers=[push_further])
+        def counts_its_own(steps, max_iterations):
+            return steps

@@ -1447,10 +1447,16 @@ def select(condition: t.Any, then: t.Any, otherwise: t.Any) -> t.Any:
     return then if holds(condition) else otherwise
 
 
+class SelectProcess(TaskProcess):
+    """The process behind :func:`select`, which is handed the nodes so that it can return one of them."""
+
+    TAKES_PLAIN_VALUES: t.ClassVar[bool] = False
+
+
 # What it returns is one of the values it was given, which already exists, so this records that it returned a node
 # rather than created one. A calcfunction cannot: creating a node that is already its own input is a cycle.
 select = TaskHandle(
-    process_function(node_class=WorkFunctionNode, base_class=TaskProcess, outputs=['value'])(select),
+    process_function(node_class=WorkFunctionNode, base_class=SelectProcess, outputs=['value'])(select),
     TaskSpec(identifier='select', executor=ExecutorReference(module=__name__, name='select')),
 )
 

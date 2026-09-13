@@ -20,7 +20,7 @@ from aiida.engine import WaitProcess, graph, monitor, run_get_node, submit, task
 @monitor
 def looked_at_three_times(path) -> bool:
     """Say yes on the third look, leaving a mark each time so that the looks can be counted afterwards."""
-    marks = Path(path.value)
+    marks = Path(path)
     marks.write_text(f'{marks.read_text()}x' if marks.exists() else 'x')
 
     return len(marks.read_text()) >= 3
@@ -34,7 +34,7 @@ def never(path) -> bool:
 
 @task(outputs=['looks'])
 def count_marks(path) -> dict:
-    return {'looks': len(Path(path.value).read_text())}
+    return {'looks': len(Path(path).read_text())}
 
 
 def test_a_monitor_holds_back_what_waits_for_it(tmp_path):

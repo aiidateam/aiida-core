@@ -19,7 +19,6 @@ import warnings
 from aiida.calculations.shell import ParserFunctionType, ShellJob
 from aiida.common import exceptions, lang
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.typing import FilePath
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine import Process, WorkChain, run_get_node
 from aiida.engine import submit as submit_process
@@ -43,7 +42,7 @@ LOGGER = AIIDA_LOGGER.getChild('tools.shell')
 def launch_shell_job(
     command: str | AbstractCode,
     arguments: list[str] | str | None = None,
-    nodes: t.Mapping[str, FilePath | Data] | None = None,
+    nodes: t.Mapping[str, str | pathlib.Path | Data] | None = None,
     filenames: dict[str, str] | None = None,
     outputs: list[str] | None = None,
     parser: ParserFunctionType | str | None = None,
@@ -107,7 +106,7 @@ def launch_shell_job(
 def prepare_shell_job_inputs(
     command: str | AbstractCode,
     arguments: list[str] | str | None = None,
-    nodes: t.Mapping[str, FilePath | Data] | None = None,
+    nodes: t.Mapping[str, str | pathlib.Path | Data] | None = None,
     filenames: dict[str, str] | None = None,
     outputs: list[str] | None = None,
     parser: ParserFunctionType | str | None = None,
@@ -248,8 +247,9 @@ def prepare_computer(computer: Computer | None = None) -> Computer:
                 description='Localhost automatically created by `aiida.tools.launch_shell_job`',
                 transport_type='core.local',
                 scheduler_type='core.direct',
-                workdir=str(pathlib.Path(tempfile.gettempdir()) / 'aiida_shell_scratch'),
-            ).store()
+            )
+            computer.set_workdir(str(pathlib.Path(tempfile.gettempdir()) / 'aiida_shell_scratch'))
+            computer.store()
             computer.configure(safe_interval=0.0)
             computer.set_minimum_job_poll_interval(0.0)
             computer.set_default_mpiprocs_per_machine(1)

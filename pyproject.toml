@@ -10,7 +10,7 @@ dev = [
 ]
 
 [project]
-authors = [{name = 'The AiiDA team', email = 'developers@aiida.net'}]
+authors = [{ name = 'The AiiDA team', email = 'developers@aiida.net' }]
 classifiers = [
   'Development Status :: 5 - Production/Stable',
   'Framework :: AiiDA',
@@ -66,7 +66,7 @@ dependencies = [
 description = 'AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.'
 dynamic = ['version']  # read from aiida/__init__.py
 keywords = ['aiida', 'workflows']
-license = {file = 'LICENSE.txt'}
+license = { file = 'LICENSE.txt' }
 name = 'aiida-core'
 readme = 'README.md'
 requires-python = '>=3.10'
@@ -367,9 +367,6 @@ enable_error_code = [
   'redundant-expr',
   'truthy-bool'
 ]
-disable_error_code = [
-  'method-assign'
-]
 plugins = [
   'pydantic.mypy',
   'sqlalchemy.ext.mypy.plugin'
@@ -440,6 +437,7 @@ module = [
 
 [[tool.mypy.overrides]]
 disable_error_code = [
+  'method-assign',
   'no-redef',
   'overload-cannot-match',
   'overload-overlap'

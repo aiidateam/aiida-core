@@ -155,6 +155,9 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     def content(self, value: str) -> None:
         return self._backend_entity.set_content(value)
 
+    def set_mtime(self, value: datetime) -> None:
+        return self._backend_entity.set_mtime(value)
+
     # TODO the following methods are handled above via property operations - consider removing
 
     def set_user(self, value: User) -> None:

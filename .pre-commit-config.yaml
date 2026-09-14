@@ -82,9 +82,10 @@ repos:
 
         src/aiida/calculations/arithmetic/add.py|
         src/aiida/calculations/diff_tutorial/calculations.py|
-        src/aiida/calculations/shell.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
+        src/aiida/cmdline/commands/cmd_data/cmd_bands.py|
+        src/aiida/cmdline/commands/cmd_data/cmd_trajectory.py|
         src/aiida/engine/daemon/execmanager.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
@@ -126,10 +127,12 @@ repos:
         src/aiida/storage/sqlite_zip/models.py|
         src/aiida/storage/sqlite_zip/orm.py|
         src/aiida/tools/data/array/kpoints/legacy.py|
+        src/aiida/tools/data/array/kpoints/main.py|
         src/aiida/tools/data/array/kpoints/seekpath.py|
         src/aiida/tools/data/orbital/orbital.py|
         src/aiida/tools/data/orbital/realhydrogen.py|
         src/aiida/tools/dbimporters/plugins/.*|
+        src/aiida/tools/visualization/graph.py|
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|

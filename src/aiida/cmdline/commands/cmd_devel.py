@@ -178,8 +178,8 @@ def devel_launch_arithmetic_add(code, daemon, sleep):
             assert code.default_calc_job_plugin == default_calc_job_plugin
 
     builder = code.get_builder()
-    builder.x = Int(1)
-    builder.y = Int(1)
+    builder.x = Int(value=1)
+    builder.y = Int(value=1)
 
     if sleep:
         builder.metadata.options.sleep = sleep
@@ -230,9 +230,9 @@ def devel_launch_multiply_add(code, daemon):
             assert code.default_calc_job_plugin == default_calc_job_plugin
 
     inputs = {
-        'x': Int(1),
-        'y': Int(1),
-        'z': Int(1),
+        'x': Int(value=1),
+        'y': Int(value=1),
+        'z': Int(value=1),
         'code': code,
     }
 
@@ -270,8 +270,9 @@ def prepare_localhost():
             description='Localhost automatically created by `verdi devel launch-add`',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir=tempfile.gettempdir(),
-        ).store()
+        )
+        computer.set_workdir(tempfile.gettempdir())
+        computer.store()
         computer.configure(safe_interval=0.0)
         computer.set_minimum_job_poll_interval(0.0)
 

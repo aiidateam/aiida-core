@@ -10,15 +10,18 @@
 
 from __future__ import annotations
 
+import inspect
 import re
+import typing as t
 import warnings
 from collections.abc import Callable, Mapping, Sequence
+from types import UnionType
 from typing import Any
 
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.orm import Data, Node, to_aiida_type
+from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, to_aiida_type
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -293,3 +296,42 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                 result[name] = value
 
         return result
+
+
+def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
+    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
+
+    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
+        tuple is returned.
+    """
+
+    def get_type_from_annotation(annotation):
+        # `t.Dict`/`t.List` are distinct runtime keys from `dict`/`list` (`t.Dict != dict`) and map the
+        # pre-PEP-585 annotation spelling; UP006 would collapse them into duplicate builtin keys.
+        valid_type_map = {
+            bool: Bool,
+            dict: Dict,
+            t.Dict: Dict,  # noqa: UP006
+            float: Float,
+            int: Int,
+            list: List,
+            t.List: List,  # noqa: UP006
+            str: Str,
+        }
+
+        if inspect.isclass(annotation) and issubclass(annotation, Data):
+            return annotation
+
+        return valid_type_map.get(annotation)
+
+    inferred_valid_type: tuple[t.Any, ...] = ()
+
+    if inspect.isclass(annotation):
+        inferred_valid_type = (get_type_from_annotation(annotation),)
+    elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
+        inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
+    elif t.get_origin(annotation) is t.Optional:
+        inferred_valid_type = (t.get_args(annotation),)
+
+    return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)

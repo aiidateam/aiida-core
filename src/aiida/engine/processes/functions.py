@@ -17,25 +17,20 @@ import logging
 import signal
 import typing as t
 from inspect import get_annotations
-from types import UnionType
 from typing import TYPE_CHECKING, ParamSpec
 
 import docstring_parser
 
 from aiida.common.lang import override
+from aiida.engine.processes.containers import as_dict, fields_of, is_a_container
+from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.process_spec import ProcessSpec, _lazily
 from aiida.manage import get_manager
 from aiida.orm import (
-    Bool,
     CalcFunctionNode,
     Data,
-    Dict,
-    Float,
-    Int,
-    List,
     ProcessNode,
-    Str,
     WorkFunctionNode,
     to_aiida_type,
 )
@@ -140,13 +135,17 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
 def process_function(
     node_class: type[ProcessNode],
     base_class: type[FunctionProcess] | None = None,
-    outputs: t.Sequence[str] | None = None,
+    outputs: t.Sequence[str] | type | None = None,
+    inputs: type | None = None,
 ) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
     :param base_class: the ``FunctionProcess`` subclass to build, which defaults to ``FunctionProcess`` itself
-    :param outputs: names of the output ports to declare, instead of a dynamic output namespace
+    :param outputs: names of the output ports to declare, or a structured container whose fields name them,
+        instead of a dynamic output namespace
+    :param inputs: a structured container whose fields name the input ports, for a function whose signature does
+        not say what it takes
     """
 
     def decorator(function: FunctionType) -> FunctionType:
@@ -155,7 +154,9 @@ def process_function(
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
         """
-        process_class = FunctionProcess.build(function, node_class=node_class, base_class=base_class, outputs=outputs)
+        process_class = FunctionProcess.build(
+            function, node_class=node_class, base_class=base_class, outputs=outputs, inputs=inputs
+        )
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
@@ -236,9 +237,18 @@ def process_function(
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        try:
+            takes = get_annotations(function, eval_str=True)
+        except (NameError, TypeError):
+            takes = {}
+
         def get_launch_inputs(**inputs: t.Any) -> dict[str, t.Any]:
-            """Return the inputs to launch the process with, which a function takes as they are given."""
-            return inputs
+            """Return the inputs to launch the process with.
+
+            A structured container given where a namespace is declared is flattened into it, so that each of its
+            fields is stored and validated as the port it is.
+            """
+            return {name: _flattened(takes.get(name), value) for name, value in inputs.items()}
 
         decorated_function.run = decorated_function  # type: ignore[attr-defined]
         decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
@@ -277,55 +287,76 @@ def _takes_many(annotation: t.Any) -> bool:
     return annotation is Many or t.get_origin(annotation) is Many
 
 
-def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
-    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
+def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
+    """Return a value as the port taking it holds it, which for a container is the namespace of its fields.
 
-    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
-    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
-        tuple is returned.
+    What says to flatten is the annotation rather than the shape of the value, since plenty of things are a
+    dataclass without being what a parameter was written to take.
     """
+    if not is_a_container(annotation):
+        return value
 
-    def get_type_from_annotation(annotation):
-        # `t.Dict`/`t.List` are distinct runtime keys from `dict`/`list` (`t.Dict != dict`) and map the
-        # pre-PEP-585 annotation spelling; UP006 would collapse them into duplicate builtin keys.
-        valid_type_map = {
-            bool: Bool,
-            dict: Dict,
-            t.Dict: Dict,  # noqa: UP006
-            float: Float,
-            int: Int,
-            list: List,
-            t.List: List,  # noqa: UP006
-            str: Str,
-        }
+    held = as_dict(value)
 
-        if inspect.isclass(annotation) and issubclass(annotation, Data):
-            return annotation
+    return value if held is None else held
 
-        return valid_type_map.get(annotation)
 
-    inferred_valid_type: tuple[t.Any, ...] = ()
+def _declare_input_types(container: type | None, spec: t.Any, signature: inspect.Signature) -> set[str]:
+    """Declare one input port per field of a container, for a function whose signature does not say what it takes.
 
-    if inspect.isclass(annotation):
-        inferred_valid_type = (get_type_from_annotation(annotation),)
-    elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
-        inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
-    elif t.get_origin(annotation) is t.Optional:
-        inferred_valid_type = (t.get_args(annotation),)
+    This is the way in for a function that came from somewhere else, where the parameters carry no annotation to
+    read. The fields are the ports, and the function is handed each of them by the name it declared.
 
-    return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
+    :param container: the structured container naming the ports, or ``None`` where the signature says it all.
+    :param spec: the spec to declare them on.
+    :param signature: the signature of the wrapped function, which has to be able to take them.
+    :returns: the names that were declared, which the signature is not asked about again.
+    :raises TypeError: if the container is not one that can be read, or names something the function cannot take.
+    """
+    if container is None:
+        return set()
+
+    fields = fields_of(container)
+
+    if fields is None:
+        raise TypeError(
+            f'`{getattr(container, "__name__", container)}` is not a structured container, so there is nothing to '
+            f'declare the inputs from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
+        )
+
+    takes_anything = any(parameter.kind is parameter.VAR_KEYWORD for parameter in signature.parameters.values())
+    unreachable = sorted(
+        field.name for field in fields if field.name not in signature.parameters and not takes_anything
+    )
+
+    if unreachable:
+        raise TypeError(
+            f'`{getattr(container, "__name__", container)}` names {unreachable}, which the function does not take, '
+            f'so nothing given there would reach it.'
+        )
+
+    for field in fields:
+        spec.input(
+            field.name,
+            valid_type=infer_valid_type_from_type_annotation(field.annotation) or (Data,),
+            required=field.required,
+            serializer=to_aiida_type,
+            **({} if field.required else {'default': _lazily(field.default)}),
+        )
+
+    return {field.name for field in fields}
 
 
 def _declare_output_types(
-    outputs: t.Sequence[str] | None, return_annotation: t.Any
+    outputs: t.Sequence[str] | type | None, return_annotation: t.Any
 ) -> dict[str, tuple[t.Any, ...]] | None:
     """Return the output ports to declare for a function process, or ``None`` to keep the namespace dynamic.
 
-    Explicit ``outputs`` take precedence over the return annotation. A ``TypedDict`` annotation declares one port
-    per field, any other annotation declares a single ``result`` port, and no annotation leaves the namespace
-    dynamic, since then the outputs are not known before the function has run.
+    Explicit ``outputs`` take precedence over the return annotation. A structured container declares one port per
+    field, any other annotation declares a single ``result`` port, and no annotation leaves the namespace dynamic,
+    since then the outputs are not known before the function has run.
 
-    :param outputs: names of the output ports to declare.
+    :param outputs: names of the output ports to declare, or a structured container whose fields name them.
     :param return_annotation: the return annotation of the wrapped function, if it has one.
     :returns: a mapping of port name onto its valid types, or ``None`` if the namespace should stay dynamic.
     :raises TypeError: if ``outputs`` is not a sequence of port names.
@@ -334,16 +365,17 @@ def _declare_output_types(
         if isinstance(outputs, str):
             # A bare string is a sequence of strings, so it would silently declare one port per character.
             raise TypeError(f'`outputs` should be a sequence of port names, got the string `{outputs}`.')
-        return {name: (Data,) for name in outputs}
+
+        if (fields := fields_of(outputs)) is not None:
+            return {field.name: infer_valid_type_from_type_annotation(field.annotation) or (Data,) for field in fields}
+
+        return {name: (Data,) for name in t.cast(t.Sequence[str], outputs)}
 
     if return_annotation is None or return_annotation is type(None):
         return None
 
-    if t.is_typeddict(return_annotation):
-        return {
-            name: infer_valid_type_from_type_annotation(hint) or (Data,)
-            for name, hint in t.get_type_hints(return_annotation).items()
-        }
+    if (fields := fields_of(return_annotation)) is not None:
+        return {field.name: infer_valid_type_from_type_annotation(field.annotation) or (Data,) for field in fields}
 
     return {Process.SINGLE_OUTPUT_LINKNAME: infer_valid_type_from_type_annotation(return_annotation) or (Data,)}
 
@@ -367,7 +399,8 @@ class FunctionProcess(Process):
         func: FunctionType,
         node_class: type[ProcessNode],
         base_class: type[FunctionProcess] | None = None,
-        outputs: t.Sequence[str] | None = None,
+        outputs: t.Sequence[str] | type | None = None,
+        inputs: type | None = None,
     ) -> type[FunctionProcess]:
         """Build a Process from the given function.
 
@@ -438,7 +471,12 @@ class FunctionProcess(Process):
 
             super(generated, cls).define(spec)  # type: ignore[arg-type]
 
+            named = _declare_input_types(inputs, spec, signature)
+
             for parameter in signature.parameters.values():
+                if parameter.name in named:
+                    continue
+
                 if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
                     continue
 
@@ -478,6 +516,15 @@ class FunctionProcess(Process):
                     spec.input_namespace(
                         parameter.name,
                         valid_type=valid_type,
+                        required=default is UNSPECIFIED,
+                        help=help_string,
+                    )
+                    continue
+
+                if is_a_container(annotation):
+                    spec.input_namespace_from(
+                        parameter.name,
+                        annotation,
                         required=default is UNSPECIFIED,
                         help=help_string,
                     )
@@ -553,6 +600,9 @@ class FunctionProcess(Process):
     def create_inputs(cls, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
         """Create the input dictionary for the ``FunctionProcess``."""
         cls.validate_inputs(*args, **kwargs)
+
+        takes = get_annotations(cls._func, eval_str=True)
+        kwargs = {name: _flattened(takes.get(name), value) for name, value in kwargs.items()}
 
         # The complete input dictionary consists of the keyword arguments...
         inputs = dict(kwargs or {})

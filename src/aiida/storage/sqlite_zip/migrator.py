@@ -8,28 +8,21 @@
 ###########################################################################
 """Versioning and migration implementation for the sqlite_zip format."""
 
-import contextlib
 import json
-import os
 import shutil
 import tarfile
 import tempfile
 import zipfile
-from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from alembic.command import upgrade
-from alembic.config import Config
-from alembic.runtime.environment import EnvironmentContext
-from alembic.runtime.migration import MigrationContext, MigrationInfo
-from alembic.script import ScriptDirectory
 from archive_path import ZipPath, extract_file_in_zip, open_file_in_tar, open_file_in_zip
 
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.storage.log import MIGRATE_LOGGER
+from aiida.storage.migrator import AlembicMigrator
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from aiida.storage.sqlite_zip.migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
 from aiida.storage.sqlite_zip.migrations.legacy_to_main import LEGACY_TO_MAIN_REVISION, perform_v1_migration
@@ -44,15 +37,26 @@ from aiida.storage.sqlite_zip.utils import (
 )
 
 
+def _get_sqlite_metadata():
+    """Return the SQLite archive ORM metadata."""
+    from aiida.storage.sqlite_zip.models import SqliteBase
+
+    return SqliteBase.metadata
+
+
+alembic_migrator = AlembicMigrator(Path(__file__).resolve().parent / 'migrations', _get_sqlite_metadata)
+
+
 def get_schema_version_head() -> str:
-    """Return the head schema version for this storage, i.e. the latest schema this storage can be migrated to."""
-    return _alembic_script().revision_map.get_current_head('main') or ''
+    """Return the head schema version for this storage."""
+    return alembic_migrator.get_schema_version_head()
 
 
 def list_versions() -> list[str]:
     """Return all available schema versions (oldest to latest)."""
     legacy_versions = list(LEGACY_MIGRATE_FUNCTIONS) + [FINAL_LEGACY_VERSION]
-    alembic_versions = [entry.revision for entry in reversed(list(_alembic_script().walk_revisions()))]
+    revisions = alembic_migrator._alembic_script().walk_revisions()
+    alembic_versions = [entry.revision for entry in reversed(list(revisions))]
     return legacy_versions + alembic_versions
 
 
@@ -221,15 +225,13 @@ def migrate(
             # so that we don't waste time doing that (which could be slow), only for alembic to fail
             if current_version != version:
                 MIGRATE_LOGGER.report('Performing SQLite migrations:')
-                with _migration_context(db_path) as context:
-                    assert context.script is not None
-                    assert context.connection is not None
-                    context.stamp(context.script, current_version)
-                    context.connection.commit()
-                # see https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys
-                # for why we do not enforce foreign keys here
-                with _alembic_connect(db_path, enforce_foreign_keys=False) as config:
-                    upgrade(config, version)
+                # See https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys
+                # for why we do not enforce foreign keys here.
+                with create_sqla_engine(db_path, enforce_foreign_keys=False).connect() as connection:
+                    alembic_migrator.stamp(connection, current_version)
+                    connection.commit()
+                    alembic_migrator.migrate_up(connection, version)
+                    connection.commit()
                 update_metadata(metadata, version)
 
             if not written_repo:
@@ -313,50 +315,3 @@ def _perform_legacy_migrations(current_version: str, to_version: str, metadata: 
             progress.update()
 
     return to_version
-
-
-def _alembic_config() -> Config:
-    """Return an instance of an Alembic `Config`."""
-    config = Config()
-    config.set_main_option('script_location', str(Path(os.path.realpath(__file__)).parent / 'migrations'))
-    return config
-
-
-def _alembic_script() -> ScriptDirectory:
-    """Return an instance of an Alembic `ScriptDirectory`."""
-    return ScriptDirectory.from_config(_alembic_config())
-
-
-@contextlib.contextmanager
-def _alembic_connect(db_path: Path, enforce_foreign_keys: bool = True) -> Iterator[Config]:
-    """Context manager to return an instance of an Alembic configuration.
-
-    The profiles's database connection is added in the `attributes` property, through which it can then also be
-    retrieved, also in the `env.py` file, which is run when the database is migrated.
-    """
-    with create_sqla_engine(db_path, enforce_foreign_keys=enforce_foreign_keys).connect() as connection:
-        config = _alembic_config()
-        config.attributes['connection'] = connection
-
-        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
-            """Callback to be called after a migration step is executed."""
-            from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
-            MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')
-
-        config.attributes['on_version_apply'] = _callback
-
-        yield config
-
-
-@contextlib.contextmanager
-def _migration_context(db_path: Path) -> Iterator[MigrationContext]:
-    """Context manager to return an instance of an Alembic migration context.
-
-    This migration context will have been configured with the current database connection, which allows this context
-    to be used to inspect the contents of the database, such as the current revision.
-    """
-    with _alembic_connect(db_path) as config:
-        script = ScriptDirectory.from_config(config)
-        with EnvironmentContext(config, script) as context:
-            context.configure(context.config.attributes['connection'])
-            yield context.get_context()

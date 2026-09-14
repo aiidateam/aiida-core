@@ -5,8 +5,4 @@
 # The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 ###########################################################################
-"""Alembic environment for the PostgreSQL disk-objectstore migrations."""
-
-from aiida.storage.alembic_env import run
-
-run()
+"""Tests for SQLite archive migrations."""

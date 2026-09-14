@@ -21,10 +21,8 @@ import pathlib
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
-from alembic.command import downgrade, upgrade
 from alembic.config import Config
-from alembic.runtime.environment import EnvironmentContext
-from alembic.runtime.migration import MigrationContext, MigrationInfo
+from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, Engine, MetaData, String, column, desc, insert, inspect, select, table
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -35,6 +33,7 @@ from aiida.common import exceptions
 from aiida.manage.configuration.profile import Profile
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.migrations import TEMPLATE_INVALID_SCHEMA_VERSION
+from aiida.storage.migrator import AlembicMigrator
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
@@ -51,9 +50,18 @@ To migrate the database schema version to the current one, run the following com
     verdi -p {profile_name} storage migrate
 """
 
-ALEMBIC_REL_PATH = 'migrations'
 
 REPOSITORY_UUID_KEY = 'repository|uuid'
+
+
+def _get_orm_metadata() -> MetaData:
+    """Return the PostgreSQL ORM metadata without importing models at module load."""
+    from aiida.storage.psql_dos.models.base import get_orm_metadata
+
+    return get_orm_metadata()
+
+
+_ALEMBIC_MIGRATOR = AlembicMigrator(pathlib.Path(__file__).resolve().parent / 'migrations', _get_orm_metadata)
 
 
 class PsqlDosMigrator:
@@ -77,7 +85,6 @@ class PsqlDosMigrator:
         if self._connection is not None:
             self._connection.close()
             self._connection = None
-
         if self._engine is not None:
             self._engine.dispose()
             self._engine = None
@@ -92,13 +99,7 @@ class PsqlDosMigrator:
 
     @property
     def connection(self) -> Connection:
-        """Return the connection to the database.
-
-        Will automatically create the engine and open an connection if not already opened in a previous call.
-
-        :return: Open connection to the database.
-        :raises: :class:`aiida.common.exceptions.UnreachableStorage` if connecting to the database fails.
-        """
+        """Return an open connection to the profile database."""
         if self._connection is None:
             if self._engine is None:
                 self._engine = create_sqlalchemy_engine(self.profile.storage_config)  # type: ignore[arg-type]
@@ -106,23 +107,43 @@ class PsqlDosMigrator:
                 self._connection = self._engine.connect()
             except OperationalError as exception:
                 raise exceptions.UnreachableStorage(f'Could not connect to database: {exception}') from exception
-
         return self._connection
 
     @classmethod
-    def get_schema_versions(cls) -> dict[str, str]:
-        """Return all available schema versions (oldest to latest).
+    def _alembic_config(cls) -> Config:
+        """Return the Alembic configuration for the PostgreSQL migration graph."""
+        return _ALEMBIC_MIGRATOR._alembic_config()
 
-        :return: schema version -> description
-        """
-        return {entry.revision: entry.doc for entry in reversed(list(cls._alembic_script().walk_revisions()))}
+    @classmethod
+    def _alembic_script(cls) -> ScriptDirectory:
+        """Return the Alembic script directory for the PostgreSQL migration graph."""
+        return _ALEMBIC_MIGRATOR._alembic_script()
+
+    @classmethod
+    def get_schema_versions(cls) -> dict[str, str]:
+        """Return all available schema versions, from oldest to latest."""
+        return _ALEMBIC_MIGRATOR.get_schema_versions()
 
     @classmethod
     def get_schema_version_head(cls) -> str:
-        """Return the head schema version for this storage, i.e. the latest schema this storage can be migrated to."""
-        version = cls._alembic_script().revision_map.get_current_head('main')
-        assert version is not None
-        return version
+        """Return the latest schema version available for this storage."""
+        return _ALEMBIC_MIGRATOR.get_schema_version_head()
+
+    @contextlib.contextmanager
+    def _alembic_connect(self) -> Iterator[Config]:
+        with _ALEMBIC_MIGRATOR._alembic_connect(self.connection, profile=self.profile) as config:
+            yield config
+
+    @contextlib.contextmanager
+    def _migration_context(self) -> Iterator[MigrationContext]:
+        with _ALEMBIC_MIGRATOR.migration_context(self.connection, profile=self.profile) as context:
+            yield context
+
+    def migrate_up(self, version: str) -> None:
+        _ALEMBIC_MIGRATOR.migrate_up(self.connection, version, profile=self.profile)
+
+    def migrate_down(self, version: str) -> None:
+        _ALEMBIC_MIGRATOR.migrate_down(self.connection, version, profile=self.profile)
 
     def get_schema_version_profile(self, check_legacy: bool = False) -> str | None:
         """Return the schema version of the backend instance for this profile.
@@ -404,68 +425,6 @@ class PsqlDosMigrator:
         MIGRATE_LOGGER.report('Migrating to the head of the main branch')
         self.migrate_up('main@head')
         self.connection.commit()
-
-    def migrate_up(self, version: str) -> None:
-        """Migrate the database up to a specific version.
-
-        :param version: string with schema version to migrate to
-        """
-        with self._alembic_connect() as config:
-            upgrade(config, version)
-
-    def migrate_down(self, version: str) -> None:
-        """Migrate the database down to a specific version.
-
-        :param version: string with schema version to migrate to
-        """
-        with self._alembic_connect() as config:
-            downgrade(config, version)
-
-    @staticmethod
-    def _alembic_config() -> Config:
-        """Return an instance of an Alembic `Config`."""
-        dirpath = pathlib.Path(__file__).resolve().parent
-        config = Config()
-        config.set_main_option('script_location', str(dirpath / ALEMBIC_REL_PATH))
-        return config
-
-    @classmethod
-    def _alembic_script(cls) -> ScriptDirectory:
-        """Return an instance of an Alembic `ScriptDirectory`."""
-        return ScriptDirectory.from_config(cls._alembic_config())
-
-    @contextlib.contextmanager
-    def _alembic_connect(self) -> Iterator[Config]:
-        """Context manager to return an instance of an Alembic configuration.
-
-        The profiles's database connection is added in the `attributes` property, through which it can then also be
-        retrieved, also in the `env.py` file, which is run when the database is migrated.
-        """
-        config = self._alembic_config()
-        config.attributes['connection'] = self.connection
-        config.attributes['aiida_profile'] = self.profile
-
-        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
-            """Callback to be called after a migration step is executed."""
-            from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
-            MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')
-
-        config.attributes['on_version_apply'] = _callback
-
-        yield config
-
-    @contextlib.contextmanager
-    def _migration_context(self) -> Iterator[MigrationContext]:
-        """Context manager to return an instance of an Alembic migration context.
-
-        This migration context will have been configured with the current database connection, which allows this context
-        to be used to inspect the contents of the database, such as the current revision.
-        """
-        with self._alembic_connect() as config:
-            script = ScriptDirectory.from_config(config)
-            with EnvironmentContext(config, script) as context:
-                context.configure(context.config.attributes['connection'])
-                yield context.get_context()
 
     # the following are used for migration tests
 

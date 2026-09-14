@@ -367,6 +367,9 @@ enable_error_code = [
   'redundant-expr',
   'truthy-bool'
 ]
+disable_error_code = [
+  'method-assign'
+]
 plugins = [
   'pydantic.mypy',
   'sqlalchemy.ext.mypy.plugin'
@@ -437,7 +440,6 @@ module = [
 
 [[tool.mypy.overrides]]
 disable_error_code = [
-  'method-assign',
   'no-redef',
   'overload-cannot-match',
   'overload-overlap'

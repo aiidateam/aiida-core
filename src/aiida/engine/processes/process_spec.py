@@ -8,12 +8,34 @@
 ###########################################################################
 """AiiDA-specific process specifications."""
 
+from __future__ import annotations
+
+import typing as t
+
+from aiida.engine.processes.containers import fields_of
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
-from aiida.engine.processes.ports import CalcJobOutputPort, InputPort, PortNamespace
-from aiida.orm import Dict
+from aiida.engine.processes.ports import (
+    CalcJobOutputPort,
+    InputPort,
+    PortNamespace,
+    infer_valid_type_from_type_annotation,
+)
+from aiida.orm import Data, Dict, to_aiida_type
 
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
+
+
+def _lazily(default: t.Any) -> t.Any:
+    """Return the default as a port takes it, which for a value to be stored is something that makes it.
+
+    A port default is called where one is needed, so that a node is made at that moment rather than when the
+    class was defined, which is too early for anything to be stored.
+    """
+    if default is None or isinstance(default, Data) or callable(default):
+        return default
+
+    return lambda: to_aiida_type(default)
 
 
 class ProcessSpec(spec.ProcessSpec):
@@ -31,6 +53,45 @@ class ProcessSpec(spec.ProcessSpec):
     def __init__(self) -> None:
         super().__init__()
         self._exit_codes = ExitCodesNamespace()
+
+    def input_namespace_from(self, name: str, container: type, **kwargs: t.Any) -> None:
+        """Declare a namespace holding one port per field of a structured container.
+
+        A ``TypedDict``, a dataclass, a ``NamedTuple`` and a pydantic model each say which names a value has, of
+        which types, and which of them have a default. That is what a namespace of ports says, so this is how one
+        is written once and said in both places:
+
+        >>> class Relax(BaseModel):
+        >>>     structure: StructureData
+        >>>     steps: int = 10
+        >>>
+        >>> spec.input_namespace_from('relax', Relax)
+
+        Validation then belongs to the ports, wherever the values come from, so a container is a way of saying
+        what a namespace holds rather than a second place where types live.
+
+        :param name: the namespace to declare the fields under.
+        :param container: the structured container whose fields to declare.
+        :param kwargs: passed on to the namespace itself, ``required`` and ``help`` among them.
+        :raises TypeError: if the container is not one this knows how to read.
+        """
+        fields = fields_of(container)
+
+        if fields is None:
+            raise TypeError(
+                f'`{getattr(container, "__name__", container)}` is not a structured container, so there is nothing '
+                f'to declare `{name}` from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
+            )
+
+        self.input_namespace(name, **kwargs)
+
+        for field in fields:
+            self.input(
+                f'{name}{self.namespace_separator}{field.name}',
+                valid_type=infer_valid_type_from_type_annotation(field.annotation) or (Data,),
+                required=field.required,
+                **({} if field.required else {'default': _lazily(field.default)}),
+            )
 
     @property
     def metadata_key(self) -> str:

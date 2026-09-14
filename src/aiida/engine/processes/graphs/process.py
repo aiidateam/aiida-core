@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import collections.abc
 import functools
+import inspect
 import typing as t
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
+from inspect import get_annotations
 
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
+from aiida.engine.processes.containers import as_dict, build, fields_of
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
@@ -61,11 +64,35 @@ class TaskProcess(FunctionProcess):
         if not self.TAKES_PLAIN_VALUES:
             return args, kwargs
 
-        return [_plain(value) for value in args], {name: _plain(value) for name, value in kwargs.items()}
+        annotations = get_annotations(self._func, eval_str=True)
+        positional = [
+            name
+            for name, parameter in inspect.signature(self._func).parameters.items()
+            if parameter.kind in (parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD)
+        ]
+
+        # What is positional is named by the signature; anything past that is variable and has no annotation.
+        given = [self._as_written(annotations.get(name), value) for name, value in zip(positional, args)]
+        given += [_plain(value) for value in args[len(positional) :]]
+
+        return given, {name: self._as_written(annotations.get(name), value) for name, value in kwargs.items()}
+
+    def _as_written(self, annotation: t.Any, value: t.Any) -> t.Any:
+        """Return the value as the parameter was written to take it, which for a container is one of those."""
+        fields = fields_of(annotation)
+
+        if fields is None or not isinstance(value, Mapping):
+            return _plain(value)
+
+        return build(annotation, {name: _plain(held) for name, held in value.items()})
 
     @override
     def _out_result(self, result: t.Any) -> None:
         declared = list(self.spec().outputs.keys())
+
+        # A returned container says which output each of its fields is, exactly as it does where it is an input.
+        if (fields := as_dict(result)) is not None:
+            result = fields
 
         if not self.spec().outputs.dynamic and not isinstance(result, collections.abc.Mapping):
             values = result if isinstance(result, tuple) else (result,)

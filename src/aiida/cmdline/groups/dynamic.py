@@ -67,12 +67,14 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
     def _get_cli_create_spec(self, cls: type[t.Any]) -> CliCreateSpec | None:
         """Return the CLI creation specification exposed by a class."""
+        from aiida.cmdline.spec import CliCreateSpec
+
         factory = getattr(cls, 'cli_spec', None)
 
         if factory is None:
             return None
 
-        return t.cast(CliCreateSpec, factory())
+        return t.cast(CliCreateSpec, factory)
 
     def _supports_cli_creation(self, entry_point: str) -> bool:
         """Return whether the plugin supports CLI-based creation."""

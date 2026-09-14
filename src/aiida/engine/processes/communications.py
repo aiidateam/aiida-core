@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import logging
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Hashable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
@@ -29,6 +31,7 @@ from aiida.brokers import exceptions as broker_exceptions
 from aiida.brokers import futures as broker_futures
 from aiida.brokers.filters import BroadcastFilter
 from aiida.common import loaders
+from aiida.common.lang import override
 from aiida.engine.processes import events, persistence
 from aiida.engine.processes.generic import futures
 from aiida.engine.processes.persistence import PID_TYPE
@@ -43,6 +46,7 @@ Communicator = broker_communicator.Communicator
 
 if TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
+    from aiida.engine.processes.process import Process as AiidaProcess
 
     # identifiers for subscribers
     ID_TYPE = Hashable
@@ -369,7 +373,99 @@ def create_create_body(
     return msg_body
 
 
-class RemoteProcessController:
+class _ProcessController(ABC):
+    """Interface for asynchronously controlling a process."""
+
+    @abstractmethod
+    async def kill_process(self, pid: PID_TYPE, msg_text: str | None = None, force_kill: bool = False) -> ProcessResult:
+        """Kill a process.
+
+        :param pid: The process identifier.
+        :param msg_text: Optional message to record on the process node.
+        :param force_kill: Whether to immediately terminate the process without cancelling a scheduler job.
+        :return: ``True`` if the process and all children were killed, ``False`` otherwise.
+        """
+
+    @abstractmethod
+    async def pause_process(self, pid: PID_TYPE, msg_text: str | None = None) -> ProcessResult:
+        """Pause a process.
+
+        :param pid: The process identifier.
+        :param msg_text: Optional message to record on the process node.
+        :return: ``True`` if the process was paused, ``False`` otherwise.
+        """
+
+    @abstractmethod
+    async def play_process(self, pid: PID_TYPE) -> ProcessResult:
+        """Resume a process.
+
+        :param pid: The process identifier.
+        :return: ``True`` if the process is playing, ``False`` otherwise.
+        """
+
+
+class LocalProcessController(_ProcessController):
+    """Control a process running on the current event loop.
+
+    Its methods must be called from that event loop.
+    """
+
+    def __init__(self, process: AiidaProcess, loop: asyncio.AbstractEventLoop) -> None:
+        self._process = process
+        self._loop = loop
+
+    @override
+    async def kill_process(self, pid: PID_TYPE, msg_text: str | None = None, force_kill: bool = False) -> ProcessResult:
+        if asyncio.get_running_loop() is not self._loop:
+            msg = 'The local process controller must be called from its event loop.'
+            raise RuntimeError(msg)
+
+        if pid != self._process.pid:
+            msg = f'Process<{pid}> is not controlled by this controller.'
+            raise ValueError(msg)
+
+        from aiida.engine.processes.greenback import ensure_portal
+
+        await ensure_portal()
+        result = self._process.kill(msg_text, force_kill)
+        if inspect.isawaitable(result):
+            return bool(await result)
+
+        return result
+
+    @override
+    async def pause_process(self, pid: PID_TYPE, msg_text: str | None = None) -> ProcessResult:
+        if asyncio.get_running_loop() is not self._loop:
+            msg = 'The local process controller must be called from its event loop.'
+            raise RuntimeError(msg)
+
+        if pid != self._process.pid:
+            msg = f'Process<{pid}> is not controlled by this controller.'
+            raise ValueError(msg)
+
+        from aiida.engine.processes.greenback import ensure_portal
+
+        await ensure_portal()
+        result = self._process.pause(msg_text)
+        if inspect.isawaitable(result):
+            return bool(await result)
+
+        return result
+
+    @override
+    async def play_process(self, pid: PID_TYPE) -> ProcessResult:
+        if asyncio.get_running_loop() is not self._loop:
+            msg = 'The local process controller must be called from its event loop.'
+            raise RuntimeError(msg)
+
+        if pid != self._process.pid:
+            msg = f'Process<{pid}> is not controlled by this controller.'
+            raise ValueError(msg)
+
+        return self._process.play()
+
+
+class RemoteProcessController(_ProcessController):
     """
     Control remote processes using coroutines that will send messages and wait
     (in a non-blocking way) for their response
@@ -389,14 +485,8 @@ class RemoteProcessController:
         result = await asyncio.wrap_future(future)
         return result
 
+    @override
     async def pause_process(self, pid: PID_TYPE, msg_text: str | None = None) -> ProcessResult:
-        """
-        Pause the process
-
-        :param pid: the pid of the process to pause
-        :param msg: optional pause message
-        :return: True if paused, False otherwise
-        """
         msg = MessageBuilder.pause(text=msg_text)
 
         pause_future = self._communicator.rpc_send(pid, msg)
@@ -406,26 +496,15 @@ class RemoteProcessController:
         result = await asyncio.wrap_future(future)
         return result
 
+    @override
     async def play_process(self, pid: PID_TYPE) -> ProcessResult:
-        """
-        Play the process
-
-        :param pid: the pid of the process to play
-        :return: True if played, False otherwise
-        """
         play_future = self._communicator.rpc_send(pid, MessageBuilder.play())
         future = await asyncio.wrap_future(play_future)
         result = await asyncio.wrap_future(future)
         return result
 
+    @override
     async def kill_process(self, pid: PID_TYPE, msg_text: str | None = None, force_kill: bool = False) -> ProcessResult:
-        """
-        Kill the process
-
-        :param pid: the pid of the process to kill
-        :param msg: optional kill message
-        :return: True if killed, False otherwise
-        """
         msg = MessageBuilder.kill(text=msg_text, force_kill=force_kill)
 
         # Wait for the communication to go through

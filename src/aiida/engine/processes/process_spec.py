@@ -86,8 +86,14 @@ class ProcessSpec(spec.ProcessSpec):
         self.input_namespace(name, **kwargs)
 
         for field in fields:
+            under = f'{name}{self.namespace_separator}{field.name}'
+
+            if fields_of(field.annotation) is not None:
+                self.input_namespace_from(under, field.annotation, required=field.required)
+                continue
+
             self.input(
-                f'{name}{self.namespace_separator}{field.name}',
+                under,
                 valid_type=infer_valid_type_from_type_annotation(field.annotation) or (Data,),
                 required=field.required,
                 **({} if field.required else {'default': _lazily(field.default)}),

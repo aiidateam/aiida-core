@@ -8,7 +8,7 @@
 ###########################################################################
 """Tests for saying what a namespace of ports holds with a structured container."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import NamedTuple, TypedDict
 
@@ -17,7 +17,7 @@ from pydantic import BaseModel, field_serializer
 
 from aiida.engine import WorkChain, graph, run_get_node, task
 from aiida.engine.processes.containers import as_dict, build, fields_of, is_a_container
-from aiida.orm import Str
+from aiida.orm import Int, Str
 
 
 class AsTypedDict(TypedDict):
@@ -294,3 +294,77 @@ def test_describing_a_task_with_something_that_is_not_a_container_is_refused():
         @task(inputs=int)
         def whatever(x):
             return x
+
+
+class Kpoints(BaseModel):
+    mesh: int = 4
+    offset: float = 0.0
+
+
+class Nested(BaseModel):
+    structure: str
+    kpoints: Kpoints = Kpoints()
+
+
+@dataclass
+class NestedDataclass:
+    structure: str
+    kpoints: Kpoints = field(default_factory=Kpoints)
+
+
+@task(outputs=['seen'])
+def sees_nested(given: Nested) -> str:
+    return f'{given.structure}/{given.kpoints.mesh}/{type(given.kpoints).__name__}'
+
+
+@task(outputs=['mesh'])
+def choose_mesh(structure: str) -> int:
+    return len(structure) * 2
+
+
+@pytest.mark.parametrize('container', (Nested, NestedDataclass), ids=('model', 'dataclass'))
+def test_a_field_that_is_a_container_names_a_namespace_under_this_one(container):
+    """A container nests, and so does a namespace, so the one maps onto the other all the way down."""
+
+    class Runner(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input_namespace_from('relax', container)
+            spec.outline()
+
+    ports = Runner.spec().inputs['relax']
+
+    assert sorted(ports['kpoints']) == ['mesh', 'offset']
+    assert Int in ports['kpoints']['mesh'].valid_type
+
+
+def test_a_nested_container_is_handed_back_whole():
+    """What the function named is what it is given, however deep the container goes."""
+    results, node = run_get_node(sees_nested, given=Nested(structure='si'))
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['seen'] == 'si/4/Kpoints'
+    assert sorted(node.base.links.get_incoming().all_link_labels()) == [
+        'given__kpoints__mesh',
+        'given__kpoints__offset',
+        'given__structure',
+    ]
+
+
+def test_a_task_fills_one_field_of_a_nested_container():
+    """The fields are ordinary ports however deep they sit, so a graph wires into one of them."""
+
+    @graph
+    def pick_then_see(structure):
+        chosen = choose_mesh(structure=structure)
+        return {'seen': sees_nested(given={'structure': structure, 'kpoints': {'mesh': chosen.mesh}}).seen}
+
+    (edge,) = pick_then_see.build().dependencies
+
+    assert (edge.target, edge.target_port) == ('sees_nested', 'given.kpoints.mesh')
+
+    results, node = run_get_node(pick_then_see, structure='silicon')
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['seen'] == 'silicon/14/Kpoints', 'the mesh the other task chose, not the default'

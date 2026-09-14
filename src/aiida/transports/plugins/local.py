@@ -86,9 +86,7 @@ class LocalTransport(BlockingTransport):
 
     @property
     def curdir(self):
-        """Returns the _internal_dir, if the channel is open.
-        If possible, use getcwd() instead!
-        """
+        """Return the internal working directory when the channel is open."""
         if self._is_open:
             return os.path.realpath(self._internal_dir)
 
@@ -122,14 +120,6 @@ class LocalTransport(BlockingTransport):
         """
         path = str(path)
         return os.path.realpath(os.path.join(self.curdir, path))
-
-    def getcwd(self):
-        """
-        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `getcwd()` is DEPRECATED and will be removed in the next major version.
-
-        Returns the current working directory, emulated by the transport"""
-        return self.curdir
 
     @staticmethod
     def _os_path_split_asunder(path: TransportPath):
@@ -753,8 +743,7 @@ class LocalTransport(BlockingTransport):
             already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
-                if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`.
+                if None, the command will be executed in the internal working directory.
 
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
@@ -770,10 +759,7 @@ class LocalTransport(BlockingTransport):
         bash_commmand = f'{self._bash_command_str}-c '
 
         command = bash_commmand + escape_for_bash(command)
-        if workdir:
-            cwd = workdir
-        else:
-            cwd = self.getcwd()
+        cwd = workdir or self.curdir
 
         if sys.platform == 'win32':
             shell = False
@@ -797,8 +783,7 @@ class LocalTransport(BlockingTransport):
         :param command: the command to execute
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
-                if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`.
+                if None, the command will be executed in the internal working directory.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.

@@ -661,18 +661,6 @@ class SshTransport(BlockingTransport):
 
         return self.sftp.lstat(path)
 
-    def getcwd(self):
-        """
-        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `getcwd()` is DEPRECATED and will be removed in the next major version.
-
-        Return the current working directory for this SFTP session, as
-        emulated by paramiko. If no directory has been set with chdir,
-        this method will return None. But in __enter__ this is set explicitly,
-        so this should never happen within this class.
-        """
-        return self.sftp.getcwd()
-
     def makedirs(self, path: TransportPath, ignore_existing: bool = False):
         """Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
@@ -736,7 +724,7 @@ class SshTransport(BlockingTransport):
                 )
             else:
                 raise OSError(
-                    f"Error during mkdir of '{path}' from folder '{self.getcwd()}', "
+                    f"Error during mkdir of '{path}' from folder '{self.sftp.getcwd()}', "
                     "maybe you don't have the permissions to do it, "
                     f'or the directory already exists? ({exc})'
                 )
@@ -1324,7 +1312,7 @@ class SshTransport(BlockingTransport):
         if path.startswith('/'):
             abs_dir = path
         else:
-            abs_dir = os.path.join(self.getcwd(), path)
+            abs_dir = os.path.join(self.sftp.getcwd(), path)
 
         if not pattern:
             return self.sftp.listdir(abs_dir)
@@ -1402,8 +1390,7 @@ class SshTransport(BlockingTransport):
         :param bufsize: same meaning of the one used by paramiko.
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
-                if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`, if that has a value.
+                if None, the command will be executed in the SFTP session's working directory.
 
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
@@ -1415,7 +1402,7 @@ class SshTransport(BlockingTransport):
 
         if workdir is not None:
             command_to_execute = f'cd {workdir} &&  ( {command} )'
-        elif (cwd := self.getcwd()) is not None:
+        elif (cwd := self.sftp.getcwd()) is not None:
             escaped_folder = escape_for_bash(cwd)
             command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:

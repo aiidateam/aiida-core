@@ -322,12 +322,7 @@ def test_isfile_isdir(custom_transport, tmp_path_remote):
 
 
 def test_chdir_to_empty_string(custom_transport):
-    """I check that if I pass an empty string to chdir, the cwd does
-    not change (this is a paramiko default behavior), but getcwd()
-    is still correctly defined.
-
-    chdir() is no longer an abstract method, to be removed from interface
-    """
+    """Verify that passing an empty path to chdir does not change the working directory."""
     if not hasattr(custom_transport, 'chdir'):
         return
 
@@ -336,7 +331,11 @@ def test_chdir_to_empty_string(custom_transport):
             new_dir = transport.normalize(os.path.join('/', 'tmp'))
             transport.chdir(new_dir)
             transport.chdir('')
-            assert new_dir == transport.getcwd()
+
+        retcode, stdout, stderr = transport.exec_command_wait('pwd')
+        assert retcode == 0
+        assert stdout.strip() == new_dir
+        assert stderr == ''
 
 
 def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
@@ -1019,14 +1018,14 @@ def test_exec_pwd(custom_transport, tmp_path_remote):
     creation (which should be done by paramiko) and in the command
     execution (done in this module, in the _exec_command_internal function).
 
-    Note: chdir() & getcwd() is no longer an abstract method, therefore this test is skipped for AsyncSshTransport.
+    Note: chdir() is no longer an abstract method, therefore this test is skipped for AsyncSshTransport.
     """
     # Start value
     if not hasattr(custom_transport, 'chdir'):
         return
 
     with custom_transport as transport:
-        # To compare with: getcwd uses the normalized ('realpath') path
+        # Use the normalized ('realpath') path for comparison with `pwd`.
         location = transport.normalize('/tmp')
         subfolder = """_'s f"#"""  # A folder with characters to escape
         subfolder_fullpath = os.path.join(location, subfolder)
@@ -1042,7 +1041,6 @@ def test_exec_pwd(custom_transport, tmp_path_remote):
             with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
                 transport.chdir(subfolder)
 
-            assert subfolder_fullpath == transport.getcwd()
             retcode, stdout, stderr = transport.exec_command_wait('pwd')
             assert retcode == 0
             # I have to strip it because 'pwd' returns a trailing \n

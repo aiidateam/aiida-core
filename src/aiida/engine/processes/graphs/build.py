@@ -16,7 +16,9 @@ import inspect
 import typing as t
 from collections import Counter
 from dataclasses import dataclass, field, replace
+from inspect import get_annotations
 
+from aiida.engine.processes.containers import as_dict, is_a_container
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
@@ -304,6 +306,20 @@ class MappedOutputs(TaskOutputs):
     """References to the outputs of a task that runs once per item, each of them a result per item."""
 
     _output_class: t.ClassVar[type[TaskOutput]] = MappedOutput
+
+
+def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
+    """Return a value as the port taking it holds it, which for a container is the namespace of its fields.
+
+    What says to flatten is the annotation rather than the shape of the value, since plenty of things are a
+    dataclass without being what a parameter was written to take, references among them.
+    """
+    if not is_a_container(annotation):
+        return value
+
+    held = as_dict(value)
+
+    return value if held is None else held
 
 
 def _arguments(function: t.Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
@@ -1204,8 +1220,10 @@ class TaskHandle:
         the rest have been bound.
         """
         beside = {name: kwargs.pop(name) for name in list(kwargs) if self._is_a_port_alone(name)}
+        bound = _arguments(self._function, *args, **kwargs)
+        annotations = get_annotations(self._function, eval_str=True)
 
-        return {**_arguments(self._function, *args, **kwargs), **beside}
+        return {**{name: _flattened(annotations.get(name), value) for name, value in bound.items()}, **beside}
 
     def _is_a_port_alone(self, name: str) -> bool:
         """Return whether the name is an input of the process running this task and not a parameter of it."""
@@ -1268,7 +1286,8 @@ class TaskHandle:
 def task(
     function: t.Callable[P, R_co] | None = None,
     *,
-    outputs: t.Sequence[str] | None = None,
+    inputs: type | None = None,
+    outputs: t.Sequence[str] | type | None = None,
     identifier: str | None = None,
     handlers: t.Sequence[TaskHandler] = (),
 ) -> t.Any:
@@ -1315,8 +1334,28 @@ def task(
     >>>
     >>> converging = task(converge, handlers=[push_further])
 
+    A structured container says what a task takes and produces, and where the function is annotated with one, it
+    says so itself. A `TypedDict`, a dataclass, a `NamedTuple` and a pydantic model all do:
+
+    >>> class PhInputs(BaseModel):
+    >>>     structure: str
+    >>>     spin: str = 'none'
+    >>>
+    >>> @task(outputs=['dielectric'])
+    >>> def ph(given: PhInputs) -> float:
+    >>>     return compute(given.structure, given.spin)
+
+    The fields of the container are the ports of the namespace it names, so a graph wires into one of them,
+    `ph(given={'structure': relaxed.structure})`, and the function is handed the container it asked for. A
+    function that carries no annotations, because it came from somewhere else, is described where it is placed:
+
+    >>> ph = task(their_ph, inputs=PhInputs, outputs=PhOutputs)
+
+    which names the ports at the top level, one per field, since the function takes them one by one.
+
     :param function: The function to decorate, or the process class to declare a task.
-    :param outputs: Names of the output ports to declare.
+    :param inputs: A structured container naming the input ports, for a function whose signature does not.
+    :param outputs: Names of the output ports to declare, or a structured container whose fields name them.
     :param identifier: Name of the task, which defaults to the name of the function or class.
     :param handlers: Ways to recover from a run that failed, as declared by :func:`~aiida.engine.handler`.
     :return: The decorated function, carrying its ``task_spec``, or a handle placing the process in a graph.
@@ -1331,10 +1370,10 @@ def task(
                 f'task on its own. Decorate a function, or pass a `CalcJob` or `WorkChain`.'
             )
 
-        if outputs is not None:
+        if outputs is not None or inputs is not None:
             raise TypeError(
-                f'`{function.__name__}` is a process and declares its own output ports, so `outputs` does not '
-                f'apply to it.'
+                f'`{function.__name__}` is a process and declares its own ports, so `inputs` and `outputs` do '
+                f'not apply to it.'
             )
 
         if handlers:
@@ -1347,7 +1386,9 @@ def task(
         return ProcessHandle(function, TaskSpec.from_process(function, identifier=identifier))
 
     def decorator(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, CalcFunctionNode]:
-        decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess, outputs=outputs)(function)
+        decorated = process_function(
+            node_class=CalcFunctionNode, base_class=TaskProcess, outputs=outputs, inputs=inputs
+        )(function)
 
         # Build the process spec eagerly, so an invalid declaration is reported where the task is defined rather
         # than when it is first launched.

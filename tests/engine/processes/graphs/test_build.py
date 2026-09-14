@@ -461,7 +461,8 @@ def test_a_process_is_launched_rather_than_called_outside_a_graph():
     'subject, kwargs, expected',
     [
         pytest.param(dict, {}, 'only a process class can be a task', id='not-a-process'),
-        pytest.param(Combine, {'outputs': ['total']}, 'declares its own output ports', id='outputs-given'),
+        pytest.param(Combine, {'outputs': ['total']}, 'declares its own ports', id='outputs-given'),
+        pytest.param(Combine, {'inputs': dict}, 'declares its own ports', id='inputs-given'),
     ],
 )
 def test_declaring_a_class_a_task_is_refused_when_it_cannot_be_one(subject, kwargs, expected):

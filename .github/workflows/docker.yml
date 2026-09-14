@@ -12,8 +12,8 @@ on:
     paths-ignore:
     - '**.md'
     - '**.txt'
-    - docs/**
-    - tests/**
+    - aiida-core/docs/**
+    - aiida-core/tests/**
   workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency

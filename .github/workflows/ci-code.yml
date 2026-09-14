@@ -5,7 +5,7 @@ on:
     branches-ignore: [gh-pages]
   pull_request:
     branches-ignore: [gh-pages]
-    paths-ignore: [docs/**]
+    paths-ignore: [aiida-core/docs/**]
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -61,14 +61,27 @@ jobs:
       run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Install aiida-core
-      uses: ./.github/actions/install-aiida-core
+      uses: ./.github/actions/install-package
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Install aiida-atomistic into core venv for shims
+      # Mixed core suites import moved types via `aiida.orm` shims.
+      # `--no-deps` + explicit `--python` (never bare `pip`/`uv run`):
+      # plain installs ignore `tool.uv.sources` and overwrite local core
+      # with PyPI (proven by CI log: aiida-core-2.9.2 replaced 2.10.0.dev).
+      # Core test venv already provides ase etc. via atomic_tools extra;
+      # only upf_to_json (dropped from core) is added explicitly.
+      run: |
+        uv pip install --python aiida-core/.venv/bin/python --no-deps -e ./aiida-atomistic
+        uv pip install --python aiida-core/.venv/bin/python 'upf_to_json~=0.9.2'
+      shell: bash
 
     - name: Setup environment
       run: .github/workflows/setup.sh
 
     - name: Run test suite
+      working-directory: aiida-core
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
@@ -81,7 +94,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.14
-        files: ./coverage.xml
+        files: ./aiida-core/coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
     - name: Upload coverage artifact
@@ -91,8 +104,8 @@ jobs:
         name: coverage-${{ matrix.broker-backend }}
         include-hidden-files: true
         path: |
-          coverage.xml
-          .coverage
+          aiida-core/coverage.xml
+          aiida-core/.coverage
         retention-days: 30
 
   tests-minimum-requirements:
@@ -112,7 +125,7 @@ jobs:
       run: sudo apt update && sudo apt install graphviz
 
     - name: Install aiida-core
-      uses: ./.github/actions/install-aiida-core
+      uses: ./.github/actions/install-package
       with:
         python-version: ${{ matrix.python-version }}
         from-lock: 'false'
@@ -122,35 +135,33 @@ jobs:
     - name: Setup SSH on localhost
       run: .github/workflows/setup_ssh.sh
 
+    - name: Install aiida-atomistic for backward-compat shims
+      # Same shims as above, but locked sync would defeat lowest-direct:
+      # install with `--no-deps` (core lowest already provides ase etc.)
+      # plus the one dep core dropped (`upf_to_json`). `--no-deps` also
+      # stops pip resolving `aiida-core` from PyPI over the local install.
+      run: |
+        uv pip install --resolution lowest-direct --no-deps -e ./aiida-atomistic
+        uv pip install --resolution lowest-direct 'upf_to_json~=0.9.2'
+      shell: bash
+
     - name: Run test suite
+      working-directory: aiida-core
       env:
         AIIDA_WARN_v3: 0
       run: pytest --disable-warnings -n auto --db-backend ${{ matrix.database-backend }} --broker-backend zmq -m 'not nightly' tests/
 
 
   tests-presto:
-
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-
-    steps:
-    - uses: actions/checkout@v7
-
-    - name: Install graphviz
-      run: sudo apt update && sudo apt install graphviz
-
-    - name: Install aiida-core
-      uses: ./.github/actions/install-aiida-core
-      with:
-        python-version: '3.14'
-
-    - name: Setup SSH on localhost
-      run: .github/workflows/setup_ssh.sh
-
-    - name: Run test suite
-      env:
-        AIIDA_WARN_v3: 0
-      run: pytest -n auto --broker-backend zmq -m 'presto' tests/
+    # Presto tests need no external services; they run through the shared template.
+    uses: ./.github/workflows/reusable-pytest.yml
+    with:
+      package: aiida-core
+      python-version: '3.14'
+      test-path: tests/
+      pytest-args: --broker-backend zmq -m 'presto'
+      warn-v3: '0'
+      test-profile: ''
 
 
   verdi:
@@ -162,7 +173,7 @@ jobs:
     - uses: actions/checkout@v7
 
     - name: Install aiida-core
-      uses: ./.github/actions/install-aiida-core
+      uses: ./.github/actions/install-package
       with:
         python-version: '3.14'
         from-lock: 'true'
@@ -205,7 +216,7 @@ jobs:
     - uses: actions/checkout@v7
 
     - name: Install aiida-core
-      uses: ./.github/actions/install-aiida-core
+      uses: ./.github/actions/install-package
       with:
         python-version: '3.10'
         from-lock: 'true'
@@ -215,6 +226,7 @@ jobs:
       run: .github/workflows/setup_ssh.sh
 
     - name: Test new pytest fixtures
+      working-directory: aiida-core
       run: pytest -v --cov=src/aiida --noconftest tests/tools/pytest_fixtures/
 
     - name: Upload coverage report

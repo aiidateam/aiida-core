@@ -86,3 +86,14 @@ module = [
   'trogon.*',
   'wrapt.*'
 ]
+
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = [
+  'aiida_atomistic.orm.nodes.data.cif',
+  'aiida_atomistic.orm.nodes.data.structure',
+  'aiida_atomistic.orm.nodes.data.upf',
+  'aiida_atomistic.tools.data.array.kpoints.seekpath',
+  'aiida_atomistic.tools.data.orbital.orbital',
+  'aiida_atomistic.tools.data.orbital.realhydrogen'
+]

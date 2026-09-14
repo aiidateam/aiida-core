@@ -1,0 +1,368 @@
+[build-system]
+build-backend = 'flit_core.buildapi'
+requires = ["flit_core >=4.0.2,<5"]
+
+# The "dev" dependency group is automatically synced by uv
+# and should thus contain all necessary deps for local development.
+[dependency-groups]
+dev = [
+  "aiida-core[atomic_tools,rest,tests,pre-commit,tests,docs]"
+]
+
+[project]
+authors = [{ name = 'The AiiDA team', email = 'developers@aiida.net' }]
+classifiers = [
+  'Development Status :: 5 - Production/Stable',
+  'Framework :: AiiDA',
+  'License :: OSI Approved :: MIT License',
+  'Operating System :: POSIX :: Linux',
+  'Operating System :: MacOS :: MacOS X',
+  'Programming Language :: Python',
+  'Programming Language :: Python :: 3.10',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12',
+  'Programming Language :: Python :: 3.13',
+  'Programming Language :: Python :: 3.14',
+  'Topic :: Scientific/Engineering'
+]
+# NOTE: When updating versions of some packages, such as requests or paramiko,
+# you need to also update the versions of corresponding stub packages
+# in the 'pre-commit' group e.g. 'types-requests'
+dependencies = [
+  'alembic~=1.8',
+  'archive-path~=0.4.2',
+  "asyncssh~=2.22.0",
+  'circus~=0.19.0',
+  'click-spinner~=0.1.8',
+  'click>=8.1.0,<8.3',
+  'dill>=0.3.6,<1',
+  'disk-objectstore~=1.5.0',
+  'docstring-parser',
+  'graphviz~=0.19',
+  'greenback~=1.0',
+  'greenlet>=3.2.4',
+  'importlib-metadata~=6.0',
+  'ipython>=7.6',
+  'jedi<0.19',
+  'jinja2~=3.0',
+  'kiwipy[rmq]~=0.9.0',
+  'numpy>=1.21,<3',
+  'paramiko~=3.0',
+  'pgsu~=0.3.0',
+  'psutil~=7.0',
+  'psycopg[binary]>=3.0.2,<4',
+  'pydantic~=2.12',
+  'pytz~=2021.1',
+  'pyyaml~=6.0',
+  'requests~=2.0',
+  'sqlalchemy>=2.0.20,<3',
+  'tabulate>=0.9.0,<0.10.0',
+  'tqdm~=4.45',
+  'typing-extensions~=4.13',
+  'wrapt~=1.11',
+  'chardet~=5.2.0;platform_system=="Windows"'
+]
+description = 'AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.'
+dynamic = ['version']  # read from aiida/__init__.py
+keywords = ['aiida', 'workflows']
+license = { file = 'LICENSE.txt' }
+name = 'aiida-core'
+readme = 'README.md'
+requires-python = '>=3.10'
+
+[project.entry-points.'aiida.brokers']
+'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'
+'core.zeromq' = 'aiida.brokers.zeromq.broker:ZeromqBroker'
+
+[project.entry-points.'aiida.calculations']
+'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
+'core.shell' = 'aiida.calculations.shell:ShellJob'
+'core.stash' = 'aiida.calculations.stash:StashCalculation'
+'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
+'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
+'core.unstash' = 'aiida.calculations.unstash:UnstashCalculation'
+
+[project.entry-points.'aiida.calculations.importers']
+'core.arithmetic.add' = 'aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter'
+
+[project.entry-points.'aiida.calculations.monitors']
+'core.always_kill' = 'aiida.calculations.monitors.base:always_kill'
+
+[project.entry-points.'aiida.cmdline.computer.configure']
+'core.local' = 'aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD'
+'core.ssh' = 'aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD'
+
+[project.entry-points.'aiida.cmdline.data']
+'core.array' = 'aiida.cmdline.commands.cmd_data.cmd_array:array'
+'core.dict' = 'aiida.cmdline.commands.cmd_data.cmd_dict:dictionary'
+'core.remote' = 'aiida.cmdline.commands.cmd_data.cmd_remote:remote'
+'core.singlefile' = 'aiida.cmdline.commands.cmd_data.cmd_singlefile:singlefile'
+
+[project.entry-points.'aiida.cmdline.data.structure.import']
+
+[project.entry-points.'aiida.data']
+'core.array' = 'aiida.orm.nodes.data.array.array:ArrayData'
+'core.array.xy' = 'aiida.orm.nodes.data.array.xy:XyData'
+'core.base' = 'aiida.orm.nodes.data:BaseType'
+'core.bool' = 'aiida.orm.nodes.data.bool:Bool'
+'core.code' = 'aiida.orm.nodes.data.code.legacy:Code'
+'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
+'core.code.containerized' = 'aiida.orm.nodes.data.code.containerized:ContainerizedCode'
+'core.code.installed' = 'aiida.orm.nodes.data.code.installed:InstalledCode'
+'core.code.installed.shell' = 'aiida.orm.nodes.data.code.shell:ShellCode'
+'core.code.portable' = 'aiida.orm.nodes.data.code.portable:PortableCode'
+'core.dict' = 'aiida.orm.nodes.data.dict:Dict'
+'core.entry_point' = 'aiida.orm.nodes.data.entry_point:EntryPointData'
+'core.enum' = 'aiida.orm.nodes.data.enum:EnumData'
+'core.float' = 'aiida.orm.nodes.data.float:Float'
+'core.folder' = 'aiida.orm.nodes.data.folder:FolderData'
+'core.int' = 'aiida.orm.nodes.data.int:Int'
+'core.jsonable' = 'aiida.orm.nodes.data.jsonable:JsonableData'
+'core.list' = 'aiida.orm.nodes.data.list:List'
+'core.numeric' = 'aiida.orm.nodes.data.numeric:NumericType'
+'core.pickled' = 'aiida.orm.nodes.data.pickled:PickledData'
+'core.remote' = 'aiida.orm.nodes.data.remote.base:RemoteData'
+'core.remote.stash' = 'aiida.orm.nodes.data.remote.stash.base:RemoteStashData'
+'core.remote.stash.compress' = 'aiida.orm.nodes.data.remote.stash.compress:RemoteStashCompressedData'
+'core.remote.stash.custom' = 'aiida.orm.nodes.data.remote.stash.custom:RemoteStashCustomData'
+'core.remote.stash.folder' = 'aiida.orm.nodes.data.remote.stash.folder:RemoteStashFolderData'
+'core.singlefile' = 'aiida.orm.nodes.data.singlefile:SinglefileData'
+'core.str' = 'aiida.orm.nodes.data.str:Str'
+
+[project.entry-points.'aiida.groups']
+'core' = 'aiida.orm.groups:Group'
+'core.auto' = 'aiida.orm.groups:AutoGroup'
+'core.import' = 'aiida.orm.groups:ImportGroup'
+
+[project.entry-points.'aiida.node']
+'data' = 'aiida.orm.nodes.data.data:Data'
+'process' = 'aiida.orm.nodes.process.process:ProcessNode'
+'process.calculation' = 'aiida.orm.nodes.process.calculation.calculation:CalculationNode'
+'process.calculation.calcfunction' = 'aiida.orm.nodes.process.calculation.calcfunction:CalcFunctionNode'
+'process.calculation.calcjob' = 'aiida.orm.nodes.process.calculation.calcjob:CalcJobNode'
+'process.workflow' = 'aiida.orm.nodes.process.workflow.workflow:WorkflowNode'
+'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'
+'process.workflow.workfunction' = 'aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode'
+
+[project.entry-points.'aiida.orm']
+'core.auth_info' = 'aiida.orm.authinfos:AuthInfo'
+'core.comment' = 'aiida.orm.comments:Comment'
+'core.computer' = 'aiida.orm.computers:Computer'
+'core.data' = 'aiida.orm.nodes.data.data:Data'
+'core.entity' = 'aiida.orm.entities:Entity'
+'core.group' = 'aiida.orm.groups:Group'
+'core.log' = 'aiida.orm.logs:Log'
+'core.node' = 'aiida.orm.nodes.node:Node'
+'core.user' = 'aiida.orm.users:User'
+
+[project.entry-points.'aiida.parsers']
+'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
+'core.shell' = 'aiida.parsers.plugins.shell.parser:ShellParser'
+'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'
+
+[project.entry-points.'aiida.schedulers']
+'core.direct' = 'aiida.schedulers.plugins.direct:DirectScheduler'
+'core.lsf' = 'aiida.schedulers.plugins.lsf:LsfScheduler'
+'core.pbspro' = 'aiida.schedulers.plugins.pbspro:PbsproScheduler'
+'core.sge' = 'aiida.schedulers.plugins.sge:SgeScheduler'
+'core.slurm' = 'aiida.schedulers.plugins.slurm:SlurmScheduler'
+'core.torque' = 'aiida.schedulers.plugins.torque:TorqueScheduler'
+
+[project.entry-points.'aiida.storage']
+'core.psql_dos' = 'aiida.storage.psql_dos.backend:PsqlDosBackend'
+'core.sqlite_dos' = 'aiida.storage.sqlite_dos.backend:SqliteDosStorage'
+'core.sqlite_temp' = 'aiida.storage.sqlite_temp.backend:SqliteTempBackend'
+'core.sqlite_zip' = 'aiida.storage.sqlite_zip.backend:SqliteZipBackend'
+
+[project.entry-points.'aiida.tools.calculations']
+
+[project.entry-points.'aiida.tools.dbexporters']
+
+[project.entry-points.'aiida.tools.workflows']
+
+[project.entry-points.'aiida.transports']
+'core.local' = 'aiida.transports.plugins.local:LocalTransport'
+'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
+'core.ssh_async' = 'aiida.transports.plugins.ssh_async:AsyncSshTransport'
+
+[project.entry-points.'aiida.workflows']
+'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
+'core.arithmetic.multiply_add' = 'aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain'
+
+[project.optional-dependencies]
+atomic_tools = [
+  'PyCifRW~=4.4',
+  'ase~=3.21',
+  'matplotlib~=3.3,>=3.3.4',
+  'pymatgen>=2024.3.1',
+  'pymysql~=0.9.3',
+  'seekpath~=1.9,>=1.9.3',
+  'spglib>=1.14,<3.0'
+]
+bpython = [
+  'bpython~=0.20'
+]
+docs = [
+  'pydata-sphinx-theme~=0.15.1',
+  'sphinx~=7.2.0',
+  'sphinx-copybutton~=0.5.0',
+  'sphinx-design~=0.5.0',
+  'sphinx-notfound-page~=1.0',
+  'sphinxext-rediraffe~=0.2.4',
+  'sphinx-sqlalchemy~=0.2.0',
+  'sphinx-intl~=2.1.0',
+  'myst-nb~=1.0.0'
+]
+notebook = [
+  'jupyter-client~=8.0',
+  'jupyter~=1.0',
+  'notebook~=6.1,>=6.1.5'
+]
+# NOTE: THe versions of the `types-*` stubs packages should match
+# the versions of the actual packages see:
+# https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
+pre-commit = [
+  'aiida-core[tests]',
+  'mypy~=2.3.0',
+  'packaging~=23.0',
+  'pre-commit~=3.5',
+  'sqlalchemy[mypy]~=2.0',
+  'tomli',
+  'types-click-spinner~=0.1.8',
+  'types-docutils~=0.20',
+  'types-PyYAML~=6.0',
+  'types-paramiko~=3.0',
+  'types-psutil~=5.6',
+  'types-pytz~=2021.1',
+  'types-tabulate>=0.9.0,<0.10.0',
+  'types-tqdm~=4.45',
+  'types-requests~=2.0'
+]
+rest = [
+  'flask-cors~=4.0',
+  'flask-restful~=0.3.10',
+  'flask~=2.3.3',
+  'pyparsing~=3.1',
+  'python-memcached~=1.59',
+  'seekpath~=1.9,>=1.9.3'
+]
+ssh_kerberos = [
+  'gssapi~=1.6',
+  'pyasn1~=0.4.8'
+]
+tests = [
+  'aiida-core[atomic_tools,rest]',
+  'aiida-export-migration-tests==0.9.0',
+  'ipykernel~=6.9',
+  'nbclient~=0.10',
+  'nbformat~=5.10',
+  'pg8000~=1.13',
+  'pgtest~=1.3,>=1.3.1',
+  'pytest~=7.0',
+  'pytest-asyncio~=0.12,<0.17',
+  'pytest-timeout~=2.0',
+  'pytest-cov~=7.0',
+  'pytest-rerunfailures~=12.0',
+  'pytest-benchmark~=4.0',
+  'pytest-regressions~=2.2',
+  'pytest-instafail~=0.5',
+  'pytest-xdist~=3.6',
+  'pympler~=1.0',
+  'sphinx~=7.2.0',
+  'docutils~=0.20'
+]
+tui = [
+  'trogon'
+]
+tutorials = [
+  'aiida-shell>=0.9.0',
+  'aiida-workgraph>=0.9.0',
+  'gsrd>=0.2.0'
+]
+
+[project.scripts]
+runaiida = 'aiida.cmdline.commands.cmd_run:run'
+verdi = 'aiida.cmdline.commands.cmd_verdi:verdi'
+
+[project.urls]
+Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/aiida-core/CHANGELOG.md'
+Documentation = 'https://aiida.readthedocs.io'
+Home = 'http://www.aiida.net/'
+Source = 'https://github.com/aiidateam/aiida-core'
+
+[tool.coverage.run]
+core = 'sysmon'
+omit = [
+  "src/aiida/tools/_dumping/**/*"
+]
+patch = ['subprocess']
+relative_files = true
+
+[tool.flit.module]
+name = 'aiida'
+
+[tool.flit.sdist]
+exclude = [
+  '**/.mypy_cache/',
+  'docs/',
+  'environment.yml',
+  'mypy.toml',
+  'ruff.toml',
+  'tests/',
+  'uv.lock',
+  'uv.toml'
+]
+
+[tool.pytest.ini_options]
+addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append --tb=short --instafail'
+filterwarnings = [
+  'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
+  'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',
+  'ignore:datetime.datetime.utcnow:DeprecationWarning:aio_pika|pytz|pgtest:',
+  'ignore::DeprecationWarning:babel:',
+  'ignore::DeprecationWarning:frozendict:',
+  'ignore::DeprecationWarning:sqlalchemy:',
+  'ignore::DeprecationWarning:yaml:',
+  'ignore::DeprecationWarning:pymatgen:',
+  'ignore::DeprecationWarning:jsonbackend:',
+  'ignore::DeprecationWarning:pkg_resources:',
+  "ignore:'BaseCommand' is deprecated and will be removed in Click 9.0.:DeprecationWarning:trogon:",
+  'ignore:ast.* is deprecated.*:DeprecationWarning:docstring_parser:',
+  'ignore::SyntaxWarning:CifFile',
+  'ignore::pytest.PytestCollectionWarning',
+  'ignore:Creating AiiDA configuration folder.*:UserWarning',
+  'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning',
+  'ignore:Identity map already had an identity for .* inside of an event handler within the flush?:sqlalchemy.exc.SAWarning',
+  'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
+  'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
+  "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning:pytest_asyncio",
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio|kiwipy",
+  # spglib deprecation
+  'ignore:dict interface is deprecated:DeprecationWarning',
+  # https://github.com/aiidateam/archive-path/issues/21
+  'ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning:archive_path',
+  # TODO: Fix these warnings
+  'ignore:.*getcwd.*:aiida.common.warnings.AiidaDeprecationWarning',
+  "ignore:coroutine 'Process.step_until_terminated' was never awaited:RuntimeWarning:asyncio",
+  'default::ResourceWarning',
+  'ignore:unclosed database:ResourceWarning',
+  'ignore:unclosed event loop:ResourceWarning',
+  'ignore:<psycopg.* object at .* was deleted while still open:ResourceWarning:psycopg',
+  'ignore:connection .* was deleted while still open:ResourceWarning:psycopg',
+  'ignore:the server-side cursor .* was deleted while still open:ResourceWarning:psycopg'
+]
+markers = [
+  'nightly: long running tests that should rarely be affected and so only run nightly',
+  'requires_rmq: requires RabbitMQ specifically (not compatible with ZeroMQ broker)',
+  'requires_broker: requires a message broker (RabbitMQ or ZeroMQ)',
+  'requires_psql: requires a connection to PostgreSQL DB',
+  'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql)',
+  'sphinx: set parameters for the sphinx `app` fixture'
+]
+minversion = '7.0'
+testpaths = [
+  'tests'
+]
+timeout = 240
+timeout_method = "thread"
+xfail_strict = true

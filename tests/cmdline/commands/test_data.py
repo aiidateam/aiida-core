@@ -586,6 +586,16 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             # these specific formats, because ``matplotlib`` used in the others _also_ calls ``subprocess.check_output``
             monkeypatch.setattr(sp, 'check_output', mock_check_output)
 
+        if fmt in ['mpl_pos', 'mpl_heatmap']:
+            # Use a headless backend and never open a figure window during tests
+            import matplotlib
+
+            matplotlib.use('Agg')
+            monkeypatch.setattr('matplotlib.pyplot.show', lambda *args, **kwargs: None)
+
+        if fmt == 'mpl_heatmap':
+            monkeypatch.setattr('mayavi.mlab.show', lambda *args, **kwargs: None)
+
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
 

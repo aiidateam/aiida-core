@@ -80,10 +80,18 @@ def as_dict(value: t.Any) -> dict[str, t.Any] | None:
 
     if _is_a_model(type(value)):
         # A model renders its own fields, which is how a value AiiDA has no way to store is stored: whatever the
-        # model says it renders to is. Building it back coerces the rendering to the field's own type again.
+        # model says it renders to is. Building it back coerces the rendering to the field's own type again. It
+        # renders a nested model as well, which is the nested namespace that one names.
         return value.model_dump()
 
-    return {field.name: getattr(value, field.name) for field in fields}
+    return {field.name: _held(getattr(value, field.name)) for field in fields}
+
+
+def _held(value: t.Any) -> t.Any:
+    """Return a value as the namespace holds it, which for a container of its own is a namespace again."""
+    nested = as_dict(value)
+
+    return value if nested is None else nested
 
 
 def build(container: type, values: t.Mapping[str, t.Any]) -> t.Any:
@@ -95,10 +103,18 @@ def build(container: type, values: t.Mapping[str, t.Any]) -> t.Any:
     :param container: the structured container to build.
     :param values: what each of its fields holds, as :func:`as_dict` rendered them.
     """
-    if t.is_typeddict(container):
-        return dict(values)
+    fields = {field.name: field for field in fields_of(container) or ()}
+    held = {
+        name: build(fields[name].annotation, value)
+        if name in fields and isinstance(value, t.Mapping) and is_a_container(fields[name].annotation)
+        else value
+        for name, value in values.items()
+    }
 
-    return container(**values)
+    if t.is_typeddict(container):
+        return dict(held)
+
+    return container(**held)
 
 
 def _is_a_model(annotation: type) -> bool:

@@ -78,13 +78,21 @@ class TaskProcess(FunctionProcess):
         return given, {name: self._as_written(annotations.get(name), value) for name, value in kwargs.items()}
 
     def _as_written(self, annotation: t.Any, value: t.Any) -> t.Any:
-        """Return the value as the parameter was written to take it, which for a container is one of those."""
+        """Return the value as the parameter was written to take it, which for a container is one of those.
+
+        A field that is a container of its own is a namespace under this one, so this goes as deep as the
+        container does.
+        """
         fields = fields_of(annotation)
 
         if fields is None or not isinstance(value, Mapping):
             return _plain(value)
 
-        return build(annotation, {name: _plain(held) for name, held in value.items()})
+        held = {
+            field.name: self._as_written(field.annotation, value[field.name]) for field in fields if field.name in value
+        }
+
+        return build(annotation, held)
 
     @override
     def _out_result(self, result: t.Any) -> None:

@@ -336,6 +336,10 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
         )
 
     for field in fields:
+        if fields_of(field.annotation) is not None:
+            spec.input_namespace_from(field.name, field.annotation, required=field.required)
+            continue
+
         spec.input(
             field.name,
             valid_type=infer_valid_type_from_type_annotation(field.annotation) or (Data,),

@@ -22,10 +22,26 @@ from __future__ import annotations
 import dataclasses
 import typing as t
 
-__all__ = ('Field', 'as_dict', 'build', 'fields_of', 'is_a_container')
+__all__ = ('Field', 'Whole', 'as_dict', 'build', 'fields_of', 'is_a_container')
 
 UNSPECIFIED = object()
 """What a field has instead of a default when it has none, since ``None`` is a default like any other."""
+
+
+class Whole:
+    """Marks a field, or a parameter, as one value rather than as the namespace its fields would name.
+
+    A container is usually a wiring surface: one port per field, so a graph fills one of them with what another
+    task produced. Where it is opaque data instead, a configuration nobody wires into, this says so and the whole
+    of it is one node:
+
+    >>> class Given(BaseModel):
+    >>>     structure: str
+    >>>     config: Annotated[SomeConfig, Whole]
+
+    It is written as metadata of the type rather than as a keyword, so that it reaches a field of a container as
+    readily as a parameter, and survives in a container written for a function somebody else wrote.
+    """
 
 
 @dataclasses.dataclass(frozen=True)
@@ -35,6 +51,8 @@ class Field:
     name: str
     annotation: t.Any
     default: t.Any = UNSPECIFIED
+    whole: bool = False
+    """Whether the field is one value rather than the namespace its own fields would name."""
 
     @property
     def required(self) -> bool:
@@ -78,13 +96,17 @@ def as_dict(value: t.Any) -> dict[str, t.Any] | None:
     if fields is None:
         return None
 
+    kept = {field.name: getattr(value, field.name) for field in fields if field.whole}
+
     if _is_a_model(type(value)):
         # A model renders its own fields, which is how a value AiiDA has no way to store is stored: whatever the
         # model says it renders to is. Building it back coerces the rendering to the field's own type again. It
         # renders a nested model as well, which is the nested namespace that one names.
-        return value.model_dump()
+        return {**value.model_dump(), **kept}
 
-    return {field.name: _held(getattr(value, field.name)) for field in fields}
+    return {
+        field.name: getattr(value, field.name) if field.whole else _held(getattr(value, field.name)) for field in fields
+    }
 
 
 def _held(value: t.Any) -> t.Any:
@@ -106,7 +128,10 @@ def build(container: type, values: t.Mapping[str, t.Any]) -> t.Any:
     fields = {field.name: field for field in fields_of(container) or ()}
     held = {
         name: build(fields[name].annotation, value)
-        if name in fields and isinstance(value, t.Mapping) and is_a_container(fields[name].annotation)
+        if name in fields
+        and not fields[name].whole
+        and isinstance(value, t.Mapping)
+        and is_a_container(fields[name].annotation)
         else value
         for name, value in values.items()
     }
@@ -115,6 +140,16 @@ def build(container: type, values: t.Mapping[str, t.Any]) -> t.Any:
         return dict(held)
 
     return container(**held)
+
+
+def marked_whole(annotation: t.Any) -> bool:
+    """Return whether the annotation is marked as one value rather than as a namespace."""
+    return Whole in t.get_args(annotation)[1:] if t.get_origin(annotation) is t.Annotated else False
+
+
+def _without_marks(annotation: t.Any) -> t.Any:
+    """Return the type an annotation names, without the marks written beside it."""
+    return t.get_args(annotation)[0] if t.get_origin(annotation) is t.Annotated else annotation
 
 
 def _is_a_model(annotation: type) -> bool:
@@ -131,6 +166,7 @@ def _of_model(annotation: t.Any) -> tuple[Field, ...]:
             name=name,
             annotation=info.annotation,
             default=UNSPECIFIED if info.is_required() else info.get_default(call_default_factory=True),
+            whole=Whole in info.metadata,
         )
         for name, info in annotation.model_fields.items()
     )
@@ -145,8 +181,13 @@ def _of_typed_dict(annotation: t.Any) -> tuple[Field, ...]:
     optional = set(getattr(annotation, '__optional_keys__', ()))
 
     return tuple(
-        Field(name=name, annotation=hint, default=None if name in optional else UNSPECIFIED)
-        for name, hint in t.get_type_hints(annotation).items()
+        Field(
+            name=name,
+            annotation=_without_marks(hint),
+            default=None if name in optional else UNSPECIFIED,
+            whole=marked_whole(hint),
+        )
+        for name, hint in t.get_type_hints(annotation, include_extras=True).items()
     )
 
 
@@ -158,10 +199,15 @@ def _is_a_named_tuple(annotation: type) -> bool:
 def _of_named_tuple(annotation: t.Any) -> tuple[Field, ...]:
     """Return the fields of a ``NamedTuple``, whose defaults are the ones it was written with."""
     defaults = getattr(annotation, '_field_defaults', {})
-    hints = t.get_type_hints(annotation)
+    hints = t.get_type_hints(annotation, include_extras=True)
 
     return tuple(
-        Field(name=name, annotation=hints.get(name), default=defaults.get(name, UNSPECIFIED))
+        Field(
+            name=name,
+            annotation=_without_marks(hints.get(name)),
+            default=defaults.get(name, UNSPECIFIED),
+            whole=marked_whole(hints.get(name)),
+        )
         for name in annotation._fields
     )
 
@@ -169,6 +215,7 @@ def _of_named_tuple(annotation: t.Any) -> tuple[Field, ...]:
 def _of_dataclass(annotation: t.Any) -> tuple[Field, ...]:
     """Return the fields of a dataclass, taking a default factory as the value it makes."""
     fields = []
+    hints = t.get_type_hints(annotation, include_extras=True)
 
     for field in dataclasses.fields(annotation):
         if field.default is not dataclasses.MISSING:
@@ -178,7 +225,15 @@ def _of_dataclass(annotation: t.Any) -> tuple[Field, ...]:
         else:
             default = UNSPECIFIED
 
-        fields.append(Field(name=field.name, annotation=t.get_type_hints(annotation).get(field.name), default=default))
+        hint = hints.get(field.name)
+        fields.append(
+            Field(
+                name=field.name,
+                annotation=_without_marks(hint),
+                default=default,
+                whole=marked_whole(hint),
+            )
+        )
 
     return tuple(fields)
 

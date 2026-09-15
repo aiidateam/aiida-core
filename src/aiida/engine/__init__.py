@@ -93,6 +93,7 @@ __all__ = (
     'TaskWorkChain',
     'ToContext',
     'WaitProcess',
+    'Whole',
     'WithNonDb',
     'WithSerialize',
     'WorkChain',

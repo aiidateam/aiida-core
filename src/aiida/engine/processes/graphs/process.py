@@ -28,10 +28,15 @@ from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Data, Dict, GraphNode
+from aiida.orm import Data, Dict, GraphNode, JsonableData
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess')
+
+
+def _unwrapped(value: t.Any) -> t.Any:
+    """Return the object a node holds whole, which is what a field kept whole was stored as."""
+    return value.obj if isinstance(value, JsonableData) else value
 
 
 def _plain(value: t.Any) -> t.Any:
@@ -86,10 +91,19 @@ class TaskProcess(FunctionProcess):
         fields = fields_of(annotation)
 
         if fields is None or not isinstance(value, Mapping):
+            # What was asked for is what is handed over: a node where the annotation names one, and the value it
+            # holds where the annotation names that.
+            if isinstance(annotation, type) and issubclass(annotation, Data):
+                return value
+
             return _plain(value)
 
         held = {
-            field.name: self._as_written(field.annotation, value[field.name]) for field in fields if field.name in value
+            field.name: _unwrapped(value[field.name])
+            if field.whole
+            else self._as_written(field.annotation, value[field.name])
+            for field in fields
+            if field.name in value
         }
 
         return build(annotation, held)

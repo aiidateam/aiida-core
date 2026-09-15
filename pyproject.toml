@@ -356,6 +356,9 @@ exclude = [
 ]
 
 [tool.mypy]
+disable_error_code = [
+  'method-assign'
+]
 disallow_any_generics = false
 disallow_incomplete_defs = false
 disallow_subclassing_any = false
@@ -366,9 +369,6 @@ enable_error_code = [
   'ignore-without-code',
   'redundant-expr',
   'truthy-bool'
-]
-disable_error_code = [
-  'method-assign'
 ]
 plugins = [
   'pydantic.mypy',

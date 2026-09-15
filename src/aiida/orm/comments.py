@@ -122,9 +122,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         """The last modification time of this comment."""
         return self._backend_entity.mtime
 
-    @column(
-        model_adapter=BackendEntityPkAdapter(BackendNode, nodes.Node),
-    )
+    @column(model_adapter=BackendEntityPkAdapter(BackendNode, nodes.Node))
     def node(self) -> BackendNode:
         """The node associated with this comment."""
         return self._backend_entity.node
@@ -133,9 +131,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     def node(self, value: BackendNode) -> None:
         self._backend_entity.node = value
 
-    @column(
-        model_adapter=EntityPkAdapter(User),
-    )
+    @column(model_adapter=EntityPkAdapter(User))
     def user(self) -> User:
         """The user associated with this comment."""
         from aiida.orm.users import User
@@ -144,7 +140,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
     @user.setter
     def user(self, value: User) -> None:
-        self._backend_entity.user = value.backend_entity
+        self._backend_entity.set_user(value.backend_entity)
 
     @column
     def content(self) -> str:

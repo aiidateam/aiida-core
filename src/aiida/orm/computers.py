@@ -126,7 +126,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     @label.setter
     def label(self, value: str) -> None:
-        self._backend_entity.label = value
+        self._backend_entity.set_label(value)
 
     @column
     def hostname(self) -> str:
@@ -135,7 +135,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     @hostname.setter
     def hostname(self, value: str) -> None:
-        self._backend_entity.hostname = value
+        self._backend_entity.set_hostname(value)
 
     @column
     def transport_type(self) -> str:
@@ -165,7 +165,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     @description.setter
     def description(self, value: str) -> None:
-        self._backend_entity.description = value
+        self._backend_entity.set_description(value)
 
     @column(
         may_be_large=True,

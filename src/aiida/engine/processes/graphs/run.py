@@ -29,7 +29,7 @@ from aiida.engine.processes.graphs.spec import (
 from aiida.orm import Dict, List, Node, ProcessNode, load_node
 from aiida.orm.nodes.data.base import BaseType
 
-__all__ = ('GraphRun', 'Start', 'Step', 'TaskNodes', 'rerun_from', 'tasks')
+__all__ = ('GraphRun', 'Orchestrated', 'Start', 'Step', 'TaskNodes', 'rerun_from', 'tasks')
 
 
 def holds(condition: t.Any) -> bool:
@@ -275,6 +275,38 @@ class Step:
     def note(self, text: str) -> None:
         """Record something worth telling whoever is watching the graph."""
         self.notes.append(text)
+
+
+@t.runtime_checkable
+class Orchestrated(t.Protocol):
+    """A graph in progress, as whatever decides what may start next sees it.
+
+    A graph decides for itself what to run, which is the whole of it while it is the only graph there is.
+    Something ordering several graphs against each other has to know what every one of them could do before
+    saying which of them may, so it asks each of them in these words. :class:`GraphRun` answers them, and
+    holding this apart from that is what says which of its methods such a thing may lean on.
+    """
+
+    def frontier(self) -> list[str]:
+        """Return the tasks that could start now, deciding nothing."""
+        ...
+
+    def step(self) -> Step:
+        """Return the runs to begin now, which count as decided once this has been called."""
+        ...
+
+    def started(self, instance: str, pk: int) -> None:
+        """Record which process one run became."""
+        ...
+
+    def completed(self, instance: str, pk: int) -> None:
+        """Record that one run finished."""
+        ...
+
+    @property
+    def pending(self) -> dict[str, int]:
+        """Return the runs that have started and have not finished."""
+        ...
 
 
 @dataclass

@@ -31,7 +31,7 @@ from aiida.engine.processes.states import Wait
 from aiida.orm import Data, Dict, GraphNode, JsonableData
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
-__all__ = ('GraphProcess', 'TaskProcess')
+__all__ = ('GraphProcess', 'TaskProcess', 'launched_as')
 
 
 def _unwrapped(value: t.Any) -> t.Any:
@@ -228,32 +228,12 @@ class GraphProcess(Process):
 
     def _submit(self, start: Start) -> None:
         """Submit one run, under the name that its call link carries."""
-        process_class, inputs = self._launch(start)
+        process_class, inputs = launched_as(start)
         metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
         node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None
         self.run_state.started(start.instance, node.pk)
         self.report(f'dispatched task `{start.instance}` as {node.pk}')
-
-    @staticmethod
-    def _launch(start: Start) -> tuple[type[Process], dict[str, t.Any]]:
-        """Return the process that runs one instance, and the inputs to submit it with.
-
-        :raises ValueError: if the task is of a kind that has no way to run here, which a kind added to the
-            declaration without one would be.
-        """
-        if start.body is not None:
-            return GraphProcess, GraphProcess.launch_inputs(start.body, start.inputs)
-
-        if isinstance(start.task, ProcessTask):
-            process_class = start.task.spec.process_class
-
-            if issubclass(process_class, TaskWorkChain):
-                return process_class, launch_under_namespace(process_class, start.inputs)
-
-            return process_class, start.inputs
-
-        raise ValueError(f'`{start.task.name}` is of kind `{start.task.kind}`, which this version of AiiDA cannot run.')
 
     @override
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:
@@ -305,3 +285,30 @@ class GraphProcess(Process):
     def _build_process_label(self) -> str:
         """Return the name of the graph, so that a run of one is told apart from a run of another."""
         return self.graph.identifier or super()._build_process_label()
+
+
+def launched_as(start: Start) -> tuple[type[Process], dict[str, t.Any]]:
+    """Return the process that runs one start, and the inputs to run it with.
+
+    A graph decides what to start as :class:`~aiida.engine.processes.graphs.run.Start` values, which say
+    nothing about processes. This is what turns one of them into something :func:`~aiida.engine.launch.run`
+    or :func:`~aiida.engine.launch.submit` takes, and it is what anything running a graph other than
+    :class:`GraphProcess` needs, since the translation is the same wherever the decision came from.
+
+    :param start: one run a graph asked for.
+    :return: the process class to run, and the inputs to run it with.
+    :raises ValueError: if the task is of a kind that has no way to run here, which a kind added to the
+        declaration without one would be.
+    """
+    if start.body is not None:
+        return GraphProcess, GraphProcess.launch_inputs(start.body, start.inputs)
+
+    if isinstance(start.task, ProcessTask):
+        process_class = start.task.spec.process_class
+
+        if issubclass(process_class, TaskWorkChain):
+            return process_class, launch_under_namespace(process_class, start.inputs)
+
+        return process_class, start.inputs
+
+    raise ValueError(f'`{start.task.name}` is of kind `{start.task.kind}`, which this version of AiiDA cannot run.')

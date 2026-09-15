@@ -1282,9 +1282,7 @@ class StructureData(Data):
         instance.set_pymatgen_molecule(molecule, margin=margin)
         return instance
 
-    @attribute(
-        model_field_info=pdt.fields.FieldInfo(default=False),
-    )
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def pbc1(self) -> bool:
         """Whether periodic in the a direction."""
         return self.base.attributes.get('pbc1', False)
@@ -1295,9 +1293,7 @@ class StructureData(Data):
             raise TypeError('pbc1 must be a boolean.')
         self.base.attributes.set('pbc1', value)
 
-    @attribute(
-        model_field_info=pdt.fields.FieldInfo(default=False),
-    )
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def pbc2(self) -> bool:
         """Whether periodic in the b direction."""
         return self.base.attributes.get('pbc2', False)
@@ -1308,9 +1304,7 @@ class StructureData(Data):
             raise TypeError('pbc2 must be a boolean.')
         self.base.attributes.set('pbc2', value)
 
-    @attribute(
-        model_field_info=pdt.fields.FieldInfo(default=False),
-    )
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def pbc3(self) -> bool:
         """Whether periodic in the c direction."""
         return self.base.attributes.get('pbc3', False)

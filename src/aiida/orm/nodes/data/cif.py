@@ -356,9 +356,7 @@ class CifData(SinglefileData):
         """The MD5 checksum of the file contents."""
         return self.base.attributes.get('md5', None)
 
-    @attribute(
-        model_field_info=pdt.fields.FieldInfo(default=_SCAN_TYPE_DEFAULT),
-    )
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=_SCAN_TYPE_DEFAULT))
     def scan_type(self) -> Literal['standard', 'flex']:
         """The scan type for parsing with PyCifRW."""
         return self.base.attributes.get('scan_type', self._SCAN_TYPE_DEFAULT)
@@ -369,9 +367,7 @@ class CifData(SinglefileData):
             raise ValueError(f'Got unknown scan_type {value}')
         self.base.attributes.set('scan_type', value)
 
-    @attribute(
-        model_field_info=pdt.fields.FieldInfo(default=_PARSE_POLICY_DEFAULT),
-    )
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=_PARSE_POLICY_DEFAULT))
     def parse_policy(self) -> Literal['eager', 'lazy']:
         """The parse policy for parsing with PyCifRW."""
         return self.base.attributes.get('parse_policy', self._PARSE_POLICY_DEFAULT)

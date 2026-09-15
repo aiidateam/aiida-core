@@ -237,9 +237,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     def message(self, value: str) -> None:
         self._backend_entity.message = value
 
-    @column(
-        model_field_info=pdt.fields.FieldInfo(default_factory=dict),
-    )
+    @column(model_field_info=pdt.fields.FieldInfo(default_factory=dict))
     def metadata(self) -> dict[str, t.Any]:
         """The metadata corresponding to the entry."""
         return self._backend_entity.metadata

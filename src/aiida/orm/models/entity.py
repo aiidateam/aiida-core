@@ -232,7 +232,7 @@ class ModelsNamespace(t.Generic[_EntityT]):
 
         field_info = column.model_field_info
 
-        if field_info is not None and field_info.annotation is not None:
+        if field_info.annotation is not None:
             annotation = field_info.annotation
         elif column.model_adapter is not None:
             annotation = column.model_adapter.model_type
@@ -383,12 +383,12 @@ def _build_model_field(
     model_type: t.Any,
     *,
     description: str = '',
-    model_field_info: pdt.fields.FieldInfo | None = None,
+    model_field_info: pdt.fields.FieldInfo = pdt.fields.FieldInfo(),
     model_metadata: tuple[ModelMetadata, ...] = (),
     readonly: bool = False,
 ) -> tuple[t.Any, t.Any]:
     """Build the Pydantic declaration for a model field."""
-    field_info = model_field_info if model_field_info is not None else pdt.fields.FieldInfo()
+    field_info = model_field_info
     field_dict = field_info.asdict()
 
     metadata = (*field_dict['metadata'], *model_metadata)

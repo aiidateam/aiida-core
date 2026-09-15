@@ -6,7 +6,7 @@ from pydantic_core import PydanticUndefined
 
 from aiida.cmdline.spec import CliParameter
 from aiida.common.utils import is_nullable, make_nullable, make_required
-from aiida.orm.cli.utils import CliField, CliFieldInfo
+from aiida.orm.cli.utils import CliField
 from aiida.orm.decorators.columns import iter_columns
 
 if t.TYPE_CHECKING:
@@ -30,7 +30,7 @@ class EntityCliCreateSpec:
         for cli_field in self._iter_fields():
             field = cli_field.field
             model_field = cli_field.model_field
-            cli_info = field.cli_field_info or CliFieldInfo()
+            cli_info = field.cli_field_info
 
             annotation = make_required(
                 self._cli_field_annotation(

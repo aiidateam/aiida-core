@@ -157,7 +157,7 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
 
         field_info = attribute.model_field_info
 
-        if field_info is not None and field_info.annotation is not None:
+        if field_info.annotation is not None:
             annotation = field_info.annotation
         elif attribute.model_adapter is not None:
             annotation = attribute.model_adapter.model_type

@@ -20,6 +20,26 @@ __all__ = (
 )
 
 
+@dataclasses.dataclass(frozen=True)
+class CliFieldInfo:
+    """Optional Click-specific configuration for an ORM field."""
+
+    prompt: str | bool | None = None
+    help: str = ''
+    priority: int = 0
+    short_name: str = ''
+    option_cls: functools.partial[TemplateInteractiveOption] | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class CliField:
+    """Resolved ORM field participating in CLI creation."""
+
+    name: str
+    field: BaseField
+    model_field: pdt.fields.FieldInfo
+
+
 _CliValueT = t.TypeVar('_CliValueT')
 _ModelValueT = t.TypeVar('_ModelValueT')
 
@@ -47,23 +67,3 @@ class CliAdapter(abc.ABC, t.Generic[_CliValueT, _ModelValueT]):
     @abc.abstractmethod
     def to_cli(self, value: _ModelValueT) -> _CliValueT:
         """Convert a model-side value to its CLI/external representation."""
-
-
-@dataclasses.dataclass(frozen=True)
-class CliFieldInfo:
-    """Optional Click-specific configuration for an ORM field."""
-
-    prompt: str | bool | None = None
-    help: str = ''
-    priority: int = 0
-    short_name: str = ''
-    option_cls: functools.partial[TemplateInteractiveOption] | None = None
-
-
-@dataclasses.dataclass(frozen=True)
-class CliField:
-    """Resolved ORM field participating in CLI creation."""
-
-    name: str
-    field: BaseField
-    model_field: pdt.fields.FieldInfo

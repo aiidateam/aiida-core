@@ -11,6 +11,7 @@ from typing_extensions import Self
 from aiida.common import exceptions
 from aiida.common.utils import is_nullable
 from aiida.orm import qb_fields
+from aiida.orm.cli.utils import CliFieldInfo
 
 __all__ = (
     'BaseField',
@@ -21,7 +22,7 @@ __all__ = (
 )
 
 if t.TYPE_CHECKING:
-    from aiida.orm.cli import CliAdapter, CliFieldInfo
+    from aiida.orm.cli.utils import CliAdapter
     from aiida.orm.models.modeling import ModelAdapter, ModelMetadata
 
 
@@ -32,12 +33,12 @@ class BaseFieldConfig:
     readonly: bool = False
     required_once_stored: bool = False
 
-    model_field_info: pdt.fields.FieldInfo | None = None
+    model_field_info: pdt.fields.FieldInfo = dataclasses.field(default_factory=pdt.fields.FieldInfo)
     model_metadata: tuple[ModelMetadata, ...] = ()
     model_adapter: ModelAdapter[t.Any, t.Any, t.Any] | None = None
 
     cli_exclude: bool = False
-    cli_field_info: CliFieldInfo | None = None
+    cli_field_info: CliFieldInfo = dataclasses.field(default_factory=CliFieldInfo)
     cli_adapter: CliAdapter[t.Any, t.Any] | None = None
 
 
@@ -122,7 +123,7 @@ class BaseField(
         return self._spec
 
     @property
-    def model_field_info(self) -> pdt.fields.FieldInfo | None:
+    def model_field_info(self) -> pdt.fields.FieldInfo:
         """Return optional Pydantic-specific field configuration."""
         return self._config.model_field_info
 
@@ -150,7 +151,7 @@ class BaseField(
         return self._config.cli_exclude
 
     @property
-    def cli_field_info(self) -> CliFieldInfo | None:
+    def cli_field_info(self) -> CliFieldInfo:
         """Return optional CLI-specific field configuration."""
         return self._config.cli_field_info
 
@@ -162,7 +163,7 @@ class BaseField(
     @property
     def title(self) -> str:
         """Return the human-readable title."""
-        if self.model_field_info is not None and self.model_field_info.title is not None:
+        if self.model_field_info.title is not None:
             return self.model_field_info.title
 
         return self.spec.name.replace('_', ' ').title()

@@ -16,7 +16,6 @@ from collections.abc import Iterator
 from functools import cached_property
 from uuid import UUID
 
-from aiida.orm.cli.node import NodeCliCreateSpec
 import pydantic as pdt
 from typing_extensions import Self
 
@@ -25,6 +24,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
+from aiida.orm.cli.node import NodeCliCreateSpec
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import column
 from aiida.orm.decorators.attributes import attributes_column

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 
 import pytest
@@ -16,6 +17,8 @@ from aiida.engine.processes.calcjobs.monitors import (
     CalcJobMonitorResult,
     CalcJobMonitors,
 )
+from aiida.engine.processes.communications import LocalProcessController
+from aiida.engine.processes.exceptions import KilledError
 from aiida.orm import Dict, Int, Str
 
 
@@ -183,13 +186,12 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
 
 
 def monitor_emit_warning(node, transport, **kwargs):
-    """Test monitor that logs a warning when called."""
-    from aiida.common.log import AIIDA_LOGGER
-
-    AIIDA_LOGGER.warning('monitor_emit_warning monitor was called')
+    """Test monitor that records its invocation."""
+    node.base.extras.set('monitor_called', True)
 
 
-def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_code_installed, caplog):
+@pytest.mark.asyncio
+async def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_code_installed, runner):
     """Test the ``minimum_poll_interval`` input by actually running through the engine."""
     entry_points.add(monitor_emit_warning, 'aiida.calculations.monitors:core.emit_warning')
 
@@ -197,15 +199,24 @@ def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_
     builder = code.get_builder()
     builder.x = Int(1)
     builder.y = Int(1)
-    builder.monitors = {'always_kill': Dict({'entry_point': 'core.emit_warning', 'minimum_poll_interval': 5})}
-    builder.metadata = {'options': {'sleep': 1, 'resources': {'num_machines': 1}}}
+    builder.monitors = {'always_kill': Dict({'entry_point': 'core.emit_warning', 'minimum_poll_interval': 10})}
+    builder.metadata = {'options': {'sleep': 300, 'resources': {'num_machines': 1}}}
 
-    _, node = run_get_node(builder)
-    assert node.is_finished_ok
+    process = runner.instantiate_process(builder)
+    controller = LocalProcessController(process, runner.loop)
+    runner.schedule(process)
 
-    # Check that the number of log messages emitted by the monitor is just 1 as it should have been called just once.
-    logs = [rec.message for rec in caplog.records if rec.message == 'monitor_emit_warning monitor was called']
-    assert len(logs) == 1
+    async def monitor_called():
+        while not process.node.base.extras.get('monitor_called', False):
+            await asyncio.sleep(0.1)
+
+    try:
+        await asyncio.wait_for(monitor_called(), timeout=30)
+    finally:
+        if not process.has_terminated():
+            assert await controller.kill_process(process.pid)
+        with pytest.raises(KilledError):
+            await process.future()
 
 
 def test_calc_job_monitors_outputs(entry_points, aiida_code_installed):

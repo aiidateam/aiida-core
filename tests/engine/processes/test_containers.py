@@ -455,6 +455,34 @@ def test_a_field_marked_whole_is_one_port_holding_the_object():
     assert results['seen'] == 'si/Conf/0.1', 'handed back as the object it was, not as what it was stored as'
 
 
+@task(outputs=['seen'])
+def takes_a_whole_parameter(given: Annotated[Conf, Whole]) -> str:
+    return f'{type(given).__name__}/{given.tolerance}'
+
+
+def test_a_parameter_marked_whole_is_one_port_holding_the_object():
+    """The mark reads the same on a parameter as on a field: one node holding the container."""
+    port = takes_a_whole_parameter.process_class.spec().inputs['given']
+
+    assert JsonableData in port.valid_type
+    assert not hasattr(port, 'ports'), 'a port rather than a namespace'
+
+    results, node = run_get_node(takes_a_whole_parameter, given=Conf(tolerance=0.1))
+
+    assert node.is_finished_ok, node.exit_message
+    assert sorted(node.base.links.get_incoming().all_link_labels()) == ['given']
+    assert results['seen'] == 'Conf/0.1', 'handed back as the object it was'
+    assert load_node(node.inputs.given.pk).obj.tolerance == 0.1, 'and the node holds it whole'
+
+
+def test_a_port_holding_a_container_takes_its_fields_as_a_mapping():
+    """A namespace takes the fields written out, so a port holding the whole container takes them too."""
+    results, node = run_get_node(takes_a_whole_parameter, given={'tolerance': 0.25})
+
+    assert results['seen'] == 'Conf/0.25', 'the mapping was read as the container it stands for'
+    assert isinstance(node.inputs.given, JsonableData)
+
+
 def test_a_model_is_stored_whole_and_read_back():
     """`JsonableData` takes a pydantic model as readily as anything else saying how it is written."""
     stored = JsonableData(Opaque(structure='si')).store()

@@ -981,8 +981,8 @@ def generate_calculation_node_add(aiida_localhost):
         arithmetic_add = CalculationFactory('core.arithmetic.add')
 
         add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
+            'x': Int(value=1),
+            'y': Int(value=2),
             'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         }
 
@@ -1014,8 +1014,8 @@ def construct_calculation_node_add(tmp_path_factory):
         calc_node = CalcJobNode(computer=computer)
 
         # Create input nodes
-        x_node = Int(x)
-        y_node = Int(y)
+        x_node = Int(value=x)
+        y_node = Int(value=y)
         code_node = InstalledCode(computer=computer, filepath_executable='/bin/bash')
 
         # Store input nodes
@@ -1116,7 +1116,7 @@ def construct_calculation_node_add(tmp_path_factory):
         retrieved_folder.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='retrieved')
 
         # Create and link output node (sum)
-        output_node = Int(x + y)
+        output_node = Int(value=x + y)
         output_node.store()
         output_node.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='sum')
 
@@ -1141,9 +1141,9 @@ def generate_workchain_multiply_add(aiida_localhost):
         multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
 
         multiply_add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
-            'z': Int(3),
+            'x': Int(value=1),
+            'y': Int(value=2),
+            'z': Int(value=3),
             'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         }
 
@@ -1252,7 +1252,7 @@ def generate_calculation_node_io(generate_calculation_node, tmp_path):
         # ? Use instance for folderdata
         folderdata = FolderData()
         folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]
-        arraydata_input = ArrayData(arrays=np.ones(3))
+        arraydata_input = ArrayData.from_arrays(np.ones(3))
 
         # Create calculation inputs, outputs
         calculation_node_inputs = {
@@ -1327,7 +1327,7 @@ def generate_workchain_node_io():
 def setup_no_process_group() -> orm.Group:
     no_process_group, _ = orm.Group.collection.get_or_create(label='no-process-group')
     if no_process_group.is_empty:
-        int_node = orm.Int(1).store()
+        int_node = orm.Int(value=1).store()
         no_process_group.add_nodes([int_node])
     return no_process_group
 

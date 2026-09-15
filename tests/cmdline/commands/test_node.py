@@ -190,7 +190,7 @@ class TestVerdiNode:
 
         Here the relative path argument should be optional and the command should determine it automatically.
         """
-        node = orm.SinglefileData(io.BytesIO(b'content')).store()
+        node = orm.SinglefileData.from_filelike(io.BytesIO(b'content')).store()
         options = [str(node.pk)]
         result = run_cli_command(cmd_node.repo_cat, options)
         assert result.stdout_bytes == b'content'
@@ -468,10 +468,10 @@ class TestVerdiUserCommand:
 def create_nodes(aiida_profile_clean_class):
     return [
         orm.Data().store(),
-        orm.Bool(True).store(),
-        orm.Bool(False).store(),
-        orm.Float(1.0).store(),
-        orm.Int(1).store(),
+        orm.Bool(value=True).store(),
+        orm.Bool(value=False).store(),
+        orm.Float(value=1.0).store(),
+        orm.Int(value=1).store(),
     ]
 
 
@@ -878,9 +878,9 @@ class TestVerdiDelete:
 def create_nodes_verdi_node_list(aiida_profile_clean_class):
     return (
         orm.Data().store(),
-        orm.Int(0).store(),
-        orm.Int(1).store(),
-        orm.Int(2).store(),
+        orm.Int(value=0).store(),
+        orm.Int(value=1).store(),
+        orm.Int(value=2).store(),
         orm.ArrayData().store(),
         orm.KpointsData().store(),
         orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),

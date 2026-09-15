@@ -11,7 +11,7 @@ kernelspec:
   language: python
   name: python3
 execution:
-    timeout: 60
+  timeout: 60
 ---
 
 % For reference:
@@ -20,6 +20,7 @@ execution:
 
 (tutorial)=
 (tutorial:basic)=
+
 # A provenance deep dive
 
 The goal of this tutorial is to give you an idea of how AiiDA helps you in executing data-driven workflows.
@@ -71,9 +72,9 @@ profile
 
 ## Provenance
 
-Before we dive in, we need to briefly introduce one of the most important concepts for AiiDA: *provenance*.
+Before we dive in, we need to briefly introduce one of the most important concepts for AiiDA: _provenance_.
 An AiiDA database does not only contain the results of your calculations, but also their inputs and each step that was executed to obtain them.
-All of this information is stored in the form of a *directed acyclic graph* (DAG).
+All of this information is stored in the form of a _directed acyclic graph_ (DAG).
 As an example, the {ref}`figure below <fig_intro_workchain_graph>` shows the provenance of the calculations of this tutorial.
 
 :::{figure} include/workchain_graph.png
@@ -84,15 +85,15 @@ As an example, the {ref}`figure below <fig_intro_workchain_graph>` shows the pro
 Provenance Graph of a basic AiiDA WorkChain.
 :::
 
-In the provenance graph, you can see different types of *nodes* represented by different shapes.
-The green ellipses are `Data` nodes, the blue ellipse is a `Code` node, and the rectangles represent *processes*, i.e. the calculations performed in your *workflow*.
+In the provenance graph, you can see different types of _nodes_ represented by different shapes.
+The green ellipses are `Data` nodes, the blue ellipse is a `Code` node, and the rectangles represent _processes_, i.e. the calculations performed in your _workflow_.
 
 The provenance graph allows us to not only see what data we have, but also how it was produced.
 During this tutorial, we will be using AiiDA to generate the provenance graph {ref}`shown above <fig_intro_workchain_graph>` step by step.
 
 ## Data nodes
 
-Before running any calculations, let's create and store a *data node*.
+Before running any calculations, let's create and store a _data node_.
 AiiDA ships with an interactive IPython shell that has many basic AiiDA classes pre-loaded.
 To start the IPython shell, simply type in the terminal:
 
@@ -106,7 +107,7 @@ For this tutorial, we'll keep it very simple, and start by initializing an `Int`
 ```{code-cell} ipython3
 from aiida import orm
 
-node = orm.Int(2)
+node = orm.Int(value=2)
 ```
 
 We can check the contents of the `node` variable like this:
@@ -118,7 +119,7 @@ node
 Quite a bit of information on our freshly created node is returned:
 
 - The data node is of the type `Int`
-- The node has the *universally unique identifier* (**UUID**) `eac48d2b-ae20-438b-aeab-2d02b69eb6a8`
+- The node has the _universally unique identifier_ (**UUID**) `eac48d2b-ae20-438b-aeab-2d02b69eb6a8`
 - The node is currently not stored in the database `(unstored)`
 - The integer value of the node is `2`
 
@@ -128,8 +129,8 @@ Let's store the node in the database:
 node.store()
 ```
 
-As you can see, the data node has now been assigned a *primary key* (**PK**), a number that identifies the node in your database `(pk: 1)`.
-The PK and UUID both reference the node with the only difference that the PK is unique *for your local database only*, whereas the UUID is a globally unique identifier and can therefore be used between *different* databases.
+As you can see, the data node has now been assigned a _primary key_ (**PK**), a number that identifies the node in your database `(pk: 1)`.
+The PK and UUID both reference the node with the only difference that the PK is unique _for your local database only_, whereas the UUID is a globally unique identifier and can therefore be used between _different_ databases.
 Use the PK only if you are working within a single database, i.e. in an interactive session and the UUID in all other cases.
 
 :::{important}
@@ -176,7 +177,7 @@ def multiply(x, y):
     return x * y
 ```
 
-This converts the `multiply` function into an AiiDA *calculation function*, the most basic execution unit in AiiDA.
+This converts the `multiply` function into an AiiDA _calculation function_, the most basic execution unit in AiiDA.
 Next, load the `Int` node you have created in the previous section using the `load_node` function and the PK of the data node:
 
 ```{code-cell} ipython3
@@ -187,7 +188,7 @@ Of course, we need another integer to multiply with the first one.
 Let's create a new `Int` data node and assign it to the variable `y`:
 
 ```{code-cell} ipython3
-y = orm.Int(3)
+y = orm.Int(value=3)
 ```
 
 Now it's time to multiply the two numbers!
@@ -214,8 +215,8 @@ Let's once again leave the IPython shell with `exit()` and look for the process 
 ```
 
 The returned list will be empty, but don't worry!
-By default, `verdi process list` only returns the *active* processes.
-If you want to see *all* processes (i.e. also the processes that are *terminated*), simply add the `-a` option:
+By default, `verdi process list` only returns the _active_ processes.
+If you want to see _all_ processes (i.e. also the processes that are _terminated_), simply add the `-a` option:
 
 ```{code-cell} ipython3
 %verdi process list -a
@@ -275,7 +276,7 @@ More details for how to {ref}`run external codes <how-to:run-codes>`.
 
 :::{dropdown} Install localhost computer and code
 
-Let's begin by setting up the computer using the ``verdi computer`` subcommand:
+Let's begin by setting up the computer using the `verdi computer` subcommand:
 
 ```console
 $ verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
@@ -284,14 +285,14 @@ $ verdi computer configure core.local tutor --safe-interval 1 -n
 
 The first commands sets up the computer with the following options:
 
-- *label* (`-L`): tutor
-- *hostname* (`-H`): localhost
-- *transport* (`-T`): local
-- *scheduler* (`-S`): direct
-- *work-dir* (`-w`): The `work` subdirectory of the current directory
+- _label_ (`-L`): tutor
+- _hostname_ (`-H`): localhost
+- _transport_ (`-T`): local
+- _scheduler_ (`-S`): direct
+- _work-dir_ (`-w`): The `work` subdirectory of the current directory
 
-The second command *configures* the computer with a minimum interval between connections (`--safe-interval`) of 1 second.
-For both commands, the *non-interactive* option (`-n`) is added to not prompt for extra input.
+The second command _configures_ the computer with a minimum interval between connections (`--safe-interval`) of 1 second.
+For both commands, the _non-interactive_ option (`-n`) is added to not prompt for extra input.
 
 Next, let's set up the code we're going to use for the tutorial:
 
@@ -299,7 +300,7 @@ Next, let's set up the code we're going to use for the tutorial:
 $ verdi code create core.code.installed --label add --computer=tutor --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 ```
 
-This command sets up a code with *label* `add` on the *computer* `tutor`, using the *plugin* `core.arithmetic.add`.
+This command sets up a code with _label_ `add` on the _computer_ `tutor`, using the _plugin_ `core.arithmetic.add`.
 
 :::
 
@@ -312,7 +313,7 @@ This command sets up a code with *label* `add` on the *computer* `tutor`, using 
 ```
 
 A typical real-world example of a computer is a remote supercomputing facility.
-Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
+Codes can be anything from a Python script to powerful _ab initio_ codes such as Quantum Espresso or machine learning tools like Tensorflow.
 Let's have a look at the codes that are available to us:
 
 ```{code-cell} ipython3
@@ -328,7 +329,7 @@ To see more details about the computer, you can use the following `verdi` comman
 %verdi computer show tutor
 ```
 
-We can see that the *Work directory* has been set up as the `work` subdirectory of the current directory.
+We can see that the _Work directory_ has been set up as the `work` subdirectory of the current directory.
 This is the directory in which the calculations running on the `tutor` computer will be executed.
 
 :::{note}
@@ -344,7 +345,7 @@ code = orm.load_code(label='add')
 code
 ```
 
-Every code has a convenient tool for setting up the required input, called the *builder*.
+Every code has a convenient tool for setting up the required input, called the _builder_.
 It can be obtained by using the `get_builder` method:
 
 ```{code-cell} ipython3
@@ -357,7 +358,7 @@ Let's use the `Int` node that was created by our previous `calcfunction` as one 
 
 ```{code-cell} ipython3
 builder.x = orm.load_node(pk=4)
-builder.y = orm.Int(5)
+builder.y = orm.Int(value=5)
 builder
 ```
 
@@ -365,7 +366,7 @@ In case that your nodes' PKs are different and you don't remember the PK of the 
 
 ```ipython
 In [3]: builder.x = orm.load_node(uuid='42541d38')
-   ...: builder.y = orm.Int(5)
+   ...: builder.y = orm.Int(value=5)
 ```
 
 Note that you don't have to provide the entire UUID to load the node.
@@ -384,7 +385,7 @@ engine.run(builder)
 
 Besides the sum of the two `Int` nodes, the calculation function also returns two other outputs: one of type `RemoteData` and one of type `FolderData`.
 See the {ref}`topics section on calculation jobs <topics:calculations:usage:calcfunctions>` for more details.
-Now, exit the IPython shell and once more check for *all* processes:
+Now, exit the IPython shell and once more check for _all_ processes:
 
 ```{code-cell} ipython3
 %verdi process list -a
@@ -428,7 +429,7 @@ You can see more details on any process, including its inputs and outputs, using
 ## Workflows
 
 So far we have executed each process manually.
-AiiDA allows us to automate these steps by linking them together in a *workflow*, whose provenance is stored to ensure reproducibility.
+AiiDA allows us to automate these steps by linking them together in a _workflow_, whose provenance is stored to ensure reproducibility.
 For this tutorial we have prepared a basic `WorkChain` that is already implemented in `aiida-core`.
 You can see the code below:
 
@@ -518,7 +519,7 @@ MultiplyAddWorkChain = plugins.WorkflowFactory('core.arithmetic.multiply_add')
 ```
 
 The `WorkflowFactory` loads workflows based on their {ref}`entry point <topics:plugins:entrypoints>`, e.g. `'core.arithmetic.multiply_add'` in this case.
-The entry point mechanism allows AiiDA to automatically discover workflows provided by  `aiida-core` and {ref}`AiiDA plugins <how-to:plugins-install>`, and display them to the user, e.g. via `verdi plugin list aiida.workflows`. Pass the entry point as an argument to display detailed information, e.g. via `verdi plugin list aiida.workflows core.arithmetic.multiply_add`.
+The entry point mechanism allows AiiDA to automatically discover workflows provided by `aiida-core` and {ref}`AiiDA plugins <how-to:plugins-install>`, and display them to the user, e.g. via `verdi plugin list aiida.workflows`. Pass the entry point as an argument to display detailed information, e.g. via `verdi plugin list aiida.workflows core.arithmetic.multiply_add`.
 
 Similar to a `CalcJob`, the `WorkChain` input can be set up using a builder:
 
@@ -526,9 +527,9 @@ Similar to a `CalcJob`, the `WorkChain` input can be set up using a builder:
 from aiida import orm
 builder = MultiplyAddWorkChain.get_builder()
 builder.code = orm.load_code(label='add')
-builder.x = orm.Int(2)
-builder.y = orm.Int(3)
-builder.z = orm.Int(5)
+builder.x = orm.Int(value=2)
+builder.y = orm.Int(value=3)
+builder.z = orm.Int(value=5)
 builder
 ```
 
@@ -567,10 +568,10 @@ Info: last time an entry changed state: 0s ago (at 09:08:59 on 2020-05-13)
 
 :::
 
-We can see that the `MultiplyAddWorkChain` is currently waiting for its *child process*, the `ArithmeticAddCalculation`, to finish.
-Check the process list again for *all* processes (You should know how by now!).
+We can see that the `MultiplyAddWorkChain` is currently waiting for its _child process_, the `ArithmeticAddCalculation`, to finish.
+Check the process list again for _all_ processes (You should know how by now!).
 After about half a minute, all the processes should be in the `Finished` state.
-The `verdi process status` command prints a *hierarchical* overview of the processes called by the work chain:
+The `verdi process status` command prints a _hierarchical_ overview of the processes called by the work chain:
 
 ```{code-cell} ipython3
 %verdi process status 14
@@ -614,8 +615,8 @@ The provenance graph should be similar to the {ref}`one we showed at the start o
 
 When we used the `run` command in the previous sections, the IPython shell was blocked while it was waiting for the `CalcJob` to finish.
 This is not a problem when we're simply adding two number together, but if we want to run multiple calculations that take hours or days, this is no longer practical.
-Instead, we are going to *submit* the `CalcJob` to the AiiDA *daemon*.
-The daemon is a program that runs in the background and manages submitted calculations until they are *terminated*.
+Instead, we are going to _submit_ the `CalcJob` to the AiiDA _daemon_.
+The daemon is a program that runs in the background and manages submitted calculations until they are _terminated_.
 Let's first check the status of the daemon using the `verdi` CLI:
 
 ```console
@@ -640,7 +641,7 @@ In this case, let's stop it for now:
 $ verdi daemon stop
 ```
 
-Next, let's *submit* the `CalcJob` we ran previously.
+Next, let's _submit_ the `CalcJob` we ran previously.
 Start the `verdi shell` and execute the Python code snippet below.
 This follows all the steps we did previously, but now uses the `submit` function instead of `run`:
 
@@ -650,13 +651,13 @@ In [1]: from aiida.engine import submit
    ...: code = load_code(label='add')
    ...: builder = code.get_builder()
    ...: builder.x = load_node(pk=4)
-   ...: builder.y = Int(5)
+   ...: builder.y = Int(value=5)
    ...:
    ...: submit(builder)
 ```
 
 When using `submit` the calculation job is not run in the local interpreter but is sent off to the daemon and you get back control instantly.
-Instead of the *result* of the calculation, it returns the node of the `CalcJob` that was just submitted:
+Instead of the _result_ of the calculation, it returns the node of the `CalcJob` that was just submitted:
 
 ```ipython
 Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:core.arithmetic.add)>
@@ -739,7 +740,7 @@ Sharing your workflows
 
 Working with external codes
 : Existing calculation plugins, for interfacing with external codes, are available on the [aiida plugin registry](https://aiidateam.github.io/aiida-registry/).
-  If none meet your needs, then the {ref}`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
+If none meet your needs, then the {ref}`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
 Tuning performance
 : To optimise the performance of AiiDA for running many concurrent computations see the {ref}`tuning performance how-to <how-to:tune-performance>`.
@@ -752,11 +753,11 @@ Saving computational resources
 
 Connecting to supercomputers
 : To setup up a computer which can communicate with a high-performance computer over SSH, see the {ref}`how-to for running external codes <how-to:run-codes>`, or add a {ref}`custom transport <topics:transport:develop_plugin>`.
-  AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
+AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
 
 Working with external codes
 : Existing calculation plugins, for interfacing with external codes, are available on the [aiida plugin registry](https://aiidateam.github.io/aiida-registry/).
-  If none meet your needs, then the {ref}`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
+If none meet your needs, then the {ref}`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
 Exploring your data
 : Once you have run multiple computations, the {ref}`find and query data how-to <how-to:query>` can show you how to efficiently explore your data. The data lineage can also be visualised as a {ref}`provenance graph <how-to:data:visualise-provenance>`.

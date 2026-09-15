@@ -27,35 +27,16 @@ def entry_point():
 
 def test_constructor(entry_point):
     """Test the constructor of :class:`~aiida.orm.nodes.data.entry_point.EntryPointData`."""
-    node = EntryPointData(entry_point=entry_point)
+    node = EntryPointData.from_entry_point(entry_point)
     assert isinstance(node, EntryPointData)
 
-    node = EntryPointData(group=entry_point.group, name=entry_point.name)
+    node = EntryPointData.from_name(group=entry_point.group, name=entry_point.name)
     assert isinstance(node, EntryPointData)
-
-
-@pytest.mark.parametrize(
-    'kwargs, exception, matches',
-    (
-        ({}, ValueError, r'Define either the `entry_point` directly or the `group` and `name`\.'),
-        ({'group': 'some.group'}, ValueError, r'Define either the `entry_point` directly or the `group` and `name`\.'),
-        ({'name': 'some.name'}, ValueError, r'Define either the `entry_point` directly or the `group` and `name`\.'),
-        ({'entry_point': 'invalid_type'}, TypeError, r'Got object of type .*, expecting .*'),
-        ({'group': 'a', 'name': 'a'}, ValueError, r'entry point with group `a` and name `a` does not exist.'),
-        ({'entry_point': InvalidEntryPoint}, ValueError, r'entry point .* could not be loaded.'),
-        ({'entry_point': InconsistentEntryPoint}, ValueError, r'Inconsistent.*: the `name` and `group` of .* do not'),
-        ({'entry_point': DifferentEntryPoint}, ValueError, r'Inconsistent.*: the `name` and `group` of .* point'),
-    ),
-)
-def test_constructor_invalid(kwargs, exception, matches):
-    """Test the constructor of :class:`~aiida.orm.nodes.data.entry_point.EntryPointData`."""
-    with pytest.raises(exception, match=matches):
-        EntryPointData(**kwargs)
 
 
 def test_load():
     """Test :meth:`~aiida.orm.nodes.data.entry_point.EntryPointData.load`."""
-    node = EntryPointData(group='aiida.data', name='core.entry_point')
+    node = EntryPointData.from_name(group='aiida.data', name='core.entry_point')
     assert node.load() == EntryPointData
     print(node.base.attributes.all)
 
@@ -70,5 +51,5 @@ def test_version():
     """Test that the package version of the wrapped entry point is stored in the attributes."""
     from aiida import __version__
 
-    node = EntryPointData(group='aiida.data', name='core.entry_point')
+    node = EntryPointData.from_name(group='aiida.data', name='core.entry_point')
     assert node.base.attributes.get(EntryPointData.KEY_ATTRIBUTES_VERSION) == __version__

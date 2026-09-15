@@ -80,15 +80,15 @@ class TestUpfParser:
         self.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
         self.filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
         self.filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
-        self.pseudo_barium = orm.UpfData(file=self.filepath_barium).store()
-        self.pseudo_oxygen = orm.UpfData(file=self.filepath_oxygen).store()
-        self.pseudo_carbon = orm.UpfData(file=self.filepath_carbon).store()
+        self.pseudo_barium = orm.UpfData.from_path(self.filepath_barium).store()
+        self.pseudo_oxygen = orm.UpfData.from_path(self.filepath_oxygen).store()
+        self.pseudo_carbon = orm.UpfData.from_path(self.filepath_carbon).store()
         self.temp_dir = str(tmp_path)
 
     def test_constructor(self):
         """Tests for the constructor of `UpfData`."""
         filename = 'C.some_custom_filename.upf'
-        upf = orm.UpfData(file=self.filepath_carbon, filename=filename)
+        upf = orm.UpfData.from_path(self.filepath_carbon, filename=filename)
         assert upf.filename == filename
 
         # Store and check that the filename is unchanged

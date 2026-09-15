@@ -7,7 +7,7 @@ from aiida import engine, orm
 
 @engine.calcfunction
 def add_calcfunction(data):
-    return orm.Int(data.value + 1)
+    return orm.Int(value=data.value + 1)
 
 
 @pytest.mark.requires_broker

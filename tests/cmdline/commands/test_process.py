@@ -159,8 +159,8 @@ def test_process_kill_failing_transport(
 
     def make_a_builder(sleep_seconds=0):
         builder = code.get_builder()
-        builder.x = Int(1)
-        builder.y = Int(1)
+        builder.x = Int(value=1)
+        builder.y = Int(value=1)
         builder.metadata.options.sleep = sleep_seconds
         return builder
 
@@ -200,8 +200,8 @@ def test_process_kill_failing_transport_failed_kill(
 
     def make_a_builder(sleep_seconds=0):
         builder = code.get_builder()
-        builder.x = Int(1)
-        builder.y = Int(1)
+        builder.x = Int(value=1)
+        builder.y = Int(value=1)
         builder.metadata.options.sleep = sleep_seconds
         return builder
 
@@ -242,8 +242,8 @@ def test_process_kill_failing_ebm_transport(
 
     def make_a_builder(sleep_seconds=0):
         builder = code.get_builder()
-        builder.x = Int(1)
-        builder.y = Int(1)
+        builder.x = Int(value=1)
+        builder.y = Int(value=1)
         builder.metadata.options.sleep = sleep_seconds
         return builder
 
@@ -286,8 +286,8 @@ def test_process_kill_failing_ebm_kill(
 
     def make_a_builder(sleep_seconds=0):
         builder = code.get_builder()
-        builder.x = Int(1)
-        builder.y = Int(1)
+        builder.x = Int(value=1)
+        builder.y = Int(value=1)
         builder.metadata.options.sleep = sleep_seconds
         return builder
 
@@ -961,8 +961,8 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
-    builder.x = Int(2)
-    builder.y = Int(3)
+    builder.x = Int(value=2)
+    builder.y = Int(value=3)
     builder.metadata.options.sleep = 20
 
     # Kill a paused process

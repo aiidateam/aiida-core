@@ -542,7 +542,7 @@ class NodeTransform:
         if self.import_new_extras:
             # Remove node hashing and other aiida "private" extras
             data['extras'] = {k: v for k, v in data['extras'].items() if not k.startswith('_aiida_')}
-            if data.get('node_type', '').endswith('code.Code.'):
+            if data.get('node_type', '').endswith('code.abstract.AbstractCode.'):
                 data['extras'].pop('hidden', None)
         else:
             data['extras'] = {}
@@ -1160,7 +1160,7 @@ def _make_import_group(
         IMPORT_LOGGER.report(f'Created new import Group: PK={group_id}, label={label}')
         group_node_ids = set()
     else:
-        group_id = group.pk  # type: ignore[assignment]
+        group_id = group.pk
         IMPORT_LOGGER.report(f'Using existing import Group: PK={group_id}, label={group.label}')
         group_node_ids = {
             pk

@@ -53,10 +53,10 @@ def test_strip_checkpoints(tmp_path):
     export_file = tmp_path / 'export1.aiida'
     create_archive([process], filename=export_file, strip_checkpoints=False)
     with get_format().open(export_file, 'r') as archive:
-        assert archive.get(orm.ProcessNode, uuid=process.uuid).checkpoint == {'foo': 'bar'}
+        assert archive.get(orm.ProcessNode, uuid=process.uuid).checkpoints == {'foo': 'bar'}
 
     # Export without checkpoints
     export_file = tmp_path / 'export2.aiida'
     create_archive([process], filename=export_file, strip_checkpoints=True)
     with get_format().open(export_file, 'r') as archive:
-        assert archive.get(orm.ProcessNode, uuid=process.uuid).checkpoint is None
+        assert archive.get(orm.ProcessNode, uuid=process.uuid).checkpoints is None

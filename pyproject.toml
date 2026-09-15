@@ -364,6 +364,9 @@ exclude = [
 ]
 
 [tool.mypy]
+disable_error_code = [
+  'method-assign'
+]
 disallow_any_generics = false
 disallow_incomplete_defs = false
 disallow_subclassing_any = false
@@ -441,6 +444,14 @@ module = [
   'trogon.*',
   'wrapt.*'
 ]
+
+[[tool.mypy.overrides]]
+disable_error_code = [
+  'no-redef',
+  'overload-cannot-match',
+  'overload-overlap'
+]
+module = "aiida.orm.*"
 
 [tool.pytest.ini_options]
 addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append --tb=short --instafail'

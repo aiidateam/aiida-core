@@ -205,8 +205,8 @@ async def test_upload_local_copy_list_files_folders(
     folder.base.repository.put_object_from_tree(tmp_path)
 
     inputs = {
-        'file_x': SinglefileData(io.BytesIO(b'content_x')).store(),
-        'file_y': SinglefileData(io.BytesIO(b'content_y')).store(),
+        'file_x': SinglefileData.from_filelike(io.BytesIO(b'content_x')).store(),
+        'file_y': SinglefileData.from_filelike(io.BytesIO(b'content_y')).store(),
         'folder': folder.store(),
     }
 
@@ -300,7 +300,7 @@ async def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, or
     filepath_local.write_text('local')
 
     remote_data = RemoteData(remote_path=str(dirpath_remote), computer=node.computer)
-    folder_data = FolderData(tree=dirpath_local)
+    folder_data = FolderData.from_tree(dirpath_local)
     sandbox = SandboxFolder(dirpath_sandbox)
     sandbox.create_file_from_filelike(io.BytesIO(b'sandbox'), 'file.txt')
 
@@ -589,7 +589,7 @@ async def test_upload_combinations(
 
         if issubclass(data_class, SinglefileData):
             create_file_hierarchy({filename: content}, sub_tmp_path_local)
-            copy_node = SinglefileData(sub_tmp_path_local / filename).store()
+            copy_node = SinglefileData.from_path(sub_tmp_path_local / filename).store()
 
             calc_info.local_copy_list.append((copy_node.uuid, copy_node.filename, target_path))
 
@@ -641,7 +641,7 @@ async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_i
     (subdir / 'some-file').write_bytes(b'sub dummy')
     (tmp_path / 'bash').write_bytes(b'bash implementation')
 
-    code = PortableCode(
+    code = PortableCode.from_directory(
         filepath_executable='bash',
         filepath_files=tmp_path,
     ).store()

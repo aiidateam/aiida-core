@@ -7,4 +7,4 @@ def average(*args):
     return sum(args) / len(args)
 
 
-result = average(*(Int(1), Int(2), Int(3)))
+result = average(*(Int(value=1), Int(value=2), Int(value=3)))

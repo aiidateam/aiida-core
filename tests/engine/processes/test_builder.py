@@ -35,7 +35,7 @@ class ExampleWorkChain(WorkChain):
         spec.input('name_spaced', valid_type=orm.Str, help='Not actually a namespaced port')
         spec.input('boolean', valid_type=orm.Bool, help='A pointless boolean')
         spec.input('dict', valid_type=orm.Dict, help='A pointless dict', required=False)
-        spec.input('default', valid_type=orm.Int, default=lambda: orm.Int(DEFAULT_INT).store())
+        spec.input('default', valid_type=orm.Int, default=lambda: orm.Int(value=DEFAULT_INT).store())
 
 
 class LazyProcessNamespace(Process):
@@ -77,11 +77,9 @@ class NestedNamespaceProcess(Process):
 class MappingData(Mapping, orm.Data):  # type: ignore[misc]
     """Data sub class that is also a `Mapping`."""
 
-    def __init__(self, data=None):
-        super().__init__()
-        if data is None:
-            data = {}
-        self._data = data
+    def initialize(self) -> None:
+        super().initialize()
+        self._data = self.base.attributes.get('data', {})
 
     def __getitem__(self, key):
         return self._data[key]
@@ -96,13 +94,13 @@ class MappingData(Mapping, orm.Data):  # type: ignore[misc]
 @pytest.fixture()
 def example_inputs():
     return {
-        'dynamic': {'namespace': {'alp': orm.Int(1).store()}},
+        'dynamic': {'namespace': {'alp': orm.Int(value=1).store()}},
         'name': {
-            'spaced': orm.Int(1).store(),
+            'spaced': orm.Int(value=1).store(),
         },
-        'name_spaced': orm.Str('underscored').store(),
-        'dict': orm.Dict({'a': 1, 'b': {'c': 2}}),
-        'boolean': orm.Bool(True).store(),
+        'name_spaced': orm.Str(value='underscored').store(),
+        'dict': orm.Dict(**{'a': 1, 'b': {'c': 2}}),
+        'boolean': orm.Bool(value=True).store(),
         'metadata': {},
     }
 
@@ -116,7 +114,7 @@ def test_builder_inputs():
     assert not builder._inputs(prune=True)
 
     # With a specific input in `namespace` the case of `prune=True` should now only remove `metadata`
-    integer = orm.Int(DEFAULT_INT)
+    integer = orm.Int(value=DEFAULT_INT)
     builder = LazyProcessNamespace.get_builder()
     builder.namespace.a = integer
     assert builder._inputs(prune=False) == {'namespace': {'a': integer, 'nested': {}}, 'metadata': {}}
@@ -224,7 +222,7 @@ def test_builder_restart_work_chain(example_inputs):
     node.base.links.add_incoming(example_inputs['name']['spaced'], LinkType.INPUT_WORK, 'name__spaced')
     node.base.links.add_incoming(example_inputs['name_spaced'], LinkType.INPUT_WORK, 'name_spaced')
     node.base.links.add_incoming(example_inputs['boolean'], LinkType.INPUT_WORK, 'boolean')
-    node.base.links.add_incoming(orm.Int(DEFAULT_INT).store(), LinkType.INPUT_WORK, 'default')
+    node.base.links.add_incoming(orm.Int(value=DEFAULT_INT).store(), LinkType.INPUT_WORK, 'default')
     node.base.links.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='CALL_WORK')
     node.store()
 
@@ -241,7 +239,7 @@ def test_builder_restart_work_chain(example_inputs):
     assert builder.name.spaced == example_inputs['name']['spaced']
     assert builder.name_spaced == example_inputs['name_spaced']
     assert builder.boolean == example_inputs['boolean']
-    assert builder.default == orm.Int(DEFAULT_INT)
+    assert builder.default == orm.Int(value=DEFAULT_INT)
 
 
 def test_port_names_overlapping_mutable_mapping_methods():
@@ -259,14 +257,14 @@ def test_port_names_overlapping_mutable_mapping_methods():
         builder.values()
 
     # However, we can assign a node to it
-    builder.values = orm.Int(2)
+    builder.values = orm.Int(value=2)
 
     # Calling the attribute `values` will then actually try to call the node, which should raise
     with pytest.raises(TypeError):
         builder.values()
 
     # Casting the builder to a dict, *should* then make `values` callable again
-    assert orm.Int(2) in dict(builder).values()
+    assert orm.Int(value=2) in dict(builder).values()
 
     # The mapping methods should not be auto-completed, i.e. not in the values returned by calling `dir`
     for method in [method for method in dir(MutableMapping) if method != 'values']:
@@ -277,8 +275,8 @@ def test_port_names_overlapping_mutable_mapping_methods():
         assert port_name in dir(builder)
 
     # The `update` method is implemented, but prefixed with an underscore to not block the name for a port
-    builder.update({'boolean': orm.Bool(False)})
-    assert builder.boolean == orm.Bool(False)
+    builder.update({'boolean': orm.Bool(value=False)})
+    assert builder.boolean == orm.Bool(value=False)
 
 
 def test_calc_job_node_get_builder_restart(aiida_code_installed):
@@ -290,16 +288,16 @@ def test_calc_job_node_get_builder_restart(aiida_code_installed):
             'description': 'some-description',
             'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}, 'max_wallclock_seconds': 1800},
         },
-        'x': orm.Int(1),
-        'y': orm.Int(2),
+        'x': orm.Int(value=1),
+        'y': orm.Int(value=2),
         'code': code,
     }
 
     _, node = run_get_node(CalculationFactory('core.arithmetic.add'), **inputs)
     builder = node.get_builder_restart()
 
-    assert builder.x == orm.Int(1)
-    assert builder.y == orm.Int(2)
+    assert builder.x == orm.Int(value=1)
+    assert builder.y == orm.Int(value=2)
     assert builder._inputs(prune=True)['metadata'] == inputs['metadata']
 
 
@@ -318,7 +316,7 @@ def test_code_get_builder(aiida_localhost):
     assert builder.code.pk == code.pk
 
     # Check that I can set the parameters
-    builder.parameters = orm.Dict(dict={})
+    builder.parameters = orm.Dict()
 
     # Check that it complains for an unknown input
     with pytest.raises(AttributeError):
@@ -326,7 +324,7 @@ def test_code_get_builder(aiida_localhost):
 
     # Check that it complains if the type is not the correct one (for the templatereplacer, it should be a Dict)
     with pytest.raises(ValueError):
-        builder.parameters = orm.Int(3)
+        builder.parameters = orm.Int(value=3)
 
 
 def test_set_attr():

@@ -26,7 +26,8 @@ def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_local
     user = orm.User(email=new_email).store()
 
     # Create a structure data node that has a calculation as output
-    sd1 = orm.StructureData(pbc=False)
+    sd1 = orm.StructureData()
+    sd1.set_pbc(pbc=False)
     sd1.user = user
     sd1.label = 'sd1'
     sd1.store()
@@ -40,7 +41,8 @@ def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_local
     jc1.store()
 
     # Create some nodes from a different user
-    sd2 = orm.StructureData(pbc=False)
+    sd2 = orm.StructureData()
+    sd2.set_pbc(pbc=False)
     sd2.user = user
     sd2.label = 'sd2'
     sd2.store()
@@ -54,7 +56,8 @@ def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_local
     jc2.base.links.add_incoming(sd2, link_type=LinkType.INPUT_CALC, link_label='l2')
     jc2.store()
 
-    sd3 = orm.StructureData(pbc=False)
+    sd3 = orm.StructureData()
+    sd3.set_pbc(pbc=False)
     sd3.label = 'sd3'
     sd3.store()
     sd3.base.links.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
@@ -95,7 +98,8 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
     user = orm.User(email=new_email).store()
 
     # Create a structure data node that has a calculation as output
-    sd1 = orm.StructureData(pbc=False)
+    sd1 = orm.StructureData()
+    sd1.set_pbc(pbc=False)
     sd1.user = user
     sd1.label = 'sd1'
     sd1.store()
@@ -109,7 +113,8 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
     jc1.store()
 
     # Create some nodes from a different user
-    sd2 = orm.StructureData(pbc=False)
+    sd2 = orm.StructureData()
+    sd2.set_pbc(pbc=False)
     sd2.user = user
     sd2.label = 'sd2'
     sd2.base.links.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
@@ -140,7 +145,8 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
     jc2.base.links.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
     jc2.store()
 
-    sd3 = orm.StructureData(pbc=False)
+    sd3 = orm.StructureData()
+    sd3.set_pbc(pbc=False)
     sd3.label = 'sd3'
     sd3.base.links.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
     sd3.store()
@@ -169,7 +175,7 @@ def test_filter_size(tmp_path, aiida_profile_clean):
     nodes = []
     # We need to attach a node to the user otherwise it is not exported
     for i in range(nb_nodes):
-        node = orm.Int(5, user=orm.User(email=f'{i}').store())
+        node = orm.Int(value=5, user=orm.User(email=f'{i}').store())
         node.store()
         nodes.append(node)
 

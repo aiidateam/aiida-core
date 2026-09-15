@@ -4,7 +4,7 @@ from aiida.engine import submit
 ArithmeticAddCalculation = plugins.CalculationFactory('core.arithmetic.add')
 
 builder = ArithmeticAddCalculation.get_builder()
-builder.x = orm.Int(1)
-builder.y = orm.Int(2)
+builder.x = orm.Int(value=1)
+builder.y = orm.Int(value=2)
 
 node = submit(builder)

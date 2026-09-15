@@ -21,7 +21,7 @@ from aiida.common.warnings import AiidaDeprecationWarning
 def test_dot_dict_manager():
     """Verify that the Dict.dict manager behaves as intended."""
     dict_content = {'a': True, 'b': 1, 'c': 'Some string'}
-    dict_node = orm.Dict(dict=dict_content)
+    dict_node = orm.Dict(**dict_content)
 
     # Check that dir() return all keys and nothing else, important
     # for tab competion

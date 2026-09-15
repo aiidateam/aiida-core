@@ -512,7 +512,7 @@ class TestGroups:
 
         # Add different types of nodes
         calc_node = orm.CalculationNode().store().seal()
-        data_node = orm.Int(42).store()
+        data_node = orm.Int(value=42).store()
         workflow_node = orm.WorkflowNode().store().seal()
 
         group.add_nodes([calc_node, data_node, workflow_node])

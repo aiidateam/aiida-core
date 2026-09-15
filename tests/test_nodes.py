@@ -177,7 +177,7 @@ class TestQueryWithAiidaObjects:
         a1.base.extras.set(extra_name, True)
         a3 = orm.Data().store()
         a3.base.extras.set(extra_name, True)
-        a4 = Dict(dict={'a': 'b'}).store()
+        a4 = Dict(**{'a': 'b'}).store()
         a4.base.extras.set(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
@@ -865,7 +865,7 @@ class TestNodeBasic:
         l2.store()
 
         # Manages to store, and value is converted to its base type
-        p = orm.Dict(dict={'b': orm.Str('sometext'), 'c': l1})
+        p = orm.Dict(**{'b': orm.Str(value='sometext'), 'c': l1})
         p.store()
         assert p.base.attributes.get('b') == 'sometext'
         assert isinstance(p.base.attributes.get('b'), str)
@@ -874,7 +874,7 @@ class TestNodeBasic:
 
         # Check also before storing
         n = orm.Data()
-        n.base.attributes.set('a', orm.Str('sometext2'))
+        n.base.attributes.set('a', orm.Str(value='sometext2'))
         n.base.attributes.set('b', l2)
         assert n.base.attributes.get('a').value == 'sometext2'
         assert isinstance(n.base.attributes.get('a'), orm.Str)
@@ -883,7 +883,7 @@ class TestNodeBasic:
 
         # Check also deep in a dictionary/list
         n = orm.Data()
-        n.base.attributes.set('a', {'b': [orm.Str('sometext3')]})
+        n.base.attributes.set('a', {'b': [orm.Str(value='sometext3')]})
         assert n.base.attributes.get('a')['b'][0].value == 'sometext3'
         assert isinstance(n.base.attributes.get('a')['b'][0], orm.Str)
         n.store()
@@ -904,7 +904,7 @@ class TestNodeBasic:
         # Check also before storing
         n = orm.Data()
         n.store()
-        n.base.extras.set('a', orm.Str('sometext2'))
+        n.base.extras.set('a', orm.Str(value='sometext2'))
         n.base.extras.set('c', l1)
         n.base.extras.set('d', l2)
         assert n.base.extras.get('a') == 'sometext2'
@@ -917,7 +917,7 @@ class TestNodeBasic:
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.store()
-        n.base.extras.set('a', {'b': [orm.Str('sometext3')]})
+        n.base.extras.set('a', {'b': [orm.Str(value='sometext3')]})
         assert n.base.extras.get('a')['b'][0] == 'sometext3'
         assert isinstance(n.base.extras.get('a')['b'][0], str)
 
@@ -961,142 +961,6 @@ class TestNodeBasic:
             (default_user_email, 'text'),
             (default_user_email, 'text2'),
         ]
-
-    @pytest.mark.usefixtures('suppress_internal_deprecations')
-    def test_code_loading_from_string(self):
-        """Checks that the method Code.get_from_string works correctly."""
-        from aiida.common.exceptions import MultipleObjectsError, NotExistent
-
-        # Create some code nodes
-        code1 = orm.Code()
-        code1.set_remote_computer_exec((self.computer, '/bin/true'))
-        code1.label = 'test_code1'
-        code1.store()
-
-        code2 = orm.Code()
-        code2.set_remote_computer_exec((self.computer, '/bin/true'))
-        code2.label = 'test_code2'
-        code2.store()
-
-        # Test that the code1 can be loaded correctly with its label
-        q_code_1 = orm.Code.get_from_string(code1.label)
-        assert q_code_1.pk == code1.pk
-        assert q_code_1.label == code1.label
-        assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
-
-        # Test that the code2 can be loaded correctly with its label
-        q_code_2 = orm.Code.get_from_string(f'{code2.label}@{self.computer.label}')
-        assert q_code_2.pk == code2.pk
-        assert q_code_2.label == code2.label
-        assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
-
-        # Calling get_from_string for a non string type raises exception
-        with pytest.raises(TypeError):
-            orm.Code.get_from_string(code1.pk)
-
-        # Test that the lookup of a nonexistent code works as expected
-        with pytest.raises(NotExistent):
-            orm.Code.get_from_string('nonexistent_code')
-
-        # Add another code with the label of code1
-        code3 = orm.Code()
-        code3.set_remote_computer_exec((self.computer, '/bin/true'))
-        code3.label = 'test_code1'
-        code3.store()
-
-        # Query with the common label
-        with pytest.raises(MultipleObjectsError):
-            orm.Code.get_from_string(code3.label)
-
-    @pytest.mark.usefixtures('suppress_internal_deprecations')
-    def test_code_loading_using_get(self):
-        """Checks that the method Code.get(pk) works correctly."""
-        from aiida.common.exceptions import MultipleObjectsError, NotExistent
-
-        # Create some code nodes
-        code1 = orm.Code()
-        code1.set_remote_computer_exec((self.computer, '/bin/true'))
-        code1.label = 'test_code3'
-        code1.store()
-
-        code2 = orm.Code()
-        code2.set_remote_computer_exec((self.computer, '/bin/true'))
-        code2.label = 'test_code4'
-        code2.store()
-
-        # Test that the code1 can be loaded correctly with its label only
-        q_code_1 = orm.Code.get(label=code1.label)
-        assert q_code_1.pk == code1.pk
-        assert q_code_1.label == code1.label
-        assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
-
-        # Test that the code1 can be loaded correctly with its id/pk
-        q_code_1 = orm.Code.get(code1.pk)
-        assert q_code_1.pk == code1.pk
-        assert q_code_1.label == code1.label
-        assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
-
-        # Test that the code2 can be loaded correctly with its label and computername
-        q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.label)
-        assert q_code_2.pk == code2.pk
-        assert q_code_2.label == code2.label
-        assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
-
-        # Test that the code2 can be loaded correctly with its id/pk
-        q_code_2 = orm.Code.get(code2.pk)
-        assert q_code_2.pk == code2.pk
-        assert q_code_2.label == code2.label
-        assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
-
-        # Test that the lookup of a nonexistent code works as expected
-        with pytest.raises(NotExistent):
-            orm.Code.get(label='nonexistent_code')
-
-        # Add another code with the label of code1
-        code3 = orm.Code()
-        code3.set_remote_computer_exec((self.computer, '/bin/true'))
-        code3.label = 'test_code3'
-        code3.store()
-
-        # Query with the common label
-        with pytest.raises(MultipleObjectsError):
-            orm.Code.get(label=code3.label)
-
-        # Add another code whose label is equal to pk of another code
-        pk_label_duplicate = code1.pk
-        code4 = orm.Code()
-        code4.set_remote_computer_exec((self.computer, '/bin/true'))
-        code4.label = str(pk_label_duplicate)
-        code4.store()
-
-        # Since the label of code4 is identical to the pk of code1, calling
-        # Code.get(pk_label_duplicate) should return code1, as the pk takes
-        # precedence
-        q_code_4 = orm.Code.get(code4.label)
-        assert q_code_4.pk == code1.pk
-        assert q_code_4.label == code1.label
-        assert q_code_4.get_remote_exec_path() == code1.get_remote_exec_path()
-
-    @pytest.mark.usefixtures('suppress_internal_deprecations')
-    def test_list_for_plugin(self):
-        """This test checks the Code.list_for_plugin()"""
-        code1 = orm.Code()
-        code1.set_remote_computer_exec((self.computer, '/bin/true'))
-        code1.label = 'test_code1'
-        code1.set_input_plugin_name('plugin_name')
-        code1.store()
-
-        code2 = orm.Code()
-        code2.set_remote_computer_exec((self.computer, '/bin/true'))
-        code2.label = 'test_code2'
-        code2.set_input_plugin_name('plugin_name')
-        code2.store()
-
-        retrieved_pks = set(orm.Code.list_for_plugin('plugin_name', labels=False))
-        assert retrieved_pks == set([code1.pk, code2.pk])
-
-        retrieved_labels = set(orm.Code.list_for_plugin('plugin_name', labels=True))
-        assert retrieved_labels == set([code1.label, code2.label])
 
     def test_load_node(self):
         """Tests the load node functionality"""
@@ -1343,7 +1207,7 @@ class TestSubNodesAndLinks:
         # I create some objects
         d1 = orm.Data().store()
         with tempfile.NamedTemporaryFile('w+') as handle:
-            d2 = SinglefileData(file=handle).store()
+            d2 = SinglefileData.from_filelike(handle).store()
 
         unsavedcomputer = orm.Computer(
             label='localhost2', hostname='localhost', scheduler_type='core.direct', transport_type='core.local'

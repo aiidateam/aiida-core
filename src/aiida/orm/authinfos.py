@@ -16,7 +16,8 @@ from aiida.common import exceptions
 from aiida.manage import get_manager
 from aiida.orm import entities, users
 from aiida.orm.computers import Computer
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm.decorators import column
+from aiida.orm.models.adapters import EntityPkAdapter
 from aiida.orm.users import User
 from aiida.plugins import TransportFactory
 
@@ -28,14 +29,10 @@ if t.TYPE_CHECKING:
 __all__ = ('AuthInfo',)
 
 
-class AuthInfoCollection(entities.Collection['AuthInfo']):
+class AuthInfoCollection(entities.EntityCollection['AuthInfo']):
     """The collection of `AuthInfo` entries."""
 
     collection_type: t.ClassVar[str] = 'authinfos'
-
-    @staticmethod
-    def _entity_base_cls() -> type[AuthInfo]:
-        return AuthInfo
 
     def delete(self, pk: int) -> None:
         """Delete an entry from the collection.
@@ -44,36 +41,16 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
         """
         self._backend.authinfos.delete(pk)
 
+    @staticmethod
+    def _entity_base_cls() -> type[AuthInfo]:
+        return AuthInfo
+
 
 class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     _CLS_COLLECTION = AuthInfoCollection
     PROPERTY_WORKDIR = 'workdir'
-
-    class ReadModel(entities.Entity.ReadModel):
-        computer: int = OrmMetadataField(
-            description='The PK of the computer',
-            orm_class=Computer,
-            orm_to_model=lambda auth_info: t.cast(AuthInfo, auth_info).computer.pk,
-        )
-        user: int = OrmMetadataField(
-            description='The PK of the user',
-            orm_class=User,
-            orm_to_model=lambda auth_info: t.cast(AuthInfo, auth_info).user.pk,
-        )
-        enabled: bool = OrmMetadataField(
-            True,
-            description='Whether the instance is enabled',
-        )
-        auth_params: dict[str, t.Any] = OrmMetadataField(
-            default_factory=dict,
-            description='Dictionary of authentication parameters',
-        )
-        metadata: dict[str, t.Any] = OrmMetadataField(
-            default_factory=dict,
-            description='Dictionary of metadata',
-        )
 
     def __init__(
         self,
@@ -118,40 +95,40 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
             and self.metadata == other.metadata
         )
 
-    @property
+    @column
     def enabled(self) -> bool:
-        """Return whether this instance is enabled.
-
-        :return: True if enabled, False otherwise
-        """
+        """Whether this instance is enabled."""
         return self._backend_entity.enabled
 
     @enabled.setter
     def enabled(self, enabled: bool) -> None:
-        """Set the enabled state
-
-        :param enabled: boolean, True to enable the instance, False to disable it
-        """
+        """The enabled state of this instance."""
         self._backend_entity.enabled = enabled
 
-    @property
+    @column(
+        model_adapter=EntityPkAdapter(Computer),
+    )
     def computer(self) -> Computer:
-        """Return the computer associated with this instance."""
+        """The computer associated with this instance."""
         from aiida.orm import computers
 
         return entities.from_backend_entity(computers.Computer, self._backend_entity.computer)
 
-    @property
+    @column(
+        model_adapter=EntityPkAdapter(User),
+    )
     def user(self) -> User:
-        """Return the user associated with this instance."""
+        """The user associated with this instance."""
         return entities.from_backend_entity(users.User, self._backend_entity.user)
 
-    @property
+    @column
     def auth_params(self) -> dict[str, t.Any]:
+        """The dictionary of authentication parameters."""
         return self._backend_entity.get_auth_params()
 
-    @property
+    @column
     def metadata(self) -> dict[str, t.Any]:
+        """The dictionary of metadata."""
         return self._backend_entity.get_metadata()
 
     def get_auth_params(self) -> dict[str, t.Any]:

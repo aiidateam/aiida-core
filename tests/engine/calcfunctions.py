@@ -7,4 +7,4 @@ from aiida.orm import Int
 @calcfunction
 def add_calcfunction(data):
     """Calcfunction mirroring a ``test_calcfunctions`` calcfunction but has a slightly different implementation."""
-    return Int(data.value + 2)
+    return Int(value=data.value + 2)

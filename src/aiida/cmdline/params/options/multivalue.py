@@ -35,7 +35,7 @@ def collect_usage_pieces(self: click.Command, ctx: click.Context) -> list[str]:
 
 
 # Override the `collect_usage_pieces` method of the `click.Command` class to automatically affect all commands
-click.Command.collect_usage_pieces = collect_usage_pieces  # type: ignore[method-assign]
+click.Command.collect_usage_pieces = collect_usage_pieces
 
 
 class MultipleValueOption(click.Option):
@@ -95,5 +95,5 @@ class MultipleValueOption(click.Option):
             if our_parser:
                 self._eat_all_parser = our_parser
                 self._previous_parser_process = our_parser.process
-                our_parser.process = parser_process  # type: ignore[method-assign]
+                our_parser.process = parser_process
                 break

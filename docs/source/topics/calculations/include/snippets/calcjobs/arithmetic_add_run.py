@@ -6,8 +6,8 @@ ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 inputs = {
     'code': load_code('add@localhost'),
-    'x': Int(1),
-    'y': Int(2),
+    'x': Int(value=1),
+    'y': Int(value=2),
 }
 
 run(ArithmeticAddCalculation, **inputs)

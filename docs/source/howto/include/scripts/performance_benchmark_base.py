@@ -77,8 +77,8 @@ def main(code, number, daemon):
     cls = CalculationFactory('core.arithmetic.add')
     builder = cls.get_builder()
     builder.code = code
-    builder.x = orm.Int(1)
-    builder.y = orm.Int(1)
+    builder.x = orm.Int(value=1)
+    builder.y = orm.Int(value=1)
 
     time_start = time.time()
     nodes = []

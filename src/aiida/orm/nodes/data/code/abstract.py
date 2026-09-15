@@ -14,7 +14,6 @@ import abc
 import functools
 import pathlib
 import typing as t
-from copy import deepcopy
 
 import pydantic as pdt
 
@@ -22,13 +21,14 @@ from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.orm import Computer
+from aiida.orm.cli import CliFieldInfo
+from aiida.orm.decorators import attribute, column
 from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmMetadataField, OrmModel
 from aiida.plugins import CalculationFactory
 
 if t.TYPE_CHECKING:
     from aiida.engine import ProcessBuilder
+    from aiida.orm.computers import Computer
 
 __all__ = ('AbstractCode',)
 
@@ -36,73 +36,97 @@ __all__ = ('AbstractCode',)
 class AbstractCode(Data, metaclass=abc.ABCMeta):
     """Abstract data plugin representing an executable code."""
 
-    # Should become ``default_calc_job_plugin`` once ``Code`` is dropped in ``aiida-core==3.0``
-    _KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'input_plugin'
-    _KEY_ATTRIBUTE_APPEND_TEXT: str = 'append_text'
-    _KEY_ATTRIBUTE_PREPEND_TEXT: str = 'prepend_text'
-    _KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
-    _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
-    _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
-    _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
+    KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'default_calc_job_plugin'
+    KEY_ATTRIBUTE_APPEND_TEXT: str = 'append_text'
+    KEY_ATTRIBUTE_PREPEND_TEXT: str = 'prepend_text'
+    KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
+    KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
+    KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
+    KEY_EXTRA_IS_HIDDEN: str = 'is_hidden'
 
-    class BaseNodeModel(Data.BaseNodeModel):
-        label: str = OrmMetadataField(
-            title='Label',
-            description='A unique label to identify the code by',
-            short_name='-L',
-            priority=4,
-        )
-        description: str = OrmMetadataField(
-            '',
-            title='Description',
-            description='Human-readable description, ideally including version and compilation environment',
-            short_name='-D',
-            priority=3,
-        )
+    def __str__(self):
+        if self.computer is None:
+            return f"Local code '{self.label}' pk: {self.pk}, uuid: {self.uuid}"
 
-    class CommonFields(OrmModel):
-        default_calc_job_plugin: str | None = OrmMetadataField(
-            None,
-            alias='input_plugin',
-            title='Default `CalcJob` plugin',
-            description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`)',
-            short_name='-P',
-        )
-        use_double_quotes: bool = OrmMetadataField(
-            False,
-            title='Escape using double quotes',
-            description='Whether the executable and arguments of the code in the submission script should be escaped '
-            'with single or double quotes',
-        )
-        with_mpi: bool | None = OrmMetadataField(
-            None,
-            title='Run with MPI',
-            description='Whether the executable should be run as an MPI program. This option can be left unspecified '
-            'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
-            'whether to run with MPI',
-        )
-        wrap_cmdline_params: bool = OrmMetadataField(
-            False,
-            title='Wrap command line parameters',
-            description='Whether all command line parameters to be passed to the engine command should be wrapped in '
-            'a double quotes to form a single argument. This should be set to `True` for Docker',
-        )
-        prepend_text: str = OrmMetadataField(
-            '',
-            title='Prepend script',
-            description='Bash commands that should be prepended to the run line in all submit scripts for this code',
-            option_cls=functools.partial(
-                TemplateInteractiveOption,
-                extension='.bash',
-                header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
-                'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                footer='All lines that start with `#=`: will be ignored.',
-            ),
-        )
-        append_text: str = OrmMetadataField(
-            '',
-            title='Append script',
-            description='Bash commands that should be appended to the run line in all submit scripts for this code',
+        return f"Remote code '{self.label}' on {self.computer.label} pk: {self.pk}, uuid: {self.uuid}"
+
+    @column(
+        updatable=True,
+        cli_field_info=CliFieldInfo(priority=4),
+    )
+    def label(self) -> str:
+        """The unique label of the code."""
+        return self.backend_entity.label
+
+    @label.setter
+    def label(self, value: str) -> None:
+        type_check(value, str)
+
+        if '@' in value:
+            raise ValueError('The label contains a `@` symbol, which is not allowed.')
+
+        self.backend_entity.label = value
+
+    @column(
+        updatable=True,
+        model_field_info=pdt.fields.FieldInfo(default=''),
+        cli_field_info=CliFieldInfo(priority=3),
+    )
+    def description(self) -> str:
+        """The description of the code."""
+        return self.backend_entity.description
+
+    @description.setter
+    def description(self, value: str) -> None:
+        type_check(value, str)
+        self.backend_entity.description = value
+
+    @attribute
+    def default_calc_job_plugin(self) -> str | None:
+        """The entry point name of the default ``CalcJob`` plugin."""
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
+
+    @default_calc_job_plugin.setter
+    def default_calc_job_plugin(self, value: str | None) -> None:
+        type_check(value, str, allow_none=True)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, value)
+
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
+    def use_double_quotes(self) -> bool:
+        """Whether the command line invocation of this code should be escaped with double quotes."""
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
+
+    @use_double_quotes.setter
+    def use_double_quotes(self, value: bool) -> None:
+        type_check(value, bool)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, value)
+
+    @attribute
+    def with_mpi(self) -> bool | None:
+        """Whether the command should be run as an MPI program."""
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_WITH_MPI, None)
+
+    @with_mpi.setter
+    def with_mpi(self, value: bool | None) -> None:
+        type_check(value, bool, allow_none=True)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_WITH_MPI, value)
+
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
+    def wrap_cmdline_params(self) -> bool:
+        """Whether all command line parameters should be wrapped with double quotes to form a single argument."""
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+
+    @wrap_cmdline_params.setter
+    def wrap_cmdline_params(self, value: bool) -> None:
+        type_check(value, bool)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, value)
+
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            default='',
+            title='Append scripts',
+        ),
+        cli_field_info=CliFieldInfo(
             option_cls=functools.partial(
                 TemplateInteractiveOption,
                 extension='.bash',
@@ -110,172 +134,48 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'in all submit scripts for this code, type that between the equal signs below and save the file.',
                 footer='All lines that start with `#=`: will be ignored.',
             ),
-        )
+        ),
+    )
+    def append_text(self) -> str:
+        """The text to add after the run line in the job script.
 
-    class AttributesModel(CommonFields, Data.AttributesModel): ...
-
-    class ConstructorArgsModel(CommonFields): ...
-
-    def __init__(
-        self,
-        default_calc_job_plugin: str | None = None,
-        append_text: str = '',
-        prepend_text: str = '',
-        use_double_quotes: bool = False,
-        with_mpi: bool | None = None,
-        is_hidden: bool = False,
-        wrap_cmdline_params: bool = False,
-        **kwargs,
-    ):
-        """Construct a new instance.
-
-        :param default_calc_job_plugin: The entry point name of the default ``CalcJob`` plugin to use.
-        :param append_text: The text that should be appended to the run line in the job script.
-        :param prepend_text: The text that should be prepended to the run line in the job script.
-        :param use_double_quotes: Whether the command line invocation of this code should be escaped with double quotes.
-        :param with_mpi: Whether the command should be run as an MPI program.
-        :param wrap_cmdline_params: Whether to wrap the executable and all its command line parameters into quotes to
-            form a single string. This is required to enable support for Docker with the ``ContainerizedCode``.
-        :param is_hidden: Whether the code is hidden.
+        This can include ``bash`` commands or other shell instructions to run after the main command,
+        e.g., cleaning up temporary files, logging, etc.
         """
-        input_plugin = kwargs.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
-        if input_plugin is not None:
-            if default_calc_job_plugin is not None:
-                msg = (
-                    f'Got both `{self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN}` and its replacement '
-                    '`default_calc_job_plugin` as input, which is not allowed'
-                )
-                raise ValueError(msg)
-            default_calc_job_plugin = input_plugin
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_APPEND_TEXT, '')
 
-        super().__init__(**kwargs)
-        self.default_calc_job_plugin = default_calc_job_plugin
-        self.append_text = append_text
-        self.prepend_text = prepend_text
-        self.use_double_quotes = use_double_quotes
-        self.with_mpi = with_mpi
-        self.wrap_cmdline_params = wrap_cmdline_params
-        self.is_hidden = is_hidden
+    @append_text.setter
+    def append_text(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_APPEND_TEXT, value)
 
-    def __init_subclass__(cls, **kwargs) -> None:
-        super().__init_subclass__(**kwargs)
-        cls._patch_cli_model()
-
-    def to_model(
-        self,
-        *,
-        context: dict[str, t.Any] | None = None,
-        minimal: bool = False,
-        schema: t.Literal['read', 'write', 'constructor', 'cli'] | None = None,
-    ):
-        if schema == 'cli':
-            Model = self.CliModel  # noqa: N806
-            fields = self.to_model_field_values(context=context, minimal=minimal, schema=Model)
-            return Model(**fields)
-        return super().to_model(context=context, minimal=minimal, schema=schema)
-
-    def serialize(
-        self,
-        *,
-        context: dict[str, t.Any] | None = None,
-        minimal: bool = False,
-        schema: t.Literal['read', 'write', 'constructor', 'cli'] | None = None,
-        mode: t.Literal['json', 'python'] = 'python',
-        exclude_none: bool = False,
-        repository_dump_path: pathlib.Path | None = None,
-    ):
-        if schema == 'cli':
-            return self.to_model(context=context, minimal=minimal, schema=schema).model_dump(
-                mode=mode,
-                exclude_unset=minimal,
-                exclude_none=exclude_none,
-            )
-        return super().serialize(
-            context=context,
-            minimal=minimal,
-            schema=schema,
-            mode=mode,
-            exclude_none=exclude_none,
-            repository_dump_path=repository_dump_path,
-        )
-
-    @classmethod
-    def _patch_cli_model(cls):
-        """Patch `CliModel` by synthesizing it from the base and constructor models."""
-        model_fields: dict[str, t.Any] = {
-            'label': (
-                cls.BaseNodeModel.model_fields['label'].annotation,
-                deepcopy(cls.BaseNodeModel.model_fields['label']),
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            default='',
+            title='Prepend scripts',
+        ),
+        cli_field_info=CliFieldInfo(
+            option_cls=functools.partial(
+                TemplateInteractiveOption,
+                extension='.bash',
+                header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                footer='All lines that start with `#=`: will be ignored.',
             ),
-            'description': (
-                cls.BaseNodeModel.model_fields['description'].annotation,
-                deepcopy(cls.BaseNodeModel.model_fields['description']),
-            ),
-            **{
-                key: (field_info.annotation, deepcopy(field_info))
-                for key, field_info in cls.ConstructorArgsModel.model_fields.items()
-            },
-        }
-        CliModel = t.cast(  # noqa: N806
-            type[OrmModel],
-            pdt.create_model(
-                'CliModel',
-                __base__=OrmModel,
-                __module__=cls.__module__,
-                __qualname__=f'{cls.__name__}.CliModel',
-                **model_fields,
-            ),
-        )
-        cls._CliModel = CliModel
+        ),
+    )
+    def prepend_text(self) -> str:
+        """The text to add before the run line in the job script.
 
-    @abc.abstractmethod
-    def can_run_on_computer(self, computer: Computer) -> bool:
-        """Return whether the code can run on a given computer.
-
-        :param computer: The computer.
-        :return: ``True`` if the code can run on ``computer``, ``False`` otherwise.
+        This can include ``bash`` commands or other shell instructions to run before the main command,
+        e.g., setting environment variables, loading modules, etc.
         """
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_PREPEND_TEXT, '')
 
-    @abc.abstractmethod
-    def get_executable(self) -> pathlib.PurePath:
-        """Return the executable that the submission script should execute to run the code.
-
-        :return: The executable to be called in the submission script.
-        """
-
-    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
-        """Return the list of executable with its command line parameters.
-
-        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
-        :return: List of the executable followed by its command line parameters.
-        """
-        return [str(self.get_executable())] + (cmdline_params or [])
-
-    def get_prepend_cmdline_params(
-        self, mpi_args: list[str] | None = None, extra_mpirun_params: list[str] | None = None
-    ) -> list[str]:
-        """Return List of command line parameters to be prepended to the executable in submission line.
-        These command line parameters are typically parameters related to MPI invocations.
-
-        :param mpi_args: List of MPI parameters provided by the ``Computer.get_mpirun_command`` method.
-        :param extra_mpiruns_params: List of MPI parameters provided by the ``metadata.options.extra_mpirun_params``
-            input of the ``CalcJob``.
-        :return: List of command line parameters to be prepended to the executable in submission line.
-        """
-        return (mpi_args or []) + (extra_mpirun_params or [])
-
-    def validate_working_directory(self, folder: Folder):
-        """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
-
-        This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
-        calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
-        for the calculation to create the input files for the working directory. This method can be overridden by
-        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
-
-        :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
-            working directory for the corresponding calculation job instance.
-        :raises PluginInternalError: If the content of the sandbox folder is not valid.
-        """
+    @prepend_text.setter
+    def prepend_text(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_PREPEND_TEXT, value)
 
     @property
     @abc.abstractmethod
@@ -289,141 +189,12 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
 
     @property
-    def label(self) -> str:
-        """Return the label.
-
-        :return: The label.
-        """
-        return self.backend_entity.label
-
-    @label.setter
-    def label(self, value: str) -> None:
-        """Set the label.
-
-        The label cannot contain any ``@`` symbols.
-
-        :param value: The new label.
-        :raises ValueError: If the label contains invalid characters.
-        """
-        type_check(value, str)
-
-        if '@' in value:
-            raise ValueError('The label contains a `@` symbol, which is not allowed.')
-
-        self.backend_entity.label = value
-
-    @property
-    def default_calc_job_plugin(self) -> str | None:
-        """Return the optional default ``CalcJob`` plugin.
-
-        :return: The entry point name of the default ``CalcJob`` plugin to use.
-        """
-        return self.base.attributes.get(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
-
-    @default_calc_job_plugin.setter
-    def default_calc_job_plugin(self, value: str | None) -> None:
-        """Set the default ``CalcJob`` plugin.
-
-        :param value: The entry point name of the default ``CalcJob`` plugin to use.
-        """
-        type_check(value, str, allow_none=True)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, value)
-
-    @property
-    def append_text(self) -> str:
-        """Return the text that should be appended to the run line in the job script.
-
-        :return: The text that should be appended to the run line in the job script.
-        """
-        return self.base.attributes.get(self._KEY_ATTRIBUTE_APPEND_TEXT, '')
-
-    @append_text.setter
-    def append_text(self, value: str) -> None:
-        """Set the text that should be appended to the run line in the job script.
-
-        :param value: The text that should be appended to the run line in the job script.
-        """
-        type_check(value, str, allow_none=True)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_APPEND_TEXT, value)
-
-    @property
-    def prepend_text(self) -> str:
-        """Return the text that should be prepended to the run line in the job script.
-
-        :return: The text that should be prepended to the run line in the job script.
-        """
-        return self.base.attributes.get(self._KEY_ATTRIBUTE_PREPEND_TEXT, '')
-
-    @prepend_text.setter
-    def prepend_text(self, value: str) -> None:
-        """Set the text that should be prepended to the run line in the job script.
-
-        :param value: The text that should be prepended to the run line in the job script.
-        """
-        type_check(value, str, allow_none=True)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_PREPEND_TEXT, value)
-
-    @property
-    def use_double_quotes(self) -> bool:
-        """Return whether the command line invocation of this code should be escaped with double quotes.
-
-        :return: ``True`` if to escape with double quotes, ``False`` otherwise.
-        """
-        return self.base.attributes.get(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
-
-    @use_double_quotes.setter
-    def use_double_quotes(self, value: bool) -> None:
-        """Set whether the command line invocation of this code should be escaped with double quotes.
-
-        :param value: ``True`` if to escape with double quotes, ``False`` otherwise.
-        """
-        type_check(value, bool)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, value)
-
-    @property
-    def with_mpi(self) -> bool | None:
-        """Return whether the command should be run as an MPI program.
-
-        :return: ``True`` if the code should be run as an MPI program, ``False`` if it shouldn't, ``None`` if unknown.
-        """
-        return self.base.attributes.get(self._KEY_ATTRIBUTE_WITH_MPI, None)
-
-    @with_mpi.setter
-    def with_mpi(self, value: bool | None) -> None:
-        """Set whether the command should be run as an MPI program.
-
-        :param value: ``True`` if the code should be run as an MPI program, ``False`` if it shouldn't, ``None`` if
-            unknown.
-        """
-        type_check(value, bool, allow_none=True)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_WITH_MPI, value)
-
-    @property
-    def wrap_cmdline_params(self) -> bool:
-        """Return whether all command line parameters should be wrapped with double quotes to form a single argument.
-
-        ..note:: This is required to support certain containerization technologies, such as Docker.
-
-        :return: ``True`` if command line parameters should be wrapped, ``False`` otherwise.
-        """
-        return self.base.attributes.get(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
-
-    @wrap_cmdline_params.setter
-    def wrap_cmdline_params(self, value: bool) -> None:
-        """Set whether all command line parameters should be wrapped with double quotes to form a single argument.
-
-        :param value: ``True`` if command line parameters should be wrapped, ``False`` otherwise.
-        """
-        type_check(value, bool)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, value)
-
-    @property
     def is_hidden(self) -> bool:
         """Return whether the code is hidden.
 
         :return: ``True`` if the code is hidden, ``False`` otherwise, which is also the default.
         """
-        return self.base.extras.get(self._KEY_EXTRA_IS_HIDDEN, False)
+        return self.base.extras.get(self.KEY_EXTRA_IS_HIDDEN, False)
 
     @is_hidden.setter
     def is_hidden(self, value: bool) -> None:
@@ -432,7 +203,66 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :param value: ``True`` if the code should be hidden, ``False`` otherwise.
         """
         type_check(value, bool)
-        self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
+        self.base.extras.set(self.KEY_EXTRA_IS_HIDDEN, value)
+
+    @abc.abstractmethod
+    def can_run_on_computer(self, computer: Computer) -> bool:
+        """Return whether the code can run on a given computer.
+
+        :param computer: The computer.
+        :return: ``True`` if the code can run on ``computer``, ``False`` otherwise.
+        """
+
+    def get_description(self):
+        """Return a string description of this Code instance.
+
+        :return: string description of this Code instance
+        """
+        return self.full_label
+
+    @abc.abstractmethod
+    def get_executable(self) -> pathlib.PurePath:
+        """Return the executable that the submission script should execute to run the code.
+
+        :return: The executable to be called in the submission script.
+        """
+
+    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list[str]:
+        """Return the list of executable with its command line parameters.
+
+        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
+        :return: List of the executable followed by its command line parameters.
+        """
+        return [str(self.get_executable())] + (cmdline_params or [])
+
+    def get_prepend_cmdline_params(
+        self,
+        mpi_args: list[str] | None = None,
+        extra_mpirun_params: list[str] | None = None,
+    ) -> list[str]:
+        """Return List of command line parameters to be prepended to the executable in submission line.
+
+        These command line parameters are typically parameters related to MPI invocations.
+
+        :param mpi_args: List of MPI parameters provided by the ``Computer.get_mpirun_command`` method.
+        :param extra_mpiruns_params: List of MPI parameters provided by the ``metadata.options.extra_mpirun_params``
+            input of the ``CalcJob``.
+        :return: List of command line parameters to be prepended to the executable in submission line.
+        """
+        return (mpi_args or []) + (extra_mpirun_params or [])
+
+    def validate_working_directory(self, folder: Folder) -> None:
+        """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
+
+        This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
+        calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
+        for the calculation to create the input files for the working directory. This method can be overridden by
+        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
+
+        :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
+            working directory for the corresponding calculation job instance.
+        :raises PluginInternalError: If the content of the sandbox folder is not valid.
+        """
 
     def get_builder(self) -> ProcessBuilder:
         """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
@@ -465,20 +295,20 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = self.serialize(
-            schema='cli',
-            context={'repository_dump_path': pathlib.Path.cwd() / f'{self.label}'},
-            exclude_none=True,
-        )
-
-        # NOTE: remove this in v3 when the deprecated `input_plugin` is removed
-        # Until then, we serialize by the alias (`input_plugin`), so we must rewire
-        default_calc_job_plugin = code_data.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
-        if default_calc_job_plugin is not None:
-            code_data['default_calc_job_plugin'] = default_calc_job_plugin
+        context = {'repository_dump_path': pathlib.Path.cwd() / self.label}
+        code_data = type(self).cli_spec.serialize(self, context=context)
 
         return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):
         """Also allow for export as .yml"""
         return self._prepare_yaml(*args, **kwargs)
+
+    # TODO deprecated; update calls and remove
+
+    def get_execname(self):
+        """Return the executable string to be put in the script.
+        For local codes, it is ./LOCAL_EXECUTABLE_NAME
+        For remote codes, it is the absolute path to the executable.
+        """
+        return str(self.get_executable())

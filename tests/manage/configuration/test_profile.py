@@ -78,7 +78,7 @@ def profile_with_minimal_data(aiida_profile_clean):
     # Create some test data
     group = orm.Group(label=TEST_GROUP_LABEL).store()
     calc_node = orm.CalculationNode().store().seal()
-    data_node = orm.Int(42).store()
+    data_node = orm.Int(value=42).store()
     _ = orm.WorkflowNode().store().seal()
 
     group.add_nodes([calc_node, data_node])

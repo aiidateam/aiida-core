@@ -28,7 +28,7 @@ from aiida.engine.processes.containers import (
     marked_whole,
     without_marks,
 )
-from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import infer_valid_type_from_type_annotation, serializer_for
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec, _as_a_port
 from aiida.manage import get_manager
@@ -547,7 +547,7 @@ class FunctionProcess(Process):
                     parameter.name,
                     valid_type=valid_type,
                     default=indirect_default,
-                    serializer=to_aiida_type,
+                    serializer=serializer_for(annotation),
                     help=help_string,
                 )
 

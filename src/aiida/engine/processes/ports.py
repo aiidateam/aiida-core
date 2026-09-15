@@ -15,12 +15,13 @@ import re
 import typing as t
 import warnings
 from collections.abc import Callable, Mapping, Sequence
+from enum import Enum
 from types import UnionType
 
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, to_aiida_type
+from aiida.orm import Bool, Data, Dict, EnumData, Float, Int, List, Node, Str, to_aiida_type
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -326,6 +327,9 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
         if inspect.isclass(annotation) and issubclass(annotation, Data):
             return annotation
 
+        if inspect.isclass(annotation) and issubclass(annotation, Enum):
+            return EnumData
+
         return valid_type_map.get(annotation)
 
     inferred_valid_type: tuple[t.Any, ...] = ()
@@ -338,3 +342,21 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
         inferred_valid_type = (t.get_args(annotation),)
 
     return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
+
+
+def serializer_for(annotation: t.Any) -> t.Callable[[t.Any], t.Any]:
+    """Return what stores a value given for a parameter annotated this way.
+
+    An enum member is stored as :class:`~aiida.orm.nodes.data.enum.EnumData`, which keeps the class it belongs
+    to and hands the member back. ``to_aiida_type`` cannot be relied on for that, since it dispatches on the
+    type and a member of ``class Spin(str, Enum)`` is a ``str`` before it is an ``Enum``, so the string wins and
+    the enum is stored as its ``str()``.
+    """
+    if inspect.isclass(annotation) and issubclass(annotation, Enum):
+
+        def as_a_member(value: t.Any) -> t.Any:
+            return EnumData(value) if isinstance(value, Enum) else to_aiida_type(value)
+
+        return as_a_member
+
+    return to_aiida_type

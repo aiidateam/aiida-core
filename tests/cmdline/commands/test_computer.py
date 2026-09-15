@@ -995,10 +995,13 @@ def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
     assert stdout in result.output
 
 
-def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeypatch):
+def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeypatch, tmp_path):
     """Test ``verdi computer test`` where ``use_login_shell=True`` is much slower."""
     from aiida.cmdline.commands import cmd_computer
 
+    # A login shell reads its startup files from ``HOME``. Isolate it from the
+    # user's home directory, which may be inaccessible in the test environment.
+    monkeypatch.setenv('HOME', str(tmp_path))
     aiida_localhost.configure()
 
     def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.engine.processes.containers import fields_of
+from aiida.engine.processes.containers import Field, fields_of
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
 from aiida.engine.processes.ports import (
@@ -21,9 +21,44 @@ from aiida.engine.processes.ports import (
     PortNamespace,
     infer_valid_type_from_type_annotation,
 )
-from aiida.orm import Data, Dict, to_aiida_type
+from aiida.orm import Data, Dict, JsonableData, to_aiida_type
 
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
+
+
+def _as_a_port(field: Field) -> dict[str, t.Any]:
+    """Return how one field of a container is declared as a port.
+
+    A field kept whole is one node holding the object, which is what :class:`~aiida.orm.JsonableData` is for,
+    unless what it holds is a node already.
+    """
+    declared = infer_valid_type_from_type_annotation(field.annotation)
+    options: dict[str, t.Any] = {'required': field.required}
+
+    if not field.required:
+        options['default'] = _lazily(field.default)
+
+    if field.whole and not declared:
+        return {**options, 'valid_type': (JsonableData,), 'serializer': _as_one_node(field)}
+
+    return {**options, 'valid_type': declared or (Data,)}
+
+
+def _as_one_node(field: Field) -> t.Callable[[t.Any], JsonableData]:
+    """Return what stores a field kept whole, which is one node holding the whole of it."""
+
+    def store(value: t.Any) -> JsonableData:
+        try:
+            return JsonableData(value)
+        except Exception as exception:
+            msg = (
+                f'`{field.name}` is kept whole, so it is stored as one node holding it as JSON, and '
+                f'`{type(value).__name__}` holds something that cannot be written that way. Either say how that '
+                f'value is rendered, or drop the mark so that each field is stored as the node it is.'
+            )
+            raise ValueError(msg) from exception
+
+    return store
 
 
 def _lazily(default: t.Any) -> t.Any:
@@ -88,15 +123,13 @@ class ProcessSpec(spec.ProcessSpec):
         for field in fields:
             under = f'{name}{self.namespace_separator}{field.name}'
 
-            if fields_of(field.annotation) is not None:
+            if fields_of(field.annotation) is not None and not field.whole:
                 self.input_namespace_from(under, field.annotation, required=field.required)
                 continue
 
             self.input(
                 under,
-                valid_type=infer_valid_type_from_type_annotation(field.annotation) or (Data,),
-                required=field.required,
-                **({} if field.required else {'default': _lazily(field.default)}),
+                **_as_a_port(field),
             )
 
     @property

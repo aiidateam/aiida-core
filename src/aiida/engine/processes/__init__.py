@@ -14,6 +14,7 @@
 
 from aiida.engine.processes.builder import *
 from aiida.engine.processes.calcjobs import *
+from aiida.engine.processes.containers import *
 from aiida.engine.processes.exit_code import *
 from aiida.engine.processes.functions import *
 from aiida.engine.processes.futures import *
@@ -89,6 +90,7 @@ __all__ = (
     'TaskWorkChain',
     'ToContext',
     'WaitProcess',
+    'Whole',
     'WithNonDb',
     'WithSerialize',
     'WorkChain',

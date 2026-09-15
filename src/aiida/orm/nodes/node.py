@@ -24,7 +24,6 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
-from aiida.orm.cli import CliConfig
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import column
 from aiida.orm.decorators.attributes import attributes_column
@@ -202,17 +201,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    _cli_config = CliConfig(
-        exclude=Entity._cli_config.exclude
-        | {
-            'node_type',
-            'process_type',
-            'extras',
-            'attributes',
-            'repository_metadata',
-        },
-    )
-
     def __init__(
         self,
         label: str = '',
@@ -333,6 +321,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         updatable=True,
         may_be_large=True,
         model_field_info=pdt.fields.FieldInfo(default_factory=dict),
+        cli_exclude=True,
     )
     def extras(self) -> dict[str, t.Any]:
         """The extras of the node."""
@@ -354,6 +343,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     @column(
         may_be_large=True,
         model_field_info=pdt.fields.FieldInfo(default_factory=dict),
+        cli_exclude=True,
     )
     def repository_metadata(self) -> dict[str, t.Any]:
         """The repository metadata of the node."""
@@ -369,6 +359,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     @column(
         required_once_stored=True,
+        cli_exclude=True,
     )
     def node_type(self) -> str | None:
         """The type of the node."""
@@ -378,7 +369,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def node_type(self, value: str | None) -> None:
         self._backend_entity.node_type = value
 
-    @column
+    @column(cli_exclude=True)
     def process_type(self) -> str | None:
         """The process type of the node."""
         return self._backend_entity.process_type

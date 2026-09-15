@@ -15,7 +15,6 @@ import pydantic as pdt
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.orm.cli import CliConfig
 from aiida.orm.decorators import attribute
 from aiida.orm.entities import from_backend_entity
 from aiida.orm.nodes.node import Node
@@ -34,8 +33,6 @@ class Data(Node):
     """
 
     _attributes_model_config = pdt.ConfigDict(extra='allow')
-
-    _cli_config = CliConfig(exclude=Node._cli_config.exclude | {'source'})
 
     _source_attributes = [
         'db_name',
@@ -87,7 +84,7 @@ class Data(Node):
 
         return clone
 
-    @attribute
+    @attribute(cli_exclude=True)
     def source(self) -> dict | None:
         """The dictionary describing the source of the data.
 

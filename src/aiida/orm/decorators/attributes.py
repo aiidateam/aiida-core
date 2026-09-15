@@ -34,13 +34,13 @@ __all__ = (
 
 
 @dataclasses.dataclass(frozen=True)
-class NodeAttributeSpec(BaseFieldSpec):
-    """Canonical semantic description of a typed Node attribute."""
+class NodeAttributeConfig(BaseFieldConfig):
+    """Unresolved configuration supplied to the `attribute` decorator."""
 
 
 @dataclasses.dataclass(frozen=True)
-class NodeAttributeConfig(BaseFieldConfig):
-    """Unresolved configuration supplied to the `attribute` decorator."""
+class NodeAttributeSpec(BaseFieldSpec):
+    """Canonical semantic description of a typed Node attribute."""
 
 
 _NodeT = t.TypeVar('_NodeT', bound=Storable)
@@ -267,6 +267,7 @@ class NodeAttributeDecorator(
         model_field_info: pdt.fields.FieldInfo | None = None,
         model_metadata: tuple[ModelMetadata, ...] = (),
         model_adapter: ModelAdapter[_AdaptedEntityT, _AdaptedModelT, _QbFieldT],
+        cli_exclude: bool = False,
         cli_field_info: CliFieldInfo | None = None,
         cli_adapter: CliAdapter[t.Any, t.Any] | None = None,
     ) -> ConfiguredAttributeDecorator[_QbFieldT]: ...
@@ -280,6 +281,7 @@ class NodeAttributeDecorator(
         model_field_info: pdt.fields.FieldInfo | None = None,
         model_metadata: tuple[ModelMetadata, ...] = (),
         model_adapter: None = None,
+        cli_exclude: bool = False,
         cli_field_info: CliFieldInfo | None = None,
         cli_adapter: CliAdapter[t.Any, t.Any] | None = None,
     ) -> Self: ...
@@ -319,6 +321,7 @@ class NodeAttributesColumn(
             fget,
             config=ColumnConfig(
                 may_be_large=True,
+                cli_exclude=True,
             ),
         )
 

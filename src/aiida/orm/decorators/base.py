@@ -26,17 +26,6 @@ if t.TYPE_CHECKING:
 
 
 @dataclasses.dataclass(frozen=True)
-class BaseFieldSpec:
-    """Base semantic description of an ORM field."""
-
-    name: str
-    value_type: t.Any
-    description: str
-    readonly: bool
-    required_once_stored: bool
-
-
-@dataclasses.dataclass(frozen=True)
 class BaseFieldConfig:
     """Base unresolved configuration for an ORM field."""
 
@@ -47,8 +36,20 @@ class BaseFieldConfig:
     model_metadata: tuple[ModelMetadata, ...] = ()
     model_adapter: ModelAdapter[t.Any, t.Any, t.Any] | None = None
 
+    cli_exclude: bool = False
     cli_field_info: CliFieldInfo | None = None
     cli_adapter: CliAdapter[t.Any, t.Any] | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class BaseFieldSpec:
+    """Base semantic description of an ORM field."""
+
+    name: str
+    value_type: t.Any
+    description: str
+    readonly: bool
+    required_once_stored: bool
 
 
 class Storable(t.Protocol):
@@ -142,6 +143,11 @@ class BaseField(
             return self.model_adapter.model_type
 
         return self.spec.value_type
+
+    @property
+    def cli_exclude(self) -> bool:
+        """Return whether the field should be excluded from the CLI."""
+        return self._config.cli_exclude
 
     @property
     def cli_field_info(self) -> CliFieldInfo | None:

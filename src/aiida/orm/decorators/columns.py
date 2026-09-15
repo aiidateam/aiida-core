@@ -31,6 +31,15 @@ __all__ = (
 
 
 @dataclasses.dataclass(frozen=True)
+class ColumnConfig(BaseFieldConfig):
+    """Unresolved configuration supplied to the `column` decorator."""
+
+    backend_key: str | None = None
+    updatable: bool = False
+    may_be_large: bool = False
+
+
+@dataclasses.dataclass(frozen=True)
 class ColumnSpec(BaseFieldSpec):
     """Canonical semantic description of a top-level entity column."""
 
@@ -42,15 +51,6 @@ class ColumnSpec(BaseFieldSpec):
     def immutable(self) -> bool:
         """Return whether the column is immutable after storage."""
         return not self.updatable
-
-
-@dataclasses.dataclass(frozen=True)
-class ColumnConfig(BaseFieldConfig):
-    """Unresolved configuration supplied to the `column` decorator."""
-
-    backend_key: str | None = None
-    updatable: bool = False
-    may_be_large: bool = False
 
 
 _EntityT = t.TypeVar('_EntityT', bound=Storable)
@@ -300,6 +300,7 @@ class ColumnDecorator(
         model_field_info: pdt.fields.FieldInfo | None = None,
         model_metadata: tuple[ModelMetadata, ...] = (),
         model_adapter: ModelAdapter[_AdaptedEntityT, _AdaptedModelT, _QbFieldT],
+        cli_exclude: bool = False,
         cli_field_info: CliFieldInfo | None = None,
         cli_adapter: CliAdapter[t.Any, t.Any] | None = None,
     ) -> ConfiguredColumnDecorator[_QbFieldT]: ...
@@ -316,6 +317,7 @@ class ColumnDecorator(
         model_field_info: pdt.fields.FieldInfo | None = None,
         model_metadata: tuple[ModelMetadata, ...] = (),
         model_adapter: None = None,
+        cli_exclude: bool = False,
         cli_field_info: CliFieldInfo | None = None,
         cli_adapter: CliAdapter[t.Any, t.Any] | None = None,
     ) -> Self: ...

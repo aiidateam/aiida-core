@@ -19,7 +19,7 @@ from inspect import get_annotations
 
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
-from aiida.engine.processes.containers import as_dict, build, fields_of
+from aiida.engine.processes.containers import as_dict, build, fields_of, marked_whole
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
@@ -88,6 +88,9 @@ class TaskProcess(FunctionProcess):
         A field that is a container of its own is a namespace under this one, so this goes as deep as the
         container does.
         """
+        if marked_whole(annotation):
+            return _unwrapped(value)
+
         fields = fields_of(annotation)
 
         if fields is None or not isinstance(value, Mapping):

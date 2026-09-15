@@ -21,7 +21,13 @@ from inspect import get_annotations
 import docstring_parser
 
 from aiida.common.lang import override
-from aiida.engine.processes.containers import as_dict, fields_of, is_a_container
+from aiida.engine.processes.containers import (
+    as_dict,
+    fields_of,
+    is_a_container,
+    marked_whole,
+    without_marks,
+)
 from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec, _as_a_port
@@ -515,6 +521,15 @@ class FunctionProcess(Process):
                         parameter.name,
                         valid_type=valid_type,
                         required=default is UNSPECIFIED,
+                        help=help_string,
+                    )
+                    continue
+
+                if marked_whole(annotation):
+                    spec.input_whole(
+                        parameter.name,
+                        without_marks(annotation),
+                        default=default,
                         help=help_string,
                     )
                     continue

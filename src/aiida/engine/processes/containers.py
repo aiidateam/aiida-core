@@ -22,7 +22,7 @@ from __future__ import annotations
 import dataclasses
 import typing as t
 
-__all__ = ('Field', 'Whole', 'as_dict', 'build', 'fields_of', 'is_a_container')
+__all__ = ('Field', 'Whole', 'as_dict', 'build', 'fields_of', 'is_a_container', 'marked_whole', 'without_marks')
 
 UNSPECIFIED = object()
 """What a field has instead of a default when it has none, since ``None`` is a default like any other."""
@@ -147,7 +147,7 @@ def marked_whole(annotation: t.Any) -> bool:
     return Whole in t.get_args(annotation)[1:] if t.get_origin(annotation) is t.Annotated else False
 
 
-def _without_marks(annotation: t.Any) -> t.Any:
+def without_marks(annotation: t.Any) -> t.Any:
     """Return the type an annotation names, without the marks written beside it."""
     return t.get_args(annotation)[0] if t.get_origin(annotation) is t.Annotated else annotation
 
@@ -183,7 +183,7 @@ def _of_typed_dict(annotation: t.Any) -> tuple[Field, ...]:
     return tuple(
         Field(
             name=name,
-            annotation=_without_marks(hint),
+            annotation=without_marks(hint),
             default=None if name in optional else UNSPECIFIED,
             whole=marked_whole(hint),
         )
@@ -204,7 +204,7 @@ def _of_named_tuple(annotation: t.Any) -> tuple[Field, ...]:
     return tuple(
         Field(
             name=name,
-            annotation=_without_marks(hints.get(name)),
+            annotation=without_marks(hints.get(name)),
             default=defaults.get(name, UNSPECIFIED),
             whole=marked_whole(hints.get(name)),
         )
@@ -229,7 +229,7 @@ def _of_dataclass(annotation: t.Any) -> tuple[Field, ...]:
         fields.append(
             Field(
                 name=field.name,
-                annotation=_without_marks(hint),
+                annotation=without_marks(hint),
                 default=default,
                 whole=marked_whole(hint),
             )

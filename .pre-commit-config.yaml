@@ -38,9 +38,11 @@ repos:
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
+    additional_dependencies: [toml-sort~=0.24.0]
     exclude: uv.lock
   - id: pretty-format-yaml
     args: [--autofix]
+    additional_dependencies: [toml-sort~=0.24.0]
     exclude: >-
       (?x)^(
         tests/.*|

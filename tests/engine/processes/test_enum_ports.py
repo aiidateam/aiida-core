@@ -15,7 +15,7 @@ from enum import Enum
 import pytest
 from pydantic import BaseModel
 
-from aiida.engine import run_get_node, task
+from aiida.engine import graph, run_get_node, task
 from aiida.orm import EnumData
 
 
@@ -64,3 +64,29 @@ def test_a_container_field_holds_a_member():
 
     assert isinstance(node.inputs.given.spin, EnumData)
     assert results['seen'] == 'collinear/2'
+
+
+@graph
+def pipeline(spin):
+    return {'seen': reads_a_member(spin=spin).seen}
+
+
+def test_a_graph_input_is_stored_as_the_port_it_feeds_takes_it():
+    """A graph input has the type of the ports it feeds, so it is stored the way the port at the end stores it."""
+    results, node = run_get_node(pipeline, spin=Spin.COLLINEAR)
+
+    assert isinstance(node.inputs.graph_inputs.spin, EnumData)
+    assert results['seen'] == 'Spin/collinear'
+
+
+@graph
+def nested(spin):
+    return {'seen': pipeline(spin=spin).seen}
+
+
+def test_an_input_of_a_graph_inside_a_graph_is_stored_the_same_way():
+    """The port is one graph further in, so finding it is the same question asked again."""
+    results, node = run_get_node(nested, spin=Spin.COLLINEAR)
+
+    assert isinstance(node.inputs.graph_inputs.spin, EnumData)
+    assert results['seen'] == 'Spin/collinear'

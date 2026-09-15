@@ -187,7 +187,8 @@ class GraphProcess(Process):
         return {
             cls._GRAPH: Dict(dict=body.to_dict()),
             cls._GRAPH_INPUTS: {
-                name: value if isinstance(value, Data) else to_aiida_type(value) for name, value in inputs.items()
+                name: value if isinstance(value, Data) else body.serializer_for_input(name)(value)
+                for name, value in inputs.items()
             },
         }
 

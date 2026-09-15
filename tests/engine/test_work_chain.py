@@ -20,6 +20,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
+from aiida.engine.processes.communications import LocalProcessController
 from aiida.engine.processes.exceptions import ClosedError, KilledError
 from aiida.engine.processes.generic.futures import Future
 from aiida.engine.processes.listener import ProcessListener
@@ -764,8 +765,9 @@ class TestWorkchain:
             assert payload == payload2
 
             # run the loaded workchain to completion
+            controller = LocalProcessController(workchain2, runner.loop)
             runner.schedule(workchain2)
-            workchain2.play()
+            assert await controller.play_process(workchain2.pid)
             await workchain2.future()
             assert workchain2.ctx.s1
             assert workchain2.ctx.s2
@@ -1132,11 +1134,12 @@ class TestWorkChainAbort:
         """
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
+        controller = LocalProcessController(process, runner.loop)
 
         async def run_async():
             await run_until_paused(process)
 
-            process.play()
+            assert await controller.play_process(process.pid)
 
             with Capturing():
                 with pytest.raises(RuntimeError):
@@ -1149,19 +1152,17 @@ class TestWorkChainAbort:
         assert process.node.is_excepted is True
         assert process.node.is_killed is False
 
-    def test_simple_kill_through_process(self):
-        """Run the workchain for one step and then kill it by calling kill
-        on the workchain itself. This should have the workchain end up
-        in the KILLED state.
-        """
+    def test_simple_kill_through_controller(self):
+        """Run the workchain for one step and kill it through a local controller."""
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
+        controller = LocalProcessController(process, runner.loop)
 
         async def run_async():
             await run_until_paused(process)
 
             assert process.paused
-            process.kill()
+            assert await controller.kill_process(process.pid)
 
             with pytest.raises(ClosedError):
                 launch.run(process)
@@ -1229,19 +1230,16 @@ class TestWorkChainAbortChildren:
         assert process.node.is_excepted is True
         assert process.node.is_killed is False
 
-    def test_simple_kill_through_process(self):
-        """Run the workchain for one step and then kill it. This should have the
-        workchain and its children end up in the KILLED state.
-        """
+    def test_simple_kill_through_controller(self):
+        """Kill the workchain and its children through a local controller."""
         runner = get_manager().get_runner()
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+        controller = LocalProcessController(process, runner.loop)
 
         async def run_async():
             await run_until_waiting(process)
 
-            result = process.kill()
-            if asyncio.isfuture(result):
-                await result
+            assert await controller.kill_process(process.pid)
 
             with pytest.raises(KilledError):
                 await process.future()
@@ -1739,15 +1737,14 @@ class TestWorkChainEvents:
         try:
             inputs = {'outcome': Str('finished'), 'pause_child': Bool(True)}
             workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs=inputs, runner=runner)
+            controller = LocalProcessController(workflow, runner.loop)
             listener = TestWorkChainEvents.ProcessListenerTester()
             workflow.add_process_listener(listener)
 
             async def run_async():
                 await run_until_waiting(workflow)
 
-                result = workflow.kill()
-                if asyncio.isfuture(result):
-                    await result
+                assert await controller.kill_process(workflow.pid)
 
                 with pytest.raises(KilledError):
                     await workflow.future()

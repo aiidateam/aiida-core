@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import typing as t
+from collections.abc import Mapping
 
-from aiida.engine.processes.containers import Field, fields_of
+from aiida.engine.processes.containers import UNSPECIFIED, Field, build, fields_of, is_a_container
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
 from aiida.engine.processes.ports import (
@@ -48,6 +49,11 @@ def _as_one_node(field: Field) -> t.Callable[[t.Any], JsonableData]:
     """Return what stores a field kept whole, which is one node holding the whole of it."""
 
     def store(value: t.Any) -> JsonableData:
+        # A namespace takes the fields written as a mapping, so a port holding the whole container takes one
+        # too, and the container is what says whether those fields are acceptable.
+        if isinstance(value, Mapping) and is_a_container(field.annotation):
+            value = build(field.annotation, dict(value))
+
         try:
             return JsonableData(value)
         except Exception as exception:
@@ -88,6 +94,22 @@ class ProcessSpec(spec.ProcessSpec):
     def __init__(self) -> None:
         super().__init__()
         self._exit_codes = ExitCodesNamespace()
+
+    def input_whole(self, name: str, container: type, default: t.Any = UNSPECIFIED, **kwargs: t.Any) -> None:
+        """Declare one port holding the whole of a structured container.
+
+        This is what :class:`~aiida.engine.processes.containers.Whole` asks for: the container is stored as one
+        node holding it as JSON, so nothing wires into a field of it and the provenance carries one value:
+
+        >>> spec.input_whole('config', SomeConfig)
+
+        :param name: the port to declare.
+        :param container: the structured container the port holds.
+        :param default: what the port holds when nothing is given, or ``UNSPECIFIED`` to make it required.
+        :param kwargs: passed on to the port, ``help`` among them.
+        """
+        field = Field(name=name, annotation=container, default=default, whole=True)
+        self.input(name, **{**_as_a_port(field), **kwargs})
 
     def input_namespace_from(self, name: str, container: type, **kwargs: t.Any) -> None:
         """Declare a namespace holding one port per field of a structured container.

@@ -35,6 +35,7 @@ from aiida.transports import Transport
 # TODO : silly cases of copy/put/get from self to self
 
 CHDIR_WARNING = re.escape('`chdir()` is deprecated and will be removed')
+ASYNC_SSH_TEST_CONFIG = Path(__file__).parents[2] / '.aiida-core-test-ssh' / 'config'
 
 
 @pytest.fixture(scope='function')
@@ -80,6 +81,9 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     if request.param[0] == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
     elif request.param[0] == 'core.ssh_async':
+        if not ASYNC_SSH_TEST_CONFIG.is_file():
+            pytest.skip('run `utils/setup_ssh_test.sh` to configure localhost SSH tests')
+        monkeypatch.setenv('AIIDA_CORE_TEST_ASYNC_SSH_CONFIG', str(ASYNC_SSH_TEST_CONFIG))
         kwargs = {
             'machine': 'localhost',
             'backend': request.param[1],

@@ -18,6 +18,7 @@ while the `_OpenSSH` class uses the `ssh` command line client.
 import abc
 import asyncio
 import logging
+import os
 import posixpath
 import re
 import subprocess
@@ -228,10 +229,16 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     """
 
     async def open(self):
-        conn = await asyncssh.connect(self.machine)
+        config = os.getenv('AIIDA_CORE_TEST_ASYNC_SSH_CONFIG')
+        connect_kwargs = {'config': config} if config else {}
+        conn = await asyncssh.connect(self.machine, **connect_kwargs)
         data_conn = None
         try:
-            data_conn = conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+            data_conn = (
+                conn
+                if self.data_machine == self.machine
+                else await asyncssh.connect(self.data_machine, **connect_kwargs)
+            )
             sftp = await data_conn.start_sftp_client()
         except BaseException:
             # `BaseException` rather than `Exception`, to also release them when the open is cancelled.

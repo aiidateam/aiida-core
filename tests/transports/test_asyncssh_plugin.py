@@ -94,6 +94,23 @@ class TestDataNodeHost:
         return connections, patch('aiida.transports.plugins.async_backend.asyncssh.connect', side_effect=fake_connect)
 
     @pytest.mark.asyncio
+    async def test_asyncssh_uses_test_config(self, monkeypatch):
+        """The test SSH config is forwarded when explicitly configured."""
+        config = '/tmp/aiida-test-ssh-config'
+        connection = AsyncMock()
+        connection.close = MagicMock()
+        backend = _AsyncSSH('login.hpc', 'login.hpc', MagicMock(), 'bash -l ')
+        monkeypatch.setenv('AIIDA_CORE_TEST_ASYNC_SSH_CONFIG', config)
+
+        with patch(
+            'aiida.transports.plugins.async_backend.asyncssh.connect', new_callable=AsyncMock, return_value=connection
+        ) as connect:
+            await backend.open()
+
+        connect.assert_awaited_once_with('login.hpc', config=config)
+        await backend.close()
+
+    @pytest.mark.asyncio
     async def test_asyncssh_starts_sftp_client_on_data_node(self):
         """The SFTP client is started on the data node, so that all SFTP traffic is carried out there."""
         connections, patcher = self._patch_connect()

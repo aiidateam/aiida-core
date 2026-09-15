@@ -2,7 +2,7 @@
 set -ev
 
 # Setup SSH on localhost
-${GITHUB_WORKSPACE}/.github/workflows/setup_ssh.sh
+${GITHUB_WORKSPACE}/utils/setup_ssh_test.sh
 
 # Replace the placeholders in configuration files with actual values
 CONFIG="${GITHUB_WORKSPACE}/.github/config"

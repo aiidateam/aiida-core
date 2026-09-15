@@ -75,7 +75,7 @@ def load_function(name: str, instance: Any | None = None) -> Any:
     """Load a function from its fully qualified name."""
     obj = load_object(name)
     if inspect.ismethod(obj) and instance is not None:
-        return obj.__get__(instance, instance.__class__)  # type: ignore[attr-defined]
+        return obj.__get__(instance, instance.__class__)  # type: ignore[attr-defined, unused-ignore]
     if inspect.ismethod(obj) or inspect.isfunction(obj):
         return obj
     raise ValueError(f"Invalid function name '{name}'")

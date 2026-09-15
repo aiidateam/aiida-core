@@ -21,6 +21,7 @@ from aiida.engine.processes.ports import (
     InputPort,
     PortNamespace,
     infer_valid_type_from_type_annotation,
+    serializer_for,
 )
 from aiida.orm import Data, Dict, JsonableData, to_aiida_type
 
@@ -42,7 +43,7 @@ def _as_a_port(field: Field) -> dict[str, t.Any]:
     if field.whole and not declared:
         return {**options, 'valid_type': (JsonableData,), 'serializer': _as_one_node(field)}
 
-    return {**options, 'valid_type': declared or (Data,)}
+    return {**options, 'valid_type': declared or (Data,), 'serializer': serializer_for(field.annotation)}
 
 
 def _as_one_node(field: Field) -> t.Callable[[t.Any], JsonableData]:

@@ -28,7 +28,7 @@ from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Data, Dict, GraphNode, JsonableData
+from aiida.orm import Data, Dict, EnumData, GraphNode, JsonableData
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess', 'launched_as')
@@ -41,6 +41,10 @@ def _unwrapped(value: t.Any) -> t.Any:
 
 def _plain(value: t.Any) -> t.Any:
     """Return the plain Python value a node holds, where it holds one, and the node itself where it does not."""
+    if isinstance(value, EnumData):
+        # The member rather than its value, since the class it belongs to is what was asked for.
+        return value.get_member()
+
     return value.value if isinstance(value, BaseType) else value
 
 

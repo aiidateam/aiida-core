@@ -26,7 +26,7 @@ from aiida.storage.sqlite_zip.migrator import _alembic_connect, list_versions
 from tests.storage.sqlite.utils import reflect_schema
 
 # Revisions whose downgrade is not implemented: they raise ``NotImplementedError``.
-_MAIN_REVISIONS_WITHOUT_DOWNGRADE = ['main_0000', 'main_0000a', 'main_0000b']
+_MAIN_REVISIONS_WITHOUT_DOWNGRADE = ['main_0000', 'main_0000a', 'main_0000b', 'main_0003']
 
 
 @pytest.mark.parametrize('version', [version for version in list_versions() if version.startswith('main')])

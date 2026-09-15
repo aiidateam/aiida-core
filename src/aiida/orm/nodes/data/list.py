@@ -1,169 +1,154 @@
-###########################################################################
-# Copyright (c), The AiiDA team. All rights reserved.                     #
-# This file is part of the AiiDA code.                                    #
-#                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
-# For further information on the license, see the LICENSE.txt file        #
-# For further information please visit http://www.aiida.net               #
-###########################################################################
-"""`Data` sub class to represent a list."""
+from __future__ import annotations
 
+import builtins
 import typing as t
 from collections.abc import MutableSequence
 
 import pydantic as pdt
 
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('List',)
 
 
-class List(Data, MutableSequence):
-    """`Data` sub class to represent a list."""
+class List(Data, MutableSequence[t.Any]):
+    """ORM representation of a list node."""
 
-    _LIST_KEY = 'list'
+    def __getitem__(self, item: t.Any) -> t.Any:
+        return self.list[item]
 
-    class AttributesModel(Data.AttributesModel):
-        value: list[t.Any] = OrmMetadataField(
-            alias='list',
-            description='Content of the data',
-            validation_alias=pdt.AliasChoices('list', 'value'),
-        )
-
-    def __init__(self, value=None, **kwargs):
-        """Initialise a ``List`` node instance.
-
-        :param value: list to initialise the ``List`` node from
-        """
-        data = value or kwargs.pop('list', [])
-        super().__init__(**kwargs)
-        self.set_list(data)
-
-    def __getitem__(self, item):
-        return self.get_list()[item]
-
-    def __setitem__(self, key, value):
-        data = self.get_list()
+    def __setitem__(self, key: t.Any, value: t.Any) -> None:
+        data = self.list
         data[key] = value
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
 
-    def __delitem__(self, key):
-        data = self.get_list()
+    def __delitem__(self, key: t.Any) -> None:
+        data = self.list
         del data[key]
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
 
-    def __len__(self):
-        return len(self.get_list())
+    def __len__(self) -> int:
+        return len(self.list)
 
-    def __str__(self):
-        return f'{super().__str__()} value: {self.get_list()}'
+    def __str__(self) -> str:
+        return f'{super().__str__()} value: {self.list}'
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, List):
-            return self.get_list() == other.get_list()
-        return self.get_list() == other
+            return self.list == other.list
+        return self.list == other
 
-    def append(self, value):
-        data = self.get_list()
+    @attribute(model_field_info=pdt.fields.FieldInfo(title='List contents'))
+    def list(self) -> builtins.list[t.Any]:
+        """The list content."""
+        return self.base.attributes.get('list', [])
+
+    @list.setter
+    def list(self, value: builtins.list[t.Any]) -> None:
+        if not isinstance(value, list):
+            raise TypeError('Must supply list type')
+        self.base.attributes.set('list', value.copy())
+
+    @property
+    def value(self) -> builtins.list[t.Any]:
+        """Return the value of this node, which is the list content."""
+        return self.list
+
+    def append(self, value: t.Any) -> None:
+        """Append an item to the list."""
+        data = self.list
         data.append(value)
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
 
-    def extend(self, value):
-        data = self.get_list()
+    def extend(self, value: t.Iterable[t.Any]) -> None:
+        """Extend the list by appending all the items from the iterable."""
+        data = self.list
         data.extend(value)
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
 
-    def insert(self, i, value):
-        data = self.get_list()
+    def insert(self, i: int, value: t.Any) -> None:
+        """Insert value at index i."""
+        data = self.list
         data.insert(i, value)
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
 
-    def remove(self, value):
-        data = self.get_list()
-        item = data.remove(value)
+    def remove(self, value: t.Any) -> None:
+        """Remove first occurrence of value."""
+        data = self.list
+        data.remove(value)
         if not self._using_list_reference():
-            self.set_list(data)
-        return item
+            self.list(data)
 
     def pop(self, index: int = -1) -> t.Any:
         """Remove and return item at index (default last)."""
-        data = self.get_list()
+        data = self.list
         item = data.pop(index)
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
         return item
 
-    def index(self, value: t.Any, start: int = 0, stop: int = 0) -> int:
-        """Return first index of value.."""
-        return self.get_list().index(value)
+    def index(self, value: t.Any, start: int = 0, stop: int | None = None) -> int:
+        """Return first index of value."""
+        if stop is None:
+            return self.list.index(value, start)
+        return self.list.index(value, start, stop)
 
-    def count(self, value):
+    def count(self, value: t.Any) -> int:
         """Return number of occurrences of value."""
-        return self.get_list().count(value)
+        return self.list.count(value)
 
-    def sort(self, key=None, reverse=False):
-        data = self.get_list()
+    def sort(self, *, key: t.Callable[[t.Any], t.Any] | None = None, reverse: bool = False) -> None:
+        """Sort the list in place."""
+        data = self.list
         data.sort(key=key, reverse=reverse)
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
 
-    def reverse(self):
-        data = self.get_list()
+    def reverse(self) -> None:
+        """Reverse the list in place."""
+        data = self.list
         data.reverse()
         if not self._using_list_reference():
-            self.set_list(data)
+            self.list(data)
 
-    @property
-    def value(self) -> list[t.Any]:
-        """Return the value of this node, which is the list content.
-
-        :return: The list content.
-        """
-        return self.get_list()
-
-    def get_list(self):
-        """Return the contents of this node.
-
-        :return: a list
-        """
-        try:
-            return self.base.attributes.get(self._LIST_KEY)
-        except AttributeError:
-            self.set_list([])
-            return self.base.attributes.get(self._LIST_KEY)
-
-    def set_list(self, data):
-        """Set the contents of this node.
-
-        :param data: the list to set
-        """
-        if not isinstance(data, list):
-            raise TypeError('Must supply list type')
-        self.base.attributes.set(self._LIST_KEY, data.copy())
-
-    def _using_list_reference(self):
-        """This function tells the class if we are using a list reference.  This
+    def _using_list_reference(self) -> bool:
+        """This function tells the class if we are using a list reference. This
         means that calls to self.get_list return a reference rather than a copy
         of the underlying list and therefore self.set_list need not be called.
-        This knwoledge is essential to make sure this class is performant.
+        This knowledge is essential to make sure this class is performant.
 
         Currently the implementation assumes that if the node needs to be
         stored then it is using the attributes cache which is a reference.
 
-        :return: True if using self.get_list returns a reference to the
-            underlying sequence.  False otherwise.
+        :return: True if using self.get_list returns a reference to the underlying sequence. False otherwise.
         :rtype: bool
         """
         return not self.is_stored
 
+    # TODO the following methods are handled above via property operations - consider removing
+
+    def get_list(self) -> builtins.list[t.Any]:
+        """Return the list content of this node.
+
+        :return: a list
+        """
+        return self.list
+
+    def set_list(self, data: builtins.list[t.Any]) -> None:
+        """Set the list content of this node.
+
+        :param data: the list to set
+        """
+        self.list = data
+
 
 @to_aiida_type.register(list)
-def _(value):
-    return List(value)
+def _(value: list[t.Any]) -> List:
+    return List(list=value)

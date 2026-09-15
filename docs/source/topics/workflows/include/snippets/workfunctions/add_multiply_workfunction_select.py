@@ -7,4 +7,4 @@ def maximum(x, y, z):
     return sorted([x, y, z])[-1]
 
 
-result = maximum(Int(1), Int(2), Int(3))
+result = maximum(Int(value=1), Int(value=2), Int(value=3))

@@ -491,8 +491,8 @@ class TestVerdiGroup:
     def test_move_nodes(self, run_cli_command):
         """Test `verdi group move-nodes` command."""
         node_01 = orm.CalculationNode().store()
-        node_02 = orm.Int(1).store()
-        node_03 = orm.Bool(True).store()
+        node_02 = orm.Int(value=1).store()
+        node_03 = orm.Bool(value=True).store()
 
         group1 = orm.load_group('dummygroup1')
         group2 = orm.load_group('dummygroup2')

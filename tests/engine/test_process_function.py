@@ -44,17 +44,17 @@ def function_return_input(data):
 
 @calcfunction
 def function_variadic_arguments(str_a, str_b, *args):
-    return orm.Str(' '.join([e.value for e in (str_a, str_b, *args)]))
+    return orm.Str(value=' '.join([e.value for e in (str_a, str_b, *args)]))
 
 
 @calcfunction
 def function_variadic_arguments_and_keywords(*args, str_a, str_b):
-    return orm.Str(' '.join([e.value for e in (*args, str_a, str_b)]))
+    return orm.Str(value=' '.join([e.value for e in (*args, str_a, str_b)]))
 
 
 @calcfunction
 def function_variadic_arguments_label_overlap(args_0, *args):
-    return args_0 + orm.Int(sum(args))
+    return args_0 + orm.Int(value=sum(args))
 
 
 @calcfunction
@@ -68,7 +68,7 @@ def function_args(data_a):
 
 
 @workfunction
-def function_args_with_default(data_a=lambda: orm.Int(DEFAULT_INT)):
+def function_args_with_default(data_a=lambda: orm.Int(value=DEFAULT_INT)):
     return data_a
 
 
@@ -101,13 +101,13 @@ def function_args_and_kwargs(data_a, **kwargs):
 
 
 @workfunction
-def function_args_and_default(data_a, data_b=lambda: orm.Int(DEFAULT_INT)):
+def function_args_and_default(data_a, data_b=lambda: orm.Int(value=DEFAULT_INT)):
     return {'data_a': data_a, 'data_b': data_b}
 
 
 @workfunction
 def function_defaults(
-    data_a=lambda: orm.Int(DEFAULT_INT), metadata={'label': DEFAULT_LABEL, 'description': DEFAULT_DESCRIPTION}
+    data_a=lambda: orm.Int(value=DEFAULT_INT), metadata={'label': DEFAULT_LABEL, 'description': DEFAULT_DESCRIPTION}
 ):
     return data_a
 
@@ -129,12 +129,12 @@ def function_excepts(exception):
 
 @workfunction
 def function_out_unstored():
-    return orm.Int(DEFAULT_INT)
+    return orm.Int(value=DEFAULT_INT)
 
 
 @workfunction
 def function_return_nested():
-    return {'nested.output': orm.Int(DEFAULT_INT).store()}
+    return {'nested.output': orm.Int(value=DEFAULT_INT).store()}
 
 
 def test_properties():
@@ -193,9 +193,9 @@ def test_source_code_attributes():
 
     @calcfunction
     def test_process_function(data):
-        return {'result': orm.Int(data.value + 1)}
+        return {'result': orm.Int(value=data.value + 1)}
 
-    _, node = test_process_function.run_get_node(data=orm.Int(5))
+    _, node = test_process_function.run_get_node(data=orm.Int(value=5))
 
     # Read the source file of the calculation function that should be stored in the repository
     function_source_code = node.get_source_code_file().split('\n')
@@ -232,7 +232,9 @@ def test_get_source_code_file():
 
 def test_function_varargs():
     """Test a function with variadic arguments."""
-    result, node = function_variadic_arguments.run_get_node(orm.Str('a'), orm.Str('b'), *(orm.Str('c'), orm.Str('d')))
+    result, node = function_variadic_arguments.run_get_node(
+        orm.Str(value='a'), orm.Str(value='b'), *(orm.Str(value='c'), orm.Str(value='d'))
+    )
     assert isinstance(result, orm.Str)
     assert result.value == 'a b c d'
 
@@ -251,13 +253,13 @@ def test_function_varargs_label_overlap():
     This should raise a ``RuntimeError``.
     """
     with pytest.raises(RuntimeError, match=r'variadic argument with index `.*` would get the label `.*` but this'):
-        function_variadic_arguments_label_overlap.run_get_node(orm.Int(1), *(orm.Int(2), orm.Int(3)))
+        function_variadic_arguments_label_overlap.run_get_node(orm.Int(value=1), *(orm.Int(value=2), orm.Int(value=3)))
 
 
 def test_function_variadic_arguments_and_keywords():
     """Test passing variable positional arguments before keyword arguments."""
     result = function_variadic_arguments_and_keywords(
-        *(orm.Str('a'), orm.Str('b')), str_a=orm.Str('c'), str_b=orm.Str('d')
+        *(orm.Str(value='a'), orm.Str(value='b')), str_a=orm.Str(value='c'), str_b=orm.Str(value='d')
     )
     assert result.value == 'a b c d'
 
@@ -269,7 +271,7 @@ def test_function_args():
     with pytest.raises(ValueError):
         result = function_args()
 
-    result = function_args(data_a=orm.Int(arg))
+    result = function_args(data_a=orm.Int(value=arg))
     assert isinstance(result, orm.Int)
     assert result == arg
 
@@ -280,31 +282,31 @@ def test_function_args_with_default():
 
     result = function_args_with_default()
     assert isinstance(result, orm.Int)
-    assert result == orm.Int(DEFAULT_INT)
+    assert result == orm.Int(value=DEFAULT_INT)
 
-    result = function_args_with_default(data_a=orm.Int(arg))
+    result = function_args_with_default(data_a=orm.Int(value=arg))
     assert isinstance(result, orm.Int)
     assert result == arg
 
 
 def test_function_with_none_default():
     """Simple process function that defines a keyword with `None` as default value."""
-    int_a = orm.Int(1)
-    int_b = orm.Int(2)
-    int_c = orm.Int(3)
+    int_a = orm.Int(value=1)
+    int_b = orm.Int(value=2)
+    int_c = orm.Int(value=3)
 
     result = function_with_none_default(int_a, int_b)
     assert isinstance(result, orm.Int)
-    assert result == orm.Int(3)
+    assert result == orm.Int(value=3)
 
     result = function_with_none_default(int_a, int_b, int_c)
     assert isinstance(result, orm.Int)
-    assert result == orm.Int(6)
+    assert result == orm.Int(value=6)
 
 
 def test_function_kwargs():
     """Simple process function that defines keyword arguments."""
-    kwargs = {'data_a': orm.Int(DEFAULT_INT)}
+    kwargs = {'data_a': orm.Int(value=DEFAULT_INT)}
 
     result, node = function_kwargs.run_get_node()
     assert isinstance(result, dict)
@@ -318,17 +320,17 @@ def test_function_kwargs():
 
     # Calling with any number of positional arguments should raise
     with pytest.raises(TypeError):
-        function_kwargs.run_get_node(orm.Int(1))
+        function_kwargs.run_get_node(orm.Int(value=1))
 
     with pytest.raises(TypeError):
-        function_kwargs.run_get_node(orm.Int(1), b=orm.Int(2))
+        function_kwargs.run_get_node(orm.Int(value=1), b=orm.Int(value=2))
 
 
 def test_function_args_and_kwargs():
     """Simple process function that defines a positional argument and keyword arguments."""
     arg = 1
-    args = (orm.Int(DEFAULT_INT),)
-    kwargs = {'data_b': orm.Int(arg)}
+    args = (orm.Int(value=DEFAULT_INT),)
+    kwargs = {'data_b': orm.Int(value=arg)}
 
     result = function_args_and_kwargs(*args)
     assert isinstance(result, dict)
@@ -340,21 +342,21 @@ def test_function_args_and_kwargs():
 
     # Calling with more positional arguments than defined in the signature should raise
     with pytest.raises(TypeError):
-        function_kwargs.run_get_node(orm.Int(1), orm.Int(2))
+        function_kwargs.run_get_node(orm.Int(value=1), orm.Int(value=2))
 
     with pytest.raises(TypeError):
-        function_kwargs.run_get_node(orm.Int(1), orm.Int(2), b=orm.Int(2))
+        function_kwargs.run_get_node(orm.Int(value=1), orm.Int(value=2), b=orm.Int(value=2))
 
 
 def test_function_args_and_kwargs_default():
     """Simple process function that defines a positional argument and an argument with a default."""
     arg = 1
-    args_input_default = (orm.Int(DEFAULT_INT),)
-    args_input_explicit = (orm.Int(DEFAULT_INT), orm.Int(arg))
+    args_input_default = (orm.Int(value=DEFAULT_INT),)
+    args_input_explicit = (orm.Int(value=DEFAULT_INT), orm.Int(value=arg))
 
     result = function_args_and_default(*args_input_default)
     assert isinstance(result, dict)
-    assert result == {'data_a': args_input_default[0], 'data_b': orm.Int(DEFAULT_INT)}
+    assert result == {'data_a': args_input_default[0], 'data_b': orm.Int(value=DEFAULT_INT)}
 
     result = function_args_and_default(*args_input_explicit)
     assert isinstance(result, dict)
@@ -363,25 +365,27 @@ def test_function_args_and_kwargs_default():
 
 def test_function_varargs_and_kwargs():
     """Test function that accepts both positional and keyword arguments."""
-    results = function_varargs_kwargs(*(orm.Str('a'), orm.Str('b')), kwarg_c=orm.Str('c'), kwarg_d=orm.Str('d'))
+    results = function_varargs_kwargs(
+        *(orm.Str(value='a'), orm.Str(value='b')), kwarg_c=orm.Str(value='c'), kwarg_d=orm.Str(value='d')
+    )
     assert sorted(results.keys()) == ['arg_0', 'arg_1', 'kwarg_c', 'kwarg_d']
-    assert results['arg_0'] == orm.Str('a')
-    assert results['arg_1'] == orm.Str('b')
-    assert results['kwarg_c'] == orm.Str('c')
-    assert results['kwarg_d'] == orm.Str('d')
+    assert results['arg_0'] == orm.Str(value='a')
+    assert results['arg_1'] == orm.Str(value='b')
+    assert results['kwarg_c'] == orm.Str(value='c')
+    assert results['kwarg_d'] == orm.Str(value='d')
 
 
 def test_function_args_passing_kwargs():
     """Cannot pass kwargs if the function does not explicitly define it accepts kwargs."""
     with pytest.raises(ValueError):
-        function_args(data_a=orm.Int(1), data_b=orm.Int(1))
+        function_args(data_a=orm.Int(value=1), data_b=orm.Int(value=1))
 
 
 def test_function_set_label_description():
     """Verify that the label and description can be set for all process function variants."""
     metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
 
-    _, node = function_args.run_get_node(data_a=orm.Int(DEFAULT_INT), metadata=metadata)
+    _, node = function_args.run_get_node(data_a=orm.Int(value=DEFAULT_INT), metadata=metadata)
     assert node.label == CUSTOM_LABEL
     assert node.description == CUSTOM_DESCRIPTION
 
@@ -393,11 +397,11 @@ def test_function_set_label_description():
     assert node.label == CUSTOM_LABEL
     assert node.description == CUSTOM_DESCRIPTION
 
-    _, node = function_args_and_kwargs.run_get_node(data_a=orm.Int(DEFAULT_INT), metadata=metadata)
+    _, node = function_args_and_kwargs.run_get_node(data_a=orm.Int(value=DEFAULT_INT), metadata=metadata)
     assert node.label == CUSTOM_LABEL
     assert node.description == CUSTOM_DESCRIPTION
 
-    _, node = function_args_and_default.run_get_node(data_a=orm.Int(DEFAULT_INT), metadata=metadata)
+    _, node = function_args_and_default.run_get_node(data_a=orm.Int(value=DEFAULT_INT), metadata=metadata)
     assert node.label == CUSTOM_LABEL
     assert node.description == CUSTOM_DESCRIPTION
 
@@ -406,7 +410,7 @@ def test_function_defaults():
     """Verify that a process function can define a default label and description but can be overriden."""
     metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
 
-    _, node = function_defaults.run_get_node(data_a=orm.Int(DEFAULT_INT))
+    _, node = function_defaults.run_get_node(data_a=orm.Int(value=DEFAULT_INT))
     assert node.label == DEFAULT_LABEL
     assert node.description == DEFAULT_DESCRIPTION
 
@@ -450,7 +454,7 @@ def test_submit_launchers():
     """
     # Process function can be submitted and will be run by a daemon worker as long as the function is importable
     # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
-    node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))
+    node = submit(add_multiply, x=orm.Int(value=1), y=orm.Int(value=2), z=orm.Int(value=3))
     assert isinstance(node, orm.WorkFunctionNode)
 
 
@@ -459,8 +463,8 @@ def test_return_exit_code():
     exit_status = 418
     exit_message = 'I am a teapot'
 
-    message = orm.Str(exit_message)
-    _, node = function_exit_code.run_get_node(exit_status=orm.Int(exit_status), exit_message=message)
+    message = orm.Str(value=exit_message)
+    _, node = function_exit_code.run_get_node(exit_status=orm.Int(value=exit_status), exit_message=message)
 
     assert node.is_finished
     assert not node.is_finished_ok
@@ -473,7 +477,7 @@ def test_normal_exception():
     exception = 'This process function excepted'
 
     with pytest.raises(RuntimeError):
-        _, node = function_excepts.run_get_node(exception=orm.Str(exception))
+        _, node = function_excepts.run_get_node(exception=orm.Str(value=exception))
         assert node.is_excepted
         assert node.exception == exception
 
@@ -506,7 +510,7 @@ def test_simple_workflow():
     def add_mul_wf(data_a, data_b, data_c):
         return mul(add(data_a, data_b), data_c)
 
-    result, node = add_mul_wf.run_get_node(orm.Int(3), orm.Int(4), orm.Int(5))
+    result, node = add_mul_wf.run_get_node(orm.Int(value=3), orm.Int(value=4), orm.Int(value=5))
 
     assert result == (3 + 4) * 5
     assert isinstance(node, orm.WorkFunctionNode)
@@ -514,8 +518,8 @@ def test_simple_workflow():
 
 def test_hashes():
     """Test that the hashes generated for identical process functions with identical inputs are the same."""
-    _, node1 = function_return_input.run_get_node(data=orm.Int(2))
-    _, node2 = function_return_input.run_get_node(data=orm.Int(2))
+    _, node1 = function_return_input.run_get_node(data=orm.Int(value=2))
+    _, node2 = function_return_input.run_get_node(data=orm.Int(value=2))
     assert node1.base.caching.get_hash() == node1.base.extras.get('_aiida_hash')
     assert node2.base.caching.get_hash() == node2.base.extras.get('_aiida_hash')
     assert node1.base.caching.get_hash() == node2.base.caching.get_hash()
@@ -523,8 +527,8 @@ def test_hashes():
 
 def test_hashes_different():
     """Test that the hashes generated for identical process functions with different inputs are the different."""
-    _, node1 = function_return_input.run_get_node(data=orm.Int(2))
-    _, node2 = function_return_input.run_get_node(data=orm.Int(3))
+    _, node1 = function_return_input.run_get_node(data=orm.Int(value=2))
+    _, node2 = function_return_input.run_get_node(data=orm.Int(value=3))
     assert node1.base.caching.get_hash() == node1.base.extras.get('_aiida_hash')
     assert node2.base.caching.get_hash() == node2.base.extras.get('_aiida_hash')
     assert node1.base.caching.get_hash() != node2.base.caching.get_hash()
@@ -536,7 +540,7 @@ def test_input_validation():
     Regression test for #5128.
     """
     with pytest.raises(ValueError):
-        function_kwargs.run_get_node(**{'namespace': {'valid': orm.Int(1), 'invalid': 1}})
+        function_kwargs.run_get_node(**{'namespace': {'valid': orm.Int(value=1), 'invalid': 1}})
 
 
 class DummyEnum(enum.Enum):
@@ -627,7 +631,7 @@ def test_invalid_outputs():
 
     @calcfunction
     def excepting():
-        node = orm.Int(2)
+        node = orm.Int(value=2)
         return {'a': node, 'b': node}
 
     with pytest.raises(ValueError):
@@ -652,7 +656,7 @@ def test_nested_namespace():
     inputs = {
         'nested': {
             'namespace': {
-                'int': orm.Int(1),
+                'int': orm.Int(value=1),
             }
         }
     }
@@ -748,9 +752,9 @@ def test_type_hinting_validation():
         function_type_hinting('string')
 
     assert function_type_hinting(1) == 2
-    assert function_type_hinting(orm.Int(1)) == 2
+    assert function_type_hinting(orm.Int(value=1)) == 2
     assert function_type_hinting(1.0) == 2.0
-    assert function_type_hinting(orm.Float(1)) == 2.0
+    assert function_type_hinting(orm.Float(value=1)) == 2.0
 
 
 def test_help_text_spec_inference():

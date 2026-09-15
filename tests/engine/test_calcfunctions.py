@@ -22,19 +22,19 @@ EXECUTION_COUNTER = 0
 
 @calcfunction
 def add_calcfunction(data):
-    return Int(data.value + 1)
+    return Int(value=data.value + 1)
 
 
 @calcfunction
 def return_stored_calcfunction():
-    return Int(2).store()
+    return Int(value=2).store()
 
 
 @calcfunction
 def execution_counter_calcfunction(data):
     global EXECUTION_COUNTER  # noqa: PLW0603
     EXECUTION_COUNTER += 1
-    return Int(data.value + 1)
+    return Int(value=data.value + 1)
 
 
 @pytest.mark.requires_broker
@@ -48,7 +48,7 @@ class TestCalcFunction:
     def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
-        self.default_int = Int(256)
+        self.default_int = Int(value=256)
         self.test_calcfunction = add_calcfunction
         yield
         assert Process.current() is None
@@ -81,12 +81,12 @@ class TestCalcFunction:
     def test_calcfunction_caching(self):
         """Verify that a calcfunction can be cached."""
         assert EXECUTION_COUNTER == 0
-        _, original = execution_counter_calcfunction.run_get_node(Int(5))
+        _, original = execution_counter_calcfunction.run_get_node(Int(value=5))
         assert EXECUTION_COUNTER == 1
 
         # Caching a CalcFunctionNode should be possible
         with enable_caching(identifier='*.execution_counter_calcfunction'):
-            input_node = Int(5)
+            input_node = Int(value=5)
             result, cached = execution_counter_calcfunction.run_get_node(input_node)
 
             assert EXECUTION_COUNTER == 1  # Calculation function body should not have been executed
@@ -121,7 +121,7 @@ class TestCalcFunction:
 
     def test_calcfunction_do_not_store_provenance(self):
         """Run the function without storing the provenance."""
-        data = Int(1)
+        data = Int(value=1)
         result, node = self.test_calcfunction.run_get_node(data, metadata={'store_provenance': False})
         assert not result.is_stored
         assert not data.is_stored

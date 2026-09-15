@@ -1,4 +1,4 @@
 from aiida.engine import run
 from aiida.orm import Int
 
-result = run(AddAndMultiplyWorkChain, a=Int(1), b=Int(2), c=Int(3))  # noqa: F821
+result = run(AddAndMultiplyWorkChain, a=Int(value=1), b=Int(value=2), c=Int(value=3))  # noqa: F821

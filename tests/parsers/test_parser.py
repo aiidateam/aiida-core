@@ -45,7 +45,7 @@ class BrokenArithmeticAddParser(Parser):
 
     def parse(self, **kwargs):
         """Intentionally attach an output that is not defined in the output spec of the calculation."""
-        self.out('invalid_output', orm.Str('0'))
+        self.out('invalid_output', orm.Str(value='0'))
 
 
 class ReportArithmeticAddParser(Parser):
@@ -54,7 +54,7 @@ class ReportArithmeticAddParser(Parser):
     def parse(self, **kwargs):
         """Log a message at the ``REPORT`` level."""
         self.logger.report('test the report method.')
-        self.out('sum', orm.Int(3))
+        self.out('sum', orm.Int(value=3))
 
 
 class TestParser:

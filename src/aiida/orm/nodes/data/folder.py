@@ -15,8 +15,9 @@ import io
 import pathlib
 import typing as t
 
+from typing_extensions import Self
+
 from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 if t.TYPE_CHECKING:
     from aiida.common.typing import FilePath
@@ -29,37 +30,15 @@ __all__ = ('FolderData',)
 class FolderData(Data):
     """`Data` sub class to represent a folder on a file system."""
 
-    class ConstructorArgsModel(OrmModel):
-        tree: str = OrmMetadataField(
-            title='Tree',
-            description='Absolute path to a folder to wrap',
-            write_only=True,
-            orm_to_model=lambda node, ctx: t.cast(FolderData, node)._export_tree_from_repo(
-                ctx.get('repository_dump_path'),
-                ctx.get('written', False),
-            ),
-        )
-
-    def __init__(self, tree: str | pathlib.Path | None = None, **kwargs):
-        """Construct a new `FolderData` to which any files and folders can be added.
-
-        Use the `tree` keyword to simply wrap a directory:
-
-            folder = FolderData(tree='/absolute/path/to/directory')
-
-        Alternatively, one can construct the node first and then use the various repository methods to add objects:
-
-            folder = FolderData()
-            folder.put_object_from_tree('/absolute/path/to/directory')
-            folder.put_object_from_filepath('/absolute/path/to/file.txt')
-            folder.put_object_from_filelike(filelike_object)
+    @classmethod
+    def from_tree(cls, tree: FilePath, **kwargs: t.Any) -> Self:
+        """Construct a new `FolderData` from a directory tree.
 
         :param tree: absolute path to a folder to wrap
-        :type tree: str
         """
-        super().__init__(**kwargs)
-        if tree:
-            self.base.repository.put_object_from_tree(str(tree))
+        instance = cls(**kwargs)
+        instance.base.repository.put_object_from_tree(str(tree))
+        return instance
 
     def list_objects(self, path: str | None = None) -> list[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
@@ -85,14 +64,18 @@ class FolderData(Data):
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Iterator[t.TextIO]: ...
+    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Generator[t.TextIO, None, None]: ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]: ...
+    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Generator[t.BinaryIO, None, None]: ...
 
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
+    def open(
+        self,
+        path: FilePath,
+        mode: t.Literal['r', 'rb'] = 'r',
+    ) -> t.Generator[t.BinaryIO, None, None] | t.Generator[t.TextIO, None, None]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -109,7 +92,7 @@ class FolderData(Data):
             yield handle
 
     @contextlib.contextmanager
-    def as_path(self, path: FilePath | None = None) -> t.Iterator[pathlib.Path]:
+    def as_path(self, path: FilePath | None = None) -> t.Generator[pathlib.Path, None, None]:
         """Make the contents of the repository available as a normal filepath on the local file system.
 
         :param path: optional relative path of the object within the repository.
@@ -155,7 +138,7 @@ class FolderData(Data):
         :raises TypeError: if the path is not a string and relative path.
         :raises FileExistsError: if an object already exists at the given path.
         """
-        return self.base.repository.put_object_from_bytes(content, path)
+        self.base.repository.put_object_from_bytes(content, path)
 
     def put_object_from_filelike(self, handle: io.BufferedReader, path: str) -> None:
         """Store the byte contents of a file in the repository.
@@ -165,7 +148,7 @@ class FolderData(Data):
         :raises TypeError: if the path is not a string and relative path.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        return self.base.repository.put_object_from_filelike(handle, path)
+        self.base.repository.put_object_from_filelike(handle, path)
 
     def put_object_from_file(self, filepath: str, path: str) -> None:
         """Store a new object under `path` with contents of the file located at `filepath` on the local file system.
@@ -175,7 +158,7 @@ class FolderData(Data):
         :raises TypeError: if the path is not a string and relative path, or the handle is not a byte stream.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        return self.base.repository.put_object_from_file(filepath, path)
+        self.base.repository.put_object_from_file(filepath, path)
 
     def put_object_from_tree(self, filepath: str, path: str | None = None) -> None:
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
@@ -185,7 +168,7 @@ class FolderData(Data):
         :raises TypeError: if the path is not a string and relative path.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        return self.base.repository.put_object_from_tree(filepath, path)
+        self.base.repository.put_object_from_tree(filepath, path)
 
     def walk(self, path: FilePath | None = None) -> t.Iterable[tuple[pathlib.PurePath, list[str], list[str]]]:
         """Walk over the directories and files contained within this repository.
@@ -249,4 +232,5 @@ class FolderData(Data):
                 repository_dump_path = pathlib.Path(tempfile.mkdtemp()) / self.uuid
             repository_dump_path.mkdir(parents=True, exist_ok=True)
             self.base.repository.copy_tree(repository_dump_path)
+
         return str(repository_dump_path)

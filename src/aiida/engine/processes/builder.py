@@ -16,7 +16,7 @@ from uuid import uuid4
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.utils import prune_mapping
 from aiida.orm import Dict, Node
-from aiida.orm.nodes.data.base import BaseType
+from aiida.orm.nodes.data.base import PrimitiveType
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.process import Process
@@ -30,10 +30,10 @@ class PrettyEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Dict):
             return o.get_dict()
-        if isinstance(o, BaseType):
+        if isinstance(o, PrimitiveType):
             return o.value
         if isinstance(o, Node):
-            return o.get_description()
+            return o.description
 
 
 class ProcessBuilderNamespace(MutableMapping):

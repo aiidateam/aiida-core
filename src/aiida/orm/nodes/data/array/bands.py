@@ -21,8 +21,8 @@ import numpy
 
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import join_labels, prettify_labels
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.array.kpoints import KpointsData
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('BandsData', 'find_bandgap')
 
@@ -215,26 +215,21 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 class BandsData(KpointsData):
     """Class to handle bands data"""
 
-    class AttributesModel(KpointsData.AttributesModel):
-        array_labels: list[str] | None = OrmMetadataField(
-            None,
-            description='Labels associated with the band arrays',
-        )
-        units: str | None = OrmMetadataField(
-            None,
-            description='Units in which the data in bands were stored',
-            orm_to_model=lambda node: t.cast(BandsData, node).base.attributes.get('units', None),
-        )
+    _attributes_model_config = KpointsData._attributes_model_config
 
-    def __init__(
-        self,
-        *,
-        array_labels: list[str] | None = None,
-        units: str | None = None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.units = units
+    @attribute
+    def array_labels(self) -> list[str] | None:
+        """Labels associated with the band arrays."""
+        return self.base.attributes.get('array_labels', None)
+
+    @attribute
+    def units(self) -> str | None:
+        """Units in which the data in bands were stored."""
+        return self.base.attributes.get('units', None)
+
+    @units.setter
+    def units(self, value: str) -> None:
+        self.base.attributes.set('units', str(value))
 
     def set_kpointsdata(self, kpointsdata):
         """Load the kpoints from a kpoint object.
@@ -263,6 +258,65 @@ class BandsData(KpointsData):
             self.labels = kpointsdata.labels
         except (AttributeError, TypeError):
             self.labels = []
+
+    def set_bands(self, bands, units=None, occupations=None, labels=None):
+        """Set an array of band energies of dimension (nkpoints x nbands).
+        Kpoints must be set in advance. Can contain floats or None.
+        :param bands: a list of nkpoints lists of nbands bands, or a 2D array
+        of shape (nkpoints x nbands), with band energies for each kpoint
+        :param units: optional, energy units
+        :param occupations: optional, a 2D list or array of floats of same
+        shape as bands, with the occupation associated to each band
+        """
+        # checks bands and occupations
+        the_bands, the_occupations, the_labels = self._validate_bands_occupations(bands, occupations, labels)
+        # set bands and their units
+        self.set_array('bands', the_bands)
+        self.units = units
+
+        if the_labels is not None:
+            self.base.attributes.set('array_labels', the_labels)
+
+        if the_occupations is not None:
+            # set occupations
+            self.set_array('occupations', the_occupations)
+
+    def get_bands(self, also_occupations=False, also_labels=False):
+        """Returns an array (nkpoints x num_bands or nspins x nkpoints x num_bands)
+        of energies.
+        :param also_occupations: if True, returns also the occupations array.
+        Default = False
+        """
+        try:
+            bands = numpy.array(self.get_array('bands'))
+        except KeyError:
+            raise AttributeError('No stored bands has been found')
+
+        to_return: list[numpy.ndarray | list] = [bands]
+
+        if also_occupations:
+            try:
+                occupations = numpy.array(self.get_array('occupations'))
+            except KeyError:
+                raise AttributeError('No occupations were set')
+            to_return.append(occupations)
+
+        if also_labels and self.array_labels is not None:
+            to_return.append(self.array_labels)
+
+        if len(to_return) == 1:
+            return bands
+
+        return to_return
+
+    def show_mpl(self, **kwargs):
+        """Call a show() command for the band structure using matplotlib.
+        This uses internally the 'mpl_singlefile' format, with empty
+        main_file_name.
+
+        Other kwargs are passed to self._exportcontent.
+        """
+        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))
 
     def _validate_bands_occupations(self, bands, occupations=None, labels=None):
         """Validate the list of bands and of occupations before storage.
@@ -339,87 +393,6 @@ class BandsData(KpointsData):
             the_labels = None
 
         return the_bands, the_occupations, the_labels
-
-    def set_bands(self, bands, units=None, occupations=None, labels=None):
-        """Set an array of band energies of dimension (nkpoints x nbands).
-        Kpoints must be set in advance. Can contain floats or None.
-        :param bands: a list of nkpoints lists of nbands bands, or a 2D array
-        of shape (nkpoints x nbands), with band energies for each kpoint
-        :param units: optional, energy units
-        :param occupations: optional, a 2D list or array of floats of same
-        shape as bands, with the occupation associated to each band
-        """
-        # checks bands and occupations
-        the_bands, the_occupations, the_labels = self._validate_bands_occupations(bands, occupations, labels)
-        # set bands and their units
-        self.set_array('bands', the_bands)
-        self.units = units
-
-        if the_labels is not None:
-            self.base.attributes.set('array_labels', the_labels)
-
-        if the_occupations is not None:
-            # set occupations
-            self.set_array('occupations', the_occupations)
-
-    @property
-    def array_labels(self):
-        """Get the labels associated with the band arrays"""
-        return self.base.attributes.get('array_labels', None)
-
-    @property
-    def units(self) -> str:
-        """Units in which the data in bands were stored."""
-        # return copy.deepcopy(self._pbc)
-        return self.base.attributes.get('units')
-
-    @units.setter
-    def units(self, value):
-        """Set the value of pbc, i.e. a tuple of three booleans, indicating if the
-        cell is periodic in the 1,2,3 crystal direction
-        """
-        the_str = str(value)
-        self.base.attributes.set('units', the_str)
-
-    def _set_pbc(self, value):
-        """Validate the pbc, then store them"""
-        from aiida.common.exceptions import ModificationNotAllowed
-        from aiida.orm.nodes.data.structure import get_valid_pbc
-
-        if self.is_stored:
-            raise ModificationNotAllowed('The KpointsData object cannot be modified, it has already been stored')
-        the_pbc = get_valid_pbc(value)
-        self.base.attributes.set('pbc1', the_pbc[0])
-        self.base.attributes.set('pbc2', the_pbc[1])
-        self.base.attributes.set('pbc3', the_pbc[2])
-
-    def get_bands(self, also_occupations=False, also_labels=False):
-        """Returns an array (nkpoints x num_bands or nspins x nkpoints x num_bands)
-        of energies.
-        :param also_occupations: if True, returns also the occupations array.
-        Default = False
-        """
-        try:
-            bands = numpy.array(self.get_array('bands'))
-        except KeyError:
-            raise AttributeError('No stored bands has been found')
-
-        to_return = [bands]
-
-        if also_occupations:
-            try:
-                occupations = numpy.array(self.get_array('occupations'))
-            except KeyError:
-                raise AttributeError('No occupations were set')
-            to_return.append(occupations)
-
-        if also_labels:
-            to_return.append(self.array_labels)
-
-        if len(to_return) == 1:
-            return bands
-
-        return to_return
 
     def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None, get_segments=False, y_origin=0.0):
         """Get data to plot a band structure
@@ -950,15 +923,6 @@ class BandsData(KpointsData):
         else:
             s_body = MATPLOTLIB_BODY_TEMPLATE.substitute(plot_code=MULTI_KP)
         return s_body
-
-    def show_mpl(self, **kwargs):
-        """Call a show() command for the band structure using matplotlib.
-        This uses internally the 'mpl_singlefile' format, with empty
-        main_file_name.
-
-        Other kwargs are passed to self._exportcontent.
-        """
-        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))
 
     def _prepare_gnuplot(
         self,

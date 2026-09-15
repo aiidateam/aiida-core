@@ -7,4 +7,4 @@ def divide(x, y):
     return x / y
 
 
-result = divide(Int(1), Int(0))
+result = divide(Int(value=1), Int(value=0))

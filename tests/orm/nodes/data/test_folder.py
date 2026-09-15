@@ -23,7 +23,7 @@ def test_constructor_tree(tmp_path):
     }
     for filename, content in tree.items():
         tmp_path.joinpath(filename).write_text(content, encoding='utf8')
-    node = FolderData(tree=str(tmp_path))
+    node = FolderData.from_tree(str(tmp_path))
     assert sorted(node.base.repository.list_object_names()) == sorted(tree.keys())
 
 

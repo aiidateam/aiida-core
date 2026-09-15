@@ -101,7 +101,7 @@ def default_node_styles(node: orm.Node) -> dict:
         }
 
     node_type_map = {
-        'data.core.code.Code.': {
+        'data.core.code.abstract.AbstractCode.': {
             'shape': 'ellipse',
             'style': 'filled',
             'fillcolor': '#4ca4b9aa',  # blue
@@ -223,7 +223,7 @@ def default_node_sublabels(node: orm.Node) -> str:
         sublabel = f'{node.base.attributes.get("value", "")}'
     elif class_node_type == 'data.core.bool.Bool.':
         sublabel = f'{node.base.attributes.get("value", "")}'
-    elif class_node_type == 'data.core.code.Code.':
+    elif class_node_type == 'data.core.code.abstract.AbstractCode.':
         label = '?' if node.computer is None else node.computer.label
         sublabel = f'{os.path.basename(node.get_execname())}@{label}'
     elif class_node_type == 'data.core.singlefile.SinglefileData.':

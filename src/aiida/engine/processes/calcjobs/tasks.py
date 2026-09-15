@@ -304,7 +304,7 @@ async def task_retrieve_job(
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
             # accounting was called but could not be set.
-            scheduler = node.computer.get_scheduler()  # type: ignore[union-attr]
+            scheduler = node.computer.get_scheduler()
             scheduler.set_transport(transport)
 
             job_id = node.get_job_id()

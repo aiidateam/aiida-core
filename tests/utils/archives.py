@@ -278,22 +278,22 @@ def _build_main_0001_dataset():
 
     code = orm.InstalledCode(computer=computer, filepath_executable='/bin/true', label='simple-code').store()
 
-    dict_in = orm.Dict({'x': 1}).store()
+    dict_in = orm.Dict(**{'x': 1}).store()
     calc = orm.CalcJobNode(computer=computer)
     # input links on process nodes must be added before storing them
     calc.base.links.add_incoming(dict_in, LinkType.INPUT_CALC, 'input')
     calc.store()
 
-    dict_out = orm.Dict({'y': 2}).store()
+    dict_out = orm.Dict(**{'y': 2}).store()
     dict_out.base.links.add_incoming(calc, LinkType.CREATE, 'output')
     # seal only once all links are in place: sealed nodes cannot gain outgoing links
     calc.seal()
 
-    dict_extra = orm.Dict({'z': 3}).store()
-    list_node = orm.List([1, 2, 3]).store()
-    int_node = orm.Int(42).store()
-    str_node = orm.Str('hello').store()
-    float_node = orm.Float(3.14).store()
+    dict_extra = orm.Dict(**{'z': 3}).store()
+    list_node = orm.List(list=[1, 2, 3]).store()
+    int_node = orm.Int(value=42).store()
+    str_node = orm.Str(value='hello').store()
+    float_node = orm.Float(value=3.14).store()
     remote = orm.RemoteData(remote_path='/tmp/simple', computer=computer).store()
 
     nodes = [code, calc, dict_in, dict_out, dict_extra, list_node, int_node, str_node, float_node, remote]

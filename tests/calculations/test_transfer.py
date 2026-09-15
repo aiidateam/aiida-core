@@ -33,7 +33,7 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
         ('data_source', 'folder/file2.txt', 'file2.txt'),
     ]
     list_of_nodes = {'data_source': data_source}
-    instructions = orm.Dict(dict={'retrieve_files': True, 'symlink_files': list_of_files})
+    instructions = orm.Dict(**{'retrieve_files': True, 'symlink_files': list_of_files})
     inputs = {'instructions': instructions, 'source_nodes': list_of_nodes, 'metadata': {'computer': aiida_localhost}}
 
     # Generate calc_info and verify basics
@@ -55,7 +55,7 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
     assert sorted(calc_info.retrieve_list) == sorted(retrieve_list)
 
     # Now without symlinks
-    instructions = orm.Dict(dict={'retrieve_files': True, 'remote_files': list_of_files})
+    instructions = orm.Dict(**{'retrieve_files': True, 'remote_files': list_of_files})
     inputs = {'instructions': instructions, 'source_nodes': list_of_nodes, 'metadata': {'computer': aiida_localhost}}
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
     assert sorted(calc_info.remote_symlink_list) == sorted([])
@@ -73,7 +73,7 @@ def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
     folder.mkdir()
     file2 = folder / 'file2.txt'
     file2.write_text('file 2 content')
-    data_source = orm.FolderData(tree=str(tmp_path))
+    data_source = orm.FolderData.from_tree(str(tmp_path))
 
     entry_point_name = 'core.transfer'
     list_of_files = [
@@ -81,7 +81,7 @@ def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
         ('data_source', 'folder/file2.txt', 'file2.txt'),
     ]
     list_of_nodes = {'data_source': data_source}
-    instructions = orm.Dict(dict={'retrieve_files': False, 'local_files': list_of_files})
+    instructions = orm.Dict(**{'retrieve_files': False, 'local_files': list_of_files})
     inputs = {'instructions': instructions, 'source_nodes': list_of_nodes, 'metadata': {'computer': aiida_localhost}}
 
     # Generate calc_info and verify basics
@@ -106,7 +106,7 @@ def test_validate_instructions():
     """Test the `TransferCalculation` validators."""
     from aiida.calculations.transfer import validate_instructions
 
-    instructions = orm.Dict(dict={}).store()
+    instructions = orm.Dict().store()
     result = validate_instructions(instructions, None)
     expected = (
         '\n\nno indication of what to do in the instruction node:\n'
@@ -117,7 +117,7 @@ def test_validate_instructions():
     )
     assert result == expected
 
-    instructions = orm.Dict(dict={'retrieve_files': 12}).store()
+    instructions = orm.Dict(**{'retrieve_files': 12}).store()
     result = validate_instructions(instructions, None)
     expected = (
         'entry for retrieve files inside of instruction node:\n'
@@ -126,7 +126,7 @@ def test_validate_instructions():
     )
     assert result == expected
 
-    instructions = orm.Dict(dict={'retrieve_files': True}).store()
+    instructions = orm.Dict(**{'retrieve_files': True}).store()
     result = validate_instructions(instructions, None)
     expected = (
         'no indication of which files to copy were found in the instruction node:\n'
@@ -204,7 +204,7 @@ def test_integration_transfer(aiida_localhost, tmp_path):
     content_local = 'Content of local file'
     srcfile_local = tmp_path / 'file_local.txt'
     srcfile_local.write_text(content_local)
-    srcnode_local = orm.FolderData(tree=str(tmp_path))
+    srcnode_local = orm.FolderData.from_tree(str(tmp_path))
 
     content_remote = 'Content of remote file'
     srcfile_remote = tmp_path / 'file_remote.txt'

@@ -15,11 +15,19 @@ import os
 import typing as t
 from pathlib import Path
 
-from aiida.orm import AuthInfo
+import pydantic as pdt
+
+from aiida.common import exceptions
+from aiida.common.lang import type_check
 from aiida.orm.computers import Computer
+from aiida.orm.decorators import attribute, column
+from aiida.orm.entities import from_backend_entity
+from aiida.orm.models.adapters import EntityPkAdapter
 from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmMetadataField
 from aiida.transports import Transport
+
+if t.TYPE_CHECKING:
+    from aiida.orm.authinfos import AuthInfo
 
 _logger = logging.getLogger(__name__)
 
@@ -34,40 +42,45 @@ class RemoteData(Data):
 
     KEY_EXTRA_CLEANED = 'cleaned'
 
-    class AttributesModel(Data.AttributesModel):
-        remote_path: str | None = OrmMetadataField(
-            None,
-            title='Remote path',
-            description='Filepath on the remote computer',
-            orm_to_model=lambda node: node.get_remote_path(),
-        )
+    @column(
+        model_field_info=pdt.fields.FieldInfo(
+            default=None,
+            description='The PK of the associated computer.',
+        ),
+        model_adapter=EntityPkAdapter(Computer),
+    )
+    def computer(self) -> Computer:
+        """The remote computer on which the data resides."""
+        if self.backend_entity.computer is None:
+            raise AttributeError('The computer is not set.')
 
-    class ReadModel(Data.ReadModel):
-        computer: int = OrmMetadataField(
-            title='Computer',
-            description='The pk of the remote computer on which the data resides',
-            orm_to_model=lambda node: t.cast(RemoteData, node).computer.pk,
-            orm_class=Computer,
-        )
+        return from_backend_entity(Computer, self.backend_entity.computer)
 
-    def __init__(self, remote_path: str | None = None, **kwargs):
-        super().__init__(**kwargs)
-        if remote_path is not None:
-            self.set_remote_path(remote_path)
+    @computer.setter
+    def computer(self, computer: Computer) -> None:
+        if self.is_stored:
+            raise exceptions.ModificationNotAllowed('cannot set the computer on a stored node')
 
-    def get_remote_path(self) -> str:
+        type_check(computer, Computer)
+        self.backend_entity.computer = computer.backend_entity
+
+    @attribute
+    def remote_path(self) -> str:
+        """The filepath on the remote computer."""
         return self.base.attributes.get('remote_path')
 
-    def set_remote_path(self, val: str):
-        self.base.attributes.set('remote_path', val)
+    @remote_path.setter
+    def remote_path(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set('remote_path', value)
 
     @property
-    def is_cleaned(self):
+    def is_cleaned(self) -> bool:
         """Return whether the remote folder has been cleaned."""
         return self.base.extras.get(self.KEY_EXTRA_CLEANED, False)
 
     @property
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """Check if remote folder is empty"""
         if self.is_cleaned:
             return True
@@ -76,10 +89,10 @@ class RemoteData(Data):
         transport = authinfo.get_transport()
 
         with transport:
-            if not transport.isdir(self.get_remote_path()):
+            if not transport.isdir(self.remote_path):
                 return True
 
-            return not transport.listdir(self.get_remote_path())
+            return not transport.listdir(self.remote_path)
 
     def getfile(self, relpath, destpath):
         """Connects to the remote folder and retrieves the content of a file.
@@ -91,7 +104,7 @@ class RemoteData(Data):
 
         with authinfo.get_transport() as transport:
             try:
-                full_path = os.path.join(self.get_remote_path(), relpath)
+                full_path = os.path.join(self.remote_path, relpath)
                 transport.getfile(full_path, destpath)
             except OSError as exception:
                 if exception.errno == 2:  # file does not exist
@@ -111,7 +124,7 @@ class RemoteData(Data):
         authinfo = self.get_authinfo()
 
         with authinfo.get_transport() as transport:
-            full_path = os.path.join(self.get_remote_path(), relpath)
+            full_path = os.path.join(self.remote_path, relpath)
             if not transport.isdir(full_path):
                 msg = (
                     f'The required remote path {full_path} on {self.computer.label} does not exist, is not a '
@@ -130,8 +143,7 @@ class RemoteData(Data):
                     )
                     exc.errno = exception.errno
                     raise exc from exception
-                else:
-                    raise
+                raise
 
     def listdir_withattributes(self, path='.'):
         """Connects to the remote folder and lists the directory content.
@@ -143,7 +155,7 @@ class RemoteData(Data):
         authinfo = self.get_authinfo()
 
         with authinfo.get_transport() as transport:
-            full_path = os.path.join(self.get_remote_path(), path)
+            full_path = os.path.join(self.remote_path, path)
             if not transport.isdir(full_path):
                 msg = (
                     f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
@@ -162,58 +174,35 @@ class RemoteData(Data):
                     )
                     exc.errno = exception.errno
                     raise exc from exception
-                else:
-                    raise
+                raise
 
-    def _clean(self, transport=None):
-        """Remove all content of the remote folder on the remote computer.
+    def get_authinfo(self) -> AuthInfo:
+        from aiida.orm.authinfos import AuthInfo
 
-        When the cleaning operation is successful, the extra with the key ``RemoteData.KEY_EXTRA_CLEANED`` is set.
-
-        :param transport: Provide an optional transport that is already open. If not provided, a transport will be
-            automatically opened, based on the current default user and the computer of this data node. Passing in the
-            transport can be used for efficiency if a great number of nodes need to be cleaned for the same computer.
-            Note that the user should take care that the correct transport is passed.
-        :raises ValueError: If the hostname of the provided transport does not match that of the node's computer.
-        """
-        from aiida.orm.utils.remote import clean_remote
-
-        remote_dir = self.get_remote_path()
-
-        if transport is None:
-            with self.get_authinfo().get_transport() as _transport:
-                clean_remote(_transport, remote_dir)
-        else:
-            if transport.hostname != self.computer.hostname:
-                msg = f'Transport hostname `{transport.hostname}` does not equal `{self.computer.hostname}` of {self}.'
-                raise ValueError(msg)
-            clean_remote(transport, remote_dir)
-
-        self.base.extras.set(self.KEY_EXTRA_CLEANED, True)
-
-    def _validate(self):
-        from aiida.common.exceptions import ValidationError
-
-        super()._validate()
-
-        try:
-            self.get_remote_path()
-        except AttributeError as exception:
-            raise ValidationError("attribute 'remote_path' not set.") from exception
-
-        computer = self.computer
-        if computer is None:
-            raise ValidationError('Remote computer not set.')
-
-    def get_authinfo(self):
         return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
+
+    @t.overload
+    def get_size_on_disk(
+        self,
+        relpath: Path | None = None,
+        method: str = 'du',
+        return_bytes: t.Literal[False] = False,
+    ) -> tuple[str, str]: ...
+
+    @t.overload
+    def get_size_on_disk(
+        self,
+        relpath: Path | None = None,
+        method: str = 'du',
+        return_bytes: t.Literal[True] = True,
+    ) -> tuple[int, str]: ...
 
     def get_size_on_disk(
         self,
         relpath: Path | None = None,
         method: str = 'du',
         return_bytes: bool = False,
-    ) -> int | str:
+    ) -> tuple[int | str, str]:
         """Connects to the remote Computer of the `RemoteData` object and returns the total size of a file or a
         directory at the given `relpath` in a human-readable format.
 
@@ -227,17 +216,16 @@ class RemoteData(Data):
 
         :return: Total size of given file or directory.
         """
-
         from aiida.common.utils import format_directory_size
 
-        total_size: int = -1
+        total_size = -1
 
         if relpath is None:
             relpath = Path('.')
 
         authinfo = self.get_authinfo()
-        full_path = Path(self.get_remote_path()) / relpath
-        computer_label = self.computer.label if self.computer is not None else ''
+        full_path = Path(self.remote_path) / relpath
+        computer_label = self.computer.label
 
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):
@@ -250,12 +238,13 @@ class RemoteData(Data):
 
             if method == 'du':
                 try:
-                    total_size: int = self._get_size_on_disk_du(full_path, transport)
+                    total_size = self._get_size_on_disk_du(full_path, transport)
                     _logger.report('Obtained size on the remote using `du`.')
+
                     if return_bytes:
                         return total_size, method
-                    else:
-                        return format_directory_size(size_in_bytes=total_size), method
+
+                    return format_directory_size(size_in_bytes=total_size), method
 
                 except (RuntimeError, NotImplementedError):
                     # NotImplementedError captures the fact that, e.g., FirecREST does not allow for `exec_command_wait`
@@ -267,22 +256,67 @@ class RemoteData(Data):
 
             if method == 'stat' or total_size < 0:
                 try:
-                    total_size: int = self._get_size_on_disk_stat(full_path, transport)
+                    total_size = self._get_size_on_disk_stat(full_path, transport)
                     _logger.report('Obtained size on the remote using `stat`.')
                     _logger.warning(
                         'Take the result with a grain of salt, as `stat` returns the apparent size of files, '
                         'not their actual disk usage.'
                     )
+
                     if return_bytes:
                         return total_size, 'stat'
-                    else:
-                        return format_directory_size(size_in_bytes=total_size), 'stat'
+
+                    return format_directory_size(size_in_bytes=total_size), 'stat'
 
                 # This should typically not even be reached, as the OSError occours if the path is not a directory or
                 # does not exist. Though, we check for its existence already in the beginning of this method.
                 except OSError:
                     _logger.critical('Could not evaluate directory size using either `du` or `stat`.')
                     raise
+
+        raise RuntimeError('Could not determine the size of the remote path.')
+
+    def _clean(self, transport: Transport | None = None) -> None:
+        """Remove all content of the remote folder on the remote computer.
+
+        When the cleaning operation is successful, the extra with the key ``RemoteData.KEY_EXTRA_CLEANED`` is set.
+
+        :param transport: Provide an optional transport that is already open. If not provided, a transport will be
+            automatically opened, based on the current default user and the computer of this data node. Passing in the
+            transport can be used for efficiency if a great number of nodes need to be cleaned for the same computer.
+            Note that the user should take care that the correct transport is passed.
+        :raises ValueError: If the hostname of the provided transport does not match that of the node's computer.
+        """
+        from aiida.orm.utils.remote import clean_remote
+
+        remote_dir = self.remote_path
+
+        if transport is None:
+            with self.get_authinfo().get_transport() as _transport:
+                clean_remote(_transport, remote_dir)
+        else:
+            if transport.hostname != self.computer.hostname:
+                msg = f'Transport hostname `{transport.hostname}` does not equal `{self.computer.hostname}` of {self}.'
+                raise ValueError(msg)
+            clean_remote(transport, remote_dir)
+
+        self.base.extras.set(self.KEY_EXTRA_CLEANED, True)
+
+    def _validate(self) -> None:
+        """Validate that the remote location is fully defined."""
+        from aiida.common.exceptions import ValidationError
+
+        super()._validate()
+
+        try:
+            self.computer
+        except AttributeError as exc:
+            raise ValidationError('Remote computer not set.') from exc
+
+        try:
+            self.remote_path
+        except AttributeError as exc:
+            raise ValidationError("attribute 'remote_path' not set.") from exc
 
     def _get_size_on_disk_du(self, full_path: Path, transport: Transport) -> int:
         """Returns the total size of a file/directory at the given ``full_path`` on the remote Computer in bytes using
@@ -296,7 +330,6 @@ class RemoteData(Data):
 
         :return: Total size of the file/directory in bytes (including all its contents).
         """
-
         try:
             # Initially, we were using the `--bytes` option here. However, this is equivalent to `--apparent-size` and
             # `--block-size=1`, with the `--apparent-size` option being rather fragile (e.g., its implementation changed
@@ -319,9 +352,8 @@ class RemoteData(Data):
         if stderr or retval != 0:
             msg = f'Error executing `du` command: {stderr}'
             raise RuntimeError(msg)
-        else:
-            total_size: int = int(stdout.split('\t')[0])
-            return total_size
+
+        return int(stdout.split('\t')[0])
 
     def _get_size_on_disk_stat(self, full_path: Path, transport: Transport) -> int:
         """Returns the total size of a file/directory at the given ``full_path`` on the remote Computer in bytes using
@@ -344,9 +376,8 @@ class RemoteData(Data):
         :return: Total size of the file/directory in bytes (including all its contents).
         """
 
-        def _get_size_on_disk_stat_recursive(full_path: Path, transport: Transport):
+        def _get_size_on_disk_stat_recursive(full_path: Path, transport: Transport) -> int:
             """Helper function for recursive directory traversal."""
-
             total_size = 0
             contents = transport.listdir_withattributes(str(full_path))
 
@@ -373,3 +404,11 @@ class RemoteData(Data):
                 'directory or has been deleted.'
             )
             raise OSError(msg) from exception
+
+    # TODO the following methods are handled above via property operations - consider removing
+
+    def get_remote_path(self) -> str:
+        return self.remote_path
+
+    def set_remote_path(self, value: str) -> None:
+        self.remote_path = value

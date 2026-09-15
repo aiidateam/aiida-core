@@ -92,14 +92,22 @@ def populate_restapi_database():
     """Populates the database with a considerable set of nodes to test the restAPI"""
     from aiida import orm
 
-    struct_forcif = orm.StructureData(pbc=False, cell=[[1, 0, 0], [0, 1, 0], [0, 0, 1]]).store()
-    orm.StructureData(pbc=False).store()
-    orm.StructureData(pbc=False).store()
+    struct_forcif = orm.StructureData(cell=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    struct_forcif.set_pbc(pbc=False)
+    struct_forcif.store()
+
+    struct1 = orm.StructureData()
+    struct1.set_pbc(pbc=False)
+    struct1.store()
+
+    struct2 = orm.StructureData()
+    struct2.set_pbc(pbc=False)
+    struct2.store()
 
     orm.Dict().store()
     orm.Dict().store()
 
-    orm.CifData(ase=struct_forcif.get_ase()).store()
+    orm.CifData.from_ase(struct_forcif.get_ase()).store()
 
     orm.KpointsData().store()
 

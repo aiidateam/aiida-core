@@ -783,8 +783,8 @@ By default it will wait for the process to reach ``ProcessState.FINISHED``:
 
         code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/usr/bin/bash')
         builder = code.get_builder()
-        builder.x = orm.Int(1)
-        builder.y = orm.Int(1)
+        builder.x = orm.Int(value=1)
+        builder.y = orm.Int(value=1)
         node = submit_and_await(builder)
         assert node.is_finished_ok
 

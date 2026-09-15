@@ -8,8 +8,9 @@
 ###########################################################################
 """Module for defintion of base `Data` sub class for numeric based data types."""
 
-from aiida.orm.nodes.data.base import BaseType, to_aiida_type
-from aiida.orm.pydantic import OrmMetadataField
+import abc
+
+from aiida.orm.nodes.data.base import PrimitiveType, to_aiida_type
 
 __all__ = ('NumericType',)
 
@@ -40,14 +41,14 @@ def _right_operator(func):
     return inner
 
 
-class NumericType(BaseType):
+class NumericType(PrimitiveType, abc.ABC):
     """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
 
-    class AttributesModel(BaseType.AttributesModel):
-        value: int | float = OrmMetadataField(
-            title='Numeric value',
-            description='The value of the numeric data',
-        )
+    @property
+    @abc.abstractmethod
+    def value(self) -> int | float:
+        """Return the numeric value stored in this node."""
+        raise NotImplementedError()
 
     @_left_operator
     def __add__(self, other):

@@ -10,8 +10,6 @@
 
 from __future__ import annotations
 
-import typing as t
-
 from aiida.orm.nodes.data.code.installed import InstalledCode
 
 __all__ = ('ShellCode',)
@@ -25,10 +23,9 @@ class ShellCode(InstalledCode):
     calculation job as well.
     """
 
-    def __init__(self, *args: t.Any, default_calc_job_plugin: str = 'core.shell', **kwargs: t.Any) -> None:
-        """Construct a new instance."""
-        self.validate_default_calc_job_plugin(default_calc_job_plugin)
-        super().__init__(*args, default_calc_job_plugin=default_calc_job_plugin, **kwargs)
+    def initialize(self) -> None:
+        super().initialize()
+        self.validate_default_calc_job_plugin(self.default_calc_job_plugin)
 
     @staticmethod
     def validate_default_calc_job_plugin(default_calc_job_plugin: str) -> None:

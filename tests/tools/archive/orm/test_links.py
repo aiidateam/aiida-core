@@ -64,8 +64,8 @@ def test_input_and_create_links(tmp_path, aiida_profile_clean):
     correctly recreated upon import.
     """
     node_work = orm.CalculationNode()
-    node_input = orm.Int(1).store()
-    node_output = orm.Int(2).store()
+    node_input = orm.Int(value=1).store()
+    node_output = orm.Int(value=2).store()
 
     node_work.base.links.add_incoming(node_input, LinkType.INPUT_CALC, 'input')
     node_work.store()
@@ -131,8 +131,8 @@ def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_
     }
 
     # Node creation
-    data1 = orm.Int(1).store()
-    data2 = orm.Int(1).store()
+    data1 = orm.Int(value=1).store()
+    data2 = orm.Int(value=1).store()
     work1 = string_to_class[work_nodes[0]]()
     work2 = string_to_class[work_nodes[1]]()
 
@@ -145,8 +145,8 @@ def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_
 
     # Waiting to store Data nodes until they have been "created" with the links below,
     # because @calcfunctions cannot return data, i.e. return stored Data nodes
-    data3 = orm.Int(1)
-    data4 = orm.Int(1)
+    data3 = orm.Int(value=1)
+    data4 = orm.Int(value=1)
 
     if calc_nodes[1] == 'CalcJobNode':
         calc2 = orm.CalcJobNode()
@@ -157,8 +157,8 @@ def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_
 
     # Waiting to store Data nodes until they have been "created" with the links below,
     # because @calcfunctions cannot return data, i.e. return stored Data nodes
-    data5 = orm.Int(1)
-    data6 = orm.Int(1)
+    data5 = orm.Int(value=1)
+    data6 = orm.Int(value=1)
 
     # Link creation
     work1.base.links.add_incoming(data1, LinkType.INPUT_WORK, 'input1')
@@ -601,8 +601,8 @@ def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
     """
     work1 = orm.WorkflowNode()
     work2 = orm.WorkflowNode().store()
-    data_in = orm.Int(1).store()
-    data_out = orm.Int(2).store()
+    data_in = orm.Int(value=1).store()
+    data_out = orm.Int(value=2).store()
 
     work1.base.links.add_incoming(data_in, LinkType.INPUT_WORK, 'input_i1')
     work1.base.links.add_incoming(work2, LinkType.CALL_WORK, 'call')
@@ -637,7 +637,7 @@ def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
 
 def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
     """Check extra RETURN links can be added to existing Nodes, when label is not unique"""
-    data = orm.Int(1).store()
+    data = orm.Int(value=1).store()
     calc = orm.CalculationNode().store()
     work = orm.WorkflowNode().store()
     link_label = 'output_data'

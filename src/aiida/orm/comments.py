@@ -12,28 +12,25 @@ from __future__ import annotations
 
 import typing as t
 from datetime import datetime
-from uuid import UUID
 
 from aiida.manage import get_manager
-from aiida.orm import entities
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm import entities, nodes
+from aiida.orm.decorators import column
+from aiida.orm.implementation import BackendNode
+from aiida.orm.models.adapters import BackendEntityPkAdapter, EntityPkAdapter
+from aiida.orm.users import User
 
 if t.TYPE_CHECKING:
     from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
     from aiida.orm.nodes.node import Node
-    from aiida.orm.users import User
 
 __all__ = ('Comment',)
 
 
-class CommentCollection(entities.Collection['Comment']):
+class CommentCollection(entities.EntityCollection['Comment']):
     """The collection of Comment entries."""
 
     collection_type: t.ClassVar[str] = 'comments'
-
-    @staticmethod
-    def _entity_base_cls() -> type[Comment]:
-        return Comment
 
     def delete(self, pk: int) -> None:
         """Remove a Comment from the collection with the given id
@@ -64,48 +61,25 @@ class CommentCollection(entities.Collection['Comment']):
         """
         return self._backend.comments.delete_many(filters)
 
+    @staticmethod
+    def _entity_base_cls() -> type[Comment]:
+        return Comment
+
 
 class Comment(entities.Entity['BackendComment', CommentCollection]):
-    """Base class to map a DbComment that represents a comment attached to a certain Node."""
-
-    _CLS_COLLECTION = CommentCollection
+    """ORM representation of a comment attached to a Node."""
 
     identity_field = 'uuid'
 
-    class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = OrmMetadataField(
-            description='The UUID of the comment',
-            read_only=True,
-            examples=['123e4567-e89b-12d3-a456-426614174000'],
-        )
-        ctime: datetime = OrmMetadataField(
-            description='Creation time of the comment',
-            read_only=True,
-            examples=['2024-01-01T12:00:00+00:00'],
-        )
-        mtime: datetime = OrmMetadataField(
-            description='Modified time of the comment',
-            read_only=True,
-            examples=['2024-01-02T12:00:00+00:00'],
-        )
-        node: int = OrmMetadataField(
-            description='Node PK that the comment is attached to',
-            orm_class='core.node',
-            orm_to_model=lambda comment: t.cast(Comment, comment).node.pk,
-            examples=[42],
-        )
-        user: int = OrmMetadataField(
-            description='User PK that created the comment',
-            orm_class='core.user',
-            orm_to_model=lambda comment: t.cast(Comment, comment).user.pk,
-            examples=[7],
-        )
-        content: str = OrmMetadataField(
-            description='Content of the comment',
-            examples=['This is a comment.'],
-        )
+    _CLS_COLLECTION = CommentCollection
 
-    def __init__(self, node: Node, user: User, content: str | None = None, backend: StorageBackend | None = None):
+    def __init__(
+        self,
+        node: Node,
+        user: User,
+        content: str | None = None,
+        backend: StorageBackend | None = None,
+    ):
         """Create a Comment for a given node and user
 
         :param node: a Node instance
@@ -116,7 +90,11 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         :return: a Comment object associated to the given node and user
         """
         backend = backend or get_manager().get_profile_storage()
-        model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
+        model = backend.comments.create(
+            node=node.backend_entity,
+            user=user.backend_entity,
+            content=content,
+        )
         super().__init__(model)
 
     def __str__(self) -> str:
@@ -129,44 +107,57 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
         return self.uuid == other.uuid
 
-    @property
+    @column(readonly=True)
     def uuid(self) -> str:
-        """Return the UUID for this comment.
-
-        This identifier is unique across all entities types and backend instances.
-
-        :return: the entity uuid
-        """
+        """The UUID for this comment."""
         return self._backend_entity.uuid
 
-    @property
+    @column(readonly=True)
     def ctime(self) -> datetime:
+        """The creation time of this comment."""
         return self._backend_entity.ctime
 
-    @property
+    @column(readonly=True)
     def mtime(self) -> datetime:
+        """The last modification time of this comment."""
         return self._backend_entity.mtime
 
-    def set_mtime(self, value: datetime) -> None:
-        return self._backend_entity.set_mtime(value)
-
-    @property
+    @column(model_adapter=BackendEntityPkAdapter(BackendNode, nodes.Node))
     def node(self) -> BackendNode:
+        """The node associated with this comment."""
         return self._backend_entity.node
 
-    @property
+    @node.setter
+    def node(self, value: BackendNode) -> None:
+        self._backend_entity.node = value
+
+    @column(model_adapter=EntityPkAdapter(User))
     def user(self) -> User:
+        """The user associated with this comment."""
         from aiida.orm.users import User
 
         return entities.from_backend_entity(User, self._backend_entity.user)
 
-    def set_user(self, value: User) -> None:
-        # mypy error: Property "user" defined in "BackendComment" is read-only
-        self._backend_entity.user = value.backend_entity  # type: ignore[misc]
+    @user.setter
+    def user(self, value: User) -> None:
+        self._backend_entity.set_user(value.backend_entity)
 
-    @property
+    @column
     def content(self) -> str:
+        """The content of this comment."""
         return self._backend_entity.content
 
-    def set_content(self, value: str) -> None:
+    @content.setter
+    def content(self, value: str) -> None:
         return self._backend_entity.set_content(value)
+
+    def set_mtime(self, value: datetime) -> None:
+        return self._backend_entity.set_mtime(value)
+
+    # TODO the following methods are handled above via property operations - consider removing
+
+    def set_user(self, value: User) -> None:
+        self.user = value
+
+    def set_content(self, value: str) -> None:
+        self.content = value

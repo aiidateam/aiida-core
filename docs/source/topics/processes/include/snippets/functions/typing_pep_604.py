@@ -7,7 +7,7 @@ from aiida.orm import Int
 @calcfunction
 def add_multiply(x: int, y: int, z: int | None = None):
     if z is None:
-        z = Int(3)
+        z = Int(value=3)
 
     return (x + y) * z
 

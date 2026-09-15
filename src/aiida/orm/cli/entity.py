@@ -1,79 +1,20 @@
 from __future__ import annotations
 
-import abc
-import dataclasses
-import functools
 import typing as t
 
-import pydantic as pdt
 from pydantic_core import PydanticUndefined
 
 from aiida.cmdline.spec import CliParameter
-from aiida.common.lang import classproperty
 from aiida.common.utils import is_nullable, make_nullable, make_required
-from aiida.orm.decorators.attributes import NodeAttribute, iter_attributes
+from aiida.orm.cli.utils import CliField, CliFieldInfo
 from aiida.orm.decorators.columns import iter_columns
 
 if t.TYPE_CHECKING:
-    from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
     from aiida.orm import Entity
     from aiida.orm.decorators.base import BaseField
     from aiida.orm.models.entity import EntityModel
 
-__all__ = (
-    'CliAdapter',
-    'CliFieldInfo',
-    'EntityCliCreateSpec',
-)
-
-
-_CliValueT = t.TypeVar('_CliValueT')
-_ModelValueT = t.TypeVar('_ModelValueT')
-
-
-class CliAdapter(abc.ABC, t.Generic[_CliValueT, _ModelValueT]):
-    """Abstract base class for adapters between CLI/external and model-side representations."""
-
-    _cli_type: t.ClassVar[t.Any] = None
-
-    @classproperty
-    def cli_type(cls: type[CliAdapter]) -> t.Any:  # noqa: N805
-        """Return the CLI-side type inferred from the `to_model` value annotation."""
-        if cls._cli_type is None:
-            try:
-                cls._cli_type = t.get_type_hints(cls.to_model)['value']
-            except KeyError:
-                raise TypeError(f'{cls.__name__}.to_model must annotate its `value` parameter') from None
-
-        return cls._cli_type
-
-    @abc.abstractmethod
-    def to_model(self, value: _CliValueT) -> _ModelValueT:
-        """Convert a CLI/external value to its model-side representation."""
-
-    @abc.abstractmethod
-    def to_cli(self, value: _ModelValueT) -> _CliValueT:
-        """Convert a model-side value to its CLI/external representation."""
-
-
-@dataclasses.dataclass(frozen=True)
-class CliFieldInfo:
-    """Optional Click-specific configuration for an ORM field."""
-
-    prompt: str | bool | None = None
-    help: str = ''
-    priority: int = 0
-    short_name: str = ''
-    option_cls: functools.partial[TemplateInteractiveOption] | None = None
-
-
-@dataclasses.dataclass(frozen=True)
-class _CliField:
-    """Resolved ORM field participating in CLI creation."""
-
-    name: str
-    field: BaseField
-    model_field: pdt.fields.FieldInfo
+__all__ = ('EntityCliCreateSpec',)
 
 
 class EntityCliCreateSpec:
@@ -124,9 +65,8 @@ class EntityCliCreateSpec:
         return parameters
 
     def validate(self, values: dict[str, t.Any]) -> EntityModel:
-        """Convert flat CLI values and validate them through the entity create model."""
+        """Convert CLI values and validate them through the entity create model."""
         model_values: dict[str, t.Any] = {}
-        attribute_values: dict[str, t.Any] = {}
 
         cli_fields = {cli_field.name: cli_field.field for cli_field in self._iter_fields()}
 
@@ -137,14 +77,7 @@ class EntityCliCreateSpec:
                 continue
 
             value = self._cli_to_model_value(field, value)  # noqa: PLW2901
-
-            if isinstance(field, NodeAttribute):
-                attribute_values[name] = value
-            else:
-                model_values[name] = value
-
-        if attribute_values:
-            model_values['attributes'] = attribute_values
+            self._set_model_value(model_values, name, field, value)
 
         return self.entity_type.models.create(**model_values)
 
@@ -183,7 +116,17 @@ class EntityCliCreateSpec:
 
         return values
 
-    def _iter_fields(self) -> t.Iterator[_CliField]:
+    def _set_model_value(
+        self,
+        model_values: dict[str, t.Any],
+        name: str,
+        field: BaseField,
+        value: t.Any,
+    ) -> None:
+        """Set a CLI field value on the model input."""
+        model_values[name] = value
+
+    def _iter_fields(self) -> t.Iterator[CliField]:
         """Yield all CLI-exposed fields in their flat external namespace."""
         create_model = self.entity_type.models.create
 
@@ -196,31 +139,9 @@ class EntityCliCreateSpec:
             if model_field is None:
                 continue
 
-            yield _CliField(
+            yield CliField(
                 name=name,
                 field=column,
-                model_field=model_field,
-            )
-
-        models_namespace = self.entity_type.models
-
-        if not hasattr(models_namespace, 'attributes'):
-            return
-
-        attributes_model = models_namespace.attributes
-
-        for name, attribute in iter_attributes(self.entity_type).items():
-            if attribute.cli_exclude:
-                continue
-
-            model_field = attributes_model.model_fields.get(name)
-
-            if model_field is None:
-                continue
-
-            yield _CliField(
-                name=name,
-                field=attribute,
                 model_field=model_field,
             )
 

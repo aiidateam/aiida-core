@@ -16,6 +16,7 @@ from collections.abc import Iterator
 from functools import cached_property
 from uuid import UUID
 
+from aiida.orm.cli.node import NodeCliCreateSpec
 import pydantic as pdt
 from typing_extensions import Self
 
@@ -177,6 +178,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     _attributes_model_config: pdt.ConfigDict
 
+    _CLS_CLI_SPEC = NodeCliCreateSpec
     _CLS_COLLECTION = NodeCollection['Node']
     _CLS_NODE_LINKS = NodeLinks
     _CLS_NODE_CACHING = NodeCaching

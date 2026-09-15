@@ -193,6 +193,7 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
 
     models: ModelsNamespace[Self] = ModelsNamespace()
 
+    _CLS_CLI_SPEC: t.ClassVar[type[EntityCliCreateSpec]] = EntityCliCreateSpec
     _CLS_COLLECTION: type[_CollectionT] = EntityCollection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
@@ -259,7 +260,7 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
         cli_spec = t.cast(EntityCliCreateSpec | None, cls.__dict__.get('_cli_spec'))
 
         if cli_spec is None:
-            cli_spec = EntityCliCreateSpec(cls)
+            cli_spec = cls._CLS_CLI_SPEC(cls)
             cls._cli_spec = cli_spec
 
         return cli_spec

@@ -11,14 +11,17 @@
 from __future__ import annotations
 
 import abc
+import functools
 import pathlib
 import typing as t
 
 import pydantic as pdt
 
+from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
+from aiida.orm.cli import CliFieldInfo
 from aiida.orm.decorators import attribute, column
 from aiida.orm.nodes.data.data import Data
 from aiida.plugins import CalculationFactory
@@ -41,7 +44,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     KEY_EXTRA_IS_HIDDEN: str = 'is_hidden'
 
-    @column
+    @column(cli_field_info=CliFieldInfo(priority=4))
     def label(self) -> str:
         """The label of the code."""
         return self.backend_entity.label
@@ -55,6 +58,20 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
         self.backend_entity.label = value
 
+    @column(
+        updatable=True,
+        model_field_info=pdt.fields.FieldInfo(default=''),
+        cli_field_info=CliFieldInfo(priority=3),
+    )
+    def description(self) -> str:
+        """The description of the code."""
+        return self.backend_entity.description
+
+    @description.setter
+    def description(self, value: str) -> None:
+        type_check(value, str)
+        self.backend_entity.description = value
+
     @attribute
     def default_calc_job_plugin(self) -> str | None:
         """The entry point name of the default ``CalcJob`` plugin."""
@@ -64,34 +81,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     def default_calc_job_plugin(self, value: str | None) -> None:
         type_check(value, str, allow_none=True)
         self.base.attributes.set(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, value)
-
-    @attribute(model_field_info=pdt.fields.FieldInfo(default=''))
-    def append_text(self) -> str:
-        """The text to add after the run line in the job script.
-
-        This can include ``bash`` commands or other shell instructions to run after the main command,
-        e.g., cleaning up temporary files, logging, etc.
-        """
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_APPEND_TEXT, '')
-
-    @append_text.setter
-    def append_text(self, value: str) -> None:
-        type_check(value, str)
-        self.base.attributes.set(self.KEY_ATTRIBUTE_APPEND_TEXT, value)
-
-    @attribute(model_field_info=pdt.fields.FieldInfo(default=''))
-    def prepend_text(self) -> str:
-        """The text to add before the run line in the job script.
-
-        This can include ``bash`` commands or other shell instructions to run before the main command,
-        e.g., setting environment variables, loading modules, etc.
-        """
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_PREPEND_TEXT, '')
-
-    @prepend_text.setter
-    def prepend_text(self, value: str) -> None:
-        type_check(value, str)
-        self.base.attributes.set(self.KEY_ATTRIBUTE_PREPEND_TEXT, value)
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def use_double_quotes(self) -> bool:
@@ -122,6 +111,62 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     def wrap_cmdline_params(self, value: bool) -> None:
         type_check(value, bool)
         self.base.attributes.set(self.KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, value)
+
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            default='',
+            title='Append scripts',
+        ),
+        cli_field_info=CliFieldInfo(
+            option_cls=functools.partial(
+                TemplateInteractiveOption,
+                extension='.bash',
+                header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                footer='All lines that start with `#=`: will be ignored.',
+            ),
+        ),
+    )
+    def append_text(self) -> str:
+        """The text to add after the run line in the job script.
+
+        This can include ``bash`` commands or other shell instructions to run after the main command,
+        e.g., cleaning up temporary files, logging, etc.
+        """
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_APPEND_TEXT, '')
+
+    @append_text.setter
+    def append_text(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_APPEND_TEXT, value)
+
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            default='',
+            title='Prepend scripts',
+        ),
+        cli_field_info=CliFieldInfo(
+            option_cls=functools.partial(
+                TemplateInteractiveOption,
+                extension='.bash',
+                header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                footer='All lines that start with `#=`: will be ignored.',
+            ),
+        ),
+    )
+    def prepend_text(self) -> str:
+        """The text to add before the run line in the job script.
+
+        This can include ``bash`` commands or other shell instructions to run before the main command,
+        e.g., setting environment variables, loading modules, etc.
+        """
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_PREPEND_TEXT, '')
+
+    @prepend_text.setter
+    def prepend_text(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_PREPEND_TEXT, value)
 
     @property
     @abc.abstractmethod

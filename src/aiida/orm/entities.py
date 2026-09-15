@@ -22,7 +22,7 @@ from aiida.common import exceptions, log
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import call_with_super_check, classproperty, super_check, type_check
 from aiida.manage import get_manager
-from aiida.orm.cli import EntityCliCreateSpec
+from aiida.orm.cli import CliConfig, EntityCliCreateSpec
 from aiida.orm.decorators import column
 from aiida.orm.models.entity import EntityModel, ModelsNamespace
 
@@ -198,6 +198,7 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
 
     _entity_model_config: pdt.ConfigDict
 
+    _cli_config: t.ClassVar[CliConfig] = CliConfig()
     _cli_spec: t.ClassVar[EntityCliCreateSpec | None] = None
 
     def __init__(self, backend_entity: _BackendEntityT) -> None:

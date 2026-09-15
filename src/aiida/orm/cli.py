@@ -57,6 +57,31 @@ class CliAdapter(abc.ABC, t.Generic[_CliValueT, _ModelValueT]):
 
 
 @dataclasses.dataclass(frozen=True)
+class CliConfig:
+    exclude: frozenset[str] = frozenset()
+    """Fields to exclude from the CLI by default."""
+    include: frozenset[str] = frozenset()
+    """Can be used to reenable parent-excluded fields."""
+
+    @classmethod
+    def resolve(cls, entity_type: type[Entity]) -> CliConfig:
+        excluded: set[str] = set()
+
+        for base in reversed(entity_type.__mro__):
+            config = base.__dict__.get('_cli_config')
+
+            if config is None:
+                continue
+
+            assert isinstance(config, CliConfig), '_cli_config must be an instance of CliConfig'
+
+            excluded.update(config.exclude)
+            excluded.difference_update(config.include)
+
+        return cls(exclude=frozenset(excluded))
+
+
+@dataclasses.dataclass(frozen=True)
 class CliFieldInfo:
     """Optional Click-specific configuration for an ORM field."""
 
@@ -89,9 +114,7 @@ class EntityCliCreateSpec:
         for cli_field in self._iter_fields():
             field = cli_field.field
             model_field = cli_field.model_field
-            cli_info = field.cli_field_info
-
-            assert cli_info is not None
+            cli_info = field.cli_field_info or CliFieldInfo()
 
             annotation = make_required(
                 self._cli_field_annotation(
@@ -189,8 +212,10 @@ class EntityCliCreateSpec:
         """Yield all CLI-exposed fields in their flat external namespace."""
         create_model = self.entity_type.models.create
 
+        config = CliConfig.resolve(self.entity_type)
+
         for name, column in iter_columns(self.entity_type).items():
-            if column.cli_field_info is None:
+            if name in config.exclude:
                 continue
 
             model_field = create_model.model_fields.get(name)
@@ -212,7 +237,7 @@ class EntityCliCreateSpec:
         attributes_model = models_namespace.attributes
 
         for name, attribute in iter_attributes(self.entity_type).items():
-            if attribute.cli_field_info is None:
+            if name in config.exclude:
                 continue
 
             model_field = attributes_model.model_fields.get(name)

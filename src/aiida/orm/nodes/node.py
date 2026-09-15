@@ -24,6 +24,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
+from aiida.orm.cli import CliConfig
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import column
 from aiida.orm.decorators.attributes import attributes_column
@@ -200,6 +201,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     # Flag that determines whether the class can be stored.
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
+
+    _cli_config = CliConfig(
+        exclude=Entity._cli_config.exclude
+        | {
+            'node_type',
+            'process_type',
+            'extras',
+            'attributes',
+            'repository_metadata',
+        },
+    )
 
     def __init__(
         self,

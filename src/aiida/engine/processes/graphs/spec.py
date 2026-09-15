@@ -19,6 +19,7 @@ from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskWorkChain
 from aiida.engine.processes.process import Process
+from aiida.orm import to_aiida_type
 
 __all__ = (
     'BodyTask',
@@ -670,6 +671,57 @@ class GraphSpec:
             if task.name == name:
                 return task
         raise KeyError(f'no task named `{name}` in this graph.')
+
+    def serializer_for_input(self, name: str) -> t.Callable[[t.Any], t.Any]:
+        """Return what stores a value given for one of the graph's own inputs.
+
+        An input has no type of its own: it has the type of the ports it feeds, so it is stored the way the port
+        at the other end stores what is written into it. Without that, every input would be stored by
+        ``to_aiida_type`` alone, which knows only the value it is handed, so an enum member would arrive as the
+        string it prints as and a port asking for the enum would refuse it.
+
+        :param name: the input of this graph a value was given for.
+        :return: what to store it with, which is ``to_aiida_type`` where nothing more specific is known.
+        """
+        for task_name, port in self.inputs.get(name, ()):
+            found = self._serializer_at(task_name, port)
+
+            if found is not None:
+                return found
+
+        return to_aiida_type
+
+    def _serializer_at(self, task_name: str, port: str) -> t.Callable[[t.Any], t.Any] | None:
+        """Return what the named port of the named task stores what is written into it with.
+
+        :return: the serializer, or ``None`` where this graph cannot say, which a namespace and a task holding a
+            graph of its own both are.
+        """
+        task = self.task(task_name)
+
+        if isinstance(task, BodyTask):
+            # The port belongs to the graph inside, whose inputs carry the same names.
+            return next(
+                (
+                    found
+                    for inner_task, inner_port in task.body.inputs.get(port, ())
+                    if (found := task.body._serializer_at(inner_task, inner_port)) is not None
+                ),
+                None,
+            )
+
+        if not isinstance(task, ProcessTask):
+            return None
+
+        holder: t.Any = task.spec.process_class.spec().inputs
+
+        for segment in port.split('.'):
+            if not isinstance(holder, PortNamespace) or segment not in holder:
+                return None
+
+            holder = holder[segment]
+
+        return getattr(holder, 'serializer', None)
 
     def predecessors(self, name: str) -> set[str]:
         """Return the names of the tasks the given one waits for, whether it takes a value from them or not."""

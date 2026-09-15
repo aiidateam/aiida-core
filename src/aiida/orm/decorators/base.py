@@ -5,7 +5,7 @@ import dataclasses
 import typing as t
 from collections.abc import Callable
 
-import pydantic as pdt
+from pydantic.fields import FieldInfo as ModelFieldInfo
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -33,7 +33,7 @@ class BaseFieldConfig:
     readonly: bool = False
     required_once_stored: bool = False
 
-    model_field_info: pdt.fields.FieldInfo = dataclasses.field(default_factory=pdt.fields.FieldInfo)
+    model_field_info: ModelFieldInfo = dataclasses.field(default_factory=ModelFieldInfo)
     model_metadata: tuple[ModelMetadata, ...] = ()
     model_adapter: ModelAdapter[t.Any, t.Any, t.Any] | None = None
 
@@ -123,7 +123,7 @@ class BaseField(
         return self._spec
 
     @property
-    def model_field_info(self) -> pdt.fields.FieldInfo:
+    def model_field_info(self) -> ModelFieldInfo:
         """Return optional Pydantic-specific field configuration."""
         return self._config.model_field_info
 

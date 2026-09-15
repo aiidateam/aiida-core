@@ -25,7 +25,7 @@ from aiida.common.lang import override
 from aiida.engine.processes.containers import as_dict, fields_of, is_a_container
 from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec, _lazily
+from aiida.engine.processes.process_spec import ProcessSpec, _as_a_port
 from aiida.manage import get_manager
 from aiida.orm import (
     CalcFunctionNode,
@@ -336,17 +336,11 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
         )
 
     for field in fields:
-        if fields_of(field.annotation) is not None:
+        if fields_of(field.annotation) is not None and not field.whole:
             spec.input_namespace_from(field.name, field.annotation, required=field.required)
             continue
 
-        spec.input(
-            field.name,
-            valid_type=infer_valid_type_from_type_annotation(field.annotation) or (Data,),
-            required=field.required,
-            serializer=to_aiida_type,
-            **({} if field.required else {'default': _lazily(field.default)}),
-        )
+        spec.input(field.name, **_as_a_port(field))
 
     return {field.name for field in fields}
 

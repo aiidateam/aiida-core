@@ -10,14 +10,14 @@
 
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import NamedTuple, TypedDict
+from typing import Annotated, NamedTuple, TypedDict
 
 import pytest
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, ConfigDict, field_serializer
 
-from aiida.engine import WorkChain, graph, run_get_node, task
+from aiida.engine import Whole, WorkChain, graph, run_get_node, task
 from aiida.engine.processes.containers import as_dict, build, fields_of, is_a_container
-from aiida.orm import Int, Str
+from aiida.orm import Float, Int, JsonableData, Str, load_node
 
 
 class AsTypedDict(TypedDict):
@@ -368,3 +368,123 @@ def test_a_task_fills_one_field_of_a_nested_container():
 
     assert node.is_finished_ok, node.exit_message
     assert results['seen'] == 'silicon/14/Kpoints', 'the mesh the other task chose, not the default'
+
+
+class Spacing(BaseModel):
+    """A container declaring a node type beside a plain one."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    spacing: Float
+    points: int = 4
+
+
+@task(outputs=['seen'])
+def sees_spacing(given: Spacing) -> str:
+    return f'{type(given.spacing).__name__}={given.spacing.value}/{type(given.points).__name__}={given.points}'
+
+
+def test_a_field_declaring_a_node_takes_that_node():
+    """What the container says a field holds is what the port takes, node types among them."""
+    ports = sees_spacing.process_class.spec().inputs['given']
+
+    assert ports['spacing'].valid_type == (Float,)
+    assert Int in ports['points'].valid_type
+
+
+@pytest.mark.parametrize('as_nodes', (False, True), ids=('plain-values', 'nodes'))
+def test_a_value_is_converted_to_what_the_field_declares(as_nodes):
+    """A port turns a plain value into the node it takes, which a field of a container inherits."""
+    given = {'spacing': Float(0.2), 'points': Int(8)} if as_nodes else {'spacing': 0.2, 'points': 8}
+    results, node = run_get_node(sees_spacing, given=given)
+
+    assert node.is_finished_ok, node.exit_message
+    assert isinstance(node.inputs.given.spacing, Float), 'stored as the node the field declares'
+    assert results['seen'] == 'Float=0.2/int=8', 'and handed over as the field declares it, node or value'
+
+
+class Conf(BaseModel):
+    """Opaque configuration, which nothing wires into."""
+
+    tolerance: float = 1e-6
+
+
+class Opaque(BaseModel):
+    structure: str
+    config: Annotated[Conf, Whole] = Conf()
+
+
+@dataclass
+class OpaqueDataclass:
+    structure: str
+    config: Annotated[Conf, Whole] = field(default_factory=Conf)
+
+
+class OpaqueTypedDict(TypedDict):
+    structure: str
+    config: Annotated[Conf, Whole]
+
+
+@task(outputs=['seen'])
+def keeps_whole(given: Opaque) -> str:
+    return f'{given.structure}/{type(given.config).__name__}/{given.config.tolerance}'
+
+
+@pytest.mark.parametrize(
+    'container', (Opaque, OpaqueDataclass, OpaqueTypedDict), ids=('model', 'dataclass', 'typed-dict')
+)
+def test_a_field_marked_whole_is_read_as_one_value(container):
+    """The mark is metadata of the type, so every kind carries it where it writes its annotations."""
+    fields = {field.name: field.whole for field in fields_of(container)}
+
+    assert fields == {'structure': False, 'config': True}
+
+
+def test_a_field_marked_whole_is_one_port_holding_the_object():
+    """A container that nothing wires into is one node, rather than the namespace its fields would name."""
+    ports = keeps_whole.process_class.spec().inputs['given']
+
+    assert JsonableData in ports['config'].valid_type
+    assert not hasattr(ports['config'], 'ports'), 'a port rather than a namespace'
+
+    results, node = run_get_node(keeps_whole, given=Opaque(structure='si', config=Conf(tolerance=0.1)))
+
+    assert node.is_finished_ok, node.exit_message
+    assert sorted(node.base.links.get_incoming().all_link_labels()) == ['given__config', 'given__structure']
+    assert isinstance(node.inputs.given.config, JsonableData)
+    assert results['seen'] == 'si/Conf/0.1', 'handed back as the object it was, not as what it was stored as'
+
+
+def test_a_model_is_stored_whole_and_read_back():
+    """`JsonableData` takes a pydantic model as readily as anything else saying how it is written."""
+    stored = JsonableData(Opaque(structure='si')).store()
+    back = load_node(stored.pk).obj
+
+    assert isinstance(back, Opaque)
+    assert (back.structure, back.config.tolerance) == ('si', 1e-6), 'the nested one came back too'
+
+
+class HoldsANode(BaseModel):
+    """A container holding a node, which is not something JSON has a way to write."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    spacing: Float
+
+
+class KeptWhole(BaseModel):
+    label: str
+    config: Annotated[HoldsANode, Whole]
+
+
+@task(outputs=['seen'])
+def keeps_a_node_whole(given: KeptWhole) -> str:
+    return given.label
+
+
+def test_a_whole_field_that_cannot_be_written_as_json_says_what_to_do():
+    """One node holding a container holds it as JSON, which a node inside it has no way to be written as."""
+    given = KeptWhole(label='si', config=HoldsANode(spacing=Float(0.2)))
+
+    with pytest.raises(ValueError, match='drop the mark so that each field is stored as the node it is'):
+        run_get_node(keeps_a_node_whole, given=given)

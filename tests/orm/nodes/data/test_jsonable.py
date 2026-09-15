@@ -4,6 +4,7 @@ import datetime
 import math
 
 import pytest
+from pydantic import BaseModel
 from pymatgen.core.structure import Molecule
 
 from aiida.orm import load_node
@@ -50,7 +51,9 @@ def test_invalid_class_no_as_dict():
     class InvalidClass:
         pass
 
-    with pytest.raises(TypeError, match=r'the `obj` argument does not have the required `as_dict` method.'):
+    with pytest.raises(
+        TypeError, match=r'the `obj` argument does not have the required `as_dict` or `model_dump` method.'
+    ):
         JsonableData(InvalidClass())
 
 
@@ -147,3 +150,35 @@ def test_msonable():
     loaded = load_node(node.pk)
     assert loaded is not node
     assert loaded.obj == obj
+
+
+class Point(BaseModel):
+    """A model that says how it is written the way pydantic says it."""
+
+    x: int
+    y: int = 0
+
+
+class Shape(BaseModel):
+    """And one holding another, so that the nesting is carried too."""
+
+    label: str
+    origin: Point = Point(x=0)
+
+
+def test_pydantic_model():
+    """A pydantic model says `model_dump` and `model_validate` where this asks for `as_dict` and `from_dict`."""
+    node = JsonableData(Shape(label='square')).store()
+    loaded = load_node(node.pk)
+
+    assert isinstance(loaded.obj, Shape)
+    assert loaded.obj.label == 'square'
+    assert isinstance(loaded.obj.origin, Point), 'the model it holds came back as well'
+    assert (loaded.obj.origin.x, loaded.obj.origin.y) == (0, 0)
+
+
+def test_pydantic_model_unstored():
+    """An unstored node returns the very object it was given, as it does for anything else."""
+    shape = Shape(label='circle')
+
+    assert JsonableData(shape).obj is shape

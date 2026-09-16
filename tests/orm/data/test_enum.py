@@ -43,7 +43,7 @@ class IntegerFlag(enum.IntFlag):
 @pytest.mark.parametrize(
     'member', [DummyEnum.OPTION_A, StringEnum.OPTION, IntegerEnum.OPTION, FloatEnum.OPTION, IntegerFlag.OPTION]
 )
-def test_to_aiida_type_enum(member):
+def test_to_aiida_type_enum(member: enum.Enum) -> None:
     """Serialization preserves the enum class and member, including after storage."""
     node = to_aiida_type(member)
     assert isinstance(node, EnumData)
@@ -54,7 +54,7 @@ def test_to_aiida_type_enum(member):
 
 
 @pytest.mark.parametrize('register_base', [False, True])
-def test_to_aiida_type_custom_enum_converter(register_base):
+def test_to_aiida_type_custom_enum_converter(register_base: bool) -> None:
     """An explicitly registered converter still takes precedence for its enum subclass."""
     from aiida.orm import Str
 
@@ -65,7 +65,7 @@ def test_to_aiida_type_custom_enum_converter(register_base):
         OPTION = 'custom'
 
     @to_aiida_type.register(CustomBase if register_base else CustomEnum)
-    def convert(value):
+    def convert(value: CustomBase) -> Str:
         return Str(f'converted: {value.value}')
 
     node = to_aiida_type(CustomEnum.OPTION)

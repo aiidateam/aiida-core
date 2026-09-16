@@ -4,6 +4,7 @@ import stat
 import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import asyncssh
 import pytest
 
 from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH, get_openssh_version
@@ -185,6 +186,38 @@ class TestDataNodeHost:
         assert ssh_commands, 'run() should still be executed over ssh'
         for command in ssh_commands:
             assert command[1] == 'login.hpc'
+
+
+class TestSftpErrorTranslation:
+    """The backend has to report failures as `OSError`, which is what the `Transport` interface promises.
+
+    `asyncssh` raises its own `SFTPError`, which does not derive from `OSError`, so callers that catch
+    `OSError` (e.g. `RemoteData._get_size_on_disk_stat`) would let it escape.
+    """
+
+    @staticmethod
+    def _backend(**sftp_methods):
+        backend = _AsyncSSH('localhost', 'localhost', MagicMock(), 'bash ')
+        backend._sftp = MagicMock(**sftp_methods)
+        return backend
+
+    @pytest.mark.asyncio
+    async def test_listdir_of_missing_path_raises_file_not_found(self):
+        """A missing path is reported as `FileNotFoundError`, as the `openssh` backend does."""
+        backend = self._backend(listdir=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/does/not/exist'):
+            await backend.listdir('/does/not/exist')
+
+    @pytest.mark.asyncio
+    async def test_listdir_failure_raises_oserror(self):
+        """Any other SFTP failure is reported as a plain `OSError`, keeping the reason of the server."""
+        backend = self._backend(listdir=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')))
+
+        with pytest.raises(OSError, match='Permission denied') as exception:
+            await backend.listdir('/root')
+
+        assert not isinstance(exception.value, FileNotFoundError)
 
 
 class TestSemaphoreBehavior:

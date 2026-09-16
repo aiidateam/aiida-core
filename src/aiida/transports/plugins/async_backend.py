@@ -322,7 +322,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         return await self._sftp.isfile(path)
 
     async def listdir(self, path: str):
-        return list(await self._sftp.listdir(path))
+        try:
+            return list(await self._sftp.listdir(path))
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            # `asyncssh` errors do not derive from `OSError`, which the `Transport` interface promises.
+            msg = f'No such file or directory: {path}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while listing directory {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
         try:

@@ -19,11 +19,37 @@ class JsonSerializableProtocol(typing.Protocol):
     def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]: ...
 
 
+def _renders(obj: typing.Any) -> bool:
+    """Return whether the object says how it is written as a dictionary, in either of the two ways it might."""
+    return any(callable(getattr(obj, name, None)) for name in ('as_dict', 'model_dump'))
+
+
+def _render(obj: typing.Any) -> dict:
+    """Return the dictionary the object is stored as.
+
+    A pydantic model says this as ``model_dump``, and says it in the JSON words, since that is what the
+    attributes of a node hold.
+    """
+    if callable(getattr(obj, 'as_dict', None)):
+        return obj.as_dict()
+
+    return obj.model_dump(mode='json')
+
+
+def _rebuild(cls: typing.Any, data: dict) -> typing.Any:
+    """Return the object the dictionary was written from, asked for in whichever way the class says it."""
+    if callable(getattr(cls, 'from_dict', None)):
+        return cls.from_dict(data)
+
+    return cls.model_validate(data)
+
+
 class JsonableData(Data):
     """Data plugin that allows to easily wrap objects that are JSON-able.
 
     Any class that implements the ``as_dict`` method, returning a dictionary that is a JSON serializable representation
-    of the object, can be wrapped and stored by this data plugin.
+    of the object, can be wrapped and stored by this data plugin. A pydantic model says the same thing in its own
+    words, ``model_dump`` and ``model_validate``, and is taken as readily.
 
     As an example, take the ``Molecule`` class of the ``pymatgen`` library, which respects the spec described above. To
     store an instance as a ``JsonableData`` simply pass an instance as an argument to the constructor as follows::
@@ -93,13 +119,13 @@ class JsonableData(Data):
         if obj is None:
             raise TypeError('the `obj` argument cannot be `None`.')
 
-        if not hasattr(obj, 'as_dict') or not callable(getattr(obj, 'as_dict')):
-            raise TypeError('the `obj` argument does not have the required `as_dict` method.')
+        if not _renders(obj):
+            raise TypeError('the `obj` argument does not have the required `as_dict` or `model_dump` method.')
 
         super().__init__(*args, **kwargs)
 
         self._obj = obj
-        dictionary = obj.as_dict()
+        dictionary = _render(obj)
 
         if '@class' not in dictionary:
             dictionary['@class'] = obj.__class__.__name__
@@ -197,7 +223,7 @@ class JsonableData(Data):
                 ) from exc
 
             deserialized = self._deserialize_float_constants(attributes)
-            self._obj = cls.from_dict(deserialized)
+            self._obj = _rebuild(cls, deserialized)
 
             return self._obj
 

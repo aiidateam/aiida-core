@@ -6,25 +6,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with `Node` sub classes for processes."""
+"""Module with `Node` sub class for the execution of a graph of tasks."""
 
-# AUTO-GENERATED
+from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
 
-# fmt: off
+__all__ = ('GraphNode',)
 
-from aiida.orm.nodes.process.calculation import *
-from aiida.orm.nodes.process.process import *
-from aiida.orm.nodes.process.workflow import *
 
-__all__ = (
-    'CalcFunctionNode',
-    'CalcJobNode',
-    'CalculationNode',
-    'GraphNode',
-    'ProcessNode',
-    'WorkChainNode',
-    'WorkFunctionNode',
-    'WorkflowNode',
-)
+class GraphNode(WorkflowNode):
+    """ORM class for all nodes representing the execution of a graph of tasks.
 
-# fmt: on
+    A graph is run by one process class for every graph there is, since what to run is an input rather than a
+    subclass, so the kind of workflow a run was is what this says and the process type cannot.
+    """

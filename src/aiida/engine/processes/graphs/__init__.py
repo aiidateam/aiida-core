@@ -6,25 +6,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with `Node` sub classes for processes."""
+"""Declaring, writing and running a graph of tasks."""
 
 # AUTO-GENERATED
 
 # fmt: off
 
-from aiida.orm.nodes.process.calculation import *
-from aiida.orm.nodes.process.process import *
-from aiida.orm.nodes.process.workflow import *
-
-__all__ = (
-    'CalcFunctionNode',
-    'CalcJobNode',
-    'CalculationNode',
-    'GraphNode',
-    'ProcessNode',
-    'WorkChainNode',
-    'WorkFunctionNode',
-    'WorkflowNode',
-)
+from aiida.engine.processes.graphs.build import *
+from aiida.engine.processes.graphs.handlers import *
+from aiida.engine.processes.graphs.monitors import *
+from aiida.engine.processes.graphs.process import *
+from aiida.engine.processes.graphs.run import *
+from aiida.engine.processes.graphs.spec import *
 
 # fmt: on

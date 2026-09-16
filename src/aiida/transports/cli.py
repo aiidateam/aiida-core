@@ -104,7 +104,12 @@ def interactive_default(key, also_non_interactive=False):
 
         auth_params = authinfo.get_auth_params()
         suggestion = auth_params.get(key)
-        suggestion = suggestion or transport_option_default(key, computer)
+
+        # Only an unset parameter falls back to the plugin default. A stored ``False`` or ``0`` is a
+        # deliberate choice and must survive a reconfiguration.
+        if suggestion is None or suggestion == '':
+            suggestion = transport_option_default(key, computer)
+
         return suggestion
 
     return get_default

@@ -428,3 +428,57 @@ def test_scp_with_special_chars(tmp_path):
         escaped = backend._escape_for_rcp(str(source))
         result = subprocess.run(['scp', '-O', f'localhost:{escaped}', str(dest_rcp)], capture_output=True, check=False)
         assert result.returncode == 0 and dest_rcp.read_text() == f'content of {filename}'
+
+
+class TestAsyncSshIgnoredConfigKwargs:
+    """A computer whose entry relies on a directive ``asyncssh`` reads no value from carries it itself."""
+
+    @pytest.mark.parametrize(
+        'auth_params, expected',
+        (
+            ({'known_hosts': False}, {'known_hosts': None}),
+            ({'client_keys': False}, {'client_keys': None}),
+            ({'gss_host': 'host/myhpc'}, {'gss_host': 'host/myhpc'}),
+            ({}, {}),
+        ),
+    )
+    def test_reaches_the_backend(self, auth_params, expected):
+        transport = AsyncSshTransport(machine='myhpc', **auth_params)
+
+        assert transport.async_backend.connect_kwargs == expected
+
+    @pytest.mark.asyncio
+    async def test_reaches_the_data_transfer_host_too(self):
+        """The parameters belong to the computer, and both of its connections are that computer."""
+        transport = AsyncSshTransport(machine='myhpc', data_node_host='myhpc-data', known_hosts=False)
+
+        with patch('asyncssh.connect', new=AsyncMock()) as connect:
+            await transport.async_backend._connect('myhpc-data')
+
+        assert connect.await_args.kwargs == {'known_hosts': None}
+
+    @pytest.mark.parametrize('auth_params', ({'known_hosts': False}, {'client_keys': False}))
+    def test_is_not_passed_on_by_the_openssh_backend(self, auth_params):
+        """``ssh`` and ``scp`` read the directives themselves, so nothing has to be lifted for them."""
+        transport = AsyncSshTransport(machine='myhpc', backend='openssh', **auth_params)
+
+        assert transport.async_backend.ssh_command_generator('whoami') == ['ssh', 'myhpc', 'bash -l -c "whoami"']
+
+    @pytest.mark.asyncio
+    async def test_is_given_to_asyncssh(self):
+        backend = _AsyncSSH('h', 'h', MagicMock(), 'bash ', connect_kwargs={'known_hosts': None})
+
+        with patch('asyncssh.connect', new=AsyncMock()) as connect:
+            await backend._connect('myhpc')
+
+        assert connect.await_args.kwargs == {'known_hosts': None}
+
+    @pytest.mark.asyncio
+    async def test_a_native_computer_is_given_nothing(self):
+        """Every other computer connects exactly as it did, reading ``~/.ssh/config`` by default."""
+        backend = _AsyncSSH('myhpc', 'myhpc', MagicMock(), 'bash ')
+
+        with patch('asyncssh.connect', new=AsyncMock()) as connect:
+            await backend._connect('myhpc')
+
+        assert connect.await_args.kwargs == {}

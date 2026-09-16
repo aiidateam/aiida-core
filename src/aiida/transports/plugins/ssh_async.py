@@ -14,6 +14,7 @@ import asyncio
 import glob
 import os
 import subprocess
+import typing as t
 from pathlib import Path, PurePath
 
 import click
@@ -177,6 +178,8 @@ class AsyncSshTransport(AsyncTransport):
             # for backward compatibility
             self.auth_script = kwargs.pop('script_before', 'None')
 
+        connect_kwargs = self._asyncssh_ignored_config_kwargs(kwargs)
+
         if kwargs.get('backend') == 'openssh':
             from aiida.transports.plugins.async_backend import _OpenSSH
 
@@ -192,8 +195,34 @@ class AsyncSshTransport(AsyncTransport):
             from aiida.transports.plugins.async_backend import _AsyncSSH
 
             self.async_backend = _AsyncSSH(  # type: ignore[assignment]
-                self.machine, self.data_machine, self.logger, self._bash_command_str
+                self.machine,
+                self.data_machine,
+                self.logger,
+                self._bash_command_str,
+                connect_kwargs=connect_kwargs,
             )
+
+    @staticmethod
+    def _asyncssh_ignored_config_kwargs(auth_params: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Return the ``asyncssh.connect()`` arguments for the directives it reads no value from.
+
+        ``asyncssh`` parses ``~/.ssh/config`` like any other client, but has no handler for
+        ``StrictHostKeyChecking`` or ``GSSAPIServerIdentity``, and takes ``IdentityFile none`` for a
+        file name. A computer whose entry relies on one of those carries it as an authentication
+        parameter instead, which is also what the storage migration records for a computer it moved
+        off the v2 ``core.ssh`` plugin. The ``ssh`` and ``scp`` clients honour all three natively,
+        so the ``openssh`` backend needs none of this.
+        """
+        connect_kwargs: dict[str, t.Any] = {}
+
+        for parameter in ('known_hosts', 'client_keys'):
+            if auth_params.pop(parameter, True) is False:
+                connect_kwargs[parameter] = None
+
+        if gss_host := auth_params.pop('gss_host', None):
+            connect_kwargs['gss_host'] = gss_host
+
+        return connect_kwargs
 
     @property
     def max_io_allowed(self):
@@ -1371,5 +1400,4 @@ class AsyncSshTransport(AsyncTransport):
         :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
         connect_string = self._gotocomputer_string(remotedir=remotedir)
-        cmd = f'ssh -t {self.machine} {connect_string}'
-        return cmd
+        return f'ssh -t {self.machine} {connect_string}'

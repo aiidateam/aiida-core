@@ -172,6 +172,10 @@ An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm
 - ``value``: the member's value
 - ``identifier``: the string representation of the enum's identifier
 
+:py:func:`~aiida.orm.to_aiida_type` converts enum members to :py:class:`~aiida.orm.EnumData`, including enums mixed with primitive types such as ``str``, ``int`` or ``float``.
+This preserves the enum class and member instead of converting only its primitive value.
+An explicitly registered converter for a more specific enum subclass still takes precedence.
+
 .. code-block:: ipython
 
     In [1]: from enum import Enum

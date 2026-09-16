@@ -11,18 +11,20 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 from collections.abc import Callable
 from enum import Enum, auto
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
 from aiida import orm
 from aiida.common import LinkType, timezone
 from aiida.common.log import AIIDA_LOGGER
+from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
 from aiida.orm.utils import LinkTriple
 from aiida.tools._dumping.config import DumpMode
 from aiida.tools._dumping.tracking import DumpRecord
@@ -39,6 +41,67 @@ logger = AIIDA_LOGGER.getChild('tools._dumping.executors.process')
 
 # Type hint for the recursive dump function expected by WorkflowWalker
 DumpProcessorType = Callable[[orm.ProcessNode, Path], None]
+
+
+def _serialize_data_node(node: orm.Node) -> Any:
+    """Return the JSON-native content of a ``Data`` node.
+
+    ``Dict``, ``List`` and the ``BaseType`` scalars answer their ``value``, any other node its attributes
+    (``EnumData`` deliberately falls in the second group: its ``value`` is the enum member, not JSON). Attributes
+    pass through ``clean_value`` on storage, which refuses anything that is not JSON-serializable, so the result can
+    always be handed to ``json.dumps``.
+
+    :param node: The node to serialize
+    :return: A JSON-native object
+    """
+
+    if isinstance(node, (orm.Dict, orm.List, orm.BaseType)):
+        return node.value
+
+    return node.base.attributes.all
+
+
+def _nest_by_link_label(values: dict[str, Any]) -> dict[str, Any]:
+    """Group ``{link_label: value}`` into nested dictionaries, splitting each label on ``__``.
+
+    A namespaced label like ``alphas__filled`` denotes a nested port, which the repository-backed dump turns into the
+    directory ``alphas/filled``. Here the labels of one namespace become a single ``alphas.json`` instead, so a
+    namespace is read as one document rather than as a file per port.
+
+    A label that would have to be written inside another label's value, or on top of it, is dropped with a warning:
+    writing it would discard the value that is there. Two labels of one namespace, such as ``alphas__filled`` and
+    ``alphas__empty``, do not clash and are merged into one document.
+
+    :param values: The serialized value of each link label
+    :return: The values nested by namespace
+    """
+
+    nested: dict[str, Any] = {}
+    # The path of each label placed so far. A path holds one node's value, so no other label may nest inside it.
+    placed: set[tuple[str, ...]] = set()
+
+    # Sorting puts a label before any label nested inside it, so a clash is always detected on the longer one.
+    for label in sorted(values):
+        path = tuple(label.split(PORT_NAMESPACE_SEPARATOR))
+        *namespace, name = path
+
+        if any(path[:depth] in placed for depth in range(1, len(path))):
+            logger.warning(f"Link label `{label}` is nested inside another label's value. Not writing it.")
+            continue
+
+        cursor = nested
+
+        for part in namespace:
+            cursor = cursor.setdefault(part, {})
+
+        if name in cursor:
+            logger.warning(f'Link label `{label}` clashes with another label of the same namespace. Not writing it.')
+            continue
+
+        cursor[name] = values[label]
+        placed.add(path)
+
+    return nested
 
 
 class NodeDumpAction(Enum):
@@ -344,6 +407,7 @@ class ProcessDumpExecutor:
             self.repo_io_dumper._dump_calculation_content(process_node, output_path)
         elif isinstance(process_node, orm.WorkflowNode):
             self.workflow_walker._dump_children(process_node, output_path)
+            self.repo_io_dumper._dump_workflow_content(process_node, output_path)
 
     def _cleanup_failed_dump(
         self,
@@ -501,43 +565,79 @@ class NodeRepoIoDumper:
                 retrieved_target.mkdir(parents=True, exist_ok=True)
                 calculation_node.outputs.retrieved.base.repository.copy_tree(retrieved_target)
 
-        # Dump the node_inputs (linked Data nodes)
+        # Copy the repository content of node_inputs and node_outputs before writing either's JSON: under
+        # `flat` the two share a directory, so a `<label>.json` file must not collide with a repository-backed
+        # node's own file copied in by the other side.
+        input_path = output_path / io_dump_mapping.inputs
+        input_json_values: dict[str, Any] = {}
         if self.config.include_inputs:
             input_links = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC).all()
             if input_links:
-                input_path = output_path / io_dump_mapping.inputs
-                self._dump_calculation_io_files(
-                    parent_path=input_path,
-                    link_triples=input_links,
-                )
+                input_json_values = self._copy_io_repository_content(parent_path=input_path, link_triples=input_links)
 
-        # Dump the node_outputs (created Data nodes, excluding 'retrieved')
+        output_path_target = output_path / io_dump_mapping.outputs
+        output_json_values: dict[str, Any] = {}
         if self.config.include_outputs:
             output_links = calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE).all()
             output_links_filtered = [link for link in output_links if link.link_label != 'retrieved']
             if output_links_filtered:
-                output_path_target = output_path / io_dump_mapping.outputs
-                self._dump_calculation_io_files(
-                    parent_path=output_path_target,
-                    link_triples=output_links_filtered,
+                output_json_values = self._copy_io_repository_content(
+                    parent_path=output_path_target, link_triples=output_links_filtered
                 )
 
-    def _dump_calculation_io_files(
+        self._dump_io_json(parent_path=input_path, json_values=input_json_values)
+        self._dump_io_json(parent_path=output_path_target, json_values=output_json_values)
+
+    def _dump_workflow_content(self, workflow_node: orm.WorkflowNode, output_path: Path) -> None:
+        """Dump the ``RETURN``-linked Data nodes of a ``WorkflowNode``.
+
+        These are the workflow's own results, the values it selected out of everything its steps produced. Requires
+        ``include_workflow_outputs``; without it a workflow directory holds its called steps alone.
+
+        ``include_outputs`` governs a calculation's ``CREATE`` outputs and does not apply here.
+
+        :param workflow_node: The ``orm.WorkflowNode`` whose returned nodes should be dumped
+        :param output_path: The dumping output path
+        """
+
+        if not self.config.include_workflow_outputs:
+            return
+
+        return_links = workflow_node.base.links.get_outgoing(link_type=LinkType.RETURN).all()
+
+        if not return_links:
+            return
+
+        io_dump_mapping = self._generate_calculation_io_mapping(flat=self.config.flat)
+        parent_path = output_path / io_dump_mapping.outputs
+        json_values = self._copy_io_repository_content(parent_path=parent_path, link_triples=return_links)
+        self._dump_io_json(parent_path=parent_path, json_values=json_values)
+
+    def _copy_io_repository_content(
         self,
         parent_path: Path,
         link_triples: list[LinkTriple],
-    ):
-        """Helper to dump linked input/output Data nodes.
+    ) -> dict[str, Any]:
+        """Copy the repository content of linked Data nodes, and collect the rest for JSON.
 
-        :param parent_path: Dumping parent path of the ``orm.CalculationNode``
+        A node that carries repository content has it copied out here. A node that does not is collected instead of
+        written: the caller writes its JSON only once every repository-backed node destined for the same directory
+        has been copied, so the "already exists" guard in ``_dump_io_json`` sees every file the JSON could collide
+        with. Collecting happens only with ``include_data_json`` set: it is the ``Dict`` and ``Int`` results that no
+        dump reached before the option existed. Without it such a node is passed over, as it was before.
+
+        :param parent_path: Dumping parent path of the process node
         :param link_triples: List of ``LinkTriples`` (incoming, outgoing)
+        :return: The serialized value of each link label whose node carries no repository content
         """
+
+        json_values: dict[str, Any] = {}
 
         for link_triple in link_triples:
             node = link_triple.node
             link_label = link_triple.link_label
             if not self.config.flat:
-                relative_parts = link_label.split('__')
+                relative_parts = link_label.split(PORT_NAMESPACE_SEPARATOR)
                 linked_node_path = parent_path.joinpath(*relative_parts)
             else:
                 # Dump content directly into parent_path,
@@ -547,6 +647,30 @@ class NodeRepoIoDumper:
             if node.base.repository.list_object_names():
                 linked_node_path.parent.mkdir(parents=True, exist_ok=True)
                 node.base.repository.copy_tree(linked_node_path)
+            elif self.config.include_data_json:
+                json_values[link_label] = _serialize_data_node(node)
+
+        return json_values
+
+    def _dump_io_json(self, parent_path: Path, json_values: dict[str, Any]) -> None:
+        """Helper to write the serialized content of linked Data nodes as JSON files.
+
+        An existing file is never overwritten: under ``flat``, a calculation's own retrieved files share the directory
+        the JSON goes into, and so do its inputs and its outputs.
+
+        :param parent_path: Directory the JSON files are written into, created if anything is written
+        :param json_values: The serialized value of each link label
+        """
+
+        for filename, value in _nest_by_link_label(json_values).items():
+            output_file = parent_path / f'{filename}.json'
+
+            if output_file.exists():
+                logger.warning(f'File `{output_file}` already exists. Not writing the JSON of `{filename}` over it.')
+                continue
+
+            parent_path.mkdir(parents=True, exist_ok=True)
+            output_file.write_text(json.dumps(value, indent=2, sort_keys=True) + '\n', encoding='utf-8')
 
     @staticmethod
     def _generate_calculation_io_mapping(flat: bool = False) -> SimpleNamespace:

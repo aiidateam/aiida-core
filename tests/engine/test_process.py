@@ -8,6 +8,7 @@
 ###########################################################################
 """Module to test AiiDA processes."""
 
+import sys
 import threading
 
 import pytest
@@ -667,3 +668,59 @@ def test_portal_available_in_on_terminated():
 
     assert PortalProbeWorkChain.portal_in_step is True
     assert PortalProbeWorkChain.portal_in_on_terminated is True
+
+
+class NotebookLikeWorkChain(WorkChain):
+    """Stands in for a class defined in a notebook cell, whose module is the interpreter's entry point."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.outline(cls.do_nothing)
+
+    def do_nothing(self):
+        pass
+
+
+@pytest.fixture
+def defined_in_main(monkeypatch):
+    """Make the stand-in class look the way a notebook definition does.
+
+    A notebook cell executes in the user namespace, which *is* ``sys.modules['__main__']``, so the class both reports
+    that module and is findable in it. Setting only the attribute would leave its source unreachable, which is a
+    different situation from the one under test.
+    """
+    monkeypatch.setitem(sys.modules, '__main__', sys.modules[__name__])
+    monkeypatch.setattr(NotebookLikeWorkChain, '__module__', '__main__')
+
+
+@pytest.mark.requires_rmq
+def test_class_record_kept_for_a_class_no_name_identifies(defined_in_main):
+    """Test that a class recorded under ``__main__`` keeps its source and a fingerprint on the node.
+
+    ``process_type`` names the module the class was defined in, and ``__main__`` is a different module in every
+    interpreter, so nothing else on the node would say what ran.
+    """
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.process_type == '__main__.NotebookLikeWorkChain'
+    assert node.base.attributes.get(node.KEY_ATTRIBUTES_CLASS_FINGERPRINT) is not None
+    assert node.class_source.startswith('class NotebookLikeWorkChain(WorkChain):')
+
+
+@pytest.mark.requires_rmq
+def test_class_record_omitted_for_an_importable_class():
+    """Test that a class its ``process_type`` can load carries nothing extra, since the node would only grow."""
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.base.attributes.get(node.KEY_ATTRIBUTES_CLASS_FINGERPRINT, None) is None
+    assert node.class_source is None
+
+
+@pytest.mark.requires_rmq
+def test_process_class_says_why_it_cannot_load(defined_in_main):
+    """Test that a class no name identifies reports that, rather than an import error naming a module that exists."""
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    with pytest.raises(ValueError, match=r'.*was defined in `__main__`.*cannot be loaded.*class_source.*'):
+        _ = node.process_class

@@ -96,6 +96,10 @@ The running process now supplies its own class, and `Parser.process_class` prefe
 What such a calculation cannot do is be parsed again later from the stored node, with `Parser.parse_from_node`.
 There is no running process to ask by then, and the checkpoint that carried the class is deleted when the node seals.
 
+`process_type` still records `__main__.NotebookWorkChain` for such a class, since that is the module it ran in.
+That string identifies nothing in another interpreter, so the source of the class and a fingerprint of it are now kept on the process node, readable through `ProcessNode.class_source` once the checkpoint carrying the class is gone.
+`ProcessNode.process_class` says so, where it used to raise an import error about a module that does exist.
+
 ### Fixes
 
 ### Deprecations

@@ -17,6 +17,7 @@ The unit tests elsewhere pin each decision on its own. These pin that the decisi
 
 import sys
 import textwrap
+import time
 
 import pytest
 
@@ -192,3 +193,20 @@ def test_calcjob_defined_in_main(submit_and_await, defined_in_main, aiida_code_i
 
     assert node.is_finished_ok, node.exception
     assert node.outputs.sum.value == 42
+
+    # The record of what ran outlives the checkpoint that carried it. The source is read from the file the
+    # class's own methods were compiled from, since `__main__` has none to offer.
+    #
+    # Sealing is what deletes the checkpoint, and it lands just after the state that `submit_and_await` waits for.
+    for _ in range(100):
+        node = orm.load_node(node.pk)
+        if node.is_sealed:
+            break
+        time.sleep(0.1)
+
+    assert node.is_sealed
+    assert node.checkpoint is None
+    assert node.base.attributes.get(node.KEY_ATTRIBUTES_CLASS_FINGERPRINT) is not None
+    source = textwrap.dedent(node.class_source)
+    assert source.startswith('class MainCalcJob(ArithmeticAddCalculation):')
+    assert 'super().define(spec)' in source

@@ -21,6 +21,7 @@ import logging
 import posixpath
 import re
 import subprocess
+import typing as t
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
@@ -227,11 +228,27 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
+    def __init__(
+        self,
+        machine: str,
+        data_machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        connect_kwargs: dict[str, t.Any] | None = None,
+    ):
+        super().__init__(machine, data_machine, logger, bash_command)
+        # The client configuration directives `asyncssh` reads no value from, if the computer
+        # relies on any. Empty for every other computer.
+        self.connect_kwargs = connect_kwargs or {}
+
+    async def _connect(self, host: str) -> asyncssh.SSHClientConnection:
+        return await asyncssh.connect(host, **self.connect_kwargs)
+
     async def open(self):
-        conn = await asyncssh.connect(self.machine)
+        conn = await self._connect(self.machine)
         data_conn = None
         try:
-            data_conn = conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+            data_conn = conn if self.data_machine == self.machine else await self._connect(self.data_machine)
             sftp = await data_conn.start_sftp_client()
         except BaseException:
             # `BaseException` rather than `Exception`, to also release them when the open is cancelled.

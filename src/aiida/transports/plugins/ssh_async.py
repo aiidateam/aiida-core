@@ -170,6 +170,11 @@ class AsyncSshTransport(AsyncTransport):
         data_node_host = kwargs.pop('data_node_host', 'None')
         self.data_machine = self.machine if not data_node_host or data_node_host == 'None' else data_node_host
 
+        # Resolved here, so that a configuration deleted in the meantime is reported as missing.
+        from aiida.transports.plugins import ssh_legacy
+
+        self._ssh_config_file = ssh_legacy.resolve_config_file(kwargs.pop('ssh_config_file', None))
+
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self._semaphore = asyncio.Semaphore(self._max_io_allowed)
         self.auth_script = kwargs.pop('authentication_script', 'None')
@@ -186,13 +191,18 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger,
                 self._bash_command_str,
                 use_sftp=kwargs.pop('use_sftp', True),
+                ssh_config_file=self._ssh_config_file,
             )
         else:
             # default backend is asyncssh
             from aiida.transports.plugins.async_backend import _AsyncSSH
 
             self.async_backend = _AsyncSSH(  # type: ignore[assignment]
-                self.machine, self.data_machine, self.logger, self._bash_command_str
+                self.machine,
+                self.data_machine,
+                self.logger,
+                self._bash_command_str,
+                ssh_config_file=self._ssh_config_file,
             )
 
     @property
@@ -1370,6 +1380,9 @@ class AsyncSshTransport(AsyncTransport):
 
         :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
+        from aiida.transports.plugins import ssh_legacy
+
         connect_string = self._gotocomputer_string(remotedir=remotedir)
-        cmd = f'ssh -t {self.machine} {connect_string}'
-        return cmd
+        # Before the destination: everything after it is the command.
+        options = ssh_legacy.client_options(self._ssh_config_file)
+        return ' '.join(['ssh', '-t', *options, self.machine, connect_string])

@@ -286,8 +286,8 @@ class _TestOpenSSH(_OpenSSH):
     """Minimal OpenSSH subclass for testing escape methods."""
 
     def __init__(self):
-        self.machine = 'localhost'
-        self.bash_command = 'bash -c '
+        # Through ``super()``, so that the double keeps every attribute the real backend sets up.
+        super().__init__('localhost', 'localhost', MagicMock(), 'bash ', use_sftp=True)
 
 
 def test_openssh_path_exists_raises_on_unexpected_return_code():

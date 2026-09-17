@@ -354,9 +354,8 @@ class AddTestProfileKey(SingleMigration):
 
             if profile_name_new is not None:
                 if profile_name_new in profile_names:
-                    raise exceptions.ConfigurationError(
-                        f'cannot change `{profile_name}` to `{profile_name_new}` because it already exists.'
-                    )
+                    msg = f'cannot change `{profile_name}` to `{profile_name_new}` because it already exists.'
+                    raise exceptions.ConfigurationError(msg)
 
                 CONFIG_LOGGER.warning(f'changing profile name from `{profile_name}` to `{profile_name_new}`.')
                 profile_name = profile_name_new  # noqa: PLW2901
@@ -594,16 +593,19 @@ def upgrade_config(
         try:
             migrator = next(m for m in migrations if m.down_revision == current)
         except StopIteration:
-            raise exceptions.ConfigurationError(f'No migration found to upgrade version {current}')
+            msg = f'No migration found to upgrade version {current}'
+            raise exceptions.ConfigurationError(msg)
         if migrator in used:
-            raise exceptions.ConfigurationError(f'Circular migration detected, upgrading to {target}')
+            msg = f'Circular migration detected, upgrading to {target}'
+            raise exceptions.ConfigurationError(msg)
         used.append(migrator)
         migrator().upgrade(config)
         current = migrator.up_revision
         config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current
         config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.up_compatible
     if current != target:
-        raise exceptions.ConfigurationError(f'Could not upgrade to version {target}, current version is {current}')
+        msg = f'Could not upgrade to version {target}, current version is {current}'
+        raise exceptions.ConfigurationError(msg)
     return config
 
 
@@ -631,15 +633,18 @@ def downgrade_config(
         try:
             migrator = next(m for m in migrations if m.up_revision == current)
         except StopIteration:
-            raise exceptions.ConfigurationError(f'No migration found to downgrade version {current}')
+            msg = f'No migration found to downgrade version {current}'
+            raise exceptions.ConfigurationError(msg)
         if migrator in used:
-            raise exceptions.ConfigurationError(f'Circular migration detected, downgrading to {target}')
+            msg = f'Circular migration detected, downgrading to {target}'
+            raise exceptions.ConfigurationError(msg)
         used.append(migrator)
         migrator().downgrade(config)
         config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current = migrator.down_revision
         config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.down_compatible
     if current != target:
-        raise exceptions.ConfigurationError(f'Could not downgrade to version {target}, current version is {current}')
+        msg = f'Could not downgrade to version {target}, current version is {current}'
+        raise exceptions.ConfigurationError(msg)
     return config
 
 

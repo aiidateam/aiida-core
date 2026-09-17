@@ -42,7 +42,8 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
     :returns: dictionary as described above in the docstring
     """
     if method not in _GET_KPOINTS_PATH_METHODS:
-        raise ValueError(f"the method '{method}' is not implemented")
+        msg = f"the method '{method}' is not implemented"
+        raise ValueError(msg)
 
     method = _GET_KPOINTS_PATH_METHODS[method]
 
@@ -77,7 +78,8 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     :returns: dictionary as described above in the docstring
     """
     if method not in _GET_EXPLICIT_KPOINTS_PATH_METHODS:
-        raise ValueError(f"the method '{method}' is not implemented")
+        msg = f"the method '{method}' is not implemented"
+        raise ValueError(msg)
 
     method = _GET_EXPLICIT_KPOINTS_PATH_METHODS[method]
 
@@ -114,7 +116,8 @@ def _seekpath_get_kpoints_path(structure, **kwargs):
     unknown_args = set(kwargs).difference(recognized_args)
 
     if unknown_args:
-        raise ValueError(f'unknown arguments {unknown_args}')
+        msg = f'unknown arguments {unknown_args}'
+        raise ValueError(msg)
 
     return seekpath.get_kpoints_path(structure, kwargs)
 
@@ -153,7 +156,8 @@ def _seekpath_get_explicit_kpoints_path(structure, **kwargs):
     unknown_args = set(kwargs).difference(recognized_args)
 
     if unknown_args:
-        raise ValueError(f'unknown arguments {unknown_args}')
+        msg = f'unknown arguments {unknown_args}'
+        raise ValueError(msg)
 
     return seekpath.get_explicit_kpoints_path(structure, kwargs)
 
@@ -172,7 +176,8 @@ def _legacy_get_kpoints_path(structure, **kwargs):
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
-        raise ValueError(f'unknown arguments {args_unknown}')
+        msg = f'unknown arguments {args_unknown}'
+        raise ValueError(msg)
 
     point_coords, path, bravais_info = legacy.get_kpoints_path(cell=structure.cell, pbc=structure.pbc, **kwargs)
 
@@ -203,7 +208,8 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
-        raise ValueError(f'unknown arguments {args_unknown}')
+        msg = f'unknown arguments {args_unknown}'
+        raise ValueError(msg)
 
     point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
         cell=structure.cell, pbc=structure.pbc, **kwargs

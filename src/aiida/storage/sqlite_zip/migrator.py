@@ -68,12 +68,13 @@ def validate_storage(inpath: Path) -> None:
     schema_version_code = get_schema_version_head()
     schema_version_archive = read_version(inpath)
     if schema_version_archive != schema_version_code:
-        raise IncompatibleStorageSchema(
+        msg = (
             f'Archive schema version `{schema_version_archive}` '
             f'is incompatible with the required schema version `{schema_version_code}`. '
             'To migrate the archive schema version to the current one, '
             f'run the following command: verdi archive migrate {str(inpath)!r}'
         )
+        raise IncompatibleStorageSchema(msg)
 
 
 def migrate(
@@ -121,7 +122,8 @@ def migrate(
     elif zipfile.is_zipfile(str(inpath)):
         is_tar = False
     else:
-        raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
+        msg = f'The input file is neither a tar nor a zip file: {inpath}'
+        raise CorruptStorage(msg)
 
     # Check if migration is needed
     current_version = SqliteZipBackend.get_current_archive_version(inpath=inpath)
@@ -214,7 +216,8 @@ def migrate(
                     try:
                         extract_file_in_zip(inpath, DB_FILENAME, handle)
                     except Exception as exc:
-                        raise CorruptStorage(f'database could not be read: {exc}') from exc
+                        msg = f'database could not be read: {exc}'
+                        raise CorruptStorage(msg) from exc
 
             # perform alembic migrations
             # note, we do this before writing the repository files (unless a legacy migration),
@@ -291,11 +294,11 @@ def _perform_legacy_migrations(current_version: str, to_version: str, metadata: 
     pathway: list[str] = []
     while prev_version != to_version:
         if prev_version not in LEGACY_MIGRATE_FUNCTIONS:
-            raise StorageMigrationError(f"No migration pathway available for '{current_version}' to '{to_version}'")
+            msg = f"No migration pathway available for '{current_version}' to '{to_version}'"
+            raise StorageMigrationError(msg)
         if prev_version in pathway:
-            raise StorageMigrationError(
-                f'cyclic migration pathway encountered: {" -> ".join(pathway + [prev_version])}'
-            )
+            msg = f'cyclic migration pathway encountered: {" -> ".join(pathway + [prev_version])}'
+            raise StorageMigrationError(msg)
         pathway.append(prev_version)
         prev_version = LEGACY_MIGRATE_FUNCTIONS[prev_version][0]
 

@@ -80,7 +80,8 @@ def detect_postgres_config(
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
 
     if not postgres.is_connected:
-        raise ConnectionError(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
+        msg = f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}'
+        raise ConnectionError(msg)
 
     database_name = f'aiida-{profile_name}'
     database_username = f'aiida-{profile_name}'
@@ -91,7 +92,8 @@ def detect_postgres_config(
             dbname=database_name, dbuser=database_username, dbpass=database_password
         )
     except Exception as exception:
-        raise ConnectionError(f'Unable to automatically create the PostgreSQL user and database: {exception}')
+        msg = f'Unable to automatically create the PostgreSQL user and database: {exception}'
+        raise ConnectionError(msg)
 
     aiida_config_folder = AiiDAConfigDir.get()
 
@@ -204,7 +206,8 @@ def verdi_presto(
     from aiida.plugins import BrokerFactory
 
     if profile_name in ctx.obj.config.profile_names:
-        raise click.BadParameter(f'The profile `{profile_name}` already exists.', param_hint='--profile-name')
+        msg = f'The profile `{profile_name}` already exists.'
+        raise click.BadParameter(msg, param_hint='--profile-name')
 
     postgres_config_kwargs = {
         'profile_name': profile_name,

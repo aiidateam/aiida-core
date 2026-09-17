@@ -355,7 +355,8 @@ class QueryBuilder:
         # First of all, let's make sure the specified the class or the type (not both)
 
         if cls is not None and entity_type is not None:
-            raise ValueError(f'You cannot specify both a class ({cls}) and a entity_type ({entity_type})')
+            msg = f'You cannot specify both a class ({cls}) and a entity_type ({entity_type})'
+            raise ValueError(msg)
 
         if cls is None and entity_type is None:
             raise ValueError('You need to specify at least a class or a entity_type')
@@ -365,16 +366,20 @@ class QueryBuilder:
             if isinstance(cls, (list, tuple)):
                 for sub_cls in cls:
                     if not inspect_isclass(sub_cls):
-                        raise TypeError(f"{sub_cls} was passed with kw 'cls', but is not a class")
+                        msg = f"{sub_cls} was passed with kw 'cls', but is not a class"
+                        raise TypeError(msg)
             elif not inspect_isclass(cls):
-                raise TypeError(f"{cls} was passed with kw 'cls', but is not a class")
+                msg = f"{cls} was passed with kw 'cls', but is not a class"
+                raise TypeError(msg)
         elif entity_type is not None:
             if isinstance(entity_type, (list, tuple)):
                 for sub_type in entity_type:
                     if not isinstance(sub_type, str):
-                        raise TypeError(f'{sub_type} was passed as entity_type, but is not a string')
+                        msg = f'{sub_type} was passed as entity_type, but is not a string'
+                        raise TypeError(msg)
             elif not isinstance(entity_type, str):
-                raise TypeError(f'{entity_type} was passed as entity_type, but is not a string')
+                msg = f'{entity_type} was passed as entity_type, but is not a string'
+                raise TypeError(msg)
 
         ormclass, classifiers = _get_ormclass(cls, entity_type)
 
@@ -382,11 +387,11 @@ class QueryBuilder:
         # Let's get a tag
         if tag:
             if self._EDGE_TAG_DELIM in tag:
-                raise ValueError(
-                    f'tag cannot contain {self._EDGE_TAG_DELIM}\nsince this is used as a delimiter for links'
-                )
+                msg = f'tag cannot contain {self._EDGE_TAG_DELIM}\nsince this is used as a delimiter for links'
+                raise ValueError(msg)
             if tag in self._tags:
-                raise ValueError(f'This tag ({tag}) is already in use')
+                msg = f'This tag ({tag}) is already in use'
+                raise ValueError(msg)
         else:
             tag = self._get_unique_tag(classifiers)
 
@@ -449,15 +454,17 @@ class QueryBuilder:
                 spec_to_function_map.add('direction')
             for key, val in kwargs.items():
                 if key not in spec_to_function_map:
-                    raise ValueError(
+                    msg = (
                         f"'{key}' is not a valid keyword for {ormclass.value!r} joining specification\n"
                         f'Valid keywords are: {spec_to_function_map or []!r}'
                     )
+                    raise ValueError(msg)
                 if joining_keyword:
-                    raise ValueError(
+                    msg = (
                         'You already specified joining specification '
                         f'{joining_keyword}\nBut you now also want to specify {key}'
                     )
+                    raise ValueError(msg)
 
                 joining_keyword = key
                 if joining_keyword == 'direction':
@@ -472,9 +479,8 @@ class QueryBuilder:
                             raise ValueError('direction=0 is not valid')
                         joining_value = self._path[-abs(val)]['tag']
                     except IndexError as exc:
-                        raise ValueError(
-                            f'You have specified a non-existent entity with\ndirection={joining_value}\n{exc}\n'
-                        )
+                        msg = f'You have specified a non-existent entity with\ndirection={joining_value}\n{exc}\n'
+                        raise ValueError(msg)
                 else:
                     joining_value = self._tags.get(val)
 
@@ -502,7 +508,8 @@ class QueryBuilder:
                     edge_destination_tag = self._tags.get(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
                 elif edge_tag in self._tags:
-                    raise ValueError(f'The tag {edge_tag} is already in use')
+                    msg = f'The tag {edge_tag} is already in use'
+                    raise ValueError(msg)
                 LOGGER.debug('edge_tag chosen: %s', edge_tag)
 
                 # edge tags do not have an ormclass
@@ -616,10 +623,11 @@ class QueryBuilder:
 
         for order_spec in order_by:
             if not isinstance(order_spec, dict):
-                raise TypeError(
+                msg = (  # type: ignore[unreachable]
                     f'Invalid input for order_by statement: {order_spec!r}\n'
                     'Expecting a dictionary like: {tag: field} or {tag: [field1, field2, ...]}'
                 )
+                raise TypeError(msg)
             _order_spec: dict = {}
             for tagspec, items_to_order_by in order_spec.items():
                 if not isinstance(items_to_order_by, (tuple, list)):
@@ -634,9 +642,10 @@ class QueryBuilder:
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
-                        raise ValueError(
+                        msg = (
                             f'Cannot deal with input to order_by {item_to_order_by}\nof type{type(item_to_order_by)}\n'
                         )
+                        raise ValueError(msg)
                     for entityname, orderspec in item_to_order_by.items():
                         # if somebody specifies eg {'node':{'id':'asc'}}
                         # tranform to {'node':{'id':{'order':'asc'}}}
@@ -646,10 +655,11 @@ class QueryBuilder:
                         elif isinstance(orderspec, dict):
                             this_order_spec = orderspec
                         else:
-                            raise TypeError(
+                            msg = (
                                 'I was expecting a string or a dictionary\nYou provided '
                                 f'{type(orderspec)} {orderspec}\n'
                             )
+                            raise TypeError(msg)
                         for key in this_order_spec:
                             if key not in allowed_keys:
                                 raise ValueError(
@@ -845,18 +855,20 @@ class QueryBuilder:
             elif isinstance(projection, qb_fields.QbFields):
                 _thisprojection = {_update_project_map(projection[name]): {} for name in projection}
             else:
-                raise ValueError(f'Cannot deal with projection specification {projection}\n')
+                msg = f'Cannot deal with projection specification {projection}\n'
+                raise ValueError(msg)
             for spec in _thisprojection.values():
                 if not isinstance(spec, dict):
-                    raise TypeError(
-                        f'\nThe value of a key-value pair in a projection\nhas to be a dictionary\nYou gave: {spec}\n'
-                    )
+                    msg = f'\nThe value of a key-value pair in a projection\nhas to be a dictionary\nYou gave: {spec}\n'
+                    raise TypeError(msg)
 
                 for key, val in spec.items():
                     if key not in self._VALID_PROJECTION_KEYS:
-                        raise ValueError(f'{key} is not a valid key {self._VALID_PROJECTION_KEYS}')
+                        msg = f'{key} is not a valid key {self._VALID_PROJECTION_KEYS}'
+                        raise ValueError(msg)
                     if not isinstance(val, str):
-                        raise TypeError(f'{val} has to be a string')
+                        msg = f'{val} has to be a string'
+                        raise TypeError(msg)
             _projections.append(_thisprojection)
         LOGGER.debug('projections have become: %s', _projections)
         self._projections[tag] = _projections
@@ -927,7 +939,8 @@ class QueryBuilder:
         :returns: self
         """
         if not isinstance(value, bool):
-            raise TypeError(f'distinct() takes a boolean as parameter, not {value!r}')
+            msg = f'distinct() takes a boolean as parameter, not {value!r}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         self._distinct = value
         return self
 
@@ -1273,7 +1286,8 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> tuple[EntityTypes, Classifier]
         ormclass = EntityTypes.NODE
 
     else:
-        raise ValueError(f'I do not know what to do with {cls}')
+        msg = f'I do not know what to do with {cls}'
+        raise ValueError(msg)
 
     if ormclass == EntityTypes.NODE:
         is_valid_node_type_string(classifiers.ormclass_type_string, raise_on_false=True)
@@ -1460,15 +1474,18 @@ class _QueryTagMap:
         if isinstance(tag_or_cls, str):
             if tag_or_cls in self:
                 return tag_or_cls
-            raise ValueError(f'Tag {tag_or_cls!r} is not among my known tags: {list(self)}')
+            msg = f'Tag {tag_or_cls!r} is not among my known tags: {list(self)}'
+            raise ValueError(msg)
         if self._cls_to_tag_map.get(tag_or_cls, None):
             if len(self._cls_to_tag_map[tag_or_cls]) != 1:
-                raise ValueError(
+                msg = (
                     f'The object used as a tag ({tag_or_cls}) has multiple values associated with it: '
                     f'{self._cls_to_tag_map[tag_or_cls]}'
                 )
+                raise ValueError(msg)
             return next(iter(self._cls_to_tag_map[tag_or_cls]))
-        raise ValueError(f'The given object ({tag_or_cls}) has no tags associated with it.')
+        msg = f'The given object ({tag_or_cls}) has no tags associated with it.'
+        raise ValueError(msg)
 
 
 def _get_group_type_filter(classifiers: Classifier, subclassing: bool) -> dict:

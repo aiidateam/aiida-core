@@ -35,17 +35,21 @@ def validate_script(ctx, param, value: str):
     if value == 'None':
         return value
     if not os.path.isabs(value):
-        raise click.BadParameter(f'{value} is not an absolute path')
+        msg = f'{value} is not an absolute path'
+        raise click.BadParameter(msg)
     if not os.path.isfile(value):
-        raise click.BadParameter(f'The script file: {value} does not exist')
+        msg = f'The script file: {value} does not exist'
+        raise click.BadParameter(msg)
     if not os.access(value, os.X_OK):
-        raise click.BadParameter(f'The script {value} is not executable')
+        msg = f'The script {value} is not executable'
+        raise click.BadParameter(msg)
     return value
 
 
 def validate_backend(ctx, param, value: str):
     if value not in ['asyncssh', 'openssh']:
-        raise click.BadParameter(f'{value} is not a valid backend, choose either `asyncssh` or `openssh`')
+        msg = f'{value} is not a valid backend, choose either `asyncssh` or `openssh`'
+        raise click.BadParameter(msg)
     return value
 
 
@@ -214,13 +218,15 @@ class AsyncSshTransport(AsyncTransport):
                     f'stdout: {result.stdout}\n'
                     f'stderr: {result.stderr}'
                 )
-                raise OSError(f'Authentication script {self.auth_script} failed with exit code {result.returncode}')
+                msg = f'Authentication script {self.auth_script} failed with exit code {result.returncode}'
+                raise OSError(msg)
             self.async_backend.logger.info(f'Authentication script {self.auth_script} executed successfully\n')
 
         try:
             await self.async_backend.open()
         except OSError as exc:
-            raise OSError(f'Error while opening the transport: {exc}')
+            msg = f'Error while opening the transport: {exc}'
+            raise OSError(msg)
 
         self._is_open = True
 
@@ -237,7 +243,8 @@ class AsyncSshTransport(AsyncTransport):
         try:
             await self.async_backend.close()
         except Exception as exc:
-            raise OSError(f'Error while closing the transport: {exc}')
+            msg = f'Error while closing the transport: {exc}'
+            raise OSError(msg)
 
         self._is_open = False
 
@@ -324,7 +331,8 @@ class AsyncSshTransport(AsyncTransport):
         elif ignore_nonexisting:
             pass
         else:
-            raise OSError(f'The remote path {remotepath} does not exist')
+            msg = f'The remote path {remotepath} does not exist'
+            raise OSError(msg)
 
     async def getfile_async(
         self,
@@ -375,7 +383,8 @@ class AsyncSshTransport(AsyncTransport):
                     recursive=False,
                 )
             except OSError as exc:
-                raise OSError(f'Error while downloading file {remotepath}: {exc}')
+                msg = f'Error while downloading file {remotepath}: {exc}'
+                raise OSError(msg)
 
     async def gettree_async(
         self,
@@ -420,7 +429,8 @@ class AsyncSshTransport(AsyncTransport):
             raise ValueError('Localpaths must be an absolute path')
 
         if not await self.isdir_async(remotepath):
-            raise OSError(f'Input remotepath is not a folder: {localpath}')
+            msg = f'Input remotepath is not a folder: {localpath}'
+            raise OSError(msg)
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -446,7 +456,8 @@ class AsyncSshTransport(AsyncTransport):
                         recursive=True,
                     )
                 except OSError as exc:
-                    raise OSError(f'Error while downloading file {parentpath}: {exc}')
+                    msg = f'Error while downloading file {parentpath}: {exc}'
+                    raise OSError(msg)
 
     async def put_async(
         self,
@@ -535,7 +546,8 @@ class AsyncSshTransport(AsyncTransport):
             else:
                 await self.putfile_async(localpath, remotepath, dereference, overwrite, preserve)
         elif not ignore_nonexisting:
-            raise OSError(f'The local path {localpath} does not exist')
+            msg = f'The local path {localpath} does not exist'
+            raise OSError(msg)
 
     async def putfile_async(
         self,
@@ -589,7 +601,8 @@ class AsyncSshTransport(AsyncTransport):
                     recursive=False,
                 )
             except OSError as exc:
-                raise OSError(f'Error while uploading file {localpath}: {exc}')
+                msg = f'Error while uploading file {localpath}: {exc}'
+                raise OSError(msg)
 
     async def puttree_async(
         self,
@@ -632,7 +645,8 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError('The localpath does not exists')
 
         if not os.path.isdir(localpath):
-            raise ValueError(f'Input localpath is not a folder: {localpath}')
+            msg = f'Input localpath is not a folder: {localpath}'
+            raise ValueError(msg)
 
         if not remotepath:
             raise OSError('remotepath must be a non empty string')
@@ -663,7 +677,8 @@ class AsyncSshTransport(AsyncTransport):
                         recursive=True,
                     )
                 except OSError as exc:
-                    raise OSError(f'Error while uploading file {parentpath}: {exc}')
+                    msg = f'Error while uploading file {parentpath}: {exc}'
+                    raise OSError(msg)
 
     async def copy_async(
         self,
@@ -787,16 +802,20 @@ class AsyncSshTransport(AsyncTransport):
         :raises OSError: if root_dir is not a directory
         """
         if not await self.isdir_async(root_dir):
-            raise OSError(f'The relative root {root_dir} does not exist, or is not a directory.')
+            msg = f'The relative root {root_dir} does not exist, or is not a directory.'
+            raise OSError(msg)
 
         if await self.isdir_async(remotedestination):
-            raise OSError(f'The remote destination {remotedestination} is a directory, should include a filename.')
+            msg = f'The remote destination {remotedestination} is a directory, should include a filename.'
+            raise OSError(msg)
 
         if not overwrite and await self.path_exists_async(remotedestination):
-            raise OSError(f'The remote destination {remotedestination} already exists.')
+            msg = f'The remote destination {remotedestination} already exists.'
+            raise OSError(msg)
 
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
-            raise ValueError(f'Unsupported compression format: {format}')
+            msg = f'Unsupported compression format: {format}'
+            raise ValueError(msg)
 
         await self.makedirs_async(Path(remotedestination).parent, ignore_existing=True)
 
@@ -817,7 +836,8 @@ class AsyncSshTransport(AsyncTransport):
                 copy_list += await self.glob_async(source, ignore_nonexisting=False)
             else:
                 if not await self.path_exists_async(source):
-                    raise OSError(f'The remote path {source} does not exist')
+                    msg = f'The remote path {source} does not exist'
+                    raise OSError(msg)
 
                 copy_list.append(source)
 
@@ -840,7 +860,8 @@ class AsyncSshTransport(AsyncTransport):
                 f'Problem executing tar. Exit code: {retval}, '
                 f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
-            raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
+            msg = f'Error while creating the tar archive. Exit code: {retval}'
+            raise OSError(msg)
 
     async def extract_async(
         self,
@@ -866,7 +887,8 @@ class AsyncSshTransport(AsyncTransport):
             raise NotImplementedError('The overwrite=False is not implemented yet')
 
         if not await self.path_exists_async(remotesource):
-            raise OSError(f'The remote path {remotesource} does not exist')
+            msg = f'The remote path {remotesource} does not exist'
+            raise OSError(msg)
 
         await self.makedirs_async(remotedestination, ignore_existing=True)
 
@@ -885,7 +907,8 @@ class AsyncSshTransport(AsyncTransport):
                 f'Problem executing tar. Exit code: {retval}, '
                 f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
-            raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
+            msg = f'Error while extracting the tar archive. Exit code: {retval}'
+            raise OSError(msg)
 
     async def exec_command_wait_async(
         self,
@@ -977,7 +1000,8 @@ class AsyncSshTransport(AsyncTransport):
             elif key == 'st_mtime':
                 aiida_attr[key] = obj_stat.mtime
             else:
-                raise NotImplementedError(f'Mapping the {key} attribute is not implemented')
+                msg = f'Mapping the {key} attribute is not implemented'
+                raise NotImplementedError(msg)
         return aiida_attr
 
     async def isdir_async(self, path: TransportPath):
@@ -1096,7 +1120,8 @@ class AsyncSshTransport(AsyncTransport):
         try:
             await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=True)
         except FileExistsError as exc:
-            raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
+            msg = f'Error while creating directory {path}: {exc}, directory already exists'
+            raise OSError(msg)
 
     async def mkdir_async(self, path: TransportPath, ignore_existing=False):
         """Create a directory.
@@ -1113,7 +1138,8 @@ class AsyncSshTransport(AsyncTransport):
         try:
             await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=False)
         except FileExistsError as exc:
-            raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
+            msg = f'Error while creating directory {path}: {exc}, directory already exists'
+            raise OSError(msg)
 
     async def normalize_async(self, path: TransportPath):
         raise NotImplementedError('Not implemented, waiting for a use case.')
@@ -1150,7 +1176,8 @@ class AsyncSshTransport(AsyncTransport):
             raise ValueError('oldpath and newpath must be non-empty strings')
 
         if await self.path_exists_async(newpath):
-            raise OSError(f'Cannot rename {oldpath} to {newpath}: destination exists')
+            msg = f'Cannot rename {oldpath} to {newpath}: destination exists'
+            raise OSError(msg)
 
         await self.async_backend.rename(oldpath, newpath)
 
@@ -1204,7 +1231,8 @@ class AsyncSshTransport(AsyncTransport):
             return username.strip()
 
         self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
-        raise OSError(f'Error while executing whoami. Exit code: {retval}')
+        msg = f'Error while executing whoami. Exit code: {retval}'
+        raise OSError(msg)
 
     async def symlink_async(self, remotesource: TransportPath, remotedestination: TransportPath):
         """Create a symbolic link between the remote source and the remote
@@ -1271,7 +1299,8 @@ class AsyncSshTransport(AsyncTransport):
         if await self.path_exists_async(path):
             await self.async_backend.chmod(path, mode, follow_symlinks=follow_symlinks)
         else:
-            raise OSError(f'Error, path {path} does not exist')
+            msg = f'Error, path {path} does not exist'
+            raise OSError(msg)
 
     async def copy_from_remote_to_remote_async(
         self,

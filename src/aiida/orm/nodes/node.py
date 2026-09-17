@@ -79,10 +79,12 @@ class NodeCollection(EntityCollection[NodeType], t.Generic[NodeType]):
             return
 
         if node.base.links.get_incoming().all():
-            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
+            msg = f'cannot delete Node<{node.pk}> because it has incoming links'
+            raise exceptions.InvalidOperation(msg)
 
         if node.base.links.get_outgoing().all():
-            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
+            msg = f'cannot delete Node<{node.pk}> because it has outgoing links'
+            raise exceptions.InvalidOperation(msg)
 
         self._backend.nodes.delete(pk)
 
@@ -318,9 +320,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             :return: The constructor-based creation model class.
             """
             if cls._ConstructorModel is None:
-                raise exceptions.UnsupportedSchemaError(
-                    f"'{cls.class_node_type}' does not support constructor-based creation."
-                )
+                msg = f"'{cls.class_node_type}' does not support constructor-based creation."
+                raise exceptions.UnsupportedSchemaError(msg)
             return cls._ConstructorModel
 
         @classproperty
@@ -331,7 +332,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             :raises UnsupportedSchemaError: if this node type does not support creation via a CLI model.
             """
             if cls._CliModel is None:
-                raise exceptions.UnsupportedSchemaError(f"'{cls.class_node_type}' does not support CLI-based creation.")
+                msg = f"'{cls.class_node_type}' does not support CLI-based creation."
+                raise exceptions.UnsupportedSchemaError(msg)
             return cls._CliModel
 
     def __init__(
@@ -467,9 +469,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         if schema == 'constructor':
             if not self.supports_constructor_model:
-                raise exceptions.UnsupportedSchemaError(
-                    f"'{self.class_node_type}' does not provide a constructor schema"
-                )
+                msg = f"'{self.class_node_type}' does not provide a constructor schema"
+                raise exceptions.UnsupportedSchemaError(msg)
             Model = self.ConstructorModel  # noqa: N806
             fields = self.to_model_field_values(context=context, minimal=minimal, schema=Model)
             return Model(**fields)
@@ -509,7 +510,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return cls._from_constructor_model(model)
         if cls._CliModel is not None and isinstance(model, cls.CliModel):
             return cls._from_cli_model(model)
-        raise ValueError(f'cannot create `{cls.__name__}` from model of type `{type(model).__name__}`')
+        msg = f'cannot create `{cls.__name__}` from model of type `{type(model).__name__}`'
+        raise ValueError(msg)
 
     def serialize(
         self,
@@ -542,9 +544,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         if repository_dump_path is not None:
             if not repository_dump_path.exists():
-                raise ValueError(f'`{repository_dump_path}` does not exist')
+                msg = f'`{repository_dump_path}` does not exist'
+                raise ValueError(msg)
             if not repository_dump_path.is_dir():
-                raise ValueError(f'`{repository_dump_path}` is not a directory')
+                msg = f'`{repository_dump_path}` is not a directory'
+                raise ValueError(msg)
 
             self.base.repository.copy_tree(repository_dump_path)
             context = {**context, 'repository_dump_path': repository_dump_path, 'written': True}
@@ -655,11 +659,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
         if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
-            raise exceptions.StoringNotAllowed(
+            msg = (
                 f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
                 'Check that the corresponding plugin is installed '
                 'and that the entry point shows up in `verdi plugin list`.'
             )
+            raise exceptions.StoringNotAllowed(msg)
 
     @classproperty
     def supports_constructor_model(cls) -> bool:  # noqa: N805
@@ -818,7 +823,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         Unstored nodes from cached incoming linkswill also be stored.
         """
         if self.is_stored:
-            raise exceptions.ModificationNotAllowed(f'Node<{self.pk}> is already stored')
+            msg = f'Node<{self.pk}> is already stored'
+            raise exceptions.ModificationNotAllowed(msg)
 
         # For each node of a cached incoming link, check that all its incoming links are stored
         for link_triple in self.base.links.incoming_cache:
@@ -887,9 +893,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
-                raise exceptions.ModificationNotAllowed(
-                    f'Cannot store because source node of link triple {link_triple} is not stored'
-                )
+                msg = f'Cannot store because source node of link triple {link_triple} is not stored'
+                raise exceptions.ModificationNotAllowed(msg)
 
     def _store_from_cache(self, cache_node: Node) -> None:
         """Store this node from an existing cache node.
@@ -1197,10 +1202,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 None,
             )
             if not is_exception:
-                raise TypeError(
+                msg = (
                     f'`{cls.__name__}` should not define `ReadModel`; '
                     'only define `AttributesModel` and optionally `ConstructorArgsModel`'
                 )
+                raise TypeError(msg)
             # For exceptions that override `ReadModel`, we need to copy the overridden fields.
             # We don't know a priori which fields are overridden, so we copy all.
             BaseReadModel = cls.ReadModel.__bases__[0]  # noqa: N806
@@ -1267,7 +1273,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
 
         if not isinstance(model, cls.WriteModel):
-            raise ValueError(f'expected `{cls.WriteModel.__name__}` model, got `{type(model).__name__}`')
+            msg = f'expected `{cls.WriteModel.__name__}` model, got `{type(model).__name__}`'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         fields = model._to_orm_field_values()
 
@@ -1298,7 +1305,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         seen: set[str] = set()
         for filepath, fileobj_callable in (files or {}).items():
             if filepath in seen:
-                raise exceptions.ValidationError(f'duplicate file: {filepath}')
+                msg = f'duplicate file: {filepath}'
+                raise exceptions.ValidationError(msg)
 
             fileobj = fileobj_callable()
             if fileobj is None:
@@ -1310,9 +1318,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                         actual_hash = chunked_file_hash(fileobj, hashlib.sha256)
                         fileobj.seek(0)
                         if expected_hash != actual_hash:
-                            raise exceptions.ValidationError(
+                            msg = (
                                 f'file hash mismatch for `{filepath}`; expected {expected_hash}, computed {actual_hash}'
                             )
+                            raise exceptions.ValidationError(msg)
                 instance.attach_file(filepath, fileobj)
                 fileobj.close()
 
@@ -1328,7 +1337,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: the constructed node instance
         """
         if not isinstance(model, cls.ConstructorModel):
-            raise ValueError(f'expected `ConstructorModel`, got `{type(model).__name__}`')
+            msg = f'expected `ConstructorModel`, got `{type(model).__name__}`'  # type: ignore[unreachable]
+            raise ValueError(msg)
         fields = model._to_orm_field_values()
         fields.update(**fields.pop('args'))
         fields.pop('node_type')
@@ -1342,7 +1352,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: the constructed node instance
         """
         if not isinstance(model, cls.CliModel):
-            raise ValueError(f'expected `{cls.CliModel.__name__}` model, got `{type(model).__name__}`')
+            msg = f'expected `{cls.CliModel.__name__}` model, got `{type(model).__name__}`'  # type: ignore[unreachable]
+            raise ValueError(msg)
         fields = model._to_orm_field_values()
         return cls(**fields)
 

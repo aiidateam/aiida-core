@@ -154,10 +154,11 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
                 engine_command='docker {image_name}',
             )
 
-        raise RuntimeError(
+        msg = (
             f'no instance generator implemented for class `{data_class}`. If you have added a `_prepare_*` method '
             'for this data class, add a generator of a dummy instance here'
         )
+        raise RuntimeError(msg)
 
     return _generate_class_instance
 

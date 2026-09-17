@@ -367,7 +367,8 @@ class TestCommand(unittest.TestCase):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            raise ValueError(f'Unable to parse time string {string}, the message was {exc}')
+            msg = f'Unable to parse time string {string}, the message was {exc}'
+            raise ValueError(msg)
 
         # I convert from a time_struct to a datetime object going through
         # the seconds since epoch, as suggested on stackoverflow:

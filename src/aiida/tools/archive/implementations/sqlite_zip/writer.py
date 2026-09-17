@@ -115,7 +115,8 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
 
     def update_metadata(self, data: dict[str, t.Any], overwrite: bool = False) -> None:
         if not overwrite and set(self._metadata).intersection(set(data)):
-            raise ValueError(f'Cannot overwrite existing keys: {set(self._metadata).intersection(set(data))}')
+            msg = f'Cannot overwrite existing keys: {set(self._metadata).intersection(set(data))}'
+            raise ValueError(msg)
         self._metadata.update(data)
 
     def bulk_insert(
@@ -132,17 +133,18 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         if allow_defaults:
             for row in rows:
                 if not col_keys.issuperset(row):
-                    raise IntegrityError(
-                        f'Incorrect fields given for {entity_type}: {set(row)} not subset of {col_keys}'
-                    )
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {col_keys}'
+                    raise IntegrityError(msg)
         else:
             for row in rows:
                 if set(row) != col_keys:
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {col_keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} != {col_keys}'
+                    raise IntegrityError(msg)
         try:
             self._conn.execute(insert(model.__table__), rows)
         except SqlaIntegrityError as exc:
-            raise IntegrityError(f'Inserting {entity_type}: {exc}') from exc
+            msg = f'Inserting {entity_type}: {exc}'
+            raise IntegrityError(msg) from exc
 
     def _stream_binary(
         self,
@@ -192,7 +194,8 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         return key
 
     def delete_object(self, key: str) -> None:
-        raise OSError(f'Cannot delete objects in {self._mode!r} mode')
+        msg = f'Cannot delete objects in {self._mode!r} mode'
+        raise OSError(msg)
 
 
 class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
@@ -201,20 +204,21 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
     def delete_object(self, key: str) -> None:
         self._assert_in_context()
         if f'{utils.REPO_FOLDER}/{key}' in self._central_dir:
-            raise OSError(f'Cannot delete object {key!r} that has been added in the same append context')
+            msg = f'Cannot delete object {key!r} that has been added in the same append context'
+            raise OSError(msg)
         self._deleted_paths.add(f'{utils.REPO_FOLDER}/{key}')
 
     def __enter__(self) -> 'ArchiveAppenderSqlZip':
         """Start appending to the archive"""
         # the file should already exist
         if not self._path.exists():
-            raise FileNotFoundError(f'Archive {self._path} does not exist')
+            msg = f'Archive {self._path} does not exist'
+            raise FileNotFoundError(msg)
         # the file should be an archive with the correct version
         version = self._format.read_version(self._path)
         if not version == self._format.latest_version:
-            raise IncompatibleStorageSchema(
-                f'Archive is version {version!r} but expected {self._format.latest_version!r}'
-            )
+            msg = f'Archive is version {version!r} but expected {self._format.latest_version!r}'
+            raise IncompatibleStorageSchema(msg)
         # load the metadata
         self._metadata = json.loads(read_file_in_zip(self._path, utils.META_FILENAME, 'utf8', search_limit=4))
         # overwrite metadata
@@ -239,7 +243,8 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
             try:
                 extract_file_in_zip(self.path, utils.DB_FILENAME, handle, search_limit=4)
             except Exception as exc:
-                raise CorruptStorage(f'archive database could not be read: {exc}') from exc
+                msg = f'archive database could not be read: {exc}'
+                raise CorruptStorage(msg) from exc
         # open a connection to the database
         engine = utils.create_sqla_engine(
             self._work_dir / self.db_name, enforce_foreign_keys=self._enforce_foreign_keys, echo=self._debug

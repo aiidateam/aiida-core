@@ -286,14 +286,14 @@ class ProcessNode(Sealable, Node):
         from aiida.plugins.entry_point import load_entry_point_from_string
 
         if not self.process_type:
-            raise ValueError(f'no process type for Node<{self.pk}>: cannot recreate process class')
+            msg = f'no process type for Node<{self.pk}>: cannot recreate process class'
+            raise ValueError(msg)
 
         try:
             process_class = load_entry_point_from_string(self.process_type)
         except exceptions.EntryPointError as exception:
-            raise ValueError(
-                f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
-            ) from exception
+            msg = f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
+            raise ValueError(msg) from exception
         except ValueError as exception:
             import importlib
 
@@ -312,9 +312,8 @@ class ProcessNode(Sealable, Node):
                 except (AttributeError, ValueError, ImportError):
                     pass
             else:
-                raise ValueError(
-                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
-                ) from exception
+                msg = f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+                raise ValueError(msg) from exception
 
         return process_class
 
@@ -497,7 +496,8 @@ class ProcessNode(Sealable, Node):
             status = status.value
 
         if not isinstance(status, int):
-            raise ValueError(f'exit status has to be an integer, got {status}')
+            msg = f'exit status has to be an integer, got {status}'
+            raise ValueError(msg)
 
         return self.base.attributes.set(self.EXIT_STATUS_KEY, status)
 
@@ -518,7 +518,8 @@ class ProcessNode(Sealable, Node):
             return None
 
         if not isinstance(message, str):
-            raise ValueError(f'exit message has to be a string type, got {type(message)}')
+            msg = f'exit message has to be a string type, got {type(message)}'
+            raise ValueError(msg)
 
         return self.base.attributes.set(self.EXIT_MESSAGE_KEY, message)
 
@@ -541,7 +542,8 @@ class ProcessNode(Sealable, Node):
         :param exception: the exception message
         """
         if not isinstance(exception, str):
-            raise ValueError(f'exception message has to be a string type, got {type(exception)}')
+            msg = f'exception message has to be a string type, got {type(exception)}'
+            raise ValueError(msg)
 
         return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 

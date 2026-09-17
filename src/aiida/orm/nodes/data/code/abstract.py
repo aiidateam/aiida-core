@@ -141,10 +141,11 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         input_plugin = kwargs.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
         if input_plugin is not None:
             if default_calc_job_plugin is not None:
-                raise ValueError(
+                msg = (
                     f'Got both `{self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN}` and its replacement '
                     '`default_calc_job_plugin` as input, which is not allowed'
                 )
+                raise ValueError(msg)
             default_calc_job_plugin = input_plugin
 
         super().__init__(**kwargs)
@@ -452,7 +453,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         try:
             process_class = CalculationFactory(entry_point)
         except exceptions.EntryPointError:
-            raise exceptions.EntryPointError(f'The calculation entry point `{entry_point}` could not be loaded')
+            msg = f'The calculation entry point `{entry_point}` could not be loaded'
+            raise exceptions.EntryPointError(msg)
 
         builder = process_class.get_builder()  # type: ignore[union-attr]
         builder.code = self

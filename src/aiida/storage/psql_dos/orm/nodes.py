@@ -201,7 +201,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
                 link = self.LINK_CLASS(input_id=source.pk, output_id=self.pk, label=link_label, type=link_type.value)
                 session.add(link)
         except SQLAlchemyError as exception:
-            raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception
+            msg = f'failed to create the link: {exception}'
+            raise exceptions.UniquenessError(msg) from exception
 
     def clean_values(self):
         self.model.attributes = clean_value(self.model.attributes)
@@ -239,7 +240,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         try:
             return self.model.attributes[key]
         except KeyError as exception:
-            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+            msg = f'attribute `{exception}` does not exist'
+            raise AttributeError(msg) from exception
 
     def set_attribute(self, key: str, value: t.Any) -> None:
         validate_attribute_extra_key(key)
@@ -277,7 +279,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         try:
             self.model.attributes.pop(key)
         except KeyError as exception:
-            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+            msg = f'attribute `{exception}` does not exist'
+            raise AttributeError(msg) from exception
         else:
             self._flush_if_stored({'attributes'})
 
@@ -285,7 +288,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         non_existing_keys = [key for key in keys if key not in self.model.attributes]
 
         if non_existing_keys:
-            raise AttributeError(f'attributes `{", ".join(non_existing_keys)}` do not exist')
+            msg = f'attributes `{", ".join(non_existing_keys)}` do not exist'
+            raise AttributeError(msg)
 
         for key in keys:
             self.bare_model.attributes.pop(key)
@@ -316,7 +320,8 @@ class SqlaNodeCollection(BackendNodeCollection):
                 session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one(), self.backend
             )
         except NoResultFound:
-            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
+            msg = f"Node with pk '{pk}' not found"
+            raise exceptions.NotExistent(msg) from NoResultFound
 
     def delete(self, pk):
         session = self.backend.get_session()
@@ -326,4 +331,5 @@ class SqlaNodeCollection(BackendNodeCollection):
             session.delete(row)
             session.commit()
         except NoResultFound:
-            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
+            msg = f"Node with pk '{pk}' not found"
+            raise exceptions.NotExistent(msg) from NoResultFound

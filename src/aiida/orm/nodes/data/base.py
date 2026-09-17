@@ -22,7 +22,8 @@ __all__ = ('BaseType', 'to_aiida_type')
 @singledispatch
 def to_aiida_type(value):
     """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
-    raise TypeError(f'Cannot convert value of type {type(value)} to AiiDA type.')
+    msg = f'Cannot convert value of type {type(value)} to AiiDA type.'
+    raise TypeError(msg)
 
 
 class BaseType(Data):

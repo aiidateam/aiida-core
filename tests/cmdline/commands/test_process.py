@@ -135,7 +135,8 @@ def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
 
     while not (result := condition()):
         if time.time() - start_time > timeout:
-            raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
+            msg = f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.'
+            raise RuntimeError(msg)
         time.sleep(0.1)
 
     return result

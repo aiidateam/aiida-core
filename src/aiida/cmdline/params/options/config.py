@@ -83,9 +83,8 @@ def configuration_callback(
         unknown_params = set(specified_params).difference(set(valid_params))
 
         if unknown_params:
-            raise click.BadParameter(
-                f'Invalid configuration file, the following keys are not supported: {unknown_params}', ctx, param
-            )
+            msg = f'Invalid configuration file, the following keys are not supported: {unknown_params}'
+            raise click.BadParameter(msg, ctx, param)
 
         ctx.default_map.update(config)
 

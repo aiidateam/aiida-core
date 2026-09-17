@@ -109,13 +109,15 @@ class ProcessBuilderNamespace(MutableMapping):
                 port = self._port_namespace[attr]
             except KeyError as exception:
                 if not self._port_namespace.dynamic:
-                    raise AttributeError(f'Unknown builder parameter: {attr}') from exception
+                    msg = f'Unknown builder parameter: {attr}'
+                    raise AttributeError(msg) from exception
                 port = None
             else:
                 value = port.serialize(value)  # type: ignore[union-attr]
                 validation_error = port.validate(value)  # type: ignore[union-attr]
                 if validation_error:
-                    raise ValueError(f'invalid attribute value {validation_error.message}')
+                    msg = f'invalid attribute value {validation_error.message}'
+                    raise ValueError(msg)
 
             # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
             # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become
@@ -175,7 +177,8 @@ class ProcessBuilderNamespace(MutableMapping):
         :param kwds: keyword value pairs that should be mapped onto the ports.
         """
         if len(args) > 1:
-            raise TypeError(f'update expected at most 1 arguments, got {len(args)}')
+            msg = f'update expected at most 1 arguments, got {len(args)}'
+            raise TypeError(msg)
 
         if args:
             for key, value in args[0].items():

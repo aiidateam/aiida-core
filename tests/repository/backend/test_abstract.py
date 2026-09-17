@@ -56,7 +56,8 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def open(self, key: str) -> contextlib.AbstractContextManager[t.BinaryIO]:
         """Minimal implementation required because open() is now abstract."""
         if not self.has_object(key):
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+            msg = f'object with key `{key}` does not exist.'
+            raise FileNotFoundError(msg)
         return contextlib.nullcontext(io.BytesIO(b'test'))
 
 

@@ -142,7 +142,8 @@ class _FunctionCall(_Instruction):
         try:
             args = inspect.getfullargspec(func)[0]
         except TypeError:
-            raise TypeError(f'func is not a function, got {type(func)}')
+            msg = f'func is not a function, got {type(func)}'
+            raise TypeError(msg)
         if len(args) != 1:
             raise TypeError('Step must take one argument only: self')
 

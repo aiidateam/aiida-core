@@ -166,9 +166,11 @@ def create_archive(
         filename = Path.cwd() / 'export_data.aiida'
     filename = Path(filename)
     if not overwrite and filename.exists():
-        raise ArchiveExportError(f"The output file '{filename}' already exists")
+        msg = f"The output file '{filename}' already exists"
+        raise ArchiveExportError(msg)
     if filename.exists() and not filename.is_file():
-        raise ArchiveExportError(f"The output file '{filename}' exists as a directory")
+        msg = f"The output file '{filename}' exists as a directory"
+        raise ArchiveExportError(msg)
 
     if compression not in range(10):
         raise ArchiveExportError('compression must be an integer between 0 and 9')
@@ -242,9 +244,8 @@ def create_archive(
                 starting_uuids[EntityTypes.USER].add(entry.email)
                 entity_ids[EntityTypes.USER].add(entry.pk)
             else:
-                raise ArchiveExportError(
-                    f'I was given {entry} ({type(entry)}), which is not a User, Node, Computer, or Group instance'
-                )
+                msg = f'I was given {entry} ({type(entry)}), which is not a User, Node, Computer, or Group instance'
+                raise ArchiveExportError(msg)
         group_nodes, link_data = _collect_required_entities(
             querybuilder,
             entity_ids,
@@ -649,9 +650,8 @@ def _stream_repo_files(
     repository = backend.get_repository()
     if not repository.key_format == key_format:
         # Here we would have to go back and replace all the keys in the `BackendNode.repository_metadata`s
-        raise NotImplementedError(
-            f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
-        )
+        msg = f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
+        raise NotImplementedError(msg)
     with get_progress_reporter()(desc='Archiving files: ', total=len(keys)) as progress:
         for key, stream in repository.iter_object_streams(keys):
             # to-do should we use assume the key here is correct, or always re-compute and check?
@@ -677,10 +677,11 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: 
     )
     unsealed_node_pks = qbuilder.all(batch_size=batch_size, flat=True)
     if unsealed_node_pks:
-        raise ExportValidationError(
+        msg = (
             'All ProcessNodes must be sealed before they can be exported. '
             f'Node(s) with PK(s): {", ".join(str(pk) for pk in unsealed_node_pks)} is/are not sealed.'
         )
+        raise ExportValidationError(msg)
 
 
 def _check_node_licenses(
@@ -751,13 +752,11 @@ def _check_node_licenses(
         if name is None:
             continue
         if not check_allowed(name):
-            raise LicensingException(
-                f"Node {node_id} is licensed under '{name}' license, which is not in the list of allowed licenses"
-            )
+            msg = f"Node {node_id} is licensed under '{name}' license, which is not in the list of allowed licenses"
+            raise LicensingException(msg)
         if check_forbidden(name):
-            raise LicensingException(
-                f"Node {node_id} is licensed under '{name}' license, which is in the list of forbidden licenses"
-            )
+            msg = f"Node {node_id} is licensed under '{name}' license, which is in the list of forbidden licenses"
+            raise LicensingException(msg)
 
 
 def get_init_summary(

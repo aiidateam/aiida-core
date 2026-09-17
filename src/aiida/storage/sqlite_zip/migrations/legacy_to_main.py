@@ -169,7 +169,8 @@ def _json_to_sqlite(
                     try:
                         connection.execute(insert(backend_cls.__table__), rows)  # type: ignore
                     except IntegrityError as exc:
-                        raise StorageMigrationError(f'Database integrity error: {exc}') from exc
+                        msg = f'Database integrity error: {exc}'
+                        raise StorageMigrationError(msg) from exc
                     progress.update(nrows)
 
     if not (data['groups_uuid'] or data['links_uuid']):
@@ -188,11 +189,13 @@ def _json_to_sqlite(
                 try:
                     input_id = node_uuid_map[link_row['input']]
                 except KeyError:
-                    raise StorageMigrationError(f'Database contains link with unknown input node: {link_row}')
+                    msg = f'Database contains link with unknown input node: {link_row}'
+                    raise StorageMigrationError(msg)
                 try:
                     output_id = node_uuid_map[link_row['output']]
                 except KeyError:
-                    raise StorageMigrationError(f'Database contains link with unknown output node: {link_row}')
+                    msg = f'Database contains link with unknown output node: {link_row}'
+                    raise StorageMigrationError(msg)
                 return {
                     'input_id': input_id,
                     'output_id': output_id,
@@ -247,9 +250,11 @@ def _iter_entity_fields(
         extras = data.get('node_extras', {})
         for pk, all_fields in data['export_data'].get(name, {}).items():
             if pk not in attributes:
-                raise CorruptStorage(f'Unable to find attributes info for Node with Pk={pk}')
+                msg = f'Unable to find attributes info for Node with Pk={pk}'
+                raise CorruptStorage(msg)
             if pk not in extras:
-                raise CorruptStorage(f'Unable to find extra info for Node with Pk={pk}')
+                msg = f'Unable to find extra info for Node with Pk={pk}'
+                raise CorruptStorage(msg)
             uuid = all_fields['uuid']
             repository_metadata = _create_repo_metadata(node_repos[uuid]) if uuid in node_repos else {}
             yield {

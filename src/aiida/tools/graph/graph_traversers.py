@@ -136,9 +136,8 @@ def validate_traversal_rules(
     :param call_work_backward: will traverse CALL_WORK links in the backward direction.
     """
     if not isinstance(ruleset, GraphTraversalRules):
-        raise TypeError(
-            f'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {type(ruleset)}'
-        )
+        msg = f'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {type(ruleset)}'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
     rules_applied: dict[str, bool] = {}
     links_forward: list[LinkType] = []
@@ -149,12 +148,14 @@ def validate_traversal_rules(
 
         if name in traversal_rules:
             if not rule.toggleable:
-                raise ValueError(f'input rule {name} is not toggleable for ruleset {ruleset}')
+                msg = f'input rule {name} is not toggleable for ruleset {ruleset}'
+                raise ValueError(msg)
 
             follow = traversal_rules.pop(name)
 
             if not isinstance(follow, bool):
-                raise ValueError(f'the value of rule {name} must be boolean, but it is: {follow}')
+                msg = f'the value of rule {name} must be boolean, but it is: {follow}'  # type: ignore[unreachable]
+                raise ValueError(msg)
 
         if follow:
             if rule.direction == 'forward':
@@ -162,7 +163,8 @@ def validate_traversal_rules(
             elif rule.direction == 'backward':
                 links_backward.append(rule.link_type)
             else:
-                raise exceptions.InternalError(f'unrecognized direction `{rule.direction}` for graph traversal rule')
+                msg = f'unrecognized direction `{rule.direction}` for graph traversal rule'
+                raise exceptions.InternalError(msg)
 
         rules_applied[name] = follow
 
@@ -215,22 +217,26 @@ def traverse_graph(
     linktype_list = []
     for linktype in links_forward:
         if not isinstance(linktype, LinkType):
-            raise TypeError(f'links_forward should contain links, but one of them is: {type(linktype)}')
+            msg = f'links_forward should contain links, but one of them is: {type(linktype)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         linktype_list.append(linktype.value)
     filters_forwards = {'type': {'in': linktype_list}}
 
     linktype_list = []
     for linktype in links_backward:
         if not isinstance(linktype, LinkType):
-            raise TypeError(f'links_backward should contain links, but one of them is: {type(linktype)}')
+            msg = f'links_backward should contain links, but one of them is: {type(linktype)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         linktype_list.append(linktype.value)
     filters_backwards = {'type': {'in': linktype_list}}
 
     if not isinstance(starting_pks, Iterable):
-        raise TypeError(f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}')
+        msg = f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
     if any(not isinstance(pk, int) for pk in starting_pks):
-        raise TypeError(f'one of the starting_pks is not of type int:\n {starting_pks}')
+        msg = f'one of the starting_pks is not of type int:\n {starting_pks}'
+        raise TypeError(msg)
     operational_set = set(starting_pks)
 
     if not operational_set:
@@ -244,9 +250,8 @@ def traverse_graph(
 
     missing_pks = operational_set.difference(existing_pks)
     if missing_pks and missing_callback is None:
-        raise exceptions.NotExistent(
-            f'The following pks are not in the database and must be pruned before this call: {missing_pks}'
-        )
+        msg = f'The following pks are not in the database and must be pruned before this call: {missing_pks}'
+        raise exceptions.NotExistent(msg)
     elif missing_pks and missing_callback is not None:
         missing_callback(missing_pks)
 

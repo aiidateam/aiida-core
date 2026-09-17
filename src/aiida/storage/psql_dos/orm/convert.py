@@ -25,7 +25,8 @@ from aiida.storage.psql_dos.models.user import DbUser
 @singledispatch
 def get_backend_entity(dbmodel, backend):
     """Default get_backend_entity"""
-    raise TypeError(f"No corresponding AiiDA backend class exists for the model class '{dbmodel.__class__.__name__}'")
+    msg = f"No corresponding AiiDA backend class exists for the model class '{dbmodel.__class__.__name__}'"
+    raise TypeError(msg)
 
 
 ################################

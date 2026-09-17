@@ -187,7 +187,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         from aiida.plugins.entry_point import get_entry_point_names
 
         if scheduler_type not in get_entry_point_names('aiida.schedulers'):
-            raise exceptions.ValidationError(f'The specified scheduler `{scheduler_type}` is not a valid one')
+            msg = f'The specified scheduler `{scheduler_type}` is not a valid one'
+            raise exceptions.ValidationError(msg)
 
     @classmethod
     def _prepend_text_validator(cls, prepend_text: str) -> None:
@@ -208,9 +209,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         try:
             convertedwd = workdir.format(username='test')
         except KeyError as exc:
-            raise exceptions.ValidationError(f'In workdir there is an unknown replacement field {exc.args[0]}')
+            msg = f'In workdir there is an unknown replacement field {exc.args[0]}'
+            raise exceptions.ValidationError(msg)
         except ValueError as exc:
-            raise exceptions.ValidationError(f"Error in the string: '{exc}'")
+            msg = f"Error in the string: '{exc}'"
+            raise exceptions.ValidationError(msg)
 
         if not os.path.isabs(convertedwd):
             raise exceptions.ValidationError('The workdir must be an absolute path')
@@ -234,9 +237,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             for arg in mpirun_cmd:
                 arg.format(**subst)
         except KeyError as exc:
-            raise exceptions.ValidationError(f'In workdir there is an unknown replacement field {exc.args[0]}')
+            msg = f'In workdir there is an unknown replacement field {exc.args[0]}'
+            raise exceptions.ValidationError(msg)
         except ValueError as exc:
-            raise exceptions.ValidationError(f"Error in the string: '{exc}'")
+            msg = f"Error in the string: '{exc}'"
+            raise exceptions.ValidationError(msg)
 
     def validate(self) -> None:
         """Check if the attributes and files retrieved from the DB are valid.
@@ -286,9 +291,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             return
 
         if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:  # type: ignore[redundant-expr]
-            raise exceptions.ValidationError(
-                f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
-            )
+            msg = f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
+            raise exceptions.ValidationError(msg)
 
     def copy(self) -> Computer:
         """Return a copy of the current object to work with, not stored yet."""
@@ -411,7 +415,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             self.metadata = olddata
         except KeyError:
             if raise_exception:
-                raise AttributeError(f"'{name}' property not found")
+                msg = f"'{name}' property not found"
+                raise AttributeError(msg)
 
     def set_property(self, name: str, value: t.Any) -> None:
         """Set a property on this computer
@@ -438,7 +443,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             return olddata[name]
         except KeyError:
             if not args:
-                raise AttributeError(f"'{name}' property not found")
+                msg = f"'{name}' property not found"
+                raise AttributeError(msg)
             return args[0]
 
     def get_prepend_text(self) -> str:
@@ -555,9 +561,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     def set_shebang(self, val: str) -> None:
         """:param str val: A valid shebang line"""
         if not isinstance(val, str):
-            raise ValueError(f'{val} is invalid. Input has to be a string')
+            msg = f'{val} is invalid. Input has to be a string'  # type: ignore[unreachable]
+            raise ValueError(msg)
         if not val.startswith('#!'):
-            raise ValueError(f'{val} is invalid. A shebang line has to start with #!')
+            msg = f'{val} is invalid. A shebang line has to start with #!'
+            raise ValueError(msg)
         metadata = self.metadata
         metadata['shebang'] = val
         self.metadata = metadata
@@ -577,10 +585,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         try:
             authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
         except exceptions.NotExistent as exc:
-            raise exceptions.NotExistent(
+            msg = (
                 f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.get_short_name()}` '
                 f'(ID={user.pk}) - use `verdi computer configure` first'
-            ) from exc
+            )
+            raise exceptions.NotExistent(msg) from exc
 
         return authinfo
 
@@ -649,9 +658,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         try:
             return TransportFactory(self.transport_type)
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                f'No transport found for {self.label} [type {self.transport_type}], message: {exception}'
-            )
+            msg = f'No transport found for {self.label} [type {self.transport_type}], message: {exception}'
+            raise exceptions.ConfigurationError(msg)
 
     def get_scheduler(self) -> Scheduler:
         """Get a scheduler instance for this computer"""
@@ -660,9 +668,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             # I call the init without any parameter
             return scheduler_class()
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
-            )
+            msg = f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
+            raise exceptions.ConfigurationError(msg)
 
     def configure(self, user: User | None = None, **kwargs: t.Any) -> AuthInfo:
         """Configure a computer for a user with valid auth params passed via kwargs
@@ -680,7 +687,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         if not set(kwargs.keys()).issubset(valid_keys):
             invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError(f'{transport_cls}: received invalid authentication parameter(s) "{invalid_keys}"')
+            msg = f'{transport_cls}: received invalid authentication parameter(s) "{invalid_keys}"'
+            raise ValueError(msg)
 
         try:
             authinfo = self.get_authinfo(user)

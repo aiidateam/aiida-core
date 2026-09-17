@@ -94,7 +94,8 @@ def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType
             try:
                 getattr(super(), func.__name__)
             except AttributeError:
-                raise RuntimeError(f'Function {func} does not override a superclass method')
+                msg = f'Function {func} does not override a superclass method'
+                raise RuntimeError(msg)
 
             return func(self, *args, **kwargs)
 

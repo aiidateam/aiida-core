@@ -100,7 +100,8 @@ def extract_metadata(path: str | Path, *, search_limit: int | None = 10) -> dict
 
     path = Path(path)
     if not path.exists():
-        raise UnreachableStorage(f'path not found: {path}')
+        msg = f'path not found: {path}'
+        raise UnreachableStorage(msg)
 
     if path.is_dir():
         if not path.joinpath(META_FILENAME).is_file():
@@ -108,22 +109,26 @@ def extract_metadata(path: str | Path, *, search_limit: int | None = 10) -> dict
         try:
             metadata = json.loads(path.joinpath(META_FILENAME).read_text(encoding='utf8'))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+            msg = f'Could not read metadata: {exc}'
+            raise CorruptStorage(msg) from exc
     elif path.is_file() and zipfile.is_zipfile(path):
         try:
             metadata = json.loads(read_file_in_zip(path, META_FILENAME, search_limit=search_limit))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+            msg = f'Could not read metadata: {exc}'
+            raise CorruptStorage(msg) from exc
     elif path.is_file() and tarfile.is_tarfile(path):
         try:
             metadata = json.loads(read_file_in_tar(path, META_FILENAME))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+            msg = f'Could not read metadata: {exc}'
+            raise CorruptStorage(msg) from exc
     else:
         raise CorruptStorage('Path not a folder, zip or tar file')
 
     if not isinstance(metadata, dict):
-        raise CorruptStorage(f'Metadata is not a dictionary: {type(metadata)}')
+        msg = f'Metadata is not a dictionary: {type(metadata)}'
+        raise CorruptStorage(msg)
 
     return metadata
 

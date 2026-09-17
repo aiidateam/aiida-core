@@ -287,7 +287,8 @@ class InputPort(Port):
             if not callable(default):
                 validation_error = self.validate(default)
                 if validation_error:
-                    raise ValueError(f'Invalid default value: {validation_error.message}')
+                    msg = f'Invalid default value: {validation_error.message}'
+                    raise ValueError(msg)
 
         self._default = default
 
@@ -478,7 +479,8 @@ class PortNamespace(collections.abc.MutableMapping, Port):
             )
 
         if not isinstance(name, str):
-            raise ValueError(f'name has to be a string type, not {type(name)}')
+            msg = f'name has to be a string type, not {type(name)}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         if not name:
             raise ValueError('name cannot be an empty string')
@@ -487,7 +489,8 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         port_name = namespace.pop(0)
 
         if port_name not in self:
-            raise ValueError(f"port '{port_name}' does not exist in port namespace '{self.name}'")
+            msg = f"port '{port_name}' does not exist in port namespace '{self.name}'"
+            raise ValueError(msg)
 
         if namespace:
             portnamespace = t.cast(PortNamespace, self[port_name])
@@ -507,7 +510,8 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         :raises: ValueError if any sub namespace is occupied by a non-namespace port
         """
         if not isinstance(name, str):
-            raise ValueError(f'name has to be a string type, not {type(name)}')
+            msg = f'name has to be a string type, not {type(name)}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         if not name:
             raise ValueError('name cannot be an empty string')
@@ -516,7 +520,8 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         port_name = namespace.pop(0)
 
         if port_name in self and not isinstance(self[port_name], PortNamespace):
-            raise ValueError(f"the name '{port_name}' in '{self.name}' already contains a Port")
+            msg = f"the name '{port_name}' in '{self.name}' already contains a Port"
+            raise ValueError(msg)
 
         # If this is True, the (sub) port namespace does not yet exist, so we create it
         if port_name not in self:
@@ -576,9 +581,8 @@ class PortNamespace(collections.abc.MutableMapping, Port):
                 setattr(self, attr, namespace_options.pop(attr, getattr(port_namespace, attr)))
 
         if namespace_options:
-            raise ValueError(
-                f'the namespace_options {list(namespace_options.keys())}, is not a supported PortNamespace property'
-            )
+            msg = f'the namespace_options {list(namespace_options.keys())}, is not a supported PortNamespace property'
+            raise ValueError(msg)
 
         absorbed_ports = []
 

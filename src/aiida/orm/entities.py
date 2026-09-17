@@ -273,7 +273,8 @@ class Entity(abc.ABC, t.Generic[BackendEntityType, CollectionType]):
         """
         schema = schema or ('read' if self.is_stored else 'write')
         if schema not in self._MODEL_MAP:
-            raise exceptions.UnsupportedSchemaError(f"expected one of {list(self._MODEL_MAP)} schemas, got '{schema}'")
+            msg = f"expected one of {list(self._MODEL_MAP)} schemas, got '{schema}'"
+            raise exceptions.UnsupportedSchemaError(msg)
         if schema == 'read' and not self.is_stored:
             raise exceptions.UnsupportedSchemaError("cannot use 'read' schema for an unstored entity")
         Model = self._MODEL_MAP[schema]  # noqa: N806
@@ -599,7 +600,8 @@ class Entity(abc.ABC, t.Generic[BackendEntityType, CollectionType]):
         """Patch the `fields` attribute of the class based on the `ReadModel` definition."""
         current_fields = getattr(cls, 'fields', None)
         if current_fields is not None and not isinstance(current_fields, QbFields):
-            raise ValueError(f'fields already set on `{cls}`')
+            msg = f'fields already set on `{cls}`'
+            raise ValueError(msg)
 
         fields: dict[str, t.Any] = {}
 
@@ -655,10 +657,11 @@ class Entity(abc.ABC, t.Generic[BackendEntityType, CollectionType]):
 
         if actual_inheritance != expected_inheritance:
             bases = [f'{e.__module__}.{e.__qualname__}' for e in expected_inheritance]
-            raise RuntimeError(
+            msg = (
                 f'`{cls.__name__}.{model_name}` does not subclass all necessary base classes. It should be: '
                 f'`class {model_name}({", ".join(sorted(bases))}):`'
             )
+            raise RuntimeError(msg)
 
     def to_model_field_values(
         self,

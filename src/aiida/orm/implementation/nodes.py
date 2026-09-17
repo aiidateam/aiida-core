@@ -249,7 +249,8 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         try:
             return [self.get_attribute(key) for key in keys]
         except KeyError as exception:
-            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+            msg = f'attribute `{exception}` does not exist'
+            raise AttributeError(msg) from exception
 
     @abc.abstractmethod
     def set_attribute(self, key: str, value: t.Any) -> None:

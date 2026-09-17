@@ -175,7 +175,8 @@ class SqliteTempBackend(StorageBackend):
         self, key: str, value: t.Any, description: str | None = None, overwrite: bool = True
     ) -> None:
         if not overwrite and key in self._globals:
-            raise ValueError(f'global variable {key} already exists')
+            msg = f'global variable {key} already exists'
+            raise ValueError(msg)
         self._globals[key] = (value, description)
 
     def get_session(self) -> Session:
@@ -308,11 +309,13 @@ class SqliteTempBackend(StorageBackend):
         if allow_defaults:
             for row in rows:
                 if not keys.issuperset(row):
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                    raise IntegrityError(msg)
         else:
             for row in rows:
                 if set(row) != keys:
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} != {keys}'
+                    raise IntegrityError(msg)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
@@ -324,9 +327,11 @@ class SqliteTempBackend(StorageBackend):
             return None
         for row in rows:
             if 'id' not in row:
-                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+                msg = f"'id' field not given for {entity_type}: {set(row)}"
+                raise IntegrityError(msg)
             if not keys.issuperset(row):
-                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                raise IntegrityError(msg)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)

@@ -260,7 +260,8 @@ def aiida_profile(
         config = config_psql_dos()
     else:
         # This should be unreachable
-        raise ValueError(f'Invalid DB backend {db_backend}')
+        msg = f'Invalid DB backend {db_backend}'
+        raise ValueError(msg)
 
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker

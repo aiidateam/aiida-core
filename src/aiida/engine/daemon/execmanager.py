@@ -100,10 +100,11 @@ async def upload_calculation(
     logger = LoggerAdapter(logger=EXEC_LOGGER, extra=logger_extra)
 
     if not dry_run and not node.is_stored:
-        raise ValueError(
+        msg = (
             f'Cannot submit calculation {node.pk} because it is not stored! If you just want to test the submission, '
             'set `metadata.dry_run` to True in the inputs.'
         )
+        raise ValueError(msg)
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
@@ -112,10 +113,11 @@ async def upload_calculation(
         remote_user = await transport.whoami_async()
         remote_working_directory = computer.get_workdir().format(username=remote_user)
         if not remote_working_directory.strip():
-            raise exceptions.ConfigurationError(
+            msg = (
                 f'[submission of calculation {node.pk}] No remote_working_directory '
                 f"configured for computer '{computer.label}'"
             )
+            raise exceptions.ConfigurationError(msg)
 
         # If it already exists, no exception is raised
         if not await transport.path_exists_async(remote_working_directory):
@@ -126,11 +128,12 @@ async def upload_calculation(
             try:
                 await transport.makedirs_async(remote_working_directory)
             except OSError as exc:
-                raise exceptions.ConfigurationError(
+                msg = (
                     f'[submission of calculation {node.pk}] '
                     f'Unable to create the remote directory {remote_working_directory} on '
                     f"computer '{computer.label}': {exc}"
                 )
+                raise exceptions.ConfigurationError(msg)
         # Store remotely with sharding (here is where we choose
         # the folder structure of remote jobs; then I store this
         # in the calculation properties using _set_remote_dir
@@ -220,7 +223,8 @@ async def upload_calculation(
             if not dry_run:
                 await _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
         else:
-            raise RuntimeError(f'file copy operation {file_copy_operation} is not yet implemented.')
+            msg = f'file copy operation {file_copy_operation} is not yet implemented.'
+            raise RuntimeError(msg)
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
     if dry_run:
@@ -305,10 +309,11 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
                 )
                 raise
         else:
-            raise NotImplementedError(
+            msg = (
                 f'[submission of calculation {node.pk}] Remote copy between two different machines is '
                 'not implemented yet'
             )
+            raise NotImplementedError(msg)
 
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
         if remote_computer_uuid == computer.uuid:
@@ -327,9 +332,8 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
                 )
                 raise
         else:
-            raise OSError(
-                f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
-            )
+            msg = f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
+            raise OSError(msg)
 
 
 async def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):
@@ -522,12 +526,10 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                                 )
                                 continue
                             else:
-                                raise exceptions.StashingError(
-                                    f'File {source_filepath} does not exist. Stashing failed.'
-                                ) from exc
-                        raise exceptions.StashingError(
-                            f'Failed to copy {source_filepath} to {target_filepath}: {exc}'
-                        ) from exc
+                                msg = f'File {source_filepath} does not exist. Stashing failed.'
+                                raise exceptions.StashingError(msg) from exc
+                        msg = f'Failed to copy {source_filepath} to {target_filepath}: {exc}'
+                        raise exceptions.StashingError(msg) from exc
                     EXEC_LOGGER.debug(f'Stashed from {source_filepath} to {target_filepath}')
 
         try:
@@ -571,9 +573,8 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                         'Stashing with glob patterns is not supported when fail_on_missing is True. Stashing failed.'
                     )
                 if not await transport.path_exists_async(source_filepath):
-                    raise exceptions.StashingError(
-                        f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
-                    )
+                    msg = f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
+                    raise exceptions.StashingError(msg)
 
         remote_stash = RemoteStashCompressedData(
             computer=calculation.computer,
@@ -815,7 +816,8 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
         # If the job is returned it is still running and the kill really failed, so we raise
         if job is not None and job.job_state != JobState.DONE:
-            raise exceptions.RemoteOperationError(f'scheduler.kill_job({job_id}) was unsuccessful')
+            msg = f'scheduler.kill_job({job_id}) was unsuccessful'
+            raise exceptions.RemoteOperationError(msg)
         else:
             EXEC_LOGGER.warning(
                 'scheduler.kill_job() failed but job<{%s}> no longer seems to be running regardless', job_id

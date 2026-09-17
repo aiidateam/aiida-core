@@ -32,9 +32,8 @@ def validate_attribute_extra_key(key):
         raise exceptions.ValidationError('key for attributes or extras should be a string')
 
     if FIELD_SEPARATOR in key:
-        raise exceptions.ValidationError(
-            f'key for attributes or extras cannot contain the character `{FIELD_SEPARATOR}`'
-        )
+        msg = f'key for attributes or extras cannot contain the character `{FIELD_SEPARATOR}`'
+        raise exceptions.ValidationError(msg)
 
 
 def clean_value(value):
@@ -92,7 +91,8 @@ def clean_value(value):
             return new_val
 
         # Anything else we do not understand and we refuse
-        raise exceptions.ValidationError(f'type `{type(val)}` is not supported as it is not json-serializable')
+        msg = f'type `{type(val)}` is not supported as it is not json-serializable'
+        raise exceptions.ValidationError(msg)
 
     if isinstance(value, BaseType):
         return clean_builtin(value.value)

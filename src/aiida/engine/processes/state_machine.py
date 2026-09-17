@@ -89,12 +89,14 @@ def event(
         if inspect.isclass(from_states):
             from_states = (from_states,)
         if not all(issubclass(state, State) for state in from_states):  # type: ignore[arg-type]
-            raise TypeError(f'from_states: {from_states}')
+            msg = f'from_states: {from_states}'
+            raise TypeError(msg)
     if to_states != '*':
         if inspect.isclass(to_states):
             to_states = (to_states,)
         if not all(issubclass(state, State) for state in to_states):  # type: ignore[arg-type]
-            raise TypeError(f'to_states: {to_states}')
+            msg = f'to_states: {to_states}'
+            raise TypeError(msg)
 
     def wrapper(wrapped: Callable[..., t.Any]) -> Callable[..., t.Any]:
         evt_label = wrapped.__name__
@@ -167,7 +169,8 @@ class State:
     def exit(self) -> None:
         """Exiting the state"""
         if self.is_terminal():
-            raise InvalidStateError(f'Cannot exit a terminal state {self.LABEL}')
+            msg = f'Cannot exit a terminal state {self.LABEL}'
+            raise InvalidStateError(msg)
 
     def create_state(self, state_label: Hashable, *args: t.Any, **kwargs: t.Any) -> State:
         return self.state_machine.create_state(state_label, *args, **kwargs)
@@ -301,7 +304,8 @@ class StateMachine(metaclass=StateMachineMeta):
         try:
             self._event_callbacks[hook].remove(callback)
         except (KeyError, ValueError):
-            raise ValueError(f"Callback not set for hook '{hook}'")
+            msg = f"Callback not set for hook '{hook}'"
+            raise ValueError(msg)
 
     def _fire_state_event(self, hook: Hashable, state: State | None) -> None:
         for callback in self._event_callbacks.get(hook, []):
@@ -385,7 +389,8 @@ class StateMachine(metaclass=StateMachineMeta):
         try:
             return self.get_states_map()[state_label](self, *args, **kwargs)
         except KeyError:
-            raise ValueError(f'{state_label} is not a valid state')
+            msg = f'{state_label} is not a valid state'
+            raise ValueError(msg)
 
     def _exit_current_state(self, next_state: State) -> None:
         """Exit the given state"""
@@ -394,11 +399,13 @@ class StateMachine(metaclass=StateMachineMeta):
         # in which case check the new state is the initial state
         if self._state is None:
             if next_state.label != self.initial_state_label():
-                raise RuntimeError(f"Cannot enter state '{next_state}' as the initial state")
+                msg = f"Cannot enter state '{next_state}' as the initial state"
+                raise RuntimeError(msg)
             return  # Nothing to exit
 
         if next_state.LABEL not in self._state.ALLOWED:
-            raise RuntimeError(f'Cannot transition from {self._state.LABEL} to {next_state.label}')
+            msg = f'Cannot transition from {self._state.LABEL} to {next_state.label}'
+            raise RuntimeError(msg)
         self._fire_state_event(StateEventHook.EXITING_STATE, next_state)
         self._state.do_exit()
 
@@ -412,7 +419,8 @@ class StateMachine(metaclass=StateMachineMeta):
 
     def _create_state_instance(self, state_cls: Hashable, **kwargs: t.Any) -> State:
         if state_cls not in self.get_states_map():
-            raise ValueError(f'{state_cls} is not a valid state')
+            msg = f'{state_cls} is not a valid state'
+            raise ValueError(msg)
 
         cls = self.get_states_map()[state_cls]
 

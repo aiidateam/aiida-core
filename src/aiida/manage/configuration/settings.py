@@ -124,7 +124,8 @@ def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> No
             try:
                 path.mkdir(parents=True, exist_ok=True)
             except OSError as exc:
-                raise ConfigurationError(f'could not create the `{path}` configuration directory: {exc}') from exc
+                msg = f'could not create the `{path}` configuration directory: {exc}'
+                raise ConfigurationError(msg) from exc
     finally:
         _ = os.umask(umask)
 

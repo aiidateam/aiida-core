@@ -128,7 +128,8 @@ def get_option(name: str) -> Option:
     options = GlobalOptionsSchema.model_fields
     option_name = name.replace('.', '__')
     if option_name not in options:
-        raise ConfigurationError(f'the option {name} does not exist')
+        msg = f'the option {name} does not exist'
+        raise ConfigurationError(msg)
     return Option(name, _get_options_schema_properties()[option_name], options[option_name])
 
 

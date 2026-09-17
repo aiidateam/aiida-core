@@ -105,7 +105,8 @@ class PsqlDosMigrator:
             try:
                 self._connection = self._engine.connect()
             except OperationalError as exception:
-                raise exceptions.UnreachableStorage(f'Could not connect to database: {exception}') from exception
+                msg = f'Could not connect to database: {exception}'
+                raise exceptions.UnreachableStorage(msg) from exception
 
         return self._connection
 
@@ -181,10 +182,11 @@ class PsqlDosMigrator:
         if database_repository_uuid is None:
             raise exceptions.CorruptStorage('The database has no repository UUID set.')
         if database_repository_uuid != repository_uuid:
-            raise exceptions.CorruptStorage(
+            msg = (
                 f'The database has a repository UUID configured to {database_repository_uuid} '
                 f"but the disk-objectstore's is {repository_uuid}."
             )
+            raise exceptions.CorruptStorage(msg)
 
     def get_container(self) -> Container:
         """Return the disk-object store container.
@@ -207,9 +209,8 @@ class PsqlDosMigrator:
         try:
             return self.get_container().container_id
         except Exception as exception:
-            raise exceptions.UnreachableStorage(
-                f'Could not access disk-objectstore {self.get_container()}: {exception}'
-            ) from exception
+            msg = f'Could not access disk-objectstore {self.get_container()}: {exception}'
+            raise exceptions.UnreachableStorage(msg) from exception
 
     def initialise(self, reset: bool = False) -> bool:
         """Initialise the storage backend.

@@ -77,7 +77,8 @@ def dataclass_constructor(loader: yaml.Loader, serialized: yaml.Node) -> t.Any:
 def represent_node(dumper: yaml.Dumper, node: orm.Node) -> yaml.ScalarNode:
     """Represent a node in yaml."""
     if not node.is_stored:
-        raise ValueError(f'node {type(node)}<{node.uuid}> cannot be represented because it is not stored')
+        msg = f'node {type(node)}<{node.uuid}> cannot be represented because it is not stored'
+        raise ValueError(msg)
     return dumper.represent_scalar(_NODE_TAG, f'{node.uuid}')
 
 
@@ -111,7 +112,8 @@ def node_links_manager_constructor(loader: yaml.Loader, node_links_manager: yaml
 def represent_group(dumper: yaml.Dumper, group: orm.Group) -> yaml.ScalarNode:
     """Represent a group in yaml."""
     if not group.is_stored:
-        raise ValueError(f'group {group} cannot be represented because it is not stored')
+        msg = f'group {group} cannot be represented because it is not stored'
+        raise ValueError(msg)
     return dumper.represent_scalar(_GROUP_TAG, f'{group.uuid}')
 
 
@@ -124,7 +126,8 @@ def group_constructor(loader: yaml.Loader, group: yaml.Node) -> orm.Group:
 def represent_computer(dumper: yaml.Dumper, computer: orm.Computer) -> yaml.ScalarNode:
     """Represent a computer in yaml."""
     if not computer.is_stored:
-        raise ValueError(f'computer {computer} cannot be represented because it is not stored')
+        msg = f'computer {computer} cannot be represented because it is not stored'
+        raise ValueError(msg)
     return dumper.represent_scalar(_COMPUTER_TAG, f'{computer.uuid}')
 
 

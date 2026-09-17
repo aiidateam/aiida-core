@@ -29,7 +29,8 @@ class ExtrasMixin:
         try:
             return self.model.extras[key]
         except KeyError as exception:
-            raise AttributeError(f'extra `{exception}` does not exist') from exception
+            msg = f'extra `{exception}` does not exist'
+            raise AttributeError(msg) from exception
 
     def set_extra(self, key: str, value: t.Any) -> None:
         validate_attribute_extra_key(key)
@@ -66,7 +67,8 @@ class ExtrasMixin:
         try:
             self.model.extras.pop(key)
         except KeyError as exception:
-            raise AttributeError(f'extra `{exception}` does not exist') from exception
+            msg = f'extra `{exception}` does not exist'
+            raise AttributeError(msg) from exception
         else:
             self._flush_if_stored({'extras'})
 
@@ -74,7 +76,8 @@ class ExtrasMixin:
         non_existing_keys = [key for key in keys if key not in self.model.extras]
 
         if non_existing_keys:
-            raise AttributeError(f'extras `{", ".join(non_existing_keys)}` do not exist')
+            msg = f'extras `{", ".join(non_existing_keys)}` do not exist'
+            raise AttributeError(msg)
 
         for key in keys:
             self.bare_model.extras.pop(key)

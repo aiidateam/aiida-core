@@ -52,11 +52,11 @@ class Profile:
     def __init__(self, name: str, config: Mapping[str, t.Any], validate=True):
         """Load a profile with the profile configuration."""
         if not isinstance(config, collections.abc.Mapping):
-            raise TypeError(f'config should be a mapping but is {type(config)}')
+            msg = f'config should be a mapping but is {type(config)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         if validate and not set(config.keys()).issuperset(self.REQUIRED_KEYS):
-            raise exceptions.ConfigurationError(
-                f'profile {name!r} configuration does not contain all required keys: {self.REQUIRED_KEYS}'
-            )
+            msg = f'profile {name!r} configuration does not contain all required keys: {self.REQUIRED_KEYS}'
+            raise exceptions.ConfigurationError(msg)
 
         self._name = name
         self._attributes: dict[str, t.Any] = deepcopy(config)  # type: ignore[arg-type]

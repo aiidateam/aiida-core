@@ -66,7 +66,8 @@ class DummyVerdiDataExportable:
         }
 
         if datatype is None or datatype not in datatype_mapping:
-            raise RuntimeError(f'The listing of the objects {datatype} is not supported')
+            msg = f'The listing of the objects {datatype} is not supported'
+            raise RuntimeError(msg)
 
         export_cmd = datatype_mapping[datatype]
 
@@ -126,7 +127,8 @@ class DummyVerdiDataListable:
         }
 
         if datatype is None or datatype not in datatype_mapping:
-            raise RuntimeError(f'The listing of the objects {datatype} is not supported')
+            msg = f'The listing of the objects {datatype} is not supported'
+            raise RuntimeError(msg)
 
         listing_cmd = datatype_mapping[datatype]
 

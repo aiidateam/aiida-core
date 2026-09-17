@@ -271,7 +271,8 @@ def get_node_id_label(node: orm.Node, id_type: IdentifierType | list[IdentifierT
     try:
         return '|'.join(NODE_IDENTIFIER_TO_LABEL[key](node) for key in id_types)
     except KeyError as exception:
-        raise ValueError(f'`{id_type}` is not a valid `node_id_type`, choose from: pk, uuid, label') from exception
+        msg = f'`{id_type}` is not a valid `node_id_type`, choose from: pk, uuid, label'
+        raise ValueError(msg) from exception
 
 
 def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierType] = 'pk') -> str:
@@ -284,7 +285,8 @@ def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierTyp
             f'({get_node_id_label(node, id_type)})'
         )
     else:
-        raise TypeError(f'Unknown type: {type(node)}')
+        msg = f'Unknown type: {type(node)}'
+        raise TypeError(msg)
 
     return label
 
@@ -481,10 +483,12 @@ class Graph:
         """
         in_node = self._load_node(in_node)
         if in_node.pk not in self._nodes:
-            raise AssertionError(f'in_node pk={in_node.pk} must have already been added to the graph')
+            msg = f'in_node pk={in_node.pk} must have already been added to the graph'
+            raise AssertionError(msg)
         out_node = self._load_node(out_node)
         if out_node.pk not in self._nodes:
-            raise AssertionError(f'out_node pk={out_node.pk} must have already been added to the graph')
+            msg = f'out_node pk={out_node.pk} must have already been added to the graph'
+            raise AssertionError(msg)
 
         if (in_node.pk, out_node.pk, link_pair) in self._edges and not overwrite:
             return
@@ -532,9 +536,8 @@ class Graph:
         :returns: list of nodes or node pks
         """
         if annotate_links not in [None, False, 'label', 'type', 'both']:
-            raise ValueError(
-                f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
-            )
+            msg = f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
+            raise ValueError(msg)
 
         # incoming nodes are found traversing backwards
         node_pk = self._load_node(node).pk
@@ -589,9 +592,8 @@ class Graph:
         :returns: list of nodes or node pks
         """
         if annotate_links not in [None, False, 'label', 'type', 'both']:
-            raise ValueError(
-                f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
-            )
+            msg = f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
+            raise ValueError(msg)
 
         # outgoing nodes are found traversing forwards
         node_pk = self._load_node(node).pk

@@ -74,7 +74,8 @@ class GroupPath:
 
         """
         if not issubclass(cls, orm.Group):
-            raise TypeError(f'cls must a subclass of Group: {cls}')
+            msg = f'cls must a subclass of Group: {cls}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         self._delimiter = '/'
         self._cls = cls
@@ -87,9 +88,11 @@ class GroupPath:
         if path == self._delimiter:
             return ''
         if self._delimiter * 2 in path:
-            raise InvalidPath(f"The path may not contain a duplicate delimiter '{self._delimiter}': {path}")
+            msg = f"The path may not contain a duplicate delimiter '{self._delimiter}': {path}"
+            raise InvalidPath(msg)
         if path.startswith(self._delimiter) or path.endswith(self._delimiter):
-            raise InvalidPath(f"The path may not start/end with the delimiter '{self._delimiter}': {path}")
+            msg = f"The path may not start/end with the delimiter '{self._delimiter}': {path}"
+            raise InvalidPath(msg)
         return path
 
     def __repr__(self) -> str:
@@ -147,7 +150,8 @@ class GroupPath:
     def __truediv__(self, path: str) -> GroupPath:
         """Return a child ``GroupPath``, with a new path formed by appending ``path`` to the current path."""
         if not isinstance(path, str):
-            raise TypeError(f'path is not a string: {path}')
+            msg = f'path is not a string: {path}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         path = self._validate_path(path)
         child = GroupPath(
             path=self.path + self.delimiter + path if self.path else path,

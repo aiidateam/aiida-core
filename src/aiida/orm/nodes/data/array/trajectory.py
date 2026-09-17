@@ -241,7 +241,8 @@ class TrajectoryData(ArrayData):
         if len(pbc_set) == 1:
             pbc = pbc_set.pop()
         else:
-            raise ValueError(f'All structures should have the same `pbc`, found: {pbc_set}')
+            msg = f'All structures should have the same `pbc`, found: {pbc_set}'
+            raise ValueError(msg)
         self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
 
     def _validate(self) -> bool:
@@ -263,9 +264,8 @@ class TrajectoryData(ArrayData):
             )
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
-            raise ValidationError(
-                f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
-            )
+            msg = f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
+            raise ValidationError(msg)
         return True
 
     @property
@@ -370,7 +370,8 @@ class TrajectoryData(ArrayData):
         try:
             return int(numpy.where(self.get_stepids() == stepid)[0][0])
         except IndexError:
-            raise ValueError(f'{stepid} not among the stepids')
+            msg = f'{stepid} not among the stepids'
+            raise ValueError(msg)
 
     def get_step_data(
         self, index: int
@@ -396,7 +397,8 @@ class TrajectoryData(ArrayData):
         :raises KeyError: if you did not store the trajectory yet.
         """
         if index >= self.numsteps:
-            raise IndexError(f'You have only {self.numsteps} steps, but you are looking beyond (index={index})')
+            msg = f'You have only {self.numsteps} steps, but you are looking beyond (index={index})'
+            raise IndexError(msg)
 
         vel = self.get_velocities()
         if vel is not None:
@@ -448,12 +450,13 @@ class TrajectoryData(ArrayData):
             if len(kind_names) != len(set(kind_names)):
                 raise ValueError('Multiple kinds with the same name passed as custom_kinds')
             if set(kind_names) != set(symbols):
-                raise ValueError(
+                msg = (
                     'If you pass custom_kinds, you have to '
                     'pass one Kind object for each symbol '
                     'that is present in the trajectory. You '
                     f'passed {sorted(kind_names)}, but the symbols are {sorted(symbols)}'
                 )
+                raise ValueError(msg)
 
         struc = StructureData(cell=cell, pbc=self.pbc)
         if custom_kinds is not None:
@@ -598,11 +601,12 @@ class TrajectoryData(ArrayData):
         )
 
         if positions.shape != (numsteps, numsites, 3):
-            raise ValueError(
+            msg = (
                 'TrajectoryData.positions must have shape (s,n,3), '
                 f'with s=number of steps={numsteps} and '
                 f'n=number of symbols={numsites}'
             )
+            raise ValueError(msg)
 
         self.set_array('positions', positions)
 
@@ -631,11 +635,12 @@ class TrajectoryData(ArrayData):
         )
 
         if velocities.shape != (numsteps, numsites, 3):
-            raise ValueError(
+            msg = (
                 'TrajectoryData.positions must have shape (s,n,3), '
                 f'with s=number of steps={numsteps} and '
                 f'n=number of symbols={numsites}'
             )
+            raise ValueError(msg)
 
         self.set_array('velocities', velocities)
 
@@ -689,7 +694,8 @@ class TrajectoryData(ArrayData):
         elif color_scheme == 'cpk':
             from ase.data.colors import cpk_colors as colors
         else:
-            raise ValueError(f'Unknown color spec {color_scheme}')
+            msg = f'Unknown color spec {color_scheme}'
+            raise ValueError(msg)
 
         if element_list is None:
             # If not all elements are allowed

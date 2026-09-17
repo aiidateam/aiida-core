@@ -104,7 +104,8 @@ class TemplateScheduler(Scheduler):
         """
         if retval != 0:
             _LOGGER.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}; stdout={stdout}; stderr={stderr}')
+            msg = f'Error during submission, retval={retval}; stdout={stdout}; stderr={stderr}'
+            raise SchedulerError(msg)
 
         if stderr.strip():
             _LOGGER.warning(f'in _parse_submit_output there was some text in stderr: {stderr}')
@@ -137,4 +138,5 @@ class TemplateScheduler(Scheduler):
         :return: None or an instance of `aiida.engine.processes.exit_code.ExitCode`
         :raises TypeError or ValueError: if the passed arguments have incorrect type or value
         """
-        raise exceptions.FeatureNotAvailable(f'output parsing is not available for `{self.__class__.__name__}`')
+        msg = f'output parsing is not available for `{self.__class__.__name__}`'
+        raise exceptions.FeatureNotAvailable(msg)

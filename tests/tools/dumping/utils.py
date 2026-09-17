@@ -30,7 +30,8 @@ def tree_to_dict(root_path: Path) -> dict[str, list[t.Any]]:
         Dict[str, List[Any]]: Dictionary representation of the directory structure
     """
     if not root_path.exists() or not root_path.is_dir():
-        raise ValueError(f'The path {root_path} does not exist or is not a directory')
+        msg = f'The path {root_path} does not exist or is not a directory'
+        raise ValueError(msg)
 
     # Get the directory name
     dir_name = root_path.name
@@ -76,7 +77,8 @@ def tree_to_dict_dirs_only(root_path: Path) -> dict[str, list[t.Any]]:
                               containing only directories
     """
     if not root_path.exists() or not root_path.is_dir():
-        raise ValueError(f'The path {root_path} does not exist or is not a directory')
+        msg = f'The path {root_path} does not exist or is not a directory'
+        raise ValueError(msg)
 
     # Get the directory name
     dir_name = root_path.name

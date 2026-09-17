@@ -251,7 +251,8 @@ def _format_dictionary_json_date(dictionary: dict | list, sort_keys: bool = True
         if isinstance(data, datetime.datetime):
             return timezone.localtime(data).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
-        raise TypeError(f'{data!r} is not JSON serializable')
+        msg = f'{data!r} is not JSON serializable'
+        raise TypeError(msg)
 
     return json.dumps(dictionary, indent=4, sort_keys=sort_keys, default=default_jsondump)
 
@@ -300,7 +301,8 @@ def echo_dictionary(dictionary: dict | list, fmt: str = 'json+date', sort_keys: 
         format_function = VALID_DICT_FORMATS_MAPPING[fmt]
     except KeyError:
         formats = ', '.join(VALID_DICT_FORMATS_MAPPING.keys())
-        raise ValueError(f'Unrecognised printing format. Valid formats are: {formats}')
+        msg = f'Unrecognised printing format. Valid formats are: {formats}'
+        raise ValueError(msg)
 
     echo(format_function(dictionary, sort_keys=sort_keys))
 

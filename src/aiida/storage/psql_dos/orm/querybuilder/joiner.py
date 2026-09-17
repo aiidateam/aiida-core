@@ -535,7 +535,7 @@ def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship: s
     """
     for entity, cls in (entities_cls_joined, entities_cls_to_join):
         if not issubclass(entity._sa_class_manager.class_, cls):
-            raise TypeError(
+            msg = (
                 f"You are attempting to join {entities_cls_joined[0].__name__} as '{relationship}' "
                 f'of {entities_cls_to_join[0].__name__}\n'
                 'This failed because you passed:\n'
@@ -545,3 +545,4 @@ def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship: s
                 f'as entity to join (expected {entities_cls_to_join[1].__name__})\n'
                 '\n'
             )
+            raise TypeError(msg)

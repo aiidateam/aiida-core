@@ -99,10 +99,11 @@ class AiiDALoaderMagics(magic.Magics):
         command_name = cmdline_arguments[0]
 
         if command_name in ('-p', '--profile'):
-            raise ValueError(
+            msg = (
                 'The `-p/--profile` option is not supported for the `%verdi` magic operator. It will use the currently '
                 f'loaded profile `{profile}`'
             )
+            raise ValueError(msg)
 
         # Construct the subcommand that will be executed, thereby circumventing the profile option of ``verdi`` itself.
         # If the caller specified a subcommand that doesn't exist, the following will raise an exception.
@@ -110,7 +111,8 @@ class AiiDALoaderMagics(magic.Magics):
         command = verdi.get_command(context, command_name)
 
         if command is None:
-            raise RuntimeError(f'command `{command_name}` not found.')
+            msg = f'command `{command_name}` not found.'
+            raise RuntimeError(msg)
 
         return command(
             cmdline_arguments[1:],

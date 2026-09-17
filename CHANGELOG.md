@@ -46,6 +46,21 @@ The `core.shell` calculation job and parser entry points keep the names they had
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### `JsonableData`: store a pydantic model
+
+`JsonableData` wraps any object that says how it is written as a dictionary.
+It asked for that as `as_dict` and `from_dict`; a pydantic model says it as `model_dump` and `model_validate`, and either pair is taken now:
+
+```python
+class Point(BaseModel):
+    x: int
+    y: int = 0
+
+
+node = JsonableData(Point(x=1)).store()
+load_node(node.pk).obj  # Point(x=1, y=0)
+```
+
 ### Behavior changes
 
 ### Fixes

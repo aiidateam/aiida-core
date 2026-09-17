@@ -43,10 +43,12 @@ class ArchiveWriterAbstract(ABC):
         """
         self._path = Path(path)
         if mode not in ('x', 'w', 'a'):
-            raise ValueError(f'mode not in x, w, a: {mode}')
+            msg = f'mode not in x, w, a: {mode}'
+            raise ValueError(msg)
         self._mode = mode
         if compression not in range(10):
-            raise ValueError(f'compression not in range 0-9: {compression}')
+            msg = f'compression not in range 0-9: {compression}'
+            raise ValueError(msg)
         self._compression = compression
         self._format = fmt
         self._kwargs = kwargs

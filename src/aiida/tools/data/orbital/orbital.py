@@ -123,10 +123,11 @@ class Orbital:
             raise ValidationError('You cannot manually set the _orbital_type')
         entry_point = get_entry_point_from_class(self.__class__.__module__, self.__class__.__name__)[1]
         if entry_point is None:
-            raise ValidationError(
+            msg = (
                 f'Unable to detect entry point for current class {self.__class__}, maybe you did not register an entry '
                 'point for it?'
             )
+            raise ValidationError(msg)
 
         validated_dict['_orbital_type'] = entry_point.name
 
@@ -134,12 +135,14 @@ class Orbital:
             try:
                 value = input_dict.pop(name)
             except KeyError:
-                raise ValidationError(f"Missing required parameter '{name}'")
+                msg = f"Missing required parameter '{name}'"
+                raise ValidationError(msg)
             # This might raise ValidationError
             try:
                 value = validator(value)
             except ValidationError as exc:
-                raise exc.__class__(f"Error validating '{name}': {exc!s}")
+                msg = f"Error validating '{name}': {exc!s}"
+                raise exc.__class__(msg)
             validated_dict[name] = value
 
         for name, validator, default_value in self._base_fields_optional:
@@ -151,11 +154,13 @@ class Orbital:
             try:
                 value = validator(value)
             except ValidationError as exc:
-                raise exc.__class__(f"Error validating '{name}': {exc!s}")
+                msg = f"Error validating '{name}': {exc!s}"
+                raise exc.__class__(msg)
             validated_dict[name] = value
 
         if input_dict:
-            raise ValidationError(f'Unknown keys: {list(input_dict.keys())}')
+            msg = f'Unknown keys: {list(input_dict.keys())}'
+            raise ValidationError(msg)
         return validated_dict
 
     def set_orbital_dict(self, init_dict):

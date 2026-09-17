@@ -135,9 +135,8 @@ class NodeLinksManager:
             # `AttributeError`, so that `getattr(node.inputs, 'some_label', some_default)` returns `some_default`.
             # Otherwise, the exception is not caught by `getattr` and is propagated, instead of returning the default.
             prefix = 'input' if self._incoming else 'output'
-            raise NotExistentAttributeError(
-                f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
-            ) from exception
+            msg = f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
+            raise NotExistentAttributeError(msg) from exception
 
     def __contains__(self, key):
         """Override the operator of the base class to emit deprecation warning if double underscore is used in key."""
@@ -171,9 +170,8 @@ class NodeLinksManager:
             # `KeyError` - in this way, users can use the standard construct `try/except KeyError` and this will behave
             # like a standard dictionary.
             prefix = 'input' if self._incoming else 'output'
-            raise NotExistentKeyError(
-                f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
-            ) from exception
+            msg = f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
+            raise NotExistentKeyError(msg) from exception
 
     def __str__(self):
         """Return a string representation of the manager"""

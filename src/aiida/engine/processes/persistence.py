@@ -467,7 +467,8 @@ class CheckpointContext:
         try:
             return self._values[item]
         except KeyError:
-            raise AttributeError(f"item '{item}' not found")
+            msg = f"item '{item}' not found"
+            raise AttributeError(msg)
 
     def __iter__(self) -> Iterable[t.Any]:
         return self._value.__iter__()

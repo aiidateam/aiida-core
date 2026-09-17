@@ -61,7 +61,8 @@ def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_computer_ssh_a
     elif request.param[0] == 'core.ssh_async':
         node = CalcJobNode(computer=aiida_computer_ssh_async(backend=request.param[1]))
     else:
-        raise ValueError(f'unsupported transport: {request.param}')
+        msg = f'unsupported transport: {request.param}'
+        raise ValueError(msg)
 
     node.store()
 

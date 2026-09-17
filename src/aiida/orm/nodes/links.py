@@ -39,7 +39,8 @@ class NodeLinks:
         link_triple = LinkTriple(source, link_type, link_label)
 
         if link_triple in self.incoming_cache:
-            raise exceptions.UniquenessError(f'the link triple {link_triple} is already present in the cache')
+            msg = f'the link triple {link_triple} is already present in the cache'
+            raise exceptions.UniquenessError(msg)
 
         self.incoming_cache.append(link_triple)
 
@@ -133,7 +134,8 @@ class NodeLinks:
             link_type = t.cast(t.Sequence[LinkType], (link_type,))
 
         if link_type and not all(isinstance(t, LinkType) for t in link_type):
-            raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
+            msg = f'link_type should be a LinkType or tuple of LinkType: got {link_type}'
+            raise TypeError(msg)
 
         node_class = node_class or Node
         node_filters: dict[str, t.Any] = {'id': {'==': self._node.pk}}
@@ -205,9 +207,8 @@ class NodeLinks:
                 )
 
             if link_triple in link_triples:
-                raise exceptions.InternalError(
-                    f'Node<{self._node.pk}> has both a stored and cached link triple {link_triple}'
-                )
+                msg = f'Node<{self._node.pk}> has both a stored and cached link triple {link_triple}'
+                raise exceptions.InternalError(msg)
 
             if not link_type or link_triple.link_type in link_type:
                 if link_label_filter is not None:

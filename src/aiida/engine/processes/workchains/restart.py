@@ -298,7 +298,8 @@ class BaseRestartWorkChain(WorkChain):
 
             if report is not None and not isinstance(report, ProcessHandlerReport):
                 name = handler.__name__
-                raise RuntimeError(f'handler `{name}` returned a value that is not a ProcessHandlerReport')
+                msg = f'handler `{name}` returned a value that is not a ProcessHandlerReport'
+                raise RuntimeError(msg)
 
             # If an actual report was returned, save it so it is not overridden by next handler returning `None`
             if report:

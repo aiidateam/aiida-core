@@ -47,11 +47,13 @@ class OrmModel(AiiDABaseModel):
                     try:
                         orm_class = BaseFactory('aiida.orm', orm_class)
                     except EntryPointError as exception:
-                        raise EntryPointError(f'invalid `orm_class` on `{key}`: {exception}') from exception
+                        msg = f'invalid `orm_class` on `{key}`: {exception}'
+                        raise EntryPointError(msg) from exception
                 try:
                     fields[field_name] = orm_class.collection.get(id=field_value)
                 except NotExistent as exception:
-                    raise NotExistent(f'no `{orm_class}` found with pk={field_value}') from exception
+                    msg = f'no `{orm_class}` found with pk={field_value}'
+                    raise NotExistent(msg) from exception
             elif model_to_orm := get_metadata(field, 'model_to_orm'):
                 fields[field_name] = model_to_orm(self)
             else:
@@ -72,7 +74,8 @@ class OrmModel(AiiDABaseModel):
         try:
             orm_class_name, model_name = cls.__qualname__.split('.')
         except ValueError as exception:
-            raise ValueError(f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'") from exception
+            msg = f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'"
+            raise ValueError(msg) from exception
 
         model_fields: dict[str, t.Any] = {}
         for key, field in cls.model_fields.items():

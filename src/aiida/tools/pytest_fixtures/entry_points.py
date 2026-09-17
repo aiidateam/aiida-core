@@ -98,7 +98,8 @@ class EntryPointManager:
         try:
             self.entry_points[name]
         except KeyError:
-            raise KeyError(f'entry point `{name}` does not exist in group `{group}`.')
+            msg = f'entry point `{name}` does not exist in group `{group}`.'
+            raise KeyError(msg)
         self.entry_points = importlib_metadata.EntryPoints(
             ep for ep in self.entry_points if not (ep.name == name and ep.group == group)
         )

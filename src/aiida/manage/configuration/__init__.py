@@ -92,12 +92,14 @@ def load_config(create=False) -> 'Config':
     filepath = get_config_path()
 
     if not os.path.isfile(filepath) and not create:
-        raise exceptions.MissingConfigurationError(f'configuration file {filepath} does not exist')
+        msg = f'configuration file {filepath} does not exist'
+        raise exceptions.MissingConfigurationError(msg)
 
     try:
         config = Config.from_file(filepath)
     except ValueError as exc:
-        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON') from exc
+        msg = f'configuration file {filepath} contains invalid JSON'
+        raise exceptions.ConfigurationError(msg) from exc
 
     _merge_deprecated_cache_yaml(config, filepath)
 

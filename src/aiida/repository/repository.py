@@ -148,7 +148,8 @@ class Repository:
 
         # reject absolute paths
         if path_obj.is_absolute():
-            raise TypeError(f'path `{path_obj}` is not a relative path.')
+            msg = f'path `{path_obj}` is not a relative path.'
+            raise TypeError(msg)
 
         return path_obj
 
@@ -236,7 +237,8 @@ class Repository:
 
         for part in path.parts:
             if part not in file_object.objects:
-                raise FileNotFoundError(f'object with path `{path}` does not exist.')
+                msg = f'object with path `{path}` does not exist.'
+                raise FileNotFoundError(msg)
 
             file_object = file_object.objects[part]
 
@@ -254,7 +256,8 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type != FileType.DIRECTORY:
-            raise NotADirectoryError(f'object with path `{path}` is not a directory.')
+            msg = f'object with path `{path}` is not a directory.'
+            raise NotADirectoryError(msg)
 
         return file_object
 
@@ -275,7 +278,8 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type != FileType.FILE:
-            raise IsADirectoryError(f'object with path `{path}` is not a file.')
+            msg = f'object with path `{path}` is not a file.'
+            raise IsADirectoryError(msg)
 
         return file_object
 
@@ -339,10 +343,12 @@ class Repository:
             filepath = pathlib.PurePath(filepath)
 
         if not isinstance(filepath, pathlib.PurePath):
-            raise TypeError(f'filepath `{filepath}` is not of type `str` nor `pathlib.PurePath`.')
+            msg = f'filepath `{filepath}` is not of type `str` nor `pathlib.PurePath`.'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         if not filepath.is_absolute():
-            raise TypeError(f'filepath `{filepath}` is not an absolute path.')
+            msg = f'filepath `{filepath}` is not an absolute path.'
+            raise TypeError(msg)
 
         # Explicitly create the base directory if specified by `path`, just in case `filepath` contains no file objects.
         if path.parts:
@@ -426,7 +432,8 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type == FileType.DIRECTORY:
-            raise IsADirectoryError(f'object with path `{path}` is a directory.')
+            msg = f'object with path `{path}` is a directory.'
+            raise IsADirectoryError(msg)
 
         if hard_delete:
             assert file_object.key is not None, 'Expected FileType.File to have a key'
@@ -498,16 +505,19 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type != FileType.DIRECTORY:
-            raise NotADirectoryError(f'object with path `{path}` is not a directory.')
+            msg = f'object with path `{path}` is not a directory.'
+            raise NotADirectoryError(msg)
 
         if isinstance(target, str):
             target = pathlib.Path(target)
 
         if not isinstance(target, pathlib.Path):
-            raise TypeError(f'path `{path}` is not of type `str` nor `pathlib.Path`.')
+            msg = f'path `{path}` is not of type `str` nor `pathlib.Path`.'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         if not target.is_absolute():
-            raise TypeError(f'provided target `{target}` is not an absolute path.')
+            msg = f'provided target `{target}` is not an absolute path.'
+            raise TypeError(msg)
 
         for root, dirnames, filenames in self.walk(path):
             for dirname in dirnames:

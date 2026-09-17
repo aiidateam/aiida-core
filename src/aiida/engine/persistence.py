@@ -76,12 +76,14 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
         try:
             calculation = load_node(pid)
         except (MultipleObjectsError, NotExistent):
-            raise PersistenceError(f'Failed to load the node for process<{pid}>: {traceback.format_exc()}')
+            msg = f'Failed to load the node for process<{pid}>: {traceback.format_exc()}'
+            raise PersistenceError(msg)
 
         checkpoint = calculation.checkpoint
 
         if checkpoint is None:
-            raise PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
+            msg = f'Calculation<{calculation.pk}> does not have a saved checkpoint'
+            raise PersistenceError(msg)
 
         try:
             payload = serialize.deserialize_unsafe(checkpoint)

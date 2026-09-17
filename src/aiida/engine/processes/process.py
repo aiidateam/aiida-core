@@ -542,9 +542,8 @@ class Process(ProcessBase):
             self.node.set_exit_status(result.status)
             self.node.set_exit_message(result.message)
         else:
-            raise ValueError(
-                f'the result should be an integer, ExitCode or None, got {type(result)} {result} {self.pid}'
-            )
+            msg = f'the result should be an integer, ExitCode or None, got {type(result)} {result} {self.pid}'
+            raise ValueError(msg)
 
     @override
     def on_paused(self, msg: str | None = None) -> None:
@@ -575,7 +574,8 @@ class Process(ProcessBase):
 
         # Note that `PortNamespaces` should be able to receive non `Data` types such as a normal dictionary
         if isinstance(output_port, OutputPort) and not isinstance(value, orm.Data):
-            raise TypeError(f'Processes can only return `orm.Data` instances as output, got {value.__class__}')
+            msg = f'Processes can only return `orm.Data` instances as output, got {value.__class__}'
+            raise TypeError(msg)
 
     def set_status(self, status: str | None) -> None:
         """The status of the Process is about to be changed, so we reflect this is in node's attribute proxy.
@@ -788,7 +788,8 @@ class Process(ProcessBase):
             elif name == 'description':
                 self.node.description = value
             else:
-                raise RuntimeError(f'unsupported metadata key: {name}')
+                msg = f'unsupported metadata key: {name}'
+                raise RuntimeError(msg)
 
         # Store JSON-serializable values of ``metadata`` ports in the node's attributes. Note that instead of passing in
         # the ``metadata`` inputs directly, the entire namespace of raw inputs is passed. The reason is that although
@@ -989,7 +990,8 @@ class Process(ProcessBase):
                 try:
                     port_namespace = self.spec().inputs.get_port(sub_namespace)  # type: ignore[assignment]
                 except KeyError:
-                    raise ValueError(f'this process does not contain the "{sub_namespace}" input namespace')
+                    msg = f'this process does not contain the "{sub_namespace}" input namespace'
+                    raise ValueError(msg)
 
             # Get the list of ports that were exposed for the given Process class in the current sub_namespace
             exposed_inputs_list = self.spec()._exposed_inputs[sub_namespace][process_class]
@@ -1033,7 +1035,8 @@ class Process(ProcessBase):
             # only the top-level key is stored in _exposed_outputs
             for top_name in top_namespace_map:
                 if namespace is not None and namespace not in self.spec()._exposed_outputs:
-                    raise KeyError(f'the namespace `{namespace}` is not an exposed namespace.')
+                    msg = f'the namespace `{namespace}` is not an exposed namespace.'
+                    raise KeyError(msg)
                 if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:
                     output_key_map[top_name] = port_namespace
 

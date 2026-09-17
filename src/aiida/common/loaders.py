@@ -78,7 +78,8 @@ def load_function(name: str, instance: t.Any | None = None) -> t.Any:
         return obj.__get__(instance, instance.__class__)  # type: ignore[attr-defined, unused-ignore]
     if inspect.ismethod(obj) or inspect.isfunction(obj):
         return obj
-    raise ValueError(f"Invalid function name '{name}'")
+    msg = f"Invalid function name '{name}'"
+    raise ValueError(msg)
 
 
 def load_object(fullname: str) -> t.Any:
@@ -88,7 +89,8 @@ def load_object(fullname: str) -> t.Any:
         try:
             obj = getattr(obj, name)
         except AttributeError as exception:
-            raise ValueError(f"Could not load object corresponding to '{fullname}'") from exception
+            msg = f"Could not load object corresponding to '{fullname}'"
+            raise ValueError(msg) from exception
     return obj
 
 
@@ -101,4 +103,5 @@ def load_module(fullname: str) -> tuple[types.ModuleType, deque[str]]:
             return importlib.import_module('.'.join(parts)), remainder
         except ImportError:
             remainder.appendleft(parts.pop())
-    raise ValueError(f"Could not load a module corresponding to '{fullname}'")
+    msg = f"Could not load a module corresponding to '{fullname}'"
+    raise ValueError(msg)

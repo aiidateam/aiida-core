@@ -79,7 +79,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raises TypeError: if the handle is not a byte stream.
         """
         if not isinstance(handle, io.BufferedIOBase) and not self.is_readable_byte_stream(handle):
-            raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
+            msg = f'handle does not seem to be a byte stream: {type(handle)}.'
+            raise TypeError(msg)
         return self._put_object_from_filelike(handle)
 
     @abc.abstractmethod

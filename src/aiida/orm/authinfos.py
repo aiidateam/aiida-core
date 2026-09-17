@@ -202,6 +202,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         try:
             transport_class = TransportFactory(transport_type)
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(f'transport type `{transport_type}` could not be loaded: {exception}')
+            msg = f'transport type `{transport_type}` could not be loaded: {exception}'
+            raise exceptions.ConfigurationError(msg)
 
         return transport_class(machine=computer.hostname, **self.get_auth_params())

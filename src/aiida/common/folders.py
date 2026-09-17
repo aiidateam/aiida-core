@@ -60,10 +60,11 @@ class Folder:
 
             # check that it is a subfolder
             if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
-                raise ValueError(
+                msg = (
                     'The absolute path for this folder is not within the '
                     f'folder_limit. abspath={abspath}, folder_limit={folder_limit}.'
                 )
+                raise ValueError(msg)
 
         self._abspath = abspath
         self._folder_limit = folder_limit
@@ -195,7 +196,8 @@ class Folder:
                     # This automatically overwrites files
                     shutil.copyfile(src, dest_abs_path)
                 else:
-                    raise OSError(f'destination already exists: {os.path.join(dest_abs_path)}')
+                    msg = f'destination already exists: {os.path.join(dest_abs_path)}'
+                    raise OSError(msg)
             else:
                 shutil.copyfile(src, dest_abs_path)
         elif os.path.isdir(src):
@@ -208,7 +210,8 @@ class Folder:
                     # This automatically overwrites files
                     shutil.copytree(src, dest_abs_path)
                 else:
-                    raise OSError(f'destination already exists: {os.path.join(dest_abs_path)}')
+                    msg = f'destination already exists: {os.path.join(dest_abs_path)}'
+                    raise OSError(msg)
             else:
                 shutil.copytree(src, dest_abs_path)
         else:
@@ -276,7 +279,8 @@ class Folder:
 
         if check_existence:
             if not os.path.exists(dest_abs_path):
-                raise OSError(f'{relpath} does not exist within the folder {self.abspath}')
+                msg = f'{relpath} does not exist within the folder {self.abspath}'
+                raise OSError(msg)
 
         return dest_abs_path
 
@@ -367,7 +371,8 @@ class Folder:
         if overwrite:
             self.erase()
         elif self.exists():
-            raise OSError(f'Location {self.abspath} already exists, and overwrite is set to False')
+            msg = f'Location {self.abspath} already exists, and overwrite is set to False'
+            raise OSError(msg)
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)

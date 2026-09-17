@@ -505,9 +505,9 @@ def validate_output_filename(
         output_file = Path(output_file)
 
     if output_file.is_dir():
-        raise IsADirectoryError(
-            f'A directory with the name `{output_file.resolve()}` already exists. Remove manually and try again.'
-        )
+        msg = f'A directory with the name `{output_file.resolve()}` already exists. Remove manually and try again.'
+        raise IsADirectoryError(msg)
 
     if output_file.is_file() and not overwrite:
-        raise FileExistsError(f'File `{output_file}` already exists, use `--overwrite` to overwrite.')
+        msg = f'File `{output_file}` already exists, use `--overwrite` to overwrite.'
+        raise FileExistsError(msg)

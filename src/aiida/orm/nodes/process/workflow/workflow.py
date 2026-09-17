@@ -38,12 +38,13 @@ class WorkflowNodeLinks(ProcessNodeLinks):
         """
         super().validate_outgoing(target, link_type, link_label)
         if link_type is LinkType.RETURN and not target.is_stored:
-            raise ValueError(
+            msg = (
                 f'Workflow<{self._node.process_label}> tried returning an unstored `Data` node. '
                 'This likely means new `Data` is being created '
                 'inside the workflow. In order to preserve data provenance, use a `calcfunction` to create this node '
                 'and return its output from the workflow'
             )
+            raise ValueError(msg)
 
 
 class WorkflowNode(ProcessNode):

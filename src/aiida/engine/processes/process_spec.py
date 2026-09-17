@@ -58,19 +58,24 @@ class ProcessSpec(spec.ProcessSpec):
             with this exit code will not be considered for caching
         """
         if not isinstance(status, int):
-            raise TypeError(f'status should be of integer type and not of {type(status)}')
+            msg = f'status should be of integer type and not of {type(status)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         if status < 0:
-            raise ValueError(f'status should be a positive integer, received {type(status)}')
+            msg = f'status should be a positive integer, received {type(status)}'
+            raise ValueError(msg)
 
         if not isinstance(label, str):
-            raise TypeError(f'label should be of str type and not of {type(label)}')
+            msg = f'label should be of str type and not of {type(label)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         if not isinstance(message, str):
-            raise TypeError(f'message should be of str type and not of {type(message)}')
+            msg = f'message should be of str type and not of {type(message)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         if not isinstance(invalidates_cache, bool):
-            raise TypeError(f'invalidates_cache should be of type bool and not of {type(invalidates_cache)}')
+            msg = f'invalidates_cache should be of type bool and not of {type(invalidates_cache)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         self._exit_codes[label] = ExitCode(status, message, invalidates_cache=invalidates_cache)
 
@@ -105,14 +110,14 @@ class CalcJobProcessSpec(ProcessSpec):
     @default_output_node.setter
     def default_output_node(self, port_name: str) -> None:
         if port_name not in self.outputs:
-            raise ValueError(f'{port_name} is not a registered output port')
+            msg = f'{port_name} is not a registered output port'
+            raise ValueError(msg)
 
         valid_type_port = self.outputs[port_name].valid_type
         valid_type_required = Dict
 
         if valid_type_port is not valid_type_required:
-            raise ValueError(
-                f'the valid type of a default output has to be a {valid_type_required} but it is {valid_type_port}'
-            )
+            msg = f'the valid type of a default output has to be a {valid_type_required} but it is {valid_type_port}'
+            raise ValueError(msg)
 
         self._default_output_node = port_name

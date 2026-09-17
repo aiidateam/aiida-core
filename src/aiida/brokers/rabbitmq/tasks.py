@@ -309,7 +309,8 @@ class RmqIncomingTask:
 
     def process(self) -> asyncio.Future[t.Any]:
         if self._state != TASK_PENDING:
-            raise asyncio.InvalidStateError(f'The task is {self._state}')
+            msg = f'The task is {self._state}'
+            raise asyncio.InvalidStateError(msg)
 
         self._state = TASK_PROCESSING
         outcome: asyncio.Future[t.Any] = self._loop.create_future()
@@ -322,7 +323,8 @@ class RmqIncomingTask:
 
     async def requeue(self) -> None:
         if self._state not in [TASK_PENDING, TASK_PROCESSING]:
-            raise asyncio.InvalidStateError(f'The task is {self._state}')
+            msg = f'The task is {self._state}'
+            raise asyncio.InvalidStateError(msg)
 
         self._state = TASK_REQUEUED
         assert self._message is not None
@@ -334,7 +336,8 @@ class RmqIncomingTask:
         """Processing context. The task should be done at the end otherwise it is requeued."""
 
         if self._state != TASK_PENDING:
-            raise asyncio.InvalidStateError(f'The task is {self._state}')
+            msg = f'The task is {self._state}'
+            raise asyncio.InvalidStateError(msg)
 
         self._state = TASK_PROCESSING
         outcome: asyncio.Future[t.Any] = self._loop.create_future()

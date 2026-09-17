@@ -222,6 +222,5 @@ class Sealable:
             if keys is None:
                 raise exceptions.ModificationNotAllowed('Cannot bulk modify attributes of a stored+unsealed node')
             elif any(key not in self._updatable_attributes for key in keys):
-                raise exceptions.ModificationNotAllowed(
-                    f'Cannot modify non-updatable attributes of a stored+unsealed node: {keys}'
-                )
+                msg = f'Cannot modify non-updatable attributes of a stored+unsealed node: {keys}'
+                raise exceptions.ModificationNotAllowed(msg)

@@ -110,7 +110,8 @@ async def task_upload_job(process: CalcJob, transport_queue: TransportQueue, can
         raise
     except Exception as exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'upload_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'upload_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'uploading CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.UNSTASHING)
@@ -156,7 +157,8 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
         raise
     except Exception as exception:
         logger.warning(f'submitting CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'submit_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'submit_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'submitting CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.WITHSCHEDULER)
@@ -214,7 +216,8 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         raise
     except Exception as exception:
         logger.warning(f'updating CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'update_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'update_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'updating CalcJob<{node.pk}> successful')
         if job_done:
@@ -264,7 +267,8 @@ async def task_monitor_job(
         raise
     except Exception as exception:
         logger.warning(f'monitoring CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'monitor_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'monitor_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'monitoring CalcJob<{node.pk}> successful')
         return monitor_result
@@ -333,7 +337,8 @@ async def task_retrieve_job(
         raise
     except Exception as exception:
         logger.warning(f'retrieving CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'retrieve_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'retrieve_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         node.set_state(CalcJobState.PARSING)
         logger.info(f'retrieving CalcJob<{node.pk}> successful')
@@ -387,7 +392,8 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
         raise
     except Exception as exception:
         logger.warning(f'stashing calculation<{node.pk}> failed')
-        raise TransportTaskException(f'stash_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'stash_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         node.set_state(CalcJobState.RETRIEVING)
         logger.info(f'stashing calculation<{node.pk}> successful')
@@ -423,7 +429,8 @@ async def task_unstash_job(node: CalcJobNode, transport_queue: TransportQueue, c
         raise
     except Exception as exception:
         logger.warning(f'unstashing calculation<{node.pk}> failed')
-        raise TransportTaskException(f'unstash_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'unstash_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         node.set_state(CalcJobState.SUBMITTING)
         logger.info(f'unstashing calculation<{node.pk}> successful')
@@ -465,7 +472,8 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
         raise
     except Exception as exception:
         logger.warning(f'killing CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'kill_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'kill_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'killing CalcJob<{node.pk}> successful')
         node.set_scheduler_state(JobState.DONE)
@@ -624,7 +632,8 @@ class Waiting(states.Waiting):
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException as exception:
-            raise states.PauseInterruption(f'Pausing after failed transport task: {exception}')
+            msg = f'Pausing after failed transport task: {exception}'
+            raise states.PauseInterruption(msg)
         except StashingError as exception:
             exit_code = self.process.exit_codes.ERROR_STASHING_FAILED.format(message=str(exception))
             return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)

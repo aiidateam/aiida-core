@@ -729,17 +729,19 @@ class SshTransport(BlockingTransport):
             self.sftp.mkdir(path)
         except OSError as exc:
             if os.path.isabs(path):
-                raise OSError(
+                msg = (
                     f"Error during mkdir of '{path}', "
                     "maybe you don't have the permissions to do it, "
                     f'or the directory already exists? ({exc})'
                 )
+                raise OSError(msg)
             else:
-                raise OSError(
+                msg = (
                     f"Error during mkdir of '{path}' from folder '{self.getcwd()}', "
                     "maybe you don't have the permissions to do it, "
                     f'or the directory already exists? ({exc})'
                 )
+                raise OSError(msg)
 
     def rmtree(self, path: TransportPath):
         """Remove a file or a directory at path, recursively
@@ -767,7 +769,8 @@ class SshTransport(BlockingTransport):
                 self.logger.warning(f'There was nonempty stderr in the rm command: {stderr}')
             return True
         self.logger.error(f"Problem executing rm. Exit code: {retval}, stdout: '{stdout}', stderr: '{stderr}'")
-        raise OSError(f'Error while executing rm. Exit code: {retval}')
+        msg = f'Error while executing rm. Exit code: {retval}'
+        raise OSError(msg)
 
     def rmdir(self, path: TransportPath):
         """Remove the folder named 'path' if empty."""
@@ -898,7 +901,8 @@ class SshTransport(BlockingTransport):
             else:
                 self.putfile(localpath, remotepath, callback, dereference, overwrite)
         elif not ignore_nonexisting:
-            raise OSError(f'The local path {localpath} does not exist')
+            msg = f'The local path {localpath} does not exist'
+            raise OSError(msg)
 
     def putfile(
         self,
@@ -972,7 +976,8 @@ class SshTransport(BlockingTransport):
             raise OSError('The localpath does not exists')
 
         if not os.path.isdir(localpath):
-            raise ValueError(f'Input localpath is not a folder: {localpath}')
+            msg = f'Input localpath is not a folder: {localpath}'
+            raise ValueError(msg)
 
         if not remotepath:
             raise OSError('remotepath must be a non empty string')
@@ -1078,7 +1083,8 @@ class SshTransport(BlockingTransport):
         elif ignore_nonexisting:
             pass
         else:
-            raise OSError(f'The remote path {remotepath} does not exist')
+            msg = f'The remote path {remotepath} does not exist'
+            raise OSError(msg)
 
     def getfile(
         self,
@@ -1156,7 +1162,8 @@ class SshTransport(BlockingTransport):
             raise ValueError('Localpaths must be an absolute path')
 
         if not self.isdir(remotepath):
-            raise OSError(f'Input remotepath is not a folder: {localpath}')
+            msg = f'Input remotepath is not a folder: {localpath}'
+            raise OSError(msg)
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -1290,12 +1297,14 @@ class SshTransport(BlockingTransport):
                 f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
             )
             if 'No such file or directory' in str(stderr):
-                raise FileNotFoundError(f'Error while executing cp: {stderr}')
+                msg = f'Error while executing cp: {stderr}'
+                raise FileNotFoundError(msg)
 
-            raise OSError(
+            msg = (
                 f'Error while executing cp. Exit code: {retval}, '
                 f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
             )
+            raise OSError(msg)
 
     @staticmethod
     def _local_listdir(path: str, pattern=None):
@@ -1349,19 +1358,23 @@ class SshTransport(BlockingTransport):
         :raises ValueError: if oldpath/newpath is not a valid path
         """
         if not oldpath:
-            raise ValueError(f'Source {oldpath} is not a valid path')
+            msg = f'Source {oldpath} is not a valid path'
+            raise ValueError(msg)
         if not newpath:
-            raise ValueError(f'Destination {newpath} is not a valid path')
+            msg = f'Destination {newpath} is not a valid path'
+            raise ValueError(msg)
 
         oldpath = str(oldpath)
         newpath = str(newpath)
 
         if not self.isfile(oldpath):
             if not self.isdir(oldpath):
-                raise OSError(f'Source {oldpath} does not exist')
+                msg = f'Source {oldpath} does not exist'
+                raise OSError(msg)
 
         if self.path_exists(newpath):
-            raise OSError(f'Destination {newpath} already exist')
+            msg = f'Destination {newpath} already exist'
+            raise OSError(msg)
 
         return self.sftp.rename(oldpath, newpath)
 

@@ -68,9 +68,8 @@ class AttributeDict(dict[str, t.Any]):
         try:
             self[attr] = value
         except KeyError:
-            raise AttributeError(
-                f"AttributeError: '{attr}' is not a valid attribute of the object '{self.__class__.__name__}'"
-            )
+            msg = f"AttributeError: '{attr}' is not a valid attribute of the object '{self.__class__.__name__}'"
+            raise AttributeError(msg)
 
     def __delattr__(self, attr: str) -> None:
         """Delete a key as an attribute.
@@ -144,7 +143,8 @@ class AttributesFrozendict(Frozendict):
         try:
             return self[attr]
         except KeyError as exception:
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'") from exception
+            msg = f"'{self.__class__.__name__}' object has no attribute '{attr}'"
+            raise AttributeError(msg) from exception
 
     def __dir__(self) -> list[str]:
         return list(self.keys())
@@ -263,7 +263,8 @@ class DefaultFieldsAttributeDict(AttributeDict):
                 try:
                     validator(self[key])
                 except Exception as exc:
-                    raise exceptions.ValidationError(f"Invalid value for key '{key}' [{exc.__class__.__name__}]: {exc}")
+                    msg = f"Invalid value for key '{key}' [{exc.__class__.__name__}]: {exc}"
+                    raise exceptions.ValidationError(msg)
 
     def __setattr__(self, attr: str, value: t.Any) -> None:
         """Overridden to allow direct access to fields with underscore."""

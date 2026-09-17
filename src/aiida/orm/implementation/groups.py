@@ -128,7 +128,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any(not isinstance(node, BackendNode) for node in nodes):
-            raise TypeError(f'nodes have to be of type {BackendNode}')
+            msg = f'nodes have to be of type {BackendNode}'
+            raise TypeError(msg)
 
     def remove_nodes(self, nodes: Sequence[BackendNode]) -> None:
         """Remove a set of nodes from the group.
@@ -144,7 +145,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any(not isinstance(node, BackendNode) for node in nodes):
-            raise TypeError(f'nodes have to be of type {BackendNode}')
+            msg = f'nodes have to be of type {BackendNode}'
+            raise TypeError(msg)
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'

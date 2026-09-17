@@ -59,7 +59,8 @@ def get_archive_file(archive: str, filepath=None, external_module=None) -> str:
 
     if not os.path.isfile(dirpath_archive):
         dirpath_parent = os.path.dirname(dirpath_archive)
-        raise ValueError(f'archive {archive} does not exist in the archives directory {dirpath_parent}')
+        msg = f'archive {archive} does not exist in the archives directory {dirpath_parent}'
+        raise ValueError(msg)
 
     return dirpath_archive
 
@@ -128,7 +129,8 @@ def generate_archive_at_version(version: str, dest_dir) -> str:
 
     head = get_schema_version_head()
     if version not in list_versions():
-        raise ValueError(f'Unknown archive version {version!r}')
+        msg = f'Unknown archive version {version!r}'
+        raise ValueError(msg)
 
     dest_dir = Path(dest_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -230,7 +232,8 @@ def generate_archive_head(dest_dir) -> str:
     try:
         builder = builders[head]
     except KeyError:
-        raise ValueError(f'No reference dataset defined for archive version {head!r}') from None
+        msg = f'No reference dataset defined for archive version {head!r}'
+        raise ValueError(msg) from None
     return builder(dest_dir)
 
 

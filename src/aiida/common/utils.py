@@ -405,7 +405,8 @@ class Prettifier:
         try:
             self._prettifier_f = self.prettifiers[format]
         except KeyError:
-            raise ValueError(f'Unknown prettifier format {format}; valid formats: {", ".join(self.get_prettifiers())}')
+            msg = f'Unknown prettifier format {format}; valid formats: {", ".join(self.get_prettifiers())}'
+            raise ValueError(msg)
 
     def prettify(self, label: str) -> str:
         """Prettify a label using the format passed in the initializer
@@ -551,7 +552,8 @@ class ErrorAccumulator:
 
     def raise_errors(self, raise_cls: type[Exception]) -> None:
         if not self.success():
-            raise raise_cls(f'The following errors were encountered: {self.errors}')
+            msg = f'The following errors were encountered: {self.errors}'
+            raise raise_cls(msg)
 
 
 class DatetimePrecision:

@@ -94,7 +94,8 @@ def computer(request, aiida_computer_local, aiida_computer_ssh):
     if request.param == 'core.ssh':
         return aiida_computer_ssh(configure=False)
 
-    raise ValueError(f'unsupported request parameter: {request.param}')
+    msg = f'unsupported request parameter: {request.param}'
+    raise ValueError(msg)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

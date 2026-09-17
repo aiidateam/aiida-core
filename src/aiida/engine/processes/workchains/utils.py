@@ -99,7 +99,8 @@ def process_handler(
     handler_args = getfullargspec(wrapped)[0]
 
     if len(handler_args) != 2:
-        raise TypeError(f'process handler `{wrapped.__name__}` has invalid signature: should be (self, node)')
+        msg = f'process handler `{wrapped.__name__}` has invalid signature: should be (self, node)'
+        raise TypeError(msg)
 
     wrapped.decorator = process_handler  # type: ignore[attr-defined]
     wrapped.priority = priority  # type: ignore[attr-defined]

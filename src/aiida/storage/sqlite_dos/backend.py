@@ -161,10 +161,11 @@ class SqliteDosMigrator(PsqlDosMigrator):
         if database_repository_uuid is None:
             raise exceptions.CorruptStorage('The database has no repository UUID set.')
         if database_repository_uuid != repository_uuid:
-            raise exceptions.CorruptStorage(
+            msg = (
                 f'The database has a repository UUID configured to {database_repository_uuid} '
                 f"but the disk-objectstore's is {repository_uuid}."
             )
+            raise exceptions.CorruptStorage(msg)
 
     @property
     def is_database_initialised(self) -> bool:
@@ -234,14 +235,12 @@ class SqliteDosStorage(PsqlDosBackend):
         try:
             filepath.mkdir(parents=True, exist_ok=True)
         except FileExistsError as exception:
-            raise ValueError(
-                f'`{filepath}` is a file and cannot be used for instance of `SqliteDosStorage`.'
-            ) from exception
+            msg = f'`{filepath}` is a file and cannot be used for instance of `SqliteDosStorage`.'
+            raise ValueError(msg) from exception
 
         if list(filepath.iterdir()):
-            raise ValueError(
-                f'`{filepath}` already exists but is not empty and cannot be used for instance of `SqliteDosStorage`.'
-            )
+            msg = f'`{filepath}` already exists but is not empty and cannot be used for instance of `SqliteDosStorage`.'
+            raise ValueError(msg)
 
         return super().initialise(profile, reset)
 

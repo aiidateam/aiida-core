@@ -91,7 +91,8 @@ class Parser(ABC):
         :raises aiida.common.ModificationNotAllowed: if an output node was already registered with the same link label
         """
         if link_label in self._outputs:
-            raise exceptions.ModificationNotAllowed(f'the output {link_label} already exists')
+            msg = f'the output {link_label} already exists'
+            raise exceptions.ModificationNotAllowed(msg)
         self._outputs[link_label] = node
 
     def get_outputs_for_parsing(self):

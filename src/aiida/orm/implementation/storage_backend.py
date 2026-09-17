@@ -365,17 +365,20 @@ class StorageBackend(abc.ABC):
             if backup_manager.check_path_exists(backup_config_path):
                 success, stdout = backup_manager.run_cmd(['cat', str(backup_config_path)])
                 if not success:
-                    raise exceptions.StorageBackupError(f"Couldn't read {backup_config_path!s}.")
+                    msg = f"Couldn't read {backup_config_path!s}."
+                    raise exceptions.StorageBackupError(msg)
                 try:
                     backup_config_existing = json.loads(stdout)
                 except json.decoder.JSONDecodeError as exc:
-                    raise exceptions.StorageBackupError(f'JSON parsing failed for {backup_config_path!s}: {exc.msg}')
+                    msg = f'JSON parsing failed for {backup_config_path!s}: {exc.msg}'
+                    raise exceptions.StorageBackupError(msg)
 
                 # create a temporary config file to access the profile info
                 with tempfile.NamedTemporaryFile() as temp_file:
                     backup_config = Config(temp_file.name, backup_config_existing, validate=False)
                     if len(backup_config.profiles) != 1:
-                        raise exceptions.StorageBackupError(f"{backup_config_path!s} doesn't contain exactly 1 profile")
+                        msg = f"{backup_config_path!s} doesn't contain exactly 1 profile"
+                        raise exceptions.StorageBackupError(msg)
 
                     if (
                         backup_config.profiles[0].uuid != self.profile.uuid
@@ -389,7 +392,8 @@ class StorageBackend(abc.ABC):
                 # make sure the folder is empty
                 success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
                 if not success:
-                    raise exceptions.StorageBackupError(f"Couldn't read {backup_manager.path!s}.")
+                    msg = f"Couldn't read {backup_manager.path!s}."
+                    raise exceptions.StorageBackupError(msg)
                 if stdout:
                     raise exceptions.StorageBackupError("Can't initialize the backup folder, destination is not empty.")
 
@@ -423,7 +427,8 @@ class StorageBackend(abc.ABC):
         try:
             ProfileAccessManager(self._profile).request_access()
         except LockedProfileError as exc:
-            raise StorageBackupError(f'{self._profile} is locked!') from exc
+            msg = f'{self._profile} is locked!'
+            raise StorageBackupError(msg) from exc
 
         backup_manager = self._validate_or_init_backup_folder(dest, keep)
 

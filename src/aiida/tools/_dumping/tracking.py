@@ -142,7 +142,8 @@ class DumpRegistry:
         :raises ValueError: If the UUID already exists in the registry
         """
         if uuid in self.entries:
-            raise ValueError(f"UUID '{uuid}' already exists in the registry")
+            msg = f"UUID '{uuid}' already exists in the registry"
+            raise ValueError(msg)
         self.entries[uuid] = entry
 
     def add_entries(self, entries: dict[str, DumpRecord]) -> None:
@@ -160,7 +161,8 @@ class DumpRegistry:
         :raises ValueError: If the UUID doesn't exist in the registry
         """
         if uuid not in self.entries:
-            raise ValueError(f"UUID '{uuid}' not in the registry")
+            msg = f"UUID '{uuid}' not in the registry"
+            raise ValueError(msg)
         del self.entries[uuid]
 
     def del_entries(self, uuids: Collection[str]) -> None:
@@ -179,7 +181,8 @@ class DumpRegistry:
         :raises ValueError: If the UUID doesn't exist in the registry
         """
         if uuid not in self.entries:
-            raise ValueError(f"UUID '{uuid}' not found in the registry")
+            msg = f"UUID '{uuid}' not found in the registry"
+            raise ValueError(msg)
         return self.entries[uuid]
 
     def to_dict(self) -> dict:

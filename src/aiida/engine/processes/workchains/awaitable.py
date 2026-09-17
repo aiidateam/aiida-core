@@ -53,7 +53,8 @@ def construct_awaitable(target: Awaitable | ProcessNode) -> Awaitable:
     if isinstance(target, ProcessNode):
         awaitable_target = AwaitableTarget.PROCESS
     else:
-        raise ValueError(f'invalid class for awaitable target: {type(target)}')
+        msg = f'invalid class for awaitable target: {type(target)}'  # type: ignore[unreachable]
+        raise ValueError(msg)
 
     awaitable = Awaitable(
         {

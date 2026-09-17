@@ -120,7 +120,8 @@ class JsonableData(Data):
         try:
             serialized = json.loads(json.dumps(dictionary), parse_constant=lambda x: x)
         except TypeError as exc:
-            raise TypeError(f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.') from exc
+            msg = f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.'
+            raise TypeError(msg) from exc
 
         self.base.attributes.set_many(serialized)
 
@@ -187,14 +188,14 @@ class JsonableData(Data):
             try:
                 module = importlib.import_module(module_name)
             except ImportError as exc:
-                raise ImportError(f'the objects module `{module_name}` can not be imported.') from exc
+                msg = f'the objects module `{module_name}` can not be imported.'
+                raise ImportError(msg) from exc
 
             try:
                 cls = getattr(module, class_name)
             except AttributeError as exc:
-                raise ImportError(
-                    f'the objects module `{module_name}` does not contain the class `{class_name}`.'
-                ) from exc
+                msg = f'the objects module `{module_name}` does not contain the class `{class_name}`.'
+                raise ImportError(msg) from exc
 
             deserialized = self._deserialize_float_constants(attributes)
             self._obj = cls.from_dict(deserialized)

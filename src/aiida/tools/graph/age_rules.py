@@ -104,7 +104,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
             elif entity_type.startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise RuntimeError(f'not understood entity from ( {entity_type} )')
+                msg = f'not understood entity from ( {entity_type} )'
+                raise RuntimeError(msg)
             return result
 
         query_dict = querybuilder.as_dict()
@@ -113,11 +114,12 @@ class QueryRule(Operation, metaclass=ABCMeta):
         query_projections = query_dict['project']
         for projection_key in query_projections:
             if query_projections[projection_key] != []:
-                raise ValueError(
+                msg = (
                     'The input querybuilder must not have any projections.\n'
                     f'Instead, it has the following:\n - Key: {projection_key}\n - Val: '
                     f'{query_projections[projection_key]}\n'
                 )
+                raise ValueError(msg)
         for pathspec in query_dict['path']:
             if not pathspec['entity_type']:
                 pathspec['entity_type'] = 'node.Node.'
@@ -196,7 +198,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
                     # For now I can only specify edge_identifiers as 'edge', ie. project on the edge
                     # itself, or by the entity_from, entity_to keyword, ie. groups or nodes.
                     # One could think of other keywords...
-                    raise ValueError(f'This tag ({tag}) is not known')
+                    msg = f'This tag ({tag}) is not known'
+                    raise ValueError(msg)
                 self._edge_keys.append((actual_tag, projection))
                 projections[actual_tag].append(projection)
 

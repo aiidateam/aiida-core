@@ -135,7 +135,8 @@ class RmqSubscriber:
         try:
             identifier = await rpc_queue.consume(partial(self._on_rpc, subscriber), consumer_tag=identifier)
         except aio_pika.exceptions.DuplicateConsumerTag as exception:
-            raise exceptions.DuplicateSubscriberIdentifier(f"RPC identifier '{identifier}'") from exception
+            msg = f"RPC identifier '{identifier}'"
+            raise exceptions.DuplicateSubscriberIdentifier(msg) from exception
         else:
             assert self._exchange is not None
             assert identifier is not None
@@ -148,7 +149,8 @@ class RmqSubscriber:
         try:
             rpc_queue = self._rpc_subscribers.pop(identifier)
         except KeyError as exception:
-            raise ValueError(f"Unknown subscriber '{identifier}'") from exception
+            msg = f"Unknown subscriber '{identifier}'"
+            raise ValueError(msg) from exception
         else:
             await rpc_queue.cancel(identifier)
             assert self._exchange is not None
@@ -157,7 +159,8 @@ class RmqSubscriber:
     async def add_broadcast_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         identifier = identifier or shortuuid.uuid()
         if identifier in self._broadcast_subscribers:
-            raise exceptions.DuplicateSubscriberIdentifier(f"Broadcast identifier '{identifier}'")
+            msg = f"Broadcast identifier '{identifier}'"
+            raise exceptions.DuplicateSubscriberIdentifier(msg)
 
         self._broadcast_subscribers[identifier] = subscriber
         if self._broadcast_consumer_tag is None:
@@ -170,7 +173,8 @@ class RmqSubscriber:
         try:
             del self._broadcast_subscribers[identifier]
         except KeyError as exception:
-            raise ValueError(f"Broadcast subscriber '{identifier}' unknown") from exception
+            msg = f"Broadcast subscriber '{identifier}' unknown"
+            raise ValueError(msg) from exception
         if not self._broadcast_subscribers:
             assert self._broadcast_queue is not None
             assert self._broadcast_consumer_tag is not None

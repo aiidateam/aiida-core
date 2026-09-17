@@ -208,7 +208,8 @@ def parse_entry_point_string(entry_point_string: str) -> tuple[str, str]:
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
     except ValueError as exc:
-        raise ValueError(f'invalid entry_point_string format: {entry_point_string}') from exc
+        msg = f'invalid entry_point_string format: {entry_point_string}'
+        raise ValueError(msg) from exc
 
     return group, name
 
@@ -277,7 +278,8 @@ def load_entry_point(group: str, name: str) -> t.Any:
     try:
         loaded_entry_point = entry_point.load()
     except ImportError:
-        raise LoadingEntryPointError(f"Failed to load entry point '{name}':\n{traceback.format_exc()}")
+        msg = f"Failed to load entry point '{name}':\n{traceback.format_exc()}"
+        raise LoadingEntryPointError(msg)
 
     return loaded_entry_point
 
@@ -320,11 +322,13 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     name = convert_potentially_deprecated_entry_point(group, name)
     found = eps_select(group=group, name=name)
     if name not in found.names:
-        raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
+        msg = f"Entry point '{name}' not found in group '{group}'"
+        raise MissingEntryPointError(msg)
     # If multiple entry points are found and they have different values we raise, otherwise if they all
     # correspond to the same value, we simply return one of them
     if len(found) > 1 and len(set(ep.value for ep in found)) != 1:
-        raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}': {found}")
+        msg = f"Multiple entry points '{name}' found in group '{group}': {found}"
+        raise MultipleEntryPointError(msg)
     return found[name]
 
 

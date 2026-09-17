@@ -1160,7 +1160,8 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
             return futures.CancellableAction(do_kill, cookie=exception, loop=self.loop)
 
-        raise ValueError(f"Got unknown interruption type '{type(exception)}'")
+        msg = f"Got unknown interruption type '{type(exception)}'"
+        raise ValueError(msg)
 
     def _set_interrupt_action(self, new_action: futures.CancellableAction | None) -> None:
         """
@@ -1390,16 +1391,14 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
             if namespace_name not in port_namespace:
                 if not port_namespace.dynamic:
-                    raise ValueError(
-                        f"port '{namespace_name}' does not exist in port namespace '{port_namespace.name}'"
-                    )
+                    msg = f"port '{namespace_name}' does not exist in port namespace '{port_namespace.name}'"
+                    raise ValueError(msg)
                 break
 
             port = port_namespace[namespace_name]
             if not isinstance(port, ports.PortNamespace):
-                raise ValueError(
-                    f"port '{namespace_name}' in port namespace '{port_namespace.name}' is not a namespace"
-                )
+                msg = f"port '{namespace_name}' in port namespace '{port_namespace.name}' is not a namespace"
+                raise ValueError(msg)
 
             port_namespace = port
             unresolved_path.pop(0)

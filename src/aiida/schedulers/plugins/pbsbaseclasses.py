@@ -361,7 +361,8 @@ class PbsBaseClass(BashCliScheduler):
         if filtered_stderr.strip():
             _LOGGER.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
             if retval != 0:
-                raise SchedulerError(f'Error during qstat parsing, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+                msg = f'Error during qstat parsing, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+                raise SchedulerError(msg)
 
         jobdata_raw: list[dict[str, t.Any]] = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
@@ -397,9 +398,8 @@ class PbsBaseClass(BashCliScheduler):
                     # I append to the previous string
                     # stripping the TAB
                     if not jobdata_raw[-1]['lines']:
-                        raise SchedulerParsingError(
-                            f'Line {line_num} is the first line of the job, but it starts with a TAB! ({line})'
-                        )
+                        msg = f'Line {line_num} is the first line of the job, but it starts with a TAB! ({line})'
+                        raise SchedulerParsingError(msg)
                     jobdata_raw[-1]['lines'][-1] += line[1:]
                 else:
                     # raise SchedulerParsingError(
@@ -509,10 +509,11 @@ class PbsBaseClass(BashCliScheduler):
                             node.job_index = int(jobidx_and_ncpu[0])
                             node.num_cpus = int(jobidx_and_ncpu[1])
                         else:
-                            raise ValueError(
+                            msg = (
                                 f'Wrong number of pieces: {len(jobidx_and_ncpu)} '
                                 f'instead of 1 or 2 in exec_hosts: {exec_hosts}'
                             )
+                            raise ValueError(msg)
                         exec_host_list.append(node)
                     this_job.allocated_machines = exec_host_list
                 except Exception as exc:
@@ -690,7 +691,8 @@ class PbsBaseClass(BashCliScheduler):
         """
         if retval != 0:
             _LOGGER.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}; stdout={stdout}; stderr={stderr}')
+            msg = f'Error during submission, retval={retval}; stdout={stdout}; stderr={stderr}'
+            raise SchedulerError(msg)
 
         if stderr.strip():
             _LOGGER.warning(f'in _parse_submit_output there was some text in stderr: {stderr}')

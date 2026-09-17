@@ -951,10 +951,11 @@ class CalcJob(Process):
 
         for code in codes:
             if not code.can_run_on_computer(computer):
-                raise InputValidationError(
+                msg = (
                     f'The selected code {code.pk} for calculation {self.node.pk} '
                     f'cannot run on computer {computer.label}'
                 )
+                raise InputValidationError(msg)
 
             code.validate_working_directory(folder)
 
@@ -1162,7 +1163,8 @@ class CalcJob(Process):
         def encoder(obj):
             if dataclasses.is_dataclass(obj):
                 return dataclasses.asdict(obj)  # type: ignore[arg-type]
-            raise TypeError(f' {obj!r} is not JSON serializable')
+            msg = f' {obj!r} is not JSON serializable'
+            raise TypeError(msg)
 
         subfolder = folder.get_subfolder('.aiida', create=True)
         subfolder.create_file_from_filelike(
@@ -1182,32 +1184,32 @@ class CalcJob(Process):
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
         except ValidationError as exception:
-            raise PluginInternalError(
-                f'[presubmission of calc {this_pk}] local_copy_list format problem: {exception}'
-            ) from exception
+            msg = f'[presubmission of calc {this_pk}] local_copy_list format problem: {exception}'
+            raise PluginInternalError(msg) from exception
 
         remote_copy_list = calc_info.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
         except ValidationError as exception:
-            raise PluginInternalError(
-                f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exception}'
-            ) from exception
+            msg = f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exception}'
+            raise PluginInternalError(msg) from exception
 
         for remote_computer_uuid, _, dest_rel_path in remote_copy_list:
             try:
                 Computer.collection.get(uuid=remote_computer_uuid)
             except exceptions.NotExistent as exception:
-                raise PluginInternalError(
+                msg = (
                     f'[presubmission of calc {this_pk}] '
                     f'The remote copy requires a computer with UUID={remote_computer_uuid}'
                     'but no such computer was found in the '
                     'database'
-                ) from exception
+                )
+                raise PluginInternalError(msg) from exception
             if os.path.isabs(dest_rel_path):
-                raise PluginInternalError(
+                msg = (
                     f'[presubmission of calc {this_pk}] The destination path of the remote copy is absolute! '
                     f'({dest_rel_path})'
                 )
+                raise PluginInternalError(msg)
 
         return calc_info

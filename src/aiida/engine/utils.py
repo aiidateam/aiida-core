@@ -82,7 +82,8 @@ def instantiate_process(runner: Runner, process: Process | type[Process] | Proce
     elif inspect.isclass(process) and issubclass(process, Process):  # type: ignore[redundant-expr]
         process_class = process
     else:
-        raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
+        msg = f'invalid process {type(process)}, needs to be Process or ProcessBuilder'  # type: ignore[unreachable]
+        raise ValueError(msg)
 
     process = process_class(runner=runner, inputs=inputs)
 
@@ -128,7 +129,8 @@ class InterruptableFuture(asyncio.Future):
             wait_iter = asyncio.as_completed({self, task})
             result = await next(wait_iter)
             if self.done():
-                raise RuntimeError(f"This interruptible future had it's result set unexpectedly to '{result}'")
+                msg = f"This interruptible future had it's result set unexpectedly to '{result}'"
+                raise RuntimeError(msg)
 
             return result
         finally:
@@ -309,7 +311,8 @@ def set_process_state_change_timestamp(node: ProcessNode) -> None:
         # This will only occur for testing, as in general users cannot launch plain Process classes
         return
     else:
-        raise ValueError(f'unsupported calculation node type {type(node)}')
+        msg = f'unsupported calculation node type {type(node)}'  # type: ignore[unreachable]
+        raise ValueError(msg)
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
@@ -343,7 +346,8 @@ def get_process_state_change_timestamp(process_type: str | None = None) -> datet
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
-        raise ValueError(f'invalid value for process_type, valid values are {", ".join(valid_process_types)}')
+        msg = f'invalid value for process_type, valid values are {", ".join(valid_process_types)}'
+        raise ValueError(msg)
 
     if process_type is None:
         process_types = valid_process_types

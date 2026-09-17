@@ -38,7 +38,8 @@ def load_node_class(type_string):
         return Data
 
     if not type_string.endswith('.'):
-        raise exceptions.DbContentError(f'The type string `{type_string}` is invalid')
+        msg = f'The type string `{type_string}` is invalid'
+        raise exceptions.DbContentError(msg)
 
     base_path = type_string.rsplit('.', 2)[0]
 
@@ -123,7 +124,8 @@ def is_valid_node_type_string(type_string, raise_on_false=False):
     # as well as the usual type strings like 'data.parameter.ParameterData.'
     if type_string.count('.') == 1 or not type_string.endswith('.'):
         if raise_on_false:
-            raise exceptions.DbContentError(f'The type string {type_string} is invalid')
+            msg = f'The type string {type_string} is invalid'
+            raise exceptions.DbContentError(msg)
         return False
 
     return True

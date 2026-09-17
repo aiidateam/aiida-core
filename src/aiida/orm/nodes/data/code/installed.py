@@ -128,9 +128,8 @@ class InstalledCode(Code):
             ) from exception
 
         if not file_exists:
-            raise exceptions.ValidationError(
-                f'The provided remote absolute path `{self.filepath_executable}` does not exist on the computer.'
-            )
+            msg = f'The provided remote absolute path `{self.filepath_executable}` does not exist on the computer.'
+            raise exceptions.ValidationError(msg)
 
         if not user_has_execute:
             execute_msg = (

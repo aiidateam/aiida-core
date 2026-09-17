@@ -232,11 +232,13 @@ class CollectionDumpExecutor:
                 if old_path.exists():
                     try:
                         if not old_path.is_dir():
-                            raise OSError(f'Source path {old_path} is not a directory')
+                            msg = f'Source path {old_path} is not a directory'
+                            raise OSError(msg)
 
                         # Check if new_path already exists (os.rename would fail)
                         if new_path.exists():
-                            raise OSError(f'Destination path {new_path} already exists')
+                            msg = f'Destination path {new_path} already exists'
+                            raise OSError(msg)
 
                         # Only create parent directory right before rename
                         new_path.parent.mkdir(parents=True, exist_ok=True)

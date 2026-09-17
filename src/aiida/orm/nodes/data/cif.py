@@ -135,7 +135,8 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         import CifFile
         from CifFile import CifBlock
     except ImportError as exc:
-        raise ImportError(f'{exc!s}. You need to install the PyCifRW package.')
+        msg = f'{exc!s}. You need to install the PyCifRW package.'
+        raise ImportError(msg)
 
     if loops is None:
         loops = {}
@@ -148,9 +149,8 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         pass
 
     if names and len(names) < len(datablocks):
-        raise ValueError(
-            f'Not enough names supplied for datablocks: {len(names)} (names) < {len(datablocks)} (datablocks)'
-        )
+        msg = f'Not enough names supplied for datablocks: {len(names)} (names) < {len(datablocks)} (datablocks)'
+        raise ValueError(msg)
     for i, values in enumerate(datablocks):
         name = str(i)
         if names:
@@ -169,9 +169,8 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                     if row_size is None:
                         row_size = len(tag_values)
                     elif row_size != len(tag_values):
-                        raise ValueError(
-                            f'Number of values for tag `{tag}` is different from the others in the same loop'
-                        )
+                        msg = f'Number of values for tag `{tag}` is different from the others in the same loop'
+                        raise ValueError(msg)
                     if row_size == 0:
                         continue
                     datablock.AddItem(tag, tag_values)
@@ -291,7 +290,8 @@ class CifData(SinglefileData):
 
         for left, right in CifData._SET_INCOMPATIBILITIES:
             if args[left] is not None and args[right] is not None:
-                raise ValueError(f'cannot pass {left} and {right} at the same time')
+                msg = f'cannot pass {left} and {right} at the same time'
+                raise ValueError(msg)
 
         super().__init__(file, filename=filename, **kwargs)
         self.set_scan_type(scan_type or CifData._SCAN_TYPE_DEFAULT)
@@ -550,7 +550,8 @@ class CifData(SinglefileData):
         if scan_type in CifData._SCAN_TYPES:
             self.base.attributes.set('scan_type', scan_type)
         else:
-            raise ValueError(f'Got unknown scan_type {scan_type}')
+            msg = f'Got unknown scan_type {scan_type}'
+            raise ValueError(msg)
 
     def set_parse_policy(self, parse_policy):
         """Set the parse policy.
@@ -561,7 +562,8 @@ class CifData(SinglefileData):
         if parse_policy in CifData._PARSE_POLICIES:
             self.base.attributes.set('parse_policy', parse_policy)
         else:
-            raise ValueError(f'Got unknown parse_policy {parse_policy}')
+            msg = f'Got unknown parse_policy {parse_policy}'
+            raise ValueError(msg)
 
     def get_formulae(self, mode='sum', custom_tags=None):
         """Return chemical formulae specified in CIF file.
@@ -765,7 +767,8 @@ class CifData(SinglefileData):
         try:
             convert_function = getattr(cif_tools, f'_get_aiida_structure_{converter}_inline')
         except AttributeError:
-            raise ValueError(f"No such converter '{converter}' available")
+            msg = f"No such converter '{converter}' available"
+            raise ValueError(msg)
 
         result = convert_function(cif=self, parameters=parameters, metadata={'store_provenance': store})
 
@@ -806,4 +809,5 @@ class CifData(SinglefileData):
             raise ValidationError("attribute 'md5' not set.")
         md5 = self.generate_md5()
         if attr_md5 != md5:
-            raise ValidationError(f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead.")
+            msg = f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead."
+            raise ValidationError(msg)

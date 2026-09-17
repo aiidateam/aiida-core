@@ -251,14 +251,16 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         try:
             validate_link_label(port_name)
         except ValueError as exception:
-            raise ValueError(f'invalid port name `{port_name}`: {exception}')
+            msg = f'invalid port name `{port_name}`: {exception}'
+            raise ValueError(msg)
 
         # Following regexes will match all groups of consecutive underscores where each group will be of the form
         # `('___', '_')`, where the first element is the matched group of consecutive underscores.
         consecutive_underscores = [match[0] for match in re.findall(r'((_)\2+)', port_name)]
 
         if any(len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores):
-            raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
+            msg = f'invalid port name `{port_name}`: more than two consecutive underscores'
+            raise ValueError(msg)
 
     def serialize(self, mapping: dict[str, t.Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, t.Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.
@@ -276,7 +278,8 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
         if not isinstance(mapping, Mapping):
             port_name = breadcrumbs_to_port(breadcrumbs)  # type: ignore[unreachable]
-            raise TypeError(f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary')
+            msg = f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary'
+            raise TypeError(msg)
 
         result: dict[str, t.Any] = {}
 
@@ -288,7 +291,8 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                 elif isinstance(port, InputPort):
                     result[name] = port.serialize(value)
                 else:
-                    raise AssertionError(f'port does not have a serialize method: {port}')
+                    msg = f'port does not have a serialize method: {port}'
+                    raise AssertionError(msg)
             else:
                 result[name] = value
 

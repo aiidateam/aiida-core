@@ -152,10 +152,11 @@ class WorkChain(Process):
             # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
             #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
             if type(ctx) is not AttributeDict:
-                raise ValueError(
+                msg = (
                     f'Can not update the context for key `{key}`:'
                     f' found instance of `{type(ctx)}` at `{".".join(ctx_path[: index + 1])}`, expected AttributeDict'
                 )
+                raise ValueError(msg)
 
         return ctx, ctx_path[-1]
 
@@ -175,7 +176,8 @@ class WorkChain(Process):
         elif awaitable.action == AwaitableAction.APPEND:
             ctx.setdefault(key, []).append(awaitable)
         else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
+            msg = f'Unsupported awaitable action: {awaitable.action}'
+            raise AssertionError(msg)
 
         self._awaitables.append(
             awaitable
@@ -201,9 +203,11 @@ class WorkChain(Process):
                     container[index] = value
                     break
             else:
-                raise AssertionError(f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`')
+                msg = f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`'
+                raise AssertionError(msg)
         else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
+            msg = f'Unsupported awaitable action: {awaitable.action}'
+            raise AssertionError(msg)
 
         awaitable.resolved = True
         self._awaitables.remove(awaitable)  # remove only if everything went ok, otherwise we may lose track
@@ -339,7 +343,8 @@ class WorkChain(Process):
                 callback = functools.partial(self.call_soon, self._on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
-                raise AssertionError(f"invalid awaitable target '{awaitable.target}'")
+                msg = f"invalid awaitable target '{awaitable.target}'"
+                raise AssertionError(msg)
 
     def _on_awaitable_finished(self, awaitable: Awaitable) -> None:
         """Callback function, for when an awaitable process instance is completed.
@@ -354,7 +359,8 @@ class WorkChain(Process):
         try:
             node = load_node(awaitable.pk)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
+            msg = f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance'
+            raise ValueError(msg)
 
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}

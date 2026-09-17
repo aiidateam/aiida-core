@@ -90,10 +90,12 @@ class ArrayData(Data):
                     elif isinstance(array, np.ndarray):
                         arrays[key] = array.tolist()
                     else:
-                        raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
+                        msg = f'`arrays` should be an iterable or dictionary of iterables but got: {value}'  # type: ignore[unreachable]
+                        raise TypeError(msg)
                 return arrays
             else:
-                raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
+                msg = f'`arrays` should be an iterable or dictionary of iterables but got: {value}'  # type: ignore[unreachable]
+                raise TypeError(msg)
 
     array_prefix = 'array|'
     default_array_name = 'default'
@@ -112,7 +114,8 @@ class ArrayData(Data):
             arrays = {self.default_array_name: arrays}
 
         if not isinstance(arrays, dict) or any(not isinstance(a, (Sequence, np.ndarray)) for a in arrays.values()):
-            raise TypeError(f'`arrays` should be a single sequence or dictionary of sequences but got: {arrays}')
+            msg = f'`arrays` should be a single sequence or dictionary of sequences but got: {arrays}'
+            raise TypeError(msg)
 
         for key, value in arrays.items():
             self.set_array(key, np.asarray(value))
@@ -181,7 +184,8 @@ class ArrayData(Data):
         """
         fname = f'{name}.npy'
         if fname not in self.base.repository.list_object_names():
-            raise KeyError(f"Array with name '{name}' not found in node pk= {self.pk}")
+            msg = f"Array with name '{name}' not found in node pk= {self.pk}"
+            raise KeyError(msg)
 
         # remove both file and attribute
         self.base.repository.delete_object(fname)
@@ -245,7 +249,8 @@ class ArrayData(Data):
             filename = f'{name}.npy'
 
             if filename not in self.base.repository.list_object_names():
-                raise KeyError(f'Array with name `{name}` not found in ArrayData<{self.pk}>')
+                msg = f'Array with name `{name}` not found in ArrayData<{self.pk}>'
+                raise KeyError(msg)
 
             # Open a handle in binary read mode as the arrays are written as binary files as well
             with self.base.repository.open(filename, mode='rb') as handle:
@@ -302,7 +307,8 @@ class ArrayData(Data):
 
     def attach_file(self, name: str, fileobj: t.BinaryIO) -> None:
         if not name.lower().endswith('.npy'):
-            raise ValueError(f'expected .npy file: {name}')
+            msg = f'expected .npy file: {name}'
+            raise ValueError(msg)
         base = name.removesuffix('.npy')
         array = np.load(fileobj, allow_pickle=False)
         self.set_array(base, array)
@@ -316,10 +322,11 @@ class ArrayData(Data):
         import re
 
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
-            raise ValueError(
+            msg = (
                 f'The name assigned to the array ({name}) is not valid. '
                 'It can only contain digits, letters and underscores'
             )
+            raise ValueError(msg)
 
     def _validate(self) -> bool:
         """Check if the list of .npy files stored inside the node and the
@@ -333,9 +340,8 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            raise ValidationError(
-                f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
-            )
+            msg = f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
+            raise ValidationError(msg)
         return super()._validate()
 
     def _get_array_entries(self) -> dict[str, t.Any]:

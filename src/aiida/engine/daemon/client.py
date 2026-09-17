@@ -488,7 +488,8 @@ class DaemonClient:
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint(self.get_circus_port())
         else:
-            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
+            msg = f'invalid controller protocol {self._ENDPOINT_PROTOCOL}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         return endpoint
 
@@ -505,7 +506,8 @@ class DaemonClient:
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
-            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
+            msg = f'invalid controller protocol {self._ENDPOINT_PROTOCOL}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         return endpoint
 
@@ -522,7 +524,8 @@ class DaemonClient:
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
-            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
+            msg = f'invalid controller protocol {self._ENDPOINT_PROTOCOL}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         return endpoint
 
@@ -803,7 +806,8 @@ class DaemonClient:
             subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exception:
             # CalledProcessError is not passing the subprocess stderr in its message so we add it in DaemonException
-            raise DaemonException(f'The daemon failed to start with error:\n{exception.stdout.decode()}') from exception
+            msg = f'The daemon failed to start with error:\n{exception.stdout.decode()}'
+            raise DaemonException(msg) from exception
 
         if not wait:
             self._write_version_file()
@@ -915,17 +919,17 @@ class DaemonClient:
             # The circus daemon process can appear as ``start-circus`` or ``circusd``. See this issue comment for
             # details: https://github.com/aiidateam/aiida-core/issues/5336#issuecomment-1376093322
             if not any(cmd in process.cmdline() for cmd in ['start-circus', 'circusd']):
-                raise DaemonException(
+                msg = (
                     f'process command `{process.cmdline()}` of PID `{pid}` does not match expected AiiDA daemon command'
                 )
+                raise DaemonException(msg)
 
             process_user = process.username()
             current_user = psutil.Process().username()
 
             if process_user != current_user:
-                raise DaemonException(
-                    f'process user `{process_user}` of PID `{pid}` does not match current user `{current_user}`'
-                )
+                msg = f'process user `{process_user}` of PID `{pid}` does not match current user `{current_user}`'
+                raise DaemonException(msg)
 
         except (psutil.AccessDenied, psutil.NoSuchProcess, DaemonException) as exception:
             raise DaemonException(exception) from exception

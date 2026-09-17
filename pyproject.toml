@@ -530,6 +530,7 @@ select = [
   'PLW',  # pylint-warning
   'RUF',  # ruff
   'FLY',  # flynt
+  'EM102',  # flake8-errmsg
   'NPY201',  # numpy compatibility
   'TID'  # flake8-tidy-imports
 ]

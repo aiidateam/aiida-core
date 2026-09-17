@@ -112,7 +112,8 @@ class XyData(ArrayData):
                 return value
             if isinstance(value, np.ndarray):
                 return value.tolist()
-            raise TypeError(f'`x_array` should be an iterable but got: {value}')
+            msg = f'`x_array` should be an iterable but got: {value}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         @field_validator('y_arrays', mode='before')
         @classmethod
@@ -126,7 +127,8 @@ class XyData(ArrayData):
                 return value.tolist()
             if isinstance(value, Sequence):
                 return value
-            raise TypeError(f'`y_arrays` should be an iterable but got: {value}')
+            msg = f'`y_arrays` should be an iterable but got: {value}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
     def __init__(
         self,
@@ -242,7 +244,8 @@ class XyData(ArrayData):
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise ValueError(f'y_array {y_name} does not have the same shape as x_array!')
+                msg = f'y_array {y_name} does not have the same shape as x_array!'
+                raise ValueError(msg)
             self.set_array(f'y_array_{num}', y_array)
 
         # if the y_arrays pass the initial validation, sets each
@@ -285,5 +288,6 @@ class XyData(ArrayData):
             for i in range(len(y_names)):
                 y_arrays += [self.get_array(f'y_array_{i}')]
         except (KeyError, AttributeError):
-            raise NotExistent(f'Could not retrieve array associated with y array {y_names[i]}')
+            msg = f'Could not retrieve array associated with y array {y_names[i]}'
+            raise NotExistent(msg)
         return list(zip(y_names, y_arrays, y_units))

@@ -98,10 +98,12 @@ class PortableCode(Code):
 
             filepath_files_path = pathlib.Path(filepath_files)
             if not filepath_files_path.exists():
-                raise ValueError(f'The filepath `{filepath_files}` does not exist.')
+                msg = f'The filepath `{filepath_files}` does not exist.'
+                raise ValueError(msg)
 
             if not filepath_files_path.is_dir():
-                raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
+                msg = f'The filepath `{filepath_files}` is not a directory.'
+                raise ValueError(msg)
 
             self.base.repository.put_object_from_tree(str(filepath_files))
         else:
@@ -134,9 +136,8 @@ class PortableCode(Code):
                 # since the file could be in a subdirectory
                 pass
         except FileNotFoundError:
-            raise exceptions.ValidationError(
-                f'The executable `{filepath_executable}` is not one of the uploaded files in the node repository.'
-            )
+            msg = f'The executable `{filepath_executable}` is not one of the uploaded files in the node repository.'
+            raise exceptions.ValidationError(msg)
 
     def can_run_on_computer(self, computer: Computer) -> bool:
         """Return whether the code can run on a given computer.
@@ -169,9 +170,8 @@ class PortableCode(Code):
             executable for this portable code.
         """
         if str(self.filepath_executable) in folder.get_content_list():
-            raise exceptions.PluginInternalError(
-                f'The plugin created a file {self.filepath_executable} that is also the executable name!'
-            )
+            msg = f'The plugin created a file {self.filepath_executable} that is also the executable name!'
+            raise exceptions.PluginInternalError(msg)
 
     @property
     def full_label(self) -> str:

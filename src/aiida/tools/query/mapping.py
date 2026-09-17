@@ -149,21 +149,24 @@ class CalculationProjectionMapper(ProjectionMapper):
         if projection_labels is not None:
             for projection, label in projection_labels.items():
                 if projection not in self.valid_projections:
-                    raise ValueError(f'{projection} is not a valid projection')
+                    msg = f'{projection} is not a valid projection'
+                    raise ValueError(msg)
                 else:
                     default_labels[projection] = label
 
         if projection_attributes is not None:
             for projection, attribute in projection_attributes.items():
                 if projection not in self.valid_projections:
-                    raise ValueError(f'{projection} is not a valid projection')
+                    msg = f'{projection} is not a valid projection'
+                    raise ValueError(msg)
                 else:
                     default_attributes[projection] = attribute
 
         if projection_formatters is not None:
             for projection, formatter in projection_formatters.items():
                 if projection not in self.valid_projections:
-                    raise ValueError(f'{projection} is not a valid projection')
+                    msg = f'{projection} is not a valid projection'
+                    raise ValueError(msg)
                 else:
                     default_formatters[projection] = formatter
 

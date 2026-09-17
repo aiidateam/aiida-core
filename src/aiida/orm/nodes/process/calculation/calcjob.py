@@ -262,7 +262,8 @@ class CalcJobNode(CalculationNode):
         :raise: ValueError if state is invalid
         """
         if not isinstance(state, CalcJobState):
-            raise ValueError(f'{state} is not a valid CalcJobState')
+            msg = f'{state} is not a valid CalcJobState'
+            raise ValueError(msg)
 
         self.base.attributes.set(self.CALC_JOB_STATE_KEY, state.value)
 
@@ -304,7 +305,8 @@ class CalcJobNode(CalculationNode):
 
             # Otherwise, it has to be a tuple of length three with specific requirements
             if not isinstance(directive, (tuple, list)) or len(directive) != 3:
-                raise ValueError(f'invalid directive, not a list or tuple of length three: {directive}')
+                msg = f'invalid directive, not a list or tuple of length three: {directive}'
+                raise ValueError(msg)
 
             if not isinstance(directive[0], str):
                 raise ValueError('invalid directive, first element has to be a string representing remote path')
@@ -376,7 +378,8 @@ class CalcJobNode(CalculationNode):
         from aiida.schedulers.datastructures import JobState
 
         if not isinstance(state, JobState):
-            raise ValueError(f'scheduler state should be an instance of JobState, got: {state}')
+            msg = f'scheduler state should be an instance of JobState, got: {state}'
+            raise ValueError(msg)
 
         self.base.attributes.set(self.SCHEDULER_STATE_KEY, state.value)
         self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.now().isoformat())

@@ -69,7 +69,8 @@ class IdentifierParamType(click.ParamType, ABC):
             try:
                 entry_point = get_entry_point_from_string(entry_point_string)
             except (ValueError, exceptions.EntryPointError) as exception:
-                raise ValueError(f'{entry_point_string} is not a valid entry point string: {exception}')
+                msg = f'{entry_point_string} is not a valid entry point string: {exception}'
+                raise ValueError(msg)
             else:
                 entry_points.append(entry_point)
         return entry_points
@@ -116,13 +117,15 @@ class IdentifierParamType(click.ParamType, ABC):
                 try:
                     sub_class = entry_point.load()  # type: ignore[no-untyped-call]
                 except ImportError as exception:
-                    raise RuntimeError(f'failed to load the entry point {entry_point}: {exception}')
+                    msg = f'failed to load the entry point {entry_point}: {exception}'
+                    raise RuntimeError(msg)
 
                 if not issubclass(sub_class, loader.orm_base_class):
-                    raise RuntimeError(
+                    msg = (
                         f'the class {sub_class} of entry point {entry_point} '
                         f'is not a sub class of {loader.orm_base_class}'
                     )
+                    raise RuntimeError(msg)
                 else:
                     sub_classes.append(sub_class)
 

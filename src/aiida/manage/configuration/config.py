@@ -421,7 +421,8 @@ class Config:
         try:
             ConfigSchema(**config)
         except ValidationError as exception:
-            raise ConfigurationError(f'invalid config schema: {filepath}: {exception!s}')
+            msg = f'invalid config schema: {filepath}: {exception!s}'
+            raise ConfigurationError(msg)
 
     def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
@@ -573,7 +574,8 @@ class Config:
         from aiida.common import exceptions
 
         if name not in self.profile_names:
-            raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
+            msg = f'profile `{name}` does not exist'
+            raise exceptions.ProfileConfigurationError(msg)
 
     def get_profile(self, name: str | None = None) -> Profile:
         """Return the profile for the given name or the default one if not specified.
@@ -584,9 +586,8 @@ class Config:
         from aiida.common import exceptions
 
         if not name and not self.default_profile_name:
-            raise exceptions.ProfileConfigurationError(
-                f'no default profile defined: {self._default_profile}\n{self.dictionary}'
-            )
+            msg = f'no default profile defined: {self._default_profile}\n{self.dictionary}'
+            raise exceptions.ProfileConfigurationError(msg)
 
         if not name:
             name = self.default_profile_name
@@ -625,18 +626,21 @@ class Config:
         from aiida.plugins.entry_point import load_entry_point
 
         if name in self.profile_names:
-            raise ValueError(f'The profile `{name}` already exists.')
+            msg = f'The profile `{name}` already exists.'
+            raise ValueError(msg)
 
         try:
             storage_cls = load_entry_point('aiida.storage', storage_backend)
         except EntryPointError as exception:
-            raise ValueError(f'The entry point `{storage_backend}` could not be loaded.') from exception
+            msg = f'The entry point `{storage_backend}` could not be loaded.'
+            raise ValueError(msg) from exception
         else:
             if not issubclass(storage_cls, StorageBackend):
-                raise TypeError(
+                msg = (
                     f'The `storage_backend={storage_backend}` is not a subclass of '
                     '`aiida.orm.implementation.storage_backend.StorageBackend`.'
                 )
+                raise TypeError(msg)
 
         storage_config = storage_cls.CliModel(**(storage_config or {})).model_dump()
 
@@ -644,12 +648,12 @@ class Config:
             try:
                 broker_cls = load_entry_point('aiida.brokers', broker_backend)
             except EntryPointError as exception:
-                raise ValueError(f'The entry point `{broker_backend}` could not be loaded.') from exception
+                msg = f'The entry point `{broker_backend}` could not be loaded.'
+                raise ValueError(msg) from exception
             else:
                 if not issubclass(broker_cls, Broker):
-                    raise TypeError(
-                        f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
-                    )
+                    msg = f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
+                    raise TypeError(msg)
 
         profile = Profile(
             name,
@@ -670,9 +674,10 @@ class Config:
         try:
             profile.storage_cls.initialise(profile)
         except Exception as exception:
-            raise StorageMigrationError(
+            msg = (
                 f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
             )
+            raise StorageMigrationError(msg)
         LOGGER.report('Storage initialisation completed.')
 
         self.add_profile(profile)

@@ -17,7 +17,8 @@ class OqmdDbImporter(DbImporter):
     def _str_clause(self, key, alias, values):
         """Returns part of HTTP GET query for querying string fields."""
         if not isinstance(values, str) and not isinstance(values, int):
-            raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
+            msg = f"incorrect value for keyword '{alias}' -- only strings and integers are accepted"
+            raise ValueError(msg)
         return f'{key}={values}'
 
     _keywords = {'element': ['element', None]}
@@ -70,7 +71,8 @@ class OqmdDbImporter(DbImporter):
             self._query_url = query_url
 
         if kwargs:
-            raise NotImplementedError(f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}')
+            msg = f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}'
+            raise NotImplementedError(msg)
 
     def get_supported_keywords(self):
         """Returns the list of all supported query keywords.

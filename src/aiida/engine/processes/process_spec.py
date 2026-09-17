@@ -20,12 +20,32 @@ from aiida.engine.processes.ports import (
     CalcJobOutputPort,
     InputPort,
     PortNamespace,
+    as_written,
     infer_valid_type_from_type_annotation,
     serializer_for,
 )
 from aiida.orm import Data, Dict, JsonableData, to_aiida_type
 
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
+
+
+def _against(container: type) -> t.Callable[[t.Any, t.Any], str | None]:
+    """Return what checks a namespace against the container that named it.
+
+    The ports check that each value is of the type the field declared. Whatever else the container says, a
+    pydantic `Field` constraint or a validator of its own, it says while being built, so building one here is
+    what refuses a run where it is submitted rather than where the task starts.
+    """
+
+    def validate(value: t.Any, port: t.Any) -> str | None:
+        try:
+            as_written(container, value)
+        except Exception as exception:
+            return f'these do not make a `{getattr(container, "__name__", container)}`: {exception}'
+
+        return None
+
+    return validate
 
 
 def _as_a_port(field: Field) -> dict[str, t.Any]:
@@ -141,6 +161,7 @@ class ProcessSpec(spec.ProcessSpec):
                 f'to declare `{name}` from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
             )
 
+        kwargs.setdefault('validator', _against(container))
         self.input_namespace(name, **kwargs)
 
         for field in fields:

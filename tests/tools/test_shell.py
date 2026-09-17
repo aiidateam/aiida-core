@@ -342,7 +342,8 @@ def test_parser_non_stdout():
 
         from aiida.orm import Dict
 
-        return {'json': Dict(json.load((dirpath / filename).open()))}
+        with (dirpath / filename).open() as handle:
+            return {'json': Dict(json.load(handle))}
 
     dictionary = {'a': 1}
     results, node = launch_shell_job(

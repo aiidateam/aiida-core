@@ -4,6 +4,8 @@
 
 ### Breaking changes
 
+Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.
+
 Process checkpoints created with earlier releases cannot be continued after upgrading because process state classes are now provided in-tree instead of by `plumpy`.
 Finish or terminate all active processes before upgrading.
 The `logging.plumpy_loglevel` configuration option is removed because the Plumpy implementation is now part of aiida-core.

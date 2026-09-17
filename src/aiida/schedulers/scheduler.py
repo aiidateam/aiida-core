@@ -14,11 +14,10 @@ import abc
 import typing as t
 
 from aiida.common import exceptions, log, warnings
-from aiida.common.datastructures import CodeRunMode
+from aiida.common.datastructures import CodeRunMode, JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.schedulers.datastructures import JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
 
 if t.TYPE_CHECKING:
     from aiida.transports import Transport

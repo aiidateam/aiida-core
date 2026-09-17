@@ -381,7 +381,7 @@ def test_preexisting_localhost_no_default_mpiprocs_per_machine(
 
     If the ``localhost`` is created before ``prepare_computer`` is ever called, it is possible that the property
     ``default_mpiprocs_per_machine`` is not set. This would result the ``ShellJob`` validation to fail if the scheduler
-    type has a job resource class that is a subclass of :class:`~aiida.schedulers.datastructures.NodeNumberJobResource`.
+    type has a job resource class that is a subclass of :class:`~aiida.common.datastructures.NodeNumberJobResource`.
     """
     computer = aiida_computer(label='localhost', scheduler_type=scheduler_type)
 

@@ -20,11 +20,11 @@ import typing as t
 from typing_extensions import override
 
 import aiida.schedulers
+from aiida.common.datastructures import JobInfo, JobResource, JobState, JobTemplate
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import ConfigurationError, FeatureNotAvailable
 from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobResource, JobState, JobTemplate
 from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:

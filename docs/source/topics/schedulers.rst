@@ -98,7 +98,7 @@ Unsurprisingly, different schedulers have different ways of specifying the resou
 In AiiDA, these differences are accounted for by subclasses of the |JobResource|  class.
 The previous section lists which subclass to use with a given scheduler.
 
-All subclasses define at least the :py:meth:`~aiida.schedulers.datastructures.JobResource.get_tot_num_mpiprocs` method that returns the total number of MPI processes requested but otherwise have slightly different interfaces described in the following.
+All subclasses define at least the :py:meth:`~aiida.common.datastructures.JobResource.get_tot_num_mpiprocs` method that returns the total number of MPI processes requested but otherwise have slightly different interfaces described in the following.
 
 .. note::
 
@@ -106,7 +106,7 @@ All subclasses define at least the :py:meth:`~aiida.schedulers.datastructures.Jo
 
     .. code-block:: python
 
-        from aiida.schedulers.datastructures import NodeNumberJobResource
+        from aiida.common.datastructures import NodeNumberJobResource
 
     In practice, however, the appropriate class will be inferred from scheduler configured for the relevant AiiDA computer, and you can simply set the relevant fields in the ``metadata.options`` input dictionary of the |CalcJob|.
 
@@ -185,7 +185,7 @@ The ``num_cores_per_machine`` and ``num_cores_per_mpiproc`` fields are optional 
 ParEnvJobResource (SGE-like)
 ............................
 
-The :py:class:`~aiida.schedulers.datastructures.ParEnvJobResource` class is used for specifying the resources of SGE and similar schedulers, which require specifying a *parallel environment* and the *total number of CPUs* requested.
+The :py:class:`~aiida.common.datastructures.ParEnvJobResource` class is used for specifying the resources of SGE and similar schedulers, which require specifying a *parallel environment* and the *total number of CPUs* requested.
 
 The class has the following attributes:
 
@@ -234,9 +234,9 @@ To get you started, you can download :download:`this template <include/scheduler
 #. ``parse_output``: parse the output of the scheduler.
 
 All these methods *have* to be implemented, except for ``_get_detailed_job_info_command`` and ``parse_output``, which are optional.
-In addition to these methods, the ``_job_resource_class`` class attribute needs to be set to a subclass :class:`~aiida.schedulers.datastructures.JobResource`.
-For schedulers that work like SLURM, Torque and PBS, one can most likely simply reuse the :class:`~aiida.schedulers.datastructures.NodeNumberJobResource` class, that ships with ``aiida-core``.
-Schedulers that work like LSF and SGE, may be able to reuse :class:`~aiida.schedulers.datastructures.ParEnvJobResource` instead.
+In addition to these methods, the ``_job_resource_class`` class attribute needs to be set to a subclass :class:`~aiida.common.datastructures.JobResource`.
+For schedulers that work like SLURM, Torque and PBS, one can most likely simply reuse the :class:`~aiida.common.datastructures.NodeNumberJobResource` class, that ships with ``aiida-core``.
+Schedulers that work like LSF and SGE, may be able to reuse :class:`~aiida.common.datastructures.ParEnvJobResource` instead.
 If neither of these work, one can implement a custom subclass, a template for which, the class called ``TemplateJobResource``, is already included in the template file.
 
 
@@ -246,6 +246,6 @@ If neither of these work, one can implement a custom subclass, a template for wh
     Refer to :ref:`the section on how to register plugins <how-to:plugins-develop:entrypoints>` for instructions.
 
 
-.. |NodeNumberJobResource| replace:: :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`
-.. |JobResource| replace:: :py:class:`~aiida.schedulers.datastructures.JobResource`
+.. |NodeNumberJobResource| replace:: :py:class:`~aiida.common.datastructures.NodeNumberJobResource`
+.. |JobResource| replace:: :py:class:`~aiida.common.datastructures.JobResource`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`

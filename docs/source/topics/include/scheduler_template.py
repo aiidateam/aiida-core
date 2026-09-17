@@ -3,8 +3,8 @@
 import logging
 
 from aiida.common import exceptions
+from aiida.common.datastructures import JobResource, JobState
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import JobResource, JobState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class TemplateScheduler(Scheduler):
         'can_query_by_user': False,
     }
 
-    # Class to be used for job resources, Should be a subclass of :class:`~aiida.schedulers.datastructures.JobResource`
+    # Class to be used for job resources, Should be a subclass of :class:`~aiida.common.datastructures.JobResource`
     _job_resource_class = JobResource
 
     _map_status = _MAP_SCHEDULER_AIIDA_STATUS

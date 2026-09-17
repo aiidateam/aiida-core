@@ -11,11 +11,11 @@
 
 from __future__ import annotations
 
+import typing as t
 import uuid
 import warnings
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import and_, not_, or_
 from sqlalchemy import func as sa_func
@@ -34,7 +34,7 @@ from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQuer
 from aiida.storage.psql_dos.orm.querybuilder.joiner import JoinReturn, SqlaJoiner
 from aiida.storage.utils import _create_smarter_in_clause
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from sqlalchemy.orm.query import Query
@@ -197,7 +197,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             result = build.query.count()
         return result
 
-    def first(self, data: QueryDictType) -> list[Any] | None:
+    def first(self, data: QueryDictType) -> list[t.Any] | None:
         with self.query_session(data) as build:
             result = build.query.first()
 
@@ -211,7 +211,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         return [self.to_backend(r) for r in result]
 
-    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[Any]]:
+    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[t.Any]]:
         """Return an iterator over all the results of a list of lists."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -224,7 +224,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 for resultrow in session.execute(stmt):
                     yield [self.to_backend(rowitem) for rowitem in resultrow]
 
-    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, Any]]]:
+    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, t.Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -236,7 +236,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             with nullcontext() if session.in_nested_transaction() else self._backend.transaction():
                 for row in self.get_session().execute(stmt):
                     # build the yield result
-                    yield_result: dict[str, dict[str, Any]] = {}
+                    yield_result: dict[str, dict[str, t.Any]] = {}
                     for (
                         tag,
                         projected_entities_dict,
@@ -413,7 +413,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f'Unknown casting key {cast}')
         return entity
 
-    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, Any]) -> ColumnElement[bool] | None:
+    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, t.Any]) -> ColumnElement[bool] | None:
         """Recurse through the filter specification and apply filter operations.
 
         :param alias: The alias of the ORM class the filter will be applied on
@@ -421,7 +421,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         :returns: an sqlalchemy expression.
         """
-        expressions: list[Any] = []
+        expressions: list[t.Any] = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in ('and', 'or', '~or', '~and', '!and', '!or'):
                 subexpressions = []
@@ -470,13 +470,13 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def get_filter_expr(
         self,
         operator: str,
-        value: Any,
+        value: t.Any,
         attr_key: list[str],
         is_jsonb: bool,
         alias: AliasedClass | None = None,
         column: InstrumentedAttribute | None = None,
         column_name: str | None = None,
-    ) -> Any:
+    ) -> t.Any:
         """Applies a filter on the alias given.
 
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -550,7 +550,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 }
             } # id is not 2
         """
-        expr: Any = None
+        expr: t.Any = None
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
@@ -619,12 +619,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def get_filter_expr_from_jsonb(
         self,
         operator: str,
-        value: Any,
+        value: t.Any,
         attr_key: list[str],
         column: InstrumentedAttribute | None = None,
         column_name: str | None = None,
         alias: AliasedClass | None = None,
-    ) -> Any:
+    ) -> t.Any:
         """Return a filter expression"""
 
         def cast_according_to_type(path_in_json, value):
@@ -657,7 +657,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             column = get_column(column_name, alias)
 
         database_entity = column[tuple(attr_key)]
-        expr: Any
+        expr: t.Any
         if operator == '==':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = case((type_filter, casted_entity == value), else_=False)
@@ -737,7 +737,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f'Unknown operator {operator} for filters in JSON field')
         return expr
 
-    def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
+    def get_filter_expr_from_column(self, operator: str, value: t.Any, column) -> BinaryExpression:
         """A method that returns an valid SQLAlchemy expression.
 
         :param operator: The operator provided by the user ('==',  '>', ...)
@@ -778,7 +778,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
 
-    def to_backend(self, res) -> Any:
+    def to_backend(self, res) -> t.Any:
         """Convert results to return backend specific objects.
 
         - convert `DbModel` instances to `BackendEntity` instances.
@@ -815,9 +815,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         rows = self.get_session().execute(text(f'EXPLAIN{options} {compiled.string}')).fetchall()
         return '\n'.join(row[0] for row in rows)
 
-    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, Any]:
+    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, t.Any]:
         session = self.get_session()
-        retdict: dict[Any, Any] = {}
+        retdict: dict[t.Any, t.Any] = {}
 
         total_query = session.query(self.Node)
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))
@@ -1153,7 +1153,7 @@ def _get_projection(
     get_projectable_entity,
     cast: str | None = None,
     func: str | None = None,
-    **_kw: Any,
+    **_kw: t.Any,
 ) -> tuple[AliasedClass | ColumnElement, bool]:
     """:param alias: An alias for an ormclass
     :param projectable_entity_name:

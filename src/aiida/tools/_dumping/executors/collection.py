@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import os
+import typing as t
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import click
 
@@ -23,7 +23,7 @@ from aiida.tools._dumping.detect import DumpChangeDetector
 from aiida.tools._dumping.tracking import DumpRecord, DumpTracker
 from aiida.tools._dumping.utils import DUMP_PROGRESS_BAR_FORMAT, DumpChanges, DumpPaths, ProcessingQueue
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools._dumping.config import GroupDumpConfig, ProfileDumpConfig
     from aiida.tools._dumping.executors.process import ProcessDumpExecutor
     from aiida.tools._dumping.mapping import GroupNodeMapping

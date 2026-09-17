@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     import asyncio
 
     from aiida.brokers.broker import Broker
@@ -256,7 +256,7 @@ class Manager:
         """
         return self._profile_storage is not None
 
-    def get_option(self, option_name: str) -> Any:
+    def get_option(self, option_name: str) -> t.Any:
         """Return the value of a configuration option.
 
         In order of priority, the option is returned from:
@@ -450,7 +450,7 @@ class Manager:
 
         self._runner = new_runner
 
-    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> Runner:
+    def create_runner(self, with_persistence: bool = True, **kwargs: t.Any) -> Runner:
         """Create and return a new runner
 
         :param with_persistence: create a runner with persistence enabled

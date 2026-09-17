@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import typing as t
-from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -131,7 +130,7 @@ class NodeLinks:
         from aiida.orm.nodes.node import Node
 
         if not isinstance(link_type, (tuple, list)):
-            link_type = cast(t.Sequence[LinkType], (link_type,))
+            link_type = t.cast(t.Sequence[LinkType], (link_type,))
 
         if link_type and not all(isinstance(t, LinkType) for t in link_type):
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
@@ -187,7 +186,7 @@ class NodeLinks:
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
         if not isinstance(link_type, (tuple, list)):
-            link_type = cast(t.Sequence[LinkType], (link_type,))
+            link_type = t.cast(t.Sequence[LinkType], (link_type,))
 
         if self._node.is_stored:
             link_triples = self.get_stored_link_triples(

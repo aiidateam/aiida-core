@@ -8,9 +8,9 @@
 ###########################################################################
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
 
+import typing as t
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
@@ -235,13 +235,13 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     def attributes(self):
         return self.model.attributes
 
-    def get_attribute(self, key: str) -> Any:
+    def get_attribute(self, key: str) -> t.Any:
         try:
             return self.model.attributes[key]
         except KeyError as exception:
             raise AttributeError(f'attribute `{exception}` does not exist') from exception
 
-    def set_attribute(self, key: str, value: Any) -> None:
+    def set_attribute(self, key: str, value: t.Any) -> None:
         validate_attribute_extra_key(key)
 
         if self.is_stored:
@@ -250,7 +250,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         self.model.attributes[key] = value
         self._flush_if_stored({'attributes'})
 
-    def set_attribute_many(self, attributes: dict[str, Any]) -> None:
+    def set_attribute_many(self, attributes: dict[str, t.Any]) -> None:
         for key in attributes:
             validate_attribute_extra_key(key)
 
@@ -263,7 +263,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             self.bare_model.attributes[key] = value
         self._flush_if_stored({'attributes'})
 
-    def reset_attributes(self, attributes: dict[str, Any]) -> None:
+    def reset_attributes(self, attributes: dict[str, t.Any]) -> None:
         for key in attributes:
             validate_attribute_extra_key(key)
 
@@ -296,7 +296,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         self.model.attributes = {}
         self._flush_if_stored({'attributes'})
 
-    def attributes_items(self) -> Iterable[tuple[str, Any]]:
+    def attributes_items(self) -> Iterable[tuple[str, t.Any]]:
         yield from self.model.attributes.items()
 
     def attributes_keys(self) -> Iterable[str]:

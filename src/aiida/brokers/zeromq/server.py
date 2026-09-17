@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import logging
 import time
+import typing as t
 from collections import deque
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 import zmq
 
@@ -103,7 +103,7 @@ class ZeromqBrokerServer:
         self._running = False
 
         # Message type -> handler mapping (built once, not per message)
-        self._handlers: dict[str, Callable[[bytes, dict[str, Any]], None]] = {
+        self._handlers: dict[str, Callable[[bytes, dict[str, t.Any]], None]] = {
             MessageType.TASK.value: self._handle_task,
             MessageType.TASK_RESPONSE.value: self._handle_task_response,
             MessageType.TASK_ACK.value: self._handle_task_ack,
@@ -285,7 +285,7 @@ class ZeromqBrokerServer:
         except Exception as exc:
             _LOGGER.exception('Error handling router message: %s', exc)
 
-    def _handle_task(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_task(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle incoming task message.
 
         Queue the task and try to dispatch to an available worker.
@@ -326,7 +326,7 @@ class ZeromqBrokerServer:
         # Try to dispatch immediately
         self._dispatch_pending_tasks()
 
-    def _handle_task_response(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_task_response(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle task response from worker.
 
         Since the broker already sends an immediate acknowledgment when a task
@@ -335,7 +335,7 @@ class ZeromqBrokerServer:
         task_id = msg.get('task_id', '?')
         _LOGGER.debug('Received task response for %s (discarded — sender already acknowledged)', task_id)
 
-    def _handle_task_ack(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_task_ack(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle task acknowledgment from worker."""
         task_id = msg.get('task_id')
         if task_id:
@@ -355,7 +355,7 @@ class ZeromqBrokerServer:
         # Worker has freed a slot and is available for more tasks
         self._mark_worker_available(identity)
 
-    def _handle_task_nack(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_task_nack(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle task negative acknowledgment from worker."""
         task_id = msg.get('task_id')
         if task_id:
@@ -375,7 +375,7 @@ class ZeromqBrokerServer:
         # Worker has freed a slot and is available for more tasks
         self._mark_worker_available(identity)
 
-    def _handle_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_rpc(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle RPC message.
 
         Route to the specified recipient.
@@ -409,7 +409,7 @@ class ZeromqBrokerServer:
             self._send_rpc_error(identity, rpc_id, f'Recipient not found: {recipient}')
             return
 
-    def _handle_rpc_response(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_rpc_response(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle RPC response.
 
         Route back to original caller.
@@ -430,7 +430,7 @@ class ZeromqBrokerServer:
         # Forward response to original sender
         self._send_to_client(original_sender, msg)
 
-    def _handle_broadcast(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_broadcast(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle broadcast message.
 
         Forward to all connected clients via ROUTER socket.
@@ -447,7 +447,7 @@ class ZeromqBrokerServer:
 
         _LOGGER.debug('Broadcast sent to %d clients: %s', len(client_identities), msg.get('subject', 'no subject'))
 
-    def _handle_subscribe_task(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_subscribe_task(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle task subscriber registration."""
         identifier = msg.get('identifier') or msg.get('sender')
         if not identifier:
@@ -465,7 +465,7 @@ class ZeromqBrokerServer:
         # Try to dispatch any pending tasks
         self._dispatch_pending_tasks()
 
-    def _handle_subscribe_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_subscribe_rpc(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle RPC subscriber registration."""
         identifier = msg.get('identifier') or msg.get('sender')
         if not identifier:
@@ -475,7 +475,7 @@ class ZeromqBrokerServer:
         self._rpc_subscribers[identifier] = identity
         _LOGGER.info('RPC subscriber registered: %s', identifier)
 
-    def _handle_unsubscribe_task(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_unsubscribe_task(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle task subscriber removal."""
         identifier = msg.get('identifier') or msg.get('sender')
         if identifier and identifier in self._task_subscribers:
@@ -485,7 +485,7 @@ class ZeromqBrokerServer:
                 self._worker_prefetch.pop(worker_identity, None)
             _LOGGER.info('Task subscriber removed: %s', identifier)
 
-    def _handle_unsubscribe_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _handle_unsubscribe_rpc(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Handle RPC subscriber removal."""
         identifier = msg.get('identifier') or msg.get('sender')
         if identifier and identifier in self._rpc_subscribers:
@@ -648,7 +648,7 @@ class ZeromqBrokerServer:
         if identity not in self._available_workers:
             self._available_workers.append(identity)
 
-    def _send_to_client(self, identity: bytes, msg: dict[str, Any]) -> None:
+    def _send_to_client(self, identity: bytes, msg: dict[str, t.Any]) -> None:
         """Send a message to a specific client.
 
         :raises zmq.ZMQError: If the client is disconnected (ROUTER_MANDATORY).
@@ -670,7 +670,7 @@ class ZeromqBrokerServer:
 
     # === Status and monitoring ===
 
-    def get_status(self) -> dict[str, Any]:
+    def get_status(self) -> dict[str, t.Any]:
         """Get current broker status."""
         return {
             'running': self._running,
@@ -683,10 +683,10 @@ class ZeromqBrokerServer:
             'pending_rpc_responses': len(self._pending_rpc_responses),
         }
 
-    def get_pending_tasks(self) -> list[tuple[str, dict[str, Any]]]:
+    def get_pending_tasks(self) -> list[tuple[str, dict[str, t.Any]]]:
         """Get all pending tasks."""
         return self._task_queue.get_all_pending()
 
-    def get_processing_tasks(self) -> list[tuple[str, dict[str, Any]]]:
+    def get_processing_tasks(self) -> list[tuple[str, dict[str, t.Any]]]:
         """Get all tasks currently being processed."""
         return self._task_queue.get_all_processing()

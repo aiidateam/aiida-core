@@ -13,8 +13,8 @@ from __future__ import annotations
 import os
 import pathlib
 import sys
+import typing as t
 import warnings
-from typing import final
 
 DEFAULT_UMASK = 0o0077
 DEFAULT_AIIDA_PATH_VARIABLE = 'AIIDA_PATH'
@@ -32,7 +32,7 @@ DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 __all__ = ('AiiDAConfigDir', 'AiiDAConfigPathResolver')
 
 
-@final
+@t.final
 class AiiDAConfigDir:
     """Singleton for setting and getting the path to configuration directory."""
 
@@ -60,7 +60,7 @@ class AiiDAConfigDir:
         _create_instance_directories(cls._glb_aiida_config_folder)
 
 
-@final
+@t.final
 class AiiDAConfigPathResolver:
     """For resolving configuration directory, daemon dir, daemon log dir and access control dir.
     The locations are all trivially derived from the config directory.

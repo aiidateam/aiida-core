@@ -31,8 +31,8 @@ Examples of invalid full types:
 
 """
 
+import typing as t
 from collections.abc import MutableMapping
-from typing import Any
 
 from aiida.common.escaping import escape_for_sql_like
 
@@ -88,7 +88,7 @@ def get_full_type_filters(full_type):
     """
     validate_full_type(full_type)
 
-    filters: dict[str, Any] = {}
+    filters: dict[str, t.Any] = {}
     node_type, process_type = full_type.split(FULL_TYPE_CONCATENATOR)
 
     for entry in (node_type, process_type):

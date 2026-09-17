@@ -18,12 +18,12 @@
 
 import asyncio
 import sys
+import typing as t
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any
 
 __all__: tuple[str, ...] = ()
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
 
 
@@ -53,12 +53,12 @@ class ProcessCallback:
     __slots__ = ('__weakref__', '_args', '_callback', '_cancelled', '_kwargs', '_process')
 
     def __init__(
-        self, process: 'Process', callback: Callable[..., Any], args: Sequence[Any], kwargs: dict[str, Any]
+        self, process: 'Process', callback: Callable[..., t.Any], args: Sequence[t.Any], kwargs: dict[str, t.Any]
     ) -> None:
         self._process: Process = process
-        self._callback: Callable[..., Any] = callback
-        self._args: Sequence[Any] = args
-        self._kwargs: dict[str, Any] = kwargs
+        self._callback: Callable[..., t.Any] = callback
+        self._args: Sequence[t.Any] = args
+        self._kwargs: dict[str, t.Any] = kwargs
         self._cancelled: bool = False
 
     def cancel(self) -> None:

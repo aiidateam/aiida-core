@@ -14,6 +14,7 @@ import json
 import shutil
 import tarfile
 import tempfile
+import typing as t
 import weakref
 import zipfile
 from collections.abc import Iterable, Iterator
@@ -21,7 +22,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import Any, BinaryIO, NoReturn, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import field_validator
@@ -234,7 +234,7 @@ class SqliteZipBackend(StorageBackend):
         return True
 
     @classmethod
-    def migrate(cls, profile: Profile) -> NoReturn:
+    def migrate(cls, profile: Profile) -> t.NoReturn:
         raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
 
     def __init__(self, profile: Profile):
@@ -367,18 +367,18 @@ class SqliteZipBackend(StorageBackend):
     def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise ReadOnlyError()
 
-    def get_global_variable(self, key: str) -> NoReturn:
+    def get_global_variable(self, key: str) -> t.NoReturn:
         raise NotImplementedError
 
     def set_global_variable(
-        self, key: str, value: Any, description: str | None = None, overwrite: bool = True
-    ) -> NoReturn:
+        self, key: str, value: t.Any, description: str | None = None, overwrite: bool = True
+    ) -> t.NoReturn:
         raise ReadOnlyError()
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> NoReturn:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> t.NoReturn:
         raise NotImplementedError
 
-    def get_info(self, detailed: bool = False) -> dict[str, Any]:
+    def get_info(self, detailed: bool = False) -> dict[str, t.Any]:
         # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
 
@@ -462,7 +462,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def key_format(self) -> str | None:
         return 'sha256'
 
-    def initialise(self, **kwargs: Any) -> None:
+    def initialise(self, **kwargs: t.Any) -> None:
         pass
 
     @property
@@ -472,13 +472,13 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def erase(self) -> None:
         raise ReadOnlyError()
 
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         raise ReadOnlyError()
 
     def has_objects(self, keys: list[str]) -> list[bool]:
         return [self.has_object(key) for key in keys]
 
-    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[tuple[str, t.BinaryIO]]:
         for key in keys:
             with self.open(key) as handle:
                 yield key, handle
@@ -489,10 +489,10 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def get_object_hash(self, key: str) -> str:
         return key
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: t.Any) -> None:
         pass
 
-    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
 
@@ -540,11 +540,11 @@ class ZipfileBackendRepository(_RoBackendRepository):
                 yield name[prefix_len:]
 
     @contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> Iterator[t.BinaryIO]:
         handle = None
         try:
             handle = self._zipfile.open(f'{self._folder}/{key}')
-            yield cast(BinaryIO, handle)
+            yield t.cast(t.BinaryIO, handle)
         except KeyError:
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         finally:
@@ -567,8 +567,8 @@ class FolderBackendRepository(_RoBackendRepository):
                 yield subpath.name
 
     @contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> Iterator[t.BinaryIO]:
         if not self._path.joinpath(key).is_file():
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         with self._path.joinpath(key).open('rb', encoding='utf-8') as handle:
-            yield cast(BinaryIO, handle)
+            yield t.cast(t.BinaryIO, handle)

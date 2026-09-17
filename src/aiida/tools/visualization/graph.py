@@ -13,8 +13,8 @@
 from __future__ import annotations
 
 import os
+import typing as t
 from collections.abc import Callable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from graphviz import Digraph
 
@@ -24,16 +24,16 @@ from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.graph.graph_traversers import traverse_graph
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'default_node_sublabels', 'pstate_node_styles')
 
-LinkAnnotateType = Literal[None, 'label', 'type', 'both']
-IdentifierType = Literal['pk', 'uuid', 'label']
+LinkAnnotateType = t.Literal[None, 'label', 'type', 'both']
+IdentifierType = t.Literal['pk', 'uuid', 'label']
 
 
-class LinkStyleFunc(Protocol):
+class LinkStyleFunc(t.Protocol):
     """Protocol for a link style function"""
 
     def __call__(self, link_pair: LinkPair, add_label: bool, add_type: bool) -> dict: ...
@@ -803,7 +803,7 @@ class Graph:
         target_filters: dict | None = None,
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
-        origin_style: Mapping[str, Any] | None = None,
+        origin_style: Mapping[str, t.Any] | None = None,
         annotate_links: LinkAnnotateType = None,
     ) -> None:
         """Add nodes and edges from an origin node to all nodes of a target node class.
@@ -855,7 +855,7 @@ class Graph:
         target_filters: dict | None = None,
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
-        origin_style: Mapping[str, Any] | None = None,
+        origin_style: Mapping[str, t.Any] | None = None,
         annotate_links: LinkAnnotateType = None,
     ) -> None:
         """Add nodes and edges from all nodes of an origin class to all node of a target node class.

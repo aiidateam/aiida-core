@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import TypedDict
 
@@ -22,7 +22,7 @@ from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.utils.links import LinkQuadruple
     from aiida.tools.graph.age_rules import Operation
@@ -117,7 +117,7 @@ def get_nodes_export(
 
 def validate_traversal_rules(
     ruleset: GraphTraversalRules = GraphTraversalRules.DEFAULT, **traversal_rules: bool
-) -> dict[str, Any]:
+) -> dict[str, t.Any]:
     """Validates the keywords with a ruleset template and returns a parsed dictionary
     ready to be used.
 
@@ -208,7 +208,7 @@ def traverse_graph(
     from numpy import inf
 
     if max_iterations is None:
-        max_iterations = cast('int', inf)
+        max_iterations = t.cast('int', inf)
     elif not (isinstance(max_iterations, int) or max_iterations is inf):  # type: ignore[unreachable]
         raise TypeError('Max_iterations has to be an integer or infinity')
 

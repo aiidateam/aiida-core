@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from collections.abc import Iterator, KeysView, Mapping
-from typing import Any
 
 from typing_extensions import Self
 
@@ -26,7 +26,7 @@ __all__ = (
 )
 
 
-class AttributeDict(dict[str, Any]):
+class AttributeDict(dict[str, t.Any]):
     """This class internally stores values in a dictionary, but exposes
     the keys also as attributes, i.e. asking for attrdict.key
     will return the value of attrdict['key'] and so on.
@@ -36,7 +36,7 @@ class AttributeDict(dict[str, Any]):
     used.
     """
 
-    def __init__(self, dictionary: Mapping[str, Any] | None = None):
+    def __init__(self, dictionary: Mapping[str, t.Any] | None = None):
         """Recursively turn the `dict` and all its nested dictionaries into `AttributeDict` instance."""
         super().__init__()
         if dictionary is None:
@@ -52,7 +52,7 @@ class AttributeDict(dict[str, Any]):
         """Representation of the object."""
         return f'{self.__class__.__name__}({dict.__repr__(self)})'
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> t.Any:
         """Read a key as an attribute.
 
         :raises AttributeError: if the attribute does not correspond to an existing key.
@@ -63,7 +63,7 @@ class AttributeDict(dict[str, Any]):
             errmsg = f"'{self.__class__.__name__}' object has no attribute '{attr}'"
             raise AttributeError(errmsg)
 
-    def __setattr__(self, attr: str, value: Any) -> None:
+    def __setattr__(self, attr: str, value: t.Any) -> None:
         """Set a key as an attribute."""
         try:
             self[attr] = value
@@ -83,7 +83,7 @@ class AttributeDict(dict[str, Any]):
             errmsg = f"'{self.__class__.__name__}' object has no attribute '{attr}'"
             raise AttributeError(errmsg)
 
-    def __deepcopy__(self, memo: Mapping[str, Any] | None = None) -> Self:
+    def __deepcopy__(self, memo: Mapping[str, t.Any] | None = None) -> Self:
         """Deep copy."""
         from copy import deepcopy
 
@@ -92,11 +92,11 @@ class AttributeDict(dict[str, Any]):
         retval = deepcopy(dict(self))
         return self.__class__(retval)
 
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> dict[str, t.Any]:
         """Needed for pickling this class."""
         return self.__dict__.copy()
 
-    def __setstate__(self, dictionary: Mapping[str, Any]) -> None:
+    def __setstate__(self, dictionary: Mapping[str, t.Any]) -> None:
         """Needed for pickling this class."""
         self.__dict__.update(dictionary)
 
@@ -104,20 +104,20 @@ class AttributeDict(dict[str, Any]):
         return self.keys()
 
 
-class Frozendict(Mapping[str, Any]):
+class Frozendict(Mapping[str, t.Any]):
     """An immutable mapping backed by a dictionary."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         self._dict = dict(*args, **kwargs)
         self._hash: int | None = None
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: str) -> t.Any:
         return self._dict[key]
 
     def __contains__(self, key: object) -> bool:
         return key in self._dict
 
-    def copy(self, **add_or_replace: Any) -> Frozendict:
+    def copy(self, **add_or_replace: t.Any) -> Frozendict:
         return self.__class__(self, **add_or_replace)
 
     def __repr__(self) -> str:
@@ -138,7 +138,7 @@ class Frozendict(Mapping[str, Any]):
 class AttributesFrozendict(Frozendict):
     """An immutable mapping whose keys can also be accessed as attributes."""
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> t.Any:
         if attr == '__setstate__':
             raise AttributeError()
         try:
@@ -161,9 +161,9 @@ class FixedFieldsAttributeDict(AttributeDict):
             _valid_fields = ('a','b','c')
     """
 
-    _valid_fields: tuple[Any, ...] = tuple()
+    _valid_fields: tuple[t.Any, ...] = tuple()
 
-    def __init__(self, init: Mapping[str, Any] | None = None):
+    def __init__(self, init: Mapping[str, t.Any] | None = None):
         if init is None:
             init = {}
 
@@ -173,14 +173,14 @@ class FixedFieldsAttributeDict(AttributeDict):
                 raise KeyError(errmsg)
         super().__init__(init)
 
-    def __setitem__(self, item: str, value: Any) -> None:
+    def __setitem__(self, item: str, value: t.Any) -> None:
         """Set a key as an attribute."""
         if item not in self._valid_fields:
             errmsg = f"'{item}' is not a valid key for object '{self.__class__.__name__}'"
             raise KeyError(errmsg)
         super().__setitem__(item, value)
 
-    def __setattr__(self, attr: str, value: Any) -> None:
+    def __setattr__(self, attr: str, value: t.Any) -> None:
         """Overridden to allow direct access to fields with underscore."""
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
@@ -194,7 +194,7 @@ class FixedFieldsAttributeDict(AttributeDict):
 
     # TODO: We're in violation of the `dict` interface here,
     # we should be returning collections.abc.KeysView[Any]
-    def __dir__(self) -> list[Any]:  # type: ignore[override]
+    def __dir__(self) -> list[t.Any]:  # type: ignore[override]
         return list(self._valid_fields)
 
 
@@ -265,14 +265,14 @@ class DefaultFieldsAttributeDict(AttributeDict):
                 except Exception as exc:
                     raise exceptions.ValidationError(f"Invalid value for key '{key}' [{exc.__class__.__name__}]: {exc}")
 
-    def __setattr__(self, attr: str, value: Any) -> None:
+    def __setattr__(self, attr: str, value: t.Any) -> None:
         """Overridden to allow direct access to fields with underscore."""
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
             super().__setattr__(attr, value)
 
-    def __getitem__(self, key: str) -> Any | None:
+    def __getitem__(self, key: str) -> t.Any | None:
         """Return None instead of raising an exception if the key does not exist
         but is in the list of default fields.
         """

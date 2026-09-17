@@ -9,8 +9,8 @@
 """Convenience classes to help building the input dictionaries for Processes."""
 
 import json
+import typing as t
 from collections.abc import Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from aiida.engine.processes.ports import PortNamespace
@@ -18,7 +18,7 @@ from aiida.engine.processes.utils import prune_mapping
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
@@ -95,7 +95,7 @@ class ProcessBuilderNamespace(MutableMapping):
         child_class = type(class_name, (self.__class__,), dynamic_properties)
         self.__class__ = child_class
 
-    def __setattr__(self, attr: str, value: Any) -> None:
+    def __setattr__(self, attr: str, value: t.Any) -> None:
         """Assign the given value to the port with key `attr`.
 
         .. note:: Any attributes without a leading underscore being set correspond to inputs and should hence be

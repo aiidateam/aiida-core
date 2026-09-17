@@ -14,12 +14,12 @@ import functools
 import hashlib
 import os
 import shutil
+import typing as t
 import weakref
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import TYPE_CHECKING, Any, BinaryIO
 
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
@@ -35,7 +35,7 @@ from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.repository.backend.abstract import InfoDictType
 
 __all__ = ('SqliteTempBackend',)
@@ -135,7 +135,7 @@ class SqliteTempBackend(StorageBackend):
         self._resources = _TempBackendResources()
         self._resources.repo = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
         self._finalizer = weakref.finalize(self, _finalize_backend, self._resources, repr(self))
-        self._globals: dict[str, tuple[Any, str | None]] = {}
+        self._globals: dict[str, tuple[t.Any, str | None]] = {}
         self._closed = False
         self.get_session()  # load the database on initialization
 
@@ -168,10 +168,12 @@ class SqliteTempBackend(StorageBackend):
         self._globals = {}
         self._closed = True
 
-    def get_global_variable(self, key: str) -> Any:
+    def get_global_variable(self, key: str) -> t.Any:
         return self._globals[key][0]
 
-    def set_global_variable(self, key: str, value: Any, description: str | None = None, overwrite: bool = True) -> None:
+    def set_global_variable(
+        self, key: str, value: t.Any, description: str | None = None, overwrite: bool = True
+    ) -> None:
         if not overwrite and key in self._globals:
             raise ValueError(f'global variable {key} already exists')
         self._globals[key] = (value, description)
@@ -217,7 +219,7 @@ class SqliteTempBackend(StorageBackend):
     def _clear(self) -> None:
         raise NotImplementedError
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> None:
         pass
 
     def query(self) -> orm.SqliteQueryBuilder:
@@ -262,7 +264,7 @@ class SqliteTempBackend(StorageBackend):
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[t.Any, set[t.Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
@@ -352,7 +354,7 @@ class SandboxShaRepositoryBackend(SandboxRepositoryBackend):
     def get_object_hash(self, key: str) -> str:
         return key
 
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -379,8 +381,8 @@ class SandboxShaRepositoryBackend(SandboxRepositoryBackend):
 
         return key
 
-    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: t.Any) -> None:
         pass

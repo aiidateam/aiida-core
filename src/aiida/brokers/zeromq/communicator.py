@@ -19,11 +19,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+import typing as t
 import uuid
 from collections.abc import Callable
 from concurrent.futures import Future
 from types import TracebackType
-from typing import Any, TypeVar
 
 import zmq
 import zmq.asyncio
@@ -47,7 +47,7 @@ from aiida.brokers.zeromq.protocol import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_T = TypeVar('_T')
+_T = t.TypeVar('_T')
 
 
 class ZeromqCommunicator(broker_communicator.Communicator):
@@ -89,20 +89,20 @@ class ZeromqCommunicator(broker_communicator.Communicator):
         # message's unique ID.  When the corresponding TASK_RESULT or
         # RPC_RESPONSE arrives, the Future is popped and resolved, delivering
         # the result to the caller.  Only accessed from the loop thread.
-        self._pending_futures: dict[str, Future[Any]] = {}
+        self._pending_futures: dict[str, Future[t.Any]] = {}
         self._timeout_handles: dict[str, asyncio.TimerHandle] = {}
 
         # Subscribers (only accessed from the loop thread)
-        self._task_subscribers: dict[str, Callable[..., Any]] = {}
-        self._rpc_subscribers: dict[str, Callable[..., Any]] = {}
-        self._broadcast_subscribers: dict[str, Callable[..., Any]] = {}
+        self._task_subscribers: dict[str, Callable[..., t.Any]] = {}
+        self._rpc_subscribers: dict[str, Callable[..., t.Any]] = {}
+        self._broadcast_subscribers: dict[str, Callable[..., t.Any]] = {}
 
         # Tasks in progress: task_id -> (Future, no_reply).  We delay the
         # ACK until the Future resolves so the broker can redeliver if we die.
-        self._in_progress_tasks: dict[str, tuple[Future[Any], bool]] = {}
+        self._in_progress_tasks: dict[str, tuple[Future[t.Any], bool]] = {}
 
         # RPCs in progress: rpc_id -> (recipient, Future).
-        self._in_progress_rpcs: dict[str, tuple[str, Future[Any]]] = {}
+        self._in_progress_rpcs: dict[str, tuple[str, Future[t.Any]]] = {}
 
         # Event loop thread
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -327,13 +327,13 @@ class ZeromqCommunicator(broker_communicator.Communicator):
     # Task operations (communicator interface)
     # ------------------------------------------------------------------
 
-    def task_send(self, task: Any, no_reply: bool = False) -> Future[Any] | None:
+    def task_send(self, task: t.Any, no_reply: bool = False) -> Future[t.Any] | None:
         self._ensure_open()
 
-        def _do() -> Future[Any] | None:
+        def _do() -> Future[t.Any] | None:
             msg = make_task_message(task, self._client_id, no_reply)
             task_id = msg['id']
-            pending: Future[Any] | None = None
+            pending: Future[t.Any] | None = None
             if not no_reply:
                 pending = Future()
                 self._pending_futures[task_id] = pending
@@ -344,7 +344,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
 
         return self._run_on_loop(_do)
 
-    def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    def add_task_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         self._ensure_open()
 
         def _do() -> str:
@@ -377,13 +377,13 @@ class ZeromqCommunicator(broker_communicator.Communicator):
     # RPC operations (communicator interface)
     # ------------------------------------------------------------------
 
-    def rpc_send(self, recipient_id: str, msg: Any) -> Future[Any]:
+    def rpc_send(self, recipient_id: str, msg: t.Any) -> Future[t.Any]:
         self._ensure_open()
 
-        def _do() -> Future[Any]:
+        def _do() -> Future[t.Any]:
             rpc_msg = make_rpc_message(recipient_id, msg, self._client_id)
             rpc_id = rpc_msg['id']
-            future: Future[Any] = Future()
+            future: Future[t.Any] = Future()
             self._pending_futures[rpc_id] = future
             self._schedule_timeout(rpc_id)
             self._send(rpc_msg)
@@ -392,7 +392,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
 
         return self._run_on_loop(_do)
 
-    def add_rpc_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    def add_rpc_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         self._ensure_open()
 
         def _do() -> str:
@@ -425,7 +425,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
 
     def broadcast_send(
         self,
-        body: Any,
+        body: t.Any,
         sender: str | None = None,
         subject: str | None = None,
         correlation_id: str | None = None,
@@ -442,7 +442,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
 
     def add_broadcast_subscriber(
         self,
-        subscriber: Callable[..., Any],
+        subscriber: Callable[..., t.Any],
         identifier: str | None = None,
     ) -> str:
         def _do() -> str:
@@ -469,7 +469,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
         if self._closed:
             raise broker_exceptions.CommunicatorClosed
 
-    def _send(self, msg: dict[str, Any]) -> None:
+    def _send(self, msg: dict[str, t.Any]) -> None:
         """Send a message to the broker.  MUST be called from the loop thread."""
         if not self._dealer:
             raise RuntimeError('Communicator not connected')
@@ -503,7 +503,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
     # Internal — message dispatch
     # ------------------------------------------------------------------
 
-    def _dispatch_dealer_message(self, msg: dict[str, Any]) -> None:
+    def _dispatch_dealer_message(self, msg: dict[str, t.Any]) -> None:
         msg_type = msg.get('type')
         _LOGGER.debug('Received from broker: %s', msg_type)
 
@@ -524,7 +524,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
 
     # --- Tasks ---
 
-    def _handle_task(self, msg: dict[str, Any]) -> None:
+    def _handle_task(self, msg: dict[str, t.Any]) -> None:
         task_id = msg['id']
         body = msg.get('body')
         no_reply = msg.get('no_reply', False)
@@ -540,7 +540,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
                     loop = self._loop
                     assert loop is not None
 
-                    def _on_task_done(fut: Future[Any], _tid: str = task_id, _nr: bool = no_reply) -> None:
+                    def _on_task_done(fut: Future[t.Any], _tid: str = task_id, _nr: bool = no_reply) -> None:
                         loop.call_soon_threadsafe(self._finalize_task, _tid, fut, _nr)
 
                     result.add_done_callback(_on_task_done)
@@ -561,7 +561,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
         nack_msg = make_task_nack(task_id, self._client_id)
         self._send(nack_msg)
 
-    def _finalize_task(self, task_id: str, future: Future[Any], no_reply: bool) -> None:
+    def _finalize_task(self, task_id: str, future: Future[t.Any], no_reply: bool) -> None:
         """Called on the loop thread when a deferred task completes."""
         if task_id not in self._in_progress_tasks:
             return
@@ -580,7 +580,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
         except Exception:
             _LOGGER.exception('Failed to finalise task %s', task_id)
 
-    def _send_task_result(self, task_id: str, result: Any) -> None:
+    def _send_task_result(self, task_id: str, result: t.Any) -> None:
         """Send a task response, resolving chained Futures if needed."""
         if isinstance(result, Future):
             if result.done():
@@ -593,7 +593,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
                 loop = self._loop
                 assert loop is not None
 
-                def _on_result_done(fut: Future[Any], _tid: str = task_id) -> None:
+                def _on_result_done(fut: Future[t.Any], _tid: str = task_id) -> None:
                     loop.call_soon_threadsafe(self._send_task_result, _tid, fut)
 
                 result.add_done_callback(_on_result_done)
@@ -601,7 +601,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
             response = make_task_response(task_id, self._client_id, result=result)
             self._send(response)
 
-    def _handle_task_response(self, msg: dict[str, Any]) -> None:
+    def _handle_task_response(self, msg: dict[str, t.Any]) -> None:
         task_id = msg.get('task_id')
         if not task_id:
             return
@@ -614,13 +614,13 @@ class ZeromqCommunicator(broker_communicator.Communicator):
             if error:
                 future.set_exception(Exception(error))
             else:
-                result_future: broker_futures.Future[Any] = broker_futures.Future()
+                result_future: broker_futures.Future[t.Any] = broker_futures.Future()
                 result_future.set_result(msg.get('result'))
                 future.set_result(result_future)
 
     # --- RPCs ---
 
-    def _handle_rpc(self, msg: dict[str, Any]) -> None:
+    def _handle_rpc(self, msg: dict[str, t.Any]) -> None:
         rpc_id = msg['id']
         body = msg.get('body')
         recipient = str(msg['recipient']) if 'recipient' in msg else None
@@ -644,7 +644,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
                 loop = self._loop
                 assert loop is not None
 
-                def _on_rpc_done(fut: Future[Any], _rid: str = rpc_id, _rec: str = rpc_recipient) -> None:
+                def _on_rpc_done(fut: Future[t.Any], _rid: str = rpc_id, _rec: str = rpc_recipient) -> None:
                     loop.call_soon_threadsafe(self._finalize_rpc, _rid, _rec, fut)
 
                 result.add_done_callback(_on_rpc_done)
@@ -659,7 +659,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
             response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
             self._send(response)
 
-    def _finalize_rpc(self, rpc_id: str, recipient: str, future: Future[Any]) -> None:
+    def _finalize_rpc(self, rpc_id: str, recipient: str, future: Future[t.Any]) -> None:
         """Called on the loop thread when a deferred RPC completes."""
         if rpc_id not in self._in_progress_rpcs:
             return
@@ -679,7 +679,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
                 loop = self._loop
                 assert loop is not None
 
-                def _on_rpc_retry(fut: Future[Any], _rid: str = rpc_id, _rec: str = recipient) -> None:
+                def _on_rpc_retry(fut: Future[t.Any], _rid: str = rpc_id, _rec: str = recipient) -> None:
                     loop.call_soon_threadsafe(self._finalize_rpc, _rid, _rec, fut)
 
                 result.add_done_callback(_on_rpc_retry)
@@ -690,7 +690,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
             response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
             self._send(response)
 
-    def _handle_rpc_response(self, msg: dict[str, Any]) -> None:
+    def _handle_rpc_response(self, msg: dict[str, t.Any]) -> None:
         rpc_id = msg.get('rpc_id')
         if not rpc_id:
             return
@@ -707,7 +707,7 @@ class ZeromqCommunicator(broker_communicator.Communicator):
 
     # --- Broadcasts ---
 
-    def _handle_broadcast(self, msg: dict[str, Any]) -> None:
+    def _handle_broadcast(self, msg: dict[str, t.Any]) -> None:
         body = msg.get('body')
         sender = msg.get('sender')
         subject = msg.get('subject')

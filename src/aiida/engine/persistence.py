@@ -10,8 +10,8 @@
 
 import logging
 import traceback
+import typing as t
 from collections.abc import Hashable
-from typing import TYPE_CHECKING
 
 from aiida.common.loaders import DefaultObjectLoader as ObjectLoader
 from aiida.common.loaders import get_object_loader
@@ -19,7 +19,7 @@ from aiida.engine.processes import persistence as process_persistence
 from aiida.engine.processes.exceptions import PersistenceError
 from aiida.orm.utils import serialize
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('AiidaCheckpointPersister', 'ObjectLoader', 'get_object_loader')

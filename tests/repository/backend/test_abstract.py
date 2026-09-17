@@ -3,8 +3,8 @@
 import contextlib
 import io
 import tempfile
+import typing as t
 from collections.abc import Iterable
-from typing import BinaryIO
 
 import pytest
 
@@ -32,7 +32,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def is_initialised(self) -> bool:
         return True
 
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         return 'key'
 
     def delete_objects(self, keys: list[str]) -> None:
@@ -53,7 +53,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def get_info(self, detailed: bool = False, **kwargs) -> dict:
         raise NotImplementedError
 
-    def open(self, key: str) -> contextlib.AbstractContextManager[BinaryIO]:
+    def open(self, key: str) -> contextlib.AbstractContextManager[t.BinaryIO]:
         """Minimal implementation required because open() is now abstract."""
         if not self.has_object(key):
             raise FileNotFoundError(f'object with key `{key}` does not exist.')

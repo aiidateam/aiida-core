@@ -13,8 +13,8 @@ on them.
 
 from __future__ import annotations
 
+import typing as t
 from collections.abc import Sequence
-from typing import Any, cast
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
@@ -26,7 +26,7 @@ from aiida.orm.pydantic import OrmMetadataField, OrmModel
 __all__ = ('XyData',)
 
 
-def check_convert_single_to_tuple(item: Any | Sequence[Any]) -> Sequence[Any]:
+def check_convert_single_to_tuple(item: t.Any | Sequence[t.Any]) -> Sequence[t.Any]:
     """Checks if the item is a list or tuple, and converts it to a list if it is
     not already a list or tuple
 
@@ -93,13 +93,13 @@ class XyData(ArrayData):
         x_array: Sequence = OrmMetadataField(
             description='The x array, which must be a 1D numpy array of floats.',
             write_only=True,
-            orm_to_model=lambda node: cast(XyData, node).get_array('x_array').tolist(),
+            orm_to_model=lambda node: t.cast(XyData, node).get_array('x_array').tolist(),
         )
         y_arrays: Sequence = OrmMetadataField(
             description='The y array(s), which must be 1D numpy arrays of floats with the same shape as the x array.',
             write_only=True,
             orm_to_model=lambda node: [
-                cast(XyData, node).get_array(name).tolist()
+                t.cast(XyData, node).get_array(name).tolist()
                 for name in node.get_arraynames()
                 if name.startswith('y_array_')
             ],

@@ -18,20 +18,20 @@ import io
 import os
 import re
 import sys
+import typing as t
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, TypeVar, overload
 from uuid import UUID
 
 from typing_extensions import Self
 
 from aiida.common.lang import classproperty
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
-T = TypeVar('T')
-R = TypeVar('R')
+T = t.TypeVar('T')
+R = t.TypeVar('R')
 
 
 def get_new_uuid() -> str:
@@ -54,7 +54,7 @@ def validate_uuid(given_uuid: str) -> bool:
     return str(parsed_uuid) == given_uuid
 
 
-def validate_list_of_string_tuples(val: Any, tuple_length: int) -> bool:
+def validate_list_of_string_tuples(val: t.Any, tuple_length: int) -> bool:
     """Check that:
 
     1. ``val`` is a list or tuple
@@ -182,7 +182,7 @@ def str_timedelta(dt: timedelta, max_num_fields: int = 3, short: bool = False, n
     return f'{raw_string}{negative_string}'
 
 
-def get_class_string(obj: Any) -> str:
+def get_class_string(obj: t.Any) -> str:
     """Return the string identifying the class of the object (module + object name,
     joined by dots).
 
@@ -194,7 +194,7 @@ def get_class_string(obj: Any) -> str:
     return f'{obj.__module__}.{obj.__class__.__name__}'
 
 
-def get_object_from_string(class_string: str) -> Any:
+def get_object_from_string(class_string: str) -> t.Any:
     """Given a string identifying an object (as returned by the get_class_string
     method) load and return the actual object.
     """
@@ -205,7 +205,7 @@ def get_object_from_string(class_string: str) -> Any:
     return getattr(importlib.import_module(the_module), the_name)
 
 
-def grouper(n: int, iterable: Iterable[Any]) -> Iterable[Any]:
+def grouper(n: int, iterable: Iterable[t.Any]) -> Iterable[t.Any]:
     """Given an iterable, returns an iterable that returns tuples of groups of
     elements from iterable of length n, except the last one that has the
     required length to exaust iterable (i.e., there is no filling applied).
@@ -501,7 +501,7 @@ class Capturing:
             sys.stderr = self._stringioerr
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: t.Any) -> None:
         """Exit the context where all output is captured."""
         self.stdout_lines.extend(self._stringioout.getvalue().splitlines())
         sys.stdout = self._stdout
@@ -533,7 +533,7 @@ class ErrorAccumulator:
         self.error_cls = error_cls
         self.errors: dict[type[Exception], list[Exception]] = {k: [] for k in self.error_cls}
 
-    def run(self, function: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
+    def run(self, function: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> None:
         try:
             function(*args, **kwargs)
         except self.error_cls as err:
@@ -608,17 +608,17 @@ def format_directory_size(size_in_bytes: int) -> str:
     return f'{converted_size:.2f} {prefixes[index]}'
 
 
-@overload
+@t.overload
 def batch_iter(iterable: Iterable[T], size: int, transform: None = None) -> Iterable[tuple[int, list[T]]]: ...
 
 
-@overload
+@t.overload
 def batch_iter(iterable: Iterable[T], size: int, transform: Callable[[T], R]) -> Iterable[tuple[int, list[R]]]: ...
 
 
 def batch_iter(
-    iterable: Iterable[T], size: int, transform: Callable[[T], Any] | None = None
-) -> Iterable[tuple[int, list[Any]]]:
+    iterable: Iterable[T], size: int, transform: Callable[[T], t.Any] | None = None
+) -> Iterable[tuple[int, list[t.Any]]]:
     """Yield an iterable in batches of a set number of items.
 
     Note, the final yield may be less than this size.

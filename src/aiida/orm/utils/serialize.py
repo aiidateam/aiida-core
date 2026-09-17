@@ -16,10 +16,10 @@ for new types though.
 from __future__ import annotations
 
 import inspect
+import typing as t
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol, cast, overload
 
 import yaml
 
@@ -55,7 +55,7 @@ def enum_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Enum:
     return enum
 
 
-def represent_dataclass(dumper: yaml.Dumper, obj: Any) -> yaml.MappingNode:
+def represent_dataclass(dumper: yaml.Dumper, obj: t.Any) -> yaml.MappingNode:
     """Represent an arbitrary dataclass in yaml."""
     loader = get_object_loader()
     data = {
@@ -65,7 +65,7 @@ def represent_dataclass(dumper: yaml.Dumper, obj: Any) -> yaml.MappingNode:
     return dumper.represent_mapping(_DATACLASS_TAG, data)
 
 
-def dataclass_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Any:
+def dataclass_constructor(loader: yaml.Loader, serialized: yaml.Node) -> t.Any:
     """Construct a dataclass from the serialized representation."""
     deserialized = loader.construct_mapping(serialized, deep=True)  # type: ignore[arg-type]
     identifier = deserialized['__type__']
@@ -134,12 +134,12 @@ def computer_constructor(loader: yaml.Loader, computer: yaml.Node) -> orm.Comput
     return orm.Computer.collection.get(uuid=yaml_node)
 
 
-def represent_mapping(tag: str, dumper: yaml.Dumper, mapping: Any) -> yaml.MappingNode:
+def represent_mapping(tag: str, dumper: yaml.Dumper, mapping: t.Any) -> yaml.MappingNode:
     """Represent a mapping in yaml."""
     return dumper.represent_mapping(tag, mapping)
 
 
-class _MappingType(Protocol):
+class _MappingType(t.Protocol):
     def __init__(self, mapping: dict) -> None: ...
 
 
@@ -159,7 +159,7 @@ def represent_checkpoint_payload(dumper: yaml.Dumper, payload: CheckpointPayload
 def checkpoint_payload_constructor(loader: yaml.Loader, node: yaml.Node) -> CheckpointPayload:
     """Construct an :class:`aiida.engine.processes.persistence.CheckpointPayload` from the representation."""
     saved_state = loader.construct_mapping(node)  # type: ignore[arg-type]
-    return CheckpointPayload.from_saved_state(cast(dict[str, Any], saved_state))
+    return CheckpointPayload.from_saved_state(t.cast(dict[str, t.Any], saved_state))
 
 
 class AiiDADumper(yaml.Dumper):
@@ -206,15 +206,15 @@ yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_DATACLASS_TAG, dataclass_constructor, Loader=AiiDALoader)
 
 
-@overload
-def serialize(data: Any, encoding: None = None) -> str: ...
+@t.overload
+def serialize(data: t.Any, encoding: None = None) -> str: ...
 
 
-@overload
-def serialize(data: Any, encoding: str) -> bytes: ...
+@t.overload
+def serialize(data: t.Any, encoding: str) -> bytes: ...
 
 
-def serialize(data: Any, encoding: str | None = None) -> str | bytes:
+def serialize(data: t.Any, encoding: str | None = None) -> str | bytes:
     """Serialize the given data structure into a yaml dump.
 
     The function supports standard data containers such as maps and lists as well as AiiDA nodes which will be
@@ -234,7 +234,7 @@ def serialize(data: Any, encoding: str | None = None) -> str | bytes:
     return serialized
 
 
-def deserialize_unsafe(serialized: str) -> Any:
+def deserialize_unsafe(serialized: str) -> t.Any:
     """Deserialize a yaml dump that represents a serialized data structure.
 
     .. note:: This function should not be used on untrusted input, since it is built upon `yaml.Loader` which is unsafe.

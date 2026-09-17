@@ -9,16 +9,16 @@
 """Interface to the extras of a node instance."""
 
 import copy
+import typing as t
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Union
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.groups import Group
     from aiida.orm.nodes.node import Node
 
 __all__ = ('EntityExtras',)
 
-_NO_DEFAULT: Any = tuple()
+_NO_DEFAULT: t.Any = tuple()
 
 
 class EntityExtras:
@@ -31,7 +31,7 @@ class EntityExtras:
     and as such are not deemed a core part of the provenance graph.
     """
 
-    def __init__(self, entity: Union['Node', 'Group']) -> None:
+    def __init__(self, entity: t.Union['Node', 'Group']) -> None:
         """Initialize the interface."""
         self._entity = entity
         self._backend_entity = entity.backend_entity
@@ -41,7 +41,7 @@ class EntityExtras:
         return key in self._backend_entity.extras
 
     @property
-    def all(self) -> dict[str, Any]:
+    def all(self) -> dict[str, t.Any]:
         """Return the complete extras dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -61,7 +61,7 @@ class EntityExtras:
 
         return extras
 
-    def get(self, key: str, default: Any = _NO_DEFAULT) -> Any:
+    def get(self, key: str, default: t.Any = _NO_DEFAULT) -> t.Any:
         """Return the value of an extra.
 
         .. warning:: While the entity is unstored, this will return a reference of the extra on the database model,
@@ -87,7 +87,7 @@ class EntityExtras:
 
         return extra
 
-    def get_many(self, keys: list[str]) -> list[Any]:
+    def get_many(self, keys: list[str]) -> list[t.Any]:
         """Return the values of multiple extras.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -109,7 +109,7 @@ class EntityExtras:
 
         return extras
 
-    def set(self, key: str, value: Any) -> None:
+    def set(self, key: str, value: t.Any) -> None:
         """Set an extra to the given value.
 
         :param key: name of the extra
@@ -118,7 +118,7 @@ class EntityExtras:
         """
         self._backend_entity.set_extra(key, value)
 
-    def set_many(self, extras: dict[str, Any]) -> None:
+    def set_many(self, extras: dict[str, t.Any]) -> None:
         """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
@@ -128,7 +128,7 @@ class EntityExtras:
         """
         self._backend_entity.set_extra_many(extras)
 
-    def reset(self, extras: dict[str, Any]) -> None:
+    def reset(self, extras: dict[str, t.Any]) -> None:
         """Reset the extras.
 
         .. note:: This will completely clear any existing extras and replace them with the new dictionary.
@@ -158,7 +158,7 @@ class EntityExtras:
         """Delete all extras."""
         self._backend_entity.clear_extras()
 
-    def items(self) -> Iterable[tuple[str, Any]]:
+    def items(self) -> Iterable[tuple[str, t.Any]]:
         """Return an iterator over the extras.
 
         :return: an iterator with extra key value pairs

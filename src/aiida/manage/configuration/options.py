@@ -9,8 +9,8 @@
 """Definition of known configuration options and methods to parse and get option values."""
 
 import copy
+import typing as t
 from functools import lru_cache
-from typing import Any
 
 from aiida.common.exceptions import ConfigurationError
 
@@ -20,7 +20,7 @@ __all__ = ('Option', 'get_option', 'get_option_names', 'parse_option')
 class Option:
     """Represent a configuration option schema."""
 
-    def __init__(self, name: str, schema: dict[str, Any], field):
+    def __init__(self, name: str, schema: dict[str, t.Any], field):
         self._name = name
         self._schema = schema
         self._field = field
@@ -33,15 +33,15 @@ class Option:
         return self._name
 
     @property
-    def valid_type(self) -> Any:
+    def valid_type(self) -> t.Any:
         return self._field.annotation
 
     @property
-    def schema(self) -> dict[str, Any]:
+    def schema(self) -> dict[str, t.Any]:
         return copy.deepcopy(self._schema)
 
     @property
-    def default(self) -> Any:
+    def default(self) -> t.Any:
         return self._field.default
 
     @property
@@ -73,7 +73,7 @@ class Option:
         """
         return self._schema.get('requires_daemon_restart', False)
 
-    def validate(self, value: Any) -> Any:
+    def validate(self, value: t.Any) -> t.Any:
         """Validate a value
 
         :param value: The input value
@@ -114,7 +114,7 @@ def get_option_names() -> list[str]:
 
 
 @lru_cache(maxsize=1)
-def _get_options_schema_properties() -> dict[str, Any]:
+def _get_options_schema_properties() -> dict[str, t.Any]:
     """Return the JSON schema properties for the global options schema."""
     from aiida.manage.configuration.config import GlobalOptionsSchema
 
@@ -157,7 +157,7 @@ def resolve_deprecated_option_name(option_name: str, stacklevel: int = 4) -> str
     return option.deprecated_by
 
 
-def parse_option(option_name: str, option_value: Any) -> tuple[Option, Any]:
+def parse_option(option_name: str, option_value: t.Any) -> tuple[Option, t.Any]:
     """Parse and validate a value for a configuration option.
 
     :param option_name: the name of the configuration option

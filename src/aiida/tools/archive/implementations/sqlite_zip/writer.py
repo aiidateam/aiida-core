@@ -13,11 +13,11 @@ import json
 import os
 import shutil
 import tempfile
+import typing as t
 import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, BinaryIO, Literal
 
 from archive_path import NOTSET, ZipPath, extract_file_in_zip, read_file_in_zip
 from sqlalchemy import insert
@@ -44,7 +44,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         path: str | Path,
         fmt: ArchiveFormatAbstract,
         *,
-        mode: Literal['x', 'w', 'a'] = 'x',
+        mode: t.Literal['x', 'w', 'a'] = 'x',
         compression: int = 6,
         work_dir: Path | None = None,
         _debug: bool = False,
@@ -55,8 +55,8 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         self._in_context = False
         self._enforce_foreign_keys = _enforce_foreign_keys
         self._debug = _debug
-        self._metadata: dict[str, Any] = {}
-        self._central_dir: dict[str, Any] = {}
+        self._metadata: dict[str, t.Any] = {}
+        self._central_dir: dict[str, t.Any] = {}
         self._deleted_paths: set[str] = set()
         self._zip_path: ZipPath | None = None
         self._work_dir: Path | None = None
@@ -113,7 +113,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         self._zip_path = self._work_dir = self._conn = None
         self._in_context = False
 
-    def update_metadata(self, data: dict[str, Any], overwrite: bool = False) -> None:
+    def update_metadata(self, data: dict[str, t.Any], overwrite: bool = False) -> None:
         if not overwrite and set(self._metadata).intersection(set(data)):
             raise ValueError(f'Cannot overwrite existing keys: {set(self._metadata).intersection(set(data))}')
         self._metadata.update(data)
@@ -121,7 +121,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
     def bulk_insert(
         self,
         entity_type: EntityTypes,
-        rows: list[dict[str, Any]],
+        rows: list[dict[str, t.Any]],
         allow_defaults: bool = False,
     ) -> None:
         if not rows:
@@ -147,7 +147,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
     def _stream_binary(
         self,
         name: str,
-        handle: BinaryIO,
+        handle: t.BinaryIO,
         *,
         buffer_size: int | None = None,
         compression: int | None = None,
@@ -161,7 +161,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         """
         self._assert_in_context()
         assert self._zip_path is not None
-        kwargs: dict[str, Any] = {'comment': NOTSET if comment is None else comment}
+        kwargs: dict[str, t.Any] = {'comment': NOTSET if comment is None else comment}
         if compression is not None:
             kwargs['compression'] = zipfile.ZIP_DEFLATED if compression else zipfile.ZIP_STORED
             kwargs['level'] = compression
@@ -183,7 +183,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             else:
                 shutil.copyfileobj(handle, zip_handle, length=buffer_size)
 
-    def put_object(self, stream: BinaryIO, *, buffer_size: int | None = None, key: str | None = None) -> str:
+    def put_object(self, stream: t.BinaryIO, *, buffer_size: int | None = None, key: str | None = None) -> str:
         if key is None:
             key = chunked_file_hash(stream, hashlib.sha256)
             stream.seek(0)

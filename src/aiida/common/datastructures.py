@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING
 
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict
 
@@ -153,7 +153,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'file_copy_operation_order',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         job_environment: dict[str, str] | None
         email: str | None
         email_on_started: bool
@@ -233,7 +233,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'code_uuid',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         cmdline_params: list[str] | None
         stdin_name: str | None
         stdout_name: str | None

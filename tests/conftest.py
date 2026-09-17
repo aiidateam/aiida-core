@@ -47,18 +47,12 @@ import_module('aiida.storage.psql_dos.migrations.versions')
 import_module('aiida.storage.sqlite_dos.migrations.versions')
 import_module('aiida.storage.sqlite_zip.migrations.versions')
 
-try:
-    from typing import ParamSpec
-except ImportError:
-    # Fallback for Python 3.9 and older
-    from typing_extensions import ParamSpec  # type: ignore[assignment]
-
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
-P = ParamSpec('P')
+P = t.ParamSpec('P')
 
 
 class TestDbBackend(Enum):

@@ -8,14 +8,14 @@
 ###########################################################################
 """Utilities for dealing with links between nodes."""
 
+import typing as t
 from collections import OrderedDict
 from collections.abc import Generator, Iterator, Mapping
-from typing import TYPE_CHECKING, NamedTuple, Optional
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.common.links import LinkType
     from aiida.orm import Node
     from aiida.orm.implementation.storage_backend import StorageBackend
@@ -23,18 +23,18 @@ if TYPE_CHECKING:
 __all__ = ('LinkManager', 'LinkPair', 'LinkTriple', 'validate_link')
 
 
-class LinkPair(NamedTuple):
+class LinkPair(t.NamedTuple):
     link_type: 'LinkType'
     link_label: str
 
 
-class LinkTriple(NamedTuple):
+class LinkTriple(t.NamedTuple):
     node: 'Node'
     link_type: 'LinkType'
     link_label: str
 
 
-class LinkQuadruple(NamedTuple):
+class LinkQuadruple(t.NamedTuple):
     source_id: int
     target_id: int
     link_type: 'LinkType'
@@ -42,7 +42,7 @@ class LinkQuadruple(NamedTuple):
 
 
 def link_triple_exists(
-    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: Optional['StorageBackend'] = None
+    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: t.Optional['StorageBackend'] = None
 ) -> bool:
     """Return whether a link with the given type and label exists between the given source and target node.
 
@@ -75,7 +75,7 @@ def link_triple_exists(
 
 
 def validate_link(
-    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: Optional['StorageBackend'] = None
+    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: t.Optional['StorageBackend'] = None
 ) -> None:
     """Validate adding a link of the given type and label from a given node to ourself.
 

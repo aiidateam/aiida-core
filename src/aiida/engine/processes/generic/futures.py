@@ -17,8 +17,8 @@
 """Generic process-engine future helpers."""
 
 import asyncio
+import typing as t
 from collections.abc import Awaitable, Callable
-from typing import Any
 
 from aiida.brokers import futures as broker_futures
 from aiida.engine.processes.events import get_or_create_event_loop
@@ -43,8 +43,8 @@ class CancellableAction(Future):
 
     def __init__(
         self,
-        action: Callable[..., Any],
-        cookie: Any = None,
+        action: Callable[..., t.Any],
+        cookie: t.Any = None,
         loop: asyncio.AbstractEventLoop | None = None,
     ):
         super().__init__(loop=loop)
@@ -52,11 +52,11 @@ class CancellableAction(Future):
         self._cookie = cookie
 
     @property
-    def cookie(self) -> Any:
+    def cookie(self) -> t.Any:
         """A cookie that can be used to correlate the actions with something"""
         return self._cookie
 
-    def run(self, *args: Any, **kwargs: Any) -> None:
+    def run(self, *args: t.Any, **kwargs: t.Any) -> None:
         """Run the action
 
         :param args: the positional arguments to the action
@@ -72,7 +72,7 @@ class CancellableAction(Future):
             self._action = None  # type: ignore[assignment]
 
 
-def create_task(coro: Callable[[], Awaitable[Any]], loop: asyncio.AbstractEventLoop | None = None) -> Future:
+def create_task(coro: Callable[[], Awaitable[t.Any]], loop: asyncio.AbstractEventLoop | None = None) -> Future:
     """
     Schedule a call to a coro in the event loop and wrap the outcome
     in a future.
@@ -107,7 +107,7 @@ def unwrap_kiwi_future(future: broker_futures.Future) -> broker_futures.Future:
     :return: the unwrapping future
 
     """
-    unwrapping: broker_futures.Future[Any] = broker_futures.Future()
+    unwrapping: broker_futures.Future[t.Any] = broker_futures.Future()
 
     def unwrap(fut: broker_futures.Future) -> None:
         if fut.cancelled():

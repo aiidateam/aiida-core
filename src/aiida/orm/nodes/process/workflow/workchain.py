@@ -8,13 +8,13 @@
 ###########################################################################
 """Module with `Node` sub class for workchain processes."""
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools.workflows import WorkflowTools
 
 __all__ = ('WorkChainNode',)

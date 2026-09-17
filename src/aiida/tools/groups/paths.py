@@ -11,11 +11,11 @@
 from __future__ import annotations
 
 import re
+import typing as t
 import warnings
 from collections import namedtuple
 from collections.abc import Iterator
 from functools import total_ordering
-from typing import Any
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -96,13 +96,13 @@ class GroupPath:
         """Represent the instantiated class."""
         return f"{self.__class__.__name__}('{self.path}', cls='{self.cls}')"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: t.Any) -> bool:
         """Compare equality of path and ``Group`` subclass to another ``GroupPath`` object."""
         if not isinstance(other, GroupPath):
             return NotImplemented
         return (self.path, self.cls) == (other.path, other.cls)
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: t.Any) -> bool:
         """Compare less-than operator of path and ``Group`` subclass to another ``GroupPath`` object."""
         if not isinstance(other, GroupPath):
             return NotImplemented
@@ -308,7 +308,7 @@ class GroupAttr:
         """Return the ``GroupPath``."""
         return self._group_path
 
-    def __dir__(self) -> list[Any]:
+    def __dir__(self) -> list[t.Any]:
         """Return a list of available attributes."""
         return [c.path_list[-1] for c in self._group_path.children if REGEX_ATTR.match(c.path_list[-1])]
 

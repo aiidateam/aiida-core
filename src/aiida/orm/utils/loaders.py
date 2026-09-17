@@ -8,15 +8,15 @@
 ###########################################################################
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
 
+import typing as t
 from abc import abstractmethod
 from enum import Enum
-from typing import TYPE_CHECKING
 
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.lang import classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Code, Computer, Group, Node
 
 __all__ = (

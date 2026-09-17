@@ -8,10 +8,10 @@
 ###########################################################################
 """Utilities for `WorkChain` implementations."""
 
+import typing as t
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType
-from typing import NamedTuple
 
 from wrapt import decorator
 
@@ -20,7 +20,7 @@ from aiida.engine.processes.exit_code import ExitCode
 __all__ = ('ProcessHandlerReport', 'process_handler')
 
 
-class ProcessHandlerReport(NamedTuple):
+class ProcessHandlerReport(t.NamedTuple):
     """A namedtuple to define a process handler report for a :class:`aiida.engine.BaseRestartWorkChain`.
 
     This namedtuple should be returned by a process handler of a work chain instance if the condition of the handler was

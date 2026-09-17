@@ -55,9 +55,9 @@ only the AMQP-like semantics that ``aiida.brokers.communicator.Communicator`` re
 from __future__ import annotations
 
 import json
+import typing as t
 import uuid
 from enum import Enum
-from typing import Any
 
 
 class MessageType(str, Enum):
@@ -88,23 +88,23 @@ class MessageType(str, Enum):
 class _UUIDEncoder(json.JSONEncoder):
     """JSON encoder that converts uuid.UUID to string."""
 
-    def default(self, obj: Any) -> Any:
+    def default(self, obj: t.Any) -> t.Any:
         if isinstance(obj, uuid.UUID):
             return str(obj)
         return super().default(obj)
 
 
-def encode_message(msg: dict[str, Any]) -> bytes:
+def encode_message(msg: dict[str, t.Any]) -> bytes:
     """Encode a message dictionary to bytes using JSON."""
     return json.dumps(msg, cls=_UUIDEncoder).encode('utf-8')
 
 
-def decode_message(data: bytes) -> dict[str, Any]:
+def decode_message(data: bytes) -> dict[str, t.Any]:
     """Decode bytes to a message dictionary using JSON."""
     return json.loads(data.decode('utf-8'))  # type: ignore[no-any-return]
 
 
-def make_task_message(body: Any, sender: str, no_reply: bool = False) -> dict[str, Any]:
+def make_task_message(body: t.Any, sender: str, no_reply: bool = False) -> dict[str, t.Any]:
     """Create a task message dictionary."""
     return {
         'type': MessageType.TASK.value,
@@ -115,7 +115,7 @@ def make_task_message(body: Any, sender: str, no_reply: bool = False) -> dict[st
     }
 
 
-def make_task_response(task_id: str, sender: str, result: Any = None, error: str | None = None) -> dict[str, Any]:
+def make_task_response(task_id: str, sender: str, result: t.Any = None, error: str | None = None) -> dict[str, t.Any]:
     """Create a task response dictionary."""
     return {
         'type': MessageType.TASK_RESPONSE.value,
@@ -127,7 +127,7 @@ def make_task_response(task_id: str, sender: str, result: Any = None, error: str
     }
 
 
-def make_task_ack(task_id: str, sender: str) -> dict[str, Any]:
+def make_task_ack(task_id: str, sender: str) -> dict[str, t.Any]:
     """Create a task acknowledgment message."""
     return {
         'type': MessageType.TASK_ACK.value,
@@ -137,7 +137,7 @@ def make_task_ack(task_id: str, sender: str) -> dict[str, Any]:
     }
 
 
-def make_task_nack(task_id: str, sender: str) -> dict[str, Any]:
+def make_task_nack(task_id: str, sender: str) -> dict[str, t.Any]:
     """Create a task negative acknowledgment message."""
     return {
         'type': MessageType.TASK_NACK.value,
@@ -147,7 +147,7 @@ def make_task_nack(task_id: str, sender: str) -> dict[str, Any]:
     }
 
 
-def make_ping(sender: str) -> dict[str, Any]:
+def make_ping(sender: str) -> dict[str, t.Any]:
     """Create a ping message for worker liveness probing."""
     return {
         'type': MessageType.PING.value,
@@ -156,7 +156,7 @@ def make_ping(sender: str) -> dict[str, Any]:
     }
 
 
-def make_rpc_message(recipient: str, body: Any, sender: str) -> dict[str, Any]:
+def make_rpc_message(recipient: str, body: t.Any, sender: str) -> dict[str, t.Any]:
     """Create an RPC message dictionary."""
     return {
         'type': MessageType.RPC.value,
@@ -167,7 +167,7 @@ def make_rpc_message(recipient: str, body: Any, sender: str) -> dict[str, Any]:
     }
 
 
-def make_rpc_response(rpc_id: str, sender: str, result: Any = None, error: str | None = None) -> dict[str, Any]:
+def make_rpc_response(rpc_id: str, sender: str, result: t.Any = None, error: str | None = None) -> dict[str, t.Any]:
     """Create an RPC response dictionary."""
     return {
         'type': MessageType.RPC_RESPONSE.value,
@@ -180,8 +180,8 @@ def make_rpc_response(rpc_id: str, sender: str, result: Any = None, error: str |
 
 
 def make_broadcast_message(
-    body: Any, sender: str, subject: str | None = None, correlation_id: str | None = None
-) -> dict[str, Any]:
+    body: t.Any, sender: str, subject: str | None = None, correlation_id: str | None = None
+) -> dict[str, t.Any]:
     """Create a broadcast message dictionary."""
     return {
         'type': MessageType.BROADCAST.value,
@@ -198,7 +198,7 @@ def make_subscribe_message(
     sender: str,
     identifier: str | None = None,
     prefetch_count: int | None = None,
-) -> dict[str, Any]:
+) -> dict[str, t.Any]:
     """Create a subscription message dictionary.
 
     :param msg_type: Type of subscription message (e.g., ``SUBSCRIBE_TASK``, ``SUBSCRIBE_RPC``).

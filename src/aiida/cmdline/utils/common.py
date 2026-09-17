@@ -14,15 +14,15 @@ import logging
 import os
 import sys
 import textwrap
+import typing as t
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
 
 from click import style
 
 from aiida.cmdline.utils import echo
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import MutableMapping
     from datetime import datetime
 
@@ -85,7 +85,7 @@ def format_local_time(timestamp: datetime | float, format_str: str = '%Y-%m-%d %
     return timestamp.strftime(format_str)
 
 
-def print_last_process_state_change(process_type: Literal['work'] | Literal['calculation'] | None = None) -> None:
+def print_last_process_state_change(process_type: t.Literal['work'] | t.Literal['calculation'] | None = None) -> None:
     """Print the last time that a process of the specified type has changed its state.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
@@ -117,7 +117,7 @@ def get_node_summary(node: orm.Node) -> str:
     from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
-    table: list[list[str | Any]] = []
+    table: list[list[str | t.Any]] = []
 
     if isinstance(node, ProcessNode):
         table.append(['type', node.process_label])

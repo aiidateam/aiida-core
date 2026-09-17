@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import os
+import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
 
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
@@ -26,7 +26,7 @@ from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpCo
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
 
-RegistryNameType = Literal['calculations', 'workflows', 'groups']
+RegistryNameType = t.Literal['calculations', 'workflows', 'groups']
 
 # Progress bar format for dump operations - wider description field to avoid truncation
 DUMP_PROGRESS_BAR_FORMAT = '{desc:60.60}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'

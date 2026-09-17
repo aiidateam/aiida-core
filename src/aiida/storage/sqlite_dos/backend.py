@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import pathlib
+import typing as t
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from alembic.config import Config
@@ -38,7 +38,7 @@ from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.backend import validate_sqlite_version
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from disk_objectstore import Container
 
     from aiida.orm.entities import EntityTypes
@@ -322,7 +322,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     @staticmethod
     @lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[t.Any, set[t.Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key

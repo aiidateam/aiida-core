@@ -8,8 +8,8 @@
 ###########################################################################
 """Mixin class for SQL implementations of ``extras``."""
 
+import typing as t
 from collections.abc import Iterable
-from typing import Any
 
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
@@ -17,21 +17,21 @@ from aiida.orm.implementation.utils import clean_value, validate_attribute_extra
 class ExtrasMixin:
     """Mixin class for SQL implementations of ``extras``."""
 
-    model: Any
-    bare_model: Any
+    model: t.Any
+    bare_model: t.Any
     is_stored: bool
 
     @property
-    def extras(self) -> dict[str, Any]:
+    def extras(self) -> dict[str, t.Any]:
         return self.model.extras
 
-    def get_extra(self, key: str) -> Any:
+    def get_extra(self, key: str) -> t.Any:
         try:
             return self.model.extras[key]
         except KeyError as exception:
             raise AttributeError(f'extra `{exception}` does not exist') from exception
 
-    def set_extra(self, key: str, value: Any) -> None:
+    def set_extra(self, key: str, value: t.Any) -> None:
         validate_attribute_extra_key(key)
 
         if self.is_stored:
@@ -40,7 +40,7 @@ class ExtrasMixin:
         self.model.extras[key] = value
         self._flush_if_stored({'extras'})
 
-    def set_extra_many(self, extras: dict[str, Any]) -> None:
+    def set_extra_many(self, extras: dict[str, t.Any]) -> None:
         for key in extras:
             validate_attribute_extra_key(key)
 
@@ -52,7 +52,7 @@ class ExtrasMixin:
 
         self._flush_if_stored({'extras'})
 
-    def reset_extras(self, extras: dict[str, Any]) -> None:
+    def reset_extras(self, extras: dict[str, t.Any]) -> None:
         for key in extras:
             validate_attribute_extra_key(key)
 
@@ -85,7 +85,7 @@ class ExtrasMixin:
         self.model.extras = {}
         self._flush_if_stored({'extras'})
 
-    def extras_items(self) -> Iterable[tuple[str, Any]]:
+    def extras_items(self) -> Iterable[tuple[str, t.Any]]:
         yield from self.model.extras.items()
 
     def extras_keys(self) -> Iterable[str]:

@@ -4,7 +4,7 @@ import pytest
 from importlib_metadata import EntryPoint
 
 from aiida.common.exceptions import MissingEntryPointError
-from aiida.plugins.entry_point import get_entry_point, load_entry_point
+from aiida.plugins.entry_point import get_entry_point, get_entry_point_from_class, load_entry_point
 
 ENTRY_POINT_GROUP = 'aiida.calculations.importers'
 
@@ -61,6 +61,20 @@ def test_entry_points_remove_group_and_name(entry_points):
 
     with pytest.raises(MissingEntryPointError):
         get_entry_point(ENTRY_POINT_GROUP, 'core.test')
+
+
+def test_entry_points_invalidate_class_lookup(entry_points):
+    """Changing temporary entry points invalidates cached class lookups."""
+    module, name = 'some.module', 'SomeClass'
+    assert get_entry_point_from_class(module, name) == (None, None)
+
+    entry_points.add(f'{module}:{name}', f'{ENTRY_POINT_GROUP}:core.test')
+    group, entry_point = get_entry_point_from_class(module, name)
+    assert group == ENTRY_POINT_GROUP
+    assert entry_point.name == 'core.test'
+
+    entry_points.remove(f'{ENTRY_POINT_GROUP}:core.test')
+    assert get_entry_point_from_class(module, name) == (None, None)
 
 
 def raise_runtime_error():

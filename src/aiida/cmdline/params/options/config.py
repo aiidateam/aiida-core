@@ -28,7 +28,7 @@ from aiida.cmdline.params.options.overridable import OverridableOption
 if t.TYPE_CHECKING:
     from click.decorators import FC
 
-__all__ = ('ConfigFileOption',)
+__all__ = ('ConfigFileOption', 'TemplateAwareConfigFileOption')
 
 
 def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
@@ -36,6 +36,40 @@ def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
     import yaml
 
     return yaml.safe_load(handle)
+
+
+class _ReadableHandle(t.Protocol):
+    """What :func:`_template_aware_yaml_provider` needs of the value ``--config`` resolves to.
+
+    ``FileOrUrl`` yields a text handle for a local path and a byte-returning response for a URL, so both widths are
+    part of the contract.
+    """
+
+    def read(self) -> str | bytes: ...
+
+
+def _template_aware_yaml_provider(handle: _ReadableHandle, _cmd_name: t.Any) -> dict[str, t.Any]:
+    """YAML config provider that transparently resolves Jinja2 template placeholders."""
+    from aiida.cmdline.utils.template_config import TemplateValues, process_template_content
+
+    content = handle.read()
+    if isinstance(content, bytes):
+        content = content.decode('utf-8')
+
+    template_vars: TemplateValues | None = None
+    non_interactive = False
+
+    try:
+        ctx = click.get_current_context()
+    except RuntimeError:
+        pass
+    else:
+        # Both values are put on ``ctx.meta`` by ``_TemplateAwareClickOption``, which is the only place they can be
+        # read independently of the order the options were typed in.
+        template_vars = ctx.meta.get('template_vars')
+        non_interactive = ctx.meta.get('non_interactive', False)
+
+    return process_template_content(content, interactive=not non_interactive, template_vars=template_vars)
 
 
 def configuration_callback(
@@ -75,6 +109,10 @@ def configuration_callback(
     if value:
         try:
             config = provider(value, cmd_name)
+        except (click.Abort, click.exceptions.Exit):
+            # ``click.Abort`` subclasses ``RuntimeError`` and carries no message, so a provider that prompts (see
+            # ``_template_aware_yaml_provider``) would report an interrupted prompt as a blank read failure.
+            raise
         except Exception as exception:
             raise click.BadOptionUsage(option_name, f'Error reading configuration file: {exception}', ctx)
 
@@ -186,4 +224,62 @@ class ConfigFileOption(OverridableOption):
         kw_copy = self.kwargs.copy()
         kw_copy.update(kwargs)
 
+        return configuration_option(*self.args, **kw_copy)
+
+
+class _TemplateAwareClickOption(click.Option):
+    """Resolves ``--template-vars`` and ``--non-interactive`` before the config callback runs.
+
+    Click processes eager options in invocation order rather than declaration order, so by the time the ``--config``
+    callback fires, neither value is guaranteed to be in ``ctx.params`` yet: typing ``--config`` first is enough to
+    make both look absent. They are therefore read from the raw ``opts`` mapping, which is complete from the start,
+    and handed to the provider through ``ctx.meta``.
+    """
+
+    def handle_parse_result(
+        self, ctx: click.Context, opts: t.Mapping[str, t.Any], args: list[str]
+    ) -> tuple[t.Any, list[str]]:
+        ctx.meta['non_interactive'] = bool(opts.get('non_interactive', False))
+
+        raw_template_vars = opts.get('template_vars')
+        if raw_template_vars is not None and 'template_vars' not in ctx.meta:
+            from aiida.cmdline.utils.template_config import parse_template_vars
+
+            try:
+                ctx.meta['template_vars'] = parse_template_vars(raw_template_vars)
+            except click.BadParameter as exception:
+                raise click.BadOptionUsage('--template-vars', exception.message, ctx) from exception
+
+        return super().handle_parse_result(ctx, opts, args)
+
+
+class TemplateAwareConfigFileOption(OverridableOption):
+    """Like :class:`ConfigFileOption`, but transparently resolves Jinja2 placeholders in the configuration file.
+
+    Placeholders are taken from ``--template-vars`` and, in interactive mode, prompted for using the descriptions in
+    the file's ``metadata.template_variables`` section. The ``metadata`` section itself is stripped rather than
+    reported as an unsupported key, which is the one way a plain YAML file is not treated exactly as
+    :class:`ConfigFileOption` treats it.
+
+    Declare ``TEMPLATE_VARS`` alongside this option: without it there is no way to supply values non-interactively.
+    """
+
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
+        from aiida.cmdline.params.types import FileOrUrl
+
+        kwargs.update(
+            {
+                'provider': _template_aware_yaml_provider,
+                'implicit': False,
+                'cls': _TemplateAwareClickOption,
+                # The provider needs the content, not a path, so the type has to yield a handle. Defaulted here
+                # rather than left to each declaration site, where forgetting it fails only at runtime.
+                'type': kwargs.get('type', FileOrUrl()),
+            }
+        )
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, **kwargs: t.Any) -> t.Callable[[FC], FC]:
+        kw_copy = self.kwargs.copy()
+        kw_copy.update(kwargs)
         return configuration_option(*self.args, **kw_copy)

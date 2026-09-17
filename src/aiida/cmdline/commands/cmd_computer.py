@@ -287,6 +287,7 @@ def set_computer_builder(ctx, param, value):
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@options.TEMPLATE_VARS()
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()

@@ -591,6 +591,7 @@ def _check_all(serialized: dict, entity: orm.Entity):
         _check(value, field)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     entities_to_test,
@@ -605,6 +606,7 @@ def test_stored_entity_serialization(required_arguments: RequiredEntityArguments
     _check_all(serialized, entity)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     nodes_to_test,
@@ -620,6 +622,7 @@ def test_stored_node_serialization(required_arguments: RequiredNodeArguments):
     _check_all(serialized, node)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'process_generator',
     [
@@ -669,6 +672,7 @@ def _validate_value(value):
 # in the entity tests, we must explicitly specify the `WriteModel` schema.
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     entities_to_test,
@@ -687,6 +691,7 @@ def test_roundtrip_entity_from_model(required_arguments: RequiredEntityArguments
     assert _validate_value(new_model) == _validate_value(model)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     entities_to_test,

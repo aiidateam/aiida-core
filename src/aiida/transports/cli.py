@@ -41,6 +41,8 @@ def configure_computer_main(computer, user, **kwargs):
 
     user = user or orm.User.collection.get_default()
 
+    assert user is not None
+
     echo.echo_report(f'Configuring computer {computer.label} for user {user.email}.')
     if not user.is_default:
         echo.echo_report('Configuring different user, defaults may not be appropriate.')
@@ -85,7 +87,7 @@ def interactive_default(key, also_non_interactive=False):
         user = ctx.params.get('user', None) or orm.User.collection.get_default()
         computer = ctx.params.get('computer', None)
 
-        if computer is None:
+        if computer is None or user is None:
             return None
 
         try:
@@ -123,7 +125,7 @@ def create_option(name, spec):
     if existing_option:
         return existing_option(**kwargs)
 
-    return click.option(option_name, **kwargs)
+    return click.option(option_name, **kwargs)  # type: ignore[arg-type]
 
 
 def list_transport_options(transport_type):

@@ -90,6 +90,7 @@ class LocalTransport(BlockingTransport):
         If possible, use getcwd() instead!
         """
         if self._is_open:
+            assert self._internal_dir is not None
             return os.path.realpath(self._internal_dir)
 
         raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
@@ -833,7 +834,7 @@ class LocalTransport(BlockingTransport):
 
                     filelike_stdin = line_encoder(stdin)
                 elif isinstance(stdin, io.BufferedIOBase):
-                    filelike_stdin = stdin
+                    filelike_stdin = stdin  # type: ignore[assignment]
                 else:
                     raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
 

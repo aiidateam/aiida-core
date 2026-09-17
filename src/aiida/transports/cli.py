@@ -18,8 +18,6 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 
-TRANSPORT_PARAMS = []
-
 
 def match_comp_transport(ctx, param, computer, transport_type):
     """Check the computer argument against the transport type."""
@@ -49,13 +47,6 @@ def configure_computer_main(computer, user, **kwargs):
 
     computer.configure(user=user, **kwargs)
     echo.echo_success(f'{computer.label} successfully configured for {user.email}')
-
-
-def common_params(command_func):
-    """Decorate a command function with common click parameters for all transport plugins."""
-    for param in TRANSPORT_PARAMS.copy().reverse():
-        command_func = param(command_func)
-    return command_func
 
 
 def transport_option_default(name, computer):

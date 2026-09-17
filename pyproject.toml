@@ -522,6 +522,7 @@ select = [
   'F',  # pyflakes
   'UP',  # pyupgrade
   'I',  # isort
+  'ICN',  # flake8-import-conventions
   'N',  # pep8-naming
   'PLC',  # pylint-convention
   'PLE',  # pylint-error
@@ -532,6 +533,10 @@ select = [
   'NPY201',  # numpy compatibility
   'TID'  # flake8-tidy-imports
 ]
+
+[tool.ruff.lint.flake8-import-conventions]
+aliases = {typing = "t"}  # Only listed imports are checked
+banned-from = ["typing"]  # Only listed from-imports are banned
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"

@@ -125,8 +125,6 @@ repos:
         src/aiida/tools/data/array/kpoints/legacy.py|
         src/aiida/tools/data/array/kpoints/seekpath.py|
         src/aiida/tools/dbimporters/plugins/.*|
-        src/aiida/transports/cli.py|
-        src/aiida/transports/plugins/local.py|
       )$
 
   - id: generate-conda-environment

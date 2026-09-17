@@ -27,7 +27,7 @@ class ProcessFuture(asyncio.Future):
         self,
         pk: int,
         loop: asyncio.AbstractEventLoop | None = None,
-        poll_interval: None | int | float = None,
+        poll_interval: int | float | None = None,
         communicator: broker_communicator.Communicator | None = None,
     ):
         """Construct a future for a process node being finished.

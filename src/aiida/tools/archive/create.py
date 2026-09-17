@@ -45,7 +45,7 @@ QbType = Callable[[], orm.QueryBuilder]
 
 def create_archive(
     entities: Iterable[orm.Computer | orm.Node | orm.Group | orm.User] | None,
-    filename: None | str | Path = None,
+    filename: str | Path | None = None,
     *,
     archive_format: ArchiveFormatAbstract | None = None,
     overwrite: bool = False,
@@ -686,8 +686,8 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: 
 def _check_node_licenses(
     querybuilder: QbType,
     node_ids: set[int],
-    allowed_licenses: None | Sequence[str] | Callable,
-    forbidden_licenses: None | Sequence[str] | Callable,
+    allowed_licenses: Sequence[str] | Callable | None,
+    forbidden_licenses: Sequence[str] | Callable | None,
     batch_size: int,
     filter_size: int,
 ) -> None:

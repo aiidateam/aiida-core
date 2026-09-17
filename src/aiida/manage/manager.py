@@ -98,7 +98,7 @@ class Manager:
         """
         return self._profile
 
-    def load_profile(self, profile: None | str | Profile = None, allow_switch=False) -> Profile:
+    def load_profile(self, profile: str | Profile | None = None, allow_switch=False) -> Profile:
         """Load a global profile, unloading any previously loaded profile.
 
         .. note:: If a profile is already loaded and no explicit profile is specified, nothing will be done.

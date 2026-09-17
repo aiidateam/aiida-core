@@ -506,7 +506,7 @@ class ZipfileBackendRepository(_RoBackendRepository):
     def __init__(self, path: str | Path):
         super().__init__(path)
         self._folder = REPO_FOLDER
-        self.__zipfile: None | ZipFile = None
+        self.__zipfile: ZipFile | None = None
 
     def close(self) -> None:
         if self.__zipfile:

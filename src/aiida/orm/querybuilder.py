@@ -1192,7 +1192,7 @@ class QueryBuilder:
 
 
 def _get_ormclass(
-    cls: None | EntityClsType | Sequence[EntityClsType], entity_type: None | str | Sequence[str]
+    cls: EntityClsType | Sequence[EntityClsType] | None, entity_type: str | Sequence[str] | None
 ) -> tuple[EntityTypes, list[Classifier]]:
     """Get ORM classifiers from either class(es) or ormclass_type_string(s).
 
@@ -1416,7 +1416,7 @@ class _QueryTagMap:
 
     def __init__(self):
         """Construct a new instance."""
-        self._tag_to_type: dict[str, None | EntityTypes] = {}
+        self._tag_to_type: dict[str, EntityTypes | None] = {}
         # A dictionary for classes passed to the tag given to them
         # Everything is specified with unique tags, which are strings.
         # But somebody might not care about giving tags, so to do
@@ -1443,8 +1443,8 @@ class _QueryTagMap:
     def add(
         self,
         tag: str,
-        etype: None | EntityTypes = None,
-        klasses: None | EntityClsType | Sequence[EntityClsType] = None,
+        etype: EntityTypes | None = None,
+        klasses: EntityClsType | Sequence[EntityClsType] | None = None,
     ) -> None:
         """Add a tag."""
         self._tag_to_type[tag] = etype

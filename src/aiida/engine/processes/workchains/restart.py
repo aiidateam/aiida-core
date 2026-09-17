@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 __all__ = ('BaseRestartWorkChain',)
 
 
-def validate_on_unhandled_failure(value: None | orm.Str, _) -> None | str:
+def validate_on_unhandled_failure(value: orm.Str | None, _) -> str | None:
     """Validator for the `on_unhandled_failure` input port.
 
     :param value: the input `Str` node

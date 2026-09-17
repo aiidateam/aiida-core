@@ -277,7 +277,7 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def set_global_variable(
-        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
+        self, key: str, value: str | int | float | None, description: str | None = None, overwrite: bool = True
     ) -> None:
         """Set a global variable in the storage.
 
@@ -290,7 +290,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_global_variable(self, key: str) -> None | str | int | float:
+    def get_global_variable(self, key: str) -> str | int | float | None:
         """Return a global variable from the storage.
 
         :param key: the key of the setting

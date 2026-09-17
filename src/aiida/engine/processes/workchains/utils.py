@@ -46,7 +46,7 @@ def process_handler(
     wrapped: FunctionType | None = None,
     *,
     priority: int = 0,
-    exit_codes: None | ExitCode | list[ExitCode] = None,
+    exit_codes: ExitCode | list[ExitCode] | None = None,
     enabled: bool = True,
 ) -> FunctionType:
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.

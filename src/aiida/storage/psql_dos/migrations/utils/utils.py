@@ -44,7 +44,7 @@ class LazyFile(File):
         self,
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
-        key: str | None | LazyOpener = None,
+        key: str | LazyOpener | None = None,
         objects: dict[str, 'File'] | None = None,
     ):
         if not isinstance(name, str):

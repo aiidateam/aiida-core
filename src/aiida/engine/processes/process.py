@@ -820,7 +820,7 @@ class Process(ProcessBase):
 
     def _filter_serializable_metadata(
         self,
-        port: None | InputPort | PortNamespace,
+        port: InputPort | PortNamespace | None,
         port_value: Any,
     ) -> Any | None:
         """Return the inputs that correspond to ports with ``is_metadata=True`` and that are JSON serializable.
@@ -885,7 +885,7 @@ class Process(ProcessBase):
 
     def _flatten_inputs(
         self,
-        port: None | InputPort | PortNamespace,
+        port: InputPort | PortNamespace | None,
         port_value: Any,
         parent_name: str = '',
         separator: str = PORT_NAMESPACE_SEPARATOR,
@@ -928,7 +928,7 @@ class Process(ProcessBase):
 
     def _flatten_outputs(
         self,
-        port: None | OutputPort | PortNamespace,
+        port: OutputPort | PortNamespace | None,
         port_value: Any,
         parent_name: str = '',
         separator: str = PORT_NAMESPACE_SEPARATOR,

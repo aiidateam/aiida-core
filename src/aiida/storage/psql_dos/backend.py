@@ -440,7 +440,7 @@ class PsqlDosBackend(StorageBackend):
         return convert.get_backend_entity(model, self)
 
     def set_global_variable(
-        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
+        self, key: str, value: str | int | float | None, description: str | None = None, overwrite: bool = True
     ) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
@@ -454,7 +454,7 @@ class PsqlDosBackend(StorageBackend):
             else:
                 session.add(DbSetting(key=key, val=value, description=description or ''))
 
-    def get_global_variable(self, key: str) -> None | str | int | float:
+    def get_global_variable(self, key: str) -> str | int | float | None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()

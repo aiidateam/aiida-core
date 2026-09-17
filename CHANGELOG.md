@@ -48,6 +48,14 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 
 ### Behavior changes
 
+#### `to_aiida_type`: an enum member is stored as `EnumData`
+
+A member of an enum that mixes in another type, such as `class Spin(str, Enum)` or anything deriving from `IntEnum`, was stored as that mixed-in type.
+`singledispatch` resolves by method resolution order, so `str` outranked `Enum` and the member was stored as `str(member)`, which reads `'Spin.COLLINEAR'` and cannot be read back into the enum.
+A member is now stored as an `EnumData` holding it, which records the value, the name and the class, so `get_member()` returns the member.
+
+Code that passed such a member to a port declaring `valid_type=Str` has to pass `member.value` instead.
+
 ### Fixes
 
 ### Deprecations

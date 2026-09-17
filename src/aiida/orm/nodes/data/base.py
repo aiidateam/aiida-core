@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import typing as t
+from enum import Enum
 from functools import singledispatch
 
 from aiida.orm.nodes.data.data import Data
@@ -18,11 +19,71 @@ from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('BaseType', 'to_aiida_type')
 
+# ``singledispatch`` resolves by method resolution order, and ``Enum`` is the one registered type meant to be mixed
+# into another: a member of ``class Spin(str, Enum)`` is a ``str`` before it is an ``Enum``. A class named here is
+# asked ahead of whatever a value inherits from outside it.
+_DISPATCH_PRECEDENCE: t.Final[tuple[type, ...]] = (Enum,)
+
+_Conversion: t.TypeAlias = t.Callable[[t.Any], Data]
+_ConversionT = t.TypeVar('_ConversionT', bound=t.Callable[..., Data])
+
+
+class _Dispatcher(t.Protocol):
+    """What ``to_aiida_type`` exposes: a call that converts a value, and ``register`` to add a conversion."""
+
+    @property
+    def registry(self) -> t.Mapping[type, _Conversion]: ...
+
+    def __call__(self, value: t.Any) -> Data: ...
+
+    def dispatch(self, cls: type) -> _Conversion: ...
+
+    @t.overload
+    def register(self, cls: type, func: None = None) -> t.Callable[[_ConversionT], _ConversionT]: ...
+
+    @t.overload
+    def register(self, cls: _ConversionT, func: None = None) -> _ConversionT: ...
+
+    @t.overload
+    def register(self, cls: type, func: _ConversionT) -> _ConversionT: ...
+
 
 @singledispatch
-def to_aiida_type(value):
-    """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
+def _dispatch(value: t.Any) -> Data:
+    """Raise for a value whose type has no registered conversion."""
     raise TypeError(f'Cannot convert value of type {type(value)} to AiiDA type.')
+
+
+def _conversion_below(cls: type, branch: type) -> _Conversion:
+    """Return the conversion registered closest to ``cls`` among the bases of ``cls`` that are ``branch``."""
+    below = (base for base in cls.__mro__ if base in _dispatch.registry and issubclass(base, branch))
+    return _dispatch.dispatch(next(below, branch))
+
+
+def _implementation_for(cls: type) -> _Conversion:
+    """Return the conversion that turns a value of this type into a node."""
+    for branch in _DISPATCH_PRECEDENCE:
+        if issubclass(cls, branch):
+            return _conversion_below(cls, branch)
+
+    return _dispatch.dispatch(cls)
+
+
+def _to_aiida_type(value: t.Any) -> Data:
+    """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types.
+
+    :param value: the value to convert.
+    :return: the node holding it.
+    :raises TypeError: if no conversion is registered for the type of the value.
+    """
+    return _implementation_for(type(value))(value)
+
+
+_to_aiida_type.register = _dispatch.register  # type: ignore[attr-defined]
+_to_aiida_type.dispatch = _implementation_for  # type: ignore[attr-defined]
+_to_aiida_type.registry = _dispatch.registry  # type: ignore[attr-defined]
+
+to_aiida_type: _Dispatcher = t.cast(_Dispatcher, _to_aiida_type)
 
 
 class BaseType(Data):

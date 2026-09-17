@@ -286,19 +286,19 @@ def test_dir_reading_permissions(custom_transport, tmp_path_remote):
     with custom_transport as transport:
         directory = tmp_path_remote / 'test'
 
-        # create directory with non default permissions
-        transport.mkdir(directory)
+        try:
+            # create directory with non default permissions
+            transport.mkdir(directory)
 
-        # change permissions to low ones
-        transport.chmod(directory, 0)
+            # change permissions to low ones
+            transport.chmod(directory, 0)
 
-        # test if the security bits have changed
-        assert transport.get_mode(directory) == 0
-
-        # TODO : the test leaves a directory even if it is successful
-        #        The bug is in paramiko. After lowering the permissions,
-        #        I cannot restore them to higher values
-        # transport.rmdir(directory)
+            # test if the security bits have changed
+            assert transport.get_mode(directory) == 0
+        finally:
+            # Restore access locally so pytest can remove its temporary directory.
+            if directory.exists():
+                directory.chmod(0o700)
 
 
 def test_isfile_isdir(custom_transport, tmp_path_remote):

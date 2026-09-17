@@ -22,7 +22,7 @@ soon as a revision actually changes the schema.
 import pytest
 from alembic.command import downgrade, upgrade
 
-from aiida.storage.sqlite_zip.migrator import _alembic_connect, list_versions
+from aiida.storage.sqlite_zip.migrator import _alembic_connect, _migration_context, list_versions
 from tests.storage.sqlite.utils import reflect_schema
 
 # Revisions whose downgrade is not implemented: they raise ``NotImplementedError``.
@@ -36,6 +36,10 @@ def test_main(version, tmp_path, data_regression):
 
     with _alembic_connect(database_path) as config:
         upgrade(config, version)
+
+    # Checking the revision on a new connection verifies it was committed to the database.
+    with _migration_context(database_path) as context:
+        assert context.get_current_revision() == version
 
     data_regression.check(reflect_schema(database_path), basename=f'test_{version}')
 

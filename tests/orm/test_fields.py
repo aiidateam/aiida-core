@@ -15,8 +15,8 @@ from importlib_metadata import entry_points
 
 from aiida import orm
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm.fields import add_field
 from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm.qb_fields import QbAnyField, QbStrField, add_field
 from aiida.plugins import load_entry_point
 
 EPS = entry_points()
@@ -70,7 +70,7 @@ def test_add_field():
         assert node.fields.key1.is_attribute is True
     with pytest.warns(AiidaDeprecationWarning, match='QbField.is_subscriptable'):
         assert node.fields.key1.is_subscriptable is False
-    assert isinstance(node.fields.key1, orm.fields.QbStrField)
+    assert isinstance(node.fields.key1, QbStrField)
     assert node.fields.key1.backend_key == 'attributes.key1'
     assert node.fields.key1 == node.fields.attributes.key1
     with pytest.warns(AiidaDeprecationWarning, match='QbField.is_subscriptable'):
@@ -317,6 +317,6 @@ def test_unknown_attribute_field_access():
     """Test unknown attribute access returns a generic `QbAnyField`."""
     node = orm.Data()
     unknown_attr = node.fields.attributes['unknown']
-    assert isinstance(unknown_attr, orm.fields.QbAnyField)
+    assert isinstance(unknown_attr, QbAnyField)
     assert unknown_attr.key == 'attributes.unknown'
     assert unknown_attr.dtype is t.Any

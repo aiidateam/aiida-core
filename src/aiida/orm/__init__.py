@@ -17,11 +17,11 @@ from aiida.orm.comments import *
 from aiida.orm.computers import *
 from aiida.orm.entities import *
 from aiida.orm.extras import *
-from aiida.orm.fields import *
 from aiida.orm.groups import *
 from aiida.orm.logs import *
 from aiida.orm.nodes import *
 from aiida.orm.pydantic import *
+from aiida.orm.qb_fields import *
 from aiida.orm.querybuilder import *
 from aiida.orm.users import *
 from aiida.orm.utils import *

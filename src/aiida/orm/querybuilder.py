@@ -36,7 +36,7 @@ from typing import (
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-from aiida.orm import authinfos, comments, computers, convert, entities, fields, groups, logs, nodes, users
+from aiida.orm import convert, entities, qb_fields
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
     GROUP_ENTITY_TYPE_PREFIX,
@@ -55,7 +55,7 @@ __all__ = ('QueryBuilder',)
 # re-usable type annotations
 EntityClsType = type[Union[entities.Entity, 'Process']]
 ProjectType = str | dict | Sequence[str | dict]
-FilterType = dict[str, Any] | fields.QbFieldFilters | fields.QbBoolField
+FilterType = dict[str, Any] | qb_fields.QbFieldFilters | qb_fields.QbBoolField
 OrderByType = dict | list[dict] | tuple[dict, ...]
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')
@@ -637,7 +637,7 @@ class QueryBuilder:
                 for item_to_order_by in items_to_order_by:
                     if isinstance(item_to_order_by, str):
                         item_to_order_by = {item_to_order_by: {}}  # noqa: PLW2901
-                    elif isinstance(item_to_order_by, fields.QbField):
+                    elif isinstance(item_to_order_by, qb_fields.QbField):
                         item_to_order_by = {item_to_order_by.backend_key: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, dict):
                         pass
@@ -705,9 +705,9 @@ class QueryBuilder:
     @staticmethod
     def _process_filters(filters: FilterType) -> dict[str, Any]:
         """Process filters."""
-        if isinstance(filters, fields.QbBoolField):
+        if isinstance(filters, qb_fields.QbBoolField):
             filters = filters.as_filter()
-        if not isinstance(filters, (dict, fields.QbFieldFilters)):
+        if not isinstance(filters, (dict, qb_fields.QbFieldFilters)):
             raise TypeError('Filters must be either a dictionary or QbFieldFilters')
 
         processed_filters = {}
@@ -717,7 +717,7 @@ class QueryBuilder:
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
                 processed_filters[f'{key}_id'] = value.pk
-            elif isinstance(key, fields.QbField):
+            elif isinstance(key, qb_fields.QbField):
                 processed_filters[key.backend_key] = value
             else:
                 processed_filters[key] = value
@@ -831,7 +831,7 @@ class QueryBuilder:
         _projections = []
         LOGGER.debug('Adding projection of %s: %s', tag_spec, projection_spec)
 
-        def _update_project_map(projection: fields.QbField):
+        def _update_project_map(projection: qb_fields.QbField):
             """Return the DB field to use, or a tuple of the DB field to use and the key to return."""
             if projection.backend_key != projection.key:
                 self._project_map.setdefault(tag, {})
@@ -843,14 +843,14 @@ class QueryBuilder:
         for projection in projection_spec:
             if isinstance(projection, dict):
                 _thisprojection = {
-                    _update_project_map(key) if isinstance(key, fields.QbField) else key: value
+                    _update_project_map(key) if isinstance(key, qb_fields.QbField) else key: value
                     for key, value in projection.items()
                 }
             elif isinstance(projection, str):
                 _thisprojection = {projection: {}}
-            elif isinstance(projection, fields.QbField):
+            elif isinstance(projection, qb_fields.QbField):
                 _thisprojection = {_update_project_map(projection): {}}
-            elif isinstance(projection, fields.QbFields):
+            elif isinstance(projection, qb_fields.QbFields):
                 _thisprojection = {_update_project_map(projection[name]): {} for name in projection}
             else:
                 raise ValueError(f'Cannot deal with projection specification {projection}\n')
@@ -1244,6 +1244,7 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> tuple[EntityTypes, Classifier]
     """
     # Note: Unable to move this import to the top of the module for some reason
     from aiida.engine import Process
+    from aiida.orm import authinfos, comments, computers, groups, logs, nodes, users
     from aiida.orm.utils.node import is_valid_node_type_string
 
     classifiers: Classifier

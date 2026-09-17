@@ -64,7 +64,10 @@ def test_dump_plugin_subclass_node(entry_points, tmp_path):
     :mod:`aiida.tools._dumping.executors.process`: dumping must resolve the registry through
     :func:`~aiida.tools._dumping.utils.registry_name_for` rather than an exact-type dict lookup.
     """
+    from aiida.plugins.entry_point import get_entry_point_from_class
+
     entry_points.add(PluginWorkGraphNode, 'aiida.node:process.workflow.workchain.workgraph')
+    get_entry_point_from_class.cache_clear()
 
     node = PluginWorkGraphNode()
     node.label = 'my-workgraph'

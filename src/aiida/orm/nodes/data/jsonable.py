@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
-import typing
+import typing as t
 
 from pydantic import ConfigDict, WithJsonSchema
 
@@ -14,9 +14,9 @@ from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 __all__ = ('JsonableData',)
 
 
-@typing.runtime_checkable
-class JsonSerializableProtocol(typing.Protocol):
-    def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]: ...
+@t.runtime_checkable
+class JsonSerializableProtocol(t.Protocol):
+    def as_dict(self) -> t.MutableMapping[t.Any, t.Any]: ...
 
 
 class JsonableData(Data):
@@ -61,19 +61,19 @@ class JsonableData(Data):
             title='Module name',
             alias='@module',
             description='The module name of the wrapped object',
-            orm_to_model=lambda node: typing.cast(JsonableData, node).the_module,
+            orm_to_model=lambda node: t.cast(JsonableData, node).the_module,
         )
         the_class: str = OrmMetadataField(
             title='Class name',
             alias='@class',
             description='The class name of the wrapped object',
-            orm_to_model=lambda node: typing.cast(JsonableData, node).the_class,
+            orm_to_model=lambda node: t.cast(JsonableData, node).the_class,
         )
 
     class ConstructorArgsModel(OrmModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        obj: typing.Annotated[
+        obj: t.Annotated[
             JsonSerializableProtocol,
             WithJsonSchema(
                 {
@@ -150,7 +150,7 @@ class JsonableData(Data):
         return self._get_object()
 
     @classmethod
-    def _deserialize_float_constants(cls, data: typing.Any):
+    def _deserialize_float_constants(cls, data: t.Any):
         """Deserialize the contents of a dictionary ``data`` deserializing infinity and NaN string constants.
 
         The ``data`` dictionary is recursively checked for the ``Infinity``, ``-Infinity`` and ``NaN`` strings, which
@@ -204,10 +204,10 @@ class JsonableData(Data):
     def to_model_field_values(
         self,
         *,
-        context: dict[str, typing.Any] | None = None,
+        context: dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
-    ) -> dict[str, typing.Any]:
+    ) -> dict[str, t.Any]:
         fields = super().to_model_field_values(
             context=context,
             minimal=minimal,

@@ -9,10 +9,10 @@
 # ruff: noqa: N802
 """A module containing the logic for creating joined queries."""
 
+import typing as t
 import weakref
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
 
 from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
@@ -27,7 +27,7 @@ from aiida.common.links import LinkType
 from aiida.storage.psql_dos.models.base import Model
 
 
-class _EntityMapper(Protocol):
+class _EntityMapper(t.Protocol):
     """Mapping of implemented entity types."""
 
     @property
@@ -57,7 +57,7 @@ class _EntityMapper(Protocol):
     @property
     def table_groups_nodes(self) -> type[Table]: ...
 
-    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, Any]) -> ColumnElement[bool] | None: ...
+    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, t.Any]) -> ColumnElement[bool] | None: ...
 
 
 @dataclass
@@ -67,8 +67,8 @@ class JoinReturn:
     edge_tag: str = ''
 
 
-FilterType = dict[str, Any]
-JoinFuncType = Callable[[Any, Any, bool, FilterType, bool], JoinReturn]
+FilterType = dict[str, t.Any]
+JoinFuncType = Callable[[t.Any, t.Any, bool, FilterType, bool], JoinReturn]
 
 
 class SqlaJoiner:

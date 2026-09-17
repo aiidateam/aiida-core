@@ -9,7 +9,7 @@
 """Module with resources common to the repository."""
 
 import enum
-import typing
+import typing as t
 
 __all__ = ('File', 'FileType')
 
@@ -65,7 +65,7 @@ class File:
         self._objects = objects or {}
 
     @classmethod
-    def from_serialized(cls, serialized: dict[str, typing.Any], name: str = '') -> 'File':
+    def from_serialized(cls, serialized: dict[str, t.Any], name: str = '') -> 'File':
         """Construct a new instance from a serialized instance.
 
         :param serialized: the serialized instance.
@@ -82,7 +82,7 @@ class File:
 
         return cls(name, file_type, key, objects)
 
-    def serialize(self) -> dict[str, typing.Any]:
+    def serialize(self) -> dict[str, t.Any]:
         """Serialize the metadata into a JSON-serializable format.
 
         .. note:: the serialization format is optimized to reduce the size in bytes.

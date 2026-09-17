@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
+import typing as t
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from typing import Any, Literal, TypeAlias, overload
 
 # Import TypedDict from typing_extensions to get "closed" support (PEP728)
 from typing_extensions import Self, TypedDict
@@ -24,10 +24,10 @@ VALID_ENTITY_CLASSES = (orm.Node, orm.Group)
 
 GroupNodeEdge = namedtuple('GroupNodeEdge', ['node_id', 'group_id'])
 
-_NodeOrGroupCls: TypeAlias = 'type[orm.Node] | type[orm.Group]'
-_ContainerTypes: TypeAlias = 'list[Any] | tuple[Any, ...] | set[Any]'
-_EdgeType: TypeAlias = 'type[LinkQuadruple] | type[GroupNodeEdge]'
-_EdgeIdentifiers: TypeAlias = tuple[tuple[str, str], ...]
+_NodeOrGroupCls: t.TypeAlias = 'type[orm.Node] | type[orm.Group]'
+_ContainerTypes: t.TypeAlias = 'list[t.Any] | tuple[t.Any, ...] | set[t.Any]'
+_EdgeType: t.TypeAlias = 'type[LinkQuadruple] | type[GroupNodeEdge]'
+_EdgeIdentifiers: t.TypeAlias = tuple[tuple[str, str], ...]
 
 
 class AbstractSetContainer(metaclass=ABCMeta):
@@ -48,7 +48,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
     def __init__(self) -> None:
         """Initialization method"""
         super().__init__()
-        self._keyset: set[Any] = set()
+        self._keyset: set[t.Any] = set()
         self._additional_identifiers = ()
 
     @abstractmethod
@@ -64,7 +64,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _check_input_for_set(self, input_for_set: Any) -> Any:
+    def _check_input_for_set(self, input_for_set: t.Any) -> t.Any:
         """Utility function
 
         When provinding input keys for the internal set, this utility function will
@@ -80,12 +80,12 @@ class AbstractSetContainer(metaclass=ABCMeta):
         """Create new instance with the same defining attributes."""
 
     @property
-    def keyset(self) -> set[Any]:
+    def keyset(self) -> set[t.Any]:
         """Set containing the keys of the entities"""
         return self._keyset
 
     @keyset.setter
-    def keyset(self, inpset: set[Any] | None) -> None:
+    def keyset(self, inpset: set[t.Any] | None) -> None:
         """Setter for the keyset
 
         Use with care! There is no way to check if the keys are consistent ids here.
@@ -102,7 +102,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
             raise ValueError('keyset must be assigned a set or None')
 
     @property
-    def additional_identifiers(self) -> tuple[Any, ...]:
+    def additional_identifiers(self) -> tuple[t.Any, ...]:
         """Additional identifiers for the entities"""
         return self._additional_identifiers
 
@@ -138,10 +138,10 @@ class AbstractSetContainer(metaclass=ABCMeta):
     def __repr__(self) -> str:
         return f'{{{",".join(map(str, self.keyset))}}}'
 
-    def __eq__(self, other: Any) -> Any:
+    def __eq__(self, other: t.Any) -> t.Any:
         return self.keyset == other.keyset
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: t.Any) -> bool:
         return not self == other
 
     def set_entities(self, new_entitites: _ContainerTypes) -> None:
@@ -188,7 +188,7 @@ class AiidaEntitySet(AbstractSetContainer):
         self._aiida_cls = aiida_cls
         self.keyset = set()
         # Currently only 'id' is supported
-        self._identifier: Literal['id'] = 'id'
+        self._identifier: t.Literal['id'] = 'id'
         self._identifier_type = int
 
     def _check_self_and_other(self, other: Self) -> None:
@@ -201,7 +201,7 @@ class AiidaEntitySet(AbstractSetContainer):
         if self._identifier_type != other.identifier_type:
             raise TypeError('The two instances do not have the same identifier type!')
 
-    def _check_input_for_set(self, input_for_set: orm.Node | orm.Group | int) -> Any:
+    def _check_input_for_set(self, input_for_set: orm.Node | orm.Group | int) -> t.Any:
         if isinstance(input_for_set, self._aiida_cls):
             return getattr(input_for_set, self._identifier)
 
@@ -218,7 +218,7 @@ class AiidaEntitySet(AbstractSetContainer):
         return AiidaEntitySet(aiida_cls=self.aiida_cls)
 
     @property
-    def identifier(self) -> Literal['id']:
+    def identifier(self) -> t.Literal['id']:
         """Identifier used for the nodes or groups (currently always id)"""
         return self._identifier
 
@@ -284,7 +284,7 @@ class DirectedEdgeSet(AbstractSetContainer):
         if self.edge_namedtuple != other.edge_namedtuple:
             raise ValueError('The two instances do not have the same identifiers!')
 
-    def _check_input_for_set(self, input_for_set: tuple[Any, ...]) -> tuple[Any, ...]:
+    def _check_input_for_set(self, input_for_set: tuple[t.Any, ...]) -> tuple[t.Any, ...]:
         if not isinstance(input_for_set, tuple):
             raise TypeError(f'value for `input_for_set` {input_for_set} is not a tuple')
         if len(input_for_set) != len(self._edge_identifiers):
@@ -324,8 +324,8 @@ class _BasketDict(TypedDict, closed=True, total=True):
     groups_nodes: DirectedEdgeSet
 
 
-_BasketKeys: TypeAlias = Literal['nodes', 'groups', 'nodes_nodes', 'groups_nodes']
-_BasketValues: TypeAlias = 'AiidaEntitySet | DirectedEdgeSet'
+_BasketKeys: t.TypeAlias = t.Literal['nodes', 'groups', 'nodes_nodes', 'groups_nodes']
+_BasketValues: t.TypeAlias = 'AiidaEntitySet | DirectedEdgeSet'
 
 
 class Basket:
@@ -401,7 +401,7 @@ class Basket:
         self._dict = _BasketDict(nodes=nodes, groups=groups, nodes_nodes=nodes_nodes, groups_nodes=groups_nodes)
 
     @property
-    def sets(self) -> tuple[Any, ...]:
+    def sets(self) -> tuple[t.Any, ...]:
         """All sets in the basket returned as an ordered list.
         The order is: 'groups', 'groups_nodes', 'nodes', 'nodes_nodes'.
         """
@@ -424,20 +424,20 @@ class Basket:
         """Set of groups stored in the basket"""
         return self._dict['groups']
 
-    @overload
-    def __getitem__(self, key: Literal['nodes', 'groups']) -> AiidaEntitySet: ...
+    @t.overload
+    def __getitem__(self, key: t.Literal['nodes', 'groups']) -> AiidaEntitySet: ...
 
-    @overload
-    def __getitem__(self, key: Literal['nodes_nodes', 'groups_nodes']) -> DirectedEdgeSet: ...
+    @t.overload
+    def __getitem__(self, key: t.Literal['nodes_nodes', 'groups_nodes']) -> DirectedEdgeSet: ...
 
     def __getitem__(self, key: _BasketKeys) -> _BasketValues:
         return self._dict[key]
 
-    @overload
-    def __setitem__(self, key: Literal['nodes', 'groups'], val: AiidaEntitySet) -> None: ...
+    @t.overload
+    def __setitem__(self, key: t.Literal['nodes', 'groups'], val: AiidaEntitySet) -> None: ...
 
-    @overload
-    def __setitem__(self, key: Literal['nodes_nodes', 'groups_nodes'], val: DirectedEdgeSet) -> None: ...
+    @t.overload
+    def __setitem__(self, key: t.Literal['nodes_nodes', 'groups_nodes'], val: DirectedEdgeSet) -> None: ...
 
     def __setitem__(self, key: _BasketKeys, val: _BasketValues) -> None:
         self._dict[key] = val

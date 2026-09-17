@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
+import typing as t
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
@@ -38,7 +38,7 @@ from aiida.storage.migrations import TEMPLATE_INVALID_SCHEMA_VERSION
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from types import TracebackType
 
     from disk_objectstore import Container
@@ -445,7 +445,7 @@ class PsqlDosMigrator:
         config.attributes['connection'] = self.connection
         config.attributes['aiida_profile'] = self.profile
 
-        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
+        def _callback(step: MigrationInfo, **kwargs: t.Any) -> None:
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')
@@ -481,7 +481,7 @@ class PsqlDosMigrator:
         finally:
             session.close()
 
-    def get_current_table(self, table_name: str) -> Any:
+    def get_current_table(self, table_name: str) -> t.Any:
         """Return a table instantiated at the correct migration.
 
         Note that this is obtained by inspecting the database and not by looking into the models file.

@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from collections.abc import Callable
-from typing import Any
 
 from aiida.tools.query import formatting
 
@@ -35,7 +35,7 @@ class ProjectionMapper:
         self,
         projection_labels: dict[str, str] | None = None,
         projection_attributes: dict[str, str] | None = None,
-        projection_formatters: dict[str, Callable[[Any], str]] | None = None,
+        projection_formatters: dict[str, Callable[[t.Any], str]] | None = None,
     ):
         """Construct new instance."""
         if not self._valid_projections:
@@ -77,10 +77,10 @@ class ProjectionMapper:
     def get_attribute(self, projection: str) -> str:
         return self._projection_attributes[projection]
 
-    def get_formatter(self, projection: str) -> Callable[[Any], str]:
+    def get_formatter(self, projection: str) -> Callable[[t.Any], str]:
         return self._projection_formatters[projection]
 
-    def format(self, projection: str, value: Any) -> str:
+    def format(self, projection: str, value: t.Any) -> str:
         return self.get_formatter(projection)(value)
 
 
@@ -92,7 +92,7 @@ class CalculationProjectionMapper(ProjectionMapper):
         projections: tuple[str, ...],
         projection_labels: dict[str, str] | None = None,
         projection_attributes: dict[str, str] | None = None,
-        projection_formatters: dict[str, Callable[[Any], str]] | None = None,
+        projection_formatters: dict[str, Callable[[t.Any], str]] | None = None,
     ):
         from aiida.orm import ProcessNode
         from aiida.orm.nodes.caching import NodeCaching

@@ -11,8 +11,8 @@
 import functools
 import inspect
 import keyword
+import typing as t
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar
 
 
 def isidentifier(identifier: str) -> bool:
@@ -25,10 +25,10 @@ def isidentifier(identifier: str) -> bool:
     return identifier.isidentifier() and not keyword.iskeyword(identifier)
 
 
-T = TypeVar('T')
+T = t.TypeVar('T')
 
 
-def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool = False) -> T:
+def type_check(what: T, of_type: t.Any, msg: 'str | None' = None, allow_none: bool = False) -> T:
     """Verify that object 'what' is of type 'of_type' and if not the case, raise a TypeError.
 
     :param what: the object to check
@@ -49,14 +49,14 @@ def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool
     return what
 
 
-MethodType = TypeVar('MethodType', bound=Callable[..., Any])
+MethodType = t.TypeVar('MethodType', bound=Callable[..., t.Any])
 
 
 def super_check(wrapped: MethodType) -> MethodType:
     """Decorate a method to require invocation through :func:`call_with_super_check`."""
 
     @functools.wraps(wrapped)
-    def wrapper(self: Any, *args: Any, **kwargs: Any) -> None:
+    def wrapper(self: t.Any, *args: t.Any, **kwargs: t.Any) -> None:
         msg = f"The function '{wrapped.__name__}' was not called through call_with_super_check"
         assert getattr(self, '_called', 0) >= 1, msg
         wrapped(self, *args, **kwargs)
@@ -65,7 +65,7 @@ def super_check(wrapped: MethodType) -> MethodType:
     return wrapper  # type: ignore[return-value]
 
 
-def call_with_super_check(wrapped: MethodType, *args: Any, **kwargs: Any) -> None:
+def call_with_super_check(wrapped: MethodType, *args: t.Any, **kwargs: t.Any) -> None:
     """Call a bound method and verify that every override calls ``super()``."""
     self = wrapped.__self__  # type: ignore[attr-defined]
     call_count = getattr(self, '_called', 0)
@@ -90,7 +90,7 @@ def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType
             return func
 
         @functools.wraps(func)
-        def wrapped_fn(self: Any, *args: Any, **kwargs: Any) -> Any:
+        def wrapped_fn(self: t.Any, *args: t.Any, **kwargs: t.Any) -> t.Any:
             try:
                 getattr(super(), func.__name__)
             except AttributeError:
@@ -105,10 +105,10 @@ def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType
 
 override = override_decorator(check=False)
 
-ReturnType = TypeVar('ReturnType')
+ReturnType = t.TypeVar('ReturnType')
 
 
-class classproperty(Generic[ReturnType]):  # noqa: N801
+class classproperty(t.Generic[ReturnType]):  # noqa: N801
     """A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
     (i.e., the object works as a property, both for the Class and for any
@@ -116,8 +116,8 @@ class classproperty(Generic[ReturnType]):  # noqa: N801
     instance as its first argument).
     """
 
-    def __init__(self, getter: Callable[[Any], ReturnType]) -> None:
+    def __init__(self, getter: Callable[[t.Any], ReturnType]) -> None:
         self.getter = getter
 
-    def __get__(self, instance: Any, owner: type) -> ReturnType:
+    def __get__(self, instance: t.Any, owner: type) -> ReturnType:
         return self.getter(owner)

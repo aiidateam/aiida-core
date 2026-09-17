@@ -131,12 +131,12 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
     List values are split by whitespace, e.g. "a b" becomes ["a", "b"].
     """
-    import typing
+    import typing as t
 
     from aiida.common.exceptions import ConfigurationError
     from aiida.manage.configuration.options import get_option
 
-    if typing.TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         from aiida.manage.configuration import Profile
         from aiida.manage.configuration.config import Config
 

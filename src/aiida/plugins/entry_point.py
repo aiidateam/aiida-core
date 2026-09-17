@@ -13,14 +13,14 @@ from __future__ import annotations
 import enum
 import functools
 import traceback
+import typing as t
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
 from aiida.plugins import factories
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from importlib_metadata import EntryPoint, EntryPoints
 
 __all__ = ('get_entry_points', 'load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
@@ -245,7 +245,7 @@ def get_entry_point_from_string(entry_point_string: str) -> EntryPoint:
     return get_entry_point(group, name)
 
 
-def load_entry_point_from_string(entry_point_string: str) -> Any:
+def load_entry_point_from_string(entry_point_string: str) -> t.Any:
     """Load the class registered for a given entry point string that determines group and name
 
     :param entry_point_string: the entry point string
@@ -260,7 +260,7 @@ def load_entry_point_from_string(entry_point_string: str) -> Any:
     return load_entry_point(group, name)
 
 
-def load_entry_point(group: str, name: str) -> Any:
+def load_entry_point(group: str, name: str) -> t.Any:
     """Load the class registered under the entry point for a given name and group
 
     :param group: the entry point group

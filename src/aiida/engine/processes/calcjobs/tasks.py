@@ -14,8 +14,8 @@ import asyncio
 import functools
 import logging
 import tempfile
+import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
 
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
@@ -34,7 +34,7 @@ from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.calcjobs.calcjob import CalcJob
 
 UPLOAD_COMMAND = 'upload'
@@ -479,9 +479,9 @@ class Waiting(states.Waiting):
     def __init__(
         self,
         process: CalcJob,
-        done_callback: Callable[..., Any] | None,
+        done_callback: Callable[..., t.Any] | None,
         msg: str | None = None,
-        data: Any | None = None,
+        data: t.Any | None = None,
     ):
         """:param process: The process this state belongs to"""
         super().__init__(process, done_callback, msg, data)
@@ -737,7 +737,7 @@ class Waiting(states.Waiting):
             ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder, exit_code
         )
 
-    def interrupt(self, reason: Any) -> futures.Future | None:  # type: ignore[override]
+    def interrupt(self, reason: t.Any) -> futures.Future | None:  # type: ignore[override]
         """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)

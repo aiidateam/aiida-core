@@ -11,9 +11,9 @@
 from __future__ import annotations
 
 import re
+import typing as t
 import warnings
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any
 
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
@@ -115,14 +115,14 @@ class WithSerialize:
     def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
         super().__init__(*args, **kwargs)
-        self._serializer: Callable[[Any], Data] | None = serializer
+        self._serializer: Callable[[t.Any], Data] | None = serializer
 
     @property
-    def serializer(self) -> Callable[[Any], Data] | None:
+    def serializer(self) -> Callable[[t.Any], Data] | None:
         """Return the serializer."""
         return self._serializer
 
-    def serialize(self, value: Any) -> Data:
+    def serialize(self, value: t.Any) -> Data:
         """Serialize the given value, unless it is ``None``, already a Data type, or no serializer function is defined.
 
         :param value: the value to be serialized
@@ -260,7 +260,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         if any(len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores):
             raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
 
-    def serialize(self, mapping: dict[str, Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, Any] | None:
+    def serialize(self, mapping: dict[str, t.Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, t.Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.
 
         It will recursively call this function on any nested `PortNamespace` or the serialize function on any `Ports`.
@@ -278,7 +278,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             port_name = breadcrumbs_to_port(breadcrumbs)  # type: ignore[unreachable]
             raise TypeError(f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary')
 
-        result: dict[str, Any] = {}
+        result: dict[str, t.Any] = {}
 
         for name, value in mapping.items():
             if name in self:

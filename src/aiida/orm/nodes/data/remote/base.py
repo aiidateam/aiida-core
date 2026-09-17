@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import logging
 import os
+import typing as t
 from pathlib import Path
-from typing import cast
 
 from aiida.orm import AuthInfo
 from aiida.orm.computers import Computer
@@ -46,7 +46,7 @@ class RemoteData(Data):
         computer: int = OrmMetadataField(
             title='Computer',
             description='The pk of the remote computer on which the data resides',
-            orm_to_model=lambda node: cast(RemoteData, node).computer.pk,
+            orm_to_model=lambda node: t.cast(RemoteData, node).computer.pk,
             orm_class=Computer,
         )
 

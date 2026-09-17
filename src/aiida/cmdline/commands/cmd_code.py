@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import pathlib
+import typing as t
 import warnings
 from collections import defaultdict
 from functools import partial
-from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -28,7 +28,7 @@ from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Code
 
 
@@ -64,7 +64,7 @@ def code_create():
     """Create a new code."""
 
 
-def get_default(key: str, ctx: click.Context) -> Any | None:
+def get_default(key: str, ctx: click.Context) -> t.Any | None:
     """Get the default argument using a user instance property
 
     :param key: The name of the property to use
@@ -89,7 +89,7 @@ def get_on_computer(ctx: click.Context) -> bool:
     return not getattr(ctx.code_builder, 'is_local')()  # type: ignore[attr-defined]
 
 
-def set_code_builder(ctx: click.Context, _param: Any, value: Any) -> Any:
+def set_code_builder(ctx: click.Context, _param: t.Any, value: t.Any) -> t.Any:
     """Set the code spec for defaults of following options."""
     from aiida.orm.utils.builders.code import CodeBuilder
 
@@ -398,8 +398,8 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         if 'user' not in project:
             project = project + ('user',)
 
-    filters: dict[str, Any] = defaultdict(dict)
-    projections: dict[str, Any] = defaultdict(list)
+    filters: dict[str, t.Any] = defaultdict(dict)
+    projections: dict[str, t.Any] = defaultdict(list)
 
     for key in project:
         for entity, projection in VALID_PROJECTIONS[key]:

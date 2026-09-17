@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import os
 import shutil
+import typing as t
 from collections.abc import Mapping
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import TYPE_CHECKING, Any
 
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
@@ -38,7 +38,7 @@ from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
 from aiida.transports.transport import has_magic
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
@@ -46,7 +46,7 @@ REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
 
-def _find_data_node(inputs: Mapping[str, Any], uuid: str) -> Node | None:
+def _find_data_node(inputs: Mapping[str, t.Any], uuid: str) -> Node | None:
     """Find and return the node with the given UUID from a nested mapping of input nodes.
 
     :param inputs: (nested) mapping of nodes
@@ -71,7 +71,7 @@ async def upload_calculation(
     transport: Transport,
     calc_info: CalcInfo,
     folder: Folder,
-    inputs: Mapping[str, Any] | None = None,
+    inputs: Mapping[str, t.Any] | None = None,
     dry_run: bool = False,
 ) -> RemoteData | None:
     """Upload a `CalcJob` instance

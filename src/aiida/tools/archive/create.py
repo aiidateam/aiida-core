@@ -14,10 +14,10 @@ stored in a single file.
 
 import shutil
 import tempfile
+import typing as t
 from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from tabulate import tabulate
 
@@ -772,11 +772,11 @@ def get_init_summary(
     compression: int,
 ) -> str:
     """Get summary for archive initialisation"""
-    parameters: list[list[Any]] = [['Path', str(outfile)], ['Version', archive_version], ['Compression', compression]]
+    parameters: list[list[t.Any]] = [['Path', str(outfile)], ['Version', archive_version], ['Compression', compression]]
 
     result = f'\n{tabulate(parameters, headers=["Archive Parameters", ""])}'
 
-    inclusions: list[list[Any]] = [
+    inclusions: list[list[t.Any]] = [
         ['Computers/Nodes/Groups/Users', 'All' if collect_all else 'Selected'],
         ['Computer Authinfos', include_authinfos],
         ['Node Comments', include_comments],

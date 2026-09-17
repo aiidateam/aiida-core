@@ -14,7 +14,6 @@ import collections.abc
 import functools
 import logging
 import typing as t
-from typing import final
 
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
@@ -124,7 +123,7 @@ class WorkChain(Process):
         if self._awaitables:
             self._action_awaitables()
 
-    @final
+    @t.final
     def on_run(self):
         super().on_run()
         self.node.set_stepper_state_info(str(self._stepper))
@@ -214,7 +213,7 @@ class WorkChain(Process):
             # then we should not try to update it
             self._update_process_status()
 
-    @final
+    @t.final
     def to_context(self, **kwargs: Awaitable | ProcessNode) -> None:
         """Add a dictionary of awaitables to the context.
 
@@ -240,13 +239,13 @@ class WorkChain(Process):
             self.set_status(status)
 
     @override
-    @final
+    @t.final
     async def step(self) -> None:
         """Advance the process state machine by one step."""
         await super().step()
 
     @override
-    @final
+    @t.final
     async def run(self) -> t.Any:
         self._stepper = self.spec().get_outline().create_stepper(self)
         return await run_with_portal(self._do_step)
@@ -305,7 +304,7 @@ class WorkChain(Process):
                 self._store_nodes(value)
 
     @override
-    @final
+    @t.final
     def on_exiting(self) -> None:
         """Ensure that any unstored nodes in the context are stored, before the state is exited
 
@@ -319,7 +318,7 @@ class WorkChain(Process):
             # An uncaught exception here will have bizarre and disastrous consequences
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
-    @final
+    @t.final
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
         """Entering the WAITING state."""
         super().on_wait(awaitables)

@@ -19,9 +19,9 @@ from __future__ import annotations
 import abc
 import enum
 import json
+import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal
 
 from typing_extensions import Self
 
@@ -80,7 +80,7 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def validate_resources(cls, **kwargs: Any) -> dict[Any, Any] | None:
+    def validate_resources(cls, **kwargs: t.Any) -> dict[t.Any, t.Any] | None:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -118,14 +118,14 @@ class NodeNumberJobResource(JobResource):
         'num_cores_per_mpiproc',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         num_machines: int
         num_mpiprocs_per_machine: int
         num_cores_per_machine: int
         num_cores_per_mpiproc: int
 
     @classmethod
-    def validate_resources(cls, **kwargs: Any) -> AttributeDict:
+    def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -178,7 +178,7 @@ class NodeNumberJobResource(JobResource):
 
         return resources
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self, **kwargs: t.Any):
         """Initialize the job resources from the passed arguments.
 
         :raises ValueError: if the resources are invalid or incomplete
@@ -192,7 +192,7 @@ class NodeNumberJobResource(JobResource):
         return super().get_valid_keys() + ['tot_num_mpiprocs']
 
     @classmethod
-    def accepts_default_mpiprocs_per_machine(cls) -> Literal[True]:
+    def accepts_default_mpiprocs_per_machine(cls) -> t.Literal[True]:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return True
 
@@ -209,12 +209,12 @@ class ParEnvJobResource(JobResource):
         'tot_num_mpiprocs',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         parallel_env: str
         tot_num_mpiprocs: int
 
     @classmethod
-    def validate_resources(cls, **kwargs: Any) -> AttributeDict:
+    def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -244,7 +244,7 @@ class ParEnvJobResource(JobResource):
 
         return resources
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self, **kwargs: t.Any):
         """Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
@@ -254,7 +254,7 @@ class ParEnvJobResource(JobResource):
         super().__init__(resources)
 
     @classmethod
-    def accepts_default_mpiprocs_per_machine(cls) -> Literal[False]:
+    def accepts_default_mpiprocs_per_machine(cls) -> t.Literal[False]:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return False
 
@@ -385,7 +385,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'codes_info',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         shebang: str | None
         submit_as_hold: bool
         rerunnable: bool
@@ -539,7 +539,7 @@ class JobInfo(DefaultFieldsAttributeDict):
 
     # NOTE: All of these fields might be undefined, in which case they return `None`,
     # see the definition of DefaultFieldsAttributeDict.__getitem__
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         job_id: str
         title: str
         exit_status: int
@@ -624,7 +624,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         )
 
     @classmethod
-    def serialize_field(cls, value: Any, field_type: str | None) -> Any:
+    def serialize_field(cls, value: t.Any, field_type: str | None) -> t.Any:
         """Serialise a particular field value
 
         :param value: The value to serialise
@@ -639,7 +639,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return serializer_method(value)
 
     @classmethod
-    def deserialize_field(cls, value: Any, field_type: str | None) -> Any:
+    def deserialize_field(cls, value: t.Any, field_type: str | None) -> t.Any:
         """Deserialise the value of a particular field with a type
         :param value: The value
         :param field_type: The field type
@@ -659,7 +659,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         """
         return json.dumps(self.get_dict())
 
-    def get_dict(self) -> dict[str, Any]:
+    def get_dict(self) -> dict[str, t.Any]:
         """Serialise the current data into a dictionary that is JSON-serializable.
 
         :return: A dictionary
@@ -667,7 +667,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
 
     @classmethod
-    def load_from_dict(cls, data: dict[str, Any]) -> Self:
+    def load_from_dict(cls, data: dict[str, t.Any]) -> Self:
         """Create a new instance loading the values from serialised data in dictionary form
 
         :param data: The dictionary with the data to load from

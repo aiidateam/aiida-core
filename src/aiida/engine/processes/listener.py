@@ -15,14 +15,14 @@
 # The Plumpy license is reproduced in open_source_licenses.txt.         #
 ###########################################################################
 import abc
-from typing import TYPE_CHECKING, Any
+import typing as t
 
 from aiida.engine.processes import persistence
 from aiida.engine.processes.persistence import SAVED_STATE_TYPE
 
 __all__: tuple[str, ...] = ()
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
 
 
@@ -32,9 +32,9 @@ class ProcessListener(persistence.CheckpointSerializable, metaclass=abc.ABCMeta)
 
     def __init__(self) -> None:
         super().__init__()
-        self._params: dict[str, Any] = {}
+        self._params: dict[str, t.Any] = {}
 
-    def init(self, **kwargs: Any) -> None:
+    def init(self, **kwargs: t.Any) -> None:
         self._params = kwargs
 
     def load_instance_state(self, saved_state: SAVED_STATE_TYPE, load_context: persistence.CheckpointContext) -> None:
@@ -83,7 +83,7 @@ class ProcessListener(persistence.CheckpointSerializable, metaclass=abc.ABCMeta)
 
         """
 
-    def on_output_emitted(self, process: 'Process', output_port: str, value: Any, dynamic: bool) -> None:
+    def on_output_emitted(self, process: 'Process', output_port: str, value: t.Any, dynamic: bool) -> None:
         """
         Called when the process has emitted an output value
 
@@ -94,7 +94,7 @@ class ProcessListener(persistence.CheckpointSerializable, metaclass=abc.ABCMeta)
 
         """
 
-    def on_process_finished(self, process: 'Process', outputs: Any) -> None:
+    def on_process_finished(self, process: 'Process', outputs: t.Any) -> None:
         """
         Called when the process has finished successfully
 

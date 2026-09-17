@@ -10,19 +10,19 @@
 
 import abc
 import datetime
+import typing as t
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Protocol
 
 from aiida.orm.implementation.entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 from aiida.orm.implementation.nodes import BackendNode
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendGroup', 'BackendGroupCollection')
 
 
-class NodeIterator(Protocol):
+class NodeIterator(t.Protocol):
     """Protocol for iterating over nodes in a group"""
 
     def __iter__(self) -> 'NodeIterator':

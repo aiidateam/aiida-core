@@ -10,15 +10,15 @@
 
 from __future__ import annotations
 
+import typing as t
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Literal, cast
 
 from aiida.common.lang import type_check
 from aiida.tools.graph.age_entities import Basket
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
     from aiida.orm import QueryBuilder
@@ -84,7 +84,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         """
         super().__init__(max_iterations, track_edges=track_edges)
 
-        def get_spec_from_path(query_dict: QueryDictType, idx: int) -> Literal['nodes', 'groups']:
+        def get_spec_from_path(query_dict: QueryDictType, idx: int) -> t.Literal['nodes', 'groups']:
             from aiida.orm.implementation.querybuilder import GROUP_ENTITY_TYPE_PREFIX
 
             entity_type = query_dict['path'][idx]['entity_type']
@@ -93,7 +93,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             # but that is not handled by the code below!
             assert isinstance(entity_type, str)
 
-            result: Literal['nodes', 'groups']
+            result: t.Literal['nodes', 'groups']
             if (
                 entity_type.startswith('node')
                 or entity_type.startswith('data')
@@ -173,8 +173,9 @@ class QueryRule(Operation, metaclass=ABCMeta):
             # Need to get the edge_set: This is given by entity1_entity2. Here, the results needs to
             # be sorted somehow in order to ensure that the same key is used when entity_from and
             # entity_to are exchanged.
-            edge_key = cast(
-                "Literal['nodes_nodes', 'groups_nodes']", '{}_{}'.format(*sorted((self._entity_from, self._entity_to)))
+            edge_key = t.cast(
+                "t.Literal['nodes_nodes', 'groups_nodes']",
+                '{}_{}'.format(*sorted((self._entity_from, self._entity_to))),
             )
             edge_set = operational_set.dict[edge_key]
 
@@ -233,8 +234,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
             if self._track_edges:
                 assert self._edge_keys is not None
                 # As in _init_run, I need the key for the edge_set
-                edge_key = cast(
-                    "Literal['nodes_nodes', 'groups_nodes']",
+                edge_key = t.cast(
+                    "t.Literal['nodes_nodes', 'groups_nodes']",
                     '{}_{}'.format(*sorted((self._entity_from, self._entity_to))),
                 )
                 edge_set = operational_set.dict[edge_key]

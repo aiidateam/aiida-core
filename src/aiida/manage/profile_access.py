@@ -11,7 +11,7 @@
 import contextlib
 import os
 import shutil
-import typing
+import typing as t
 from pathlib import Path
 
 import psutil
@@ -22,7 +22,7 @@ from aiida.manage.configuration import Profile
 from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 
-@typing.final
+@t.final
 class ProfileAccessManager:
     """Class to manage access to a profile.
 

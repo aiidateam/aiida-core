@@ -11,11 +11,11 @@
 from __future__ import annotations
 
 import json
+import typing as t
 from collections.abc import Collection, Generator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from aiida.common import AIIDA_LOGGER, timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
@@ -274,7 +274,7 @@ class DumpTracker:
 
     def save(self) -> None:
         """Save the current log state and mapping to the JSON file."""
-        log_dict: dict[str, Any] = {
+        log_dict: dict[str, t.Any] = {
             registry_name: self._serialize_registry(registry) for registry_name, registry in self.registries.items()
         }
         log_dict['last_dump_time'] = self.dump_times.current.isoformat()
@@ -387,7 +387,7 @@ class DumpTracker:
         yield ('workflows', self.registries['workflows'])
         yield ('groups', self.registries['groups'])
 
-    def _serialize_registry(self, registry: DumpRegistry) -> dict[str, dict[str, Any]]:
+    def _serialize_registry(self, registry: DumpRegistry) -> dict[str, dict[str, t.Any]]:
         """Serialize log entries to a dictionary format with paths relative to the dump base_output_path.
 
         :param registry: Instance of the ``DumpRegistry`` to be serialized
@@ -425,7 +425,7 @@ class DumpTracker:
 
         return serialized
 
-    def _deserialize_registry(self, data: dict[str, dict[str, Any]]) -> DumpRegistry:
+    def _deserialize_registry(self, data: dict[str, dict[str, t.Any]]) -> DumpRegistry:
         """Deserialize log entries using ``DumpRecord.from_dict`` and make paths absolute for internal handling.
 
         :param data: Serialized dictionary with UUIDs as keys and entry data as values

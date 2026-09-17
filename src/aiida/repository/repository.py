@@ -2,8 +2,8 @@
 
 import contextlib
 import pathlib
+import typing as t
 from collections.abc import Iterable, Iterator
-from typing import Any, BinaryIO
 
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
@@ -57,7 +57,7 @@ class Repository:
         return self.backend.is_initialised
 
     @classmethod
-    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: dict[str, Any]) -> 'Repository':
+    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: dict[str, t.Any]) -> 'Repository':
         """Construct an instance where the metadata is initialized from the serialized content.
 
         :param backend: instance of repository backend to use to actually store the file objects.
@@ -74,7 +74,7 @@ class Repository:
     def reset(self) -> None:
         self._directory = self._file_cls()
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, t.Any]:
         """Serialize the metadata into a JSON-serializable format.
 
         :return: dictionary with the content metadata.
@@ -82,7 +82,7 @@ class Repository:
         return self._directory.serialize()
 
     @classmethod
-    def flatten(cls, serialized: dict[str, Any] | None, delimiter: str = '/') -> dict[str, str | None]:
+    def flatten(cls, serialized: dict[str, t.Any] | None, delimiter: str = '/') -> dict[str, str | None]:
         """Flatten the serialized content of a repository into a mapping of path -> key or None (if folder).
 
         Note, all folders are represented in the flattened output, and their path is suffixed with the delimiter.
@@ -115,7 +115,7 @@ class Repository:
 
         :return: the hash representing the contents of the repository.
         """
-        objects: dict[str, Any] = {}
+        objects: dict[str, t.Any] = {}
         for root, dirnames, filenames in self.walk():
             objects['__dirnames__'] = dirnames
             for filename in filenames:
@@ -302,7 +302,7 @@ class Repository:
         """
         return [entry.name for entry in self.list_objects(path)]
 
-    def put_object_from_filelike(self, handle: BinaryIO, path: FilePath) -> None:
+    def put_object_from_filelike(self, handle: t.BinaryIO, path: FilePath) -> None:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -378,7 +378,7 @@ class Repository:
         return True
 
     @contextlib.contextmanager
-    def open(self, path: FilePath) -> Iterator[BinaryIO]:
+    def open(self, path: FilePath) -> Iterator[t.BinaryIO]:
         """Open a file handle to an object stored under the given path.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -525,7 +525,7 @@ class Repository:
 
     # these methods are not actually used in aiida-core, but are here for completeness
 
-    def initialise(self, **kwargs: Any) -> None:
+    def initialise(self, **kwargs: t.Any) -> None:
         """Initialise the repository if it hasn't already been initialised.
 
         :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.

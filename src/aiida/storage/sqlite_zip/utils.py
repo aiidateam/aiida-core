@@ -9,9 +9,9 @@
 """Utilities for this backend."""
 
 import json
+import typing as t
 import zipfile
 from pathlib import Path
-from typing import Any
 
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
@@ -89,7 +89,7 @@ def create_sqla_engine(path: str | Path, *, enforce_foreign_keys: bool = True, *
     return engine
 
 
-def extract_metadata(path: str | Path, *, search_limit: int | None = 10) -> dict[str, Any]:
+def extract_metadata(path: str | Path, *, search_limit: int | None = 10) -> dict[str, t.Any]:
     """Extract the metadata dictionary from the archive.
 
     :param search_limit: the maximum number of records to search for the metadata file in a zip file.

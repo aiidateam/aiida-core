@@ -11,9 +11,9 @@
 from __future__ import annotations
 
 import json
+import typing as t
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import TYPE_CHECKING, Any, TypeVar
 
 from sqlalchemy import Select, or_, select, type_coerce
 from sqlalchemy import func as sa_func
@@ -26,7 +26,7 @@ from sqlalchemy.types import TypeEngine
 
 from aiida.common.utils import batch_iter
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 # For very large lists, multiple batches are combined with OR. 500k balances memory usage with query performance.
 IN_CLAUSE_BATCH_SIZE: int = 500_000
 
-T = TypeVar('T')
+T = t.TypeVar('T')
 
 
 @singledispatch
@@ -70,7 +70,7 @@ def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[T], va
     """
     processor = coltype.dialect_impl(dialect).bind_processor(dialect)
 
-    def process(value: T) -> Any:
+    def process(value: T) -> t.Any:
         return processor(value) if processor is not None and value is not None else value
 
     json_each_table = sa_func.json_each(json.dumps([process(value) for value in values])).table_valued('value')

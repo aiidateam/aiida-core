@@ -8,9 +8,9 @@
 ###########################################################################
 """Tests for :mod:`aiida.storage.utils`."""
 
+import typing as t
 from collections.abc import Generator
 from datetime import datetime, timezone
-from typing import cast
 
 import pytest
 import sqlalchemy as sa
@@ -99,7 +99,7 @@ def test_psql_uses_unnest() -> None:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
     from aiida.storage.psql_dos.models.node import DbNode
 
-    storage: PsqlDosBackend = cast(PsqlDosBackend, get_manager().get_profile_storage())
+    storage: PsqlDosBackend = t.cast(PsqlDosBackend, get_manager().get_profile_storage())
     session: Session = storage.get_session()
     in_clause: ColumnElement[bool] = _create_smarter_in_clause(session=session, column=DbNode.id, values=[1, 2])
     sql: str = str(in_clause.compile(bind=session.bind))
@@ -116,7 +116,7 @@ def test_psql_batches_large_lists() -> None:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
     from aiida.storage.psql_dos.models.node import DbNode
 
-    storage: PsqlDosBackend = cast(PsqlDosBackend, get_manager().get_profile_storage())
+    storage: PsqlDosBackend = t.cast(PsqlDosBackend, get_manager().get_profile_storage())
     session: Session = storage.get_session()
     values: list[int] = list(range(IN_CLAUSE_BATCH_SIZE + 1))
     in_clause: ColumnElement[bool] = _create_smarter_in_clause(session=session, column=DbNode.id, values=values)

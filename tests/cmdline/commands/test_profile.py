@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for ``verdi profile``."""
 
+import typing as t
 from unittest.mock import patch
 
 import click
@@ -803,15 +804,13 @@ class TestVerdiProfileDumpCLI:
 
     def test_dump_user_parsing(self, run_cli_command, tmp_path):
         """Test that user argument is parsed correctly."""
-        from typing import cast
-
         group = orm.Group(label='test_user_group').store()
         node = orm.CalculationNode().store()
         group.add_nodes([node])
         test_path = tmp_path / 'user-test'
 
         default_user = orm.User.collection.get_default()
-        cast(orm.User, default_user)
+        t.cast(orm.User, default_user)
 
         options = ['--path', str(test_path), '--user', default_user.email]
         result = run_cli_command(cmd_profile.profile_dump, options)

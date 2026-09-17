@@ -14,8 +14,8 @@ but redefines the SQLAlchemy models to the SQLite compatible ones.
 """
 
 import json
+import typing as t
 from functools import singledispatch
-from typing import Any
 
 from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
@@ -42,7 +42,7 @@ from aiida.storage.utils import _create_smarter_in_clause
 class SqliteEntityOverride:
     """Overrides type-checking of psql_dos ``Entity``."""
 
-    MODEL_CLASS: Any
+    MODEL_CLASS: t.Any
     _model: utils.ModelWrapper
 
     @classmethod
@@ -219,7 +219,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         query_str = f'{alias or ""}.{column_name or ""}.{attr_key} {operator} {value}'
 
-        def _cast_json_type(comparator: JSON.Comparator, value: Any) -> tuple[ColumnElement, JSON.Comparator]:
+        def _cast_json_type(comparator: JSON.Comparator, value: t.Any) -> tuple[ColumnElement, JSON.Comparator]:
             """Cast the JSON comparator to the target type."""
             if isinstance(value, bool):
                 # SQLite booleans in JSON evaluate to 0/1, see:
@@ -344,7 +344,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         raise ValueError(f'SQLite does not support JSON query: {query_str}')
 
-    def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
+    def get_filter_expr_from_column(self, operator: str, value: t.Any, column) -> BinaryExpression:
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
         if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):

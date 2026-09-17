@@ -24,12 +24,9 @@ import inspect
 import logging
 import os
 import sys
+import typing as t
 from collections.abc import Callable, Hashable, Iterable, Sequence
 from types import TracebackType
-from typing import (
-    Any,
-    Optional,
-)
 
 from aiida.common.lang import call_with_super_check, super_check
 from aiida.engine.processes.exceptions import InvalidStateError
@@ -40,7 +37,7 @@ __all__: tuple[str, ...] = ()
 _LOGGER = logging.getLogger(__name__)
 
 LABEL_TYPE = enum.Enum | str | None
-EVENT_CALLBACK_TYPE = Callable[['StateMachine', Hashable, Optional['State']], None]
+EVENT_CALLBACK_TYPE = Callable[['StateMachine', Hashable, t.Optional['State']], None]
 
 
 class StateMachineError(Exception):
@@ -52,7 +49,7 @@ class StateEntryFailed(Exception):  # noqa: N818
     Failed to enter a state, can provide the next state to go to via this exception
     """
 
-    def __init__(self, state: State, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, state: State, *args: t.Any, **kwargs: t.Any) -> None:
         super().__init__('failed to enter state')
         self.state = state
         self.args = args
@@ -86,7 +83,7 @@ class TransitionFailed(Exception):  # noqa: N818
 def event(
     from_states: str | type[State] | Iterable[type[State]] = '*',
     to_states: str | type[State] | Iterable[type[State]] = '*',
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+) -> Callable[[Callable[..., t.Any]], Callable[..., t.Any]]:
     """A decorator to check for correct transitions, raising ``EventError`` on invalid transitions."""
     if from_states != '*':
         if inspect.isclass(from_states):
@@ -99,11 +96,11 @@ def event(
         if not all(issubclass(state, State) for state in to_states):  # type: ignore[arg-type]
             raise TypeError(f'to_states: {to_states}')
 
-    def wrapper(wrapped: Callable[..., Any]) -> Callable[..., Any]:
+    def wrapper(wrapped: Callable[..., t.Any]) -> Callable[..., t.Any]:
         evt_label = wrapped.__name__
 
         @functools.wraps(wrapped)
-        def transition(self: Any, *a: Any, **kw: Any) -> Any:
+        def transition(self: t.Any, *a: t.Any, **kw: t.Any) -> t.Any:
             initial = self._state
 
             if from_states != '*' and not any(isinstance(self._state, state) for state in from_states):  # type: ignore[arg-type]
@@ -141,7 +138,7 @@ class State:
     def is_terminal(cls) -> bool:
         return not cls.ALLOWED
 
-    def __init__(self, state_machine: StateMachine, *args: Any, **kwargs: Any):
+    def __init__(self, state_machine: StateMachine, *args: t.Any, **kwargs: t.Any):
         """
         :param state_machine: The process this state belongs to
         """
@@ -172,7 +169,7 @@ class State:
         if self.is_terminal():
             raise InvalidStateError(f'Cannot exit a terminal state {self.LABEL}')
 
-    def create_state(self, state_label: Hashable, *args: Any, **kwargs: Any) -> State:
+    def create_state(self, state_label: Hashable, *args: t.Any, **kwargs: t.Any) -> State:
         return self.state_machine.create_state(state_label, *args, **kwargs)
 
     def do_enter(self) -> None:
@@ -197,7 +194,7 @@ class StateEventHook(enum.Enum):
 
 
 class StateMachineMeta(type):
-    def __call__(cls, *args: Any, **kwargs: Any) -> StateMachine:
+    def __call__(cls, *args: t.Any, **kwargs: t.Any) -> StateMachine:
         """
         Create the state machine and enter the initial state.
 
@@ -314,7 +311,7 @@ class StateMachine(metaclass=StateMachineMeta):
     def on_terminated(self) -> None:
         """Called when a terminal state is entered"""
 
-    def transition_to(self, new_state: State | None, **kwargs: Any) -> None:
+    def transition_to(self, new_state: State | None, **kwargs: t.Any) -> None:
         """Transite to the new state.
 
         The new target state will be create lazily when the state is not yet instantiated,
@@ -380,7 +377,7 @@ class StateMachine(metaclass=StateMachineMeta):
     def set_debug(self, enabled: bool) -> None:
         self._debug: bool = enabled
 
-    def create_state(self, state_label: Hashable, *args: Any, **kwargs: Any) -> State:
+    def create_state(self, state_label: Hashable, *args: t.Any, **kwargs: t.Any) -> State:
         # XXX: this method create state from label, which is duplicate as _create_state_instance and less generic
         # because the label is defined after the state and required to be know before calling this function.
         # This method should be replaced by `_create_state_instance`.
@@ -413,7 +410,7 @@ class StateMachine(metaclass=StateMachineMeta):
         self._state = next_state
         self._fire_state_event(StateEventHook.ENTERED_STATE, last_state)
 
-    def _create_state_instance(self, state_cls: Hashable, **kwargs: Any) -> State:
+    def _create_state_instance(self, state_cls: Hashable, **kwargs: t.Any) -> State:
         if state_cls not in self.get_states_map():
             raise ValueError(f'{state_cls} is not a valid state')
 

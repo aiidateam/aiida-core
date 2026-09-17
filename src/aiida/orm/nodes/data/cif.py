@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import re
-from typing import Literal
+import typing as t
 
 from aiida.common.utils import Capturing
 from aiida.orm.nodes.data.singlefile import SinglefileData
@@ -265,10 +265,10 @@ class CifData(SinglefileData):
             description='MD5 checksum of the file contents',
             read_only=True,
         )
-        scan_type: Literal['standard', 'flex'] = OrmMetadataField(
+        scan_type: t.Literal['standard', 'flex'] = OrmMetadataField(
             description='Scan type for parsing with PyCIFRW',
         )
-        parse_policy: Literal['eager', 'lazy'] = OrmMetadataField(
+        parse_policy: t.Literal['eager', 'lazy'] = OrmMetadataField(
             description='Parse policy for parsing with PyCIFRW',
         )
 
@@ -413,11 +413,11 @@ class CifData(SinglefileData):
         return self._ase
 
     @property
-    def scan_type(self) -> Literal['standard', 'flex']:
+    def scan_type(self) -> t.Literal['standard', 'flex']:
         return self.base.attributes.get('scan_type')
 
     @property
-    def parse_policy(self) -> Literal['eager', 'lazy']:
+    def parse_policy(self) -> t.Literal['eager', 'lazy']:
         return self.base.attributes.get('parse_policy')
 
     def get_ase(self, **kwargs):

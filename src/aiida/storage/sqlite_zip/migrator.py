@@ -14,11 +14,11 @@ import os
 import shutil
 import tarfile
 import tempfile
+import typing as t
 import zipfile
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from alembic.command import upgrade
 from alembic.config import Config
@@ -143,7 +143,7 @@ def migrate(
     metadata['compression'] = compression
 
     # if the archive is a "legacy" format, i.e. has a data.json file, migrate it to the target/final legacy schema
-    data: dict[str, Any] | None = None
+    data: dict[str, t.Any] | None = None
     if current_version in LEGACY_MIGRATE_FUNCTIONS:
         MIGRATE_LOGGER.report(f'Legacy migrations required from {"tar" if is_tar else "zip"} format')
         MIGRATE_LOGGER.report('Extracting data.json ...')
@@ -181,7 +181,7 @@ def migrate(
     with tempfile.TemporaryDirectory() as tmpdirname:
         # open the new zip file, within which to write the migrated content
         new_zip_path = Path(tmpdirname) / 'new.zip'
-        central_dir: dict[str, Any] = {}
+        central_dir: dict[str, t.Any] = {}
         with ZipPath(
             new_zip_path,
             mode='w',
@@ -263,7 +263,7 @@ def migrate(
         shutil.move(new_zip_path, outpath)
 
 
-def _read_json(inpath: Path, filename: str, is_tar: bool) -> dict[str, Any]:
+def _read_json(inpath: Path, filename: str, is_tar: bool) -> dict[str, t.Any]:
     """Read a JSON file from the archive."""
     if is_tar:
         with open_file_in_tar(inpath, filename) as handle:
@@ -338,7 +338,7 @@ def _alembic_connect(db_path: Path, enforce_foreign_keys: bool = True) -> Iterat
         config = _alembic_config()
         config.attributes['connection'] = connection
 
-        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
+        def _callback(step: MigrationInfo, **kwargs: t.Any) -> None:
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')

@@ -52,18 +52,18 @@ __all__ += (
 )
 
 import os
+import typing as t
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Optional
 
 from aiida.common.warnings import AiidaDeprecationWarning
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
     from aiida.orm import User
 
 # global variables for aiida
-CONFIG: Optional['Config'] = None
+CONFIG: t.Optional['Config'] = None
 
 
 def get_config_path():
@@ -166,7 +166,7 @@ def load_profile(profile: str | None = None, allow_switch=False) -> 'Profile':
     return get_manager().load_profile(profile, allow_switch)
 
 
-def get_profile() -> Optional['Profile']:
+def get_profile() -> t.Optional['Profile']:
     """Return the currently loaded profile.
 
     :return: the globally loaded `Profile` instance or `None`
@@ -241,7 +241,7 @@ def create_profile(
     config: 'Config',
     *,
     storage_backend: str,
-    storage_config: dict[str, Any],
+    storage_config: dict[str, t.Any],
     broker_backend: 'str | None' = None,
     broker_config: 'dict[str, Any] | None' = None,
     name: str,
@@ -325,7 +325,7 @@ def get_config(create=False) -> 'Config':
     return CONFIG
 
 
-def get_config_option(option_name: str) -> Any:
+def get_config_option(option_name: str) -> t.Any:
     """Return the value of a configuration option.
 
     In order of priority, the option is returned from:

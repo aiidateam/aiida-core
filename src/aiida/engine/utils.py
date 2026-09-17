@@ -15,13 +15,13 @@ import contextlib
 import functools
 import inspect
 import logging
+import typing as t
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
 
 from aiida.engine.processes.events import get_or_create_event_loop
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes import Process, ProcessBuilder
     from aiida.engine.runners import Runner
     from aiida.orm import ProcessNode
@@ -33,7 +33,7 @@ PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 
 
-def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+def prepare_inputs(inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> dict[str, t.Any]:
     """Prepare inputs for launch of a process.
 
     This is a utility function to pre-process inputs for the process that can be specified both through keyword
@@ -92,14 +92,14 @@ def instantiate_process(runner: Runner, process: Process | type[Process] | Proce
 class InterruptableFuture(asyncio.Future):
     """A future that can be interrupted by calling `interrupt`."""
 
-    _task: asyncio.Task[Any] | None = None
+    _task: asyncio.Task[t.Any] | None = None
 
-    def _retain_task(self, task: asyncio.Task[Any]) -> None:
+    def _retain_task(self, task: asyncio.Task[t.Any]) -> None:
         """Retain the task until it completes."""
         self._task = task
         task.add_done_callback(self._release_task)
 
-    def _release_task(self, task: asyncio.Task[Any]) -> None:
+    def _release_task(self, task: asyncio.Task[t.Any]) -> None:
         """Release the completed task."""
         if self._task is task:
             self._task = None
@@ -108,7 +108,7 @@ class InterruptableFuture(asyncio.Future):
         """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
         self.set_exception(reason)
 
-    async def with_interrupt(self, coro: Awaitable[Any]) -> Any:
+    async def with_interrupt(self, coro: Awaitable[t.Any]) -> t.Any:
         """Return result of a coroutine which will be interrupted if this future is interrupted ::
 
             import asyncio
@@ -138,7 +138,7 @@ class InterruptableFuture(asyncio.Future):
 
 
 def interruptable_task(
-    coro: Callable[[InterruptableFuture], Awaitable[Any]], loop: asyncio.AbstractEventLoop | None = None
+    coro: Callable[[InterruptableFuture], Awaitable[t.Any]], loop: asyncio.AbstractEventLoop | None = None
 ) -> InterruptableFuture:
     """Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
@@ -174,7 +174,7 @@ def interruptable_task(
     return future
 
 
-def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
+def ensure_coroutine(fct: Callable[..., t.Any]) -> Callable[..., Awaitable[t.Any]]:
     """Return a coroutine function for a callable."""
     if not callable(fct):
         # Defensive check: callers can reach this with values loaded from a persisted state
@@ -194,19 +194,19 @@ def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
     from aiida.engine.processes.greenback import run_with_portal
 
     @functools.wraps(fct)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+    async def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         return await run_with_portal(fct, *args, **kwargs)
 
     return wrapper
 
 
 async def exponential_backoff_retry(
-    fct: Callable[..., Any],
+    fct: Callable[..., t.Any],
     initial_interval: int | float = 10.0,
     max_attempts: int = 5,
     logger: logging.Logger | None = None,
     ignore_exceptions: type[Exception] | tuple[type[Exception], ...] | None = None,
-) -> Any:
+) -> t.Any:
     """Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
     This coroutine will loop ``max_attempts`` times, calling the ``fct`` function, breaking immediately when the call
@@ -223,7 +223,7 @@ async def exponential_backoff_retry(
     if logger is None:
         logger = LOGGER
 
-    result: Any = None
+    result: t.Any = None
     coro = ensure_coroutine(fct)
     interval = initial_interval
 
@@ -251,7 +251,7 @@ async def exponential_backoff_retry(
     return result
 
 
-def is_process_function(function: Any) -> bool:
+def is_process_function(function: t.Any) -> bool:
     """Return whether the given function is a process function
 
     :param function: a function

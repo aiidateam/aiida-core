@@ -15,13 +15,13 @@ import contextlib
 import contextvars
 import logging
 import time
+import typing as t
 from collections.abc import Hashable, Iterator
-from typing import TYPE_CHECKING, cast
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.transports import TransportQueue
     from aiida.schedulers.datastructures import JobInfo
 
@@ -282,7 +282,7 @@ class JobManager:
         # or is just a limitation of the current typing.
         # Instead of using `cast` Perhaps we should do:
         # assert authinfo.pk is not None
-        pk = cast(int, authinfo.pk)
+        pk = t.cast(int, authinfo.pk)
         if pk not in self._job_lists:
             self._job_lists[pk] = JobsList(authinfo, self._transport_queue)
 

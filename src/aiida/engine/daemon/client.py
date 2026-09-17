@@ -25,7 +25,6 @@ import time
 import typing as t
 import urllib.parse
 import urllib.request
-from typing import TYPE_CHECKING
 
 import psutil
 
@@ -36,7 +35,7 @@ from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.manager import get_manager
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from circus.client import CircusClient
 
     from aiida.manage.configuration.config import CircusEndpointFilepaths, CircusEndpointName

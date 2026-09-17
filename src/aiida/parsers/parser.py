@@ -12,14 +12,14 @@ to allow the reading of the outputs of a calculation.
 
 from __future__ import annotations
 
+import typing as t
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions, extendeddicts, log
 from aiida.engine import ExitCode, ExitCodesNamespace, calcfunction
 from aiida.engine.processes.ports import CalcJobOutputPort
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida import orm
     from aiida.orm import CalcJobNode, Data, FolderData
 
@@ -118,7 +118,7 @@ class Parser(ABC):
     @classmethod
     def parse_from_node(
         cls, node: CalcJobNode, store_provenance=True, retrieved_temporary_folder=None
-    ) -> tuple[dict[str, Any] | None, orm.CalcFunctionNode]:
+    ) -> tuple[dict[str, t.Any] | None, orm.CalcFunctionNode]:
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.

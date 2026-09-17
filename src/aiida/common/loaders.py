@@ -14,26 +14,26 @@ import abc
 import importlib
 import inspect
 import types
+import typing as t
 from collections import deque
-from typing import Any
 
 
 class ObjectLoader(abc.ABC):
     """Interface for identifying and loading Python objects."""
 
     @abc.abstractmethod
-    def load_object(self, identifier: str) -> Any:
+    def load_object(self, identifier: str) -> t.Any:
         """Load the object represented by an identifier."""
 
     @abc.abstractmethod
-    def identify_object(self, obj: Any) -> str:
+    def identify_object(self, obj: t.Any) -> str:
         """Return the persistent identifier for an object."""
 
 
 class DefaultObjectLoader(ObjectLoader):
     """Load module-level classes, functions, and constants."""
 
-    def load_object(self, identifier: str) -> Any:
+    def load_object(self, identifier: str) -> t.Any:
         """Load an object identified as ``module:name``."""
         try:
             module_name, name = identifier.split(':')
@@ -53,7 +53,7 @@ class DefaultObjectLoader(ObjectLoader):
             msg = f"object '{name}' from identifier '{identifier}' could not be loaded"
             raise ImportError(msg) from exception
 
-    def identify_object(self, obj: Any) -> str:
+    def identify_object(self, obj: t.Any) -> str:
         """Return an importable identifier for an object."""
         identifier = f'{obj.__module__}:{obj.__name__}'
         self.load_object(identifier)
@@ -71,7 +71,7 @@ def get_object_loader() -> ObjectLoader:
     return OBJECT_LOADER
 
 
-def load_function(name: str, instance: Any | None = None) -> Any:
+def load_function(name: str, instance: t.Any | None = None) -> t.Any:
     """Load a function from its fully qualified name."""
     obj = load_object(name)
     if inspect.ismethod(obj) and instance is not None:
@@ -81,7 +81,7 @@ def load_function(name: str, instance: Any | None = None) -> Any:
     raise ValueError(f"Invalid function name '{name}'")
 
 
-def load_object(fullname: str) -> Any:
+def load_object(fullname: str) -> t.Any:
     """Load an object from a fully qualified name."""
     obj, remainder = load_module(fullname)
     for name in remainder:

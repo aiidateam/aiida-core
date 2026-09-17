@@ -10,12 +10,12 @@
 
 import shutil
 import tarfile
+import typing as t
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path, PurePath
-from typing import Any
 
 from archive_path import ZipPath
 from sqlalchemy import insert, select
@@ -51,7 +51,7 @@ def perform_v1_migration(
     inpath: Path,
     working: Path,
     new_zip: ZipPath,
-    central_dir: dict[str, Any],
+    central_dir: dict[str, t.Any],
     is_tar: bool,
     metadata: dict,
     data: dict,
@@ -238,7 +238,7 @@ def _iter_entity_fields(
     data,
     name: str,
     node_repos: dict[str, list[tuple[str, str | None]]],
-) -> Iterator[dict[str, Any]]:
+) -> Iterator[dict[str, t.Any]]:
     """Iterate through entity fields."""
     keys = file_fields_to_model_fields.get(name, {})
     if name == _NODE_ENTITY_NAME:
@@ -266,7 +266,7 @@ def _iter_entity_fields(
             yield {**{keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()}, **{'id': pk}}
 
 
-def _create_repo_metadata(paths: list[tuple[str, str | None]]) -> dict[str, Any]:
+def _create_repo_metadata(paths: list[tuple[str, str | None]]) -> dict[str, t.Any]:
     """Create the repository metadata.
 
     :param paths: list of (path, hashkey) tuples

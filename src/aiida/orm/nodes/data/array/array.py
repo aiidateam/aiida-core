@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import base64
 import io
+import typing as t
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Any, BinaryIO
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
@@ -300,7 +300,7 @@ class ArrayData(Data):
         # Store the array name and shape for querying purposes
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
-    def attach_file(self, name: str, fileobj: BinaryIO) -> None:
+    def attach_file(self, name: str, fileobj: t.BinaryIO) -> None:
         if not name.lower().endswith('.npy'):
             raise ValueError(f'expected .npy file: {name}')
         base = name.removesuffix('.npy')
@@ -338,7 +338,7 @@ class ArrayData(Data):
             )
         return super()._validate()
 
-    def _get_array_entries(self) -> dict[str, Any]:
+    def _get_array_entries(self) -> dict[str, t.Any]:
         """Return a dictionary with the different array entries.
 
         The idea is that this dictionary contains the array name as a key and
@@ -370,10 +370,10 @@ class ArrayData(Data):
     def to_model_field_values(
         self,
         *,
-        context: dict[str, Any] | None = None,
+        context: dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, t.Any]:
         fields = super().to_model_field_values(context=context, minimal=minimal, schema=schema)
         if schema in (self.ReadModel, self.WriteModel):
             return fields | {'attributes': self.base.attributes.all}

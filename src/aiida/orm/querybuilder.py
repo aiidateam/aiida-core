@@ -19,19 +19,11 @@ when instantiated by the user.
 
 from __future__ import annotations
 
+import typing as t
 import warnings
 from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from inspect import isclass as inspect_isclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    NamedTuple,
-    Union,
-    cast,
-    overload,
-)
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
@@ -46,22 +38,22 @@ from aiida.orm.implementation.querybuilder import (
     QueryDictType,
 )
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine import Process
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('QueryBuilder',)
 
 # re-usable type annotations
-EntityClsType = type[Union[entities.Entity, 'Process']]
+EntityClsType = type[t.Union[entities.Entity, 'Process']]
 ProjectType = str | dict | Sequence[str | dict]
-FilterType = dict[str, Any] | qb_fields.QbFieldFilters | qb_fields.QbBoolField
+FilterType = dict[str, t.Any] | qb_fields.QbFieldFilters | qb_fields.QbBoolField
 OrderByType = dict | list[dict] | tuple[dict, ...]
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')
 
 
-class Classifier(NamedTuple):
+class Classifier(t.NamedTuple):
     """A classifier for an entity."""
 
     ormclass_type_string: str
@@ -92,7 +84,7 @@ class QueryBuilder:
         backend: StorageBackend | None = None,
         *,
         debug: bool | None = None,
-        path: Sequence[str | dict[str, Any] | EntityClsType] | None = (),
+        path: Sequence[str | dict[str, t.Any] | EntityClsType] | None = (),
         filters: dict[str, FilterType] | None = None,
         project: dict[str, ProjectType] | None = None,
         limit: int | None = None,
@@ -139,9 +131,9 @@ class QueryBuilder:
         # A list storing the path being traversed by the query
         self._path: list[PathItemType] = []
         # map tags to filters
-        self._filters: dict[str, dict[str, Any]] = {}
+        self._filters: dict[str, dict[str, t.Any]] = {}
         # map tags to projections: tag -> list(fields) -> func | cast -> value
-        self._projections: dict[str, list[dict[str, dict[str, Any]]]] = {}
+        self._projections: dict[str, list[dict[str, dict[str, t.Any]]]] = {}
         # mapping: tag -> field -> return key for iterdict/dict methods
         self._project_map: dict[str, dict[str, str]] = {}
         # list of mappings: tag -> list(fields) -> 'order' | 'cast' -> value (str('asc' | 'desc'), str(cast_key))
@@ -225,7 +217,7 @@ class QueryBuilder:
         return self.as_dict()
 
     @classmethod
-    def from_dict(cls, dct: dict[str, Any]) -> QueryBuilder:
+    def from_dict(cls, dct: dict[str, t.Any]) -> QueryBuilder:
         """Create an instance from a dictionary representation of the query."""
         return cls(**dct)
 
@@ -293,9 +285,9 @@ class QueryBuilder:
         edge_project: ProjectType | None = None,
         outerjoin: bool = False,
         joining_keyword: str | None = None,
-        joining_value: Any | None = None,
+        joining_value: t.Any | None = None,
         orm_base: str | None = None,
-        **kwargs: Any,
+        **kwargs: t.Any,
     ) -> QueryBuilder:
         """Any iterative procedure to build the path for a graph query
         needs to invoke this method to append to the path.
@@ -504,7 +496,7 @@ class QueryBuilder:
 
         # EDGES #################################
         if len(self._path) > 0:
-            joining_value = cast(str, joining_value)
+            joining_value = t.cast(str, joining_value)
             try:
                 if edge_tag is None:
                     edge_destination_tag = self._tags.get(joining_value)
@@ -703,7 +695,7 @@ class QueryBuilder:
         return self
 
     @staticmethod
-    def _process_filters(filters: FilterType) -> dict[str, Any]:
+    def _process_filters(filters: FilterType) -> dict[str, t.Any]:
         """Process filters."""
         if isinstance(filters, qb_fields.QbBoolField):
             filters = filters.as_filter()
@@ -884,7 +876,7 @@ class QueryBuilder:
 
         return self
 
-    def debug(self, msg: str, *objects: Any) -> None:
+    def debug(self, msg: str, *objects: t.Any) -> None:
         """Log debug message.
 
         objects will passed to the format string, e.g. ``msg % objects``
@@ -939,7 +931,7 @@ class QueryBuilder:
         self._distinct = value
         return self
 
-    def inputs(self, **kwargs: Any) -> QueryBuilder:
+    def inputs(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to inputs of previous vertice in path.
 
         :returns: self
@@ -951,7 +943,7 @@ class QueryBuilder:
         self.append(cls=cls, with_outgoing=join_to, **kwargs)
         return self
 
-    def outputs(self, **kwargs: Any) -> QueryBuilder:
+    def outputs(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to outputs of previous vertice in path.
 
         :returns: self
@@ -963,7 +955,7 @@ class QueryBuilder:
         self.append(cls=cls, with_incoming=join_to, **kwargs)
         return self
 
-    def children(self, **kwargs: Any) -> QueryBuilder:
+    def children(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to children/descendants of previous vertice in path.
 
         :returns: self
@@ -975,7 +967,7 @@ class QueryBuilder:
         self.append(cls=cls, with_ancestors=join_to, **kwargs)
         return self
 
-    def parents(self, **kwargs: Any) -> QueryBuilder:
+    def parents(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to parents/ancestors of previous vertice in path.
 
         :returns: self
@@ -1010,7 +1002,7 @@ class QueryBuilder:
         return self._impl.analyze_query(data=self.as_dict(), execute=execute, verbose=verbose)
 
     @staticmethod
-    def _get_aiida_entity_res(value) -> Any:
+    def _get_aiida_entity_res(value) -> t.Any:
         """Convert a projected query result to front end class if it is an instance of a `BackendEntity`.
 
         Values that are not an `BackendEntity` instance will be returned unaltered
@@ -1023,13 +1015,13 @@ class QueryBuilder:
         except TypeError:
             return value
 
-    @overload
-    def first(self, flat: Literal[False] = False) -> list[Any] | None: ...
+    @t.overload
+    def first(self, flat: t.Literal[False] = False) -> list[t.Any] | None: ...
 
-    @overload
-    def first(self, flat: Literal[True]) -> Any | None: ...
+    @t.overload
+    def first(self, flat: t.Literal[True]) -> t.Any | None: ...
 
-    def first(self, flat: bool = False) -> list[Any] | Any | None:
+    def first(self, flat: bool = False) -> list[t.Any] | t.Any | None:
         """Return the first result of the query.
 
         Calling ``first`` results in an execution of the underlying query.
@@ -1059,7 +1051,7 @@ class QueryBuilder:
         """
         return self._impl.count(self.as_dict())
 
-    def iterall(self, batch_size: int | None = 100) -> Iterable[list[Any]]:
+    def iterall(self, batch_size: int | None = 100) -> Iterable[list[t.Any]]:
         """Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
@@ -1078,7 +1070,7 @@ class QueryBuilder:
 
             yield item
 
-    def iterdict(self, batch_size: int | None = 100) -> Iterable[dict[str, dict[str, Any]]]:
+    def iterdict(self, batch_size: int | None = 100) -> Iterable[dict[str, dict[str, t.Any]]]:
         """Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
@@ -1096,13 +1088,13 @@ class QueryBuilder:
 
             yield item
 
-    @overload
-    def all(self, batch_size: int | None = None, flat: Literal[False] = False) -> list[list[Any]]: ...
+    @t.overload
+    def all(self, batch_size: int | None = None, flat: t.Literal[False] = False) -> list[list[t.Any]]: ...
 
-    @overload
-    def all(self, batch_size: int | None = None, flat: Literal[True] = True) -> list[Any]: ...
+    @t.overload
+    def all(self, batch_size: int | None = None, flat: t.Literal[True] = True) -> list[t.Any]: ...
 
-    def all(self, batch_size: int | None = None, flat: bool = False) -> list[list[Any]] | list[Any]:
+    def all(self, batch_size: int | None = None, flat: bool = False) -> list[list[t.Any]] | list[t.Any]:
         """Executes the full query with the order of the rows as returned by the backend.
 
         The order inside each row is given by the order of the vertices in the path and the order of the projections for
@@ -1121,7 +1113,7 @@ class QueryBuilder:
 
         return [projection for entry in matches for projection in entry]
 
-    def one(self) -> list[Any]:
+    def one(self) -> list[t.Any]:
         """Executes the query asking for exactly one results.
 
         Will raise an exception if this is not the case:
@@ -1143,7 +1135,7 @@ class QueryBuilder:
             raise NotExistent('No result was found')
         return res[0]
 
-    def dict(self, batch_size: int | None = None) -> list[dict[str, dict[str, Any]]]:
+    def dict(self, batch_size: int | None = None) -> list[dict[str, dict[str, t.Any]]]:
         """Executes the full query with the order of the rows as returned by the backend.
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
@@ -1371,7 +1363,7 @@ def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict
 
     value = classifiers.process_type_string
     assert value is not None
-    filters: dict[str, Any]
+    filters: dict[str, t.Any]
 
     if not subclassing:
         filters = {'==': value}
@@ -1430,7 +1422,7 @@ class _QueryTagMap:
 
         # The cls_to_tag_map in this case would be:
         # {PwCalculation: {'pwcalc'}, StructureData: {'structure'}}
-        self._cls_to_tag_map: dict[Any, set[str]] = {}
+        self._cls_to_tag_map: dict[t.Any, set[str]] = {}
 
     def __repr__(self) -> str:
         return repr(list(self._tag_to_type))

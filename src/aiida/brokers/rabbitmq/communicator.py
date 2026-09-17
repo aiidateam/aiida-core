@@ -21,10 +21,10 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import typing as t
 from collections.abc import Callable
 from contextlib import suppress
 from functools import partial
-from typing import Any
 
 import aio_pika
 import aio_pika.abc
@@ -39,15 +39,15 @@ _LOGGER = logging.getLogger(__name__)
 
 # The exchange properties used by the publisher and subscriber. These have to match
 # which is why they're declared here.
-EXCHANGE_PROPERTIES: dict[str, Any] = {'type': aio_pika.ExchangeType.TOPIC}
+EXCHANGE_PROPERTIES: dict[str, t.Any] = {'type': aio_pika.ExchangeType.TOPIC}
 
 
 class RmqPublisher(messages.BasePublisherWithReplyQueue):
     """Publisher for sending a range of message types over RMQ."""
 
-    DEFAULT_EXCHANGE_PARAMS: dict[str, Any] = EXCHANGE_PROPERTIES
+    DEFAULT_EXCHANGE_PARAMS: dict[str, t.Any] = EXCHANGE_PROPERTIES
 
-    async def rpc_send(self, recipient_id: str, msg: Any) -> asyncio.Future[Any]:
+    async def rpc_send(self, recipient_id: str, msg: t.Any) -> asyncio.Future[t.Any]:
         routing_key = f'{defaults.RPC_TOPIC}.{recipient_id}'
         assert self._reply_queue is not None
         _LOGGER.debug(
@@ -64,8 +64,8 @@ class RmqPublisher(messages.BasePublisherWithReplyQueue):
         return response_future
 
     async def broadcast_send(
-        self, msg: Any, sender: Any = None, subject: Any = None, correlation_id: Any = None
-    ) -> Any:
+        self, msg: t.Any, sender: t.Any = None, subject: t.Any = None, correlation_id: t.Any = None
+    ) -> t.Any:
         message_dict = messages.BroadcastMessage.create(
             body=msg,
             sender=sender,
@@ -94,8 +94,8 @@ class RmqSubscriber:
         connection: aio_pika.Connection,
         message_exchange: str = defaults.MESSAGE_EXCHANGE,
         queue_expires: int = defaults.QUEUE_EXPIRES,
-        decoder: Callable[..., Any] = defaults.DECODER,
-        encoder: Callable[..., Any] = defaults.ENCODER,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
         testing_mode: bool = False,
     ) -> None:
         """Initialise the subscriber.
@@ -117,18 +117,18 @@ class RmqSubscriber:
         self._testing_mode = testing_mode
         self._response_encode = encoder
 
-        self._broadcast_queue_arguments: dict[str, Any] = {'x-message-ttl': defaults.MESSAGE_TTL}
+        self._broadcast_queue_arguments: dict[str, t.Any] = {'x-message-ttl': defaults.MESSAGE_TTL}
 
-        self._rmq_queue_arguments: dict[str, Any] = {'x-message-ttl': defaults.MESSAGE_TTL}
+        self._rmq_queue_arguments: dict[str, t.Any] = {'x-message-ttl': defaults.MESSAGE_TTL}
         if queue_expires:
             self._rmq_queue_arguments['x-expires'] = queue_expires
 
         self._rpc_subscribers: dict[str, aio_pika.abc.AbstractQueue] = {}
-        self._broadcast_subscribers: dict[str, Callable[..., Any]] = {}
+        self._broadcast_subscribers: dict[str, Callable[..., t.Any]] = {}
         self._broadcast_queue: aio_pika.abc.AbstractQueue | None = None
         self._broadcast_consumer_tag: str | None = None
 
-    async def add_rpc_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    async def add_rpc_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         assert self._channel is not None
         # Create an RPC queue
         rpc_queue = await self._channel.declare_queue(exclusive=True, arguments=self._rmq_queue_arguments)
@@ -154,7 +154,7 @@ class RmqSubscriber:
             assert self._exchange is not None
             await rpc_queue.unbind(self._exchange, routing_key=f'{defaults.RPC_TOPIC}.{identifier}')
 
-    async def add_broadcast_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    async def add_broadcast_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         identifier = identifier or shortuuid.uuid()
         if identifier in self._broadcast_subscribers:
             raise exceptions.DuplicateSubscriberIdentifier(f"Broadcast identifier '{identifier}'")
@@ -186,7 +186,7 @@ class RmqSubscriber:
             # Already connected
             return
 
-        exchange_params: dict[str, Any] = copy.copy(EXCHANGE_PROPERTIES)
+        exchange_params: dict[str, t.Any] = copy.copy(EXCHANGE_PROPERTIES)
 
         if self._testing_mode:
             exchange_params.setdefault('auto_delete', self._testing_mode)
@@ -222,7 +222,7 @@ class RmqSubscriber:
         self._exchange = None
         self._channel = None
 
-    async def _on_rpc(self, subscriber: Callable[..., Any], message: aio_pika.abc.AbstractIncomingMessage) -> None:
+    async def _on_rpc(self, subscriber: Callable[..., t.Any], message: aio_pika.abc.AbstractIncomingMessage) -> None:
         """:param subscriber: The subscriber function or coroutine that will get the RPC message."""
         async with message.process(ignore_processed=True):
             # Tell the sender that we've dealt with it
@@ -262,7 +262,7 @@ class RmqSubscriber:
                     _LOGGER.exception('Exception in broadcast receiver')
 
     async def _send_future_response(
-        self, future: asyncio.Future[Any], reply_to: str | None, correlation_id: str | None
+        self, future: asyncio.Future[t.Any], reply_to: str | None, correlation_id: str | None
     ) -> None:
         """Send pending responses while an RPC future resolves, then the final result.
 
@@ -271,7 +271,7 @@ class RmqSubscriber:
         :param correlation_id: The correlation id.
         """
         # Keep looping in case we're in a situation where a future resolves to a future etc.
-        pending: Any = future
+        pending: t.Any = future
         try:
             while asyncio.isfuture(pending):
                 # Send out a message saying that we're waiting for a future to complete
@@ -288,7 +288,9 @@ class RmqSubscriber:
         # We have a final result so send that as the response
         await self._send_response(reply_to, correlation_id, utils.result_response(pending))
 
-    async def _send_response(self, reply_to: str | None, correlation_id: str | None, response: dict[str, Any]) -> Any:
+    async def _send_response(
+        self, reply_to: str | None, correlation_id: str | None, response: dict[str, t.Any]
+    ) -> t.Any:
         assert reply_to, 'Must provide an identifier for the recipient'
 
         message = aio_pika.Message(body=self._response_encode(response), correlation_id=correlation_id)
@@ -311,8 +313,8 @@ class RmqCommunicator:
         task_queue: str = defaults.TASK_QUEUE,
         task_prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
         task_prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
-        encoder: Callable[..., Any] = defaults.ENCODER,
-        decoder: Callable[..., Any] = defaults.DECODER,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
         testing_mode: bool = False,
     ) -> None:
         """Create a new asynchronous communicator.
@@ -359,21 +361,21 @@ class RmqCommunicator:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(self, exc_type: t.Any, exc_val: t.Any, exc_tb: t.Any) -> None:
         await self.disconnect()
 
     def __str__(self) -> str:
         return f'RMQCommunicator({self._connection})'
 
     @property
-    def server_properties(self) -> dict[str, Any]:
+    def server_properties(self) -> dict[str, t.Any]:
         """A dictionary containing server properties as returned by the RMQ server at connection time.
 
         :return: The server properties dictionary.
         """
         transport = self._connection.transport
         assert transport is not None
-        properties: dict[str, Any] = transport.connection.server_properties
+        properties: dict[str, t.Any] = transport.connection.server_properties
         return properties
 
     @property
@@ -478,7 +480,7 @@ class RmqCommunicator:
 
         await self._connection.close()
 
-    async def add_rpc_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    async def add_rpc_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         msg_subscriber = await self.get_message_subscriber()
         identifier = await msg_subscriber.add_rpc_subscriber(subscriber, identifier)
         return identifier
@@ -487,7 +489,7 @@ class RmqCommunicator:
         msg_subscriber = await self.get_message_subscriber()
         await msg_subscriber.remove_rpc_subscriber(identifier)
 
-    async def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    async def add_task_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         default_task_queue = await self.get_default_task_queue()
         return await default_task_queue.add_task_subscriber(subscriber, identifier)
 
@@ -495,7 +497,7 @@ class RmqCommunicator:
         default_task_queue = await self.get_default_task_queue()
         await default_task_queue.remove_task_subscriber(identifier)
 
-    async def add_broadcast_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    async def add_broadcast_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         msg_subscriber = await self.get_message_subscriber()
         identifier = await msg_subscriber.add_broadcast_subscriber(subscriber, identifier)
         return identifier
@@ -504,7 +506,7 @@ class RmqCommunicator:
         msg_subscriber = await self.get_message_subscriber()
         await msg_subscriber.remove_broadcast_subscriber(identifier)
 
-    async def rpc_send(self, recipient_id: str, msg: Any) -> asyncio.Future[Any]:
+    async def rpc_send(self, recipient_id: str, msg: t.Any) -> asyncio.Future[t.Any]:
         """Initiate a remote procedure call on a recipient.
 
         :param recipient_id: The recipient identifier.
@@ -519,13 +521,13 @@ class RmqCommunicator:
             raise exceptions.UnroutableError(str(exception))
 
     async def broadcast_send(
-        self, body: Any, sender: Any = None, subject: Any = None, correlation_id: Any = None
-    ) -> Any:
+        self, body: t.Any, sender: t.Any = None, subject: t.Any = None, correlation_id: t.Any = None
+    ) -> t.Any:
         publisher = await self.get_message_publisher()
         result = await publisher.broadcast_send(body, sender, subject, correlation_id)
         return result
 
-    async def task_send(self, task: Any, no_reply: bool = False) -> asyncio.Future[Any] | None:
+    async def task_send(self, task: t.Any, no_reply: bool = False) -> asyncio.Future[t.Any] | None:
         try:
             task_queue = await self.get_default_task_queue()
             result = await task_queue.task_send(task, no_reply)
@@ -566,8 +568,8 @@ class RmqCommunicator:
 
 async def async_connect(
     # Connection parameters
-    connection_params: str | dict[str, Any] | None = None,
-    connection_factory: Callable[..., Any] = aio_pika.connect_robust,
+    connection_params: str | dict[str, t.Any] | None = None,
+    connection_factory: Callable[..., t.Any] = aio_pika.connect_robust,
     # Messages
     message_exchange: str = defaults.MESSAGE_EXCHANGE,
     queue_expires: int = defaults.QUEUE_EXPIRES,
@@ -576,8 +578,8 @@ async def async_connect(
     task_queue: str = defaults.TASK_QUEUE,
     task_prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
     task_prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
-    encoder: Callable[..., Any] = defaults.ENCODER,
-    decoder: Callable[..., Any] = defaults.DECODER,
+    encoder: Callable[..., t.Any] = defaults.ENCODER,
+    decoder: Callable[..., t.Any] = defaults.DECODER,
     testing_mode: bool = False,
 ) -> RmqCommunicator:
     """Return a connected communicator.

@@ -22,8 +22,8 @@ import asyncio
 import concurrent.futures
 import contextlib
 import logging
+import typing as t
 from collections.abc import Iterator
-from typing import Any
 
 __all__ = (
     'CancelledError',
@@ -43,7 +43,7 @@ as_completed = concurrent.futures.as_completed
 Future = concurrent.futures.Future
 
 
-def copy_future(source: Future[Any], target: Future[Any]) -> None:
+def copy_future(source: Future[t.Any], target: Future[t.Any]) -> None:
     """Copy the status of future ``source`` to ``target`` unless ``target`` is already done.
 
     :param source: The source future.
@@ -59,7 +59,7 @@ def copy_future(source: Future[Any], target: Future[Any]) -> None:
             target.set_result(source.result())
 
 
-def chain(source: Future[Any], target: Future[Any]) -> None:
+def chain(source: Future[t.Any], target: Future[t.Any]) -> None:
     """Chain two futures together so that when one completes, so does the other.
 
     The result (success or failure) of ``source`` will be copied to ``target``, unless
@@ -70,7 +70,7 @@ def chain(source: Future[Any], target: Future[Any]) -> None:
 
 @contextlib.contextmanager
 def capture_exceptions(
-    future: Future[Any] | asyncio.Future[Any], ignore: tuple[type[Exception], ...] = ()
+    future: Future[t.Any] | asyncio.Future[t.Any], ignore: tuple[type[Exception], ...] = ()
 ) -> Iterator[None]:
     """Capture any exceptions in the context and set them as the result of the given future.
 

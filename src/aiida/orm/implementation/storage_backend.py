@@ -11,13 +11,13 @@
 from __future__ import annotations
 
 import abc
+import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
-from typing import TYPE_CHECKING, Any, TypeVar
 
 from aiida.common.log import AIIDA_LOGGER
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
 
     from aiida.manage.configuration.profile import Profile
@@ -40,7 +40,7 @@ __all__ = ('StorageBackend',)
 
 LOGGER = AIIDA_LOGGER.getChild('orm.implementation.storage_backend')
 
-TransactionType = TypeVar('TransactionType')
+TransactionType = t.TypeVar('TransactionType')
 
 
 class StorageBackend(abc.ABC):
@@ -217,7 +217,7 @@ class StorageBackend(abc.ABC):
         """Return an instance of a query builder implementation for this backend"""
 
     @abc.abstractmethod
-    def transaction(self) -> AbstractContextManager[Any]:
+    def transaction(self) -> AbstractContextManager[t.Any]:
         """Get a context manager that can be used as a transaction context for a series of backend operations.
         If there is an exception within the context then the changes will be rolled back and the state will
         be as before entering.  Transactions can be nested.
@@ -299,7 +299,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> None:
         """Perform maintenance tasks on the storage.
 
         If `full == True`, then this method may attempt to block the profile associated with the
@@ -448,7 +448,7 @@ class StorageBackend(abc.ABC):
         STORAGE_LOGGER.report(f'Overwriting the `{DEFAULT_CONFIG_FILE_NAME} file.')
         self._write_backup_config(backup_manager)
 
-    def get_info(self, detailed: bool = False) -> dict[str, Any]:
+    def get_info(self, detailed: bool = False) -> dict[str, t.Any]:
         """Return general information on the storage.
 
         :param detailed: flag to request more detailed information about the content of the storage.
@@ -456,7 +456,7 @@ class StorageBackend(abc.ABC):
         """
         return {'entities': self.get_orm_entities(detailed=detailed)}
 
-    def get_orm_entities(self, detailed: bool = False) -> dict[str, Any]:
+    def get_orm_entities(self, detailed: bool = False) -> dict[str, t.Any]:
         """Return a mapping with an overview of the storage contents regarding ORM entities.
 
         :param detailed: flag to request more detailed information about the content of the storage.
@@ -464,7 +464,7 @@ class StorageBackend(abc.ABC):
         """
         from aiida.orm import Comment, Computer, Group, Log, Node, QueryBuilder, User
 
-        data: dict[str, Any] = {}
+        data: dict[str, t.Any] = {}
 
         query_user = QueryBuilder(self).append(User, project=['email'])
         data['Users'] = {'count': query_user.count()}

@@ -18,7 +18,6 @@ import signal
 import typing as t
 from inspect import get_annotations
 from types import UnionType
-from typing import TYPE_CHECKING, ParamSpec
 
 import docstring_parser
 
@@ -41,7 +40,7 @@ from aiida.orm import (
 )
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
 
 __all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
@@ -51,7 +50,7 @@ LOGGER = logging.getLogger(__name__)
 FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])
 
 
-P = ParamSpec('P')
+P = t.ParamSpec('P')
 R_co = t.TypeVar('R_co', covariant=True)
 N = t.TypeVar('N', bound=ProcessNode)
 

@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import contextlib
 import os
+import typing as t
 from collections.abc import Callable
 from enum import Enum, auto
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
 
 import yaml
 
@@ -29,7 +29,7 @@ from aiida.tools._dumping.tracking import DumpRecord
 from aiida.tools._dumping.utils import DumpPaths, registry_name_for
 from aiida.tools.archive.exceptions import ExportValidationError
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools._dumping.config import GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
     from aiida.tools._dumping.tracking import DumpTracker
     from aiida.tools._dumping.utils import DumpTimes

@@ -9,9 +9,9 @@ import inspect
 import os
 import socket
 import traceback
+import typing as t
 from collections.abc import Callable
 from types import TracebackType
-from typing import Any
 
 from aiida.brokers import exceptions
 from aiida.brokers.rabbitmq import defaults
@@ -33,7 +33,7 @@ def get_rmq_url(
     host: str | None = None,
     port: str | None = None,
     virtual_host: str | None = None,
-    **kwargs: Any,
+    **kwargs: t.Any,
 ) -> str:
     """Return the URL to connect to RabbitMQ.
 
@@ -104,12 +104,12 @@ def get_task_exchange_name(prefix: str) -> str:
     return f'{prefix}.{defaults.TASK_EXCHANGE}'
 
 
-def get_host_info() -> dict[str, Any]:
+def get_host_info() -> dict[str, t.Any]:
     """Return information about the current host."""
     return {'hostname': socket.gethostname(), 'pid': os.getpid()}
 
 
-def add_host_info(msg: dict[str, Any]) -> None:
+def add_host_info(msg: dict[str, t.Any]) -> None:
     """Add host information to a message in place."""
     if HOST_KEY in msg:
         error_msg = 'Host information key already exists in message'
@@ -118,12 +118,12 @@ def add_host_info(msg: dict[str, Any]) -> None:
     msg[HOST_KEY] = get_host_info()
 
 
-def result_response(result: Any) -> dict[str, Any]:
+def result_response(result: t.Any) -> dict[str, t.Any]:
     """Create a result response dictionary."""
     return {RESULT_KEY: result}
 
 
-def exception_response(exception: Exception, trace: TracebackType | None = None) -> dict[str, Any]:
+def exception_response(exception: Exception, trace: TracebackType | None = None) -> dict[str, t.Any]:
     """Create an exception response dictionary.
 
     :param exception: The exception to encode.
@@ -135,24 +135,24 @@ def exception_response(exception: Exception, trace: TracebackType | None = None)
     return {EXCEPTION_KEY: msg}
 
 
-def cancelled_response(msg: Any = None) -> dict[str, Any]:
+def cancelled_response(msg: t.Any = None) -> dict[str, t.Any]:
     """Create a cancelled response dictionary."""
     return {CANCELLED_KEY: msg}
 
 
-def pending_response(msg: Any = None) -> dict[str, Any]:
+def pending_response(msg: t.Any = None) -> dict[str, t.Any]:
     """Create a pending response dictionary."""
     return {PENDING_KEY: msg}
 
 
-def response_to_future(response: Any, future: asyncio.Future[Any] | None = None) -> asyncio.Future[Any]:
+def response_to_future(response: t.Any, future: asyncio.Future[t.Any] | None = None) -> asyncio.Future[t.Any]:
     """Take a response message and set the appropriate value on the given future."""
     if not isinstance(response, collections.abc.Mapping):
         msg = 'Response must be a mapping'
         raise TypeError(msg)
 
     if future is None:
-        future = asyncio.Future[Any]()
+        future = asyncio.Future[t.Any]()
 
     if CANCELLED_KEY in response:
         future.cancel()
@@ -169,7 +169,7 @@ def response_to_future(response: Any, future: asyncio.Future[Any] | None = None)
     return future
 
 
-def future_to_response(future: asyncio.Future[Any]) -> dict[str, Any]:
+def future_to_response(future: asyncio.Future[t.Any]) -> dict[str, t.Any]:
     """Convert a future to a response dictionary."""
     if future.cancelled():
         return cancelled_response()
@@ -179,20 +179,20 @@ def future_to_response(future: asyncio.Future[Any]) -> dict[str, Any]:
         return exception_response(exception)
 
 
-def ensure_coroutine(coro_or_fn: Any) -> Callable[..., Any]:
+def ensure_coroutine(coro_or_fn: t.Any) -> Callable[..., t.Any]:
     """Wrap a sync callable so it can be awaited on the communicator event loop."""
     if inspect.iscoroutinefunction(coro_or_fn):
-        coroutine_fn: Callable[..., Any] = coro_or_fn
+        coroutine_fn: Callable[..., t.Any] = coro_or_fn
         return coroutine_fn
     if callable(coro_or_fn):
         if inspect.isclass(coro_or_fn):
             coro_or_fn = coro_or_fn.__call__
 
         @functools.wraps(coro_or_fn)
-        async def wrap(*args: Any, **kwargs: Any) -> Any:
+        async def wrap(*args: t.Any, **kwargs: t.Any) -> t.Any:
             return coro_or_fn(*args, **kwargs)
 
-        wrapped: Callable[..., Any] = wrap
+        wrapped: Callable[..., t.Any] = wrap
         return wrapped
 
     msg = 'coro_or_fn must be a callable'

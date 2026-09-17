@@ -15,9 +15,9 @@ import functools
 import logging
 import signal
 import threading
+import typing as t
 import uuid
 from collections.abc import Callable
-from typing import Any, NamedTuple
 
 from aiida.brokers import communicator as broker_communicator
 from aiida.brokers.filters import BroadcastFilter
@@ -37,13 +37,13 @@ __all__ = ('Runner',)
 LOGGER = logging.getLogger(__name__)
 
 
-class ResultAndNode(NamedTuple):
-    result: dict[str, Any]
+class ResultAndNode(t.NamedTuple):
+    result: dict[str, t.Any]
     node: ProcessNode
 
 
-class ResultAndPk(NamedTuple):
-    result: dict[str, Any]
+class ResultAndPk(t.NamedTuple):
+    result: dict[str, t.Any]
     pk: int | None
 
 
@@ -88,7 +88,7 @@ class Runner:
         self._job_manager = manager.JobManager(self._transport)
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
-        self._process_tasks: set[asyncio.Task[Any]] = set()
+        self._process_tasks: set[asyncio.Task[t.Any]] = set()
 
         if communicator is not None:
             self._communicator = wrap_communicator(communicator, self._loop)
@@ -154,7 +154,7 @@ class Runner:
         """Stop the internal event loop."""
         self._loop.stop()
 
-    def run_until_complete(self, future: asyncio.Future) -> Any:
+    def run_until_complete(self, future: asyncio.Future) -> t.Any:
         """Run the loop until the future has finished and return the result."""
 
         with utils.loop_scope(self._loop):
@@ -173,7 +173,7 @@ class Runner:
 
         return instantiate_process(self, process, **inputs)
 
-    def submit(self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any):
+    def submit(self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any):
         """Submit the process with the supplied inputs to this runner immediately returning control to the interpreter.
 
         The return value will be the calculation node of the submitted process
@@ -208,7 +208,7 @@ class Runner:
         return process_inited.node
 
     def schedule(
-        self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+        self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
     ) -> ProcessNode:
         """Schedule a process to be executed by this runner.
 
@@ -227,8 +227,8 @@ class Runner:
         return process_inited.node
 
     def _run(
-        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
-    ) -> tuple[dict[str, Any], ProcessNode]:
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+    ) -> tuple[dict[str, t.Any], ProcessNode]:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process
@@ -269,7 +269,9 @@ class Runner:
 
             return process_inited.outputs, process_inited.node
 
-    def run(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+    def run(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+    ) -> dict[str, t.Any]:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process
@@ -282,7 +284,7 @@ class Runner:
         return result
 
     def run_get_node(
-        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
     ) -> ResultAndNode:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
@@ -295,7 +297,9 @@ class Runner:
         result, node = self._run(process, inputs, **kwargs)
         return ResultAndNode(result, node)
 
-    def run_get_pk(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> ResultAndPk:
+    def run_get_pk(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+    ) -> ResultAndPk:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process
@@ -307,7 +311,7 @@ class Runner:
         result, node = self._run(process, inputs, **kwargs)
         return ResultAndPk(result, node.pk)
 
-    def call_on_process_finish(self, pk: int, callback: Callable[[], Any]) -> None:
+    def call_on_process_finish(self, pk: int, callback: Callable[[], t.Any]) -> None:
         """Schedule a callback when the process of the given pk is terminated.
 
         This method will add a broadcast subscriber that will listen for state changes of the target process to be

@@ -8,9 +8,9 @@
 ###########################################################################
 """Import an archive."""
 
+import typing as t
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal
 
 from tabulate import tabulate
 
@@ -36,13 +36,13 @@ __all__ = ('import_archive',)
 
 IMPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 
-MergeExtrasType = tuple[Literal['k', 'n'], Literal['c', 'n'], Literal['l', 'u', 'd']]
+MergeExtrasType = tuple[t.Literal['k', 'n'], t.Literal['c', 'n'], t.Literal['l', 'u', 'd']]
 MergeExtraDescs = (
     {'k': '(k)eep', 'n': 'do (n)ot keep'},
     {'c': '(c)reate', 'n': 'do (n)ot create'},
     {'l': '(l)eave existing', 'u': '(u)pdate with new', 'd': '(d)elete'},
 )
-MergeCommentsType = Literal['leave', 'newest', 'overwrite']
+MergeCommentsType = t.Literal['leave', 'newest', 'overwrite']
 
 DUPLICATE_LABEL_MAX = 100
 DUPLICATE_LABEL_TEMPLATE = '{0} (Imported #{1})'
@@ -661,7 +661,7 @@ def _merge_node_extras(
             f'Number of Nodes in archive ({input_extras.count()}) and backend ({backend_extras.count()}) do not match'
         )
 
-    def _transform(data: tuple[Any, Any]) -> dict:
+    def _transform(data: tuple[t.Any, t.Any]) -> dict:
         """Transform the new and existing extras into a dict that can be passed to bulk_update."""
         new_uuid, new_extras = data[0]
         old_uuid, old_extras = data[1]

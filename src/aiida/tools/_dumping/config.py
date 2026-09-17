@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
+import typing as t
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
@@ -134,7 +134,7 @@ class BaseDumpConfig(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def _resolve_dump_mode_from_flags(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def _resolve_dump_mode_from_flags(cls, values: dict[str, t.Any]) -> dict[str, t.Any]:
         """Map incoming CLI click options to internal representation."""
         # Convert Dump Mode
 

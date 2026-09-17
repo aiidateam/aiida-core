@@ -22,11 +22,11 @@ import asyncio
 import copy
 import logging
 import traceback
+import typing as t
 import uuid
 from collections import deque
 from collections.abc import Callable
 from contextlib import suppress
-from typing import Any
 
 import aio_pika
 import aio_pika.abc
@@ -47,7 +47,9 @@ class BroadcastMessage:
     CORRELATION_ID = 'correlation_id'
 
     @staticmethod
-    def create(body: Any, sender: Any = None, subject: Any = None, correlation_id: Any = None) -> dict[str, Any]:
+    def create(
+        body: t.Any, sender: t.Any = None, subject: t.Any = None, correlation_id: t.Any = None
+    ) -> dict[str, t.Any]:
         return {
             BroadcastMessage.BODY: body,
             BroadcastMessage.SENDER: sender,
@@ -59,13 +61,13 @@ class BroadcastMessage:
 class BaseConnectionWithExchange:
     """An RMQ connection with a channel and exchange."""
 
-    DEFAULT_EXCHANGE_PARAMS: dict[str, Any] = {'type': aio_pika.ExchangeType.TOPIC}
+    DEFAULT_EXCHANGE_PARAMS: dict[str, t.Any] = {'type': aio_pika.ExchangeType.TOPIC}
 
     def __init__(
         self,
         connection: aio_pika.Connection,
         exchange_name: str = defaults.MESSAGE_EXCHANGE,
-        exchange_params: dict[str, Any] | None = None,
+        exchange_params: dict[str, t.Any] | None = None,
         testing_mode: bool = False,
     ) -> None:
         """Initialise the connection wrapper.
@@ -132,15 +134,15 @@ class BaseConnectionWithExchange:
 class BasePublisherWithReplyQueue:
     """A base class for any object that publishes a message and potentially expects a reply."""
 
-    DEFAULT_EXCHANGE_PARAMS: dict[str, Any] = {'type': aio_pika.ExchangeType.TOPIC}
+    DEFAULT_EXCHANGE_PARAMS: dict[str, t.Any] = {'type': aio_pika.ExchangeType.TOPIC}
 
     def __init__(
         self,
         connection: aio_pika.Connection,
         exchange_name: str = defaults.MESSAGE_EXCHANGE,
-        exchange_params: dict[str, Any] | None = None,
-        encoder: Callable[..., Any] = defaults.ENCODER,
-        decoder: Callable[..., Any] = defaults.DECODER,
+        exchange_params: dict[str, t.Any] | None = None,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
         confirm_deliveries: bool = True,
         testing_mode: bool = False,
     ) -> None:
@@ -169,10 +171,10 @@ class BasePublisherWithReplyQueue:
         self._confirm_deliveries = confirm_deliveries
         if self._confirm_deliveries:
             self._num_published = 0
-            self._delivery_info: deque[Any] = deque()
+            self._delivery_info: deque[t.Any] = deque()
         self._testing_mode = testing_mode
 
-        self._awaiting_response: dict[str, asyncio.Future[Any]] = {}
+        self._awaiting_response: dict[str, asyncio.Future[t.Any]] = {}
 
         self._connection = connection
         self._channel: aio_pika.abc.AbstractChannel | None = None
@@ -230,7 +232,7 @@ class BasePublisherWithReplyQueue:
                 await channel.close()
             self._channel = None
 
-    def action_message(self, message: Any) -> Any:
+    def action_message(self, message: t.Any) -> t.Any:
         """Execute a message that involves communication.
 
         :param message: The message to execute.
@@ -239,7 +241,7 @@ class BasePublisherWithReplyQueue:
         message.send(self)
         return message.future
 
-    async def publish(self, message: aio_pika.Message, routing_key: str, mandatory: bool = True) -> Any:
+    async def publish(self, message: aio_pika.Message, routing_key: str, mandatory: bool = True) -> t.Any:
         """Send a fire-and-forget message i.e. no response expected.
 
         :param message: The message to send.
@@ -252,13 +254,13 @@ class BasePublisherWithReplyQueue:
 
     async def publish_expect_response(
         self, message: aio_pika.Message, routing_key: str, mandatory: bool = True
-    ) -> tuple[Any, asyncio.Future[Any]]:
+    ) -> tuple[t.Any, asyncio.Future[t.Any]]:
         # If there is no correlation id we have to set one so that we know what the response will be to
         if not message.correlation_id:
             message.correlation_id = str(uuid.uuid4())
         correlation_id: str = message.correlation_id
 
-        response_future: asyncio.Future[Any] = asyncio.Future()
+        response_future: asyncio.Future[t.Any] = asyncio.Future()
         self._awaiting_response[correlation_id] = response_future
         self._track_response_future(correlation_id, response_future)
         try:
@@ -301,22 +303,22 @@ class BasePublisherWithReplyQueue:
                     # If the response was a future it means we should get another message that
                     # resolves that future
                     if asyncio.isfuture(response_future.result()):
-                        nested: asyncio.Future[Any] = response_future.result()
+                        nested: asyncio.Future[t.Any] = response_future.result()
                         self._awaiting_response[correlation_id] = nested
                         self._track_response_future(correlation_id, nested)
                 except Exception:
                     pass
 
-    def _track_response_future(self, correlation_id: str, future: asyncio.Future[Any]) -> None:
+    def _track_response_future(self, correlation_id: str, future: asyncio.Future[t.Any]) -> None:
         """Release the ``_awaiting_response`` registration once the future settles."""
 
-        def _done(settled: asyncio.Future[Any]) -> None:
+        def _done(settled: asyncio.Future[t.Any]) -> None:
             if self._awaiting_response.get(correlation_id) is settled:
                 self._awaiting_response.pop(correlation_id, None)
 
         future.add_done_callback(_done)
 
-    def _on_channel_close(self, _closing_future: Any, *args: Any, **kwargs: Any) -> None:
+    def _on_channel_close(self, _closing_future: t.Any, *args: t.Any, **kwargs: t.Any) -> None:
         """Reset all channel specific members."""
         if self._confirm_deliveries:
             self._num_published = 0

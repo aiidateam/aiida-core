@@ -8,7 +8,7 @@
 ###########################################################################
 """`verdi group` commands"""
 
-from typing import Any
+import typing as t
 
 import click
 
@@ -216,7 +216,7 @@ def group_delete(
         from aiida.common.escaping import escape_for_sql_like
 
         builder = orm.QueryBuilder()
-        filters: dict[str, Any] = {}
+        filters: dict[str, t.Any] = {}
 
         # Note: we could have set 'core' as a default value for type_string,
         # but for the sake of uniform interface, we decided to keep the default value of None.
@@ -464,7 +464,7 @@ def group_list(
     from aiida.common.escaping import escape_for_sql_like
 
     builder = orm.QueryBuilder()
-    filters: dict[str, Any] = {}
+    filters: dict[str, t.Any] = {}
 
     if not all_entries:
         if '%' in type_string or '_' in type_string:

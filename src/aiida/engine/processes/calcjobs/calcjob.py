@@ -15,8 +15,8 @@ import io
 import json
 import os
 import shutil
+import typing as t
 from collections.abc import Hashable
-from typing import Any
 
 from aiida import orm
 from aiida.common import AttributeDict, exceptions
@@ -37,7 +37,7 @@ from aiida.engine.processes.process_spec import CalcJobProcessSpec
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs: Any, ctx: PortNamespace) -> str | None:
+def validate_calc_job(inputs: t.Any, ctx: PortNamespace) -> str | None:
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -113,7 +113,7 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> str | None:
     return None
 
 
-def validate_unstash_options(unstash_options: Any, _: Any) -> str | None:
+def validate_unstash_options(unstash_options: t.Any, _: t.Any) -> str | None:
     """Validate the ``unstash`` options."""
     from aiida.common.datastructures import UnstashTargetMode
 
@@ -137,7 +137,7 @@ def validate_unstash_options(unstash_options: Any, _: Any) -> str | None:
     return None
 
 
-def validate_stash_options(stash_options: Any, _: Any) -> str | None:
+def validate_stash_options(stash_options: t.Any, _: t.Any) -> str | None:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
     from aiida.transports.transport import has_magic
@@ -195,7 +195,7 @@ def validate_stash_options(stash_options: Any, _: Any) -> str | None:
     return None
 
 
-def validate_monitors(monitors: Any, _: PortNamespace) -> str | None:
+def validate_monitors(monitors: t.Any, _: PortNamespace) -> str | None:
     """Validate the ``monitors`` input namespace."""
     for key, monitor_node in monitors.items():
         try:
@@ -205,7 +205,7 @@ def validate_monitors(monitors: Any, _: PortNamespace) -> str | None:
     return None
 
 
-def validate_parser(parser_name: Any, _: PortNamespace) -> str | None:
+def validate_parser(parser_name: t.Any, _: PortNamespace) -> str | None:
     """Validate the parser.
 
     :return: string with error message in case the inputs are invalid
@@ -220,7 +220,7 @@ def validate_parser(parser_name: Any, _: PortNamespace) -> str | None:
     return None
 
 
-def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> str | None:
+def validate_additional_retrieve_list(additional_retrieve_list: t.Any, _: t.Any) -> str | None:
     """Validate the additional retrieve list.
 
     :return: string with error message in case the input is invalid.
@@ -662,7 +662,7 @@ class CalcJob(Process):
         """
         raise NotImplementedError()
 
-    def _setup_version_info(self) -> dict[str, Any]:
+    def _setup_version_info(self) -> dict[str, t.Any]:
         """Store relevant plugin version information."""
         from aiida.plugins.entry_point import format_entry_point_string
         from aiida.plugins.factories import ParserFactory

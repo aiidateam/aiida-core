@@ -22,11 +22,11 @@ import asyncio
 import concurrent.futures
 import functools
 import logging
+import typing as t
 from collections.abc import Callable, Iterator
 from concurrent.futures import Future as ThreadFuture
 from contextlib import contextmanager
 from types import TracebackType
-from typing import Any
 
 import aio_pika
 import aio_pika.abc
@@ -54,15 +54,15 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
     @classmethod
     def connect(
         cls,
-        connection_params: str | dict[str, Any] | None = None,
-        connection_factory: Callable[..., Any] = aio_pika.connect_robust,
+        connection_params: str | dict[str, t.Any] | None = None,
+        connection_factory: Callable[..., t.Any] = aio_pika.connect_robust,
         message_exchange: str = defaults.MESSAGE_EXCHANGE,
         task_exchange: str = defaults.TASK_EXCHANGE,
         task_queue: str = defaults.TASK_QUEUE,
         task_prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
         task_prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
-        encoder: Callable[..., Any] = defaults.ENCODER,
-        decoder: Callable[..., Any] = defaults.DECODER,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
         testing_mode: bool = False,
         async_task_timeout: float = TASK_TIMEOUT,
     ) -> RmqThreadCommunicator:
@@ -85,16 +85,16 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
 
     def __init__(
         self,
-        connection_params: str | dict[str, Any] | None = None,
-        connection_factory: Callable[..., Any] = aio_pika.connect_robust,
+        connection_params: str | dict[str, t.Any] | None = None,
+        connection_factory: Callable[..., t.Any] = aio_pika.connect_robust,
         message_exchange: str = defaults.MESSAGE_EXCHANGE,
         queue_expires: int = defaults.QUEUE_EXPIRES,
         task_exchange: str = defaults.TASK_EXCHANGE,
         task_queue: str = defaults.TASK_QUEUE,
         task_prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
         task_prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
-        encoder: Callable[..., Any] = defaults.ENCODER,
-        decoder: Callable[..., Any] = defaults.DECODER,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
         testing_mode: bool = False,
         async_task_timeout: float = TASK_TIMEOUT,
     ) -> None:
@@ -115,8 +115,8 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
         # Always use a separate loop
         self._loop = asyncio.new_event_loop()
         self._loop.set_debug(testing_mode)
-        self._loop_scheduler: Any = aiothreads.LoopScheduler(self._loop, 'RMQ communicator', async_task_timeout)
-        self._stop_signal: Any = None
+        self._loop_scheduler: t.Any = aiothreads.LoopScheduler(self._loop, 'RMQ communicator', async_task_timeout)
+        self._stop_signal: t.Any = None
         self._closed = False
 
         self._loop_scheduler.start()  # Start the loop scheduler (i.e. the event loop thread)
@@ -147,7 +147,7 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
             raise
 
     @property
-    def server_properties(self) -> dict[str, Any]:
+    def server_properties(self) -> dict[str, t.Any]:
         """A dictionary containing server properties as returned by the RMQ server at connection time.
 
         :return: The server properties dictionary.
@@ -165,7 +165,7 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
     ) -> None:
         self.close()
 
-    def loop(self) -> Any:
+    def loop(self) -> t.Any:
         return self._loop_scheduler.loop()
 
     def is_closed(self) -> bool:
@@ -196,35 +196,35 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
         self._ensure_open()
         self._communicator.add_close_callback(callback, weak)
 
-    def add_rpc_subscriber(self, subscriber: Callable[..., Any], identifier: Any = None) -> Any:
+    def add_rpc_subscriber(self, subscriber: Callable[..., t.Any], identifier: t.Any = None) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(
             self._communicator.add_rpc_subscriber(self._wrap_subscriber(subscriber), identifier)
         )
 
-    def remove_rpc_subscriber(self, identifier: Any) -> Any:
+    def remove_rpc_subscriber(self, identifier: t.Any) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(self._communicator.remove_rpc_subscriber(identifier))
 
-    def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: Any = None) -> Any:
+    def add_task_subscriber(self, subscriber: Callable[..., t.Any], identifier: t.Any = None) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(
             self._communicator.add_task_subscriber(self._wrap_subscriber(subscriber), identifier)
         )
 
-    def remove_task_subscriber(self, identifier: Any) -> Any:
+    def remove_task_subscriber(self, identifier: t.Any) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(self._communicator.remove_task_subscriber(identifier))
 
-    def add_broadcast_subscriber(self, subscriber: Callable[..., Any], identifier: Any = None) -> Any:
+    def add_broadcast_subscriber(self, subscriber: Callable[..., t.Any], identifier: t.Any = None) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(self._communicator.add_broadcast_subscriber(subscriber, identifier))
 
-    def remove_broadcast_subscriber(self, identifier: Any) -> Any:
+    def remove_broadcast_subscriber(self, identifier: t.Any) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(self._communicator.remove_broadcast_subscriber(identifier))
 
-    def task_send(self, task: Any, no_reply: bool = False) -> Any:
+    def task_send(self, task: t.Any, no_reply: bool = False) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(self._communicator.task_send(task, no_reply))
 
@@ -238,22 +238,24 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
         aioqueue = self._loop_scheduler.await_(self._communicator.task_queue(queue_name, prefetch_size, prefetch_count))
         return RmqThreadTaskQueue(aioqueue, self._loop_scheduler, self._wrap_subscriber)
 
-    def rpc_send(self, recipient_id: Any, msg: Any) -> Any:
+    def rpc_send(self, recipient_id: t.Any, msg: t.Any) -> t.Any:
         self._ensure_open()
         return self._loop_scheduler.await_(self._communicator.rpc_send(recipient_id, msg))
 
-    def broadcast_send(self, body: Any, sender: Any = None, subject: Any = None, correlation_id: Any = None) -> bool:
+    def broadcast_send(
+        self, body: t.Any, sender: t.Any = None, subject: t.Any = None, correlation_id: t.Any = None
+    ) -> bool:
         self._ensure_open()
         result = self._loop_scheduler.await_(
             self._communicator.broadcast_send(body=body, sender=sender, subject=subject, correlation_id=correlation_id)
         )
         return isinstance(result, pamqp.commands.Basic.Ack)
 
-    def _wrap_subscriber(self, subscriber: Callable[..., Any]) -> Callable[..., Any]:
+    def _wrap_subscriber(self, subscriber: Callable[..., t.Any]) -> Callable[..., t.Any]:
         """Wrap a subscriber converting any thread futures into asyncio ones for the event loop communicator."""
 
         @functools.wraps(subscriber)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
             result = subscriber(*args, **kwargs)
             if isinstance(result, ThreadFuture):
                 result = self._wrap_future(result)
@@ -261,10 +263,10 @@ class RmqThreadCommunicator(broker_communicator.Communicator):
 
         return wrapper
 
-    def _wrap_future(self, kiwi_future: futures.Future[Any]) -> asyncio.Future[Any]:
-        aio_future: asyncio.Future[Any] = self._loop.create_future()
+    def _wrap_future(self, kiwi_future: futures.Future[t.Any]) -> asyncio.Future[t.Any]:
+        aio_future: asyncio.Future[t.Any] = self._loop.create_future()
 
-        def done(_: futures.Future[Any]) -> None:
+        def done(_: futures.Future[t.Any]) -> None:
             try:
                 result = kiwi_future.result()
             except concurrent.futures.CancelledError:
@@ -290,8 +292,8 @@ class RmqThreadTaskQueue:
     def __init__(
         self,
         task_queue: tasks.RmqTaskQueue,
-        loop_scheduler: Any,
-        wrap_subscriber: Callable[..., Any],
+        loop_scheduler: t.Any,
+        wrap_subscriber: Callable[..., t.Any],
     ) -> None:
         self._task_queue = task_queue
         self._loop_scheduler = loop_scheduler
@@ -301,13 +303,13 @@ class RmqThreadTaskQueue:
         for task in self._loop_scheduler.async_iter(self._task_queue):
             yield RmqThreadIncomingTask(task, self._loop_scheduler)
 
-    def task_send(self, task: Any, no_reply: bool = False) -> Any:
+    def task_send(self, task: t.Any, no_reply: bool = False) -> t.Any:
         return self._loop_scheduler.await_(self._task_queue.task_send(task, no_reply))
 
-    def add_task_subscriber(self, subscriber: Callable[..., Any]) -> Any:
+    def add_task_subscriber(self, subscriber: Callable[..., t.Any]) -> t.Any:
         return self._loop_scheduler.await_(self._task_queue.add_task_subscriber(self._wrap_subscriber(subscriber)))
 
-    def remove_task_subscriber(self, subscriber: Any) -> Any:
+    def remove_task_subscriber(self, subscriber: t.Any) -> t.Any:
         # Note: This probably doesn't work as in add_task_subscriber we wrap it and so
         # it will be a different function here
         return self._loop_scheduler.await_(self._task_queue.remove_task_subscriber(subscriber))
@@ -321,12 +323,12 @@ class RmqThreadTaskQueue:
 class RmqThreadIncomingTask:
     """A task received from the thread task queue."""
 
-    def __init__(self, task: tasks.RmqIncomingTask, loop_scheduler: Any) -> None:
+    def __init__(self, task: tasks.RmqIncomingTask, loop_scheduler: t.Any) -> None:
         self._task = task
         self._loop_scheduler = loop_scheduler
 
     @property
-    def body(self) -> Any:
+    def body(self) -> t.Any:
         return self._task.body
 
     @property
@@ -337,7 +339,7 @@ class RmqThreadIncomingTask:
     def state(self) -> str:
         return self._task.state
 
-    def process(self) -> Any:
+    def process(self) -> t.Any:
         return aiothreads.aio_future_to_thread(self._task.process())
 
     def requeue(self) -> None:
@@ -345,6 +347,6 @@ class RmqThreadIncomingTask:
         self._loop_scheduler.await_(self._task.requeue())
 
     @contextmanager
-    def processing(self) -> Iterator[Any]:
+    def processing(self) -> Iterator[t.Any]:
         with self._loop_scheduler.async_ctx(self._task.processing()) as outcome:
             yield outcome

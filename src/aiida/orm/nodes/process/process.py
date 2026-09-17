@@ -154,6 +154,8 @@ class ProcessNode(Sealable, Node):
     _CLS_NODE_CACHING = ProcessNodeCaching
 
     CHECKPOINT_KEY = 'checkpoints'
+    CHECKPOINT_OBJECT_PREFIX = 'dos:'
+    """Marks a checkpoint attribute that names an object in the repository instead of holding the payload."""
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
     EXIT_STATUS_KEY = 'exit_status'

@@ -128,6 +128,42 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.list_all_objects()
 
+    def put_managed_object_from_filelike(self, handle: t.BinaryIO) -> str:
+        """Store the byte contents of a file as an object whose lifetime this repository leaves to the caller.
+
+        A managed object is omitted from :meth:`list_objects`, so whatever collects objects by walking the
+        references to them passes it by, and :meth:`delete_managed_objects` is what removes it.
+
+        :param handle: filelike object with the byte content to be stored.
+        :return: the fully qualified identifier for the object within the repository.
+        """
+        with self._container as container:
+            return container.add_streamed_managed_object(handle)
+
+    @contextlib.contextmanager
+    def open_managed_object(self, key: str) -> t.Iterator[t.BinaryIO]:
+        """Open a file handle to a managed object stored under the given key.
+
+        :param key: fully qualified identifier for the object within the repository.
+        :return: yield a byte stream object.
+        :raise FileNotFoundError: if the object is absent.
+        """
+        with self._container as container:
+            if not container.has_managed_object(key):
+                msg = f'managed object with key `{key}` does not exist.'
+                raise FileNotFoundError(msg)
+
+            with container.get_managed_object_stream(key) as handle:
+                yield t.cast(t.BinaryIO, handle)
+
+    def delete_managed_objects(self, keys: t.Iterable[str]) -> None:
+        """Delete managed objects, ignoring any that are absent.
+
+        :param keys: fully qualified identifiers for the objects within the repository.
+        """
+        with self._container as container:
+            container.delete_managed_objects(keys)
+
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.
 

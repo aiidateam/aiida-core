@@ -71,6 +71,22 @@ Where a distribution provides the callable, the record names that distribution a
 
 ### Behavior changes
 
+#### Large process checkpoints are kept out of the database
+
+A running process rewrites its checkpoint at every step, and since it can now carry a class and the modules that class needs, that payload is no longer always small.
+A workchain defined in a notebook goes from 1.2 kB to 9 kB, and a parser hook that closes over an array carries the array.
+
+Where the payload goes is now decided by its size.
+Below roughly 100 kB it stays an attribute on the process node, which is where it has always been and, measured on PostgreSQL, is more than twice as fast as the alternative for payloads that size.
+Above that it becomes a managed object in the profile's repository, which pulls ahead by 2.4x at 1 MB and 7.5x at 10 MB.
+Both stores are reachable by every worker of the profile: node files already live in the repository, so `repository_uri` has to name storage that every worker shares.
+`ProcessNode.checkpoint` returns that key rather than the payload when the payload went to the repository, so anything reading the attribute directly has to expect either; `ProcessNode.CHECKPOINT_OBJECT_PREFIX` is what marks it.
+Checkpoints are stripped from archives either way, and a managed object is one whose lifetime the repository leaves to its writer, so `verdi storage maintain` never collects it: the engine deletes it when the checkpoint is rewritten or the process ends.
+This requires `disk-objectstore>=1.6`.
+
+The size of each payload, where it went, and how large a carried class was are logged at debug level.
+`verdi config set logging.aiida_loglevel DEBUG` followed by `verdi daemon restart` puts them in the daemon log.
+
 #### `ShellJob` records the parser it is given
 
 The `parser` input of a `ShellJob` no longer stores the callable as a pickled node.

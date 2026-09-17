@@ -14,7 +14,7 @@ dependencies:
 - click-spinner~=0.1.8
 - click<8.3,>=8.1.0
 - cloudpickle<4,>=3
-- disk-objectstore~=1.5.0
+- disk-objectstore@ git+https://github.com/GeigerJ2/disk-objectstore@d534e7c8f6c14d2ba0cc978baf68e4c8ad9b0c99
 - docstring_parser
 - python-graphviz~=0.19
 - greenback~=1.0

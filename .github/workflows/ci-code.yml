@@ -120,11 +120,12 @@ jobs:
         resolution-strategy: lowest-direct
 
     - name: Setup SSH on localhost
-      run: .github/workflows/setup_ssh.sh
+      run: utils/setup_ssh_test.sh
 
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
+        AIIDA_CORE_TEST_ASYNC_SSH_CONFIG: ${{ github.workspace }}/.aiida-core-test-ssh/config
       run: pytest --disable-warnings -n auto --db-backend ${{ matrix.database-backend }} --broker-backend zmq -m 'not nightly' tests/
 
 
@@ -145,11 +146,12 @@ jobs:
         python-version: '3.14'
 
     - name: Setup SSH on localhost
-      run: .github/workflows/setup_ssh.sh
+      run: utils/setup_ssh_test.sh
 
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
+        AIIDA_CORE_TEST_ASYNC_SSH_CONFIG: ${{ github.workspace }}/.aiida-core-test-ssh/config
       run: pytest -n auto --broker-backend zmq -m 'presto' tests/
 
 
@@ -212,7 +214,7 @@ jobs:
         extras: tests
 
     - name: Setup SSH
-      run: .github/workflows/setup_ssh.sh
+      run: utils/setup_ssh_test.sh
 
     - name: Test new pytest fixtures
       run: pytest -v --cov=src/aiida --noconftest tests/tools/pytest_fixtures/

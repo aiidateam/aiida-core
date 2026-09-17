@@ -25,6 +25,7 @@ stubs/
 Pipfile
 
 .aiida
+.aiida-core-test-ssh/
 
 # Linter/type-checker caches
 .mypy_cache/

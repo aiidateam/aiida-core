@@ -605,20 +605,6 @@ class Transport(abc.ABC):
         :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
-    def getcwd(self):
-        """
-        DEPRECATED: This method is deprecated and should be removed in the next major version.
-            PLEASE DON'T USE IT IN THE INTERFACE!!
-
-        Get working directory
-        :return: a string identifying the current working directory
-        """
-
-        warn_deprecation(
-            '`getcwd()` is deprecated and will be removed in the next major version.',
-            version=3,
-        )
-
     @abc.abstractmethod
     def get_attribute(self, path: TransportPath):
         """Return an object FixedFieldsAttributeDict for file in a given path,
@@ -697,14 +683,12 @@ class Transport(abc.ABC):
         :return: a list of strings
         """
 
-    def listdir_withattributes(self, path: TransportPath = '.', pattern: str | None = None):
+    def listdir_withattributes(self, path: TransportPath, pattern: str | None = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
 
-        :param path: path to list (default to '.')
-            if using a relative path, it is relative to the current working directory,
-            taken from DEPRECATED `self.getcwd()`.
+        :param path: absolute path to list.
         :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
@@ -724,18 +708,13 @@ class Transport(abc.ABC):
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
         path = str(path)
+        if not path.startswith('/'):
+            raise ValueError('The path for `listdir_withattributes` must be absolute')
+
+        path = Path(path).resolve().as_posix()
         retlist = []
-        if path.startswith('/'):
-            cwd = Path(path).resolve().as_posix()
-        else:
-            warn_deprecation(
-                'Using relative paths in `listdir_withattributes` is no longer supported '
-                'and will be removed in the next major version.',
-                version=3,
-            )
-            cwd = self.getcwd()
-        for file_name in self.listdir(cwd):
-            filepath = os.path.join(cwd, file_name)
+        for file_name in self.listdir(path):
+            filepath = os.path.join(path, file_name)
             attributes = self.get_attribute(filepath)
             retlist.append({'name': file_name, 'attributes': attributes, 'isdir': self.isdir(filepath)})
         return retlist
@@ -931,30 +910,25 @@ class Transport(abc.ABC):
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
 
-        :param pathname: the pathname pattern to match.
-            It should only be an absolute path.
-            DEPRECATED: using relative path is deprecated.
+        :param pathname: absolute pathname pattern to match.
 
         :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of paths matching the pattern.
         """
-        pathname = str(pathname)
-        if not pathname.startswith('/'):
-            warn_deprecation(
-                'Using relative paths across transport in `glob` is deprecated '
-                'and will be removed in the next major version.',
-                version=3,
-            )
         return list(self.iglob(pathname))
 
     def iglob(self, pathname):
-        """Return an iterator which yields the paths matching a pathname pattern.
+        """Return an iterator which yields paths matching an absolute pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
 
-        :param pathname: the pathname pattern to match.
+        :param pathname: absolute pathname pattern to match.
         """
+        pathname = str(pathname)
+        if not pathname.startswith('/'):
+            raise ValueError('The pathname pattern must be absolute')
+
         if not has_magic(pathname):
             # if os.path.lexists(pathname): # ORIGINAL
             # our implementation
@@ -962,11 +936,6 @@ class Transport(abc.ABC):
                 yield pathname
             return
         dirname, basename = os.path.split(pathname)
-        if not dirname:
-            # for name in self.glob1(os.curdir, basename): # ORIGINAL
-            for name in self.glob1(self.getcwd(), basename):
-                yield name
-            return
 
         if has_magic(dirname):
             dirs = [d for d in self.iglob(dirname) if self.isdir(d)]
@@ -991,8 +960,6 @@ class Transport(abc.ABC):
         :param dirname: path to the directory
         :param pattern: pattern to match against
         """
-        if not dirname:
-            dirname = self.getcwd()
         if isinstance(pattern, str) and not isinstance(dirname, str):
             dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:

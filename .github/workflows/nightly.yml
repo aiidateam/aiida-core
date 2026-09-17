@@ -157,7 +157,7 @@ jobs:
         from-lock: 'true'
 
     - name: Setup SSH on localhost
-      run: .github/workflows/setup_ssh.sh
+      run: utils/setup_ssh_test.sh
 
     - name: Suppress RabbitMQ version warning
       run: verdi config set warnings.rabbitmq_version False
@@ -166,6 +166,7 @@ jobs:
       id: tests
       env:
         AIIDA_WARN_v3: 0
+        AIIDA_CORE_TEST_ASYNC_SSH_CONFIG: ${{ github.workspace }}/.aiida-core-test-ssh/config
       run: pytest -s --db-backend sqlite -m 'requires_rmq' tests/
 
     - name: Slack notification

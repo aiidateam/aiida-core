@@ -205,7 +205,7 @@ async def exponential_backoff_retry(
     initial_interval: int | float = 10.0,
     max_attempts: int = 5,
     logger: logging.Logger | None = None,
-    ignore_exceptions: None | type[Exception] | tuple[type[Exception], ...] = None,
+    ignore_exceptions: type[Exception] | tuple[type[Exception], ...] | None = None,
 ) -> Any:
     """Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 

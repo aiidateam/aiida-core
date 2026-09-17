@@ -154,29 +154,29 @@ class CalcInfo(DefaultFieldsAttributeDict):
     )
 
     if TYPE_CHECKING:
-        job_environment: None | dict[str, str]
-        email: None | str
+        job_environment: dict[str, str] | None
+        email: str | None
         email_on_started: bool
         email_on_terminated: bool
-        uuid: None | str
-        prepend_text: None | str
-        append_text: None | str
-        num_machines: None | int
-        num_mpiprocs_per_machine: None | int
-        priority: None | int
-        max_wallclock_seconds: None | int
-        max_memory_kb: None | int
+        uuid: str | None
+        prepend_text: str | None
+        append_text: str | None
+        num_machines: int | None
+        num_mpiprocs_per_machine: int | None
+        priority: int | None
+        max_wallclock_seconds: int | None
+        max_memory_kb: int | None
         rerunnable: bool
-        retrieve_list: None | list[str | tuple[str, str, int]]
-        retrieve_temporary_list: None | list[str | tuple[str, str, int]]
-        local_copy_list: None | list[tuple[str, str, str]]
-        remote_copy_list: None | list[tuple[str, str, str]]
-        remote_symlink_list: None | list[tuple[str, str, str]]
-        provenance_exclude_list: None | list[str]
-        codes_info: None | list[CodeInfo]
-        codes_run_mode: None | CodeRunMode
-        skip_submit: None | bool
-        file_copy_operation_order: None | list[FileCopyOperation]
+        retrieve_list: list[str | tuple[str, str, int]] | None
+        retrieve_temporary_list: list[str | tuple[str, str, int]] | None
+        local_copy_list: list[tuple[str, str, str]] | None
+        remote_copy_list: list[tuple[str, str, str]] | None
+        remote_symlink_list: list[tuple[str, str, str]] | None
+        provenance_exclude_list: list[str] | None
+        codes_info: list[CodeInfo] | None
+        codes_run_mode: CodeRunMode | None
+        skip_submit: bool | None
+        file_copy_operation_order: list[FileCopyOperation] | None
 
 
 class CodeInfo(DefaultFieldsAttributeDict):
@@ -234,13 +234,13 @@ class CodeInfo(DefaultFieldsAttributeDict):
     )
 
     if TYPE_CHECKING:
-        cmdline_params: None | list[str]
-        stdin_name: None | str
-        stdout_name: None | str
-        stderr_name: None | str
-        join_files: None | bool
-        withmpi: None | bool
-        code_uuid: None | str
+        cmdline_params: list[str] | None
+        stdin_name: str | None
+        stdout_name: str | None
+        stderr_name: str | None
+        join_files: bool | None
+        withmpi: bool | None
+        code_uuid: str | None
 
 
 class CodeRunMode(IntEnum):

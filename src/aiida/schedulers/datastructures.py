@@ -439,9 +439,9 @@ class JobTemplateCodeInfo:
     cmdline_params: list[str] = field(default_factory=list)
     use_double_quotes: list[bool] = field(default_factory=lambda: [False, False])
     wrap_cmdline_params: bool = False
-    stdin_name: None | str = None
-    stdout_name: None | str = None
-    stderr_name: None | str = None
+    stdin_name: str | None = None
+    stdout_name: str | None = None
+    stderr_name: str | None = None
     join_files: bool = False
 
 

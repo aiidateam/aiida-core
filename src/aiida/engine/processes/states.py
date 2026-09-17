@@ -196,7 +196,7 @@ class Running(State):
     COMMAND = 'command'  # The key used to store an upcoming command
 
     # Class level defaults
-    _command: None | Kill | Stop | Wait | Continue = None
+    _command: Kill | Stop | Wait | Continue | None = None
     _running: bool = False
     _run_handle = None
 

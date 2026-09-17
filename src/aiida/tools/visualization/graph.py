@@ -294,7 +294,7 @@ def _add_graphviz_node(
     node: orm.Node,
     node_style_func,
     node_sublabel_func,
-    style_override: None | dict = None,
+    style_override: dict | None = None,
     include_sublabels: bool = True,
     id_type: IdentifierType | list[IdentifierType] = 'pk',
 ):
@@ -393,7 +393,7 @@ class Graph:
         """
         self._graph = Digraph(engine=engine, graph_attr=graph_attr)
         self._nodes: set[int] = set()
-        self._edges: set[tuple[int, int, None | LinkPair]] = set()
+        self._edges: set[tuple[int, int, LinkPair | None]] = set()
         self._global_node_style = global_node_style or {}
         self._global_edge_style = global_edge_style or {}
         self._include_sublabels = include_sublabels
@@ -422,7 +422,7 @@ class Graph:
         return self._nodes.copy()
 
     @property
-    def edges(self) -> set[tuple[int, int, None | LinkPair]]:
+    def edges(self) -> set[tuple[int, int, LinkPair | None]]:
         """Return a copy of the edges"""
         return self._edges.copy()
 
@@ -497,7 +497,7 @@ class Graph:
 
     @staticmethod
     def _convert_link_types(
-        link_types: None | str | LinkType | Sequence[str] | Sequence[LinkType],
+        link_types: str | LinkType | Sequence[str] | Sequence[LinkType] | None,
     ) -> tuple[LinkType, ...]:
         """Convert link types, which may be strings, to a member of LinkType"""
         link_types_list: Sequence[LinkType] | Sequence[str]
@@ -519,7 +519,7 @@ class Graph:
     def add_incoming(
         self,
         node: int | str | orm.Node,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         return_pks: bool = True,
     ) -> list[int] | list[orm.Node]:
@@ -576,7 +576,7 @@ class Graph:
     def add_outgoing(
         self,
         node: int | str | orm.Node,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         return_pks: bool = True,
     ) -> list[int] | list[orm.Node]:
@@ -634,11 +634,11 @@ class Graph:
         self,
         origin: int | str | orm.Node,
         depth: int | None = None,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         origin_style: dict | None = None,
         include_process_inputs: bool = False,
-        highlight_classes: None | Sequence[str] = None,
+        highlight_classes: Sequence[str] | None = None,
     ) -> None:
         """Add nodes and edges from an origin recursively,
         following outgoing links
@@ -717,11 +717,11 @@ class Graph:
         self,
         origin: int | str | orm.Node,
         depth: int | None = None,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         origin_style: dict | None = None,
         include_process_outputs: bool = False,
-        highlight_classes: None | Sequence[str] = None,
+        highlight_classes: Sequence[str] | None = None,
     ) -> None:
         """Add nodes and edges from an origin recursively,
         following incoming links

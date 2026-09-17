@@ -695,7 +695,7 @@ class RemoteProcessThreadController:
 
     def continue_process(
         self, pid: PID_TYPE, tag: str | None = None, nowait: bool = False, no_reply: bool = False
-    ) -> None | PID_TYPE | ProcessResult:
+    ) -> PID_TYPE | ProcessResult | None:
         message = create_continue_body(pid=pid, tag=tag, nowait=nowait)
         return self.task_send(message, no_reply=no_reply)
 
@@ -708,7 +708,7 @@ class RemoteProcessThreadController:
         loader: loaders.ObjectLoader | None = None,
         nowait: bool = False,
         no_reply: bool = False,
-    ) -> None | PID_TYPE | ProcessResult:
+    ) -> PID_TYPE | ProcessResult | None:
         """
         Launch the process
 
@@ -732,7 +732,7 @@ class RemoteProcessThreadController:
         loader: loaders.ObjectLoader | None = None,
         nowait: bool = False,
         no_reply: bool = False,
-    ) -> None | PID_TYPE | ProcessResult:
+    ) -> PID_TYPE | ProcessResult | None:
         """
         Execute a process.  This call will first send a create task and then a continue task over
         the communicator.  This means that if communicator messages are durable then the process

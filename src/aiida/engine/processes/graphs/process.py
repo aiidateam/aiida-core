@@ -14,38 +14,25 @@ import collections.abc
 import functools
 import inspect
 import typing as t
-from collections.abc import Mapping, MutableMapping
+from collections.abc import MutableMapping
 from inspect import get_annotations
 
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
-from aiida.engine.processes.containers import as_dict, build, fields_of, marked_whole
+from aiida.engine.processes.containers import as_dict
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
+from aiida.engine.processes.ports import as_written
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Data, Dict, EnumData, GraphNode, JsonableData
-from aiida.orm.nodes.data.base import BaseType, to_aiida_type
+from aiida.orm import Data, Dict, GraphNode
+from aiida.orm.nodes.data.base import to_aiida_type
 
 __all__ = ('GraphProcess', 'TaskProcess', 'launched_as')
-
-
-def _unwrapped(value: t.Any) -> t.Any:
-    """Return the object a node holds whole, which is what a field kept whole was stored as."""
-    return value.obj if isinstance(value, JsonableData) else value
-
-
-def _plain(value: t.Any) -> t.Any:
-    """Return the plain Python value a node holds, where it holds one, and the node itself where it does not."""
-    if isinstance(value, EnumData):
-        # The member rather than its value, since the class it belongs to is what was asked for.
-        return value.get_member()
-
-    return value.value if isinstance(value, BaseType) else value
 
 
 class TaskProcess(FunctionProcess):
@@ -81,39 +68,10 @@ class TaskProcess(FunctionProcess):
         ]
 
         # What is positional is named by the signature; anything past that is variable and has no annotation.
-        given = [self._as_written(annotations.get(name), value) for name, value in zip(positional, args)]
-        given += [_plain(value) for value in args[len(positional) :]]
+        given = [as_written(annotations.get(name), value) for name, value in zip(positional, args)]
+        given += [as_written(None, value) for value in args[len(positional) :]]
 
-        return given, {name: self._as_written(annotations.get(name), value) for name, value in kwargs.items()}
-
-    def _as_written(self, annotation: t.Any, value: t.Any) -> t.Any:
-        """Return the value as the parameter was written to take it, which for a container is one of those.
-
-        A field that is a container of its own is a namespace under this one, so this goes as deep as the
-        container does.
-        """
-        if marked_whole(annotation):
-            return _unwrapped(value)
-
-        fields = fields_of(annotation)
-
-        if fields is None or not isinstance(value, Mapping):
-            # What was asked for is what is handed over: a node where the annotation names one, and the value it
-            # holds where the annotation names that.
-            if isinstance(annotation, type) and issubclass(annotation, Data):
-                return value
-
-            return _plain(value)
-
-        held = {
-            field.name: _unwrapped(value[field.name])
-            if field.whole
-            else self._as_written(field.annotation, value[field.name])
-            for field in fields
-            if field.name in value
-        }
-
-        return build(annotation, held)
+        return given, {name: as_written(annotations.get(name), value) for name, value in kwargs.items()}
 
     @override
     def _out_result(self, result: t.Any) -> None:

@@ -1464,7 +1464,7 @@ class SshTransport(BlockingTransport):
         stdin=None,
         workdir: TransportPath | None = None,
         combine_stderr: bool = False,
-        bufsize=-1,
+        bufsize: int = -1,
         timeout: float = 0.01,
         **kwargs,
     ):

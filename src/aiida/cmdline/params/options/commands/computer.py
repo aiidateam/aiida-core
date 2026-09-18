@@ -18,7 +18,7 @@ from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import echo
 
 if t.TYPE_CHECKING:
-    from aiida.schedulers.datastructures import JobResource
+    from aiida.common.datastructures import JobResource
 
 
 def get_job_resource_cls(ctx: click.Context) -> 'type[JobResource]':

@@ -934,11 +934,10 @@ class CalcJob(Process):
         :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
 
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.common.datastructures import CodeInfo, CodeRunMode, JobTemplate, JobTemplateCodeInfo
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import AbstractCode, Computer, load_code
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 

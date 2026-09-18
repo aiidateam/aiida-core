@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to define commonly used data structures."""
+"""Data structures used by the engine to run calculation jobs."""
 
 from __future__ import annotations
 
@@ -15,7 +15,15 @@ from enum import Enum, IntEnum
 
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict
 
-__all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode', 'UnstashTargetMode')
+__all__ = (
+    'CalcInfo',
+    'CalcJobState',
+    'CodeInfo',
+    'CodeRunMode',
+    'FileCopyOperation',
+    'StashMode',
+    'UnstashTargetMode',
+)
 
 
 class StashMode(Enum):

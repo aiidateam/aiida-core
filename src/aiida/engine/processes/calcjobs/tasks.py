@@ -17,7 +17,7 @@ import tempfile
 import typing as t
 from collections.abc import Callable
 
-from aiida.common.datastructures import CalcJobState
+from aiida.common.datastructures import CalcJobState, JobState
 from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine import utils
@@ -32,7 +32,6 @@ from aiida.engine.transports import TransportQueue
 from aiida.engine.utils import InterruptableFuture, interruptable_task
 from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
-from aiida.schedulers.datastructures import JobState
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.calcjobs.calcjob import CalcJob

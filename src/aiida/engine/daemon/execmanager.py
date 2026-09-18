@@ -26,7 +26,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing_extensions import assert_never
 
 from aiida.common import AIIDA_LOGGER, exceptions
-from aiida.common.datastructures import CalcInfo, FileCopyOperation
+from aiida.common.datastructures import CalcInfo, FileCopyOperation, JobState
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
@@ -35,7 +35,6 @@ from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
-from aiida.schedulers.datastructures import JobState
 from aiida.transports.transport import has_magic
 
 if t.TYPE_CHECKING:

@@ -24,11 +24,11 @@ from aiida.orm.nodes.process.process import ProcessNodeCaching
 from aiida.orm.pydantic import OrmMetadataField
 
 if t.TYPE_CHECKING:
+    from aiida.common.datastructures import JobInfo, JobState
     from aiida.orm import FolderData
     from aiida.orm.authinfos import AuthInfo
     from aiida.orm.utils.calcjob import CalcJobResultManager
     from aiida.parsers import Parser
-    from aiida.schedulers.datastructures import JobInfo, JobState
     from aiida.tools.calculations import CalculationTools
     from aiida.transports import Transport
 
@@ -375,7 +375,7 @@ class CalcJobNode(CalculationNode):
         :param state: an instance of `JobState`
         """
         from aiida.common import timezone
-        from aiida.schedulers.datastructures import JobState
+        from aiida.common.datastructures import JobState
 
         if not isinstance(state, JobState):
             msg = f'scheduler state should be an instance of JobState, got: {state}'
@@ -389,7 +389,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a JobState enum instance, or None if no state has been set.
         """
-        from aiida.schedulers.datastructures import JobState
+        from aiida.common.datastructures import JobState
 
         state = self.base.attributes.get(self.SCHEDULER_STATE_KEY, None)
 
@@ -447,7 +447,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a `JobInfo` object (that closely resembles a dictionary) or None.
         """
-        from aiida.schedulers.datastructures import JobInfo
+        from aiida.common.datastructures import JobInfo
 
         last_job_info_dictserialized = self.base.attributes.get(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
 

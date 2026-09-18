@@ -25,8 +25,9 @@ from datetime import datetime, timezone
 
 from typing_extensions import Self
 
-from aiida.common import AIIDA_LOGGER, CodeRunMode
+from aiida.common.datastructures._calcjob import CodeRunMode
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
+from aiida.common.log import AIIDA_LOGGER
 from aiida.common.timezone import make_aware, timezone_from_name
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
@@ -36,6 +37,7 @@ __all__ = (
     'JobResource',
     'JobState',
     'JobTemplate',
+    'JobTemplateCodeInfo',
     'MachineInfo',
     'NodeNumberJobResource',
     'ParEnvJobResource',
@@ -331,7 +333,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
       * ``append_text``: a (possibly multi-line) string to be inserted
         in the scheduler script after the main execution line
       * ``import_sys_environment``: import the system environment variables
-      * ``codes_info``: a list of aiida.scheduler.datastructures.JobTemplateCodeInfo objects.
+      * ``codes_info``: a list of aiida.common.datastructures.JobTemplateCodeInfo objects.
         Each contains the information necessary to run a single code. At the
         moment, it can contain:
 
@@ -487,10 +489,10 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``annotation``: human-readable description of the reason for the job
          being in the current state or substate.
        * ``job_state``: the job state (one of those defined in
-         ``aiida.schedulers.datastructures.JobState``)
+         ``aiida.common.datastructures.JobState``)
        * ``job_substate``: a string with the implementation-specific sub-state
        * ``allocated_machines``: a list of machines used for the current job.
-         This is a list of :py:class:`aiida.schedulers.datastructures.MachineInfo` objects.
+         This is a list of :py:class:`aiida.common.datastructures.MachineInfo` objects.
        * ``job_owner``: the job owner as reported by the scheduler
        * ``num_mpiprocs``: the *total* number of requested MPI procs
        * ``num_cpus``: the *total* number of requested CPUs (cores) [may be undefined]

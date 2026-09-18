@@ -12,9 +12,8 @@ import sys
 
 import pytest
 
-from aiida.common.datastructures import CodeRunMode
+from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 from aiida.schedulers import SchedulerError
-from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 from aiida.schedulers.plugins.direct import DirectScheduler
 
 

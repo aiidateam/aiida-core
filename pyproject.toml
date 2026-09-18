@@ -323,6 +323,11 @@ Documentation = 'https://aiida.readthedocs.io'
 Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
 
+[tool.coverage.report]
+exclude_also = [
+  'if t\.TYPE_CHECKING:'
+]
+
 [tool.coverage.run]
 core = 'sysmon'
 omit = [

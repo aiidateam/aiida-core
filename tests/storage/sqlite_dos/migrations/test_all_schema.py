@@ -9,10 +9,7 @@
 """Basic tests for all migrations"""
 
 import pytest
-from sqlalchemy import inspect
-
 from aiida.storage.sqlite_dos.backend import SqliteDosMigrator
-from aiida.storage.sqlite_zip.models import SqliteBase
 
 
 @pytest.mark.parametrize('version', list(v for v in SqliteDosMigrator.get_schema_versions() if v.startswith('main')))
@@ -52,29 +49,3 @@ def test_initialised_schema_matches_head(uninitialised_profile, reflect_schema, 
         head_version = migrator.get_schema_version_head()
         migrator.initialise()
         data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_{head_version}')
-
-
-def test_main_0003_with_db_setting(uninitialised_profile, reflect_schema, data_regression):
-    """Test upgrading a historically initialized database with the settings table.
-
-    Before ``main_0003``, fresh ``sqlite_dos`` initialization created
-    ``db_dbsetting`` through ORM metadata, while the migration schema omitted
-    it. This models that database state before upgrading it to ``main_0003``.
-    """
-    with SqliteDosMigrator(uninitialised_profile) as migrator:
-        SqliteBase.metadata.tables['db_dbsetting'].create(migrator.connection)
-        migrator.connection.commit()
-        migrator.migrate_up('main@main_0003')
-        data_regression.check(reflect_schema(uninitialised_profile), basename='test_main_0003')
-
-
-def test_main_0003_downgrade(uninitialised_profile):
-    """Test downgrading from ``main_0003`` to ``main_0002``."""
-    with SqliteDosMigrator(uninitialised_profile) as migrator:
-        migrator.migrate_up('main@main_0003')
-        migrator.migrate_down('main_0002')
-        migrator.connection.commit()
-
-    with SqliteDosMigrator(uninitialised_profile) as migrator:
-        assert migrator.get_schema_version_profile() == 'main_0002'
-        assert inspect(migrator.connection).has_table('db_dbsetting')

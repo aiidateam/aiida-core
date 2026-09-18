@@ -12,27 +12,11 @@
 
 # fmt: off
 
-from aiida.common.datastructures import (
-    JobInfo,
-    JobResource,
-    JobState,
-    JobTemplate,
-    MachineInfo,
-    NodeNumberJobResource,
-    ParEnvJobResource,
-)  # re-export for backwards compatibility: these moved to `aiida.common.datastructures` in v2.10
 from aiida.schedulers.plugins import *
 from aiida.schedulers.scheduler import *
 
 __all__ = (
     'BashCliScheduler',
-    'JobInfo',
-    'JobResource',
-    'JobState',
-    'JobTemplate',
-    'MachineInfo',
-    'NodeNumberJobResource',
-    'ParEnvJobResource',
     'Scheduler',
     'SchedulerError',
     'SchedulerParsingError',

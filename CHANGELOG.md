@@ -54,9 +54,6 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 
 ### Deprecations
 
-Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`.
-They remain importable from `aiida.schedulers` for now, but new code should import them from `aiida.common.datastructures`.
-
 ## v2.9.1 - 2026-08-27
 
 This patch ensures that process dumps include repository files from all output data types, instead of silently omitting outputs that do not have a `SinglefileData` or `FolderData` sibling.

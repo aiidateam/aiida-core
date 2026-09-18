@@ -50,6 +50,7 @@ __all__ = (
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
+    'UnsupportedModelError',
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',
@@ -300,3 +301,11 @@ class LockingProfileError(AiidaException):
 
 class UnsupportedSchemaError(AiidaException):
     """Raised when a schema (model) is not supported by the entity."""
+
+
+class UnsupportedModelError(AttributeError, UnsupportedSchemaError):
+    """Raised when a node class does not define the requested ``ConstructorModel`` or ``CliModel``.
+
+    Also an ``AttributeError``, so ``getattr`` with a default, ``hasattr`` and other attribute walkers see the
+    model as simply absent.
+    """

@@ -862,7 +862,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
             filename = fhandle.name
             fhandle.write(self.valid_sample_cif_str)
             fhandle.flush()
-            a_cif = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
+            a_cif = CifData.from_path(filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a_cif.store()
 
             g_ne = Group(label='non_empty_group')
@@ -943,7 +943,7 @@ class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_content(self):
         """Test that `verdi data singlefile content` returns the content of the file."""
         content = 'abc\ncde'
-        singlefile = orm.SinglefileData(file=io.BytesIO(content.encode('utf8'))).store()
+        singlefile = orm.SinglefileData.from_filelike(io.BytesIO(content.encode('utf8'))).store()
 
         options = [str(singlefile.uuid)]
         result = self.cli_runner(cmd_singlefile.singlefile_content, options, suppress_warnings=True)

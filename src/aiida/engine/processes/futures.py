@@ -13,7 +13,7 @@ import asyncio
 from aiida.brokers import communicator as broker_communicator
 from aiida.brokers.filters import BroadcastFilter
 from aiida.engine.processes.events import get_or_create_event_loop
-from aiida.orm import Node, load_node
+from aiida.orm import ProcessNode, load_node
 
 __all__ = ('ProcessFuture',)
 
@@ -51,6 +51,8 @@ class ProcessFuture(asyncio.Future):
         self._polling_task: asyncio.Task[None] | None = None
         node = load_node(pk=pk)
 
+        assert isinstance(node, ProcessNode), 'expected a ProcessNode'
+
         if node.is_terminated:
             self.set_result(node)
         else:
@@ -84,7 +86,7 @@ class ProcessFuture(asyncio.Future):
             self._communicator = None
             self._broadcast_identifier = None
 
-    async def _poll_process(self, node: Node, poll_interval: int | float) -> None:
+    async def _poll_process(self, node: ProcessNode, poll_interval: int | float) -> None:
         """Poll whether the process node has reached a terminal state."""
         print('polling', node)
         while not self.done() and not node.is_terminated:

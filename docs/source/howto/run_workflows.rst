@@ -48,7 +48,7 @@ Running a work function is as simple as calling a typical Python function: simpl
     add_and_multiply = WorkflowFactory('core.arithmetic.add_multiply')
     Int = DataFactory('core.int')
 
-    result = add_and_multiply(Int(2), Int(3), Int(5))
+    result = add_and_multiply(Int(value=2), Int(value=3), Int(value=5))
 
 Here, the ``add_and_multiply`` work function returns the output ``Int`` node and we assign it to the variable ``result``.
 Note that the input arguments of a work function must be an instance of ``Data`` node, or any of its subclasses.
@@ -101,13 +101,13 @@ When "running the work chain" (using the ``run`` function), it will be executed 
 
     add_code = load_code(label='add')
 
-    results = run(MultiplyAddWorkChain, x=Int(2), y=Int(3), z=Int(5), code=add_code)
+    results = run(MultiplyAddWorkChain, x=Int(value=2), y=Int(value=3), z=Int(value=5), code=add_code)
 
 Alternatively, you can first construct a dictionary of the inputs, and pass it to the ``run`` function by taking advantage of `Python's automatic keyword expansion <https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists>`_:
 
 .. code-block:: python
 
-    inputs = {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
+    inputs = {'x': Int(value=1), 'y': Int(value=2), 'z': Int(value=3), 'code': add_code}
     results = run(MultiplyAddWorkChain, **inputs)
 
 This is particularly useful in case you have a workflow with a lot of inputs.
@@ -130,7 +130,7 @@ So, it is advisable to *submit* more complex or longer work chains to the daemon
     MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
     add_code = load_code(label='add')
-    inputs = {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
+    inputs = {'x': Int(value=1), 'y': Int(value=2), 'z': Int(value=3), 'code': add_code}
 
     workchain_node = submit(MultiplyAddWorkChain, **inputs)
 
@@ -170,9 +170,9 @@ Using the builder, the inputs of the ``WorkChain`` can be provided one by one:
 .. code-block:: ipython
 
     In [3]: builder.code = load_code(label='add')
-       ...: builder.x = Int(2)
-       ...: builder.y = Int(3)
-       ...: builder.z = Int(5)
+       ...: builder.x = Int(value=2)
+       ...: builder.y = Int(value=3)
+       ...: builder.z = Int(value=5)
 
 Once the *required* inputs of the workflow have been provided to the builder, you can either run the work chain or submit it to the daemon:
 

@@ -18,6 +18,8 @@ from aiida.plugins.factories import BaseFactory
 if t.TYPE_CHECKING:
     from click.decorators import FC
 
+    from aiida.cmdline.spec import CliCreateSpec
+
 __all__ = ('DynamicEntryPointCommandGroup',)
 
 
@@ -51,113 +53,114 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         entry_point_name_filter: str = r'.*',
         shared_options: list[FC] | None = None,
         **kwargs: t.Any,
-    ):
+    ) -> None:
         super().__init__(**kwargs)
+
         self._command = command
         self.entry_point_group = entry_point_group
         self.entry_point_name_filter = entry_point_name_filter
         self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING.get(
-            entry_point_group, functools.partial(BaseFactory, entry_point_group)
+            entry_point_group,
+            functools.partial(BaseFactory, entry_point_group),
         )
         self.shared_options = shared_options
 
+    def _get_cli_create_spec(self, cls: type[t.Any]) -> CliCreateSpec | None:
+        """Return the CLI creation specification exposed by a class."""
+        from aiida.cmdline.spec import CliCreateSpec
+
+        factory = getattr(cls, 'cli_spec', None)
+
+        if factory is None:
+            return None
+
+        return t.cast(CliCreateSpec, factory)
+
     def _supports_cli_creation(self, entry_point: str) -> bool:
-        """Return whether the plugin under ``entry_point`` supports CLI-based creation.
-
-        Reads the ``supports_cli_model`` classproperty, defaulting to ``True`` for plugins that do not declare it
-        (anything outside the ``Node`` model system, e.g. storage backends). Node-based classes without a CLI
-        model, such as the abstract base ``AbstractCode``, report ``False`` and are excluded, as building their
-        options would crash the group help.
-
-        :param entry_point: The entry point name.
-        :returns: ``True`` if the plugin supports CLI-based creation, ``False`` otherwise.
-        :raises ~aiida.common.exceptions.EntryPointError: If no plugin is registered under the entry point name.
-        """
-        return getattr(self.factory(entry_point), 'supports_cli_model', True)
+        """Return whether the plugin supports CLI-based creation."""
+        cls = self.factory(entry_point)
+        return self._get_cli_create_spec(cls) is not None  # type: ignore[arg-type]
 
     def list_commands(self, ctx: click.Context) -> list[str]:
-        """Return the sorted list of subcommands for this group.
-
-        :param ctx: The :class:`click.Context`.
-        """
+        """Return the sorted list of subcommands for this group."""
         commands = super().list_commands(ctx)
+
         commands.extend(
-            [
-                entry_point
-                for entry_point in get_entry_point_names(self.entry_point_group)
-                if re.match(self.entry_point_name_filter, entry_point)
-                and getattr(self.factory(entry_point), 'cli_exposed', True)
-                and self._supports_cli_creation(entry_point)
-            ]
+            entry_point
+            for entry_point in get_entry_point_names(self.entry_point_group)
+            if re.match(self.entry_point_name_filter, entry_point)
+            and getattr(self.factory(entry_point), 'cli_exposed', True)
+            and self._supports_cli_creation(entry_point)
         )
+
         return sorted(commands)
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
-        """Return the command with the given name.
-
-        :param ctx: The :class:`click.Context`.
-        :param cmd_name: The name of the command.
-        :returns: The :class:`click.Command`.
-        """
+        """Return the command with the given name."""
         try:
-            # Resolution is gated on the CLI-creation capability only, not ``cli_exposed``: a plugin that opts out
-            # of the listing (``cli_exposed = False``) can still be created when invoked explicitly by name.
-            # TODO: if ``cli_exposed = False`` should instead mean fully non-CLI, also gate on ``cli_exposed`` here.
             if not self._supports_cli_creation(cmd_name):
                 return super().get_command(ctx, cmd_name)
-            command: click.Command | None = self.create_command(ctx, cmd_name)
-        except exceptions.EntryPointError:
-            command = super().get_command(ctx, cmd_name)
-        return command
 
-    def call_command(self, ctx: click.Context, cls: t.Any, non_interactive: bool, **kwargs: t.Any) -> t.Any:
-        """Call the ``command`` after validating the provided inputs."""
+            return self.create_command(ctx, cmd_name)
+        except exceptions.EntryPointError:
+            return super().get_command(ctx, cmd_name)
+
+    def call_command(
+        self,
+        ctx: click.Context,
+        cls: type[t.Any],
+        non_interactive: bool,
+        **kwargs: t.Any,
+    ) -> t.Any:
+        """Validate CLI inputs and call the configured creation command."""
         from pydantic import ValidationError
 
-        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
-        if not CliModel:
-            return self._command(ctx, cls, **kwargs)
+        cli_spec = self._get_cli_create_spec(cls)
+
+        if cli_spec is None:
+            msg = f'{cls.__name__} does not support CLI creation'
+            raise TypeError(msg)
 
         try:
-            CliModel(**kwargs)
+            model = cli_spec.validate(kwargs)
         except ValidationError as exception:
-            param_hint = [
-                f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
-                for loc in exception.errors()[0]['loc']
-            ]
-            message = '\n'.join([str(e['msg']) for e in exception.errors()])
+            error = exception.errors()[0]
+
+            param_hint = [f'--{str(location).replace("_", "-")}' for location in error['loc']]
+            message = '\n'.join(str(item['msg']) for item in exception.errors())
+
             raise click.BadParameter(
                 message,
                 param_hint=param_hint or 'one or more parameters',  # type: ignore[arg-type]
             ) from exception
+        except ValueError as exception:
+            raise click.BadParameter(str(exception)) from exception
 
-        return self._command(ctx, cls, **kwargs)
+        return self._command(ctx, cls, model=model)
 
     def create_command(self, ctx: click.Context, entry_point: str) -> click.Command:
-        """Create a subcommand for the given ``entry_point``."""
+        """Create a subcommand for the given entry point."""
         cls = self.factory(entry_point)
-        command = functools.partial(self.call_command, ctx, cls)
+
+        command = functools.partial(self.call_command, ctx, cls)  # type: ignore[arg-type]
         command.__doc__ = cls.__doc__
+
         return click.command(entry_point)(self.create_options(entry_point)(command))
 
     def create_options(self, entry_point: str) -> t.Callable[[FC], FC]:
-        """Create the option decorators for the command function for the given entry point.
-
-        :param entry_point: The entry point.
-        """
+        """Create the option decorators for the given entry point."""
 
         def apply_options(func: FC) -> FC:
-            """Decorate the command function with the appropriate options for the given entry point."""
             func = options.NON_INTERACTIVE()(func)
             func = options.CONFIG_FILE()(func)
 
-            options_list = self.list_options(entry_point)
-            options_list.reverse()
+            dynamic_options = self.list_options(entry_point)
+            dynamic_options.reverse()
 
-            for option in options_list:
+            for option in dynamic_options:
                 func = option(func)
 
-            shared_options = self.shared_options or []
+            shared_options = list(self.shared_options or [])
             shared_options.reverse()
 
             for option in shared_options:
@@ -168,77 +171,52 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         return apply_options
 
     def list_options(self, entry_point: str) -> list[t.Callable[[FC], FC]]:
-        """Return the list of options that should be applied to the command for the given entry point.
-
-        :param entry_point: The entry point.
-        """
-        from pydantic_core import PydanticUndefined
-
+        """Return the options that should be applied to the command."""
         cls = self.factory(entry_point)
+        cli_spec = self._get_cli_create_spec(cls)  # type: ignore[arg-type]
 
-        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
-        if not CliModel:
-            from aiida.common.warnings import warn_deprecation
+        if cli_spec is None:
+            return []
 
-            warn_deprecation(
-                'Relying on `_get_cli_options` is deprecated. The options should be defined through a `CliModel`.',
-                version=3,
+        parameters = sorted(
+            cli_spec.parameters(),
+            key=lambda parameter: parameter.priority,
+            reverse=True,
+        )
+
+        return [
+            self.create_option(
+                parameter.name,
+                parameter.as_option_spec(),
             )
-            options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
-            return [self.create_option(*item) for item in options_spec]
-
-        options_spec = {}
-
-        for key, field_info in CliModel.model_fields.items():
-            default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
-
-            # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
-            # type can be gotten from the arguments. For example it could be ``typing.Union[str, None]`` calling
-            # ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get the real type,
-            # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
-            if hasattr(field_info.annotation, '__args__'):
-                args = list(filter(lambda e: e is not type(None), field_info.annotation.__args__))
-                # Click parameters only support specifying a single type, so we default to the first one even if the
-                # pydantic model defines multiple.
-                field_type = args[0]
-            else:
-                field_type = field_info.annotation
-
-            options_spec[key] = {
-                'required': field_info.is_required(),
-                'type': field_type,
-                'is_flag': field_type is bool,
-                'prompt': field_info.title,
-                'default': default,
-                'help': field_info.description,
-            }
-            for metadata in field_info.metadata:
-                for metadata_key, metadata_value in metadata.items():
-                    if metadata_key in ('priority', 'short_name', 'option_cls'):
-                        options_spec[key][metadata_key] = metadata_value
-
-        options_ordered = []
-
-        for name, spec in sorted(options_spec.items(), key=lambda x: x[1].get('priority', 0), reverse=True):
-            spec.pop('priority', None)
-            options_ordered.append(self.create_option(name, spec))
-
-        return options_ordered
+            for parameter in parameters
+        ]
 
     @staticmethod
     def create_option(name: str, spec: dict[str, t.Any]) -> t.Callable[[FC], FC]:
-        """Create a click option from a name and a specification."""
+        """Create a Click option from a name and specification."""
         is_flag = spec.pop('is_flag', False)
+        spec.pop('priority', None)
+
         name_dashed = name.replace('_', '-')
         option_name = f'--{name_dashed}/--no-{name_dashed}' if is_flag else f'--{name_dashed}'
-        option_short_name = spec.pop('short_name', None)
-        option_names = (option_short_name, option_name) if option_short_name else (option_name,)
 
-        kwargs = {'cls': spec.pop('option_cls', InteractiveOption), 'show_default': True, 'is_flag': is_flag, **spec}
+        short_name = spec.pop('short_name', '')
+        option_names = (short_name, option_name) if short_name else (option_name,)
 
-        # If the option is a flag with no default, make sure it is not prompted for, as that will force the user to
-        # specify it to be on or off, but cannot let it unspecified.
+        kwargs = {
+            'cls': spec.pop('option_cls', InteractiveOption),
+            'show_default': True,
+            'is_flag': is_flag,
+            **spec,
+        }
+
+        # A nullable boolean should not be prompted for, since an interactive prompt
+        # would force the value to either True or False instead of allowing None.
         if kwargs['cls'] is InteractiveOption and is_flag and spec.get('default') is None:
-            kwargs['cls'] = functools.partial(InteractiveOption, prompt_fn=lambda ctx: False)
+            kwargs['cls'] = functools.partial(
+                InteractiveOption,
+                prompt_fn=lambda ctx: False,
+            )
 
-        return click.option(*(option_names), **kwargs)
+        return click.option(*option_names, **kwargs)

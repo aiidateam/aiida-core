@@ -153,8 +153,8 @@ class TestBasic:
             def define(cls, spec):
                 super().define(spec)
                 spec.input('success', valid_type=orm.Bool)
-                spec.input('through_return', valid_type=orm.Bool, default=lambda: orm.Bool(False))
-                spec.input('through_exit_code', valid_type=orm.Bool, default=lambda: orm.Bool(False))
+                spec.input('through_return', valid_type=orm.Bool, default=lambda: orm.Bool(value=False))
+                spec.input('through_exit_code', valid_type=orm.Bool, default=lambda: orm.Bool(value=False))
                 spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
                 spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
                 spec.output(cls.OUTPUT_LABEL, required=False)
@@ -176,13 +176,13 @@ class TestBasic:
                     return ExitCode()
 
             def success(self):
-                self.out(self.OUTPUT_LABEL, orm.Int(self.OUTPUT_VALUE).store())
+                self.out(self.OUTPUT_LABEL, orm.Int(value=self.OUTPUT_VALUE).store())
 
         class DummyWorkChain(WorkChain):
             pass
 
         # Run a simple test WorkChain
-        _result = run(PotentialFailureWorkChain, success=orm.Bool(True))
+        _result = run(PotentialFailureWorkChain, success=orm.Bool(value=True))
 
         # Query for nodes associated with this type of WorkChain
         qb = orm.QueryBuilder()
@@ -417,7 +417,7 @@ class TestBasic:
         d.base.attributes.set('cat', 'miau')
         d.store()
 
-        p = orm.Dict(dict={'cat': 'miau'})
+        p = orm.Dict(**{'cat': 'miau'})
         p.store()
 
         # Now when asking for a node with attr.cat==miau, I want 3 esults:
@@ -884,11 +884,6 @@ class TestQueryBuilderCornerCases:
             filepath_executable='fake_exec',
             filepath_files=tmp_path,
         )
-        legacy_code = aiida_code(
-            'core.code',
-            label='legacy-code',
-            remote_computer_exec=(aiida_localhost, '/bin/bash'),
-        )
 
         qb = orm.QueryBuilder
 
@@ -901,18 +896,6 @@ class TestQueryBuilderCornerCases:
         assert portable_code in portable_results
         assert len(portable_results) == 1
 
-        # Using orm.Code actually matches all codes.
-        # for backwards compatibility reasons we will not fix this.
-        legacy_results = qb().append(orm.Code).all(flat=True)
-        assert legacy_code in legacy_results
-        assert len(legacy_results) == 3
-
-        # Turning off subclassing should however only match the one legacy Code
-        legacy_results = qb().append(orm.Code, subclassing=False).all(flat=True)
-        assert legacy_code in legacy_results
-        assert len(legacy_results) == 1
-
-        # AbstractCode query should find all code types
         abstract_results = qb().append(orm.AbstractCode).all(flat=True)
         assert installed_code in abstract_results, (
             f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
@@ -920,10 +903,8 @@ class TestQueryBuilderCornerCases:
         assert portable_code in abstract_results, (
             f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
         )
-        assert legacy_code in abstract_results, f'Code not found with AbstractCode query. Result: {abstract_results}'
         assert len(abstract_results) == 3
 
-        # AbstractCode with basic filtering
         qb_filtered = qb().append(orm.AbstractCode, filters={'label': 'installed-code'})
         filtered_results = qb_filtered.all(flat=True)
         assert installed_code in filtered_results
@@ -1590,7 +1571,7 @@ class TestConsistency:
 
         # Ensure that batch size is smaller than the total rows yielded
         for [node] in orm.QueryBuilder().append(orm.Int).iterall(batch_size=2):
-            clone = orm.Int(node.value).store()
+            clone = orm.Int(value=node.value).store()
             pk_clones.append(clone.pk)
 
         for pk, pk_clone in zip(pks, sorted(pk_clones)):
@@ -1609,7 +1590,7 @@ class TestConsistency:
         pks_clone = []
 
         for index in range(count):
-            node = orm.Int(index).store()
+            node = orm.Int(value=index).store()
             pks.append(node.pk)
 
         # Ensure that batch size is smaller than the total rows yielded
@@ -2119,7 +2100,7 @@ class TestJsonFilters:
                 },
             },
         ).store()
-        orm.Dict({'text2': 'abcxXYZ'}).store()
+        orm.Dict(**{'text2': 'abcxXYZ'}).store()
 
         qbuilder = orm.QueryBuilder()
         qbuilder.append(orm.Dict, filters=filters)
@@ -2143,7 +2124,7 @@ class TestJsonFilters:
                 'text2': 'abc_XYZ',
             }
         ).store()
-        dict2 = orm.Dict({'text2': 'abcxXYZ'}).store()
+        dict2 = orm.Dict(**{'text2': 'abcxXYZ'}).store()
         dict1.label = 'abc_XYZ'
         dict2.label = 'abcxXYZ'
         qbuilder = orm.QueryBuilder()

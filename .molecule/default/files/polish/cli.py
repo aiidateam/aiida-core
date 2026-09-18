@@ -130,7 +130,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             click.echo(f'could not import the {workchain_module} module')
             sys.exit(1)
 
-        inputs = {'modulo': Int(modulo), 'operands': Str(' '.join(stack))}
+        inputs = {'modulo': Int(value=modulo), 'operands': Str(value=' '.join(stack))}
 
         if code:
             inputs['code'] = code

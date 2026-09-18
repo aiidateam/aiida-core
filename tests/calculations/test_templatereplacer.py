@@ -24,14 +24,14 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {'options': {'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1}}},
         'template': orm.Dict(
-            dict={
+            **{
                 'input_file_template': 'echo $(({x} + {y}))',
                 'input_file_name': 'input.txt',
                 'cmdline_params': ['input.txt'],
                 'output_file_name': 'output.txt',
             }
         ),
-        'parameters': orm.Dict(dict={'x': 1, 'y': 2}),
+        'parameters': orm.Dict(**{'x': 1, 'y': 2}),
     }
 
     # Check the attributes of the resulting `CalcInfo`
@@ -60,8 +60,8 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
 @pytest.mark.requires_broker
 def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a base template that uses two files."""
-    file1_node = orm.SinglefileData(io.BytesIO(b'Content of file 1'))
-    file2_node = orm.SinglefileData(io.BytesIO(b'Content of file 2'))
+    file1_node = orm.SinglefileData.from_filelike(io.BytesIO(b'Content of file 1'))
+    file2_node = orm.SinglefileData.from_filelike(io.BytesIO(b'Content of file 2'))
 
     # Check that the files are correctly copied to the copy list
     entry_point_name = 'core.templatereplacer'
@@ -69,7 +69,7 @@ def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {'options': {'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1}}},
         'template': orm.Dict(
-            dict={
+            **{
                 'files_to_copy': [('filenode1', 'file1.txt'), ('filenode2', 'file2.txt')],
             }
         ),

@@ -104,7 +104,7 @@ def test_outputs(parse_calc_job, create_retrieved_temporary):
         'filename_a': 'content_a',
         'filename_b': 'content_b',
     }
-    inputs = {'outputs': List(list(files.keys()))}
+    inputs = {'outputs': List(list=list(files.keys()))}
     retrieved_temporary = create_retrieved_temporary(files)
     _, results, calcfunction = parse_calc_job(inputs=inputs, filepath_retrieved_temporary=retrieved_temporary)
 
@@ -117,7 +117,7 @@ def test_outputs(parse_calc_job, create_retrieved_temporary):
 
 def test_outputs_missing(parse_calc_job, create_retrieved_temporary):
     """Test parser returns ``ERROR_OUTPUT_FILEPATHS_MISSING`` if a specified output file was not retrieved."""
-    inputs = {'outputs': List(['filename_a'])}
+    inputs = {'outputs': List(list=['filename_a'])}
     retrieved_temporary = create_retrieved_temporary()
     node, _, calcfunction = parse_calc_job(inputs=inputs, filepath_retrieved_temporary=retrieved_temporary)
 
@@ -142,7 +142,7 @@ def test_outputs_link_labels(parse_calc_job, create_retrieved_temporary, filenam
     files = {
         filename: 'content_a',
     }
-    inputs = {'outputs': List(list(files.keys()))}
+    inputs = {'outputs': List(list=list(files.keys()))}
     retrieved_temporary = create_retrieved_temporary(files)
     _, results, calcfunction = parse_calc_job(inputs=inputs, filepath_retrieved_temporary=retrieved_temporary)
 
@@ -160,7 +160,7 @@ def test_outputs_directory(parse_calc_job, create_retrieved_temporary):
         'nested/filename_a': 'content_a',
         'nested/filename_b': 'content_b',
     }
-    inputs = {'outputs': List(['nested'])}
+    inputs = {'outputs': List(list=['nested'])}
     retrieved_temporary = create_retrieved_temporary(files)
     _, results, calcfunction = parse_calc_job(inputs=inputs, filepath_retrieved_temporary=retrieved_temporary)
 

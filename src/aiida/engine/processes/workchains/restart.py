@@ -67,7 +67,7 @@ def validate_handler_overrides(
 
     for handler, overrides in handler_overrides.get_dict().items():
         if not isinstance(handler, str):
-            return f'The key `{handler}` is not a string.'
+            return f'The key `{handler}` is not a string.'  # type: ignore[unreachable]
 
         if not process_class.is_process_handler(handler):
             return f'The key `{handler}` is not a process handler of {process_class}'
@@ -161,13 +161,13 @@ class BaseRestartWorkChain(WorkChain):
         spec.input(
             'max_iterations',
             valid_type=orm.Int,
-            default=lambda: orm.Int(5),
+            default=lambda: orm.Int(value=5),
             help='Maximum number of iterations the work chain will restart the process to finish successfully.',
         )
         spec.input(
             'clean_workdir',
             valid_type=orm.Bool,
-            default=lambda: orm.Bool(False),
+            default=lambda: orm.Bool(value=False),
             help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.',
         )
         spec.input(
@@ -554,7 +554,7 @@ class BaseRestartWorkChain(WorkChain):
             if isinstance(port, PortNamespace):
                 wrapped[key] = self._wrap_bare_dict_inputs(port, value)
             elif orm.Dict in valid_types and isinstance(value, dict):
-                wrapped[key] = orm.Dict(dict=value)
+                wrapped[key] = orm.Dict(**value)
             else:
                 wrapped[key] = value
 

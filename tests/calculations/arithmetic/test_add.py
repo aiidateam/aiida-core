@@ -19,8 +19,8 @@ from aiida.common import datastructures
 def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a default `ArithmeticAddCalculation`."""
     inputs = {
-        'x': orm.Int(1),
-        'y': orm.Int(2),
+        'x': orm.Int(value=1),
+        'y': orm.Int(value=2),
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
     }
 
@@ -52,8 +52,8 @@ def test_add_custom_filenames(fixture_sandbox, aiida_localhost, generate_calc_jo
     input_filename = 'custom.in'
     output_filename = 'custom.out'
     inputs = {
-        'x': orm.Int(1),
-        'y': orm.Int(2),
+        'x': orm.Int(value=1),
+        'y': orm.Int(value=2),
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {
             'options': {
@@ -76,8 +76,8 @@ def test_sleep(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test the ``metadata.options.sleep`` input."""
     sleep = 5
     inputs = {
-        'x': orm.Int(1),
-        'y': orm.Int(2),
+        'x': orm.Int(value=1),
+        'y': orm.Int(value=2),
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {
             'options': {

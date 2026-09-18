@@ -46,9 +46,9 @@ class TestIdentifierParamType:
 
     def test_identifier_sub_classes(self):
         """The sub_classes keyword argument should allow to narrow the scope of the query based on the orm class"""
-        node_bool = Bool(True).store()
-        node_float = Float(0.0).store()
-        node_int = Int(1).store()
+        node_bool = Bool(value=True).store()
+        node_float = Float(value=0.0).store()
+        node_int = Int(value=1).store()
 
         param_type_normal = NodeParamType()
         param_type_scoped = NodeParamType(sub_classes=('aiida.data:core.bool', 'aiida.data:core.float'))

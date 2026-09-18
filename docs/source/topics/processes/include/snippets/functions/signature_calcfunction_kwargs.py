@@ -7,4 +7,4 @@ def add(**kwargs):
     return sum(kwargs.values())
 
 
-result = add(alpha=Int(1), beta=Int(2), gamma=Int(3))
+result = add(alpha=Int(value=1), beta=Int(value=2), gamma=Int(value=3))

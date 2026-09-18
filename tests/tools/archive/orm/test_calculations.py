@@ -25,7 +25,7 @@ def test_calcfunction(tmp_path, aiida_profile):
     @calcfunction
     def add(a, b):
         """Add 2 numbers"""
-        return {'res': orm.Float(a + b)}
+        return {'res': orm.Float(value=a + b)}
 
     def max_(**kwargs):
         """Select the max value"""
@@ -33,7 +33,7 @@ def test_calcfunction(tmp_path, aiida_profile):
         return {'res': max_val[1]}
 
     # I'm creating a bunch of numbers
-    a, b, c, d, e = (orm.Float(i).store() for i in range(5))
+    a, b, c, d, e = (orm.Float(value=i).store() for i in range(5))
     # this adds the maximum number between bcde to a.
     res = add(a=a, b=max_(b=b, c=c, d=d, e=e)['res'])['res']
     # These are the uuids that would be exported as well (as parents) if I wanted the final result
@@ -59,9 +59,9 @@ def test_workcalculation(tmp_path, aiida_profile):
     master = orm.WorkChainNode()
     slave = orm.WorkChainNode()
 
-    input_1 = orm.Int(3).store()
-    input_2 = orm.Int(5).store()
-    output_1 = orm.Int(2).store()
+    input_1 = orm.Int(value=3).store()
+    input_2 = orm.Int(value=5).store()
+    output_1 = orm.Int(value=2).store()
 
     master.base.links.add_incoming(input_1, LinkType.INPUT_WORK, 'input_1')
     slave.base.links.add_incoming(master, LinkType.CALL_WORK, 'CALL')

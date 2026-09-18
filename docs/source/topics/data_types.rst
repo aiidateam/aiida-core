@@ -94,7 +94,7 @@ Each of these classes can most often be used in a similar way as their correspon
 
 .. code-block:: ipython
 
-  In [1]: total = Int(2) + Int(3)
+  In [1]: total = Int(value=2) + Int(value=3)
 
 If you need to access the bare value and not the whole AiiDA class, use the ``.value`` property:
 
@@ -123,7 +123,7 @@ For example, you can create a dictionary where a value is a list of dictionaries
 
 .. code-block:: ipython
 
-  In [2]: d = Dict(dict={'k': 0.1, 'l': [{'m': 0.2}, {'n': 0.3}]})
+  In [2]: d = Dict(**{'k': 0.1, 'l': [{'m': 0.2}, {'n': 0.3}]})
 
 To obtain the Python ``list`` or ``dictionary`` from a :py:class:`~aiida.orm.nodes.data.list.List` or :py:class:`~aiida.orm.nodes.data.dict.Dict` instance, you have to use the :py:meth:`~aiida.orm.nodes.data.list.List.get_list()` or :py:meth:`~aiida.orm.nodes.data.dict.Dict.get_dict()` methods:
 
@@ -180,7 +180,7 @@ An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm
        ...: GREEN = 2
 
     In [2]: from aiida.orm import EnumData
-       ...: color = EnumData(Color.RED)
+       ...: color = EnumData.from_member(Color.RED)
 
     In [3]: color.name
     Out[3]: 'RED'
@@ -217,7 +217,7 @@ To deserialize it should also implement a ``from_dict`` method, which takes the 
        ...:         return cls(d['a'], d['b'])
        ...:
        ...: my_object = MyClass(1, 2)
-       ...: my_jsonable = JsonableData(my_object)
+       ...: my_jsonable = JsonableData.from_object(my_object)
        ...: str(my_jsonable.obj)
     Out[1]: 'MyClass(1, 2)'
 
@@ -344,7 +344,7 @@ This class can be initialized via the **absolute** path to the file you want to 
 
   In [1]: SinglefileData = DataFactory('core.singlefile')
 
-  In [2]: single_file = SinglefileData('/absolute/path/to/file')
+  In [2]: single_file = SinglefileData.from_path('/absolute/path/to/file')
 
 When storing the node, the filename is stored in the database and the file itself is copied to the repository.
 The contents of the file in string format can be obtained using the :py:meth:`~aiida.orm.nodes.data.singlefile.SinglefileData.get_content()` method:
@@ -404,7 +404,7 @@ To store a complete directory, simply use the ``tree`` keyword:
 
     In [1]: FolderData = DataFactory('core.folder')
 
-    In [2]: folder = FolderData(tree='/absolute/path/to/directory')
+    In [2]: folder = FolderData.from_tree('/absolute/path/to/directory')
 
 Alternatively, you can construct the node first and then use the various repository methods to add objects from directory and file paths:
 
@@ -620,7 +620,7 @@ Example of creating an ``PortableCode``:
 
     from pathlib import Path
     from aiida.orm import PortableCode
-    code = PortableCode(
+    code = PortableCode.from_directory(
         label='some-label',
         filepath_files=Path('/some/path/code'),
         filepath_executable='executable.exe'
@@ -911,17 +911,19 @@ For example, to create a simple two-step trajectory from a list of structures:
 
   # Create step 1
   cell = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-  structure1 = orm.StructureData(cell=cell, pbc=(True, True, False))
+  structure1 = orm.StructureData(cell=cell)
+  structure1.set_pbc(pbc=(True, True, False))
   structure1.append_atom(position=(0.0, 0.0, 0.0), symbols='H')
   structure1.append_atom(position=(0.5, 0.5, 0.5), symbols='H')
 
   # Create step 2
-  structure2 = orm.StructureData(cell=cell, pbc=(True, True, False))
+  structure2 = orm.StructureData(cell=cell)
+  structure2.set_pbc(pbc=(True, True, False))
   structure2.append_atom(position=(0.1, 0.0, 0.0), symbols='H')
   structure2.append_atom(position=(0.6, 0.5, 0.5), symbols='H')
 
   # Create the trajectory from the structure list
-  trajectory = orm.TrajectoryData([structure1, structure2])
+  trajectory = orm.TrajectoryData.from_structure_list([structure1, structure2])
 
 Alternatively, you can create a trajectory by directly setting the arrays using the :py:meth:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData.set_trajectory` method:
 
@@ -967,7 +969,7 @@ When creating a trajectory from structure lists, the periodic boundary condition
 
 .. code-block:: python
 
-  trajectory = TrajectoryData(structure_list)
+  trajectory = TrajectoryData.from_structure_list(structure_list)
   trajectory.pbc  # Extracted from the StructureData instances
   # (True, True, False)
 

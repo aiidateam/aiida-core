@@ -97,13 +97,14 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
         label = label or f'test-computer-{uuid.uuid4().hex}'
 
         def _build() -> Computer:
-            return Computer(
+            computer = Computer(
                 label=label,
                 hostname=hostname,
-                workdir=str(tmp_path),
                 transport_type=transport_type,
                 scheduler_type=scheduler_type,
             )
+            computer.set_workdir(str(tmp_path))
+            return computer
 
         # Atomic get-or-create using UNIQUE as the serializer (try get → on miss, store → on UNIQUE
         # violation, re-query). A user-space lock (``threading.Lock``, ``filelock``, etc.) would be

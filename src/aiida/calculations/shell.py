@@ -144,7 +144,7 @@ class ShellJob(CalcJob):
     def serialize_arguments(cls, value: t.Any) -> List:
         """Convert the ``value`` to a ``List`` instance if possible.
 
-        :param value: The aruguments to serialize to a ``List`` instance.
+        :param value: The arguments to serialize to a ``List`` instance.
         :raises TypeError: If the object is not a string or a list.
         """
         if isinstance(value, str):
@@ -153,7 +153,7 @@ class ShellJob(CalcJob):
             arguments = value
 
         if isinstance(arguments, list):
-            return List(arguments)  # type: ignore[no-untyped-call]
+            return List(list=arguments)
 
         msg = f'`arguments` should be a string or a list of strings but got: {type(value)}'  # type: ignore[unreachable]
         raise TypeError(msg)
@@ -166,13 +166,13 @@ class ShellJob(CalcJob):
         :raises TypeError: If the object is not a string or callable.
         """
         if callable(value):
-            return PickledData(value, recurse=True)
+            return PickledData.from_object(value, recurse=True)
 
         if isinstance(value, str):
             from aiida.plugins.entry_point import get_entry_point_from_string
 
             entry_point = get_entry_point_from_string(value)
-            return EntryPointData(entry_point=entry_point)
+            return EntryPointData.from_entry_point(entry_point)
 
         msg = f'`value` should be a string or callable but got: {type(value)}'
         raise TypeError(msg)
@@ -229,7 +229,7 @@ class ShellJob(CalcJob):
                 continue
 
             try:
-                str(node.value)
+                str(node.value)  # type: ignore[attr-defined]
             except AttributeError:
                 cls_name = node.__class__.__name__
                 return f'Unsupported node type for `{key}` in `nodes`: {cls_name} does not have the `value` property.'
@@ -244,7 +244,7 @@ class ShellJob(CalcJob):
         if not value:
             return None
 
-        elements = value.get_list()  # type: ignore[no-untyped-call]
+        elements = value.get_list()
 
         if any(not isinstance(element, str) for element in elements):
             return 'all elements of the `arguments` input should be strings'
@@ -298,9 +298,9 @@ class ShellJob(CalcJob):
 
         nodes = inputs.get('nodes', {})
         computer = inputs['code'].computer
-        filenames = (inputs.get('filenames', None) or Dict()).get_dict()  # type: ignore[no-untyped-call]
-        arguments = (inputs.get('arguments', None) or List()).get_list()  # type: ignore[no-untyped-call]
-        outputs = (inputs.get('outputs', None) or List()).get_list()  # type: ignore[no-untyped-call]
+        filenames = (inputs.get('filenames', None) or Dict()).get_dict()
+        arguments = (inputs.get('arguments', None) or List()).get_list()
+        outputs = (inputs.get('outputs', None) or List()).get_list()
         use_symlinks = inputs['metadata']['options']['use_symlinks']
         filename_stdin = inputs['metadata']['options'].get('filename_stdin', None)
         filename_stdout = inputs['metadata']['options'].get('output_filename', None)
@@ -442,7 +442,7 @@ class ShellJob(CalcJob):
                 filename = prepared_filenames[placeholder]
                 argument_interpolated = argument.format(**{placeholder: filename or placeholder})
             else:
-                argument_interpolated = argument.format(**{placeholder: str(node.value)})
+                argument_interpolated = argument.format(**{placeholder: str(node.value)})  # type: ignore[attr-defined]
 
             processed_nodes.append(placeholder)
             processed_arguments.append(argument_interpolated)

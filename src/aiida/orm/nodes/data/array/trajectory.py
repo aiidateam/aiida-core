@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import typing as t
 
+from typing_extensions import Self
+
+from aiida.common import exceptions
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.array.array import ArrayData
-from aiida.orm.pydantic import OrmMetadataField
 
 if t.TYPE_CHECKING:
     import numpy as np
@@ -25,88 +28,50 @@ __all__ = ('TrajectoryData',)
 
 
 class TrajectoryData(ArrayData):
-    """Stores a trajectory (a sequence of crystal structures with timestamps, and
-    possibly with velocities).
-    """
+    """Stores a trajectory (a sequence of crystal structures with timestamps, and possibly with velocities)."""
 
-    class AttributesModel(ArrayData.AttributesModel):
-        symbols: list[str] = OrmMetadataField(
-            description='List of symbols',
-        )
-        pbc: tuple[bool, bool, bool] | None = OrmMetadataField(
-            None,
-            description='Periodic boundary conditions',
-        )
+    _attributes_model_config = ArrayData._attributes_model_config
 
-    def __init__(self, structurelist: list[StructureData] | None = None, **kwargs: t.Any) -> None:
-        super().__init__(**kwargs)
+    @classmethod
+    def from_structure_list(cls, structurelist: list[StructureData], **kwargs: t.Any) -> Self:
+        """Construct a TrajectoryData instance from a list of StructureData objects."""
+        instance = cls(**kwargs)
+        instance.set_structurelist(structurelist)
+        return instance
 
-        if structurelist is not None:
-            self.set_structurelist(structurelist)
+    @attribute
+    def symbols(self) -> list[str]:
+        """The symbols of the sites in the trajectory."""
+        return t.cast(list[str], self.base.attributes.get('symbols'))
 
-    def _internal_validate(
-        self,
-        stepids: np.ndarray | None,
-        cells: np.ndarray | None,
-        symbols: list[str],
-        positions: np.ndarray,
-        times: np.ndarray | None,
-        velocities: np.ndarray | None,
-        pbc: tuple[bool, bool, bool] | list[bool] | None,
-    ) -> None:
-        """Internal function to validate the type and shape of the arrays. See
-        the documentation of py:meth:`.set_trajectory` for a description of the
-        valid shape and type of the parameters.
-        """
-        import numpy
+    @symbols.setter
+    def symbols(self, value: list[str]) -> None:
+        raise AttributeError("cannot set 'symbols' directly; use 'set_trajectory' instead")
 
-        if not isinstance(symbols, (list, tuple)):
-            raise TypeError('TrajectoryData.symbols must be of type list')
-        if any(not isinstance(i, str) for i in symbols):
-            raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
-        if not isinstance(positions, numpy.ndarray) or positions.dtype != float:  # type: ignore[redundant-expr]
-            raise TypeError('TrajectoryData.positions must be a numpy array of floats')
-        if stepids is not None:
-            if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:  # type: ignore[redundant-expr]
-                raise TypeError('TrajectoryData.stepids must be a numpy array of integers')
-        if cells is not None:
-            if not isinstance(cells, numpy.ndarray) or cells.dtype != float:  # type: ignore[redundant-expr]
-                raise TypeError('TrajectoryData.cells must be a numpy array of floats')
-        if times is not None:
-            if not isinstance(times, numpy.ndarray) or times.dtype != float:  # type: ignore[redundant-expr]
-                raise TypeError('TrajectoryData.times must be a numpy array of floats')
-        if velocities is not None:
-            if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:  # type: ignore[redundant-expr]
-                raise TypeError('TrajectoryData.velocities must be a numpy array of floats, or None')
-        if stepids is not None:
-            numsteps = stepids.size
-            if stepids.shape != (numsteps,):
-                raise ValueError('TrajectoryData.stepids must be a 1d array')
-        else:
-            numsteps = positions.shape[0]
-        if cells is not None:
-            if cells.shape != (numsteps, 3, 3):
-                raise ValueError('TrajectoryData.cells must have shape (s,3,3), with s=number of steps')
-        numatoms = len(symbols)
-        if positions.shape != (numsteps, numatoms, 3):
-            raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
-            )
-        if times is not None:
-            if times.shape != (numsteps,):
-                raise ValueError('TrajectoryData.times must have shape (s,), with s=number of steps')
-        if velocities is not None:
-            if velocities.shape != (numsteps, numatoms, 3):
-                raise ValueError(
-                    'TrajectoryData.velocities, if not None, must '
-                    'have shape (s,n,3), '
-                    'with s=number of steps and n=number of symbols'
-                )
-        if pbc is not None:
-            if not (len(pbc) == 3 and all(isinstance(val, bool) for val in pbc)):
-                raise ValueError('`pbc` must be a list/tuple of length three with boolean values.')
-            if cells is None and any(pbc):
-                raise ValueError('Periodic boundary conditions are only possible when a cell is defined.')
+    @attribute
+    def pbc(self) -> tuple[bool, bool, bool] | None:
+        """The periodic boundary conditions of the trajectory."""
+        return t.cast(tuple[bool, bool, bool] | None, self.base.attributes.get('pbc', None))
+
+    @pbc.setter
+    def pbc(self, value: tuple[bool, bool, bool] | None) -> None:
+        raise AttributeError("cannot set 'pbc' directly; use 'set_trajectory' instead")
+
+    @property
+    def numsteps(self) -> int:
+        """Return the number of stored steps, or zero if nothing has been stored yet."""
+        try:
+            return self.get_shape('steps')[0]
+        except (AttributeError, KeyError, IndexError):
+            return 0
+
+    @property
+    def numsites(self) -> int:
+        """Return the number of stored sites, or zero if nothing has been stored yet."""
+        try:
+            return len(self.symbols)
+        except (AttributeError, KeyError, IndexError):
+            return 0
 
     def set_trajectory(
         self,
@@ -184,34 +149,36 @@ class TrajectoryData(ArrayData):
             pbc = (True, True, True)
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities, pbc)
-        # set symbols/pbc as attributes for easier querying
+
         self.base.attributes.set('symbols', list(symbols))
         self.base.attributes.set('pbc', tuple(pbc))
+
         self.set_array('positions', positions)
-        if stepids is not None:  # use input stepids
+
+        if stepids is not None:
             self.set_array('steps', stepids)
-        else:  # use consecutive sequence if not given
+        else:
             self.set_array('steps', numpy.arange(positions.shape[0]))
+
         if cells is not None:
             self.set_array('cells', cells)
         else:
-            # Delete cells array, if it was present
             try:
                 self.delete_array('cells')
             except KeyError:
                 pass
+
         if times is not None:
             self.set_array('times', times)
         else:
-            # Delete times array, if it was present
             try:
                 self.delete_array('times')
             except KeyError:
                 pass
+
         if velocities is not None:
             self.set_array('velocities', velocities)
         else:
-            # Delete velocities array, if it was present
             try:
                 self.delete_array('velocities')
             except KeyError:
@@ -230,59 +197,25 @@ class TrajectoryData(ArrayData):
         import numpy
 
         stepids = numpy.arange(len(structurelist))
-        cells = numpy.array([x.cell for x in structurelist])
-        symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
-        for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites] for i in stepids]:
+        cells = numpy.array([structure.cell for structure in structurelist])
+        symbols_first = [str(site.kind_name) for site in structurelist[0].sites]
+
+        for symbols_now in [[str(site.kind_name) for site in structurelist[index].sites] for index in stepids]:
             if symbols_first != symbols_now:
                 raise ValueError('Symbol lists have to be the same for all of the supplied structures')
+
         symbols = list(symbols_first)
-        positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
+        positions = numpy.array([[list(site.position) for site in structure.sites] for structure in structurelist])
+
         pbc_set = {structure.pbc for structure in structurelist}
+
         if len(pbc_set) == 1:
             pbc = pbc_set.pop()
         else:
             msg = f'All structures should have the same `pbc`, found: {pbc_set}'
             raise ValueError(msg)
+
         self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
-
-    def _validate(self) -> bool:
-        """Verify that the required arrays are present and that their type and
-        dimension are correct.
-        """
-        # check dimensions, types
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            self._internal_validate(
-                self.get_stepids(),
-                self.get_cells(),
-                self.symbols,
-                self.get_positions(),
-                self.get_times(),
-                self.get_velocities(),
-                self.pbc,
-            )
-        # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
-        except Exception as exception:
-            msg = f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
-            raise ValidationError(msg)
-        return True
-
-    @property
-    def numsteps(self) -> int:
-        """Return the number of stored steps, or zero if nothing has been stored yet."""
-        try:
-            return self.get_shape('steps')[0]
-        except (AttributeError, KeyError, IndexError):
-            return 0
-
-    @property
-    def numsites(self) -> int:
-        """Return the number of stored sites, or zero if nothing has been stored yet."""
-        try:
-            return len(self.symbols)
-        except (AttributeError, KeyError, IndexError):
-            return 0
 
     def get_stepids(self) -> np.ndarray:
         """Return the array of steps, if it has already been set.
@@ -310,28 +243,6 @@ class TrajectoryData(ArrayData):
             return self.get_array('cells')
         except (AttributeError, KeyError):
             return None
-
-    @property
-    def symbols(self) -> list[str]:
-        """Return the array of symbols, if it has already been set.
-
-        :raises KeyError: if the trajectory has not been set yet.
-        """
-        return self.base.attributes.get('symbols')
-
-    @property
-    def pbc(self) -> tuple[bool, bool, bool] | None:
-        """Return the tuple of periodic boundary conditions.
-
-        Returns a tuple of length three with booleans indicating if the structure is
-        periodic in that direction.
-
-        .. versionadded:: 2.8
-
-            For ``TrajectoryData`` created with earliers versions than v2.8 this property will return None.
-
-        """
-        return self.base.attributes.get('pbc', None)
 
     def get_positions(self) -> np.ndarray:
         """Return the array of positions, if it has already been set.
@@ -400,18 +311,31 @@ class TrajectoryData(ArrayData):
             msg = f'You have only {self.numsteps} steps, but you are looking beyond (index={index})'
             raise IndexError(msg)
 
-        vel = self.get_velocities()
-        if vel is not None:
-            vel = vel[index, :, :]
-        time_array = self.get_times()
+        velocities = self.get_velocities()
+
+        if velocities is not None:
+            velocities = velocities[index, :, :]
+
+        times = self.get_times()
         time: float | None = None
-        if time_array is not None:
-            time = float(time_array[index])
+
+        if times is not None:
+            time = float(times[index])
+
         cells = self.get_cells()
         cell: np.ndarray | None = None
+
         if cells is not None:
             cell = cells[index, :, :]
-        return (int(self.get_stepids()[index]), time, cell, self.symbols, self.get_positions()[index, :, :], vel)
+
+        return (
+            int(self.get_stepids()[index]),
+            time,
+            cell,
+            self.symbols,
+            self.get_positions()[index, :, :],
+            velocities,
+        )
 
     def get_step_structure(self, index: int, custom_kinds: list[Kind] | None = None) -> StructureData:
         """Return an AiiDA :py:class:`aiida.orm.nodes.data.structure.StructureData` node
@@ -436,19 +360,21 @@ class TrajectoryData(ArrayData):
         """
         from aiida.orm.nodes.data.structure import Kind, Site, StructureData
 
-        # ignore step, time, and velocities
         _, _, cell, symbols, positions, _ = self.get_step_data(index)
 
         if custom_kinds is not None:
             kind_names = []
-            for k in custom_kinds:
-                if not isinstance(k, Kind):
+
+            for kind in custom_kinds:
+                if not isinstance(kind, Kind):
                     raise TypeError(
                         'Each element of the custom_kinds list must be a aiida.orm.nodes.data.structure.Kind object'
                     )
-                kind_names.append(k.name)
+                kind_names.append(kind.name)
+
             if len(kind_names) != len(set(kind_names)):
                 raise ValueError('Multiple kinds with the same name passed as custom_kinds')
+
             if set(kind_names) != set(symbols):
                 msg = (
                     'If you pass custom_kinds, you have to '
@@ -458,73 +384,20 @@ class TrajectoryData(ArrayData):
                 )
                 raise ValueError(msg)
 
-        struc = StructureData(cell=cell, pbc=self.pbc)
+        structure = StructureData(cell=cell)
+        structure.set_pbc(self.pbc)
+
         if custom_kinds is not None:
-            for _k in custom_kinds:
-                struc.append_kind(_k)
-            for _s, _p in zip(symbols, positions):
-                struc.append_site(Site(kind_name=_s, position=_p))
+            for kind in custom_kinds:
+                structure.append_kind(kind)
+
+            for symbol, position in zip(symbols, positions):
+                structure.append_site(Site(kind_name=symbol, position=position))
         else:
-            for _s, _p in zip(symbols, positions):
-                # Automatic species generation
-                struc.append_atom(symbols=_s, position=_p)
+            for symbol, position in zip(symbols, positions):
+                structure.append_atom(symbols=symbol, position=position)
 
-        return struc
-
-    def _prepare_xsf(self, index: int | None = None, main_file_name: str = '') -> tuple[bytes, dict[str, t.Any]]:
-        """Write the given trajectory to a string of format XSF (for XCrySDen)."""
-        from aiida.common.constants import elements
-
-        _atomic_numbers = {data['symbol']: num for num, data in elements.items()}
-
-        indices = list(range(self.numsteps))
-        if index is not None:
-            indices = [index]
-        return_string = f'ANIMSTEPS {len(indices)}\nCRYSTAL\n'
-        # Do the checks once and for all here:
-        structure = self.get_step_structure(index=0)
-        if structure.is_alloy or structure.has_vacancies:
-            raise NotImplementedError('XSF for alloys or systems with vacancies not implemented.')
-        cells = self.get_cells()
-        if cells is None:
-            raise ValueError('No cell parameters have been supplied for TrajectoryData')
-        positions = self.get_positions()
-        symbols = self.symbols
-        atomic_numbers_list = [_atomic_numbers[s] for s in symbols]
-        nat = len(symbols)
-
-        for idx in indices:
-            return_string += f'PRIMVEC {idx + 1}\n'
-            for cell_vector in cells[idx]:
-                return_string += ' '.join([f'{i:18.5f}' for i in cell_vector])
-                return_string += '\n'
-            return_string += f'PRIMCOORD {idx + 1}\n'
-            return_string += f'{nat} 1\n'
-            for atn, pos in zip(atomic_numbers_list, positions[idx]):
-                try:
-                    return_string += f'{atn} {pos[0]:18.10f} {pos[1]:18.10f} {pos[2]:18.10f}\n'
-                except:
-                    print(atn, pos)
-                    raise
-        return return_string.encode('utf-8'), {}
-
-    def _prepare_cif(
-        self, trajectory_index: int | None = None, main_file_name: str = ''
-    ) -> tuple[bytes, dict[str, t.Any]]:
-        """Write the given trajectory to a string of format CIF."""
-        from aiida.common.utils import Capturing
-        from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
-
-        cif = ''
-        indices = list(range(self.numsteps))
-        if trajectory_index is not None:
-            indices = [trajectory_index]
-        for idx in indices:
-            structure = self.get_step_structure(idx)
-            ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()), ase_loops)
-            with Capturing():
-                cif = cif + ciffile.WriteOut()
-        return cif.encode('utf-8'), {}
+        return structure
 
     def get_structure(self, store: bool = False, **kwargs: t.Any) -> StructureData:
         """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
@@ -551,16 +424,400 @@ class TrajectoryData(ArrayData):
         from aiida.orm.nodes.data.dict import Dict
         from aiida.tools.data.array.trajectory import _get_aiida_structure_inline
 
-        param = Dict(kwargs)
-
-        ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # type: ignore[call-arg]
-        return ret_dict['structure']
+        parameters = Dict(**kwargs)
+        result = _get_aiida_structure_inline(
+            trajectory=self,
+            parameters=parameters,
+            metadata={'store_provenance': store},
+        )  # type: ignore[call-arg]
+        return result['structure']
 
     def get_cif(self, index: int | None = None, **kwargs: t.Any) -> t.Any:
         """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`"""
-        struct = self.get_structure(index=index, **kwargs)
-        cif = struct.get_cif(**kwargs)
-        return cif
+        structure = self.get_structure(index=index, **kwargs)
+        return structure.get_cif(**kwargs)
+
+    def show_mpl_pos(self, **kwargs):
+        """Shows the positions as a function of time, separate for XYZ coordinates
+
+        :param int stepsize: The stepsize for the trajectory, set higher than 1 to
+            reduce number of points
+        :param int mintime: Time to start from
+        :param int maxtime: Maximum time
+        :param list elements:
+            A list of atomic symbols that should be displayed.
+            If not specified, all atoms are displayed.
+        :param list indices:
+            A list of indices of that atoms that can be displayed.
+            If not specified, all atoms of the correct species are displayed.
+        :param bool dont_block: If True, interpreter is not blocked when figure is displayed.
+        """
+        from ase.data import atomic_numbers
+
+        positions = self.get_positions()
+        times = self.get_times()
+
+        if times is None:
+            raise ValueError('This trajectory does not contain time information')
+
+        symbols = self.symbols
+        positions_unit = self.base.attributes.get('units|positions', 'A')
+        times_unit = self.base.attributes.get('units|times', 'ps')
+
+        stepsize = kwargs.pop('stepsize', 1)
+        maxtime = kwargs.pop('maxtime', times[-1])
+        mintime = kwargs.pop('mintime', times[0])
+        element_list = kwargs.pop('elements', None)
+        index_list = kwargs.pop('indices', None)
+        dont_block = kwargs.pop('dont_block', False)
+        label = kwargs.pop('label', None) or self.label or self.__repr__()
+
+        color_scheme = kwargs.pop('colors', 'jmol')
+
+        if color_scheme == 'jmol':
+            from ase.data.colors import jmol_colors as colors
+        elif color_scheme == 'cpk':
+            from ase.data.colors import cpk_colors as colors
+        else:
+            msg = f'Unknown color spec {color_scheme}'
+            raise ValueError(msg)
+
+        if element_list is None:
+            allowed_elements = set(symbols)
+        else:
+            allowed_elements = set(element_list)
+
+        color_dict = {symbol: colors[atomic_numbers[symbol]] for symbol in set(symbols)}
+
+        if index_list is None:
+            indices_to_show = [index for index, symbol in enumerate(symbols) if symbol in allowed_elements]
+        else:
+            indices_to_show = index_list
+
+        color_list = [color_dict[symbol] for symbol in symbols]
+
+        _times = times[::stepsize]
+        _positions = positions[::stepsize]
+
+        plot_positions_XYZ(
+            _times,
+            _positions,
+            indices_to_show,
+            color_list,
+            label,
+            positions_unit,
+            times_unit,
+            dont_block,
+            mintime,
+            maxtime,
+        )
+
+    def show_mpl_heatmap(self, **kwargs):
+        """Show a heatmap of the trajectory with matplotlib."""
+        import numpy as np
+        from scipy import stats  # type: ignore[import-untyped]
+
+        try:
+            from mayavi import mlab
+        except ImportError:
+            raise ImportError(
+                'The plotting feature you requested requires the mayavi package.'
+                'Try `pip install mayavi` or consult the documentation.'
+            )
+
+        from ase.data import atomic_numbers
+        from ase.data.colors import jmol_colors
+
+        def collapse_into_unit_cell(point, cell):
+            """Applies linear transformation to coordinate system based on crystal
+            lattice, vectors. The inverse of that inverse transformation matrix with the
+            point given results in the point being given as a multiples of lattice vectors
+            Than take the integer of the rows to find how many times you have to shift
+            the point back
+            """
+            invcell = np.matrix(cell).T.I
+            points_in_crystal = np.dot(invcell, point).tolist()[0]
+            points_in_unit_cell = [i % 1 for i in points_in_crystal]
+            return np.dot(cell.T, points_in_unit_cell).tolist()
+
+        elements = kwargs.pop('elements', None)
+        mintime = kwargs.pop('mintime', None)
+        maxtime = kwargs.pop('maxtime', None)
+        stepsize = kwargs.pop('stepsize', None) or 1
+        contours = np.array(kwargs.pop('contours', None) or (0.1, 0.5))
+        sampling_stepsize = int(kwargs.pop('sampling_stepsize', None) or 0)
+
+        times = self.get_times()
+
+        if times is None:
+            raise ValueError('This trajectory does not contain time information')
+
+        if mintime is None:
+            minindex = 0
+        else:
+            minindex = int(np.argmax(times > mintime))
+
+        if maxtime is None:
+            maxindex = len(times)
+        else:
+            maxindex = int(np.argmin(times < maxtime))
+
+        positions = self.get_positions()[minindex:maxindex:stepsize]
+
+        if self.base.attributes.get('units|positions', None) in ('bohr', 'atomic'):
+            bohr_to_ang = 0.52917720859
+            positions *= bohr_to_ang
+
+        symbols = self.symbols
+
+        if elements is None:
+            elements = set(symbols)
+
+        cells = self.get_cells()
+
+        if cells is None:
+            raise ValueError('No cell parameters have been supplied for TrajectoryData')
+
+        cell = np.array(cells[0])
+        storage_dict: dict[str, t.Any] = {symbol: {} for symbol in elements}
+
+        for element in elements:
+            storage_dict[element] = [np.array([]), np.array([]), np.array([])]
+
+        for atom_index, element in enumerate(symbols):
+            if element in elements:
+                for dimension in range(3):
+                    storage_dict[element][dimension] = np.concatenate(
+                        (storage_dict[element][dimension], positions[:, atom_index, dimension].flatten())
+                    )
+
+        for element in elements:
+            storage_dict[element] = np.array(storage_dict[element]).T
+            storage_dict[element] = np.array(
+                [collapse_into_unit_cell(position, cell) for position in storage_dict[element]]
+            ).T
+
+        white = (1, 1, 1)
+        mlab.figure(bgcolor=white, size=(1080, 720))
+
+        for index_1, vector in enumerate(cell):
+            index_2 = (index_1 + 1) % 3
+            index_3 = (index_1 + 2) % 3
+
+            for vector_2 in [np.zeros(3), cell[index_2]]:
+                for vector_3 in [np.zeros(3), cell[index_3]]:
+                    point_1 = vector_2 + vector_3
+                    point_2 = point_1 + vector
+                    mlab.plot3d(
+                        [point_1[0], point_2[0]],
+                        [point_1[1], point_2[1]],
+                        [point_1[2], point_2[2]],
+                        tube_radius=0.1,
+                    )
+
+        for element, data in storage_dict.items():
+            kde = stats.gaussian_kde(data, bw_method=0.15)
+
+            x = data[0, :]
+            y = data[1, :]
+            z = data[2, :]
+            xmin, ymin, zmin = x.min(), y.min(), z.min()
+            xmax, ymax, zmax = x.max(), y.max(), z.max()
+
+            xi, yi, zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
+            coords = np.vstack([item.ravel() for item in [xi, yi, zi]])
+            density = kde(coords).reshape(xi.shape)
+
+            grid = mlab.pipeline.scalar_field(xi, yi, zi, density)
+            maxdens = density.max()
+            surf = mlab.pipeline.iso_surface(
+                grid,
+                opacity=0.5,
+                colormap='cool',
+                contours=(maxdens * contours).tolist(),
+            )
+            lut = surf.module_manager.scalar_lut_manager.lut.table.to_array()
+
+            lut[:, -1] = np.linspace(100, 255, 256)
+            lut[:, 0:3] = 255 * jmol_colors[atomic_numbers[element]]
+            surf.module_manager.scalar_lut_manager.lut.table = lut
+
+            if sampling_stepsize > 0:
+                mlab.points3d(
+                    x[::sampling_stepsize],
+                    y[::sampling_stepsize],
+                    z[::sampling_stepsize],
+                    color=tuple(jmol_colors[atomic_numbers[element]].tolist()),
+                    scale_mode='none',
+                    scale_factor=0.3,
+                    opacity=0.3,
+                )
+
+        mlab.view(azimuth=155, elevation=70, distance='auto')
+        mlab.show()
+
+    def _internal_validate(
+        self,
+        stepids: np.ndarray | None,
+        cells: np.ndarray | None,
+        symbols: list[str],
+        positions: np.ndarray,
+        times: np.ndarray | None,
+        velocities: np.ndarray | None,
+        pbc: tuple[bool, bool, bool] | list[bool] | None,
+    ) -> None:
+        """Internal function to validate the type and shape of the arrays. See
+        the documentation of py:meth:`.set_trajectory` for a description of the
+        valid shape and type of the parameters.
+        """
+        import numpy
+
+        if not isinstance(symbols, (list, tuple)):
+            raise TypeError('TrajectoryData.symbols must be of type list')
+
+        if any(not isinstance(symbol, str) for symbol in symbols):
+            raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
+
+        if not isinstance(positions, numpy.ndarray) or positions.dtype != float:  # type: ignore[redundant-expr]
+            raise TypeError('TrajectoryData.positions must be a numpy array of floats')
+
+        if stepids is not None:
+            if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:  # type: ignore[redundant-expr]
+                raise TypeError('TrajectoryData.stepids must be a numpy array of integers')
+
+        if cells is not None:
+            if not isinstance(cells, numpy.ndarray) or cells.dtype != float:  # type: ignore[redundant-expr]
+                raise TypeError('TrajectoryData.cells must be a numpy array of floats')
+
+        if times is not None:
+            if not isinstance(times, numpy.ndarray) or times.dtype != float:  # type: ignore[redundant-expr]
+                raise TypeError('TrajectoryData.times must be a numpy array of floats')
+
+        if velocities is not None:
+            if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:  # type: ignore[redundant-expr]
+                raise TypeError('TrajectoryData.velocities must be a numpy array of floats, or None')
+
+        if stepids is not None:
+            numsteps = stepids.size
+
+            if stepids.shape != (numsteps,):
+                raise ValueError('TrajectoryData.stepids must be a 1d array')
+        else:
+            numsteps = positions.shape[0]
+
+        if cells is not None and cells.shape != (numsteps, 3, 3):
+            raise ValueError('TrajectoryData.cells must have shape (s,3,3), with s=number of steps')
+
+        numatoms = len(symbols)
+
+        if positions.shape != (numsteps, numatoms, 3):
+            raise ValueError(
+                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
+            )
+
+        if times is not None and times.shape != (numsteps,):
+            raise ValueError('TrajectoryData.times must have shape (s,), with s=number of steps')
+
+        if velocities is not None and velocities.shape != (numsteps, numatoms, 3):
+            raise ValueError(
+                'TrajectoryData.velocities, if not None, must '
+                'have shape (s,n,3), '
+                'with s=number of steps and n=number of symbols'
+            )
+
+        if pbc is not None:
+            if not (len(pbc) == 3 and all(isinstance(value, bool) for value in pbc)):
+                raise ValueError('`pbc` must be a list/tuple of length three with boolean values.')
+
+            if cells is None and any(pbc):
+                raise ValueError('Periodic boundary conditions are only possible when a cell is defined.')
+
+    def _validate(self) -> None:
+        """Verify that the required arrays are present and that their type and
+        dimension are correct.
+        """
+        super()._validate()
+
+        try:
+            self._internal_validate(
+                self.get_stepids(),
+                self.get_cells(),
+                self.symbols,
+                self.get_positions(),
+                self.get_times(),
+                self.get_velocities(),
+                self.pbc,
+            )
+        except Exception as exception:
+            msg = f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
+            raise exceptions.ValidationError(msg)
+
+    def _prepare_xsf(self, index: int | None = None, main_file_name: str = '') -> tuple[bytes, dict[str, t.Any]]:
+        """Write the given trajectory to a string of format XSF (for XCrySDen)."""
+        from aiida.common.constants import elements
+
+        atomic_numbers = {data['symbol']: number for number, data in elements.items()}
+
+        indices = list(range(self.numsteps))
+
+        if index is not None:
+            indices = [index]
+
+        return_string = f'ANIMSTEPS {len(indices)}\nCRYSTAL\n'
+
+        structure = self.get_step_structure(index=0)
+
+        if structure.is_alloy or structure.has_vacancies:
+            raise NotImplementedError('XSF for alloys or systems with vacancies not implemented.')
+
+        cells = self.get_cells()
+
+        if cells is None:
+            raise ValueError('No cell parameters have been supplied for TrajectoryData')
+
+        positions = self.get_positions()
+        symbols = self.symbols
+        atomic_numbers_list = [atomic_numbers[symbol] for symbol in symbols]
+        nat = len(symbols)
+
+        for idx in indices:
+            return_string += f'PRIMVEC {idx + 1}\n'
+
+            for cell_vector in cells[idx]:
+                return_string += ' '.join([f'{component:18.5f}' for component in cell_vector])
+                return_string += '\n'
+
+            return_string += f'PRIMCOORD {idx + 1}\n'
+            return_string += f'{nat} 1\n'
+
+            for atomic_number, position in zip(atomic_numbers_list, positions[idx]):
+                return_string += f'{atomic_number} {position[0]:18.10f} {position[1]:18.10f} {position[2]:18.10f}\n'
+
+        return return_string.encode('utf-8'), {}
+
+    def _prepare_cif(
+        self,
+        trajectory_index: int | None = None,
+        main_file_name: str = '',
+    ) -> tuple[bytes, dict[str, t.Any]]:
+        """Write the given trajectory to a string of format CIF."""
+        from aiida.common.utils import Capturing
+        from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
+
+        cif = ''
+        indices = list(range(self.numsteps))
+
+        if trajectory_index is not None:
+            indices = [trajectory_index]
+
+        for idx in indices:
+            structure = self.get_step_structure(idx)
+            ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()), ase_loops)
+
+            with Capturing():
+                cif += ciffile.WriteOut()
+
+        return cif.encode('utf-8'), {}
 
     def _parse_xyz_pos(self, inputstring: str) -> None:
         """Load positions from a XYZ file.
@@ -589,10 +846,12 @@ class TrajectoryData(ArrayData):
         from aiida.tools.data.structure import xyz_parser_iterator
 
         numsteps = self.numsteps
+
         if numsteps == 0:
             raise ValidationError('steps must be set before importing positional data')
 
         numsites = self.numsites
+
         if numsites == 0:
             raise ValidationError('symbols must be set before importing positional data')
 
@@ -623,10 +882,12 @@ class TrajectoryData(ArrayData):
         from aiida.tools.data.structure import xyz_parser_iterator
 
         numsteps = self.numsteps
+
         if numsteps == 0:
             raise ValidationError('steps must be set before importing positional data')
 
         numsites = self.numsites
+
         if numsites == 0:
             raise ValidationError('symbols must be set before importing positional data')
 
@@ -643,234 +904,6 @@ class TrajectoryData(ArrayData):
             raise ValueError(msg)
 
         self.set_array('velocities', velocities)
-
-    def show_mpl_pos(self, **kwargs):
-        """Shows the positions as a function of time, separate for XYZ coordinates
-
-        :param int stepsize: The stepsize for the trajectory, set higher than 1 to
-            reduce number of points
-        :param int mintime: Time to start from
-        :param int maxtime: Maximum time
-        :param list elements:
-            A list of atomic symbols that should be displayed.
-            If not specified, all atoms are displayed.
-        :param list indices:
-            A list of indices of that atoms that can be displayed.
-            If not specified, all atoms of the correct species are displayed.
-        :param bool dont_block: If True, interpreter is not blocked when figure is displayed.
-        """
-        from ase.data import atomic_numbers
-
-        # Reading the arrays I need:
-        positions = self.get_positions()
-        times = self.get_times()
-        if times is None:
-            raise ValueError('This trajectory does not contain time information')
-        symbols = self.symbols
-
-        # Try to get the units.
-        try:
-            positions_unit = self.base.attributes.get('units|positions')
-        except AttributeError:
-            positions_unit = 'A'
-        try:
-            times_unit = self.base.attributes.get('units|times')
-        except AttributeError:
-            times_unit = 'ps'
-
-        # Getting the keyword input
-        stepsize = kwargs.pop('stepsize', 1)
-        maxtime = kwargs.pop('maxtime', times[-1])
-        mintime = kwargs.pop('mintime', times[0])
-        element_list = kwargs.pop('elements', None)
-        index_list = kwargs.pop('indices', None)
-        dont_block = kwargs.pop('dont_block', False)
-        label = kwargs.pop('label', None) or self.label or self.__repr__()
-        # Choosing the color scheme
-
-        color_scheme = kwargs.pop('colors', 'jmol')
-        if color_scheme == 'jmol':
-            from ase.data.colors import jmol_colors as colors
-        elif color_scheme == 'cpk':
-            from ase.data.colors import cpk_colors as colors
-        else:
-            msg = f'Unknown color spec {color_scheme}'
-            raise ValueError(msg)
-
-        if element_list is None:
-            # If not all elements are allowed
-            allowed_elements = set(symbols)
-        else:
-            # A subset of elements are allowed
-            allowed_elements = set(element_list)
-        color_dict = {s: colors[atomic_numbers[s]] for s in set(symbols)}
-        # Here I am trying to find out the atoms to show
-        if index_list is None:
-            # If not index_list was provided, I will see if an element_list
-            # was given to me
-            indices_to_show = [i for i, sym in enumerate(symbols) if sym in allowed_elements]
-        else:
-            indices_to_show = index_list
-            # I refrain from checking if indices are ok, will crash if not...
-
-        # The color_list is a list of colors (RGB) that I will
-        # pass, so the different species give different colors in the plot
-        color_list = [color_dict[s] for s in symbols]
-
-        # Reducing array size based on stepsize variable
-        _times = times[::stepsize]
-        _positions = positions[::stepsize]
-
-        # Calling
-        plot_positions_XYZ(
-            _times,
-            _positions,
-            indices_to_show,
-            color_list,
-            label,
-            positions_unit,
-            times_unit,
-            dont_block,
-            mintime,
-            maxtime,
-        )
-
-    def show_mpl_heatmap(self, **kwargs):
-        """Show a heatmap of the trajectory with matplotlib."""
-        import numpy as np
-        from scipy import stats  # type: ignore[import-untyped]
-
-        try:
-            from mayavi import mlab
-        except ImportError:
-            raise ImportError(
-                'The plotting feature you requested requires the mayavi package.'
-                'Try `pip install mayavi` or consult the documentation.'
-            )
-        from ase.data import atomic_numbers
-        from ase.data.colors import jmol_colors
-
-        def collapse_into_unit_cell(point, cell):
-            """Applies linear transformation to coordinate system based on crystal
-            lattice, vectors. The inverse of that inverse transformation matrix with the
-            point given results in the point being given as a multiples of lattice vectors
-            Than take the integer of the rows to find how many times you have to shift
-            the point back
-            """
-            invcell = np.matrix(cell).T.I
-            # point in crystal coordinates
-            points_in_crystal = np.dot(invcell, point).tolist()[0]
-            # point collapsed into unit cell
-            points_in_unit_cell = [i % 1 for i in points_in_crystal]
-            return np.dot(cell.T, points_in_unit_cell).tolist()
-
-        elements = kwargs.pop('elements', None)
-        mintime = kwargs.pop('mintime', None)
-        maxtime = kwargs.pop('maxtime', None)
-        stepsize = kwargs.pop('stepsize', None) or 1
-        contours = np.array(kwargs.pop('contours', None) or (0.1, 0.5))
-        sampling_stepsize = int(kwargs.pop('sampling_stepsize', None) or 0)
-
-        times = self.get_times()
-        if times is None:
-            raise ValueError('This trajectory does not contain time information')
-        if mintime is None:
-            minindex = 0
-        else:
-            minindex = int(np.argmax(times > mintime))
-        if maxtime is None:
-            maxindex = len(times)
-        else:
-            maxindex = int(np.argmin(times < maxtime))
-        positions = self.get_positions()[minindex:maxindex:stepsize]
-
-        try:
-            if self.base.attributes.get('units|positions') in ('bohr', 'atomic'):
-                bohr_to_ang = 0.52917720859
-                positions *= bohr_to_ang
-        except AttributeError:
-            pass
-
-        symbols = self.symbols
-        if elements is None:
-            elements = set(symbols)
-
-        cells = self.get_cells()
-        if cells is None:
-            raise ValueError('No cell parameters have been supplied for TrajectoryData')
-        else:
-            cell = np.array(cells[0])
-        storage_dict: dict[str, t.Any] = {s: {} for s in elements}
-        for ele in elements:
-            storage_dict[ele] = [np.array([]), np.array([]), np.array([])]
-        for iat, ele in enumerate(symbols):
-            if ele in elements:
-                for idim in range(3):
-                    storage_dict[ele][idim] = np.concatenate(
-                        (storage_dict[ele][idim], positions[:, iat, idim].flatten())
-                    )
-
-        for ele in elements:
-            storage_dict[ele] = np.array(storage_dict[ele]).T
-            storage_dict[ele] = np.array([collapse_into_unit_cell(pos, cell) for pos in storage_dict[ele]]).T
-
-        white = (1, 1, 1)
-        mlab.figure(bgcolor=white, size=(1080, 720))
-
-        for i1, a in enumerate(cell):
-            i2 = (i1 + 1) % 3
-            i3 = (i1 + 2) % 3
-            for b in [np.zeros(3), cell[i2]]:
-                for c in [np.zeros(3), cell[i3]]:
-                    p1 = b + c
-                    p2 = p1 + a
-                    mlab.plot3d([p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]], tube_radius=0.1)
-
-        for ele, data in storage_dict.items():
-            kde = stats.gaussian_kde(data, bw_method=0.15)
-
-            _x = data[0, :]
-            _y = data[1, :]
-            _z = data[2, :]
-            xmin, ymin, zmin = _x.min(), _y.min(), _z.min()
-            xmax, ymax, zmax = _x.max(), _y.max(), _z.max()
-
-            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
-            coords = np.vstack([item.ravel() for item in [_xi, _yi, _zi]])
-            density = kde(coords).reshape(_xi.shape)
-
-            # Plot scatter with mayavi
-            # ~ figure = mlab.figure('DensityPlot')
-            grid = mlab.pipeline.scalar_field(_xi, _yi, _zi, density)
-            # ~ min = density.min()
-            maxdens = density.max()
-            # ~ mlab.pipeline.volume(grid, vmin=min, vmax=min + .5*(max-min))
-            surf = mlab.pipeline.iso_surface(grid, opacity=0.5, colormap='cool', contours=(maxdens * contours).tolist())
-            lut = surf.module_manager.scalar_lut_manager.lut.table.to_array()
-
-            # The lut is a 255x4 array, with the columns representing RGBA
-            # (red, green, blue, alpha) coded with integers going from 0 to 255.
-
-            # We modify the alpha channel to add a transparency gradient
-            lut[:, -1] = np.linspace(100, 255, 256)
-            lut[:, 0:3] = 255 * jmol_colors[atomic_numbers[ele]]
-            # and finally we put this LUT back in the surface object. We could have
-            # added any 255*4 array rather than modifying an existing LUT.
-            surf.module_manager.scalar_lut_manager.lut.table = lut
-
-            if sampling_stepsize > 0:
-                mlab.points3d(
-                    _x[::sampling_stepsize],
-                    _y[::sampling_stepsize],
-                    _z[::sampling_stepsize],
-                    color=tuple(jmol_colors[atomic_numbers[ele]].tolist()),
-                    scale_mode='none',
-                    scale_factor=0.3,
-                    opacity=0.3,
-                )
-
-        mlab.view(azimuth=155, elevation=70, distance='auto')
-        mlab.show()
 
 
 def plot_positions_XYZ(  # noqa: N802
@@ -907,14 +940,16 @@ def plot_positions_XYZ(  # noqa: N802
 
     tlim = [times[0], times[-1]]
     index_range = [0, len(times) - 1]
+
     if mintime is not None:
         tlim[0] = mintime
         index_range[0] = int(np.argmax(times > mintime))
+
     if maxtime is not None:
         tlim[1] = maxtime
         index_range[1] = int(np.argmin(times < maxtime))
 
-    trajectories = zip(*positions.tolist())  # only used in enumerate() below
+    trajectories = zip(*positions.tolist())
     fig = plt.figure(figsize=(12, 7))
 
     plt.suptitle(rf'Trajectory of {label}', fontsize=16)
@@ -925,29 +960,36 @@ def plot_positions_XYZ(  # noqa: N802
     plt.ylabel(rf'X Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
+
     ax2 = fig.add_subplot(gridspec[1])
     plt.ylabel(rf'Y Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
+
     ax3 = fig.add_subplot(gridspec[2])
     plt.ylabel(rf'Z Position $\left[{positions_unit}\right]$')
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
-    n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times
+
+    n_labels = np.minimum(n_labels, len(times))
     sparse_indices = np.linspace(index_range[0], index_range[1], num=n_labels, dtype=int)
 
-    for index, traj in enumerate(trajectories):
+    for index, trajectory in enumerate(trajectories):
         if index not in indices_to_show:
             continue
+
         color = color_list[index]
-        _x, _y, _z = list(zip(*traj))
-        ax1.plot(times, _x, color=color)
-        ax2.plot(times, _y, color=color)
-        ax3.plot(times, _z, color=color)
-        for i in sparse_indices:
-            ax1.text(times[i], _x[i], str(index), color=color, fontsize=5)
-            ax2.text(times[i], _x[i], str(index), color=color, fontsize=5)
-            ax3.text(times[i], _x[i], str(index), color=color, fontsize=5)
+        x, y, z = list(zip(*trajectory))
+
+        ax1.plot(times, x, color=color)
+        ax2.plot(times, y, color=color)
+        ax3.plot(times, z, color=color)
+
+        for sparse_index in sparse_indices:
+            ax1.text(times[sparse_index], x[sparse_index], str(index), color=color, fontsize=5)
+            ax2.text(times[sparse_index], y[sparse_index], str(index), color=color, fontsize=5)
+            ax3.text(times[sparse_index], z[sparse_index], str(index), color=color, fontsize=5)
+
     for axes in ax1, ax2, ax3:
         yticks = axes.yaxis.get_major_ticks()
         yticks[0].label1.set_visible(False)

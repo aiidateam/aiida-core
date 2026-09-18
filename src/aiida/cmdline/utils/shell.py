@@ -29,7 +29,7 @@ DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Str', 'Str'),
     ('aiida.orm', 'List', 'List'),
     ('aiida.orm', 'Dict', 'Dict'),
-    ('aiida.orm', 'Code', 'Code'),
+    ('aiida.orm', 'AbstractCode', 'AbstractCode'),
     ('aiida.orm', 'Computer', 'Computer'),
     ('aiida.orm', 'Group', 'Group'),
     ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),

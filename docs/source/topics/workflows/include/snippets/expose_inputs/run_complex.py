@@ -8,9 +8,9 @@ from aiida.orm import Bool, Float, Int
 if __name__ == '__main__':
     result = run(
         ComplexParentWorkChain,
-        a=Int(1),
-        child_1=dict(b=Float(1.2), c=Bool(True)),
-        child_2=dict(b=Float(2.3), c=Bool(False)),
+        a=Int(value=1),
+        child_1=dict(b=Float(value=1.2), c=Bool(value=True)),
+        child_2=dict(b=Float(value=2.3), c=Bool(value=False)),
     )
     print(result)
     # {

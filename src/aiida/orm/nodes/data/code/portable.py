@@ -22,122 +22,100 @@ from __future__ import annotations
 import logging
 import pathlib
 import typing as t
-import warnings
+
+from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.common.typing import FilePath
-from aiida.orm import Computer
+from aiida.orm.cli import CliFieldInfo
+from aiida.orm.decorators.attributes import attribute
+from aiida.orm.models.adapters import PathStrAdapter
 from aiida.orm.nodes.data.code.abstract import AbstractCode
-from aiida.orm.nodes.data.code.legacy import Code
-from aiida.orm.pydantic import OrmMetadataField
+
+if t.TYPE_CHECKING:
+    from aiida.orm.computers import Computer
 
 __all__ = ('PortableCode',)
+
 _LOGGER = logging.getLogger(__name__)
 
 
-class PortableCode(Code):
+class PortableCode(AbstractCode):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
-    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
-    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class CommonFields(AbstractCode.CommonFields):
-        filepath_executable: str = OrmMetadataField(
-            title='Filepath executable',
-            description='Relative filepath of executable with directory of code files',
-            short_name='-X',
-            priority=1,
-            orm_to_model=lambda node: str(t.cast(PortableCode, node).filepath_executable),
-        )
-
-    class AttributesModel(CommonFields, AbstractCode.AttributesModel): ...
-
-    class ConstructorArgsModel(CommonFields, AbstractCode.ConstructorArgsModel):
-        filepath_files: str = OrmMetadataField(
-            title='Code directory',
-            description='Filepath to directory containing code files',
-            short_name='-F',
-            priority=2,
-            write_only=True,
-            orm_to_model=lambda node, ctx: t.cast(PortableCode, node)._export_filepath_files_from_repo(
-                ctx.get('repository_dump_path'),
-                ctx.get('written', False),
-            ),
-        )
-
-    def __init__(
-        self,
+    @classmethod
+    def from_directory(
+        cls,
         filepath_executable: FilePath,
-        filepath_files: str | FilePath | None = None,
-        **kwargs,
-    ):
-        """Construct a new instance.
+        filepath_files: FilePath,
+        **kwargs: t.Any,
+    ) -> Self:
+        """Construct a portable code from a directory containing the code files.
 
         .. note:: If the files necessary for this code are not all located in a single directory or the directory
-            contains files that should not be uploaded, and so the ``filepath_files`` cannot be used. One can use the
-            methods of the :class:`aiida.orm.nodes.repository.NodeRepository` class. This can be accessed through the
-            ``base.repository`` attribute of the instance after it has been constructed. For example::
-
-                code = PortableCode(filepath_executable='some_name.exe')
-                code.put_object_from_file()
-                code.put_object_from_filelike()
-                code.put_object_from_tree()
+            contains files that should not be uploaded, construct the node normally and use the methods of the
+            :class:`aiida.orm.nodes.repository.NodeRepository` class. This can be accessed through the
+            ``base.repository`` attribute of the instance.
 
         :param filepath_executable: The relative filepath of the executable within the directory of uploaded files.
         :param filepath_files: The filepath to the directory containing all the files of the code.
         """
-        super().__init__(**kwargs)
+        type_check(filepath_files, (pathlib.PurePath, str))
 
-        self.filepath_executable = filepath_executable
+        filepath_files_path = pathlib.Path(filepath_files)
 
-        if filepath_files is not None:
-            type_check(filepath_files, (pathlib.PurePath, str))
+        if not filepath_files_path.exists():
+            msg = f'The filepath `{filepath_files}` does not exist.'
+            raise ValueError(msg)
 
-            filepath_files_path = pathlib.Path(filepath_files)
-            if not filepath_files_path.exists():
-                msg = f'The filepath `{filepath_files}` does not exist.'
-                raise ValueError(msg)
+        if not filepath_files_path.is_dir():
+            msg = f'The filepath `{filepath_files}` is not a directory.'
+            raise ValueError(msg)
 
-            if not filepath_files_path.is_dir():
-                msg = f'The filepath `{filepath_files}` is not a directory.'
-                raise ValueError(msg)
+        node = cls(
+            attributes={
+                cls._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str(filepath_executable),
+            },
+            **kwargs,
+        )
+        node.base.repository.put_object_from_tree(str(filepath_files_path))
 
-            self.base.repository.put_object_from_tree(str(filepath_files))
-        else:
-            warnings.warn(
-                '\n'
-                'No `filepath_files` provided. Before storing the portable code, please upload the necessary files '
-                'using one of the following `node.base.repository` methods: '
-                '\n    `put_object_from_file(...)`'
-                '\n    `put_object_from_filelike(...)`'
-                '\n    `put_object_from_tree(...)`',
-                stacklevel=2,
-            )
+        return node
 
-    def _validate(self):
-        """Validate the instance by checking that an executable is defined and it is part of the repository files.
+    @attribute(
+        model_adapter=PathStrAdapter(),
+        cli_field_info=CliFieldInfo(
+            short_name='-X',
+            priority=1,
+        ),
+    )
+    def filepath_executable(self) -> pathlib.PurePath:
+        """The relative filepath of the executable that this code represents."""
+        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
-        :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
+    @filepath_executable.setter
+    def filepath_executable(self, value: FilePath) -> None:
+        type_check(value, (str, pathlib.PurePath))
+
+        if pathlib.PurePath(value).is_absolute():
+            raise ValueError('The `filepath_executable` should not be absolute.')
+
+        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, str(value))
+
+    @property
+    def full_label(self) -> str:
+        """Return the full label of this code.
+
+        The full label can be just the label itself but it can be something else. However, it at the very least has to
+        include the label of the code.
+
+        :return: The full label of the code.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
-
-        try:
-            filepath_executable = self.filepath_executable
-        except TypeError as exception:
-            raise exceptions.ValidationError('The `filepath_executable` is not set.') from exception
-
-        try:
-            with self.base.repository.open(filepath_executable, 'r'):
-                # Try opening the file to see if it's in the repository.
-                # Note: we don't just check `self.base.repository.list_object_names()`
-                # since the file could be in a subdirectory
-                pass
-        except FileNotFoundError:
-            msg = f'The executable `{filepath_executable}` is not one of the uploaded files in the node repository.'
-            raise exceptions.ValidationError(msg)
+        return self.label
 
     def can_run_on_computer(self, computer: Computer) -> bool:
         """Return whether the code can run on a given computer.
@@ -156,7 +134,7 @@ class PortableCode(Code):
         """
         return self.filepath_executable
 
-    def validate_working_directory(self, folder: Folder):
+    def validate_working_directory(self, folder: Folder) -> None:
         """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
 
         This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
@@ -173,37 +151,44 @@ class PortableCode(Code):
             msg = f'The plugin created a file {self.filepath_executable} that is also the executable name!'
             raise exceptions.PluginInternalError(msg)
 
-    @property
-    def full_label(self) -> str:
-        """Return the full label of this code.
+    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list[str]:
+        """Return the list of executable with its command line parameters.
 
-        The full label can be just the label itself but it can be something else. However, it at the very least has to
-        include the label of the code.
-
-        :return: The full label of the code.
+        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
+        :return: List of the executable followed by its command line parameters.
         """
-        return self.label
+        executable = self.get_executable()
 
-    @property
-    def filepath_executable(self) -> pathlib.PurePath:
-        """Return the relative filepath of the executable that this code represents.
+        # Add './' if the executable is in the top folder (and not in a subfolder)
+        # otherwise a bash shell will not execute it (by default, `./` is not in the PATH).
+        if str(executable.parent) == '.':
+            str_executable = f'./{executable}'
+        else:
+            str_executable = str(executable)
 
-        :return: The relative filepath of the executable.
+        return [str_executable] + (cmdline_params or [])
+
+    def _validate(self) -> None:
+        """Validate the instance by checking that an executable is defined and it is part of the repository files.
+
+        :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
+        super()._validate()
 
-    @filepath_executable.setter
-    def filepath_executable(self, value: FilePath) -> None:
-        """Set the relative filepath of the executable that this code represents.
+        try:
+            filepath_executable = self.filepath_executable
+        except (AttributeError, TypeError) as exc:
+            raise exceptions.ValidationError('The `filepath_executable` is not set.') from exc
 
-        :param value: The relative filepath of the executable within the directory of uploaded files.
-        """
-        type_check(value, (pathlib.PurePath, str))
-
-        if pathlib.PurePath(value).is_absolute():
-            raise ValueError('The `filepath_executable` should not be absolute.')
-
-        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, str(value))
+        try:
+            with self.base.repository.open(filepath_executable, 'r'):
+                # Try opening the file to see if it's in the repository.
+                # Note: we don't just check `self.base.repository.list_object_names()`
+                # since the file could be in a subdirectory.
+                pass
+        except FileNotFoundError as exc:
+            msg = f'The executable `{filepath_executable}` is not one of the uploaded files in the node repository.'
+            raise exceptions.ValidationError(msg) from exc
 
     def _export_filepath_files_from_repo(
         self,
@@ -214,43 +199,38 @@ class PortableCode(Code):
 
         :param repository_dump_path: the path to which the repository contents should be dumped. If not provided,
             a temporary directory will be created and used.
-        :param written: whether the repository content was already written, e.g., by `node.serialize(dump_repo_path)`.
+        :param written: whether the repository content was already written.
         """
         import tempfile
 
         if not written:
             if repository_dump_path is None:
                 repository_dump_path = pathlib.Path(tempfile.mkdtemp()) / self.label
+
             repository_dump_path.mkdir(parents=True, exist_ok=True)
+
             for root, _, filenames in self.base.repository.walk():
                 for filename in filenames:
-                    rel_path = str(root / filename)
-                    (repository_dump_path / root).mkdir(parents=True, exist_ok=True)
-                    export_path = repository_dump_path / root / filename
+                    rel_path = root / filename
+                    export_path = repository_dump_path / rel_path
+                    export_path.parent.mkdir(parents=True, exist_ok=True)
                     export_path.write_bytes(self.base.repository.get_object_content(str(rel_path), mode='rb'))
+
         return str(repository_dump_path)
 
-    def _prepare_yaml(self, *args, **kwargs):
+    def _prepare_yaml(self, *args: t.Any, **kwargs: t.Any) -> tuple[bytes, dict]:
         """Export code to a YAML file."""
-        result = super()._prepare_yaml(*args, **kwargs)[0]
-        target = pathlib.Path().cwd() / f'{self.label}'
-        self._export_filepath_files_from_repo(target)
+        import yaml
+
+        target = pathlib.Path.cwd() / self.label
+        context = {
+            'repository_dump_path': target,
+            'written': False,
+        }
+
+        code_data = type(self).cli_spec.serialize(self, context=context)
+        code_data['filepath_files'] = self._export_filepath_files_from_repo(target)
+
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
-        return result, {}
 
-    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
-        """Return the list of executable with its command line parameters.
-
-        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
-        :return: List of the executable followed by its command line parameters.
-        """
-        executable = self.get_executable()
-
-        # Add './' if the executable is in the top folder (and not in a subfolder)
-        # otherwise a bash shell will not execute it (but default, `./` is not in the PATH)
-        if str(executable.parent) == '.':
-            str_executable = f'./{executable}'
-        else:
-            str_executable = str(executable)
-
-        return [str_executable] + (cmdline_params or [])
+        return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}

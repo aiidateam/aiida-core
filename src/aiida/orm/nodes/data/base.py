@@ -10,13 +10,37 @@
 
 from __future__ import annotations
 
+import abc
 import typing as t
 from functools import singledispatch
 
-from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmMetadataField
+from typing_extensions import Self
 
-__all__ = ('BaseType', 'to_aiida_type')
+from aiida.orm.nodes.data.data import Data
+
+__all__ = ('PrimitiveType', 'to_aiida_type')
+
+
+class PrimitiveType(Data, abc.ABC):
+    """Base class for AiiDA data types wrapping Python primitives."""
+
+    _type: type[t.Any]
+
+    @property
+    @abc.abstractmethod
+    def value(self) -> object:
+        """Return the wrapped Python value."""
+
+    def __str__(self) -> str:
+        return f'{super().__str__()} value: {self.value}'
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, PrimitiveType):
+            return self.value == other.value
+        return self.value == other
+
+    def new(self, value: t.Any | None = None) -> Self:
+        return type(self)(value=self.value if value is None else value)
 
 
 @singledispatch
@@ -24,40 +48,3 @@ def to_aiida_type(value):
     """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
     msg = f'Cannot convert value of type {type(value)} to AiiDA type.'
     raise TypeError(msg)
-
-
-class BaseType(Data):
-    """`Data` sub class to be used as a base for data containers that represent base python data types."""
-
-    class AttributesModel(Data.AttributesModel):
-        value: t.Any = OrmMetadataField(
-            title='Data value',
-            description='The value of the data',
-        )
-
-    def __init__(self, value=None, **kwargs):
-        try:
-            getattr(self, '_type')
-        except AttributeError:
-            raise RuntimeError('Derived class must define the `_type` class member')
-        super().__init__(**kwargs)
-        self.value = value if value is not None else self._type()
-
-    @property
-    def value(self):
-        return self.base.attributes.get('value', None)
-
-    @value.setter
-    def value(self, value):
-        self.base.attributes.set('value', self._type(value))
-
-    def __str__(self):
-        return f'{super().__str__()} value: {self.value}'
-
-    def __eq__(self, other):
-        if isinstance(other, BaseType):
-            return self.value == other.value
-        return self.value == other
-
-    def new(self, value=None):
-        return self.__class__(value)

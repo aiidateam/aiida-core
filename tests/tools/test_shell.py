@@ -217,9 +217,9 @@ def test_nodes_remote_data_filename(tmp_path_factory, aiida_localhost):
 def test_nodes_base_types():
     """Test a shellfunction that specifies positional CLI arguments that are interpolated by the ``kwargs``."""
     nodes = {
-        'float': Float(1.0),
-        'int': Int(2),
-        'str': Str('string'),
+        'float': Float(value=1.0),
+        'int': Int(value=2),
+        'str': Str(value='string'),
     }
     arguments = ['{float}', '{int}', '{str}']
     results, node = launch_shell_job('echo', arguments=arguments, nodes=nodes)
@@ -320,7 +320,7 @@ def test_parser():
     def parser(dirpath):
         from aiida.orm import Str
 
-        return {'string': Str((dirpath / 'stdout').read_text().strip())}
+        return {'string': Str(value=(dirpath / 'stdout').read_text().strip())}
 
     value = 'test_string'
     arguments = [value]
@@ -363,7 +363,7 @@ def test_parser_with_parser_argument():
     def parser(dirpath, parser):
         from aiida.orm import Str
 
-        return {'arguments': Str(parser.node.inputs.arguments[0])}
+        return {'arguments': Str(value=parser.node.inputs.arguments[0])}
 
     value = 'test_string'
     arguments = [value]
@@ -421,7 +421,7 @@ def test_metadata_computer(code_type, aiida_computer_local, tmp_path):
         filepath_executable = tmp_path / 'echo.sh'
         filepath_executable.write_text('#!/bin/bash\necho "$@"\n')
         filepath_executable.chmod(0o755)
-        command = PortableCode(filepath_executable='echo.sh', filepath_files=tmp_path).store()
+        command = PortableCode.from_directory(filepath_executable='echo.sh', filepath_files=tmp_path).store()
 
     results, node = launch_shell_job(command, arguments=['hello'], metadata={'computer': computer})
     assert node.is_finished_ok

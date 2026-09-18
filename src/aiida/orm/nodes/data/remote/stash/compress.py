@@ -10,10 +10,13 @@
 
 from __future__ import annotations
 
+import pydantic as pdt
+
+from aiida.common import exceptions
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+from aiida.orm.decorators.attributes import attribute
 from aiida.orm.nodes.data.remote.stash.base import RemoteStashData
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('RemoteStashCompressedData',)
 
@@ -23,123 +26,78 @@ class RemoteStashCompressedData(RemoteStashData):
 
     _storable = True
 
-    class AttributesModel(RemoteStashData.AttributesModel):
-        target_basepath: str = OrmMetadataField(
-            description='The the target basepath',
-        )
-        source_list: list[str] = OrmMetadataField(
-            description='The list of source files that were stashed',
-        )
-        dereference: bool = OrmMetadataField(
-            description='The format of the compression used when stashed',
-        )
-        fail_on_missing: bool = OrmMetadataField(
-            description='Whether stashing should fail if any files are missing',
-            default=False,
-        )
+    @attribute
+    def target_basepath(self) -> str:
+        """The target basepath."""
+        return self.base.attributes.get('target_basepath')
 
-    def __init__(
-        self,
-        stash_mode: StashMode,
-        target_basepath: str,
-        source_list: list[str],
-        dereference: bool,
-        fail_on_missing: bool = False,
-        **kwargs,
-    ):
-        """Construct a new instance
+    @target_basepath.setter
+    def target_basepath(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set('target_basepath', value)
 
-        :param stash_mode: the stashing mode with which the data was stashed on the remote.
-        :param target_basepath: absolute path to place the compressed file (path+filename).
-        :param source_list: the list of source files.
-        :param dereference: whether to follow symlinks while stashing.
-        :param fail_on_missing: whether stashing should fail if any files are missing.
-        """
+    @attribute
+    def source_list(self) -> list[str]:
+        """The list of source files that were stashed."""
+        return self.base.attributes.get('source_list')
 
-        super().__init__(stash_mode, **kwargs)
+    @source_list.setter
+    def source_list(self, value: list[str] | tuple[str, ...]) -> None:
+        type_check(value, (list, tuple))
 
-        self.target_basepath = target_basepath
-        self.source_list = source_list
-        self.dereference = dereference
-        self.fail_on_missing = fail_on_missing
+        if not all(isinstance(source, str) for source in value):
+            raise TypeError('`source_list` should contain only strings.')
 
-        if stash_mode not in [
+        self.base.attributes.set('source_list', list(value))
+
+    @attribute
+    def dereference(self) -> bool:
+        """Whether to follow symlinks while stashing."""
+        return self.base.attributes.get('dereference')
+
+    @dereference.setter
+    def dereference(self, value: bool) -> None:
+        type_check(value, bool)
+        self.base.attributes.set('dereference', value)
+
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
+    def fail_on_missing(self) -> bool:
+        """Whether stashing should fail if any files are missing."""
+        # The default is set for backward compatibility.
+        return self.base.attributes.get('fail_on_missing', False)
+
+    @fail_on_missing.setter
+    def fail_on_missing(self, value: bool) -> None:
+        type_check(value, bool)
+        self.base.attributes.set('fail_on_missing', value)
+
+    def _validate(self) -> None:
+        """Validate the compressed stash configuration."""
+        super()._validate()
+
+        if self.stash_mode not in {
             StashMode.COMPRESS_TAR,
             StashMode.COMPRESS_TARBZ2,
             StashMode.COMPRESS_TARGZ,
             StashMode.COMPRESS_TARXZ,
-        ]:
-            raise ValueError(
+        }:
+            raise exceptions.ValidationError(
                 '`RemoteStashCompressedData` can only be used with `stash_mode` being either '
                 '`StashMode.COMPRESS_TAR`, `StashMode.COMPRESS_TARGZ`, '
                 '`StashMode.COMPRESS_TARBZ2` or `StashMode.COMPRESS_TARXZ`.'
             )
 
-    @property
-    def dereference(self) -> bool:
-        """Return the dereference boolean.
+        try:
+            self.target_basepath
+        except AttributeError as exc:
+            raise exceptions.ValidationError("attribute 'target_basepath' not set.") from exc
 
-        :return: the dereference boolean.
-        """
-        return self.base.attributes.get('dereference')
+        try:
+            self.source_list
+        except AttributeError as exc:
+            raise exceptions.ValidationError("attribute 'source_list' not set.") from exc
 
-    @dereference.setter
-    def dereference(self, value: bool):
-        """Set the dereference boolean.
-
-        :param value: the dereference boolean.
-        """
-        type_check(value, bool)
-        self.base.attributes.set('dereference', value)
-
-    @property
-    def target_basepath(self) -> str:
-        """Return the target basepath.
-
-        :return: the target basepath.
-        """
-        return self.base.attributes.get('target_basepath')
-
-    @target_basepath.setter
-    def target_basepath(self, value: str):
-        """Set the target basepath.
-
-        :param value: the target basepath.
-        """
-        type_check(value, str)
-        self.base.attributes.set('target_basepath', value)
-
-    @property
-    def source_list(self) -> list | tuple:
-        """Return the list of source files that were stashed.
-
-        :return: the list of source files.
-        """
-        return self.base.attributes.get('source_list')
-
-    @source_list.setter
-    def source_list(self, value: list | tuple):
-        """Set the list of source files that were stashed.
-
-        :param value: the list of source files.
-        """
-        type_check(value, (list, tuple))
-        self.base.attributes.set('source_list', value)
-
-    @property
-    def fail_on_missing(self) -> bool:
-        """Return whether stashing should fail if any files are missing.
-
-        :return: the fail_on_missing flag.
-        """
-        # The default is set for backward compatibility
-        return self.base.attributes.get('fail_on_missing', False)
-
-    @fail_on_missing.setter
-    def fail_on_missing(self, value: bool):
-        """Set whether stashing should fail if any files are missing.
-
-        :param value: the fail_on_missing flag.
-        """
-        type_check(value, bool)
-        self.base.attributes.set('fail_on_missing', value)
+        try:
+            self.dereference
+        except AttributeError as exc:
+            raise exceptions.ValidationError("attribute 'dereference' not set.") from exc

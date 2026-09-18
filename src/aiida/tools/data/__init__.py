@@ -12,15 +12,12 @@
 
 # fmt: off
 
-from aiida.tools.data.array import *
 from aiida.tools.data.orbital import *
 from aiida.tools.data.structure import *
 
 __all__ = (
     'Orbital',
     'RealhydrogenOrbital',
-    'get_explicit_kpoints_path',
-    'get_kpoints_path',
     'spglib_tuple_to_structure',
     'structure_to_spglib_tuple',
 )

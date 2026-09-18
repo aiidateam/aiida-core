@@ -151,7 +151,7 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node, on_un
 @pytest.mark.requires_broker
 def test_unhandled_reset_after_success(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a successful process."""
-    process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
+    process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str(value='restart_once')})
     process.setup()
     process.ctx.children = [generate_calculation_node(exit_status=100)]
     assert process.inspect_process() is None
@@ -165,7 +165,7 @@ def test_unhandled_reset_after_success(generate_work_chain, generate_calculation
 @pytest.mark.requires_broker
 def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
-    process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
+    process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str(value='restart_once')})
     process.setup()
     process.ctx.children = [generate_calculation_node(exit_status=300)]
     assert process.inspect_process() is None
@@ -266,7 +266,7 @@ def test_handler_sets_is_finished(generate_work_chain, generate_calculation_node
     """Test the case when a handler sets ctx.is_finished=True."""
 
     # Test with max_iterations=1 to make sure the pausing logic isn't triggered
-    process = generate_work_chain(WorkChainWithFinishHandler, {'max_iterations': orm.Int(1)})
+    process = generate_work_chain(WorkChainWithFinishHandler, {'max_iterations': orm.Int(value=1)})
     process.setup()
 
     # First trigger - handler sets is_finished
@@ -300,7 +300,7 @@ class OutputNamespaceWorkChain(engine.WorkChain):
         spec.outline(cls.finalize)
 
     def finalize(self):
-        self.out('sub.result', orm.Int(1).store())
+        self.out('sub.result', orm.Int(value=1).store())
 
 
 class CustomBaseRestartWorkChain(engine.BaseRestartWorkChain):
@@ -350,5 +350,5 @@ def test_wrap_bare_dict_inputs():
     dictionaries that should be ``Dict`` nodes. This is useful if the implementation unwraps ``Dict`` inputs in the
     preparation phase so they can be updated if needed, and they don't have to manually rewrap in a ``Dict`` node.
     """
-    _, node = engine.launch.run_get_node(CustomBaseRestartWorkChain, **{'sub': {'parameters': orm.Dict({'a': 1})}})
+    _, node = engine.launch.run_get_node(CustomBaseRestartWorkChain, **{'sub': {'parameters': orm.Dict(**{'a': 1})}})
     assert node.is_finished

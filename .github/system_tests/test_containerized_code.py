@@ -15,8 +15,8 @@ from aiida.engine import run_get_node
 def test_add_singularity():
     """Test installed containerized code by add plugin"""
     builder = orm.load_code('add-singularity@localhost').get_builder()
-    builder.x = orm.Int(4)
-    builder.y = orm.Int(6)
+    builder.x = orm.Int(value=4)
+    builder.y = orm.Int(value=6)
     builder.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
 
     results, node = run_get_node(builder)

@@ -7,5 +7,5 @@ def add(alpha, beta):
     return {'nested.sum': alpha + beta}
 
 
-result = add(Int(1), Int(2))
+result = add(Int(value=1), Int(value=2))
 assert result['nested']['sum'] == 3

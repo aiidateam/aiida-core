@@ -16,7 +16,6 @@ from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
 from aiida.orm.nodes.data.code.abstract import AbstractCode
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('Code',)
 
@@ -36,26 +35,6 @@ class Code(AbstractCode):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-
-    class AttributesModel(AbstractCode.AttributesModel):
-        prepend_text: str = OrmMetadataField(
-            '',
-            description='The code that will be put in the scheduler script before the execution of the code',
-        )
-        append_text: str = OrmMetadataField(
-            '',
-            description='The code that will be put in the scheduler script after the execution of the code',
-        )
-        input_plugin: str | None = OrmMetadataField(description='The name of the input plugin to be used for this code')
-        local_executable: str | None = OrmMetadataField(
-            description='Path to a local executable',
-        )
-        remote_exec_path: str | None = OrmMetadataField(
-            description='Remote path to executable',
-        )
-        is_local: bool | None = OrmMetadataField(
-            description='Whether the code is local or remote',
-        )
 
     def __init__(
         self,

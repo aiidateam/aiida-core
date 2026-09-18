@@ -51,8 +51,8 @@ def get_calcjob_builder(aiida_code_installed):
     def _factory(**kwargs):
         code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='bash')
         builder = code.get_builder()
-        builder.x = orm.Int(1)
-        builder.y = orm.Int(1)
+        builder.x = orm.Int(value=1)
+        builder.y = orm.Int(value=1)
         builder._update(**kwargs)
         return builder
 
@@ -134,7 +134,7 @@ class MultiCodesCalcJob(CalcJob):
         spec.input('code_info_with_mpi_none', valid_type=orm.AbstractCode, required=False)
         spec.input('code_info_with_mpi_true', valid_type=orm.AbstractCode, required=False)
         spec.input('code_info_with_mpi_false', valid_type=orm.AbstractCode, required=False)
-        spec.input('parallel_run', valid_type=orm.Bool, default=lambda: orm.Bool(True))
+        spec.input('parallel_run', valid_type=orm.Bool, default=lambda: orm.Bool(value=True))
 
     def prepare_for_submission(self, folder):
         from aiida.common.datastructures import CalcInfo, CodeInfo, CodeRunMode
@@ -268,7 +268,7 @@ def test_multi_codes_run_parallel(aiida_code_installed, file_regression, paralle
             label=str(uuid.uuid4()),
             with_mpi=False,
         ),
-        'parallel_run': orm.Bool(parallel_run),
+        'parallel_run': orm.Bool(value=parallel_run),
         'metadata': {'dry_run': True, 'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
     }
 
@@ -453,15 +453,15 @@ def test_portable_code(tmp_path, aiida_localhost):
     subsubdir.mkdir()
     (subsubdir / 'sub-dummy').write_bytes(b'sub dummy')
 
-    code = orm.PortableCode(
+    code = orm.PortableCode.from_directory(
         filepath_executable='bash',
         filepath_files=tmp_path,
     ).store()
 
     inputs = {
         'code': code,
-        'x': orm.Int(1),
-        'y': orm.Int(2),
+        'x': orm.Int(value=1),
+        'y': orm.Int(value=2),
         'metadata': {
             'computer': aiida_localhost,
             'dry_run': True,
@@ -498,8 +498,8 @@ class TestCalcJob:
         assert Process.current() is None
         self.computer = aiida_localhost
         self.remote_code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/bash').store()
-        self.local_code = orm.PortableCode(filepath_executable='bash', filepath_files=tmp_path).store()
-        self.inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'metadata': {'options': {}}}
+        self.local_code = orm.PortableCode.from_directory(filepath_executable='bash', filepath_files=tmp_path).store()
+        self.inputs = {'x': orm.Int(value=1), 'y': orm.Int(value=2), 'metadata': {'options': {}}}
         yield
         assert Process.current() is None
 
@@ -610,7 +610,7 @@ class TestCalcJob:
 
         # The `metadata.options` input expects a plain dict and not a node `Dict`
         with pytest.raises(TypeError):
-            launch.run(SimpleCalcJob, code=self.remote_code, metadata={'options': orm.Dict(dict={'a': 1})})
+            launch.run(SimpleCalcJob, code=self.remote_code, metadata={'options': orm.Dict(**{'a': 1})})
 
     def test_remote_code_set_computer_implicit(self):
         """Test launching a `CalcJob` with a remote code *with* explicitly defining a computer.
@@ -768,12 +768,12 @@ class TestCalcJob:
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')
             handle.flush()
-            file_one = orm.SinglefileData(file=handle.name)
+            file_one = orm.SinglefileData.from_path(handle.name)
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')
             handle.flush()
-            file_two = orm.SinglefileData(file=handle.name)
+            file_two = orm.SinglefileData.from_path(handle.name)
 
         inputs = {
             'code': code,
@@ -782,7 +782,7 @@ class TestCalcJob:
                 'base_a_sub_one': file_one,
                 'base_b_two': file_two,
             },
-            'settings': orm.Dict(dict={'provenance_exclude_list': ['base/a/sub/one']}),
+            'settings': orm.Dict(**{'provenance_exclude_list': ['base/a/sub/one']}),
             'metadata': {'dry_run': True, 'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
         }
 
@@ -839,8 +839,8 @@ def generate_process(aiida_code_installed, aiida_localhost):
                 filepath_executable='/bin/bash',
                 computer=computer or aiida_localhost,
             ),
-            'x': orm.Int(1),
-            'y': orm.Int(2),
+            'x': orm.Int(value=1),
+            'y': orm.Int(value=2),
             'metadata': {'options': {}},
         }
 
@@ -1055,8 +1055,8 @@ def test_parse_exit_code_priority(
 
     inputs = {
         'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
-        'x': Int(1),
-        'y': Int(2),
+        'x': Int(value=1),
+        'y': Int(value=2),
     }
     process = generate_calc_job(fixture_sandbox, 'core.arithmetic.add', inputs, return_process=True)
     retrieved = orm.FolderData().store()
@@ -1220,14 +1220,14 @@ def test_validate_stash_options(stash_options, expected):
 
 def test_validate_monitors_valid():
     """Test the ``validate_monitors`` function for valid input."""
-    monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
+    monitors = {'monitor': orm.Dict(**{'entry_point': 'core.always_kill'})}
     result = validate_monitors(monitors, None)
     assert result is None
 
 
 def test_validate_monitors_non_existent_entry_point():
     """Test the ``validate_monitors`` function for invalid entry point."""
-    monitors = {'monitor': orm.Dict({'entry_point': 'not_existant_entry_point'})}
+    monitors = {'monitor': orm.Dict(**{'entry_point': 'not_existant_entry_point'})}
     result = validate_monitors(monitors, None)
     assert "Entry point 'not_existant_entry_point' not found in group" in result
 
@@ -1248,14 +1248,14 @@ def test_validate_monitors_invalid_signature(monkeypatch):
 
     monkeypatch.setattr(CalcJobMonitor, 'load_entry_point', load_entry_point)
 
-    monitors = {'monitor': orm.Dict({'entry_point': 'monitor_invalid_signature'})}
+    monitors = {'monitor': orm.Dict(**{'entry_point': 'monitor_invalid_signature'})}
     result = validate_monitors(monitors, None)
     assert 'The monitor `monitor_invalid_signature` has an invalid function signature' in result
 
 
 def test_validate_monitors_unsupported_kwargs():
     """Test the ``validate_monitors`` function for existing monitor receiving unsupported keyword argument."""
-    monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'kwargs': {'unsupported_kwarg': True}})}
+    monitors = {'monitor': orm.Dict(**{'entry_point': 'core.always_kill', 'kwargs': {'unsupported_kwarg': True}})}
     result = validate_monitors(monitors, None)
     assert 'The monitor `core.always_kill` does not accept the keywords' in result
 
@@ -1265,7 +1265,7 @@ def test_monitor_version(get_calcjob_builder):
     from aiida import __version__
 
     builder = get_calcjob_builder()
-    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
+    builder.monitors = {'monitor': orm.Dict(**{'entry_point': 'core.always_kill'})}
     _, node = launch.run_get_node(builder)
     assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
 
@@ -1284,7 +1284,7 @@ def test_monitor_result_parse(get_calcjob_builder, entry_points):
 
     builder = get_calcjob_builder()
     builder.metadata.options.sleep = 3
-    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_parse'})}
+    builder.monitors = {'monitor': orm.Dict(**{'entry_point': 'core.skip_parse'})}
     _, node = launch.run_get_node(builder)
     assert sorted(node.outputs) == ['remote_folder', 'retrieved']
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
@@ -1304,7 +1304,7 @@ def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
 
     builder = get_calcjob_builder()
     builder.metadata.options.sleep = 3
-    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_retrieval'})}
+    builder.monitors = {'monitor': orm.Dict(**{'entry_point': 'core.skip_retrieval'})}
     _, node = launch.run_get_node(builder)
     assert 'retrieved' not in node.outputs
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
@@ -1324,7 +1324,7 @@ def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
 
     builder = get_calcjob_builder()
     builder.metadata.options.sleep = 3
-    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.override_exit_code'})}
+    builder.monitors = {'monitor': orm.Dict(**{'entry_point': 'core.override_exit_code'})}
     _, node = launch.run_get_node(builder)
     assert sorted(node.outputs) == ['remote_folder', 'retrieved']
     assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
@@ -1348,8 +1348,8 @@ def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
     # Set priority to ensure that ``disable_all`` is run first. If the code works properly, it will be called first,
     # and so the ``always_kill`` monitor will never be called. This should cause the calculation to finish nominally.
     builder.monitors = {
-        'disable_all': orm.Dict({'entry_point': 'core.disable_all', 'priority': 100}),
-        'always_kill': orm.Dict({'entry_point': 'core.always_kill', 'priority': 0}),
+        'disable_all': orm.Dict(**{'entry_point': 'core.disable_all', 'priority': 100}),
+        'always_kill': orm.Dict(**{'entry_point': 'core.always_kill', 'priority': 0}),
     }
     _, node = launch.run_get_node(builder)
     assert node.is_finished_ok
@@ -1380,7 +1380,7 @@ async def test_monitor_result_action_disable_self(get_calcjob_builder, entry_poi
     builder = get_calcjob_builder()
     # Keep the job alive until the monitor has run, then terminate it explicitly below.
     builder.metadata.options.sleep = 300
-    builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
+    builder.monitors = {'disable_self': orm.Dict(**{'entry_point': 'core.disable_self'})}
 
     process = runner.instantiate_process(builder)
     controller = LocalProcessController(process, runner.loop)
@@ -1435,7 +1435,7 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
     # A monitor is added to ensure that those are properly reinitialized in the ``Waiting`` state of the process.
     builder = get_calcjob_builder()
     builder.metadata.options.sleep = 1
-    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'disabled': True})}
+    builder.monitors = {'monitor': orm.Dict(**{'entry_point': 'core.always_kill', 'disabled': True})}
     node = submit_and_await(builder, ProcessState.WAITING)
 
     daemon_client.restart_daemon(wait=True)
@@ -1458,8 +1458,8 @@ class TestImport:
             'code': aiida_code_installed(
                 default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash', computer=aiida_localhost
             ),
-            'x': orm.Int(1),
-            'y': orm.Int(2),
+            'x': orm.Int(value=1),
+            'y': orm.Int(value=2),
             'metadata': {
                 'options': {
                     'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
@@ -1559,8 +1559,8 @@ class TestImport:
 @pytest.fixture
 def arithmetic_add_inputs(aiida_localhost):
     return {
-        'x': orm.Int(1),
-        'y': orm.Int(2),
+        'x': orm.Int(value=1),
+        'y': orm.Int(value=2),
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
     }
 

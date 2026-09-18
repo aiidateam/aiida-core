@@ -119,7 +119,7 @@ An example input port that explicitly sets all these attributes is the following
 
 .. code:: python
 
-    spec.input('positive_number', required=False, default=lambda: Int(1), valid_type=(Int, Float), validator=is_number_positive)
+    spec.input('positive_number', required=False, default=lambda: Int(value=1), valid_type=(Int, Float), validator=is_number_positive)
 
 Here we define an input named ``positive_number`` that should be of type ``Int`` or ``Float`` and should pass the test of the ``is_number_positive`` validator.
 If no value is passed, the default will be used.
@@ -464,8 +464,8 @@ The following example shows how to set the ``parameters`` input, as well as the 
 
     builder.metadata.label = 'This is my calculation label'
     builder.metadata.description = 'An example calculation to demonstrate the process builder'
-    builder.x = Int(1)
-    builder.y = Int(2)
+    builder.x = Int(value=1)
+    builder.y = Int(value=2)
 
 If you evaluate the ``builder`` instance, simply by typing the variable name and hitting enter, the current values of the builder's inputs will be displayed::
 

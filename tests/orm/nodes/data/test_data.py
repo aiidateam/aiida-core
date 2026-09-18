@@ -32,7 +32,7 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             return instance
 
         if data_class is orm.StructureData:
-            instance = orm.CifData(file=os.path.join(STATIC_DIR, 'data', 'Si.cif')).get_structure()
+            instance = orm.CifData.from_path(os.path.join(STATIC_DIR, 'data', 'Si.cif')).get_structure()
             return instance
 
         if data_class is orm.BandsData:
@@ -113,10 +113,6 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
 
         if data_class is orm.AbstractCode:
             instance = data_class(label='test_abstract_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
-            return instance
-
-        if data_class is orm.Code:
-            instance = data_class(label='test_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
             return instance
 
         if data_class is orm.InstalledCode:

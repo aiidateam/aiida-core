@@ -147,10 +147,10 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path):
         label='localhost-fake',
         description='extra localhost computer set up by test',
         hostname='localhost-fake',
-        workdir=str(tmp_path),
         transport_type='core.local',
         scheduler_type='core.direct',
     )
+    fake_localhost.set_workdir(str(tmp_path))
     fake_localhost.store()
     fake_localhost.set_minimum_job_poll_interval(0.0)
     fake_localhost.configure()

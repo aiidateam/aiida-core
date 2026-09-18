@@ -12,15 +12,7 @@
 
 # fmt: off
 
-from aiida.common.datastructures import (
-    JobInfo,
-    JobResource,
-    JobState,
-    JobTemplate,
-    MachineInfo,
-    NodeNumberJobResource,
-    ParEnvJobResource,
-)  # re-export for backwards compatibility: these moved to `aiida.common.datastructures` in v2.10
+from aiida.schedulers.datastructures import *
 from aiida.schedulers.plugins import *
 from aiida.schedulers.scheduler import *
 

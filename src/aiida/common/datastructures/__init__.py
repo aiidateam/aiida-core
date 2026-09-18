@@ -31,6 +31,7 @@ from aiida.common.datastructures._scheduler import (
     NodeNumberJobResource,
     ParEnvJobResource,
 )
+from aiida.common.datastructures.orbital import Orbital, RealhydrogenOrbital
 
 __all__ = (
     'CalcInfo',
@@ -45,7 +46,9 @@ __all__ = (
     'JobTemplateCodeInfo',
     'MachineInfo',
     'NodeNumberJobResource',
+    'Orbital',
     'ParEnvJobResource',
+    'RealhydrogenOrbital',
     'StashMode',
     'UnstashTargetMode',
 )

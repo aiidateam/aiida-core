@@ -4,6 +4,8 @@
 
 ### Breaking changes
 
+`Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
+
 Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.
 
 Process checkpoints created with earlier releases cannot be continued after upgrading because process state classes are now provided in-tree instead of by `plumpy`.

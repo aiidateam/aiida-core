@@ -21,6 +21,7 @@ import logging
 import posixpath
 import re
 import subprocess
+from pathlib import Path
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
@@ -55,11 +56,20 @@ class _AsynchronousSSHBackend(abc.ABC):
     Note: Subclasses should not be part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, data_machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(
+        self,
+        machine: str,
+        data_machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        ssh_config_file: Path | None = None,
+    ):
         self.bash_command = bash_command + '-c '
         self.machine = machine
         self.data_machine = data_machine
         self.logger = logger
+        # `None` for a computer that reads the client configuration from its default location.
+        self.ssh_config_file = ssh_config_file
 
     @abc.abstractmethod
     async def open(self):
@@ -227,11 +237,25 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
+    async def _connect(self, host: str) -> asyncssh.SSHClientConnection:
+        """Connect to a host, reading the client configuration of a migrated computer if it has one.
+
+        ``asyncssh`` parses everything in it but two directives, which become connection arguments.
+        """
+        if self.ssh_config_file is None:
+            return await asyncssh.connect(host)
+
+        from aiida.transports.plugins import ssh_legacy
+
+        return await asyncssh.connect(
+            host, config=[self.ssh_config_file], **ssh_legacy.connect_kwargs(self.ssh_config_file)
+        )
+
     async def open(self):
-        conn = await asyncssh.connect(self.machine)
+        conn = await self._connect(self.machine)
         data_conn = None
         try:
-            data_conn = conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+            data_conn = conn if self.data_machine == self.machine else await self._connect(self.data_machine)
             sftp = await data_conn.start_sftp_client()
         except BaseException:
             # `BaseException` rather than `Exception`, to also release them when the open is cancelled.
@@ -298,7 +322,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         return await self._sftp.isfile(path)
 
     async def listdir(self, path: str):
-        return list(await self._sftp.listdir(path))
+        try:
+            return list(await self._sftp.listdir(path))
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            # `asyncssh` errors do not derive from `OSError`, which the `Transport` interface promises.
+            msg = f'No such file or directory: {path}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while listing directory {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
         try:
@@ -490,10 +522,16 @@ class _OpenSSH(_AsynchronousSSHBackend):
         logger: logging.LoggerAdapter,
         bash_command: str,
         use_sftp: bool,
+        ssh_config_file: Path | None = None,
     ):
-        super().__init__(machine, data_machine, logger, bash_command)
+        super().__init__(machine, data_machine, logger, bash_command, ssh_config_file)
+        from aiida.transports.plugins import ssh_legacy
+
         self.use_sftp = use_sftp
-        self.scp_options: list[str] = []
+        # `-F` is how `ssh` and `scp` take the configuration that defines `machine`. Empty for a
+        # computer that carries none.
+        self.ssh_options: list[str] = ssh_legacy.client_options(ssh_config_file)
+        self.scp_options: list[str] = ssh_legacy.client_options(ssh_config_file)
 
         # Check if the local OpenSSH client version is 9.0 or higher.
         # OpenSSH 9.0+ changed scp to use SFTP protocol by default instead of RCP.
@@ -513,7 +551,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             self.logger.debug(f'Detected OpenSSH version {openssh_version}, using SFTP mode for scp commands.')
         elif self.is_openssh_9_or_higher and not self.use_sftp:
             # `-O` forces the legacy protocol, for servers that do not implement SFTP.
-            self.scp_options = ['-O']
+            self.scp_options.append('-O')
             self.logger.debug(
                 f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands as configured.'
             )
@@ -615,7 +653,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         escaped_command = escaped_command.replace('`', '\\`')
         escaped_command = escaped_command.replace('"', '\\"')
         treated_raw_command = f'"{escaped_command}"'
-        return ['ssh', self.machine, self.bash_command + treated_raw_command]
+        return ['ssh', *self.ssh_options, self.machine, self.bash_command + treated_raw_command]
 
     async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
         if parents and not exist_ok:

@@ -125,7 +125,7 @@ class TestComputerConfigure:
         comp = self.comp_builder.new()
         comp.store()
 
-        comp.configure(username='radames', port='22')
+        comp.configure(host='radames', backend='asyncssh')
         assert comp.is_user_configured(self.user)
 
     def test_configure_ssh_invalid(self):
@@ -136,7 +136,7 @@ class TestComputerConfigure:
         comp.store()
 
         with pytest.raises(ValueError):
-            comp.configure(username='radames', invalid_auth_param='TEST')
+            comp.configure(host='radames', invalid_auth_param='TEST')
 
     def test_non_configure_error(self):
         """Configure a computer for local transport and check it is configured."""

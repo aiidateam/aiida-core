@@ -198,11 +198,6 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
             'requires_daemon_restart': True,
         },
     )
-    logging__paramiko_loglevel: AdvancedLogLevels = Field(
-        t.cast(AdvancedLogLevels, 'WARNING'),
-        description='Minimum level for the `paramiko` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
-    )
     logging__alembic_loglevel: AdvancedLogLevels = Field(
         t.cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `alembic` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',

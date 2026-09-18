@@ -4,6 +4,7 @@ import datetime
 import enum
 import io
 import typing as t
+import uuid
 
 import numpy as np
 import pytest
@@ -94,7 +95,7 @@ class RequiredNodeArguments(t.TypedDict):
 @pytest.fixture
 def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is orm.AuthInfo:
-        random_email = f'user{orm.User.collection.count() + 1}@aiida'
+        random_email = f'{uuid.uuid4()}@aiida'
         return {
             'cls': orm.AuthInfo,
             'kwargs': {

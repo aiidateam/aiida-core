@@ -26,7 +26,6 @@ def test_aiida_localhost(aiida_localhost):
 @pytest.mark.parametrize(
     'fixture_name, transport_cls, transport_type',
     [
-        ('aiida_computer_ssh', BlockingTransport, 'core.ssh'),
         ('aiida_computer_local', BlockingTransport, 'core.local'),
     ],
 )
@@ -132,7 +131,7 @@ def test_aiida_computer_integrity_error_rebuild(aiida_computer):
 def test_aiida_computer_fixtures_async(backend, backend_class, request):
     """Test the computer fixtures."""
 
-    aiida_computer = request.getfixturevalue('aiida_computer_ssh_async')
+    aiida_computer = request.getfixturevalue('aiida_computer_ssh')
 
     # check if the fixture works for configuration parameters, if any
     computer = aiida_computer(label=str(uuid.uuid4()), configure=True, backend=backend)
@@ -140,15 +139,17 @@ def test_aiida_computer_fixtures_async(backend, backend_class, request):
     assert isinstance(computer, Computer)
     assert computer.is_configured
     assert computer.hostname == 'localhost'
-    assert computer.transport_type == 'core.ssh_async'
+    assert computer.transport_type == 'core.ssh'
 
     with computer.get_transport() as transport:
         assert isinstance(transport, AsyncTransport)
         assert isinstance(transport.async_backend, backend_class)
 
     # Calling it again with the same label should simply return the existing computer
-    computer_alt = aiida_computer(label=computer.label)
+    computer_alt = aiida_computer(label=computer.label, configure=False)
     assert computer_alt.uuid == computer.uuid
+    # And leave it configured as it was.
+    assert computer_alt.get_configuration()['backend'] == backend
 
     computer_new = aiida_computer(label=str(uuid.uuid4()), configure=True, backend=backend)
     assert computer_new.uuid != computer.uuid

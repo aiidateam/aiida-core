@@ -1068,6 +1068,43 @@ def test_parse_exit_code_priority(
 
 
 @pytest.mark.requires_broker
+def test_presubmit_requires_stored_node(arithmetic_add_inputs, fixture_sandbox, monkeypatch, runner):
+    """Test that a non-dry-run calculation has to be stored before submission."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    monkeypatch.setattr(type(process.node), 'is_stored', property(lambda _: False))
+
+    with pytest.raises(exceptions.InvalidOperation, match='calculation node is not stored'):
+        process.presubmit(fixture_sandbox)
+
+
+def test_presubmit_validates_code_computer(arithmetic_add_inputs, fixture_sandbox, monkeypatch, runner):
+    """Test that a code which cannot run on the computer is rejected."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    monkeypatch.setattr(type(process.inputs.code), 'can_run_on_computer', lambda *_: False)
+
+    with pytest.raises(exceptions.InputValidationError, match='cannot run on computer'):
+        process.presubmit(fixture_sandbox)
+
+
+def test_presubmit_joins_scheduler_output_and_error(arithmetic_add_inputs, fixture_sandbox, runner):
+    """Test that identical scheduler output and error paths are joined."""
+    inputs = {
+        **arithmetic_add_inputs,
+        'metadata': {
+            'dry_run': True,
+            'options': {'scheduler_stdout': 'scheduler.out', 'scheduler_stderr': 'scheduler.out'},
+        },
+    }
+    process = instantiate_process(runner, ArithmeticAddCalculation, **inputs)
+
+    process.presubmit(fixture_sandbox)
+
+    with fixture_sandbox.get_subfolder('.aiida').open('job_tmpl.json') as handle:
+        job_template = json.load(handle)
+
+    assert job_template['sched_join_files'] is True
+
+
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()

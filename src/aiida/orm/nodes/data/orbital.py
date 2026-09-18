@@ -10,6 +10,7 @@
 
 import copy
 
+from aiida.common.datastructures import Orbital
 from aiida.common.exceptions import ValidationError
 from aiida.orm.nodes.data.data import Data
 from aiida.plugins import OrbitalFactory
@@ -28,7 +29,7 @@ class OrbitalData(Data):
         """
         self.base.attributes.set('orbital_dicts', [])
 
-    def get_orbitals(self, **kwargs):
+    def get_orbitals(self, **kwargs) -> list[Orbital]:
         """Returns all orbitals by default. If a site is provided, returns
         all orbitals cooresponding to the location of that site, additional
         arguments may be provided, which act as filters on the retrieved
@@ -61,7 +62,7 @@ class OrbitalData(Data):
             list_of_outputs.append(orbital)
         return list_of_outputs
 
-    def set_orbitals(self, orbitals):
+    def set_orbitals(self, orbitals: Orbital | list[Orbital]) -> None:
         """Sets the orbitals into the database. Uses the orbital's inherent
         set_orbital_dict method to generate a orbital dict string.
 

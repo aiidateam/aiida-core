@@ -86,6 +86,7 @@ repos:
         src/aiida/calculations/diff_tutorial/calculations.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
+        src/aiida/common/datastructures/_orbital.py|
         src/aiida/engine/daemon/execmanager.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
@@ -123,8 +124,6 @@ repos:
         src/aiida/storage/sqlite_zip/orm.py|
         src/aiida/tools/data/array/kpoints/legacy.py|
         src/aiida/tools/data/array/kpoints/seekpath.py|
-        src/aiida/tools/data/orbital/orbital.py|
-        src/aiida/tools/data/orbital/realhydrogen.py|
         src/aiida/tools/dbimporters/plugins/.*|
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|

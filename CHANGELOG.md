@@ -21,6 +21,9 @@ The process persistence primitives have been replaced with explicit checkpoint c
 - `Persister` is replaced by `CheckpointPersister`.
 - `AiiDAPersister` is replaced by `AiidaCheckpointPersister`.
 
+The `PickledData` and `EntryPointData` data plugins are removed, so `from aiida.orm import PickledData` now raises `ImportError`.
+Nodes either of them wrote stay readable and need no migration, as described under the behavior changes below.
+
 The `aiida.manage.tests.pytest_fixtures` module, deprecated since `aiida-core==2.6`, has been removed.
 Use `aiida.tools.pytest_fixtures` instead, which provides the fixtures for plugin packages and can be loaded with:
 ```python
@@ -43,12 +46,94 @@ print(results['stdout'].get_content())
 ```
 
 The `core.shell` calculation job and parser entry points keep the names they had in `aiida-shell`, so existing nodes, archives and scripts that refer to them are unaffected.
-`launch_shell_job` is importable from `aiida.tools`, and the `PickledData` and `EntryPointData` data plugins from `aiida.orm`.
+`launch_shell_job` is importable from `aiida.tools`, and the `CallableData` data plugin from `aiida.orm`.
 
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### `CallableData`: record a Python callable without storing it
+
+A new data plugin, registered under the `core.callable` entry point, records what a Python callable is, so that its bytes stay out of the graph.
+
+```python
+from aiida.orm import CallableData
+
+record = CallableData(my_parser)
+record.name, record.module, record.distribution, record.version
+record.get_source()
+record.load()
+```
+
+It holds the source text, where that source came from, and one of three identifiers: the entry point a plugin registers it under, the module and qualified name that import it, or a fingerprint of its serialized form for a lambda or a closure that no name identifies.
+Reading the record executes nothing, where reading a pickled node meant running the code inside it, and `load()` reconstructs the callable only where its recorded name reaches it.
+
+Where a distribution provides the callable, the record names that distribution and its version, and, for one installed from a repository, the commit it was built from.
+
 ### Behavior changes
+
+#### Large process checkpoints are kept out of the database
+
+A running process rewrites its checkpoint at every step, and since it can now carry a class and the modules that class needs, that payload is no longer always small.
+A workchain defined in a notebook goes from 1.2 kB to 9 kB, and a parser hook that closes over an array carries the array.
+
+Where the payload goes is now decided by its size.
+Below roughly 100 kB it stays an attribute on the process node, which is where it has always been and, measured on PostgreSQL, is more than twice as fast as the alternative for payloads that size.
+Above that it becomes a managed object in the profile's repository, which pulls ahead by 2.4x at 1 MB and 7.5x at 10 MB.
+Both stores are reachable by every worker of the profile: node files already live in the repository, so `repository_uri` has to name storage that every worker shares.
+`ProcessNode.checkpoint` returns that key rather than the payload when the payload went to the repository, so anything reading the attribute directly has to expect either; `ProcessNode.CHECKPOINT_OBJECT_PREFIX` is what marks it.
+Checkpoints are stripped from archives either way, and a managed object is one whose lifetime the repository leaves to its writer, so `verdi storage maintain` never collects it: the engine deletes it when the checkpoint is rewritten or the process ends.
+This requires `disk-objectstore>=1.6`.
+
+The size of each payload, where it went, and how large a carried class was are logged at debug level.
+`verdi config set logging.aiida_loglevel DEBUG` followed by `verdi daemon restart` puts them in the daemon log.
+
+#### `ShellJob` records the parser it is given
+
+The `parser` input of a `ShellJob` no longer stores the callable as a pickled node.
+It is recorded in a `CallableData` node, which holds the source text, where it came from, and either the module and name that can import it or a fingerprint that tells it apart from callables that share a name.
+The callable itself travels with the running process, in its checkpoint, and is gone once the process terminates.
+
+A parser that can be imported is therefore still re-runnable from an archive, and one that cannot, a lambda or a closure, is not: the archive shows what ran, without carrying code that executes when the node is read.
+
+An entry point string is recorded the same way, so the `parser` input is a `CallableData` whichever form it was given in.
+Passing an `EntryPointData` node to it directly no longer validates; pass the entry point string, which is the documented form.
+`EntryPointData` and `PickledData`, which `aiida-shell` used for this input, are removed.
+A node either of them wrote keeps its type string and loads as a plain `Data`, so its attributes and its repository contents stay readable and no migration is needed.
+What such a node loses is `load()`, the method that ran the code in the pickle.
+`dill` is no longer a dependency; callables are serialized with `cloudpickle`.
+
+#### Checkpoints carry callables that no name can recover
+
+A checkpoint can now carry a lambda, a closure or a `functools.partial`, which are serialized in full, while anything importable keeps the name reference it had.
+Previously these were written as a reference to a name that resolves to something else, or to nothing at all.
+Nothing in `aiida-core` put a callable in a checkpoint, so the defect was latent and no one could reach it.
+
+A name is only kept when the daemon worker that reads the checkpoint back can resolve it.
+The worker imports from the `sys.path` the daemon froze when it started, so a directory added to a submitting shell afterwards is importable there and not in the worker.
+A callable from such a directory now travels inside the checkpoint, together with the modules it calls into, where it previously left a reference the worker could not follow.
+A name that would find a *different* file in the worker is treated the same way, since that reference would silently run other code.
+
+`aiida.common.callables.modules_missing_from` lists the loaded modules an interpreter could not import, and `dumps(value, carry=...)` writes them into the payload.
+That is what a calculation job needs to run a callable on a remote computer, where the user's own modules are not installed.
+Modules the reader already has stay references, so a payload never carries an installed dependency or pins the version of one.
+
+#### Processes defined where no name reaches them
+
+A process class defined in a Jupyter notebook or a script can now be submitted to the daemon.
+Its checkpoint records the class itself beside the name, chosen by the same question as above: whether the worker resolves that name to the same object.
+Previously such a process was created and then excepted in the worker with `ImportError: object 'NotebookWorkChain' from identifier '__main__:NotebookWorkChain' could not be loaded`.
+A class that cannot be serialized, such as one defined inside a function that closes over a node, keeps the name it had and behaves as it did before.
+
+A `CalcJob` works too, which took one thing beyond carrying the class.
+`Parser` used to ask the *node* for the process class, to read the output spec and the exit codes from it, and a node only knows the name its class was recorded under.
+The running process now supplies its own class, and `Parser.process_class` prefers that over resolving the name.
+
+What such a calculation cannot do is be parsed again later from the stored node, with `Parser.parse_from_node`.
+There is no running process to ask by then, and the checkpoint that carried the class is deleted when the node seals.
+
+`process_type` still records `__main__.NotebookWorkChain` for such a class, since that is the module it ran in.
+That string identifies nothing in another interpreter, so the source of the class and a fingerprint of it are now kept on the process node, readable through `ProcessNode.class_source` once the checkpoint carrying the class is gone.
+`ProcessNode.process_class` says so, where it used to raise an import error about a module that does exist.
 
 ### Fixes
 

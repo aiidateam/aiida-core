@@ -38,6 +38,23 @@ def test_load_node_class_fallback():
     assert loaded_class == ProcessNode
 
 
+@pytest.mark.parametrize(
+    'node_type',
+    (
+        'data.core.pickled.PickledData.',
+        'data.core.entry_point.EntryPointData.',
+    ),
+)
+def test_load_node_class_removed_plugins(node_type):
+    """Verify that nodes written by a plugin that no longer exists still resolve to a class that can read them.
+
+    This is why removing `PickledData` and `EntryPointData` needs no migration: a node `aiida-shell` wrote keeps its
+    type string, loads as `Data`, and its attributes and repository stay readable. What it loses is the method that
+    unpickled its contents.
+    """
+    assert load_node_class(node_type) is Data
+
+
 def test_load_node_class_with_node_prefix():
     """Test the behavior of load_node_class with node prefix."""
     # Test node prefix removal

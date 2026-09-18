@@ -19,6 +19,7 @@
 import abc
 import asyncio
 import collections
+import contextlib
 import copy
 import errno
 import fnmatch
@@ -26,16 +27,19 @@ import inspect
 import os
 import pickle
 import stat
+import sys
 import typing as t
 import uuid
 import warnings
 from collections.abc import Callable, Generator, Hashable, Iterable, Mapping, MutableMapping
-from types import MethodType
+from functools import partial
+from types import MethodType, ModuleType
 
 import yaml
 
-from aiida.common import loaders
+from aiida.common import callables, loaders
 from aiida.common.lang import call_with_super_check, super_check, type_check
+from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.processes import events
 from aiida.engine.processes.exceptions import PersistenceError
 from aiida.engine.processes.generic import futures
@@ -484,13 +488,140 @@ class CheckpointContext:
         return CheckpointContext(loader=loader, **extended)
 
 
+LOGGER = AIIDA_LOGGER.getChild('persistence')
+
 META: str = '!!meta'
 META__CLASS_NAME: str = 'class_name'
+META__CLASS_PAYLOAD: str = 'class_payload'
 META__OBJECT_LOADER: str = 'object_loader'
 META__USER: str = 'user'
 META__TYPES: str = 'types'
 META__TYPE__METHOD: str = 'm'
 META__TYPE__SAVABLE: str = 'S'
+
+
+def reader_import_paths() -> tuple[str, ...] | None:
+    """Return the paths the interpreter that will read a checkpoint back imports from.
+
+    That interpreter is a daemon worker, which inherits its ``sys.path`` from the daemon and freezes it at startup.
+    ``None`` means nothing is known about it, either because no daemon is running or because it predates recording
+    this.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.engine.daemon.client import get_daemon_import_paths
+
+    try:
+        return get_daemon_import_paths()
+    except ConfigurationError:
+        return None
+
+
+_REFUSED_READER_PATHS: set[tuple[str, ...]] = set()
+"""Path lists already reported as describing something other than the reader."""
+
+
+def modules_unimportable_in(paths: tuple[str, ...] | None) -> dict[str, ModuleType] | None:
+    """Return the loaded modules an interpreter searching ``paths`` could not import.
+
+    ``None`` means the question has no believable answer, either because nothing is known about the reader or because
+    what is known cannot be true. It is distinct from an empty mapping, which says the reader lacks nothing: a caller
+    that cannot carry modules has to keep the name, since a payload without them would fail to load there.
+    """
+    if paths is None:
+        return None
+
+    missing = callables.modules_missing_from(partial(callables.module_resolves_in, search_paths=paths))
+
+    # A reader that appears to lack most of what is loaded is a broken answer, and acting on it would mean carrying
+    # the interpreter's own machinery. That does not merely waste bytes:
+    # registering `cloudpickle` itself by value recurses until the stack is gone.
+    if len(missing) * 2 > len(sys.modules):
+        # Said once per path list: this runs on every checkpoint of every process, and a deployment whose paths
+        # describe another machine would otherwise repeat it on every state transition it ever makes.
+        if paths not in _REFUSED_READER_PATHS:
+            _REFUSED_READER_PATHS.add(paths)
+            LOGGER.warning(
+                'refusing to carry %d of %d loaded modules into a checkpoint: the paths reported for the reader '
+                'look wrong, so names are being kept instead.',
+                len(missing),
+                len(sys.modules),
+            )
+
+        return None
+
+    return missing
+
+
+def carried_modules(value: t.Any) -> dict[str, ModuleType] | None:
+    """Return the modules to write into a checkpoint alongside ``value``, or ``None`` if its name recovers it.
+
+    A name is enough when the interpreter reading the checkpoint back resolves it to this very object. It is not
+    enough for a lambda, a closure or anything defined in ``__main__``, which no name identifies, nor for a module
+    only this interpreter can import, since the worker imports from the path the daemon froze at startup. Neither is
+    a name that would find a *different* file there, which would run other code without saying so.
+    """
+    paths = reader_import_paths()
+
+    if paths is not None and callables.resolves_in(value, paths):
+        return None
+
+    carry = modules_unimportable_in(paths)
+
+    # With no believable answer about the reader, a name is the cheap form and fails loudly and legibly when the
+    # assumption turns out to be wrong, where a payload carrying nothing would fail obscurely at load.
+    if carry is None:
+        return None if callables.resolves_here(value) else {}
+
+    return carry
+
+
+def identifier_resolves_for_reader(identifier: str) -> bool:
+    """Return whether the interpreter reading a checkpoint back would resolve ``identifier`` to the same object.
+
+    An identifier names a module and an attribute path within it, and both halves can fail. The module may be one the
+    reader cannot import, and the attribute path may lead nowhere at all: a class defined inside a function carries
+    ``<locals>`` in its qualified name, which no import can follow, here or anywhere.
+    """
+    module_name, separator, qualname = identifier.partition(':')
+
+    # A loader of somebody else's may use a form this cannot read, and guessing at it would be worse than trusting it.
+    if not separator:
+        return True
+
+    # ``__main__`` is the entry point of whichever interpreter is asking, so this name refers to a different module in
+    # every reader, whatever its paths turn out to be.
+    if module_name == '__main__':
+        return False
+
+    if not _qualname_resolves_here(module_name, qualname):
+        return False
+
+    paths = reader_import_paths()
+
+    if paths is None:
+        return True
+
+    return callables.module_resolves_in(module_name, paths)
+
+
+def _qualname_resolves_here(module_name: str, qualname: str) -> bool:
+    """Return whether following ``qualname`` through ``module_name`` reaches anything in this interpreter.
+
+    A module this interpreter has not loaded is left alone: it is being asked about somebody else's object, and
+    importing it to find out would run its code for the sake of a check.
+    """
+    resolved: t.Any = sys.modules.get(module_name)
+
+    if resolved is None:
+        return True
+
+    for attribute in qualname.split('.'):
+        resolved = getattr(resolved, attribute, None)
+
+        if resolved is None:
+            return False
+
+    return True
 
 
 class CheckpointMetadataView:
@@ -511,6 +642,14 @@ class CheckpointMetadataView:
     def set_class_name(self, name: str) -> None:
         """Set the persisted class name."""
         self.metadata[META__CLASS_NAME] = name
+
+    def get_class_payload(self) -> bytes | None:
+        """Return the serialized class, which is present only when its name does not reach the reader."""
+        return self._state.get(META, {}).get(META__CLASS_PAYLOAD)
+
+    def set_class_payload(self, payload: bytes) -> None:
+        """Set the serialized class."""
+        self.metadata[META__CLASS_PAYLOAD] = payload
 
     def get_member_type(self, name: str) -> t.Any:
         """Return the persisted type of a member, if defined."""
@@ -558,13 +697,33 @@ class CheckpointSerializable:
         """
         load_context = _ensure_object_loader(load_context, saved_state)
         assert load_context.loader is not None  # required for type checking
-        try:
-            class_name = CheckpointSerializable._get_class_name(saved_state)
+        payload = CheckpointSerializable._get_class_payload(saved_state)
+        load_cls = None
+
+        if payload is not None:
+            try:
+                load_cls = callables.loads(payload)
+            except Exception as exception:
+                # Deserializing arbitrary bytes raises arbitrary exceptions, and the name recorded beside the
+                # payload recovers the same class wherever it resolves. A payload written by a submitter whose
+                # daemon could not import the class reaches a worker that can, and fails there on nothing more
+                # than a difference in interpreter or `cloudpickle` version.
+                LOGGER.warning(
+                    'the class carried in this checkpoint could not be loaded, so its recorded name is being '
+                    'followed instead: %s',
+                    exception,
+                )
+
+        if load_cls is None:
+            try:
+                class_name = CheckpointSerializable._get_class_name(saved_state)
+            except KeyError:
+                msg = 'Class name not found in saved state'
+                raise ValueError(msg)
+
             load_cls = load_context.loader.load_object(class_name)
-        except KeyError:
-            raise ValueError('Class name not found in saved state')
-        else:
-            return load_cls.recreate_from(saved_state, load_context)
+
+        return load_cls.recreate_from(saved_state, load_context)
 
     @classmethod
     def auto_persist(cls, *members: str) -> None:
@@ -623,7 +782,7 @@ class CheckpointSerializable:
         else:
             loader = default_loader
 
-        CheckpointSerializable._set_class_name(out_state, loader.identify_object(self.__class__))
+        CheckpointSerializable._save_class_identity(out_state, self.__class__, loader)
         call_with_super_check(self.save_instance_state, out_state, save_context)
         return out_state
 
@@ -674,6 +833,78 @@ class CheckpointSerializable:
     @staticmethod
     def _get_class_name(saved_state: SAVED_STATE_TYPE) -> str:
         return CheckpointMetadataView(saved_state).get_class_name()
+
+    @staticmethod
+    def _set_class_payload(out_state: SAVED_STATE_TYPE, payload: bytes) -> None:
+        CheckpointMetadataView(out_state).set_class_payload(payload)
+
+    @staticmethod
+    def _get_class_payload(saved_state: SAVED_STATE_TYPE) -> bytes | None:
+        return CheckpointMetadataView(saved_state).get_class_payload()
+
+    @staticmethod
+    def _save_class_identity(out_state: SAVED_STATE_TYPE, cls: type, loader: loaders.ObjectLoader) -> None:
+        """Record how the reader is to get ``cls`` back.
+
+        Its identifier suffices whenever the interpreter reading this back resolves that identifier to the same
+        object. A class defined in a notebook or a script has no such identifier, since its module is the entry point
+        of whichever interpreter is asking, so the class travels in the checkpoint instead, together with the modules
+        it needs and that reader lacks.
+
+        The identifier is what gets checked, because a process built from a function is identified by that function,
+        while the class built for it carries a name of its own that nothing refers to.
+        """
+        identifier = None
+
+        with contextlib.suppress(ImportError, AttributeError):
+            identifier = loader.identify_object(cls)
+
+        # Written unverified, so that a checkpoint still says what it holds when read by a human. A class the loader
+        # cannot identify at all still gets a name here; the payload below is what brings such a class back.
+        name = identifier or f'{cls.__module__}:{cls.__qualname__}'
+        CheckpointSerializable._set_class_name(out_state, name)
+
+        if identifier is not None and identifier_resolves_for_reader(identifier):
+            LOGGER.debug('`%s` resolves for the reader, so the checkpoint names it and carries no class', identifier)
+            return
+
+        carry = modules_unimportable_in(reader_import_paths())
+
+        if carry is None:
+            # Nothing believable is known about the reader, so a payload might carry too little to load there. The
+            # name is what this recorded before the reader was ever consulted, and it is worth keeping only where
+            # some interpreter could follow it: ``__main__`` resolves elsewhere, and a nested qualified name is one
+            # the loader's own ``module:name`` form cannot express.
+            if identifier is not None and callables.resolves_here(cls):
+                LOGGER.debug('nothing believable is known about the reader, so `%s` travels as a name', identifier)
+                return
+
+            # ``cloudpickle`` writes a class that no module can provide by value without being told what to carry.
+            carry = {}
+
+        try:
+            payload = callables.dumps(cls, carry=carry.values())
+        except TypeError as exception:
+            # Not every class can be serialized: one defined inside a function closes over whatever that function
+            # held, which may be a node, and nodes refuse to pickle. Keeping the name leaves such a process exactly
+            # as it was, working wherever that name reaches and failing where it never did. Saying so here turns
+            # what would otherwise surface as an import error in the worker into something with a cause attached.
+            LOGGER.warning(
+                'could not write the class of this process into its checkpoint, so `%s` has to be importable '
+                'wherever the checkpoint is read back: %s',
+                name,
+                exception,
+            )
+            return
+
+        LOGGER.debug(
+            'the class `%s` travels in the checkpoint as %d bytes, from a carry set of %d module%s',
+            name,
+            len(payload),
+            len(carry),
+            '' if len(carry) == 1 else 's',
+        )
+        CheckpointSerializable._set_class_payload(out_state, payload)
 
     @staticmethod
     def _set_meta_type(out_state: SAVED_STATE_TYPE, name: str, type_spec: t.Any) -> None:

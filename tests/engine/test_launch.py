@@ -182,8 +182,8 @@ def test_await_processes(aiida_code_installed, caplog):
     assert not node.is_terminated
     launch.await_processes([node])
     assert node.is_terminated
-    assert len(caplog.records) > 0
-    assert 'out of 1 processes terminated.' in caplog.records[0].message
+    # Asyncio can log slow callbacks while the daemon is starting, so the launch report is not necessarily first.
+    assert any('out of 1 processes terminated.' in record.message for record in caplog.records)
 
 
 @pytest.mark.requires_broker

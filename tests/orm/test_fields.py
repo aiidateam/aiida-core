@@ -77,6 +77,14 @@ def test_add_field():
         assert node.fields.attributes.is_subscriptable is True
 
 
+def test_field_dir_hides_query_metadata():
+    """Test that tab completion does not expose field implementation details."""
+    field_names = orm.Data.fields.pk.__dir__()
+
+    assert field_names == sorted(field_names)
+    assert not {'key', 'backend_key', 'dtype'}.intersection(field_names)
+
+
 @pytest.mark.parametrize('key', ('|', 'some.field', '1key'))
 def test_invalid_field_keys(key):
     """Test for invalid field keys."""

@@ -106,8 +106,9 @@ class InterruptableFuture(asyncio.Future):
             self._task = None
 
     def interrupt(self, reason: Exception) -> None:
-        """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
-        self.set_exception(reason)
+        """Interrupt the coroutine represented by this future, unless it has already completed."""
+        if not self.done():
+            self.set_exception(reason)
 
     async def with_interrupt(self, coro: Awaitable[t.Any]) -> t.Any:
         """Return result of a coroutine which will be interrupted if this future is interrupted ::

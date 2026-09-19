@@ -441,7 +441,7 @@ class SshTransport(BlockingTransport):
             matcher = re.compile(r'^(?:(?P<username>[^@]+)@)?(?P<host>[^@:]+)(?::(?P<port>\d+))?\s*$')
             try:
                 # don't use a generator here to have everything evaluated
-                proxies = [matcher.match(s).groupdict() for s in proxyjumpstring.split(',')]
+                proxies = [matcher.match(s).groupdict() for s in proxyjumpstring.split(',')]  # type: ignore[union-attr]
             except AttributeError:
                 raise ValueError('The given configuration for the SSH proxy jump option could not be parsed')
 
@@ -486,7 +486,7 @@ class SshTransport(BlockingTransport):
                     )
                     self._close_proxies()  # close all since we're going to start anew on the next open() (if any)
                     raise
-                connection_arguments['sock'] = proxy_client.get_transport().open_channel(
+                connection_arguments['sock'] = proxy_client.get_transport().open_channel(  # type: ignore[union-attr]
                     'direct-tcpip', (target['host'], target['port']), ('', 0)
                 )
                 self._proxies.append(proxy_client)
@@ -540,12 +540,15 @@ class SshTransport(BlockingTransport):
 
         :todo: correctly manage exceptions
 
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raise aiida.common.InvalidOperation: if the channel is already closed
         """
         from aiida.common.exceptions import InvalidOperation
 
         if not self._is_open:
             raise InvalidOperation('Cannot close the transport: it is already closed')
+
+        if self._sftp is None:
+            raise InvalidOperation('Cannot close the transport: it has never been opened')
 
         self._sftp.close()
         self._client.close()
@@ -1400,7 +1403,14 @@ class SshTransport(BlockingTransport):
                 return False
             raise  # Typically if I don't have permissions (errno=13)
 
-    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1, workdir=None):
+    def _exec_command_internal(
+        self,
+        command: str,
+        workdir: TransportPath | None = None,
+        combine_stderr: bool = False,
+        bufsize: int = -1,
+        **kwargs,
+    ):
         """Executes the specified command in bash login shell.
 
 
@@ -1449,7 +1459,14 @@ class SshTransport(BlockingTransport):
         return stdin, stdout, stderr, channel
 
     def exec_command_wait_bytes(
-        self, command, stdin=None, combine_stderr=False, bufsize=-1, timeout=0.01, workdir: TransportPath = None
+        self,
+        command: str,
+        stdin=None,
+        workdir: TransportPath | None = None,
+        combine_stderr: bool = False,
+        bufsize: int = -1,
+        timeout: float = 0.01,
+        **kwargs,
     ):
         """Executes the specified command and waits for it to finish.
 
@@ -1472,18 +1489,18 @@ class SshTransport(BlockingTransport):
             workdir = str(workdir)
 
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
-            command, combine_stderr, bufsize=bufsize, workdir=workdir
+            command, workdir, combine_stderr=combine_stderr, bufsize=bufsize
         )
 
         if stdin is not None:
-            if isinstance(stdin, str):
-                filelike_stdin = io.StringIO(stdin)
-            elif isinstance(stdin, bytes):
-                filelike_stdin = io.BytesIO(stdin)
-            elif isinstance(stdin, (io.BufferedIOBase, io.TextIOBase)):
+            if isinstance(stdin, (io.BufferedIOBase, io.TextIOBase)):
                 # It seems both StringIO and BytesIO work correctly when doing ssh_stdin.write(line)?
                 # (The ChannelFile is opened with mode 'b', but until now it always has been a StringIO)
                 filelike_stdin = stdin
+            elif isinstance(stdin, str):
+                filelike_stdin = io.StringIO(stdin)
+            elif isinstance(stdin, bytes):
+                filelike_stdin = io.BytesIO(stdin)
             else:
                 raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
 

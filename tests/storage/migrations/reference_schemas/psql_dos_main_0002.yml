@@ -1,0 +1,996 @@
+columns:
+  alembic_version:
+  - default: null
+    name: version_num
+    nullable: false
+    type: VARCHAR(32)
+  db_dbauthinfo:
+  - default: nextval('db_dbauthinfo_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: aiidauser_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: dbcomputer_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: metadata
+    nullable: false
+    type: JSONB
+  - default: null
+    name: auth_params
+    nullable: false
+    type: JSONB
+  - default: null
+    name: enabled
+    nullable: false
+    type: BOOLEAN
+  db_dbcomment:
+  - default: nextval('db_dbcomment_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: UUID
+  - default: null
+    name: dbnode_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: ctime
+    nullable: false
+    type: TIMESTAMP
+  - default: null
+    name: mtime
+    nullable: false
+    type: TIMESTAMP
+  - default: null
+    name: user_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: content
+    nullable: false
+    type: TEXT
+  db_dbcomputer:
+  - default: nextval('db_dbcomputer_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: UUID
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: hostname
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: description
+    nullable: false
+    type: TEXT
+  - default: null
+    name: scheduler_type
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: transport_type
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: metadata
+    nullable: false
+    type: JSONB
+  db_dbgroup:
+  - default: nextval('db_dbgroup_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: UUID
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: type_string
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: time
+    nullable: false
+    type: TIMESTAMP
+  - default: null
+    name: description
+    nullable: false
+    type: TEXT
+  - default: null
+    name: extras
+    nullable: false
+    type: JSONB
+  - default: null
+    name: user_id
+    nullable: false
+    type: INTEGER
+  db_dbgroup_dbnodes:
+  - default: nextval('db_dbgroup_dbnodes_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: dbnode_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: dbgroup_id
+    nullable: false
+    type: INTEGER
+  db_dblink:
+  - default: nextval('db_dblink_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: input_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: output_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: type
+    nullable: false
+    type: VARCHAR(255)
+  db_dblog:
+  - default: nextval('db_dblog_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: UUID
+  - default: null
+    name: time
+    nullable: false
+    type: TIMESTAMP
+  - default: null
+    name: loggername
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: levelname
+    nullable: false
+    type: VARCHAR(50)
+  - default: null
+    name: dbnode_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: message
+    nullable: false
+    type: TEXT
+  - default: null
+    name: metadata
+    nullable: false
+    type: JSONB
+  db_dbnode:
+  - default: nextval('db_dbnode_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: UUID
+  - default: null
+    name: node_type
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: process_type
+    nullable: true
+    type: VARCHAR(255)
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: description
+    nullable: false
+    type: TEXT
+  - default: null
+    name: ctime
+    nullable: false
+    type: TIMESTAMP
+  - default: null
+    name: mtime
+    nullable: false
+    type: TIMESTAMP
+  - default: null
+    name: attributes
+    nullable: true
+    type: JSONB
+  - default: null
+    name: extras
+    nullable: true
+    type: JSONB
+  - default: null
+    name: repository_metadata
+    nullable: false
+    type: JSONB
+  - default: null
+    name: dbcomputer_id
+    nullable: true
+    type: INTEGER
+  - default: null
+    name: user_id
+    nullable: false
+    type: INTEGER
+  db_dbsetting:
+  - default: nextval('db_dbsetting_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: key
+    nullable: false
+    type: VARCHAR(1024)
+  - default: null
+    name: val
+    nullable: true
+    type: JSONB
+  - default: null
+    name: description
+    nullable: false
+    type: TEXT
+  - default: null
+    name: time
+    nullable: false
+    type: TIMESTAMP
+  db_dbuser:
+  - default: nextval('db_dbuser_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: email
+    nullable: false
+    type: VARCHAR(254)
+  - default: null
+    name: first_name
+    nullable: false
+    type: VARCHAR(254)
+  - default: null
+    name: last_name
+    nullable: false
+    type: VARCHAR(254)
+  - default: null
+    name: institution
+    nullable: false
+    type: VARCHAR(254)
+constraints:
+  check:
+    alembic_version: []
+    db_dbauthinfo: []
+    db_dbcomment: []
+    db_dbcomputer: []
+    db_dbgroup: []
+    db_dbgroup_dbnodes: []
+    db_dblink: []
+    db_dblog: []
+    db_dbnode: []
+    db_dbsetting: []
+    db_dbuser: []
+  primary_keys:
+    alembic_version:
+      comment: null
+      constrained_columns:
+      - version_num
+      dialect_options:
+        postgresql_include: []
+      name: alembic_version_pkc
+    db_dbauthinfo:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbauthinfo_pkey
+    db_dbcomment:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbcomment_pkey
+    db_dbcomputer:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbcomputer_pkey
+    db_dbgroup:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbgroup_pkey
+    db_dbgroup_dbnodes:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbgroup_dbnodes_pkey
+    db_dblink:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dblink_pkey
+    db_dblog:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dblog_pkey
+    db_dbnode:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbnode_pkey
+    db_dbsetting:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbsetting_pkey
+    db_dbuser:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbuser_pkey
+  unique:
+    alembic_version: []
+    db_dbauthinfo:
+    - column_names:
+      - aiidauser_id
+      - dbcomputer_id
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbauthinfo_aiidauser_id_dbcomputer_id
+    db_dbcomment:
+    - column_names:
+      - uuid
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbcomment_uuid
+    db_dbcomputer:
+    - column_names:
+      - label
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbcomputer_label
+    - column_names:
+      - uuid
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbcomputer_uuid
+    db_dbgroup:
+    - column_names:
+      - label
+      - type_string
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbgroup_label_type_string
+    - column_names:
+      - uuid
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbgroup_uuid
+    db_dbgroup_dbnodes:
+    - column_names:
+      - dbgroup_id
+      - dbnode_id
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
+    db_dblink: []
+    db_dblog:
+    - column_names:
+      - uuid
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dblog_uuid
+    db_dbnode:
+    - column_names:
+      - uuid
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbnode_uuid
+    db_dbsetting:
+    - column_names:
+      - key
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbsetting_key
+    db_dbuser:
+    - column_names:
+      - email
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbuser_email
+foreign_keys:
+  alembic_version: []
+  db_dbauthinfo:
+  - comment: null
+    constrained_columns:
+    - aiidauser_id
+    name: fk_db_dbauthinfo_aiidauser_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  - comment: null
+    constrained_columns:
+    - dbcomputer_id
+    name: fk_db_dbauthinfo_dbcomputer_id_db_dbcomputer
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbcomputer
+  db_dbcomment:
+  - comment: null
+    constrained_columns:
+    - dbnode_id
+    name: fk_db_dbcomment_dbnode_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  - comment: null
+    constrained_columns:
+    - user_id
+    name: fk_db_dbcomment_user_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  db_dbcomputer: []
+  db_dbgroup:
+  - comment: null
+    constrained_columns:
+    - user_id
+    name: fk_db_dbgroup_user_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  db_dbgroup_dbnodes:
+  - comment: null
+    constrained_columns:
+    - dbgroup_id
+    name: fk_db_dbgroup_dbnodes_dbgroup_id_db_dbgroup
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbgroup
+  - comment: null
+    constrained_columns:
+    - dbnode_id
+    name: fk_db_dbgroup_dbnodes_dbnode_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dblink:
+  - comment: null
+    constrained_columns:
+    - input_id
+    name: fk_db_dblink_input_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  - comment: null
+    constrained_columns:
+    - output_id
+    name: fk_db_dblink_output_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dblog:
+  - comment: null
+    constrained_columns:
+    - dbnode_id
+    name: fk_db_dblog_dbnode_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dbnode:
+  - comment: null
+    constrained_columns:
+    - dbcomputer_id
+    name: fk_db_dbnode_dbcomputer_id_db_dbcomputer
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: RESTRICT
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbcomputer
+  - comment: null
+    constrained_columns:
+    - user_id
+    name: fk_db_dbnode_user_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: RESTRICT
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  db_dbsetting: []
+  db_dbuser: []
+indexes:
+  alembic_version: []
+  db_dbauthinfo:
+  - column_names:
+    - aiidauser_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbauthinfo_db_dbauthinfo_aiidauser_id
+    unique: false
+  - column_names:
+    - dbcomputer_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbauthinfo_db_dbauthinfo_dbcomputer_id
+    unique: false
+  - column_names:
+    - aiidauser_id
+    - dbcomputer_id
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbauthinfo_aiidauser_id_dbcomputer_id
+    include_columns: []
+    name: uq_db_dbauthinfo_aiidauser_id_dbcomputer_id
+    unique: true
+  db_dbcomment:
+  - column_names:
+    - dbnode_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbcomment_db_dbcomment_dbnode_id
+    unique: false
+  - column_names:
+    - user_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbcomment_db_dbcomment_user_id
+    unique: false
+  - column_names:
+    - uuid
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbcomment_uuid
+    include_columns: []
+    name: uq_db_dbcomment_uuid
+    unique: true
+  db_dbcomputer:
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        label: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbcomputer_label
+    unique: false
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbcomputer_label
+    include_columns: []
+    name: uq_db_dbcomputer_label
+    unique: true
+  - column_names:
+    - uuid
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbcomputer_uuid
+    include_columns: []
+    name: uq_db_dbcomputer_uuid
+    unique: true
+  db_dbgroup:
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbgroup_db_dbgroup_label
+    unique: false
+  - column_names:
+    - type_string
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbgroup_db_dbgroup_type_string
+    unique: false
+  - column_names:
+    - user_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbgroup_db_dbgroup_user_id
+    unique: false
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        label: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbgroup_label
+    unique: false
+  - column_names:
+    - type_string
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        type_string: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbgroup_type_string
+    unique: false
+  - column_names:
+    - label
+    - type_string
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbgroup_label_type_string
+    include_columns: []
+    name: uq_db_dbgroup_label_type_string
+    unique: true
+  - column_names:
+    - uuid
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbgroup_uuid
+    include_columns: []
+    name: uq_db_dbgroup_uuid
+    unique: true
+  db_dbgroup_dbnodes:
+  - column_names:
+    - dbgroup_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbgroup_id
+    unique: false
+  - column_names:
+    - dbnode_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbnode_id
+    unique: false
+  - column_names:
+    - dbgroup_id
+    - dbnode_id
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
+    include_columns: []
+    name: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
+    unique: true
+  db_dblink:
+  - column_names:
+    - input_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dblink_db_dblink_input_id
+    unique: false
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dblink_db_dblink_label
+    unique: false
+  - column_names:
+    - output_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dblink_db_dblink_output_id
+    unique: false
+  - column_names:
+    - type
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dblink_db_dblink_type
+    unique: false
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        label: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dblink_label
+    unique: false
+  - column_names:
+    - type
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        type: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dblink_type
+    unique: false
+  db_dblog:
+  - column_names:
+    - dbnode_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dblog_db_dblog_dbnode_id
+    unique: false
+  - column_names:
+    - levelname
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dblog_db_dblog_levelname
+    unique: false
+  - column_names:
+    - loggername
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dblog_db_dblog_loggername
+    unique: false
+  - column_names:
+    - levelname
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        levelname: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dblog_levelname
+    unique: false
+  - column_names:
+    - loggername
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        loggername: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dblog_loggername
+    unique: false
+  - column_names:
+    - uuid
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dblog_uuid
+    include_columns: []
+    name: uq_db_dblog_uuid
+    unique: true
+  db_dbnode:
+  - column_names:
+    - ctime
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbnode_db_dbnode_ctime
+    unique: false
+  - column_names:
+    - dbcomputer_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbnode_db_dbnode_dbcomputer_id
+    unique: false
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbnode_db_dbnode_label
+    unique: false
+  - column_names:
+    - mtime
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbnode_db_dbnode_mtime
+    unique: false
+  - column_names:
+    - node_type
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbnode_db_dbnode_node_type
+    unique: false
+  - column_names:
+    - process_type
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbnode_db_dbnode_process_type
+    unique: false
+  - column_names:
+    - user_id
+    dialect_options:
+      postgresql_include: []
+    include_columns: []
+    name: ix_db_dbnode_db_dbnode_user_id
+    unique: false
+  - column_names:
+    - label
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        label: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbnode_label
+    unique: false
+  - column_names:
+    - node_type
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        node_type: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbnode_node_type
+    unique: false
+  - column_names:
+    - process_type
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        process_type: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbnode_process_type
+    unique: false
+  - column_names:
+    - uuid
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbnode_uuid
+    include_columns: []
+    name: uq_db_dbnode_uuid
+    unique: true
+  db_dbsetting:
+  - column_names:
+    - key
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        key: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbsetting_key
+    unique: false
+  - column_names:
+    - key
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbsetting_key
+    include_columns: []
+    name: uq_db_dbsetting_key
+    unique: true
+  db_dbuser:
+  - column_names:
+    - email
+    dialect_options:
+      postgresql_include: []
+      postgresql_ops:
+        email: varchar_pattern_ops
+    include_columns: []
+    name: ix_pat_db_dbuser_email
+    unique: false
+  - column_names:
+    - email
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbuser_email
+    include_columns: []
+    name: uq_db_dbuser_email
+    unique: true

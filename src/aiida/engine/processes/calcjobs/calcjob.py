@@ -15,8 +15,8 @@ import io
 import json
 import os
 import shutil
+import typing as t
 from collections.abc import Hashable
-from typing import Any
 
 from aiida import orm
 from aiida.common import AttributeDict, exceptions
@@ -37,7 +37,7 @@ from aiida.engine.processes.process_spec import CalcJobProcessSpec
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs: Any, ctx: PortNamespace) -> str | None:
+def validate_calc_job(inputs: t.Any, ctx: PortNamespace) -> str | None:
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -113,7 +113,7 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> str | None:
     return None
 
 
-def validate_unstash_options(unstash_options: Any, _: Any) -> str | None:
+def validate_unstash_options(unstash_options: t.Any, _: t.Any) -> str | None:
     """Validate the ``unstash`` options."""
     from aiida.common.datastructures import UnstashTargetMode
 
@@ -137,7 +137,7 @@ def validate_unstash_options(unstash_options: Any, _: Any) -> str | None:
     return None
 
 
-def validate_stash_options(stash_options: Any, _: Any) -> str | None:
+def validate_stash_options(stash_options: t.Any, _: t.Any) -> str | None:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
     from aiida.transports.transport import has_magic
@@ -195,7 +195,7 @@ def validate_stash_options(stash_options: Any, _: Any) -> str | None:
     return None
 
 
-def validate_monitors(monitors: Any, _: PortNamespace) -> str | None:
+def validate_monitors(monitors: t.Any, _: PortNamespace) -> str | None:
     """Validate the ``monitors`` input namespace."""
     for key, monitor_node in monitors.items():
         try:
@@ -205,7 +205,7 @@ def validate_monitors(monitors: Any, _: PortNamespace) -> str | None:
     return None
 
 
-def validate_parser(parser_name: Any, _: PortNamespace) -> str | None:
+def validate_parser(parser_name: t.Any, _: PortNamespace) -> str | None:
     """Validate the parser.
 
     :return: string with error message in case the inputs are invalid
@@ -220,7 +220,7 @@ def validate_parser(parser_name: Any, _: PortNamespace) -> str | None:
     return None
 
 
-def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> str | None:
+def validate_additional_retrieve_list(additional_retrieve_list: t.Any, _: t.Any) -> str | None:
     """Validate the additional retrieve list.
 
     :return: string with error message in case the input is invalid.
@@ -662,7 +662,7 @@ class CalcJob(Process):
         """
         raise NotImplementedError()
 
-    def _setup_version_info(self) -> dict[str, Any]:
+    def _setup_version_info(self) -> dict[str, t.Any]:
         """Store relevant plugin version information."""
         from aiida.plugins.entry_point import format_entry_point_string
         from aiida.plugins.factories import ParserFactory
@@ -934,11 +934,10 @@ class CalcJob(Process):
         :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
 
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.common.datastructures import CodeInfo, CodeRunMode, JobTemplate, JobTemplateCodeInfo
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import AbstractCode, Computer, load_code
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
@@ -951,10 +950,11 @@ class CalcJob(Process):
 
         for code in codes:
             if not code.can_run_on_computer(computer):
-                raise InputValidationError(
+                msg = (
                     f'The selected code {code.pk} for calculation {self.node.pk} '
                     f'cannot run on computer {computer.label}'
                 )
+                raise InputValidationError(msg)
 
             code.validate_working_directory(folder)
 
@@ -1162,7 +1162,8 @@ class CalcJob(Process):
         def encoder(obj):
             if dataclasses.is_dataclass(obj):
                 return dataclasses.asdict(obj)  # type: ignore[arg-type]
-            raise TypeError(f' {obj!r} is not JSON serializable')
+            msg = f' {obj!r} is not JSON serializable'
+            raise TypeError(msg)
 
         subfolder = folder.get_subfolder('.aiida', create=True)
         subfolder.create_file_from_filelike(
@@ -1182,32 +1183,32 @@ class CalcJob(Process):
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
         except ValidationError as exception:
-            raise PluginInternalError(
-                f'[presubmission of calc {this_pk}] local_copy_list format problem: {exception}'
-            ) from exception
+            msg = f'[presubmission of calc {this_pk}] local_copy_list format problem: {exception}'
+            raise PluginInternalError(msg) from exception
 
         remote_copy_list = calc_info.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
         except ValidationError as exception:
-            raise PluginInternalError(
-                f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exception}'
-            ) from exception
+            msg = f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exception}'
+            raise PluginInternalError(msg) from exception
 
         for remote_computer_uuid, _, dest_rel_path in remote_copy_list:
             try:
                 Computer.collection.get(uuid=remote_computer_uuid)
             except exceptions.NotExistent as exception:
-                raise PluginInternalError(
+                msg = (
                     f'[presubmission of calc {this_pk}] '
                     f'The remote copy requires a computer with UUID={remote_computer_uuid}'
                     'but no such computer was found in the '
                     'database'
-                ) from exception
+                )
+                raise PluginInternalError(msg) from exception
             if os.path.isabs(dest_rel_path):
-                raise PluginInternalError(
+                msg = (
                     f'[presubmission of calc {this_pk}] The destination path of the remote copy is absolute! '
                     f'({dest_rel_path})'
                 )
+                raise PluginInternalError(msg)
 
         return calc_info

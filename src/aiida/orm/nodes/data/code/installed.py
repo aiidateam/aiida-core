@@ -17,7 +17,7 @@ using an ``InstalledCode``, it will run its executable on the associated compute
 from __future__ import annotations
 
 import pathlib
-from typing import cast
+import typing as t
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -43,7 +43,7 @@ class InstalledCode(Code):
         filepath_executable: str = OrmMetadataField(
             title='Filepath executable',
             description='Filepath of the executable on the remote computer',
-            orm_to_model=lambda node: str(cast(InstalledCode, node).filepath_executable),
+            orm_to_model=lambda node: str(t.cast(InstalledCode, node).filepath_executable),
             short_name='-X',
             priority=1,
         )
@@ -57,15 +57,15 @@ class InstalledCode(Code):
             short_name='-Y',
             priority=2,
             write_only=True,
-            model_to_orm=lambda model: load_computer(cast(InstalledCode.ReadModel, model).computer),
-            orm_to_model=lambda node: cast(InstalledCode, node).computer.label,
+            model_to_orm=lambda model: load_computer(t.cast(InstalledCode.ReadModel, model).computer),
+            orm_to_model=lambda node: t.cast(InstalledCode, node).computer.label,
         )
 
     class ReadModel(AbstractCode.ReadModel):
         computer: int = OrmMetadataField(
             title='Computer',
             description='The pk of the remote computer on which the executable resides',
-            orm_to_model=lambda node: cast(InstalledCode, node).computer.pk,
+            orm_to_model=lambda node: t.cast(InstalledCode, node).computer.pk,
             orm_class=Computer,
         )
 
@@ -128,9 +128,8 @@ class InstalledCode(Code):
             ) from exception
 
         if not file_exists:
-            raise exceptions.ValidationError(
-                f'The provided remote absolute path `{self.filepath_executable}` does not exist on the computer.'
-            )
+            msg = f'The provided remote absolute path `{self.filepath_executable}` does not exist on the computer.'
+            raise exceptions.ValidationError(msg)
 
         if not user_has_execute:
             execute_msg = (

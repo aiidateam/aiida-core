@@ -18,7 +18,6 @@ import signal
 import typing as t
 from inspect import get_annotations
 from types import UnionType
-from typing import TYPE_CHECKING, ParamSpec
 
 import docstring_parser
 
@@ -41,7 +40,7 @@ from aiida.orm import (
 )
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
 
 __all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
@@ -51,7 +50,7 @@ LOGGER = logging.getLogger(__name__)
 FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])
 
 
-P = ParamSpec('P')
+P = t.ParamSpec('P')
 R_co = t.TypeVar('R_co', covariant=True)
 N = t.TypeVar('N', bound=ProcessNode)
 
@@ -169,7 +168,8 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
 
             # If any kwargs remain, the spec should be dynamic, so we raise if it isn't
             if kwargs and not process_class.spec().inputs.dynamic:
-                raise ValueError(f'{function.__name__} does not support these kwargs: {kwargs.keys()}')
+                msg = f'{function.__name__} does not support these kwargs: {kwargs.keys()}'
+                raise ValueError(msg)
 
             process: Process = process_class(inputs=inputs, runner=runner)
 
@@ -448,7 +448,8 @@ class FunctionProcess(Process):
         # be completely lost. If the function supports variadic arguments, however, additional args should be accepted.
         if nargs > nparameters and cls._var_positional is None:
             name = cls._func.__name__
-            raise TypeError(f'{name}() takes {nparameters} positional arguments but {nargs} were given')
+            msg = f'{name}() takes {nparameters} positional arguments but {nargs} were given'
+            raise TypeError(msg)
 
     @classmethod
     def create_inputs(cls, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
@@ -474,11 +475,12 @@ class FunctionProcess(Process):
                 for index, arg in enumerate(arguments):
                     label = f'{cls._var_positional}_{index}'
                     if label in inputs:
-                        raise RuntimeError(
+                        msg = (
                             f'variadic argument with index `{index}` would get the label `{label}` but this is already '
                             'in use by another function argument with the exact same name. To avoid this error, please '
                             f'change the name of argument `{label}` to something else.'
                         )
+                        raise RuntimeError(msg)
                     inputs[label] = arg
 
         return inputs
@@ -568,9 +570,10 @@ class FunctionProcess(Process):
             for name, value in result.items():
                 self.out(name, value)
         else:
-            raise TypeError(
+            msg = (  # type: ignore[unreachable]
                 f"Function process returned an output with unsupported type '{result.__class__}'\n"
                 'Must be a Data type or a mapping of {string: Data}'
             )
+            raise TypeError(msg)
 
         return ExitCode()

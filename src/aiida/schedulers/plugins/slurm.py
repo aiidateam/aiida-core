@@ -20,10 +20,10 @@ import typing as t
 
 from typing_extensions import override
 
+from aiida.common.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 from aiida.common.exceptions import FeatureNotAvailable
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
@@ -360,10 +360,11 @@ class SlurmScheduler(BashCliScheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
+                msg = (
                     'max_wallclock_seconds must be a positive integer (in seconds)! '
                     f"It is instead '{job_tmpl.max_wallclock_seconds}'"
                 )
+                raise ValueError(msg)
             days = tot_secs // 86400
             tot_hours = tot_secs % 86400
             hours = tot_hours // 3600
@@ -382,9 +383,8 @@ class SlurmScheduler(BashCliScheduler):
                 if physical_memory_kb < 0:  # 0 is allowed and means no limit (https://slurm.schedmd.com/sbatch.html)
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    f'max_memory_kb must be a non-negative integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
-                )
+                msg = f'max_memory_kb must be a non-negative integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
+                raise ValueError(msg)
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.
             lines.append(f'#SBATCH --mem={physical_memory_kb // 1024}')
@@ -425,7 +425,8 @@ class SlurmScheduler(BashCliScheduler):
             if 'Invalid account' in stderr:
                 return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT  # type: ignore[no-any-return]
 
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+            msg = f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+            raise SchedulerError(msg)
 
         try:
             transport_string = f' for {self.transport}'
@@ -468,11 +469,10 @@ class SlurmScheduler(BashCliScheduler):
 
         # See discussion in _get_joblist_command on how we ensure that AiiDA can expect exit code 0 here.
         if retval != 0:
-            raise SchedulerError(
-                f"""squeue returned exit code {retval} (_parse_joblist_output function)
+            msg = f"""squeue returned exit code {retval} (_parse_joblist_output function)
 stdout='{stdout.strip()}'
 stderr='{stderr.strip()}'"""
-            )
+            raise SchedulerError(msg)
         if stderr.strip():
             self.logger.warning(
                 f"squeue returned exit code 0 (_parse_joblist_output function) but non-empty stderr='{stderr.strip()}'"
@@ -742,10 +742,11 @@ stderr='{stderr.strip()}'"""
             attributes = lines[1].split('|')
 
             if len(fields) != len(attributes):
-                raise ValueError(
+                msg = (
                     'first and second line in `detailed_job_info.stdout` differ in length: '
                     f'{len(fields)} vs {len(attributes)}'
                 )
+                raise ValueError(msg)
 
             data = dict(zip(fields, attributes))
 

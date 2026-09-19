@@ -75,16 +75,16 @@ def get_pseudos_from_structure(structure, family_name):
     for node in family.nodes:
         if isinstance(node, UpfData):
             if node.element in family_pseudos:
-                raise MultipleObjectsError(
-                    f'More than one UPF for element {node.element} found in family {family_name}'
-                )
+                msg = f'More than one UPF for element {node.element} found in family {family_name}'
+                raise MultipleObjectsError(msg)
             family_pseudos[node.element] = node
 
     for kind in structure.kinds:
         try:
             pseudo_list[kind.name] = family_pseudos[kind.symbol]
         except KeyError:
-            raise NotExistent(f'No UPF for element {kind.symbol} found in family {family_name}')
+            msg = f'No UPF for element {kind.symbol} found in family {family_name}'
+            raise NotExistent(msg)
 
     return pseudo_list
 
@@ -129,11 +129,12 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
         group, group_created = orm.UpfFamily.collection.get_or_create(label=group_label, user=default_user)
 
     if group.user.email != default_user.email:
-        raise UniquenessError(
+        msg = (
             f'There is already a UpfFamily group with label {group_label}'
             f', but it belongs to user {group.user.email}, therefore you '
             'cannot modify it'
         )
+        raise UniquenessError(msg)
 
     # Always update description, even if the group already existed
     group.description = group_description
@@ -156,7 +157,8 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
             pseudo_and_created.append((pseudo, created))
         else:
             if stop_if_existing:
-                raise ValueError(f'A UPF with identical MD5 to  {filename} cannot be added with stop_if_existing')
+                msg = f'A UPF with identical MD5 to  {filename} cannot be added with stop_if_existing'
+                raise ValueError(msg)
             pseudo_and_created.append((existing_upf, False))
 
     # check whether pseudo are unique per element
@@ -177,7 +179,8 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     if not len(elements_names) == len(set(elements_names)):
         duplicates = {x for x in elements_names if elements_names.count(x) > 1}
         duplicates_string = ', '.join(i for i in duplicates)
-        raise UniquenessError(f'More than one UPF found for the elements: {duplicates_string}.')
+        msg = f'More than one UPF found for the elements: {duplicates_string}.'
+        raise UniquenessError(msg)
 
         # At this point, save the group, if still unstored
     if group_created:
@@ -256,15 +259,18 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
             element = match.group('element_name')
 
     if element is None:
-        raise ParsingError(f'Unable to find the element of UPF {fname}')
+        msg = f'Unable to find the element of UPF {fname}'
+        raise ParsingError(msg)
     element = element.capitalize()
     if element not in _valid_symbols:
-        raise ParsingError(f'Unknown element symbol {element} for file {fname}')
+        msg = f'Unknown element symbol {element} for file {fname}'
+        raise ParsingError(msg)
     if check_filename:
         if not os.path.basename(fname).lower().startswith(element.lower()):
-            raise ParsingError(
+            msg = (
                 f'Filename {fname} was recognized for element {element}, but the filename does not start with {element}'
             )
+            raise ParsingError(msg)
 
     parsed_data['element'] = element
 
@@ -342,7 +348,8 @@ class UpfData(SinglefileData):
         try:
             element = parsed_data['element']
         except KeyError:
-            raise ParsingError(f'Could not parse the element from the UPF file {self.filename}')
+            msg = f'Could not parse the element from the UPF file {self.filename}'
+            raise ParsingError(msg)
 
         self.base.attributes.set('element', str(element))
         self.base.attributes.set('md5', md5)
@@ -384,7 +391,8 @@ class UpfData(SinglefileData):
         try:
             element = parsed_data['element']
         except KeyError:
-            raise ParsingError(f"No 'element' parsed in the UPF file {self.filename}; unable to store")
+            msg = f"No 'element' parsed in the UPF file {self.filename}; unable to store"
+            raise ParsingError(msg)
 
         super().set_file(file, filename=filename)
 
@@ -438,7 +446,8 @@ class UpfData(SinglefileData):
         try:
             element = parsed_data['element']
         except KeyError:
-            raise ValidationError(f"No 'element' could be parsed in the UPF {self.filename}")
+            msg = f"No 'element' could be parsed in the UPF {self.filename}"
+            raise ValidationError(msg)
 
         try:
             attr_element = self.base.attributes.get('element')
@@ -451,10 +460,12 @@ class UpfData(SinglefileData):
             raise ValidationError("attribute 'md5' not set.")
 
         if attr_element != element:
-            raise ValidationError(f"Attribute 'element' says '{attr_element}' but '{element}' was parsed instead.")
+            msg = f"Attribute 'element' says '{attr_element}' but '{element}' was parsed instead."
+            raise ValidationError(msg)
 
         if attr_md5 != md5:
-            raise ValidationError(f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead.")
+            msg = f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead."
+            raise ValidationError(msg)
 
     def _prepare_upf(self, main_file_name=''):
         """Return UPF content."""

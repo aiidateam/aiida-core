@@ -93,13 +93,11 @@ class AutogroupManager:
         for string in strings:
             pieces = string.split(':')
             if len(pieces) != 2:
-                raise exceptions.ValidationError(
-                    f"'{string}' is not a valid include/exclude filter, must contain two parts split by a colon"
-                )
+                msg = f"'{string}' is not a valid include/exclude filter, must contain two parts split by a colon"
+                raise exceptions.ValidationError(msg)
             if pieces[0] not in valid_prefixes:
-                raise exceptions.ValidationError(
-                    f"'{string}' has an invalid prefix, must be among: {sorted(valid_prefixes)}"
-                )
+                msg = f"'{string}' has an invalid prefix, must be among: {sorted(valid_prefixes)}"
+                raise exceptions.ValidationError(msg)
 
     def set_exclude(self, exclude: list[str] | str | None) -> None:
         """Set the list of classes to exclude in the autogrouping.

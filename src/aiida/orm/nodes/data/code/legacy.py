@@ -225,7 +225,8 @@ class Code(AbstractCode):
             query.append(Computer, filters={'label': machinename}, with_node='code')
 
         if query.count() == 0:
-            raise NotExistent(f"'{label}' is not a valid code label.")
+            msg = f"'{label}' is not a valid code label."
+            raise NotExistent(msg)
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
@@ -235,7 +236,8 @@ class Code(AbstractCode):
         else:
             result = query.first()
             if not result:
-                raise NotExistent(f"code '{label}' does not exist.")
+                msg = f"code '{label}' does not exist."
+                raise NotExistent(msg)
 
             return result[0]
 
@@ -262,9 +264,11 @@ class Code(AbstractCode):
             try:
                 return load_code(pk=code_int)
             except exceptions.NotExistent:
-                raise ValueError(f'{pk} is not valid code pk')
+                msg = f'{pk} is not valid code pk'
+                raise ValueError(msg)
             except exceptions.MultipleObjectsError:
-                raise exceptions.MultipleObjectsError(f"More than one code in the DB with pk='{pk}'!")
+                msg = f"More than one code in the DB with pk='{pk}'!"
+                raise exceptions.MultipleObjectsError(msg)
 
         # check if label (and machinename) is provided
         elif label is not None:
@@ -306,9 +310,11 @@ class Code(AbstractCode):
         try:
             return cls.get_code_helper(label, machinename)
         except NotExistent:
-            raise NotExistent(f'{code_string} could not be resolved to a valid code label')
+            msg = f'{code_string} could not be resolved to a valid code label'
+            raise NotExistent(msg)
         except MultipleObjectsError:
-            raise MultipleObjectsError(f'{code_string} could not be uniquely resolved')
+            msg = f'{code_string} could not be uniquely resolved'
+            raise MultipleObjectsError(msg)
 
     @classmethod
     def list_for_plugin(cls, plugin, labels=True, backend=None):
@@ -345,9 +351,8 @@ class Code(AbstractCode):
                     'You have to set which file is the local executable using the set_exec_filename() method'
                 )
             if self.get_local_executable() not in self.base.repository.list_object_names():
-                raise exceptions.ValidationError(
-                    f"The local executable '{self.get_local_executable()}' is not in the list of files of this code"
-                )
+                msg = f"The local executable '{self.get_local_executable()}' is not in the list of files of this code"
+                raise exceptions.ValidationError(msg)
         else:
             if self.base.repository.list_object_names():
                 raise exceptions.ValidationError('The code is remote but it has files inside')
@@ -386,9 +391,8 @@ class Code(AbstractCode):
             )
 
         if not file_exists:
-            raise exceptions.ValidationError(
-                f'the provided remote absolute path `{filepath}` does not exist on the computer.'
-            )
+            msg = f'the provided remote absolute path `{filepath}` does not exist on the computer.'
+            raise exceptions.ValidationError(msg)
 
     def set_prepend_text(self, code):
         """Pass a string of code that will be put in the scheduler script before the

@@ -8,9 +8,9 @@
 ###########################################################################
 """Import an archive."""
 
+import typing as t
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal
 
 from tabulate import tabulate
 
@@ -36,13 +36,13 @@ __all__ = ('import_archive',)
 
 IMPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 
-MergeExtrasType = tuple[Literal['k', 'n'], Literal['c', 'n'], Literal['l', 'u', 'd']]
+MergeExtrasType = tuple[t.Literal['k', 'n'], t.Literal['c', 'n'], t.Literal['l', 'u', 'd']]
 MergeExtraDescs = (
     {'k': '(k)eep', 'n': 'do (n)ot keep'},
     {'c': '(c)reate', 'n': 'do (n)ot create'},
     {'l': '(l)eave existing', 'u': '(u)pdate with new', 'd': '(d)elete'},
 )
-MergeCommentsType = Literal['leave', 'newest', 'overwrite']
+MergeCommentsType = t.Literal['leave', 'newest', 'overwrite']
 
 DUPLICATE_LABEL_MAX = 100
 DUPLICATE_LABEL_TEMPLATE = '{0} (Imported #{1})'
@@ -109,7 +109,8 @@ def import_archive(
     if not (merge_extras[0] in ['k', 'n'] and merge_extras[1] in ['c', 'n'] and merge_extras[2] in ['l', 'u', 'd']):
         raise ValueError('merge_extras contains invalid values')
     if merge_comments not in ('leave', 'newest', 'overwrite'):
-        raise ValueError(f'merge_comments not in {("leave", "newest", "overwrite")!r}')
+        msg = f'merge_comments not in {("leave", "newest", "overwrite")!r}'
+        raise ValueError(msg)
     type_check(group, orm.Group, allow_none=True)
     type_check(test_run, bool)
     backend = backend or get_manager().get_profile_storage()
@@ -123,10 +124,11 @@ def import_archive(
     # i.e. its not whether the version is the latest that matters, it is that it is compatible with the backend version
     # its a bit weird at the moment because django/sqlalchemy have different versioning
     if not archive_format.read_version(path) == archive_format.latest_version:
-        raise IncompatibleStorageSchema(
+        msg = (
             f'The archive version {archive_format.read_version(path)!r} '
             f'is not the latest version {archive_format.latest_version!r}'
         )
+        raise IncompatibleStorageSchema(msg)
 
     IMPORT_LOGGER.report(
         str(
@@ -348,9 +350,8 @@ def _import_computers(
                         data['label'] = new_label
                         break
                 else:
-                    raise ImportUniquenessError(
-                        f'Archive Computer {pk} has existing label {data["label"]!r} and re-labelling failed'
-                    )
+                    msg = f'Archive Computer {pk} has existing label {data["label"]!r} and re-labelling failed'
+                    raise ImportUniquenessError(msg)
                 nonlocal relabelled
                 relabelled += 1
             labels.add(data['label'])
@@ -400,7 +401,8 @@ def _import_authinfos(
             for _, _user_id, _comp_id in input_id_user_comp
         ]
     except KeyError as exception:
-        raise ImportValidationError(f'Archive AuthInfo has unknown User/Computer: {exception}')
+        msg = f'Archive AuthInfo has unknown User/Computer: {exception}'
+        raise ImportValidationError(msg)
 
     # retrieve existing user_id / computer_id
     backend_id_user_comp = []
@@ -529,12 +531,14 @@ class NodeTransform:
         try:
             data['user_id'] = self.user_ids_archive_backend[data['user_id']]
         except KeyError as exc:
-            raise ImportValidationError(f'Archive Node {pk} has unknown User: {exc}')
+            msg = f'Archive Node {pk} has unknown User: {exc}'
+            raise ImportValidationError(msg)
         if data['dbcomputer_id'] is not None:
             try:
                 data['dbcomputer_id'] = self.computer_ids_archive_backend[data['dbcomputer_id']]
             except KeyError as exc:
-                raise ImportValidationError(f'Archive Node {pk} has unknown Computer: {exc}')
+                msg = f'Archive Node {pk} has unknown Computer: {exc}'
+                raise ImportValidationError(msg)
         if self.import_new_extras:
             # Remove node hashing and other aiida "private" extras
             data['extras'] = {k: v for k, v in data['extras'].items() if not k.startswith('_aiida_')}
@@ -586,7 +590,8 @@ def _import_logs(
             try:
                 data['dbnode_id'] = node_ids_archive_backend[data['dbnode_id']]
             except KeyError as exc:
-                raise ImportValidationError(f'Archive Log {pk} has unknown Node: {exc}')
+                msg = f'Archive Log {pk} has unknown Node: {exc}'
+                raise ImportValidationError(msg)
             return data
 
         _add_new_entities(
@@ -657,16 +662,16 @@ def _merge_node_extras(
     IMPORT_LOGGER.report(f'Merging {num_existing} existing Node extras')
 
     if not input_extras.count() == backend_extras.count():
-        raise ImportValidationError(
-            f'Number of Nodes in archive ({input_extras.count()}) and backend ({backend_extras.count()}) do not match'
-        )
+        msg = f'Number of Nodes in archive ({input_extras.count()}) and backend ({backend_extras.count()}) do not match'
+        raise ImportValidationError(msg)
 
-    def _transform(data: tuple[Any, Any]) -> dict:
+    def _transform(data: tuple[t.Any, t.Any]) -> dict:
         """Transform the new and existing extras into a dict that can be passed to bulk_update."""
         new_uuid, new_extras = data[0]
         old_uuid, old_extras = data[1]
         if new_uuid != old_uuid:
-            raise ImportValidationError(f'UUID mismatch when merging node extras: {new_uuid} != {old_uuid}')
+            msg = f'UUID mismatch when merging node extras: {new_uuid} != {old_uuid}'
+            raise ImportValidationError(msg)
         backend_id = backend_uuid_id[new_uuid]
         old_keys = set(old_extras.keys())
         new_keys = set(new_extras.keys())
@@ -695,16 +700,14 @@ def _merge_node_extras(
             for key in old_keys_only:
                 final_extras[key] = old_extras[key]
         elif mode[0] != 'n':
-            raise ImportValidationError(
-                f"Unknown first letter of the update extras mode: '{mode}'. Should be either 'k' or 'n'"
-            )
+            msg = f"Unknown first letter of the update extras mode: '{mode}'. Should be either 'k' or 'n'"  # type: ignore[unreachable]
+            raise ImportValidationError(msg)
         if mode[1] == 'c':
             for key in new_keys_only:
                 final_extras[key] = new_extras[key]
         elif mode[1] != 'n':
-            raise ImportValidationError(
-                f"Unknown second letter of the update extras mode: '{mode}'. Should be either 'c' or 'n'"
-            )
+            msg = f"Unknown second letter of the update extras mode: '{mode}'. Should be either 'c' or 'n'"  # type: ignore[unreachable]
+            raise ImportValidationError(msg)
         if mode[2] == 'u':
             for key in collided_keys:
                 final_extras[key] = new_extras[key]
@@ -712,9 +715,8 @@ def _merge_node_extras(
             for key in collided_keys:
                 final_extras[key] = old_extras[key]
         elif mode[2] != 'd':
-            raise ImportValidationError(
-                f"Unknown third letter of the update extras mode: '{mode}'. Should be one of 'u'/'l'/'a'/'d'"
-            )
+            msg = f"Unknown third letter of the update extras mode: '{mode}'. Should be one of 'u'/'l'/'a'/'d'"  # type: ignore[unreachable]
+            raise ImportValidationError(msg)
         return {'id': backend_id, 'extras': final_extras}
 
     with get_progress_reporter()(desc='Merging extras', total=input_extras.count()) as progress:
@@ -749,11 +751,13 @@ class CommentTransform:
         try:
             data['user_id'] = self.user_ids_archive_backend[data['user_id']]
         except KeyError as exc:
-            raise ImportValidationError(f'Archive Comment {pk} has unknown User: {exc}')
+            msg = f'Archive Comment {pk} has unknown User: {exc}'
+            raise ImportValidationError(msg)
         try:
             data['dbnode_id'] = self.node_ids_archive_backend[data['dbnode_id']]
         except KeyError as exc:
-            raise ImportValidationError(f'Archive Comment {pk} has unknown Node: {exc}')
+            msg = f'Archive Comment {pk} has unknown Node: {exc}'
+            raise ImportValidationError(msg)
         return data
 
 
@@ -821,7 +825,8 @@ def _import_comments(
                     progress.update(nrows)
 
         else:
-            raise ImportValidationError(f'Unknown merge_comments value: {merge_comments}.')
+            msg = f'Unknown merge_comments value: {merge_comments}.'  # type: ignore[unreachable]
+            raise ImportValidationError(msg)
     if new_comments:
         # add new comments and update backend_uuid_id with their uuid -> id mapping
         _add_new_entities(
@@ -924,11 +929,13 @@ def _import_links(
                 try:
                     in_id = node_ids_archive_backend[in_id]  # noqa: PLW2901
                 except KeyError as exc:
-                    raise ImportValidationError(f'Archive Link {link_id} has unknown input Node: {exc}')
+                    msg = f'Archive Link {link_id} has unknown input Node: {exc}'
+                    raise ImportValidationError(msg)
                 try:
                     out_id = node_ids_archive_backend[out_id]  # noqa: PLW2901
                 except KeyError as exc:
-                    raise ImportValidationError(f'Archive Link {link_id} has unknown output Node: {exc}')
+                    msg = f'Archive Link {link_id} has unknown output Node: {exc}'
+                    raise ImportValidationError(msg)
 
                 # skip existing links
                 if (in_id, out_id, link_label) in existing_links:
@@ -937,23 +944,23 @@ def _import_links(
 
                 # validation
                 if in_id == out_id:
-                    raise ImportValidationError(f'Cannot add a link to oneself: {in_id}')
+                    msg = f'Cannot add a link to oneself: {in_id}'
+                    raise ImportValidationError(msg)
                 if not in_type.startswith(allowed_in_type):
-                    raise ImportValidationError(
-                        f'Cannot add a {link_type.value!r} link from {in_type} (link {link_id})'
-                    )
+                    msg = f'Cannot add a {link_type.value!r} link from {in_type} (link {link_id})'
+                    raise ImportValidationError(msg)
                 if not out_type.startswith(allowed_out_type):
-                    raise ImportValidationError(f'Cannot add a {link_type.value!r} link to {out_type} (link {link_id})')
+                    msg = f'Cannot add a {link_type.value!r} link to {out_type} (link {link_id})'
+                    raise ImportValidationError(msg)
                 if 'in_id_label' in link_uniqueness and (in_id, link_label) in existing_in_id_label:
-                    raise ImportUniquenessError(
-                        f'Node {in_id} already has an outgoing {link_type.value!r} link with label {link_label!r}'
-                    )
+                    msg = f'Node {in_id} already has an outgoing {link_type.value!r} link with label {link_label!r}'
+                    raise ImportUniquenessError(msg)
                 if 'out_id' in link_uniqueness and out_id in existing_out_id:
-                    raise ImportUniquenessError(f'Node {out_id} already has an incoming {link_type.value!r} link')
+                    msg = f'Node {out_id} already has an incoming {link_type.value!r} link'
+                    raise ImportUniquenessError(msg)
                 if 'out_id_label' in link_uniqueness and (out_id, link_label) in existing_out_id_label:
-                    raise ImportUniquenessError(
-                        f'Node {out_id} already has an incoming {link_type.value!r} link with label {link_label!r}'
-                    )
+                    msg = f'Node {out_id} already has an incoming {link_type.value!r} link with label {link_label!r}'
+                    raise ImportUniquenessError(msg)
 
                 # update variables
                 new_count += 1
@@ -1001,7 +1008,8 @@ class GroupTransform:
         try:
             data['user_id'] = self.user_ids_archive_backend[data['user_id']]
         except KeyError as exc:
-            raise ImportValidationError(f'Archive Group {pk} has unknown User: {exc}')
+            msg = f'Archive Group {pk} has unknown User: {exc}'
+            raise ImportValidationError(msg)
         # Labels should be unique, so we create new labels on clashes
         if data['label'] in self.labels:
             for i in range(DUPLICATE_LABEL_MAX):
@@ -1010,9 +1018,8 @@ class GroupTransform:
                     data['label'] = new_label
                     break
             else:
-                raise ImportUniquenessError(
-                    f'Archive Group {pk} has existing label {data["label"]!r} and re-labelling failed'
-                )
+                msg = f'Archive Group {pk} has existing label {data["label"]!r} and re-labelling failed'
+                raise ImportUniquenessError(msg)
             self.relabelled += 1
         self.labels.add(data['label'])
         return data
@@ -1094,7 +1101,8 @@ def _import_groups(
                 try:
                     node_id = node_ids_archive_backend[row[1]]
                 except KeyError as exc:
-                    raise ImportValidationError(f'Archive Group {group_id} has unknown Node: {exc}')
+                    msg = f'Archive Group {group_id} has unknown Node: {exc}'
+                    raise ImportValidationError(msg)
                 return {'dbgroup_id': group_id, 'dbnode_id': node_id}
 
             with get_progress_reporter()(desc=f'Adding new {EntityTypes.GROUP_NODE.value}(s)', total=total) as progress:
@@ -1139,7 +1147,8 @@ def _make_import_group(
                     label = new_label
                     break
             else:
-                raise ImportUniquenessError(f'New import Group has existing label {label!r} and re-labelling failed')
+                msg = f'New import Group has existing label {label!r} and re-labelling failed'
+                raise ImportUniquenessError(msg)
         dummy_orm = orm.ImportGroup(label, backend=backend_to)
         row = {
             'label': label,
@@ -1195,9 +1204,8 @@ def _get_new_object_keys(
 
     repository = backend_to.get_repository()
     if not repository.key_format == key_format:
-        raise NotImplementedError(
-            f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
-        )
+        msg = f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
+        raise NotImplementedError(msg)
     new_hashkeys = archive_hashkeys.difference(repository.list_objects())
 
     existing_count = len(archive_hashkeys) - len(new_hashkeys)
@@ -1220,7 +1228,6 @@ def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend,
         for key, handle in repository_from.iter_object_streams(new_keys):
             backend_key = repository_to.put_object_from_filelike(handle)
             if backend_key != key:
-                raise ImportValidationError(
-                    f'Archive repository key is different to backend key: {key!r} != {backend_key!r}'
-                )
+                msg = f'Archive repository key is different to backend key: {key!r} != {backend_key!r}'
+                raise ImportValidationError(msg)
             progress.update()

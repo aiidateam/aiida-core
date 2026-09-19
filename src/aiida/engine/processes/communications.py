@@ -22,9 +22,9 @@ import asyncio
 import functools
 import inspect
 import logging
+import typing as t
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Hashable, Sequence
-from typing import TYPE_CHECKING, Any, cast
 
 from aiida.brokers import communicator as broker_communicator
 from aiida.brokers import exceptions as broker_exceptions
@@ -44,22 +44,22 @@ DeliveryFailed = broker_exceptions.DeliveryFailed
 TaskRejected = broker_exceptions.TaskRejected
 Communicator = broker_communicator.Communicator
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
     from aiida.engine.processes.process import Process as AiidaProcess
 
     # identifiers for subscribers
     ID_TYPE = Hashable
-    Subscriber = Callable[..., Any]
+    Subscriber = Callable[..., t.Any]
     # RPC subscriber params: communicator, msg
-    RpcSubscriber = Callable[[broker_communicator.Communicator, Any], Any]
+    RpcSubscriber = Callable[[broker_communicator.Communicator, t.Any], t.Any]
     # Task subscriber params: communicator, task
-    TaskSubscriber = Callable[[broker_communicator.Communicator, Any], Any]
+    TaskSubscriber = Callable[[broker_communicator.Communicator, t.Any], t.Any]
     # Broadcast subscribers params: communicator, body, sender, subject, correlation id
-    BroadcastSubscriber = Callable[[broker_communicator.Communicator, Any, Any, Any, ID_TYPE], Any]
+    BroadcastSubscriber = Callable[[broker_communicator.Communicator, t.Any, t.Any, t.Any, ID_TYPE], t.Any]
 
 
-def plum_to_kiwi_future(plum_future: futures.Future) -> broker_futures.Future[Any]:
+def plum_to_kiwi_future(plum_future: futures.Future) -> broker_futures.Future[t.Any]:
     """
     Return a kiwi future that resolves to the outcome of the plum future
 
@@ -67,7 +67,7 @@ def plum_to_kiwi_future(plum_future: futures.Future) -> broker_futures.Future[An
     :return: the broker future
 
     """
-    kiwi_future: broker_futures.Future[Any] = broker_futures.Future()
+    kiwi_future: broker_futures.Future[t.Any] = broker_futures.Future()
 
     def on_done(_plum_future: futures.Future) -> None:
         with broker_futures.capture_exceptions(kiwi_future):
@@ -101,22 +101,22 @@ def convert_to_comm(
         # we don't want to go through the (costly) process
         # of setting up async tasks and callbacks
 
-        def _passthrough(*args: Any, **kwargs: Any) -> bool:
+        def _passthrough(*args: t.Any, **kwargs: t.Any) -> bool:
             sender = kwargs['sender'] if 'sender' in kwargs else args[1]
             subject = kwargs['subject'] if 'subject' in kwargs else args[2]
             return callback.is_filtered(sender, subject)
     else:
 
-        def _passthrough(*args: Any, **kwargs: Any) -> bool:
+        def _passthrough(*args: t.Any, **kwargs: t.Any) -> bool:
             return False
 
     coro = ensure_coroutine(callback)
 
     def converted(
-        communicator: broker_communicator.Communicator, *args: Any, **kwargs: Any
-    ) -> broker_futures.Future[Any]:
+        communicator: broker_communicator.Communicator, *args: t.Any, **kwargs: t.Any
+    ) -> broker_futures.Future[t.Any]:
         if _passthrough(*args, **kwargs):
-            kiwi_future: broker_futures.Future[Any] = broker_futures.Future()
+            kiwi_future: broker_futures.Future[t.Any] = broker_futures.Future()
             kiwi_future.set_result(None)
             return kiwi_future
 
@@ -192,15 +192,15 @@ class LoopCommunicator(broker_communicator.Communicator):
     def remove_broadcast_subscriber(self, identifier: ID_TYPE) -> None:
         return self._communicator.remove_broadcast_subscriber(identifier)
 
-    def task_send(self, task: Any, no_reply: bool = False) -> broker_futures.Future[Any] | None:
+    def task_send(self, task: t.Any, no_reply: bool = False) -> broker_futures.Future[t.Any] | None:
         return self._communicator.task_send(task, no_reply)
 
-    def rpc_send(self, recipient_id: ID_TYPE, msg: Any) -> broker_futures.Future:
+    def rpc_send(self, recipient_id: ID_TYPE, msg: t.Any) -> broker_futures.Future:
         return self._communicator.rpc_send(recipient_id, msg)
 
     def broadcast_send(
         self,
-        body: Any | None,
+        body: t.Any | None,
         sender: str | None = None,
         subject: str | None = None,
         correlation_id: ID_TYPE | None = None,
@@ -216,8 +216,8 @@ class LoopCommunicator(broker_communicator.Communicator):
         self._communicator.close()
 
 
-ProcessResult = Any
-ProcessStatus = Any
+ProcessResult = t.Any
+ProcessStatus = t.Any
 
 INTENT_KEY = 'intent'
 MESSAGE_TEXT_KEY = 'message'
@@ -233,7 +233,7 @@ class Intent:
     STATUS: str = 'status'
 
 
-MessageType = dict[str, Any]
+MessageType = dict[str, t.Any]
 
 
 class MessageBuilder:
@@ -294,12 +294,12 @@ LOGGER = logging.getLogger(__name__)
 
 def create_launch_body(
     process_class: type[Process],
-    init_args: Sequence[Any] | None = None,
-    init_kwargs: dict[str, Any] | None = None,
+    init_args: Sequence[t.Any] | None = None,
+    init_kwargs: dict[str, t.Any] | None = None,
     persist: bool = False,
     loader: loaders.ObjectLoader | None = None,
     nowait: bool = True,
-) -> dict[str, Any]:
+) -> dict[str, t.Any]:
     """
     Create a message body for the launch action
 
@@ -328,7 +328,7 @@ def create_launch_body(
     return msg_body
 
 
-def create_continue_body(pid: PID_TYPE, tag: str | None = None, nowait: bool = False) -> dict[str, Any]:
+def create_continue_body(pid: PID_TYPE, tag: str | None = None, nowait: bool = False) -> dict[str, t.Any]:
     """
     Create a message body to continue an existing process
     :param pid: the pid of the existing process
@@ -343,11 +343,11 @@ def create_continue_body(pid: PID_TYPE, tag: str | None = None, nowait: bool = F
 
 def create_create_body(
     process_class: type[Process],
-    init_args: Sequence[Any] | None = None,
-    init_kwargs: dict[str, Any] | None = None,
+    init_args: Sequence[t.Any] | None = None,
+    init_kwargs: dict[str, t.Any] | None = None,
     persist: bool = False,
     loader: loaders.ObjectLoader | None = None,
-) -> dict[str, Any]:
+) -> dict[str, t.Any]:
     """
     Create a message body to create a new process
     :param process_class: the class of the process to launch
@@ -539,8 +539,8 @@ class RemoteProcessController(_ProcessController):
     async def launch_process(
         self,
         process_class: type[Process],
-        init_args: Sequence[Any] | None = None,
-        init_kwargs: dict[str, Any] | None = None,
+        init_args: Sequence[t.Any] | None = None,
+        init_kwargs: dict[str, t.Any] | None = None,
         persist: bool = False,
         loader: loaders.ObjectLoader | None = None,
         nowait: bool = False,
@@ -572,8 +572,8 @@ class RemoteProcessController(_ProcessController):
     async def execute_process(
         self,
         process_class: type[Process],
-        init_args: Sequence[Any] | None = None,
-        init_kwargs: dict[str, Any] | None = None,
+        init_args: Sequence[t.Any] | None = None,
+        init_kwargs: dict[str, t.Any] | None = None,
         loader: loaders.ObjectLoader | None = None,
         nowait: bool = False,
         no_reply: bool = False,
@@ -695,20 +695,20 @@ class RemoteProcessThreadController:
 
     def continue_process(
         self, pid: PID_TYPE, tag: str | None = None, nowait: bool = False, no_reply: bool = False
-    ) -> None | PID_TYPE | ProcessResult:
+    ) -> PID_TYPE | ProcessResult | None:
         message = create_continue_body(pid=pid, tag=tag, nowait=nowait)
         return self.task_send(message, no_reply=no_reply)
 
     def launch_process(
         self,
         process_class: type[Process],
-        init_args: Sequence[Any] | None = None,
-        init_kwargs: dict[str, Any] | None = None,
+        init_args: Sequence[t.Any] | None = None,
+        init_kwargs: dict[str, t.Any] | None = None,
         persist: bool = False,
         loader: loaders.ObjectLoader | None = None,
         nowait: bool = False,
         no_reply: bool = False,
-    ) -> None | PID_TYPE | ProcessResult:
+    ) -> PID_TYPE | ProcessResult | None:
         """
         Launch the process
 
@@ -727,12 +727,12 @@ class RemoteProcessThreadController:
     def execute_process(
         self,
         process_class: type[Process],
-        init_args: Sequence[Any] | None = None,
-        init_kwargs: dict[str, Any] | None = None,
+        init_args: Sequence[t.Any] | None = None,
+        init_kwargs: dict[str, t.Any] | None = None,
         loader: loaders.ObjectLoader | None = None,
         nowait: bool = False,
         no_reply: bool = False,
-    ) -> None | PID_TYPE | ProcessResult:
+    ) -> PID_TYPE | ProcessResult | None:
         """
         Execute a process.  This call will first send a create task and then a continue task over
         the communicator.  This means that if communicator messages are durable then the process
@@ -749,12 +749,12 @@ class RemoteProcessThreadController:
 
         message = create_create_body(process_class, init_args, init_kwargs, persist=True, loader=loader)
 
-        execute_future: broker_futures.Future[Any] = broker_futures.Future()
+        execute_future: broker_futures.Future[t.Any] = broker_futures.Future()
         create_task_future = self._communicator.task_send(message)
         assert create_task_future is not None
         create_future = futures.unwrap_kiwi_future(create_task_future)
 
-        def on_created(_: Any) -> None:
+        def on_created(_: t.Any) -> None:
             with broker_futures.capture_exceptions(execute_future):
                 pid: PID_TYPE = create_future.result()
                 continue_future = self.continue_process(pid, nowait=nowait, no_reply=no_reply)
@@ -767,7 +767,7 @@ class RemoteProcessThreadController:
         create_future.add_done_callback(on_created)
         return execute_future
 
-    def task_send(self, message: Any, no_reply: bool = False) -> Any | None:
+    def task_send(self, message: t.Any, no_reply: bool = False) -> t.Any | None:
         """
         Send a task to be performed using the communicator
 
@@ -813,7 +813,7 @@ class ProcessLauncher:
         self._loop = loop
         self._persister = persister
         self._load_context = load_context if load_context is not None else persistence.CheckpointContext()
-        self._step_tasks: set[asyncio.Task[Any]] = set()
+        self._step_tasks: set[asyncio.Task[t.Any]] = set()
 
         if loader is not None:
             self._loader = loader
@@ -822,7 +822,7 @@ class ProcessLauncher:
             self._loader = loaders.get_object_loader()
 
     async def __call__(
-        self, communicator: broker_communicator.Communicator, task: dict[str, Any]
+        self, communicator: broker_communicator.Communicator, task: dict[str, t.Any]
     ) -> PID_TYPE | ProcessResult:
         """
         Receive a task.
@@ -844,8 +844,8 @@ class ProcessLauncher:
         process_class: str,
         persist: bool,
         nowait: bool,
-        init_args: Sequence[Any] | None = None,
-        init_kwargs: dict[str, Any] | None = None,
+        init_args: Sequence[t.Any] | None = None,
+        init_kwargs: dict[str, t.Any] | None = None,
     ) -> PID_TYPE | ProcessResult:
         """
         Launch the process
@@ -899,7 +899,7 @@ class ProcessLauncher:
 
         # Do not catch exceptions here, because if these operations fail, the continue task should except and bubble up
         saved_state = self._persister.load_checkpoint(pid, tag)
-        proc = cast('Process', saved_state.decode(self._load_context))
+        proc = t.cast('Process', saved_state.decode(self._load_context))
 
         if nowait:
             # XXX: can return a reference and gracefully use task to cancel itself when the upper call stack fails
@@ -917,8 +917,8 @@ class ProcessLauncher:
         _communicator: broker_communicator.Communicator,
         process_class: str,
         persist: bool,
-        init_args: Sequence[Any] | None = None,
-        init_kwargs: dict[str, Any] | None = None,
+        init_args: Sequence[t.Any] | None = None,
+        init_kwargs: dict[str, t.Any] | None = None,
     ) -> PID_TYPE:
         """
         Create the process

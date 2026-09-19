@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import time
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -157,19 +157,40 @@ def test_calc_job_monitors_monitors(monitors, expected):
     assert list(CalcJobMonitors(monitors_full).monitors.keys()) == expected
 
 
+def test_calc_job_monitors_constructor_invalid_value():
+    """Test that monitor values have to be ``Dict`` nodes."""
+    with pytest.raises(TypeError, match=r'at least one value of `monitors` is not a `Dict` node.'):
+        CalcJobMonitors({'invalid': 'value'})
+
+
 def test_calc_job_monitors_process_poll_interval(monkeypatch):
     """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitors.process` method.
 
     Test that the ``minimum_poll_interval`` of the monitors is respected.
     """
     monitors = CalcJobMonitors({'always_kill': Dict({'entry_point': 'core.always_kill', 'minimum_poll_interval': 1})})
+    timestamp = datetime(2026, 1, 1)
+    timestamps = iter(
+        (
+            timestamp,
+            timestamp + timedelta(milliseconds=999),
+            timestamp + timedelta(seconds=1),
+            timestamp + timedelta(seconds=1),
+        )
+    )
+
+    class MockDatetime:
+        @classmethod
+        def now(cls):
+            return next(timestamps)
 
     def always_kill(*args, **kwargs):
         return 'always_kill called'
 
     monkeypatch.setattr(base, 'always_kill', always_kill)
+    monkeypatch.setattr('aiida.engine.processes.calcjobs.monitors.datetime', MockDatetime)
 
-    # First call should simple go through and so raise
+    # First call should simply go through and return a result.
     result = monitors.process(None, None)
     assert isinstance(result, CalcJobMonitorResult)
     assert result.message == 'always_kill called'
@@ -177,9 +198,7 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     # Calling again should skip it since the minimum poll interval has not yet passed
     assert monitors.process(None, None) is None
 
-    time.sleep(1)
-
-    # After the intervalhas passed, it should be called again
+    # After the interval has passed, it should be called again
     result = monitors.process(None, None)
     assert isinstance(result, CalcJobMonitorResult)
     assert result.message == 'always_kill called'

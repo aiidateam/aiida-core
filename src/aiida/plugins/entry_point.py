@@ -13,14 +13,14 @@ from __future__ import annotations
 import enum
 import functools
 import traceback
+import typing as t
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
 from aiida.plugins import factories
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from importlib_metadata import EntryPoint, EntryPoints
 
 __all__ = ('get_entry_points', 'load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
@@ -208,7 +208,8 @@ def parse_entry_point_string(entry_point_string: str) -> tuple[str, str]:
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
     except ValueError as exc:
-        raise ValueError(f'invalid entry_point_string format: {entry_point_string}') from exc
+        msg = f'invalid entry_point_string format: {entry_point_string}'
+        raise ValueError(msg) from exc
 
     return group, name
 
@@ -245,7 +246,7 @@ def get_entry_point_from_string(entry_point_string: str) -> EntryPoint:
     return get_entry_point(group, name)
 
 
-def load_entry_point_from_string(entry_point_string: str) -> Any:
+def load_entry_point_from_string(entry_point_string: str) -> t.Any:
     """Load the class registered for a given entry point string that determines group and name
 
     :param entry_point_string: the entry point string
@@ -260,7 +261,7 @@ def load_entry_point_from_string(entry_point_string: str) -> Any:
     return load_entry_point(group, name)
 
 
-def load_entry_point(group: str, name: str) -> Any:
+def load_entry_point(group: str, name: str) -> t.Any:
     """Load the class registered under the entry point for a given name and group
 
     :param group: the entry point group
@@ -277,7 +278,8 @@ def load_entry_point(group: str, name: str) -> Any:
     try:
         loaded_entry_point = entry_point.load()
     except ImportError:
-        raise LoadingEntryPointError(f"Failed to load entry point '{name}':\n{traceback.format_exc()}")
+        msg = f"Failed to load entry point '{name}':\n{traceback.format_exc()}"
+        raise LoadingEntryPointError(msg)
 
     return loaded_entry_point
 
@@ -320,11 +322,13 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     name = convert_potentially_deprecated_entry_point(group, name)
     found = eps_select(group=group, name=name)
     if name not in found.names:
-        raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
+        msg = f"Entry point '{name}' not found in group '{group}'"
+        raise MissingEntryPointError(msg)
     # If multiple entry points are found and they have different values we raise, otherwise if they all
     # correspond to the same value, we simply return one of them
     if len(found) > 1 and len(set(ep.value for ep in found)) != 1:
-        raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}': {found}")
+        msg = f"Multiple entry points '{name}' found in group '{group}': {found}"
+        raise MultipleEntryPointError(msg)
     return found[name]
 
 

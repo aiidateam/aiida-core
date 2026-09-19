@@ -45,7 +45,8 @@ def validate_positive_number(ctx, param, value):
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
 
-        raise BadParameter(f'{value} is not a valid positive number')
+        msg = f'{value} is not a valid positive number'
+        raise BadParameter(msg)
 
     return value
 
@@ -914,7 +915,8 @@ class Transport(abc.ABC):
             return username.strip()
 
         self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
-        raise OSError(f'Error while executing whoami. Exit code: {retval}')
+        msg = f'Error while executing whoami. Exit code: {retval}'
+        raise OSError(msg)
 
     @abc.abstractmethod
     def path_exists(self, path: TransportPath):
@@ -1619,16 +1621,20 @@ class BlockingTransport(Transport):
         :raises OSError: if root_dir is not a directory
         """
         if not self.isdir(root_dir):
-            raise OSError(f'The relative root {root_dir} does not exist, or is not a directory.')
+            msg = f'The relative root {root_dir} does not exist, or is not a directory.'
+            raise OSError(msg)
 
         if self.isdir(remotedestination):
-            raise OSError(f'The remote destination {remotedestination} is a directory, should include a filename.')
+            msg = f'The remote destination {remotedestination} is a directory, should include a filename.'
+            raise OSError(msg)
 
         if not overwrite and self.path_exists(remotedestination):
-            raise OSError(f'The remote destination {remotedestination} already exists.')
+            msg = f'The remote destination {remotedestination} already exists.'
+            raise OSError(msg)
 
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
-            raise ValueError(f'Unsupported compression format: {type}')
+            msg = f'Unsupported compression format: {type}'
+            raise ValueError(msg)
 
         self.makedirs(Path(remotedestination).parent, ignore_existing=True)
 
@@ -1648,12 +1654,12 @@ class BlockingTransport(Transport):
             if has_magic(source):
                 copy_list = self.glob(source)
                 if not copy_list:
-                    raise OSError(
-                        f'Either the remote path {source} does not exist, or a matching file/folder not found.'
-                    )
+                    msg = f'Either the remote path {source} does not exist, or a matching file/folder not found.'
+                    raise OSError(msg)
             else:
                 if not self.path_exists(source):
-                    raise OSError(f'The remote path {source} does not exist')
+                    msg = f'The remote path {source} does not exist'
+                    raise OSError(msg)
 
                 copy_list.append(source)
 
@@ -1676,7 +1682,8 @@ class BlockingTransport(Transport):
                 f'Problem executing tar. Exit code: {retval}, '
                 f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
-            raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
+            msg = f'Error while creating the tar archive. Exit code: {retval}'
+            raise OSError(msg)
 
     def extract(
         self,
@@ -1705,7 +1712,8 @@ class BlockingTransport(Transport):
             raise NotImplementedError('The overwrite=False is not implemented yet')
 
         if not self.path_exists(remotesource):
-            raise OSError(f'The remote path {remotesource} does not exist')
+            msg = f'The remote path {remotesource} does not exist'
+            raise OSError(msg)
 
         self.makedirs(remotedestination, ignore_existing=True)
 
@@ -1721,7 +1729,8 @@ class BlockingTransport(Transport):
                 f'Problem executing tar. Exit code: {retval}, '
                 f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
-            raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
+            msg = f'Error while extracting the tar archive. Exit code: {retval}'
+            raise OSError(msg)
 
     async def open_async(self):
         """Counterpart to open() that is async."""

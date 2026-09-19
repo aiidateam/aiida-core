@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import functools
 import pathlib
+import typing as t
 import weakref
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Any
 
 from disk_objectstore import Container, backup_utils
 from sqlalchemy import column, insert, update
@@ -34,13 +34,13 @@ from aiida.storage.psql_dos.models import base
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from aiida.storage.utils import _create_smarter_in_clause
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('PsqlDosBackend',)
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
-CONTAINER_DEFAULTS: dict[str, Any] = {
+CONTAINER_DEFAULTS: dict[str, t.Any] = {
     'pack_size_target': 4 * 1024 * 1024 * 1024,
     'loose_prefix_len': 2,
     'hash_type': 'sha256',
@@ -57,17 +57,18 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
     try:
         parts = urlparse(profile.storage_config['repository_uri'])
     except KeyError:
-        raise KeyError(f'invalid profile {profile.name}: `repository_uri` not defined in `storage.config`.')
+        msg = f'invalid profile {profile.name}: `repository_uri` not defined in `storage.config`.'
+        raise KeyError(msg)
 
     if parts.scheme != 'file':
-        raise ConfigurationError(
-            f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
-        )
+        msg = f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
+        raise ConfigurationError(msg)
 
     filepath = pathlib.Path(url2pathname(parts.path))
 
     if not filepath.is_absolute():
-        raise ConfigurationError(f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute')
+        msg = f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute'
+        raise ConfigurationError(msg)
 
     return filepath.expanduser() / 'container'
 
@@ -311,7 +312,7 @@ class PsqlDosBackend(StorageBackend):
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[t.Any, set[t.Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
@@ -351,11 +352,13 @@ class PsqlDosBackend(StorageBackend):
         if allow_defaults:
             for row in rows:
                 if not keys.issuperset(row):
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                    raise IntegrityError(msg)
         else:
             for row in rows:
                 if set(row) != keys:
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} != {keys}'
+                    raise IntegrityError(msg)
         # note for postgresql+psycopg2 we could also use `save_all` + `flush` with minimal performance degradation, see
         # https://docs.sqlalchemy.org/en/14/changelog/migration_14.html#orm-batch-inserts-with-psycopg2-now-batch-statements-with-returning-in-most-cases
         # by contrast, in sqlite, bulk_insert is faster: https://docs.sqlalchemy.org/en/14/faq/performance.html
@@ -370,9 +373,11 @@ class PsqlDosBackend(StorageBackend):
             return None
         for row in rows:
             if 'id' not in row:
-                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+                msg = f"'id' field not given for {entity_type}: {set(row)}"
+                raise IntegrityError(msg)
             if not keys.issuperset(row):
-                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                raise IntegrityError(msg)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)
@@ -440,7 +445,7 @@ class PsqlDosBackend(StorageBackend):
         return convert.get_backend_entity(model, self)
 
     def set_global_variable(
-        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
+        self, key: str, value: str | int | float | None, description: str | None = None, overwrite: bool = True
     ) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
@@ -450,18 +455,20 @@ class PsqlDosBackend(StorageBackend):
                 if overwrite:
                     session.query(DbSetting).filter(DbSetting.key == key).update(dict(val=value))
                 else:
-                    raise ValueError(f'The setting {key} already exists')
+                    msg = f'The setting {key} already exists'
+                    raise ValueError(msg)
             else:
                 session.add(DbSetting(key=key, val=value, description=description or ''))
 
-    def get_global_variable(self, key: str) -> None | str | int | float:
+    def get_global_variable(self, key: str) -> str | int | float | None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()
             if setting is None:
-                raise KeyError(f'No setting found with key {key}')
+                msg = f'No setting found with key {key}'
+                raise KeyError(msg)
             return setting.val
 
     def get_unreferenced_connections(self) -> list[tuple[int, str, int]]:
@@ -508,7 +515,7 @@ class PsqlDosBackend(StorageBackend):
 
         return terminated
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> None:
         from aiida.manage.profile_access import ProfileAccessManager
 
         repository = self.get_repository()
@@ -557,7 +564,7 @@ class PsqlDosBackend(StorageBackend):
 
         return keyset_repository - keyset_database
 
-    def get_info(self, detailed: bool = False, **kwargs: Any) -> dict[str, Any]:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> dict[str, t.Any]:
         results = super().get_info(detailed=detailed)
         results['repository'] = self.get_repository().get_info(detailed)
         return results
@@ -590,7 +597,8 @@ class PsqlDosBackend(StorageBackend):
         # This command calls `rsync` and `pg_dump` executables. check that they are in PATH
         for exe in ['rsync', 'pg_dump']:
             if shutil.which(exe) is None:
-                raise exceptions.StorageBackupError(f"Required executable '{exe}' not found in PATH, please add it.")
+                msg = f"Required executable '{exe}' not found in PATH, please add it."
+                raise exceptions.StorageBackupError(msg)
 
         cfg = self._profile.storage_config
         container = Container(get_filepath_container(self.profile))
@@ -620,12 +628,14 @@ class PsqlDosBackend(StorageBackend):
             try:
                 subprocess.run(cmd, check=True, env=env)
             except subprocess.CalledProcessError as exc:
-                raise backup_utils.BackupError(f'pg_dump: {exc}')
+                msg = f'pg_dump: {exc}'
+                raise backup_utils.BackupError(msg)
 
             if psql_temp_loc.is_file():
                 STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
             else:
-                raise backup_utils.BackupError(f"'{psql_temp_loc!s}' was not created.")
+                msg = f"'{psql_temp_loc!s}' was not created."
+                raise backup_utils.BackupError(msg)
 
             # step 3: transfer the PostgreSQL database file
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)

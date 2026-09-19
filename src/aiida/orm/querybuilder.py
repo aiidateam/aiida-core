@@ -19,24 +19,16 @@ when instantiated by the user.
 
 from __future__ import annotations
 
+import typing as t
 import warnings
 from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from inspect import isclass as inspect_isclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    NamedTuple,
-    Union,
-    cast,
-    overload,
-)
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-from aiida.orm import authinfos, comments, computers, convert, entities, fields, groups, logs, nodes, users
+from aiida.orm import convert, entities, qb_fields
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
     GROUP_ENTITY_TYPE_PREFIX,
@@ -46,22 +38,22 @@ from aiida.orm.implementation.querybuilder import (
     QueryDictType,
 )
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine import Process
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('QueryBuilder',)
 
 # re-usable type annotations
-EntityClsType = type[Union[entities.Entity, 'Process']]
+EntityClsType = type[t.Union[entities.Entity, 'Process']]
 ProjectType = str | dict | Sequence[str | dict]
-FilterType = dict[str, Any] | fields.QbFieldFilters | fields.QbBoolField
+FilterType = dict[str, t.Any] | qb_fields.QbFieldFilters | qb_fields.QbBoolField
 OrderByType = dict | list[dict] | tuple[dict, ...]
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')
 
 
-class Classifier(NamedTuple):
+class Classifier(t.NamedTuple):
     """A classifier for an entity."""
 
     ormclass_type_string: str
@@ -92,7 +84,7 @@ class QueryBuilder:
         backend: StorageBackend | None = None,
         *,
         debug: bool | None = None,
-        path: Sequence[str | dict[str, Any] | EntityClsType] | None = (),
+        path: Sequence[str | dict[str, t.Any] | EntityClsType] | None = (),
         filters: dict[str, FilterType] | None = None,
         project: dict[str, ProjectType] | None = None,
         limit: int | None = None,
@@ -139,9 +131,9 @@ class QueryBuilder:
         # A list storing the path being traversed by the query
         self._path: list[PathItemType] = []
         # map tags to filters
-        self._filters: dict[str, dict[str, Any]] = {}
+        self._filters: dict[str, dict[str, t.Any]] = {}
         # map tags to projections: tag -> list(fields) -> func | cast -> value
-        self._projections: dict[str, list[dict[str, dict[str, Any]]]] = {}
+        self._projections: dict[str, list[dict[str, dict[str, t.Any]]]] = {}
         # mapping: tag -> field -> return key for iterdict/dict methods
         self._project_map: dict[str, dict[str, str]] = {}
         # list of mappings: tag -> list(fields) -> 'order' | 'cast' -> value (str('asc' | 'desc'), str(cast_key))
@@ -225,7 +217,7 @@ class QueryBuilder:
         return self.as_dict()
 
     @classmethod
-    def from_dict(cls, dct: dict[str, Any]) -> QueryBuilder:
+    def from_dict(cls, dct: dict[str, t.Any]) -> QueryBuilder:
         """Create an instance from a dictionary representation of the query."""
         return cls(**dct)
 
@@ -293,9 +285,9 @@ class QueryBuilder:
         edge_project: ProjectType | None = None,
         outerjoin: bool = False,
         joining_keyword: str | None = None,
-        joining_value: Any | None = None,
+        joining_value: t.Any | None = None,
         orm_base: str | None = None,
-        **kwargs: Any,
+        **kwargs: t.Any,
     ) -> QueryBuilder:
         """Any iterative procedure to build the path for a graph query
         needs to invoke this method to append to the path.
@@ -363,7 +355,8 @@ class QueryBuilder:
         # First of all, let's make sure the specified the class or the type (not both)
 
         if cls is not None and entity_type is not None:
-            raise ValueError(f'You cannot specify both a class ({cls}) and a entity_type ({entity_type})')
+            msg = f'You cannot specify both a class ({cls}) and a entity_type ({entity_type})'
+            raise ValueError(msg)
 
         if cls is None and entity_type is None:
             raise ValueError('You need to specify at least a class or a entity_type')
@@ -373,16 +366,20 @@ class QueryBuilder:
             if isinstance(cls, (list, tuple)):
                 for sub_cls in cls:
                     if not inspect_isclass(sub_cls):
-                        raise TypeError(f"{sub_cls} was passed with kw 'cls', but is not a class")
+                        msg = f"{sub_cls} was passed with kw 'cls', but is not a class"
+                        raise TypeError(msg)
             elif not inspect_isclass(cls):
-                raise TypeError(f"{cls} was passed with kw 'cls', but is not a class")
+                msg = f"{cls} was passed with kw 'cls', but is not a class"
+                raise TypeError(msg)
         elif entity_type is not None:
             if isinstance(entity_type, (list, tuple)):
                 for sub_type in entity_type:
                     if not isinstance(sub_type, str):
-                        raise TypeError(f'{sub_type} was passed as entity_type, but is not a string')
+                        msg = f'{sub_type} was passed as entity_type, but is not a string'
+                        raise TypeError(msg)
             elif not isinstance(entity_type, str):
-                raise TypeError(f'{entity_type} was passed as entity_type, but is not a string')
+                msg = f'{entity_type} was passed as entity_type, but is not a string'
+                raise TypeError(msg)
 
         ormclass, classifiers = _get_ormclass(cls, entity_type)
 
@@ -390,11 +387,11 @@ class QueryBuilder:
         # Let's get a tag
         if tag:
             if self._EDGE_TAG_DELIM in tag:
-                raise ValueError(
-                    f'tag cannot contain {self._EDGE_TAG_DELIM}\nsince this is used as a delimiter for links'
-                )
+                msg = f'tag cannot contain {self._EDGE_TAG_DELIM}\nsince this is used as a delimiter for links'
+                raise ValueError(msg)
             if tag in self._tags:
-                raise ValueError(f'This tag ({tag}) is already in use')
+                msg = f'This tag ({tag}) is already in use'
+                raise ValueError(msg)
         else:
             tag = self._get_unique_tag(classifiers)
 
@@ -457,15 +454,17 @@ class QueryBuilder:
                 spec_to_function_map.add('direction')
             for key, val in kwargs.items():
                 if key not in spec_to_function_map:
-                    raise ValueError(
+                    msg = (
                         f"'{key}' is not a valid keyword for {ormclass.value!r} joining specification\n"
                         f'Valid keywords are: {spec_to_function_map or []!r}'
                     )
+                    raise ValueError(msg)
                 if joining_keyword:
-                    raise ValueError(
+                    msg = (
                         'You already specified joining specification '
                         f'{joining_keyword}\nBut you now also want to specify {key}'
                     )
+                    raise ValueError(msg)
 
                 joining_keyword = key
                 if joining_keyword == 'direction':
@@ -480,9 +479,8 @@ class QueryBuilder:
                             raise ValueError('direction=0 is not valid')
                         joining_value = self._path[-abs(val)]['tag']
                     except IndexError as exc:
-                        raise ValueError(
-                            f'You have specified a non-existent entity with\ndirection={joining_value}\n{exc}\n'
-                        )
+                        msg = f'You have specified a non-existent entity with\ndirection={joining_value}\n{exc}\n'
+                        raise ValueError(msg)
                 else:
                     joining_value = self._tags.get(val)
 
@@ -504,13 +502,14 @@ class QueryBuilder:
 
         # EDGES #################################
         if len(self._path) > 0:
-            joining_value = cast(str, joining_value)
+            joining_value = t.cast(str, joining_value)
             try:
                 if edge_tag is None:
                     edge_destination_tag = self._tags.get(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
                 elif edge_tag in self._tags:
-                    raise ValueError(f'The tag {edge_tag} is already in use')
+                    msg = f'The tag {edge_tag} is already in use'
+                    raise ValueError(msg)
                 LOGGER.debug('edge_tag chosen: %s', edge_tag)
 
                 # edge tags do not have an ormclass
@@ -624,10 +623,11 @@ class QueryBuilder:
 
         for order_spec in order_by:
             if not isinstance(order_spec, dict):
-                raise TypeError(
+                msg = (  # type: ignore[unreachable]
                     f'Invalid input for order_by statement: {order_spec!r}\n'
                     'Expecting a dictionary like: {tag: field} or {tag: [field1, field2, ...]}'
                 )
+                raise TypeError(msg)
             _order_spec: dict = {}
             for tagspec, items_to_order_by in order_spec.items():
                 if not isinstance(items_to_order_by, (tuple, list)):
@@ -637,14 +637,15 @@ class QueryBuilder:
                 for item_to_order_by in items_to_order_by:
                     if isinstance(item_to_order_by, str):
                         item_to_order_by = {item_to_order_by: {}}  # noqa: PLW2901
-                    elif isinstance(item_to_order_by, fields.QbField):
+                    elif isinstance(item_to_order_by, qb_fields.QbField):
                         item_to_order_by = {item_to_order_by.backend_key: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
-                        raise ValueError(
+                        msg = (
                             f'Cannot deal with input to order_by {item_to_order_by}\nof type{type(item_to_order_by)}\n'
                         )
+                        raise ValueError(msg)
                     for entityname, orderspec in item_to_order_by.items():
                         # if somebody specifies eg {'node':{'id':'asc'}}
                         # tranform to {'node':{'id':{'order':'asc'}}}
@@ -654,10 +655,11 @@ class QueryBuilder:
                         elif isinstance(orderspec, dict):
                             this_order_spec = orderspec
                         else:
-                            raise TypeError(
+                            msg = (
                                 'I was expecting a string or a dictionary\nYou provided '
                                 f'{type(orderspec)} {orderspec}\n'
                             )
+                            raise TypeError(msg)
                         for key in this_order_spec:
                             if key not in allowed_keys:
                                 raise ValueError(
@@ -703,11 +705,11 @@ class QueryBuilder:
         return self
 
     @staticmethod
-    def _process_filters(filters: FilterType) -> dict[str, Any]:
+    def _process_filters(filters: FilterType) -> dict[str, t.Any]:
         """Process filters."""
-        if isinstance(filters, fields.QbBoolField):
+        if isinstance(filters, qb_fields.QbBoolField):
             filters = filters.as_filter()
-        if not isinstance(filters, (dict, fields.QbFieldFilters)):
+        if not isinstance(filters, (dict, qb_fields.QbFieldFilters)):
             raise TypeError('Filters must be either a dictionary or QbFieldFilters')
 
         processed_filters = {}
@@ -717,7 +719,7 @@ class QueryBuilder:
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
                 processed_filters[f'{key}_id'] = value.pk
-            elif isinstance(key, fields.QbField):
+            elif isinstance(key, qb_fields.QbField):
                 processed_filters[key.backend_key] = value
             else:
                 processed_filters[key] = value
@@ -831,7 +833,7 @@ class QueryBuilder:
         _projections = []
         LOGGER.debug('Adding projection of %s: %s', tag_spec, projection_spec)
 
-        def _update_project_map(projection: fields.QbField):
+        def _update_project_map(projection: qb_fields.QbField):
             """Return the DB field to use, or a tuple of the DB field to use and the key to return."""
             if projection.backend_key != projection.key:
                 self._project_map.setdefault(tag, {})
@@ -843,28 +845,30 @@ class QueryBuilder:
         for projection in projection_spec:
             if isinstance(projection, dict):
                 _thisprojection = {
-                    _update_project_map(key) if isinstance(key, fields.QbField) else key: value
+                    _update_project_map(key) if isinstance(key, qb_fields.QbField) else key: value
                     for key, value in projection.items()
                 }
             elif isinstance(projection, str):
                 _thisprojection = {projection: {}}
-            elif isinstance(projection, fields.QbField):
+            elif isinstance(projection, qb_fields.QbField):
                 _thisprojection = {_update_project_map(projection): {}}
-            elif isinstance(projection, fields.QbFields):
+            elif isinstance(projection, qb_fields.QbFields):
                 _thisprojection = {_update_project_map(projection[name]): {} for name in projection}
             else:
-                raise ValueError(f'Cannot deal with projection specification {projection}\n')
+                msg = f'Cannot deal with projection specification {projection}\n'
+                raise ValueError(msg)
             for spec in _thisprojection.values():
                 if not isinstance(spec, dict):
-                    raise TypeError(
-                        f'\nThe value of a key-value pair in a projection\nhas to be a dictionary\nYou gave: {spec}\n'
-                    )
+                    msg = f'\nThe value of a key-value pair in a projection\nhas to be a dictionary\nYou gave: {spec}\n'
+                    raise TypeError(msg)
 
                 for key, val in spec.items():
                     if key not in self._VALID_PROJECTION_KEYS:
-                        raise ValueError(f'{key} is not a valid key {self._VALID_PROJECTION_KEYS}')
+                        msg = f'{key} is not a valid key {self._VALID_PROJECTION_KEYS}'
+                        raise ValueError(msg)
                     if not isinstance(val, str):
-                        raise TypeError(f'{val} has to be a string')
+                        msg = f'{val} has to be a string'
+                        raise TypeError(msg)
             _projections.append(_thisprojection)
         LOGGER.debug('projections have become: %s', _projections)
         self._projections[tag] = _projections
@@ -884,7 +888,7 @@ class QueryBuilder:
 
         return self
 
-    def debug(self, msg: str, *objects: Any) -> None:
+    def debug(self, msg: str, *objects: t.Any) -> None:
         """Log debug message.
 
         objects will passed to the format string, e.g. ``msg % objects``
@@ -935,11 +939,12 @@ class QueryBuilder:
         :returns: self
         """
         if not isinstance(value, bool):
-            raise TypeError(f'distinct() takes a boolean as parameter, not {value!r}')
+            msg = f'distinct() takes a boolean as parameter, not {value!r}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         self._distinct = value
         return self
 
-    def inputs(self, **kwargs: Any) -> QueryBuilder:
+    def inputs(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to inputs of previous vertice in path.
 
         :returns: self
@@ -951,7 +956,7 @@ class QueryBuilder:
         self.append(cls=cls, with_outgoing=join_to, **kwargs)
         return self
 
-    def outputs(self, **kwargs: Any) -> QueryBuilder:
+    def outputs(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to outputs of previous vertice in path.
 
         :returns: self
@@ -963,7 +968,7 @@ class QueryBuilder:
         self.append(cls=cls, with_incoming=join_to, **kwargs)
         return self
 
-    def children(self, **kwargs: Any) -> QueryBuilder:
+    def children(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to children/descendants of previous vertice in path.
 
         :returns: self
@@ -975,7 +980,7 @@ class QueryBuilder:
         self.append(cls=cls, with_ancestors=join_to, **kwargs)
         return self
 
-    def parents(self, **kwargs: Any) -> QueryBuilder:
+    def parents(self, **kwargs: t.Any) -> QueryBuilder:
         """Join to parents/ancestors of previous vertice in path.
 
         :returns: self
@@ -1010,7 +1015,7 @@ class QueryBuilder:
         return self._impl.analyze_query(data=self.as_dict(), execute=execute, verbose=verbose)
 
     @staticmethod
-    def _get_aiida_entity_res(value) -> Any:
+    def _get_aiida_entity_res(value) -> t.Any:
         """Convert a projected query result to front end class if it is an instance of a `BackendEntity`.
 
         Values that are not an `BackendEntity` instance will be returned unaltered
@@ -1023,13 +1028,13 @@ class QueryBuilder:
         except TypeError:
             return value
 
-    @overload
-    def first(self, flat: Literal[False] = False) -> list[Any] | None: ...
+    @t.overload
+    def first(self, flat: t.Literal[False] = False) -> list[t.Any] | None: ...
 
-    @overload
-    def first(self, flat: Literal[True]) -> Any | None: ...
+    @t.overload
+    def first(self, flat: t.Literal[True]) -> t.Any | None: ...
 
-    def first(self, flat: bool = False) -> list[Any] | Any | None:
+    def first(self, flat: bool = False) -> list[t.Any] | t.Any | None:
         """Return the first result of the query.
 
         Calling ``first`` results in an execution of the underlying query.
@@ -1059,7 +1064,7 @@ class QueryBuilder:
         """
         return self._impl.count(self.as_dict())
 
-    def iterall(self, batch_size: int | None = 100) -> Iterable[list[Any]]:
+    def iterall(self, batch_size: int | None = 100) -> Iterable[list[t.Any]]:
         """Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
@@ -1078,7 +1083,7 @@ class QueryBuilder:
 
             yield item
 
-    def iterdict(self, batch_size: int | None = 100) -> Iterable[dict[str, dict[str, Any]]]:
+    def iterdict(self, batch_size: int | None = 100) -> Iterable[dict[str, dict[str, t.Any]]]:
         """Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
@@ -1096,13 +1101,13 @@ class QueryBuilder:
 
             yield item
 
-    @overload
-    def all(self, batch_size: int | None = None, flat: Literal[False] = False) -> list[list[Any]]: ...
+    @t.overload
+    def all(self, batch_size: int | None = None, flat: t.Literal[False] = False) -> list[list[t.Any]]: ...
 
-    @overload
-    def all(self, batch_size: int | None = None, flat: Literal[True] = True) -> list[Any]: ...
+    @t.overload
+    def all(self, batch_size: int | None = None, flat: t.Literal[True] = True) -> list[t.Any]: ...
 
-    def all(self, batch_size: int | None = None, flat: bool = False) -> list[list[Any]] | list[Any]:
+    def all(self, batch_size: int | None = None, flat: bool = False) -> list[list[t.Any]] | list[t.Any]:
         """Executes the full query with the order of the rows as returned by the backend.
 
         The order inside each row is given by the order of the vertices in the path and the order of the projections for
@@ -1121,7 +1126,7 @@ class QueryBuilder:
 
         return [projection for entry in matches for projection in entry]
 
-    def one(self) -> list[Any]:
+    def one(self) -> list[t.Any]:
         """Executes the query asking for exactly one results.
 
         Will raise an exception if this is not the case:
@@ -1143,7 +1148,7 @@ class QueryBuilder:
             raise NotExistent('No result was found')
         return res[0]
 
-    def dict(self, batch_size: int | None = None) -> list[dict[str, dict[str, Any]]]:
+    def dict(self, batch_size: int | None = None) -> list[dict[str, dict[str, t.Any]]]:
         """Executes the full query with the order of the rows as returned by the backend.
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
@@ -1192,7 +1197,7 @@ class QueryBuilder:
 
 
 def _get_ormclass(
-    cls: None | EntityClsType | Sequence[EntityClsType], entity_type: None | str | Sequence[str]
+    cls: EntityClsType | Sequence[EntityClsType] | None, entity_type: str | Sequence[str] | None
 ) -> tuple[EntityTypes, list[Classifier]]:
     """Get ORM classifiers from either class(es) or ormclass_type_string(s).
 
@@ -1244,6 +1249,7 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> tuple[EntityTypes, Classifier]
     """
     # Note: Unable to move this import to the top of the module for some reason
     from aiida.engine import Process
+    from aiida.orm import authinfos, comments, computers, groups, logs, nodes, users
     from aiida.orm.utils.node import is_valid_node_type_string
 
     classifiers: Classifier
@@ -1280,7 +1286,8 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> tuple[EntityTypes, Classifier]
         ormclass = EntityTypes.NODE
 
     else:
-        raise ValueError(f'I do not know what to do with {cls}')
+        msg = f'I do not know what to do with {cls}'
+        raise ValueError(msg)
 
     if ormclass == EntityTypes.NODE:
         is_valid_node_type_string(classifiers.ormclass_type_string, raise_on_false=True)
@@ -1370,7 +1377,7 @@ def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict
 
     value = classifiers.process_type_string
     assert value is not None
-    filters: dict[str, Any]
+    filters: dict[str, t.Any]
 
     if not subclassing:
         filters = {'==': value}
@@ -1416,7 +1423,7 @@ class _QueryTagMap:
 
     def __init__(self):
         """Construct a new instance."""
-        self._tag_to_type: dict[str, None | EntityTypes] = {}
+        self._tag_to_type: dict[str, EntityTypes | None] = {}
         # A dictionary for classes passed to the tag given to them
         # Everything is specified with unique tags, which are strings.
         # But somebody might not care about giving tags, so to do
@@ -1429,7 +1436,7 @@ class _QueryTagMap:
 
         # The cls_to_tag_map in this case would be:
         # {PwCalculation: {'pwcalc'}, StructureData: {'structure'}}
-        self._cls_to_tag_map: dict[Any, set[str]] = {}
+        self._cls_to_tag_map: dict[t.Any, set[str]] = {}
 
     def __repr__(self) -> str:
         return repr(list(self._tag_to_type))
@@ -1443,8 +1450,8 @@ class _QueryTagMap:
     def add(
         self,
         tag: str,
-        etype: None | EntityTypes = None,
-        klasses: None | EntityClsType | Sequence[EntityClsType] = None,
+        etype: EntityTypes | None = None,
+        klasses: EntityClsType | Sequence[EntityClsType] | None = None,
     ) -> None:
         """Add a tag."""
         self._tag_to_type[tag] = etype
@@ -1467,15 +1474,18 @@ class _QueryTagMap:
         if isinstance(tag_or_cls, str):
             if tag_or_cls in self:
                 return tag_or_cls
-            raise ValueError(f'Tag {tag_or_cls!r} is not among my known tags: {list(self)}')
+            msg = f'Tag {tag_or_cls!r} is not among my known tags: {list(self)}'
+            raise ValueError(msg)
         if self._cls_to_tag_map.get(tag_or_cls, None):
             if len(self._cls_to_tag_map[tag_or_cls]) != 1:
-                raise ValueError(
+                msg = (
                     f'The object used as a tag ({tag_or_cls}) has multiple values associated with it: '
                     f'{self._cls_to_tag_map[tag_or_cls]}'
                 )
+                raise ValueError(msg)
             return next(iter(self._cls_to_tag_map[tag_or_cls]))
-        raise ValueError(f'The given object ({tag_or_cls}) has no tags associated with it.')
+        msg = f'The given object ({tag_or_cls}) has no tags associated with it.'
+        raise ValueError(msg)
 
 
 def _get_group_type_filter(classifiers: Classifier, subclassing: bool) -> dict:

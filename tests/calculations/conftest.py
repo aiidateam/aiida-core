@@ -35,7 +35,8 @@ def generate_shell_code(aiida_computer_local, aiida_code_installed):
             status, stdout, stderr = transport.exec_command_wait(f'which {command}')
 
             if status != 0:
-                raise ValueError(f'failed to determine the absolute path of the command on the computer: {stderr}')
+                msg = f'failed to determine the absolute path of the command on the computer: {stderr}'
+                raise ValueError(msg)
 
         return aiida_code_installed(
             label=label,

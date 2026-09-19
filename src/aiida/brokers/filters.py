@@ -19,8 +19,8 @@
 from __future__ import annotations
 
 import re
+import typing as t
 from collections.abc import Callable
-from typing import Any
 
 __all__ = ('BroadcastFilter',)
 
@@ -28,10 +28,10 @@ __all__ = ('BroadcastFilter',)
 class BroadcastFilter:
     """A filter that can be used to limit the subjects and/or senders that will be received."""
 
-    def __init__(self, subscriber: Callable[..., Any], subject: Any = None, sender: Any = None) -> None:
+    def __init__(self, subscriber: Callable[..., t.Any], subject: t.Any = None, sender: t.Any = None) -> None:
         self._subscriber = subscriber
-        self._subject_filters: list[Callable[[Any], Any]] = []
-        self._sender_filters: list[Callable[[Any], Any]] = []
+        self._subject_filters: list[Callable[[t.Any], t.Any]] = []
+        self._sender_filters: list[Callable[[t.Any], t.Any]] = []
         if subject is not None:
             self.add_subject_filter(subject)
         if sender is not None:
@@ -43,17 +43,17 @@ class BroadcastFilter:
 
     def __call__(
         self,
-        communicator: Any,
-        body: Any,
-        sender: Any = None,
-        subject: Any = None,
-        correlation_id: Any = None,
-    ) -> Any:
+        communicator: t.Any,
+        body: t.Any,
+        sender: t.Any = None,
+        subject: t.Any = None,
+        correlation_id: t.Any = None,
+    ) -> t.Any:
         if self.is_filtered(sender, subject):
             return None
         return self._subscriber(communicator, body, sender, subject, correlation_id)
 
-    def is_filtered(self, sender: Any, subject: Any) -> bool:
+    def is_filtered(self, sender: t.Any, subject: t.Any) -> bool:
         if subject is not None and self._subject_filters and not any(check(subject) for check in self._subject_filters):
             return True
 
@@ -62,14 +62,14 @@ class BroadcastFilter:
 
         return False
 
-    def add_subject_filter(self, subject_filter: Any) -> None:
+    def add_subject_filter(self, subject_filter: t.Any) -> None:
         self._subject_filters.append(self._ensure_filter(subject_filter))
 
-    def add_sender_filter(self, sender_filter: Any) -> None:
+    def add_sender_filter(self, sender_filter: t.Any) -> None:
         self._sender_filters.append(self._ensure_filter(sender_filter))
 
     @classmethod
-    def _ensure_filter(cls, filter_value: Any) -> Callable[[Any], Any]:
+    def _ensure_filter(cls, filter_value: t.Any) -> Callable[[t.Any], t.Any]:
         if isinstance(filter_value, str):
             return re.compile(filter_value.replace('.', '[.]').replace('*', '.*')).match
         if isinstance(filter_value, re.Pattern):

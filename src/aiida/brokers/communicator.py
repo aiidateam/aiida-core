@@ -19,20 +19,20 @@
 from __future__ import annotations
 
 import abc
+import typing as t
 from collections.abc import Callable
 from types import TracebackType
-from typing import Any
 
 from aiida.brokers import futures
 
 __all__ = ('Communicator',)
 
 # RPC subscriber params: communicator, msg
-RpcSubscriber = Callable[['Communicator', Any], Any]
+RpcSubscriber = Callable[['Communicator', t.Any], t.Any]
 # Task subscriber params: communicator, task
-TaskSubscriber = Callable[['Communicator', Any], Any]
+TaskSubscriber = Callable[['Communicator', t.Any], t.Any]
 # Broadcast subscribers params: communicator, body, sender, subject, correlation id
-BroadcastSubscriber = Callable[['Communicator', Any, Any, Any, Any], Any]
+BroadcastSubscriber = Callable[['Communicator', t.Any, t.Any, t.Any, t.Any], t.Any]
 
 
 class Communicator(abc.ABC):
@@ -58,18 +58,18 @@ class Communicator(abc.ABC):
         """Close a communicator, free up all resources and do not allow any further operations."""
 
     @abc.abstractmethod
-    def add_rpc_subscriber(self, subscriber: RpcSubscriber, identifier: Any | None = None) -> Any:
+    def add_rpc_subscriber(self, subscriber: RpcSubscriber, identifier: t.Any | None = None) -> t.Any:
         """Add an RPC subscriber to the communicator with an optional identifier."""
 
     @abc.abstractmethod
-    def remove_rpc_subscriber(self, identifier: Any) -> None:
+    def remove_rpc_subscriber(self, identifier: t.Any) -> None:
         """Remove an RPC subscriber given the identifier.
 
         :param identifier: The RPC subscriber identifier.
         """
 
     @abc.abstractmethod
-    def add_task_subscriber(self, subscriber: TaskSubscriber, identifier: Any | None = None) -> Any:
+    def add_task_subscriber(self, subscriber: TaskSubscriber, identifier: t.Any | None = None) -> t.Any:
         """Add a task subscriber to the communicator's default queue. Returns the identifier.
 
         :param subscriber: The task callback function.
@@ -77,14 +77,14 @@ class Communicator(abc.ABC):
         """
 
     @abc.abstractmethod
-    def remove_task_subscriber(self, identifier: Any) -> None:
+    def remove_task_subscriber(self, identifier: t.Any) -> None:
         """Remove a task subscriber from the communicator's default queue.
 
         :param identifier: The subscriber to remove.
         """
 
     @abc.abstractmethod
-    def add_broadcast_subscriber(self, subscriber: BroadcastSubscriber, identifier: Any | None = None) -> Any:
+    def add_broadcast_subscriber(self, subscriber: BroadcastSubscriber, identifier: t.Any | None = None) -> t.Any:
         """Add a broadcast subscriber that will receive all broadcast messages.
 
         :param subscriber: The subscriber function to be called.
@@ -93,14 +93,14 @@ class Communicator(abc.ABC):
         """
 
     @abc.abstractmethod
-    def remove_broadcast_subscriber(self, identifier: Any) -> None:
+    def remove_broadcast_subscriber(self, identifier: t.Any) -> None:
         """Remove a broadcast subscriber.
 
         :param identifier: The identifier of the subscriber to remove.
         """
 
     @abc.abstractmethod
-    def task_send(self, task: Any, no_reply: bool = False) -> futures.Future[Any] | None:
+    def task_send(self, task: t.Any, no_reply: bool = False) -> futures.Future[t.Any] | None:
         """Send a task message, queued and picked up by a worker at some point in the future.
 
         :param task: The task message.
@@ -109,7 +109,7 @@ class Communicator(abc.ABC):
         """
 
     @abc.abstractmethod
-    def rpc_send(self, recipient_id: Any, msg: Any) -> futures.Future[Any]:
+    def rpc_send(self, recipient_id: t.Any, msg: t.Any) -> futures.Future[t.Any]:
         """Initiate a remote procedure call on a recipient.
 
         :param recipient_id: The recipient identifier.
@@ -118,5 +118,7 @@ class Communicator(abc.ABC):
         """
 
     @abc.abstractmethod
-    def broadcast_send(self, body: Any, sender: Any = None, subject: Any = None, correlation_id: Any = None) -> bool:
+    def broadcast_send(
+        self, body: t.Any, sender: t.Any = None, subject: t.Any = None, correlation_id: t.Any = None
+    ) -> bool:
         """Broadcast a message to all subscribers."""

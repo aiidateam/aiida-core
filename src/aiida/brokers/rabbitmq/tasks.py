@@ -20,11 +20,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import typing as t
 import uuid
 import weakref
 from collections.abc import AsyncIterator, Callable, Mapping
 from contextlib import asynccontextmanager, suppress
-from typing import Any, NamedTuple
 
 import aio_pika
 import aio_pika.abc
@@ -38,17 +38,17 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ('RmqIncomingTask', 'RmqTaskPublisher', 'RmqTaskQueue', 'RmqTaskSubscriber')
 
 
-class TaskInfo(NamedTuple):
+class TaskInfo(t.NamedTuple):
     """Decoded body of a task message."""
 
-    task: Any
+    task: t.Any
     no_reply: bool
 
 
 class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
     """Listens for tasks coming in on the RMQ task queue."""
 
-    TASK_QUEUE_ARGUMENTS: dict[str, Any] = {'x-message-ttl': defaults.TASK_MESSAGE_TTL}
+    TASK_QUEUE_ARGUMENTS: dict[str, t.Any] = {'x-message-ttl': defaults.TASK_MESSAGE_TTL}
 
     def __init__(
         self,
@@ -56,9 +56,9 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
         exchange_name: str = defaults.MESSAGE_EXCHANGE,
         queue_name: str = defaults.TASK_QUEUE,
         testing_mode: bool = False,
-        decoder: Callable[..., Any] = defaults.DECODER,
-        encoder: Callable[..., Any] = defaults.ENCODER,
-        exchange_params: dict[str, Any] | None = None,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
+        exchange_params: dict[str, t.Any] | None = None,
         prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
         prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
     ) -> None:
@@ -83,10 +83,10 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
         self._consumer_tag: str | None = None
 
         self._task_queue: aio_pika.abc.AbstractQueue | None = None
-        self._subscribers: dict[str, Callable[..., Any]] = {}
-        self._pending_tasks: list[Any] = []
+        self._subscribers: dict[str, Callable[..., t.Any]] = {}
+        self._pending_tasks: list[t.Any] = []
 
-    async def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    async def add_task_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         identifier = identifier or shortuuid.uuid()
         if identifier in self._subscribers:
             msg = f"Task identifier '{identifier}'"
@@ -187,7 +187,7 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
 
     async def _create_task_queue(self) -> None:
         """Create and bind the task queue."""
-        arguments: dict[str, Any] = dict(self.TASK_QUEUE_ARGUMENTS)
+        arguments: dict[str, t.Any] = dict(self.TASK_QUEUE_ARGUMENTS)
         if self._testing_mode:
             arguments['x-expires'] = defaults.TEST_QUEUE_EXPIRES
 
@@ -253,7 +253,7 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
                     break  # Got handled
 
     def _build_response_message(
-        self, body: dict[str, Any], incoming_message: aio_pika.abc.AbstractIncomingMessage
+        self, body: dict[str, t.Any], incoming_message: aio_pika.abc.AbstractIncomingMessage
     ) -> aio_pika.Message:
         """Create an aio-pika message as a response to a task being dealt with.
 
@@ -268,7 +268,7 @@ class RmqTaskSubscriber(messages.BaseConnectionWithExchange):
         return message
 
     async def _send_response(
-        self, msg_body: dict[str, Any], incoming_message: aio_pika.abc.AbstractIncomingMessage
+        self, msg_body: dict[str, t.Any], incoming_message: aio_pika.abc.AbstractIncomingMessage
     ) -> None:
         reply_to = incoming_message.reply_to
         assert reply_to, 'Must provide an identifier for the recipient'
@@ -291,12 +291,12 @@ class RmqIncomingTask:
         self._message: aio_pika.abc.AbstractIncomingMessage | None = message
         self._task_info = TaskInfo(*subscriber._decode(message.body))
         self._state = TASK_PENDING
-        self._outcome_ref: weakref.ReferenceType[asyncio.Future[Any]] | None = None
+        self._outcome_ref: weakref.ReferenceType[asyncio.Future[t.Any]] | None = None
         self._loop: asyncio.AbstractEventLoop = subscriber.loop()
-        self._done_task: asyncio.Task[Any] | None = None
+        self._done_task: asyncio.Task[t.Any] | None = None
 
     @property
-    def body(self) -> Any:
+    def body(self) -> t.Any:
         return self._task_info.task
 
     @property
@@ -307,12 +307,13 @@ class RmqIncomingTask:
     def state(self) -> str:
         return self._state
 
-    def process(self) -> asyncio.Future[Any]:
+    def process(self) -> asyncio.Future[t.Any]:
         if self._state != TASK_PENDING:
-            raise asyncio.InvalidStateError(f'The task is {self._state}')
+            msg = f'The task is {self._state}'
+            raise asyncio.InvalidStateError(msg)
 
         self._state = TASK_PROCESSING
-        outcome: asyncio.Future[Any] = self._loop.create_future()
+        outcome: asyncio.Future[t.Any] = self._loop.create_future()
         # Rely on the done callback to signal the end of processing
         outcome.add_done_callback(self._on_task_done)
         # Or the user lets the future get destroyed
@@ -322,7 +323,8 @@ class RmqIncomingTask:
 
     async def requeue(self) -> None:
         if self._state not in [TASK_PENDING, TASK_PROCESSING]:
-            raise asyncio.InvalidStateError(f'The task is {self._state}')
+            msg = f'The task is {self._state}'
+            raise asyncio.InvalidStateError(msg)
 
         self._state = TASK_REQUEUED
         assert self._message is not None
@@ -330,14 +332,15 @@ class RmqIncomingTask:
         self._finalise()
 
     @asynccontextmanager
-    async def processing(self) -> AsyncIterator[asyncio.Future[Any]]:
+    async def processing(self) -> AsyncIterator[asyncio.Future[t.Any]]:
         """Processing context. The task should be done at the end otherwise it is requeued."""
 
         if self._state != TASK_PENDING:
-            raise asyncio.InvalidStateError(f'The task is {self._state}')
+            msg = f'The task is {self._state}'
+            raise asyncio.InvalidStateError(msg)
 
         self._state = TASK_PROCESSING
-        outcome: asyncio.Future[Any] = self._loop.create_future()
+        outcome: asyncio.Future[t.Any] = self._loop.create_future()
         try:
             yield outcome
         except KeyboardInterrupt:
@@ -352,14 +355,14 @@ class RmqIncomingTask:
             else:
                 await self.requeue()
 
-    def _on_task_done(self, outcome: asyncio.Future[Any]) -> None:
+    def _on_task_done(self, outcome: asyncio.Future[t.Any]) -> None:
         """Schedule a task to call ``_task_done`` when the outcome is done."""
         # Keep a strong reference until completion: the loop only holds a weak reference
         # and the task could otherwise be garbage-collected while pending.
         self._done_task = self._loop.create_task(self._task_done(outcome))
         self._done_task.add_done_callback(lambda _: setattr(self, '_done_task', None))
 
-    async def _task_done(self, outcome: asyncio.Future[Any]) -> None:
+    async def _task_done(self, outcome: asyncio.Future[t.Any]) -> None:
         assert outcome.done()
         self._outcome_ref = None
 
@@ -390,7 +393,7 @@ class RmqIncomingTask:
         # Clean up
         self._finalise()
 
-    def _outcome_destroyed(self, outcome_ref: weakref.ReferenceType[asyncio.Future[Any]]) -> None:
+    def _outcome_destroyed(self, outcome_ref: weakref.ReferenceType[asyncio.Future[t.Any]]) -> None:
         # This only happens if someone called self.process() and then let the future
         # get destroyed without setting an outcome
         assert outcome_ref is self._outcome_ref
@@ -412,9 +415,9 @@ class RmqTaskPublisher(messages.BasePublisherWithReplyQueue):
         connection: aio_pika.Connection,
         queue_name: str = defaults.TASK_QUEUE,
         exchange_name: str = defaults.MESSAGE_EXCHANGE,
-        exchange_params: dict[str, Any] | None = None,
-        encoder: Callable[..., Any] = defaults.ENCODER,
-        decoder: Callable[..., Any] = defaults.DECODER,
+        exchange_params: dict[str, t.Any] | None = None,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
         confirm_deliveries: bool = True,
         testing_mode: bool = False,
     ) -> None:
@@ -429,7 +432,7 @@ class RmqTaskPublisher(messages.BasePublisherWithReplyQueue):
         )
         self._task_queue_name = queue_name
 
-    async def task_send(self, task: Any, no_reply: bool = False) -> asyncio.Future[Any] | None:
+    async def task_send(self, task: t.Any, no_reply: bool = False) -> asyncio.Future[t.Any] | None:
         """Send a task for processing by a task subscriber.
 
         All task messages will be set to be persistent by setting ``delivery_mode=2``.
@@ -456,7 +459,7 @@ class RmqTaskPublisher(messages.BasePublisherWithReplyQueue):
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT,  # Task messages need to be persistent
         )
 
-        result_future: asyncio.Future[Any] | None = None
+        result_future: asyncio.Future[t.Any] | None = None
         if no_reply:
             published = await self.publish(task_msg, routing_key=self._task_queue_name, mandatory=True)
         else:
@@ -476,9 +479,9 @@ class RmqTaskQueue:
         connection: aio_pika.Connection,
         exchange_name: str = defaults.MESSAGE_EXCHANGE,
         queue_name: str = defaults.TASK_QUEUE,
-        decoder: Callable[..., Any] = defaults.DECODER,
-        encoder: Callable[..., Any] = defaults.ENCODER,
-        exchange_params: dict[str, Any] | None = None,
+        decoder: Callable[..., t.Any] = defaults.DECODER,
+        encoder: Callable[..., t.Any] = defaults.ENCODER,
+        exchange_params: dict[str, t.Any] | None = None,
         prefetch_size: int = defaults.TASK_PREFETCH_SIZE,
         prefetch_count: int = defaults.TASK_PREFETCH_COUNT,
         testing_mode: bool = False,
@@ -511,11 +514,11 @@ class RmqTaskQueue:
         async for task in self._subscriber:
             yield task
 
-    async def task_send(self, task: Any, no_reply: bool = False) -> asyncio.Future[Any] | None:
+    async def task_send(self, task: t.Any, no_reply: bool = False) -> asyncio.Future[t.Any] | None:
         """Send a task to the queue."""
         return await self._publisher.task_send(task, no_reply)
 
-    async def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    async def add_task_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         return await self._subscriber.add_task_subscriber(subscriber, identifier)
 
     async def remove_task_subscriber(self, identifier: str) -> None:

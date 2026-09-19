@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     import asyncio
 
     from aiida.brokers.broker import Broker
@@ -98,7 +98,7 @@ class Manager:
         """
         return self._profile
 
-    def load_profile(self, profile: None | str | Profile = None, allow_switch=False) -> Profile:
+    def load_profile(self, profile: str | Profile | None = None, allow_switch=False) -> Profile:
         """Load a global profile, unloading any previously loaded profile.
 
         .. note:: If a profile is already loaded and no explicit profile is specified, nothing will be done.
@@ -121,17 +121,19 @@ class Manager:
         if profile is None or isinstance(profile, str):
             profile = self.get_config().get_profile(profile)
         elif not isinstance(profile, Profile):
-            raise TypeError(f'profile must be None, a string, or a Profile instance, got: {type(profile)}')
+            msg = f'profile must be None, a string, or a Profile instance, got: {type(profile)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         # If a profile is loaded and the specified profile UUID is that of the currently loaded, do nothing
         if self._profile and (self._profile.uuid == profile.uuid):
             return self._profile
 
         if self._profile and self.profile_storage_loaded and not allow_switch:
-            raise InvalidOperation(
+            msg = (
                 f'cannot switch to profile {profile.name!r} because profile {self._profile.name!r} storage '
                 'is already loaded and allow_switch is False'
             )
+            raise InvalidOperation(msg)
 
         self.unload_profile()
         self._profile = profile
@@ -256,7 +258,7 @@ class Manager:
         """
         return self._profile_storage is not None
 
-    def get_option(self, option_name: str) -> Any:
+    def get_option(self, option_name: str) -> t.Any:
         """Return the value of a configuration option.
 
         In order of priority, the option is returned from:
@@ -388,9 +390,8 @@ class Manager:
 
         if broker is None:
             assert self._profile is not None
-            raise ConfigurationError(
-                f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
-            )
+            msg = f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
+            raise ConfigurationError(msg)
 
         return broker.get_communicator()
 
@@ -450,7 +451,7 @@ class Manager:
 
         self._runner = new_runner
 
-    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> Runner:
+    def create_runner(self, with_persistence: bool = True, **kwargs: t.Any) -> Runner:
         """Create and return a new runner
 
         :param with_persistence: create a runner with persistence enabled

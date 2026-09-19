@@ -2,8 +2,8 @@
 
 import contextlib
 import pathlib
+import typing as t
 from collections.abc import Iterable, Iterator
-from typing import Any, BinaryIO
 
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
@@ -57,7 +57,7 @@ class Repository:
         return self.backend.is_initialised
 
     @classmethod
-    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: dict[str, Any]) -> 'Repository':
+    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: dict[str, t.Any]) -> 'Repository':
         """Construct an instance where the metadata is initialized from the serialized content.
 
         :param backend: instance of repository backend to use to actually store the file objects.
@@ -74,7 +74,7 @@ class Repository:
     def reset(self) -> None:
         self._directory = self._file_cls()
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, t.Any]:
         """Serialize the metadata into a JSON-serializable format.
 
         :return: dictionary with the content metadata.
@@ -82,7 +82,7 @@ class Repository:
         return self._directory.serialize()
 
     @classmethod
-    def flatten(cls, serialized: dict[str, Any] | None, delimiter: str = '/') -> dict[str, str | None]:
+    def flatten(cls, serialized: dict[str, t.Any] | None, delimiter: str = '/') -> dict[str, str | None]:
         """Flatten the serialized content of a repository into a mapping of path -> key or None (if folder).
 
         Note, all folders are represented in the flattened output, and their path is suffixed with the delimiter.
@@ -115,7 +115,7 @@ class Repository:
 
         :return: the hash representing the contents of the repository.
         """
-        objects: dict[str, Any] = {}
+        objects: dict[str, t.Any] = {}
         for root, dirnames, filenames in self.walk():
             objects['__dirnames__'] = dirnames
             for filename in filenames:
@@ -148,7 +148,8 @@ class Repository:
 
         # reject absolute paths
         if path_obj.is_absolute():
-            raise TypeError(f'path `{path_obj}` is not a relative path.')
+            msg = f'path `{path_obj}` is not a relative path.'
+            raise TypeError(msg)
 
         return path_obj
 
@@ -236,7 +237,8 @@ class Repository:
 
         for part in path.parts:
             if part not in file_object.objects:
-                raise FileNotFoundError(f'object with path `{path}` does not exist.')
+                msg = f'object with path `{path}` does not exist.'
+                raise FileNotFoundError(msg)
 
             file_object = file_object.objects[part]
 
@@ -254,7 +256,8 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type != FileType.DIRECTORY:
-            raise NotADirectoryError(f'object with path `{path}` is not a directory.')
+            msg = f'object with path `{path}` is not a directory.'
+            raise NotADirectoryError(msg)
 
         return file_object
 
@@ -275,7 +278,8 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type != FileType.FILE:
-            raise IsADirectoryError(f'object with path `{path}` is not a file.')
+            msg = f'object with path `{path}` is not a file.'
+            raise IsADirectoryError(msg)
 
         return file_object
 
@@ -302,7 +306,7 @@ class Repository:
         """
         return [entry.name for entry in self.list_objects(path)]
 
-    def put_object_from_filelike(self, handle: BinaryIO, path: FilePath) -> None:
+    def put_object_from_filelike(self, handle: t.BinaryIO, path: FilePath) -> None:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -339,10 +343,12 @@ class Repository:
             filepath = pathlib.PurePath(filepath)
 
         if not isinstance(filepath, pathlib.PurePath):
-            raise TypeError(f'filepath `{filepath}` is not of type `str` nor `pathlib.PurePath`.')
+            msg = f'filepath `{filepath}` is not of type `str` nor `pathlib.PurePath`.'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         if not filepath.is_absolute():
-            raise TypeError(f'filepath `{filepath}` is not an absolute path.')
+            msg = f'filepath `{filepath}` is not an absolute path.'
+            raise TypeError(msg)
 
         # Explicitly create the base directory if specified by `path`, just in case `filepath` contains no file objects.
         if path.parts:
@@ -378,7 +384,7 @@ class Repository:
         return True
 
     @contextlib.contextmanager
-    def open(self, path: FilePath) -> Iterator[BinaryIO]:
+    def open(self, path: FilePath) -> Iterator[t.BinaryIO]:
         """Open a file handle to an object stored under the given path.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -426,7 +432,8 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type == FileType.DIRECTORY:
-            raise IsADirectoryError(f'object with path `{path}` is a directory.')
+            msg = f'object with path `{path}` is a directory.'
+            raise IsADirectoryError(msg)
 
         if hard_delete:
             assert file_object.key is not None, 'Expected FileType.File to have a key'
@@ -498,16 +505,19 @@ class Repository:
         file_object = self.get_object(path)
 
         if file_object.file_type != FileType.DIRECTORY:
-            raise NotADirectoryError(f'object with path `{path}` is not a directory.')
+            msg = f'object with path `{path}` is not a directory.'
+            raise NotADirectoryError(msg)
 
         if isinstance(target, str):
             target = pathlib.Path(target)
 
         if not isinstance(target, pathlib.Path):
-            raise TypeError(f'path `{path}` is not of type `str` nor `pathlib.Path`.')
+            msg = f'path `{path}` is not of type `str` nor `pathlib.Path`.'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         if not target.is_absolute():
-            raise TypeError(f'provided target `{target}` is not an absolute path.')
+            msg = f'provided target `{target}` is not an absolute path.'
+            raise TypeError(msg)
 
         for root, dirnames, filenames in self.walk(path):
             for dirname in dirnames:
@@ -525,7 +535,7 @@ class Repository:
 
     # these methods are not actually used in aiida-core, but are here for completeness
 
-    def initialise(self, **kwargs: Any) -> None:
+    def initialise(self, **kwargs: t.Any) -> None:
         """Initialise the repository if it hasn't already been initialised.
 
         :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.

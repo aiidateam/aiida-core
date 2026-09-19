@@ -230,10 +230,11 @@ def prepare_computer(computer: Computer | None = None) -> Computer:
     :return: A configured computer.
     :raises TypeError: If the provided computer is not an instance of :class:`aiida.orm.Computer`.
     """
-    from aiida.schedulers.datastructures import NodeNumberJobResource
+    from aiida.common.datastructures import NodeNumberJobResource
 
     if computer is not None and not isinstance(computer, Computer):
-        raise TypeError(f'`metadata.options.computer` should be instance of `Computer` but got: {type(computer)}.')
+        msg = f'`metadata.options.computer` should be instance of `Computer` but got: {type(computer)}.'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
     if computer is None:
         LOGGER.info('No computer specified, assuming `localhost`.')

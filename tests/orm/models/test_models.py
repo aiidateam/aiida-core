@@ -93,12 +93,13 @@ class RequiredNodeArguments(t.TypedDict):
 
 @pytest.fixture
 def required_arguments(request, default_user, aiida_localhost, tmp_path):
+    test_name = f'{request.node.module.__name__}.{request.node.originalname}'
+
     if request.param is orm.AuthInfo:
-        random_email = f'user{orm.User.collection.count() + 1}@aiida'
         return {
             'cls': orm.AuthInfo,
             'kwargs': {
-                'user': orm.User(email=random_email).store(),
+                'user': orm.User(email=f'{test_name}-authinfo@aiida').store(),
                 'computer': aiida_localhost,
             },
         }
@@ -142,7 +143,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is orm.User:
         return {
             'cls': orm.User,
-            'kwargs': {'email': 'user42@aiida'},
+            'kwargs': {'email': f'{test_name}-user@aiida'},
         }
     if request.param is orm.ArrayData:
         buffered_array = io.BytesIO()

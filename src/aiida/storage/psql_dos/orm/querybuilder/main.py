@@ -11,11 +11,11 @@
 
 from __future__ import annotations
 
+import typing as t
 import uuid
 import warnings
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import and_, not_, or_
 from sqlalchemy import func as sa_func
@@ -34,7 +34,7 @@ from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQuer
 from aiida.storage.psql_dos.orm.querybuilder.joiner import JoinReturn, SqlaJoiner
 from aiida.storage.utils import _create_smarter_in_clause
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from sqlalchemy.orm.query import Query
@@ -197,7 +197,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             result = build.query.count()
         return result
 
-    def first(self, data: QueryDictType) -> list[Any] | None:
+    def first(self, data: QueryDictType) -> list[t.Any] | None:
         with self.query_session(data) as build:
             result = build.query.first()
 
@@ -211,7 +211,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         return [self.to_backend(r) for r in result]
 
-    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[Any]]:
+    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[t.Any]]:
         """Return an iterator over all the results of a list of lists."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -224,7 +224,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 for resultrow in session.execute(stmt):
                     yield [self.to_backend(rowitem) for rowitem in resultrow]
 
-    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, Any]]]:
+    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, t.Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -236,7 +236,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             with nullcontext() if session.in_nested_transaction() else self._backend.transaction():
                 for row in self.get_session().execute(stmt):
                     # build the yield result
-                    yield_result: dict[str, dict[str, Any]] = {}
+                    yield_result: dict[str, dict[str, t.Any]] = {}
                     for (
                         tag,
                         projected_entities_dict,
@@ -245,7 +245,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         for attrkey, project_index in projected_entities_dict.items():
                             alias = build.tag_to_alias.get(tag)
                             if alias is None:
-                                raise ValueError(f'No alias found for tag {tag}')
+                                msg = f'No alias found for tag {tag}'
+                                raise ValueError(msg)
                             field_name = get_corresponding_property(
                                 get_table_name(alias),
                                 attrkey,
@@ -339,7 +340,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 continue
             alias = tag_to_alias.get(tag)
             if not alias:
-                raise ValueError(f'Unknown tag {tag!r} in filters, known: {list(tag_to_alias)}')
+                msg = f'Unknown tag {tag!r} in filters, known: {list(tag_to_alias)}'
+                raise ValueError(msg)
             filters = self.build_filters(alias, filter_specs)
             if filters is not None:
                 query = query.filter(filters)
@@ -349,7 +351,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             for tag, entity_list in order_spec.items():
                 alias = tag_to_alias.get(tag)
                 if not alias:
-                    raise ValueError(f'Unknown tag {tag!r} in order_by, known: {list(tag_to_alias)}')
+                    msg = f'Unknown tag {tag!r} in order_by, known: {list(tag_to_alias)}'
+                    raise ValueError(msg)
                 for entitydict in entity_list:
                     for entitytag, entityspec in entitydict.items():
                         query = query.order_by(self._create_order_by(alias, entitytag, entityspec))
@@ -372,15 +375,15 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         attrpath = field_key.split('.')[1:]
         if attrpath and 'cast' not in entityspec.keys():
             # JSONB fields ar delimited by '.' must be cast
-            raise ValueError(
-                f"To order_by {field_key!r}, the value has to be cast, but no 'cast' key has been specified."
-            )
+            msg = f"To order_by {field_key!r}, the value has to be cast, but no 'cast' key has been specified."
+            raise ValueError(msg)
         entity = self._get_projectable_entity(alias, column_name, attrpath, cast=entityspec.get('cast'))
         order = entityspec.get('order', 'asc')
         if order == 'desc':
             entity = entity.desc()
         elif order != 'asc':
-            raise ValueError(f"Unknown 'order' key: {order!r}, must be one of: 'asc', 'desc'")
+            msg = f"Unknown 'order' key: {order!r}, must be one of: 'asc', 'desc'"
+            raise ValueError(msg)
         return entity
 
     @staticmethod
@@ -410,10 +413,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif cast == 'd':
             entity = entity.astext.cast(DateTime)
         else:
-            raise ValueError(f'Unknown casting key {cast}')
+            msg = f'Unknown casting key {cast}'
+            raise ValueError(msg)
         return entity
 
-    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, Any]) -> ColumnElement[bool] | None:
+    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, t.Any]) -> ColumnElement[bool] | None:
         """Recurse through the filter specification and apply filter operations.
 
         :param alias: The alias of the ORM class the filter will be applied on
@@ -421,7 +425,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         :returns: an sqlalchemy expression.
         """
-        expressions: list[Any] = []
+        expressions: list[t.Any] = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in ('and', 'or', '~or', '~and', '!and', '!or'):
                 subexpressions = []
@@ -470,13 +474,13 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def get_filter_expr(
         self,
         operator: str,
-        value: Any,
+        value: t.Any,
         attr_key: list[str],
         is_jsonb: bool,
         alias: AliasedClass | None = None,
         column: InstrumentedAttribute | None = None,
         column_name: str | None = None,
-    ) -> Any:
+    ) -> t.Any:
         """Applies a filter on the alias given.
 
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -550,7 +554,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 }
             } # id is not 2
         """
-        expr: Any = None
+        expr: t.Any = None
         if operator.startswith('~'):
             negation = True
             operator = operator.lstrip('~')
@@ -564,7 +568,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 raise TypeError('You have to give an integer when comparing to a length')
         elif operator in ('like', 'ilike'):
             if not isinstance(value, str):
-                raise TypeError(f'Value for operator {operator} has to be a string (you gave {value})')
+                msg = f'Value for operator {operator} has to be a string (you gave {value})'
+                raise TypeError(msg)
 
         elif operator == 'in':
             try:
@@ -574,7 +579,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             if not value_type_set:
                 raise ValueError('Value for operator `in` is an empty list')
             if len(value_type_set) > 1:
-                raise ValueError(f'Value for operator `in` contains more than one type: {value}')
+                msg = f'Value for operator `in` contains more than one type: {value}'
+                raise ValueError(msg)
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
@@ -619,12 +625,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def get_filter_expr_from_jsonb(
         self,
         operator: str,
-        value: Any,
+        value: t.Any,
         attr_key: list[str],
         column: InstrumentedAttribute | None = None,
         column_name: str | None = None,
         alias: AliasedClass | None = None,
-    ) -> Any:
+    ) -> t.Any:
         """Return a filter expression"""
 
         def cast_according_to_type(path_in_json, value):
@@ -648,7 +654,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 type_filter = jsonb_typeof(path_in_json) == 'null'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             else:
-                raise TypeError(f'Unknown type {type(value)}')
+                msg = f'Unknown type {type(value)}'
+                raise TypeError(msg)
             return type_filter, casted_entity
 
         if column is None:
@@ -657,7 +664,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             column = get_column(column_name, alias)
 
         database_entity = column[tuple(attr_key)]
-        expr: Any
+        expr: t.Any
         if operator == '==':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = case((type_filter, casted_entity == value), else_=False)
@@ -680,7 +687,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             null_types = ('null',)
             valid_types = value_types + null_types
             if value not in valid_types:
-                raise ValueError(f'value {value} for of_type is not among valid types\n{valid_types}')
+                msg = f'value {value} for of_type is not among valid types\n{valid_types}'
+                raise ValueError(msg)
             if value in value_types:
                 expr = jsonb_typeof(database_entity) == value
             elif value in null_types:
@@ -734,10 +742,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 else_=False,
             )
         else:
-            raise ValueError(f'Unknown operator {operator} for filters in JSON field')
+            msg = f'Unknown operator {operator} for filters in JSON field'
+            raise ValueError(msg)
         return expr
 
-    def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
+    def get_filter_expr_from_column(self, operator: str, value: t.Any, column) -> BinaryExpression:
         """A method that returns an valid SQLAlchemy expression.
 
         :param operator: The operator provided by the user ('==',  '>', ...)
@@ -751,7 +760,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             column,
             (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause),
         ):
-            raise TypeError(f'column ({type(column)}) {column} is not a valid column')
+            msg = f'column ({type(column)}) {column} is not a valid column'
+            raise TypeError(msg)
         database_entity = column
         if operator == '==':
             expr = database_entity == value
@@ -775,10 +785,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # Instead, using `unnest()` or `json_each()` with an array uses only 1 parameter.
             expr = _create_smarter_in_clause(session=self.get_session(), column=column, values=value)
         else:
-            raise ValueError(f'Unknown operator {operator} for filters on columns')
+            msg = f'Unknown operator {operator} for filters on columns'
+            raise ValueError(msg)
         return expr
 
-    def to_backend(self, res) -> Any:
+    def to_backend(self, res) -> t.Any:
         """Convert results to return backend specific objects.
 
         - convert `DbModel` instances to `BackendEntity` instances.
@@ -815,9 +826,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         rows = self.get_session().execute(text(f'EXPLAIN{options} {compiled.string}')).fetchall()
         return '\n'.join(row[0] for row in rows)
 
-    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, Any]:
+    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, t.Any]:
         session = self.get_session()
-        retdict: dict[Any, Any] = {}
+        retdict: dict[t.Any, t.Any] = {}
 
         total_query = session.query(self.Node)
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))
@@ -838,7 +849,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 return d.strftime(date_format)
 
         else:
-            raise NotImplementedError(f'unsupported dialect: {dialect}')
+            msg = f'unsupported dialect: {dialect}'
+            raise NotImplementedError(msg)
 
         stat_query = session.query(
             cday.label('cday'),
@@ -911,7 +923,8 @@ def modify_expansions(
     # The update of expansions makes sense only when AliasedClass is provided
     if hasattr(alias, '_sa_class_manager'):
         if '_metadata' in expansions:
-            raise NotExistent(f"_metadata doesn't exist for {alias}. Please try metadata.")
+            msg = f"_metadata doesn't exist for {alias}. Please try metadata."
+            raise NotExistent(msg)
 
         return get_corresponding_properties(alias.__tablename__, expansions, outer_to_inner_schema)
 
@@ -990,7 +1003,8 @@ def generate_joins(
     for index, verticespec in enumerate(data['path'][1:], start=1):
         join_to = aliases[verticespec['tag']]
         if join_to is None:
-            raise ValueError(f'No alias found for tag {verticespec["tag"]}')
+            msg = f'No alias found for tag {verticespec["tag"]}'
+            raise ValueError(msg)
 
         calling_entity = data['path'][index]['orm_base']
         joining_keyword = verticespec['joining_keyword']
@@ -998,14 +1012,17 @@ def generate_joins(
         try:
             join_func = joiner.get_join_func(calling_entity, joining_keyword)
         except KeyError:
-            raise ValueError(f"'{joining_keyword}' is not a valid joining keyword for a '{calling_entity}' type entity")
+            msg = f"'{joining_keyword}' is not a valid joining keyword for a '{calling_entity}' type entity"
+            raise ValueError(msg)
 
         if not isinstance(joining_value, str):
-            raise ValueError(f"'joining_value' value is not a string: {joining_value}")
+            msg = f"'joining_value' value is not a string: {joining_value}"
+            raise ValueError(msg)
 
         join_tag = aliases.get(joining_value, None)
         if not join_tag:
-            raise ValueError(f'no alias found for joining_value tag {joining_value!r}')
+            msg = f'no alias found for joining_value tag {joining_value!r}'
+            raise ValueError(msg)
 
         edge_tag = verticespec['edge_tag']
 
@@ -1124,7 +1141,8 @@ def _create_projections(
 
     alias = aliases.get(tag)
     if alias is None:
-        raise ValueError(f'No alias found for tag {tag}')
+        msg = f'No alias found for tag {tag}'
+        raise ValueError(msg)
 
     tag_to_projected_fields[tag] = {}
 
@@ -1153,7 +1171,7 @@ def _get_projection(
     get_projectable_entity,
     cast: str | None = None,
     func: str | None = None,
-    **_kw: Any,
+    **_kw: t.Any,
 ) -> tuple[AliasedClass | ColumnElement, bool]:
     """:param alias: An alias for an ormclass
     :param projectable_entity_name:
@@ -1188,6 +1206,7 @@ def _get_projection(
     elif func == 'count':
         entity_to_project = sa_func.count(entity_to_project)
     else:
-        raise ValueError(f'\nInvalid function specification {func}')
+        msg = f'\nInvalid function specification {func}'
+        raise ValueError(msg)
 
     return entity_to_project, False

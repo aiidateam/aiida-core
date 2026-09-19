@@ -57,7 +57,8 @@ def await_condition(condition: Callable[[], T], *, timeout: float = 5.0, interva
     start_time = time.monotonic()
     while not (result := condition()):
         if time.monotonic() - start_time > timeout:
-            raise TimeoutError(f'Condition {condition} did not become truthy within {timeout} seconds.')
+            msg = f'Condition {condition} did not become truthy within {timeout} seconds.'
+            raise TimeoutError(msg)
         time.sleep(interval)
     return result
 

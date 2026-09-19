@@ -38,7 +38,8 @@ def remote_data_factory(tmp_path, aiida_localhost, aiida_computer_ssh):
             # (or repeated calls within the same session) cannot collide on ``Computer.label``.
             computer = aiida_computer_ssh()
         else:
-            raise ValueError(f'Unknown mode: {mode}')
+            msg = f'Unknown mode: {mode}'
+            raise ValueError(msg)
 
         node = RemoteData(computer=computer)
         node.set_remote_path(str(tmp_path))

@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import enum
+import typing as t
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
@@ -24,7 +24,7 @@ from aiida.orm.nodes.node import Node
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.orm.utils.mixins import Sealable
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, Process
     from aiida.engine.processes.builder import ProcessBuilder
 
@@ -83,7 +83,7 @@ class ProcessNodeCaching(NodeCaching):
         """
         super(ProcessNodeCaching, self.__class__).is_valid_cache.fset(self, valid)
 
-    def get_objects_to_hash(self) -> list[Any]:
+    def get_objects_to_hash(self) -> list[t.Any]:
         """Return a list of objects which should be included in the hash."""
         res = super().get_objects_to_hash()
         res.update(
@@ -217,14 +217,14 @@ class ProcessNode(Sealable, Node):
         paused: bool | None = OrmMetadataField(
             None,
             description='Whether the process is paused',
-            orm_to_model=lambda node: cast(ProcessNode, node).base.attributes.get('paused', None),
+            orm_to_model=lambda node: t.cast(ProcessNode, node).base.attributes.get('paused', None),
         )
 
-    def set_metadata_inputs(self, value: dict[str, Any]) -> None:
+    def set_metadata_inputs(self, value: dict[str, t.Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
         return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
 
-    def get_metadata_inputs(self) -> dict[str, Any] | None:
+    def get_metadata_inputs(self) -> dict[str, t.Any] | None:
         """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
         return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
 
@@ -248,7 +248,7 @@ class ProcessNode(Sealable, Node):
         return self._logger_adapter
 
     @classmethod
-    def recursive_merge(cls, left: dict[Any, Any], right: dict[Any, Any]) -> None:
+    def recursive_merge(cls, left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None:
         """Recursively merge the ``right`` dictionary into the ``left`` dictionary.
 
         :param left: Base dictionary.
@@ -286,14 +286,14 @@ class ProcessNode(Sealable, Node):
         from aiida.plugins.entry_point import load_entry_point_from_string
 
         if not self.process_type:
-            raise ValueError(f'no process type for Node<{self.pk}>: cannot recreate process class')
+            msg = f'no process type for Node<{self.pk}>: cannot recreate process class'
+            raise ValueError(msg)
 
         try:
             process_class = load_entry_point_from_string(self.process_type)
         except exceptions.EntryPointError as exception:
-            raise ValueError(
-                f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
-            ) from exception
+            msg = f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
+            raise ValueError(msg) from exception
         except ValueError as exception:
             import importlib
 
@@ -312,9 +312,8 @@ class ProcessNode(Sealable, Node):
                 except (AttributeError, ValueError, ImportError):
                     pass
             else:
-                raise ValueError(
-                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
-                ) from exception
+                msg = f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+                raise ValueError(msg) from exception
 
         return process_class
 
@@ -497,7 +496,8 @@ class ProcessNode(Sealable, Node):
             status = status.value
 
         if not isinstance(status, int):
-            raise ValueError(f'exit status has to be an integer, got {status}')
+            msg = f'exit status has to be an integer, got {status}'
+            raise ValueError(msg)
 
         return self.base.attributes.set(self.EXIT_STATUS_KEY, status)
 
@@ -518,7 +518,8 @@ class ProcessNode(Sealable, Node):
             return None
 
         if not isinstance(message, str):
-            raise ValueError(f'exit message has to be a string type, got {type(message)}')
+            msg = f'exit message has to be a string type, got {type(message)}'
+            raise ValueError(msg)
 
         return self.base.attributes.set(self.EXIT_MESSAGE_KEY, message)
 
@@ -541,7 +542,8 @@ class ProcessNode(Sealable, Node):
         :param exception: the exception message
         """
         if not isinstance(exception, str):
-            raise ValueError(f'exception message has to be a string type, got {type(exception)}')
+            msg = f'exception message has to be a string type, got {type(exception)}'
+            raise ValueError(msg)
 
         return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 

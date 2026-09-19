@@ -26,11 +26,11 @@ import inspect
 import os
 import pickle
 import stat
+import typing as t
 import uuid
 import warnings
 from collections.abc import Callable, Generator, Hashable, Iterable, Mapping, MutableMapping
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Optional, TypeVar, Union
 
 import yaml
 
@@ -43,10 +43,10 @@ from aiida.engine.processes.generic import futures
 __all__: tuple[str, ...] = ()
 
 PersistedCheckpoint = collections.namedtuple('PersistedCheckpoint', ['pid', 'tag'])
-SAVED_STATE_TYPE = MutableMapping[str, Any]
+SAVED_STATE_TYPE = MutableMapping[str, t.Any]
 PID_TYPE = Hashable
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
 
 
@@ -66,14 +66,14 @@ yaml.add_constructor('!uuid', uuid_constructor)
 class CheckpointPayload(dict):
     """Mapping representation of an encoded process checkpoint."""
 
-    def __init__(self, saved_state: Mapping[str, Any] | None = None):
+    def __init__(self, saved_state: Mapping[str, t.Any] | None = None):
         """Create a checkpoint payload from an already encoded saved state."""
         super().__init__()
         if saved_state is not None:
             self.update(saved_state)
 
     @classmethod
-    def from_saved_state(cls, saved_state: Mapping[str, Any]) -> 'CheckpointPayload':
+    def from_saved_state(cls, saved_state: Mapping[str, t.Any]) -> 'CheckpointPayload':
         """Create a checkpoint payload from an already encoded saved state."""
         return cls(saved_state)
 
@@ -81,13 +81,13 @@ class CheckpointPayload(dict):
     def from_object(
         cls,
         serializable: 'CheckpointSerializable',
-        save_context: Optional['CheckpointContext'] = None,
+        save_context: t.Optional['CheckpointContext'] = None,
         dereference: bool = False,
     ) -> 'CheckpointPayload':
         """Encode a serializable object as a checkpoint payload."""
         return CheckpointEncoder().encode(serializable, save_context, dereference=dereference)
 
-    def decode(self, load_context: Optional['CheckpointContext'] = None) -> 'CheckpointSerializable':
+    def decode(self, load_context: t.Optional['CheckpointContext'] = None) -> 'CheckpointSerializable':
         """Decode the checkpoint payload into a runtime object."""
         return CheckpointDecoder().decode(self, load_context)
 
@@ -98,7 +98,7 @@ class CheckpointEncoder:
     def encode(
         self,
         serializable: 'CheckpointSerializable',
-        save_context: Optional['CheckpointContext'] = None,
+        save_context: t.Optional['CheckpointContext'] = None,
         *,
         dereference: bool = False,
     ) -> CheckpointPayload:
@@ -113,7 +113,7 @@ class CheckpointDecoder:
     """Decode checkpoint payloads into runtime objects."""
 
     def decode(
-        self, payload: SAVED_STATE_TYPE, load_context: Optional['CheckpointContext'] = None
+        self, payload: SAVED_STATE_TYPE, load_context: t.Optional['CheckpointContext'] = None
     ) -> 'CheckpointSerializable':
         """Decode a checkpoint payload into a runtime object."""
         return CheckpointSerializable.load(payload, load_context)
@@ -122,11 +122,11 @@ class CheckpointDecoder:
 CHECKPOINT_PAYLOAD_TAG = '!aiida:bundle'
 
 
-def _checkpoint_payload_representer(dumper: yaml.Dumper, node: Any) -> Any:
+def _checkpoint_payload_representer(dumper: yaml.Dumper, node: t.Any) -> t.Any:
     return dumper.represent_mapping(CHECKPOINT_PAYLOAD_TAG, node)
 
 
-def _checkpoint_payload_constructor(loader: yaml.Loader, data: Any) -> Generator[CheckpointPayload, None, None]:
+def _checkpoint_payload_constructor(loader: yaml.Loader, data: t.Any) -> Generator[CheckpointPayload, None, None]:
     result = CheckpointPayload.__new__(CheckpointPayload)
     yield result
     mapping = loader.construct_mapping(data)
@@ -407,7 +407,7 @@ class InMemoryCheckpointPersister(CheckpointPersister):
             del self._checkpoints[pid]
 
 
-CheckpointSerializableClsType = TypeVar('CheckpointSerializableClsType', bound='type[CheckpointSerializable]')
+CheckpointSerializableClsType = t.TypeVar('CheckpointSerializableClsType', bound='type[CheckpointSerializable]')
 
 
 def auto_persist(*members: str) -> Callable[[CheckpointSerializableClsType], CheckpointSerializableClsType]:
@@ -422,7 +422,9 @@ def auto_persist(*members: str) -> Callable[[CheckpointSerializableClsType], Che
     return wrapped
 
 
-def _ensure_object_loader(context: Optional['CheckpointContext'], saved_state: SAVED_STATE_TYPE) -> 'CheckpointContext':
+def _ensure_object_loader(
+    context: t.Optional['CheckpointContext'], saved_state: SAVED_STATE_TYPE
+) -> 'CheckpointContext':
     """
     Given a CheckpointContext this method will ensure that it has a valid class loader
     using the following priorities:
@@ -457,23 +459,24 @@ def _ensure_object_loader(context: Optional['CheckpointContext'], saved_state: S
 
 
 class CheckpointContext:
-    def __init__(self, loader: loaders.ObjectLoader | None = None, **kwargs: Any) -> None:
+    def __init__(self, loader: loaders.ObjectLoader | None = None, **kwargs: t.Any) -> None:
         self._values = dict(**kwargs)
         self.loader = loader
 
-    def __getattr__(self, item: str) -> Any:
+    def __getattr__(self, item: str) -> t.Any:
         try:
             return self._values[item]
         except KeyError:
-            raise AttributeError(f"item '{item}' not found")
+            msg = f"item '{item}' not found"
+            raise AttributeError(msg)
 
-    def __iter__(self) -> Iterable[Any]:
+    def __iter__(self) -> Iterable[t.Any]:
         return self._value.__iter__()
 
-    def __contains__(self, item: Any) -> bool:
+    def __contains__(self, item: t.Any) -> bool:
         return self._values.__contains__(item)
 
-    def copyextend(self, **kwargs: Any) -> 'CheckpointContext':
+    def copyextend(self, **kwargs: t.Any) -> 'CheckpointContext':
         """Add additional information to the context by making a copy with the new values"""
         extended = self._values.copy()
         extended.update(kwargs)
@@ -497,7 +500,7 @@ class CheckpointMetadataView:
         self._state = state
 
     @property
-    def metadata(self) -> dict[str, Any]:
+    def metadata(self) -> dict[str, t.Any]:
         """Return the metadata namespace, creating it if needed."""
         return self._state.setdefault(META, {})
 
@@ -509,19 +512,19 @@ class CheckpointMetadataView:
         """Set the persisted class name."""
         self.metadata[META__CLASS_NAME] = name
 
-    def get_member_type(self, name: str) -> Any:
+    def get_member_type(self, name: str) -> t.Any:
         """Return the persisted type of a member, if defined."""
         try:
             return self._state[META][META__TYPES][name]
         except KeyError:
             return None
 
-    def set_member_type(self, name: str, value: Any) -> None:
+    def set_member_type(self, name: str, value: t.Any) -> None:
         """Set the persisted type of a member."""
         type_dict = self.metadata.setdefault(META__TYPES, {})
         type_dict[name] = value
 
-    def get_user_value(self, name: str) -> Any:
+    def get_user_value(self, name: str) -> t.Any:
         """Return a value from the user metadata namespace."""
         try:
             return self._state[META][META__USER][name]
@@ -529,7 +532,7 @@ class CheckpointMetadataView:
             msg = f"Unknown meta key '{name}'"
             raise ValueError(msg)
 
-    def set_user_value(self, name: str, value: Any) -> None:
+    def set_user_value(self, name: str, value: t.Any) -> None:
         """Set a value in the user metadata namespace."""
         user_dict = self.metadata.setdefault(META__USER, {})
         user_dict[name] = value
@@ -653,15 +656,15 @@ class CheckpointSerializable:
     # region Metadata getter/setters
 
     @staticmethod
-    def set_custom_meta(out_state: SAVED_STATE_TYPE, name: str, value: Any) -> None:
+    def set_custom_meta(out_state: SAVED_STATE_TYPE, name: str, value: t.Any) -> None:
         CheckpointMetadataView(out_state).set_user_value(name, value)
 
     @staticmethod
-    def get_custom_meta(saved_state: SAVED_STATE_TYPE, name: str) -> Any:
+    def get_custom_meta(saved_state: SAVED_STATE_TYPE, name: str) -> t.Any:
         return CheckpointMetadataView(saved_state).get_user_value(name)
 
     @staticmethod
-    def _get_create_meta(out_state: SAVED_STATE_TYPE) -> dict[str, Any]:
+    def _get_create_meta(out_state: SAVED_STATE_TYPE) -> dict[str, t.Any]:
         return CheckpointMetadataView(out_state).metadata
 
     @staticmethod
@@ -673,18 +676,18 @@ class CheckpointSerializable:
         return CheckpointMetadataView(saved_state).get_class_name()
 
     @staticmethod
-    def _set_meta_type(out_state: SAVED_STATE_TYPE, name: str, type_spec: Any) -> None:
+    def _set_meta_type(out_state: SAVED_STATE_TYPE, name: str, type_spec: t.Any) -> None:
         CheckpointMetadataView(out_state).set_member_type(name, type_spec)
 
     @staticmethod
-    def _get_meta_type(saved_state: SAVED_STATE_TYPE, name: str) -> Any:
+    def _get_meta_type(saved_state: SAVED_STATE_TYPE, name: str) -> t.Any:
         return CheckpointMetadataView(saved_state).get_member_type(name)
 
     # endregion
 
     def _get_value(
         self, saved_state: SAVED_STATE_TYPE, name: str, load_context: CheckpointContext | None
-    ) -> Union[MethodType, 'CheckpointSerializable']:
+    ) -> t.Union[MethodType, 'CheckpointSerializable']:
         value = saved_state[name]
 
         typ = CheckpointSerializable._get_meta_type(saved_state, name)

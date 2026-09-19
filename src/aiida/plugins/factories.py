@@ -11,8 +11,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
@@ -32,7 +32,7 @@ __all__ = (
     'WorkflowFactory',
 )
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from aiida.brokers import Broker
@@ -46,7 +46,9 @@ if TYPE_CHECKING:
     from aiida.transports import Transport
 
 
-def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, valid_classes: tuple[Any, ...]) -> NoReturn:
+def raise_invalid_type_error(
+    entry_point_name: str, entry_point_group: str, valid_classes: tuple[t.Any, ...]
+) -> t.NoReturn:
     """Raise an `InvalidEntryPointTypeError` with formatted message.
 
     :param entry_point_name: name of the entry point
@@ -59,7 +61,7 @@ def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, vali
     raise InvalidEntryPointTypeError(template.format(*args))
 
 
-def BaseFactory(group: str, name: str, load: bool = True) -> EntryPoint | Any:
+def BaseFactory(group: str, name: str, load: bool = True) -> EntryPoint | t.Any:
     """Return the plugin class registered under a given entry point group and name.
 
     :param group: entry point group
@@ -78,12 +80,12 @@ def BaseFactory(group: str, name: str, load: bool = True) -> EntryPoint | Any:
     return get_entry_point(group, name)
 
 
-@overload
-def BrokerFactory(entry_point_name: str, load: Literal[True] = True) -> type[Broker]: ...
+@t.overload
+def BrokerFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Broker]: ...
 
 
-@overload
-def BrokerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def BrokerFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def BrokerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Broker] | Callable:
@@ -111,12 +113,12 @@ def BrokerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def CalculationFactory(entry_point_name: str, load: Literal[True] = True) -> type[CalcJob] | Callable: ...
+@t.overload
+def CalculationFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[CalcJob] | Callable: ...
 
 
-@overload
-def CalculationFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def CalculationFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def CalculationFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[CalcJob] | Callable:
@@ -147,12 +149,12 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> EntryPoint |
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def CalcJobImporterFactory(entry_point_name: str, load: Literal[True] = True) -> type[CalcJobImporter]: ...
+@t.overload
+def CalcJobImporterFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[CalcJobImporter]: ...
 
 
-@overload
-def CalcJobImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def CalcJobImporterFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[CalcJobImporter]:
@@ -179,12 +181,12 @@ def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoi
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def DataFactory(entry_point_name: str, load: Literal[True] = True) -> type[Data]: ...
+@t.overload
+def DataFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Data]: ...
 
 
-@overload
-def DataFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def DataFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def DataFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Data]:
@@ -212,12 +214,12 @@ def DataFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[D
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def DbImporterFactory(entry_point_name: str, load: Literal[True] = True) -> type[DbImporter]: ...
+@t.overload
+def DbImporterFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[DbImporter]: ...
 
 
-@overload
-def DbImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def DbImporterFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def DbImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[DbImporter]:
@@ -245,12 +247,12 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoint | 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def GroupFactory(entry_point_name: str, load: Literal[True] = True) -> type[Group]: ...
+@t.overload
+def GroupFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Group]: ...
 
 
-@overload
-def GroupFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def GroupFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def GroupFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Group]:
@@ -278,12 +280,12 @@ def GroupFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def OrbitalFactory(entry_point_name: str, load: Literal[True] = True) -> type[Orbital]: ...
+@t.overload
+def OrbitalFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Orbital]: ...
 
 
-@overload
-def OrbitalFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def OrbitalFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def OrbitalFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Orbital]:
@@ -311,12 +313,12 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> EntryPoint | typ
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def ParserFactory(entry_point_name: str, load: Literal[True] = True) -> type[Parser]: ...
+@t.overload
+def ParserFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Parser]: ...
 
 
-@overload
-def ParserFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def ParserFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def ParserFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Parser]:
@@ -344,12 +346,12 @@ def ParserFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def SchedulerFactory(entry_point_name: str, load: Literal[True] = True) -> type[Scheduler]: ...
+@t.overload
+def SchedulerFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Scheduler]: ...
 
 
-@overload
-def SchedulerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def SchedulerFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def SchedulerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Scheduler]:
@@ -377,12 +379,12 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | t
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def StorageFactory(entry_point_name: str, load: Literal[True] = True) -> type[StorageBackend]: ...
+@t.overload
+def StorageFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[StorageBackend]: ...
 
 
-@overload
-def StorageFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def StorageFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def StorageFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[StorageBackend]:
@@ -410,12 +412,12 @@ def StorageFactory(entry_point_name: str, load: bool = True) -> EntryPoint | typ
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def TransportFactory(entry_point_name: str, load: Literal[True] = True) -> type[Transport]: ...
+@t.overload
+def TransportFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[Transport]: ...
 
 
-@overload
-def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def TransportFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def TransportFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Transport]:
@@ -442,12 +444,12 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> EntryPoint | t
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-@overload
-def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> type[WorkChain] | Callable: ...
+@t.overload
+def WorkflowFactory(entry_point_name: str, load: t.Literal[True] = True) -> type[WorkChain] | Callable: ...
 
 
-@overload
-def WorkflowFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
+@t.overload
+def WorkflowFactory(entry_point_name: str, load: t.Literal[False]) -> EntryPoint: ...
 
 
 def WorkflowFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[WorkChain] | Callable:

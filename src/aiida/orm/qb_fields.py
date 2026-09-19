@@ -386,7 +386,8 @@ class QbFieldFilters:
     def __eq__(self, other: object) -> bool:
         """``a == b`` checks if `a.filters == b.filters`."""
         if not isinstance(other, QbFieldFilters):
-            raise TypeError(f'cannot compare QbFieldFilters to {type(other)}')
+            msg = f'cannot compare QbFieldFilters to {type(other)}'
+            raise TypeError(msg)
         return self.filters == other.filters
 
     def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
@@ -423,7 +424,8 @@ class QbFieldFilters:
         """Resolve redundant filters and nested logical operators."""
 
         if not isinstance(other, QbFieldFilters):
-            raise TypeError(f'cannot combine QbFieldFilters and {type(other)}')
+            msg = f'cannot combine QbFieldFilters and {type(other)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         # same filters
         if other == self:
@@ -532,7 +534,8 @@ def add_field(
         'is_subscriptable': is_subscriptable,
     }
     if not isidentifier(key):
-        raise ValueError(f'{key} is not a valid python identifier')
+        msg = f'{key} is not a valid python identifier'
+        raise ValueError(msg)
     if not is_attribute and alias:
         raise ValueError('only attribute fields may be aliased')
     if key == 'attributes':

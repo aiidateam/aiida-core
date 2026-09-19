@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import traceback
-from typing import Any
+import typing as t
 
 from aiida.brokers import exceptions as broker_exceptions
 from aiida.brokers import futures as broker_futures
@@ -73,7 +73,7 @@ class ProcessLauncher(BaseProcessLauncher):
         if node.is_terminated:
             LOGGER.info('not continuing process<%d> which is already terminated with state %s', pid, node.process_state)
 
-            future: broker_futures.Future[Any] = broker_futures.Future()
+            future: broker_futures.Future[t.Any] = broker_futures.Future()
 
             if node.is_finished:
                 future.set_result(

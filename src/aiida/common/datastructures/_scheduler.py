@@ -19,14 +19,15 @@ from __future__ import annotations
 import abc
 import enum
 import json
+import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal
 
 from typing_extensions import Self
 
-from aiida.common import AIIDA_LOGGER, CodeRunMode
+from aiida.common.datastructures._calcjob import CodeRunMode
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
+from aiida.common.log import AIIDA_LOGGER
 from aiida.common.timezone import make_aware, timezone_from_name
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
@@ -36,6 +37,7 @@ __all__ = (
     'JobResource',
     'JobState',
     'JobTemplate',
+    'JobTemplateCodeInfo',
     'MachineInfo',
     'NodeNumberJobResource',
     'ParEnvJobResource',
@@ -80,7 +82,7 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def validate_resources(cls, **kwargs: Any) -> dict[Any, Any] | None:
+    def validate_resources(cls, **kwargs: t.Any) -> dict[t.Any, t.Any] | None:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -118,14 +120,14 @@ class NodeNumberJobResource(JobResource):
         'num_cores_per_mpiproc',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         num_machines: int
         num_mpiprocs_per_machine: int
         num_cores_per_machine: int
         num_cores_per_mpiproc: int
 
     @classmethod
-    def validate_resources(cls, **kwargs: Any) -> AttributeDict:
+    def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -137,7 +139,8 @@ class NodeNumberJobResource(JobResource):
         def is_greater_equal_one(parameter: str) -> None:
             value = getattr(resources, parameter, None)
             if value is not None and value < 1:
-                raise ValueError(f'`{parameter}` must be greater than or equal to one.')
+                msg = f'`{parameter}` must be greater than or equal to one.'
+                raise ValueError(msg)
 
         # Validate that all fields are valid integers if they are specified, otherwise initialize them to `None`
         for parameter in list(cls._default_fields) + ['tot_num_mpiprocs']:
@@ -148,10 +151,12 @@ class NodeNumberJobResource(JobResource):
                 try:
                     setattr(resources, parameter, int(value))
                 except ValueError:
-                    raise ValueError(f'`{parameter}` must be an integer when specified')
+                    msg = f'`{parameter}` must be an integer when specified'
+                    raise ValueError(msg)
 
         if kwargs:
-            raise ValueError(f'these parameters were not recognized: {", ".join(list(kwargs.keys()))}')
+            msg = f'these parameters were not recognized: {", ".join(list(kwargs.keys()))}'
+            raise ValueError(msg)
 
         # At least two of the following parameters need to be defined as non-zero
         if [resources.num_machines, resources.num_mpiprocs_per_machine, resources.tot_num_mpiprocs].count(None) > 1:
@@ -178,7 +183,7 @@ class NodeNumberJobResource(JobResource):
 
         return resources
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self, **kwargs: t.Any):
         """Initialize the job resources from the passed arguments.
 
         :raises ValueError: if the resources are invalid or incomplete
@@ -192,7 +197,7 @@ class NodeNumberJobResource(JobResource):
         return super().get_valid_keys() + ['tot_num_mpiprocs']
 
     @classmethod
-    def accepts_default_mpiprocs_per_machine(cls) -> Literal[True]:
+    def accepts_default_mpiprocs_per_machine(cls) -> t.Literal[True]:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return True
 
@@ -209,12 +214,12 @@ class ParEnvJobResource(JobResource):
         'tot_num_mpiprocs',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         parallel_env: str
         tot_num_mpiprocs: int
 
     @classmethod
-    def validate_resources(cls, **kwargs: Any) -> AttributeDict:
+    def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -240,11 +245,12 @@ class ParEnvJobResource(JobResource):
             raise ValueError('`tot_num_mpiprocs` must be greater than or equal to one.')
 
         if kwargs:
-            raise ValueError(f'these parameters were not recognized: {", ".join(list(kwargs.keys()))}')
+            msg = f'these parameters were not recognized: {", ".join(list(kwargs.keys()))}'
+            raise ValueError(msg)
 
         return resources
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self, **kwargs: t.Any):
         """Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
@@ -254,7 +260,7 @@ class ParEnvJobResource(JobResource):
         super().__init__(resources)
 
     @classmethod
-    def accepts_default_mpiprocs_per_machine(cls) -> Literal[False]:
+    def accepts_default_mpiprocs_per_machine(cls) -> t.Literal[False]:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return False
 
@@ -327,7 +333,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
       * ``append_text``: a (possibly multi-line) string to be inserted
         in the scheduler script after the main execution line
       * ``import_sys_environment``: import the system environment variables
-      * ``codes_info``: a list of aiida.scheduler.datastructures.JobTemplateCodeInfo objects.
+      * ``codes_info``: a list of aiida.common.datastructures.JobTemplateCodeInfo objects.
         Each contains the information necessary to run a single code. At the
         moment, it can contain:
 
@@ -385,7 +391,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'codes_info',
     )
 
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         shebang: str | None
         submit_as_hold: bool
         rerunnable: bool
@@ -439,9 +445,9 @@ class JobTemplateCodeInfo:
     cmdline_params: list[str] = field(default_factory=list)
     use_double_quotes: list[bool] = field(default_factory=lambda: [False, False])
     wrap_cmdline_params: bool = False
-    stdin_name: None | str = None
-    stdout_name: None | str = None
-    stderr_name: None | str = None
+    stdin_name: str | None = None
+    stdout_name: str | None = None
+    stderr_name: str | None = None
     join_files: bool = False
 
 
@@ -483,10 +489,10 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``annotation``: human-readable description of the reason for the job
          being in the current state or substate.
        * ``job_state``: the job state (one of those defined in
-         ``aiida.schedulers.datastructures.JobState``)
+         ``aiida.common.datastructures.JobState``)
        * ``job_substate``: a string with the implementation-specific sub-state
        * ``allocated_machines``: a list of machines used for the current job.
-         This is a list of :py:class:`aiida.schedulers.datastructures.MachineInfo` objects.
+         This is a list of :py:class:`aiida.common.datastructures.MachineInfo` objects.
        * ``job_owner``: the job owner as reported by the scheduler
        * ``num_mpiprocs``: the *total* number of requested MPI procs
        * ``num_cpus``: the *total* number of requested CPUs (cores) [may be undefined]
@@ -539,7 +545,7 @@ class JobInfo(DefaultFieldsAttributeDict):
 
     # NOTE: All of these fields might be undefined, in which case they return `None`,
     # see the definition of DefaultFieldsAttributeDict.__getitem__
-    if TYPE_CHECKING:
+    if t.TYPE_CHECKING:
         job_id: str
         title: str
         exit_status: int
@@ -576,7 +582,8 @@ class JobInfo(DefaultFieldsAttributeDict):
     def _serialize_job_state(job_state: JobState) -> str:
         """Return the serialized value of the JobState instance."""
         if not isinstance(job_state, JobState):
-            raise TypeError(f'invalid type for value {job_state}, should be an instance of `JobState`')
+            msg = f'invalid type for value {job_state}, should be an instance of `JobState`'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         return job_state.value
 
@@ -624,7 +631,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         )
 
     @classmethod
-    def serialize_field(cls, value: Any, field_type: str | None) -> Any:
+    def serialize_field(cls, value: t.Any, field_type: str | None) -> t.Any:
         """Serialise a particular field value
 
         :param value: The value to serialise
@@ -639,7 +646,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return serializer_method(value)
 
     @classmethod
-    def deserialize_field(cls, value: Any, field_type: str | None) -> Any:
+    def deserialize_field(cls, value: t.Any, field_type: str | None) -> t.Any:
         """Deserialise the value of a particular field with a type
         :param value: The value
         :param field_type: The field type
@@ -659,7 +666,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         """
         return json.dumps(self.get_dict())
 
-    def get_dict(self) -> dict[str, Any]:
+    def get_dict(self) -> dict[str, t.Any]:
         """Serialise the current data into a dictionary that is JSON-serializable.
 
         :return: A dictionary
@@ -667,7 +674,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
 
     @classmethod
-    def load_from_dict(cls, data: dict[str, Any]) -> Self:
+    def load_from_dict(cls, data: dict[str, t.Any]) -> Self:
         """Create a new instance loading the values from serialised data in dictionary form
 
         :param data: The dictionary with the data to load from

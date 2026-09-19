@@ -44,7 +44,8 @@ def validate_entry_point_strings(_, __, value):
     try:
         autogroup.AutogroupManager.validate(value)
     except (TypeError, ValueError) as exc:
-        raise click.BadParameter(f'{exc!s}: `{value}`')
+        msg = f'{exc!s}: `{value}`'
+        raise click.BadParameter(msg)
 
     return value
 

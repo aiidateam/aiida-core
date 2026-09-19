@@ -135,4 +135,5 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
             session.delete(row)
             session.commit()
         except NoResultFound:
-            raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
+            msg = f'AuthInfo<{pk}> does not exist'
+            raise exceptions.NotExistent(msg)

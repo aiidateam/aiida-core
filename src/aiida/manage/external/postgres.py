@@ -15,12 +15,12 @@ installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO
 from pgsu import PGSU, PostgresConnectionMode
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.manage.configuration import Profile
 
 # The last placeholder is for adding privileges of the user

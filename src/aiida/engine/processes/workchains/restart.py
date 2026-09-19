@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import functools
+import typing as t
 from collections.abc import Mapping
 from inspect import getmembers
 from types import FunctionType
-from typing import TYPE_CHECKING, Any
 
 from aiida import orm
 from aiida.common import AttributeDict
@@ -24,13 +24,13 @@ from aiida.engine.processes.workchains.context import ToContext, append_
 from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler
 from aiida.engine.processes.workchains.workchain import WorkChain
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec
 
 __all__ = ('BaseRestartWorkChain',)
 
 
-def validate_on_unhandled_failure(value: None | orm.Str, _) -> None | str:
+def validate_on_unhandled_failure(value: orm.Str | None, _) -> str | None:
     """Validator for the `on_unhandled_failure` input port.
 
     :param value: the input `Str` node
@@ -298,7 +298,8 @@ class BaseRestartWorkChain(WorkChain):
 
             if report is not None and not isinstance(report, ProcessHandlerReport):
                 name = handler.__name__
-                raise RuntimeError(f'handler `{name}` returned a value that is not a ProcessHandlerReport')
+                msg = f'handler `{name}` returned a value that is not a ProcessHandlerReport'
+                raise RuntimeError(msg)
 
             # If an actual report was returned, save it so it is not overridden by next handler returning `None`
             if report:
@@ -531,7 +532,7 @@ class BaseRestartWorkChain(WorkChain):
         if cleaned_calcs:
             self.report(f'cleaned remote folders of calculations: {" ".join(cleaned_calcs)}')
 
-    def _wrap_bare_dict_inputs(self, port_namespace: PortNamespace, inputs: dict[str, Any]) -> AttributeDict:
+    def _wrap_bare_dict_inputs(self, port_namespace: PortNamespace, inputs: dict[str, t.Any]) -> AttributeDict:
         """Wrap bare dictionaries in `inputs` in a `Dict` node if dictated by the corresponding inputs portnamespace.
 
         :param port_namespace: a `PortNamespace`

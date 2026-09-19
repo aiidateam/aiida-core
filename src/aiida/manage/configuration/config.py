@@ -19,9 +19,9 @@ import codecs
 import json
 import os
 import shutil
+import typing as t
 import uuid
 from pathlib import Path
-from typing import Any, Literal, TypeAlias, TypedDict, cast
 
 from pydantic import (
     BaseModel,
@@ -46,10 +46,10 @@ from aiida.manage.configuration.profile import Profile
 LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
 
 
-CircusEndpointName: TypeAlias = Literal['controller', 'pubsub', 'stats']
+CircusEndpointName: t.TypeAlias = t.Literal['controller', 'pubsub', 'stats']
 
 
-class CircusEndpointFilepaths(TypedDict):
+class CircusEndpointFilepaths(t.TypedDict):
     """Typed dictionary for Circus endpoint socket file names."""
 
     controller: str
@@ -63,13 +63,13 @@ class CircusSocketFilepaths(CircusEndpointFilepaths):
     file: str
 
 
-class ProfileFilepaths(TypedDict):
+class ProfileFilepaths(t.TypedDict):
     """Typed dictionary for profile log file paths."""
 
     log: str
 
 
-class CircusFilepaths(TypedDict):
+class CircusFilepaths(t.TypedDict):
     """Typed dictionary for Circus file paths."""
 
     log: str
@@ -78,7 +78,7 @@ class CircusFilepaths(TypedDict):
     socket: CircusSocketFilepaths
 
 
-class DaemonFilepaths(TypedDict):
+class DaemonFilepaths(t.TypedDict):
     """Typed dictionary for daemon file paths."""
 
     log: str
@@ -86,14 +86,14 @@ class DaemonFilepaths(TypedDict):
     daemon_env_info: str
 
 
-class ZeromqBrokerServiceFilepaths(TypedDict):
+class ZeromqBrokerServiceFilepaths(t.TypedDict):
     """Typed dictionary for ZeroMQ broker file paths."""
 
     dir: str
     log: str
 
 
-class ConfigFilepaths(TypedDict):
+class ConfigFilepaths(t.TypedDict):
     """Typed dictionary for profile-related file paths."""
 
     profile: ProfileFilepaths
@@ -148,7 +148,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.',
     )
     logging__terminal_handler: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+        t.cast(LogLevels, 'REPORT'),
         description=(
             'Minimum log level needed for outputting a log into the terminal. '
             'This only filters log messages and does not change the actual emitted log messages. '
@@ -157,7 +157,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         ),
     )
     logging__aiida_loglevel: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+        t.cast(LogLevels, 'REPORT'),
         description=(
             'Minimum level for the AiiDA logging stack. Can be changed for individual aiida packages in the advanced'
             ' options.'
@@ -165,22 +165,22 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
     logging__aiida_core_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+        t.cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the aiida-core logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__verdi_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+        t.cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `verdi` command logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__disk_objectstore_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INHERIT'),
+        t.cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `disk_objectstore` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__database_handler: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+        t.cast(LogLevels, 'REPORT'),
         description=(
             'Minimum log level needed for log messages bound to a stored node to be written to the `DbLog` '
             'table (what `verdi process report` displays). This only filters log messages and does not change '
@@ -190,7 +190,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
     logging__db_loglevel: LogLevels = Field(
-        cast(LogLevels, 'REPORT'),
+        t.cast(LogLevels, 'REPORT'),
         description='Deprecated: use ``logging.database_handler`` instead.',
         json_schema_extra={
             'deprecated_by': 'logging.database_handler',
@@ -199,27 +199,27 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         },
     )
     logging__paramiko_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+        t.cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `paramiko` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__alembic_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+        t.cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `alembic` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__sqlalchemy_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+        t.cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `sqlalchemy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__circus_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'INFO'),
+        t.cast(AdvancedLogLevels, 'INFO'),
         description='Minimum level for the `circus` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__aiopika_loglevel: AdvancedLogLevels = Field(
-        cast(AdvancedLogLevels, 'WARNING'),
+        t.cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `aio_pika` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
         json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
@@ -301,7 +301,7 @@ class ProfileStorageConfig(BaseModel, defer_build=True):
     """Schema for the storage backend configuration of an AiiDA profile."""
 
     backend: str
-    config: dict[str, Any]
+    config: dict[str, t.Any]
 
 
 class ProcessControlConfig(BaseModel, defer_build=True):
@@ -315,7 +315,7 @@ class ProcessControlConfig(BaseModel, defer_build=True):
     backend: str | None = Field(
         None, description='Entry point name of the broker plugin, or ``None`` if no broker is configured.'
     )
-    config: dict[str, Any] | None = Field(None, description='Configuration of the broker plugin.')
+    config: dict[str, t.Any] | None = Field(None, description='Configuration of the broker plugin.')
 
 
 class ProfileSchema(BaseModel, defer_build=True):
@@ -421,7 +421,8 @@ class Config:
         try:
             ConfigSchema(**config)
         except ValidationError as exception:
-            raise ConfigurationError(f'invalid config schema: {filepath}: {exception!s}')
+            msg = f'invalid config schema: {filepath}: {exception!s}'
+            raise ConfigurationError(msg)
 
     def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
@@ -573,7 +574,8 @@ class Config:
         from aiida.common import exceptions
 
         if name not in self.profile_names:
-            raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
+            msg = f'profile `{name}` does not exist'
+            raise exceptions.ProfileConfigurationError(msg)
 
     def get_profile(self, name: str | None = None) -> Profile:
         """Return the profile for the given name or the default one if not specified.
@@ -584,9 +586,8 @@ class Config:
         from aiida.common import exceptions
 
         if not name and not self.default_profile_name:
-            raise exceptions.ProfileConfigurationError(
-                f'no default profile defined: {self._default_profile}\n{self.dictionary}'
-            )
+            msg = f'no default profile defined: {self._default_profile}\n{self.dictionary}'
+            raise exceptions.ProfileConfigurationError(msg)
 
         if not name:
             name = self.default_profile_name
@@ -599,9 +600,9 @@ class Config:
         self,
         name: str,
         storage_backend: str,
-        storage_config: dict[str, Any],
+        storage_config: dict[str, t.Any],
         broker_backend: str | None = None,
-        broker_config: dict[str, Any] | None = None,
+        broker_config: dict[str, t.Any] | None = None,
         is_test_profile: bool = False,
     ) -> Profile:
         """Create a new profile and initialise its storage.
@@ -625,18 +626,21 @@ class Config:
         from aiida.plugins.entry_point import load_entry_point
 
         if name in self.profile_names:
-            raise ValueError(f'The profile `{name}` already exists.')
+            msg = f'The profile `{name}` already exists.'
+            raise ValueError(msg)
 
         try:
             storage_cls = load_entry_point('aiida.storage', storage_backend)
         except EntryPointError as exception:
-            raise ValueError(f'The entry point `{storage_backend}` could not be loaded.') from exception
+            msg = f'The entry point `{storage_backend}` could not be loaded.'
+            raise ValueError(msg) from exception
         else:
             if not issubclass(storage_cls, StorageBackend):
-                raise TypeError(
+                msg = (
                     f'The `storage_backend={storage_backend}` is not a subclass of '
                     '`aiida.orm.implementation.storage_backend.StorageBackend`.'
                 )
+                raise TypeError(msg)
 
         storage_config = storage_cls.CliModel(**(storage_config or {})).model_dump()
 
@@ -644,12 +648,12 @@ class Config:
             try:
                 broker_cls = load_entry_point('aiida.brokers', broker_backend)
             except EntryPointError as exception:
-                raise ValueError(f'The entry point `{broker_backend}` could not be loaded.') from exception
+                msg = f'The entry point `{broker_backend}` could not be loaded.'
+                raise ValueError(msg) from exception
             else:
                 if not issubclass(broker_cls, Broker):
-                    raise TypeError(
-                        f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
-                    )
+                    msg = f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
+                    raise TypeError(msg)
 
         profile = Profile(
             name,
@@ -670,9 +674,10 @@ class Config:
         try:
             profile.storage_cls.initialise(profile)
         except Exception as exception:
-            raise StorageMigrationError(
+            msg = (
                 f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
             )
+            raise StorageMigrationError(msg)
         LOGGER.report('Storage initialisation completed.')
 
         self.add_profile(profile)
@@ -910,7 +915,7 @@ class Config:
 
         return value
 
-    def get_options(self, scope: str | None = None) -> dict[str, tuple[Option, str, Any]]:
+    def get_options(self, scope: str | None = None) -> dict[str, tuple[Option, str, t.Any]]:
         """Return a dictionary of all option values and their source ('profile', 'global', or 'default').
 
         :param scope: the profile name or globally if not specified

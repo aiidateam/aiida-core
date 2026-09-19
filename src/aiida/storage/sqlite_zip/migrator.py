@@ -14,11 +14,11 @@ import os
 import shutil
 import tarfile
 import tempfile
+import typing as t
 import zipfile
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from alembic.command import upgrade
 from alembic.config import Config
@@ -68,12 +68,13 @@ def validate_storage(inpath: Path) -> None:
     schema_version_code = get_schema_version_head()
     schema_version_archive = read_version(inpath)
     if schema_version_archive != schema_version_code:
-        raise IncompatibleStorageSchema(
+        msg = (
             f'Archive schema version `{schema_version_archive}` '
             f'is incompatible with the required schema version `{schema_version_code}`. '
             'To migrate the archive schema version to the current one, '
             f'run the following command: verdi archive migrate {str(inpath)!r}'
         )
+        raise IncompatibleStorageSchema(msg)
 
 
 def migrate(
@@ -121,7 +122,8 @@ def migrate(
     elif zipfile.is_zipfile(str(inpath)):
         is_tar = False
     else:
-        raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
+        msg = f'The input file is neither a tar nor a zip file: {inpath}'
+        raise CorruptStorage(msg)
 
     # Check if migration is needed
     current_version = SqliteZipBackend.get_current_archive_version(inpath=inpath)
@@ -143,7 +145,7 @@ def migrate(
     metadata['compression'] = compression
 
     # if the archive is a "legacy" format, i.e. has a data.json file, migrate it to the target/final legacy schema
-    data: dict[str, Any] | None = None
+    data: dict[str, t.Any] | None = None
     if current_version in LEGACY_MIGRATE_FUNCTIONS:
         MIGRATE_LOGGER.report(f'Legacy migrations required from {"tar" if is_tar else "zip"} format')
         MIGRATE_LOGGER.report('Extracting data.json ...')
@@ -181,7 +183,7 @@ def migrate(
     with tempfile.TemporaryDirectory() as tmpdirname:
         # open the new zip file, within which to write the migrated content
         new_zip_path = Path(tmpdirname) / 'new.zip'
-        central_dir: dict[str, Any] = {}
+        central_dir: dict[str, t.Any] = {}
         with ZipPath(
             new_zip_path,
             mode='w',
@@ -214,7 +216,8 @@ def migrate(
                     try:
                         extract_file_in_zip(inpath, DB_FILENAME, handle)
                     except Exception as exc:
-                        raise CorruptStorage(f'database could not be read: {exc}') from exc
+                        msg = f'database could not be read: {exc}'
+                        raise CorruptStorage(msg) from exc
 
             # perform alembic migrations
             # note, we do this before writing the repository files (unless a legacy migration),
@@ -263,7 +266,7 @@ def migrate(
         shutil.move(new_zip_path, outpath)
 
 
-def _read_json(inpath: Path, filename: str, is_tar: bool) -> dict[str, Any]:
+def _read_json(inpath: Path, filename: str, is_tar: bool) -> dict[str, t.Any]:
     """Read a JSON file from the archive."""
     if is_tar:
         with open_file_in_tar(inpath, filename) as handle:
@@ -291,11 +294,11 @@ def _perform_legacy_migrations(current_version: str, to_version: str, metadata: 
     pathway: list[str] = []
     while prev_version != to_version:
         if prev_version not in LEGACY_MIGRATE_FUNCTIONS:
-            raise StorageMigrationError(f"No migration pathway available for '{current_version}' to '{to_version}'")
+            msg = f"No migration pathway available for '{current_version}' to '{to_version}'"
+            raise StorageMigrationError(msg)
         if prev_version in pathway:
-            raise StorageMigrationError(
-                f'cyclic migration pathway encountered: {" -> ".join(pathway + [prev_version])}'
-            )
+            msg = f'cyclic migration pathway encountered: {" -> ".join(pathway + [prev_version])}'
+            raise StorageMigrationError(msg)
         pathway.append(prev_version)
         prev_version = LEGACY_MIGRATE_FUNCTIONS[prev_version][0]
 
@@ -338,7 +341,7 @@ def _alembic_connect(db_path: Path, enforce_foreign_keys: bool = True) -> Iterat
         config = _alembic_config()
         config.attributes['connection'] = connection
 
-        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
+        def _callback(step: MigrationInfo, **kwargs: t.Any) -> None:
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')

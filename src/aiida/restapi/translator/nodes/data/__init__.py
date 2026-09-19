@@ -59,8 +59,9 @@ class DataTranslator(NodeTranslator):
             return response
 
         else:
-            raise RestInputValidationError(
+            msg = (
                 f'The format {download_format} is not supported. '
                 'The available download formats can be '
                 'queried using the /nodes/download_formats/ endpoint.'
             )
+            raise RestInputValidationError(msg)

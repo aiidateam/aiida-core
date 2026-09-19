@@ -10,8 +10,8 @@
 
 import logging
 import traceback
+import typing as t
 from collections.abc import Hashable
-from typing import TYPE_CHECKING
 
 from aiida.common.loaders import DefaultObjectLoader as ObjectLoader
 from aiida.common.loaders import get_object_loader
@@ -19,7 +19,7 @@ from aiida.engine.processes import persistence as process_persistence
 from aiida.engine.processes.exceptions import PersistenceError
 from aiida.orm.utils import serialize
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('AiidaCheckpointPersister', 'ObjectLoader', 'get_object_loader')
@@ -76,12 +76,14 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
         try:
             calculation = load_node(pid)
         except (MultipleObjectsError, NotExistent):
-            raise PersistenceError(f'Failed to load the node for process<{pid}>: {traceback.format_exc()}')
+            msg = f'Failed to load the node for process<{pid}>: {traceback.format_exc()}'
+            raise PersistenceError(msg)
 
         checkpoint = calculation.checkpoint
 
         if checkpoint is None:
-            raise PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
+            msg = f'Calculation<{calculation.pk}> does not have a saved checkpoint'
+            raise PersistenceError(msg)
 
         try:
             payload = serialize.deserialize_unsafe(checkpoint)

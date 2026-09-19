@@ -10,14 +10,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+import typing as t
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
 from aiida.orm import entities
 from aiida.orm.pydantic import OrmMetadataField
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.users import BackendUser
 
@@ -27,7 +27,7 @@ __all__ = ('User',)
 class UserCollection(entities.Collection['User']):
     """The collection of users stored in a backend."""
 
-    collection_type: ClassVar[str] = 'users'
+    collection_type: t.ClassVar[str] = 'users'
 
     @staticmethod
     def _entity_base_cls() -> type[User]:

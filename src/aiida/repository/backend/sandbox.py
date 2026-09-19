@@ -106,7 +106,8 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         """Open a file handle to an object stored under the given key."""
 
         if not self.has_object(key):
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+            msg = f'object with key `{key}` does not exist.'
+            raise FileNotFoundError(msg)
 
         with self.sandbox.open(key, mode='rb') as handle:
             yield handle

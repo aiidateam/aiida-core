@@ -207,7 +207,8 @@ class NodeRepository:
         :raises OSError: if the file could not be opened.
         """
         if mode not in ['r', 'rb']:
-            raise ValueError(f'the mode {mode} is not supported.')
+            msg = f'the mode {mode} is not supported.'
+            raise ValueError(msg)
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
@@ -267,7 +268,8 @@ class NodeRepository:
         :raises OSError: if the file could not be opened.
         """
         if mode not in ['r', 'rb']:
-            raise ValueError(f'the mode {mode} is not supported.')
+            msg = f'the mode {mode} is not supported.'
+            raise ValueError(msg)
 
         if 'b' not in mode:
             return self._repository.get_object_content(path).decode('utf-8')

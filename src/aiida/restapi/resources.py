@@ -146,7 +146,8 @@ class BaseResource(Resource):
         node = load_node(node_id)
 
         if not isinstance(node, self.trans._aiida_class):
-            raise RestInputValidationError(f'node {node_id} is not of the required type {self.trans._aiida_class}')
+            msg = f'node {node_id} is not of the required type {self.trans._aiida_class}'
+            raise RestInputValidationError(msg)
 
         return node
 

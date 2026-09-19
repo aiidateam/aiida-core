@@ -191,22 +191,25 @@ def submit_and_await(started_daemon_client):
         elif isinstance(submittable, ProcessNode):
             node = submittable
         else:
-            raise ValueError(f'type of submittable `{type(submittable)}` is not supported.')
+            msg = f'type of submittable `{type(submittable)}` is not supported.'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         start_time = time.monotonic()
 
         while node.process_state is not state:
             if node.is_excepted:
-                raise RuntimeError(f'The process excepted: {node.exception}')
+                msg = f'The process excepted: {node.exception}'
+                raise RuntimeError(msg)
 
             if time.monotonic() - start_time >= timeout:
                 daemon_log_file = pathlib.Path(started_daemon_client.daemon_log_file).read_text(encoding='utf-8')
                 daemon_status = 'running' if started_daemon_client.is_daemon_running else 'stopped'
-                raise RuntimeError(
+                msg = (
                     f'Timed out waiting for process with state `{node.process_state}` to enter state `{state}`.\n'
                     f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log file content: \n'
                     f'{daemon_log_file}'
                 )
+                raise RuntimeError(msg)
             time.sleep(0.1)
 
         return node

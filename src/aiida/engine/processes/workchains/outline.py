@@ -22,20 +22,20 @@ import abc
 import collections
 import inspect
 import re
+import typing as t
 from collections.abc import Callable, Mapping, MutableSequence, Sequence
-from typing import TYPE_CHECKING, Any, cast
 
 from aiida.engine.processes import persistence
 from aiida.engine.processes.generic.spec import ProcessSpec
 from aiida.engine.processes.persistence import SAVED_STATE_TYPE
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.workchains.workchain import WorkChain
 
 __all__: tuple[str, ...] = ()
 
 PREDICATE_TYPE = Callable[['WorkChain'], bool]
-WC_COMMAND_TYPE = Callable[['WorkChain'], Any]
+WC_COMMAND_TYPE = Callable[['WorkChain'], t.Any]
 EXIT_CODE_TYPE = int
 STEPPER_STATE = 'stepper_state'
 
@@ -80,7 +80,7 @@ class Stepper(persistence.CheckpointSerializable, metaclass=abc.ABCMeta):
         self._workchain = load_context.workchain
 
     @abc.abstractmethod
-    def step(self) -> tuple[bool, Any]:
+    def step(self) -> tuple[bool, t.Any]:
         """
         Execute on step of the instructions.
         :return: A 2-tuple with entries:
@@ -109,7 +109,7 @@ class _Instruction(metaclass=abc.ABCMeta):
         return str(self.get_description())
 
     @abc.abstractmethod
-    def get_description(self) -> Any:
+    def get_description(self) -> t.Any:
         """
         Get a text description of these instructions.
         :return: The description
@@ -130,7 +130,7 @@ class _FunctionStepper(Stepper):
         super().load_instance_state(saved_state, load_context)
         self._fn = getattr(self._workchain.__class__, saved_state['_fn'])
 
-    def step(self) -> tuple[bool, Any]:
+    def step(self) -> tuple[bool, t.Any]:
         return True, self._fn(self._workchain)
 
     def __str__(self) -> str:
@@ -142,7 +142,8 @@ class _FunctionCall(_Instruction):
         try:
             args = inspect.getfullargspec(func)[0]
         except TypeError:
-            raise TypeError(f'func is not a function, got {type(func)}')
+            msg = f'func is not a function, got {type(func)}'
+            raise TypeError(msg)
         if len(args) != 1:
             raise TypeError('Step must take one argument only: self')
 
@@ -153,7 +154,7 @@ class _FunctionCall(_Instruction):
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _FunctionStepper:
         load_context = persistence.CheckpointContext(workchain=workchain, func_spec=self)
-        return cast(_FunctionStepper, _FunctionStepper.recreate_from(saved_state, load_context))
+        return t.cast(_FunctionStepper, _FunctionStepper.recreate_from(saved_state, load_context))
 
     def get_description(self) -> str:
         desc = self._fn.__name__
@@ -172,7 +173,7 @@ class _BlockStepper(Stepper):
         self._pos: int = 0
         self._child_stepper: Stepper | None = self._block[0].create_stepper(self._workchain)
 
-    def step(self) -> tuple[bool, Any]:
+    def step(self) -> tuple[bool, t.Any]:
         assert not self.finished() and self._child_stepper is not None, "Can't call step after the block is finished"
 
         finished, result = self._child_stepper.step()
@@ -237,7 +238,7 @@ class _Block(_Instruction, collections.abc.Sequence):
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _BlockStepper:
         load_context = persistence.CheckpointContext(workchain=workchain, block_instruction=self)
-        return cast(_BlockStepper, _BlockStepper.recreate_from(saved_state, load_context))
+        return t.cast(_BlockStepper, _BlockStepper.recreate_from(saved_state, load_context))
 
     def get_description(self) -> list[str]:
         return [instruction.get_description() for instruction in self._instruction]
@@ -303,7 +304,7 @@ class _IfStepper(Stepper):
         self._pos = 0
         self._child_stepper: Stepper | None = None
 
-    def step(self) -> tuple[bool, Any]:
+    def step(self) -> tuple[bool, t.Any]:
         if self.finished():
             return True, None
 
@@ -391,9 +392,9 @@ class _If(_Instruction, collections.abc.Sequence):
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _IfStepper:
         load_context = persistence.CheckpointContext(workchain=workchain, if_instruction=self)
-        return cast(_IfStepper, _IfStepper.recreate_from(saved_state, load_context))
+        return t.cast(_IfStepper, _IfStepper.recreate_from(saved_state, load_context))
 
-    def get_description(self) -> Mapping[str, Any]:
+    def get_description(self) -> Mapping[str, t.Any]:
         description = collections.OrderedDict()
 
         description[f'if({self._ifs[0].predicate.__name__})'] = self._ifs[0].body.get_description()
@@ -409,7 +410,7 @@ class _WhileStepper(Stepper):
         self._while_instruction = while_instruction
         self._child_stepper: _BlockStepper | None = None
 
-    def step(self) -> tuple[bool, Any]:
+    def step(self) -> tuple[bool, t.Any]:
         # Do we need to check the condition?
         if self._child_stepper is None:
             # Should we go into the loop body?
@@ -461,9 +462,9 @@ class _While(_Conditional, _Instruction, collections.abc.Sequence):
 
     def recreate_stepper(self, saved_state: SAVED_STATE_TYPE, workchain: WorkChain) -> _WhileStepper:
         load_context = persistence.CheckpointContext(workchain=workchain, while_instruction=self)
-        return cast(_WhileStepper, _WhileStepper.recreate_from(saved_state, load_context))
+        return t.cast(_WhileStepper, _WhileStepper.recreate_from(saved_state, load_context))
 
-    def get_description(self) -> dict[str, Any]:
+    def get_description(self) -> dict[str, t.Any]:
         return {f'while({self.predicate.__name__})': self.body.get_description()}
 
 
@@ -478,7 +479,7 @@ class _ReturnStepper(Stepper):
         super().__init__(workchain)
         self._return_instruction = return_instruction
 
-    def step(self) -> tuple[bool, Any]:
+    def step(self) -> tuple[bool, t.Any]:
         """
         Raise a _PropagateReturn exception where the value is the exit code set
         in the _Return instruction upon instantiation
@@ -572,7 +573,7 @@ or::
 """
 
 
-def _ensure_instruction(command: Any) -> _Instruction | _FunctionCall:
+def _ensure_instruction(command: t.Any) -> _Instruction | _FunctionCall:
     # There is only a single instruction
     if isinstance(command, _Instruction):
         return command

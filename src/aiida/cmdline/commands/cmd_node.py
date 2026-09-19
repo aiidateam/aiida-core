@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING
+import typing as t
 
 import click
 
@@ -25,7 +25,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Node
 
 

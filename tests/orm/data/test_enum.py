@@ -5,7 +5,7 @@ import enum
 import pytest
 
 from aiida.common import links
-from aiida.orm import load_node
+from aiida.orm import load_node, to_aiida_type
 from aiida.orm.nodes.data.enum import EnumData
 
 
@@ -14,6 +14,63 @@ class DummyEnum(enum.Enum):
 
     OPTION_A = 'a'
     OPTION_B = 'b'
+
+
+class StringEnum(str, enum.Enum):
+    """Enum whose string mixin precedes Enum in the method resolution order."""
+
+    OPTION = 'string'
+
+
+class IntegerEnum(enum.IntEnum):
+    """Enum whose integer mixin precedes Enum in the method resolution order."""
+
+    OPTION = 1
+
+
+class FloatEnum(float, enum.Enum):
+    """Enum whose float mixin precedes Enum in the method resolution order."""
+
+    OPTION = 1.5
+
+
+class IntegerFlag(enum.IntFlag):
+    """Flag whose integer mixin must not determine its serialization."""
+
+    OPTION = 1
+
+
+@pytest.mark.parametrize(
+    'member', [DummyEnum.OPTION_A, StringEnum.OPTION, IntegerEnum.OPTION, FloatEnum.OPTION, IntegerFlag.OPTION]
+)
+def test_to_aiida_type_enum(member: enum.Enum) -> None:
+    """Serialization preserves the enum class and member, including after storage."""
+    node = to_aiida_type(member)
+    assert isinstance(node, EnumData)
+    assert node.get_member() is member
+    assert to_aiida_type.dispatch(type(member))(member).get_member() is member
+    node.store()
+    assert load_node(node.pk).get_member() is member
+
+
+@pytest.mark.parametrize('register_base', [False, True])
+def test_to_aiida_type_custom_enum_converter(register_base: bool) -> None:
+    """An explicitly registered converter still takes precedence for its enum subclass."""
+    from aiida.orm import Str
+
+    class CustomBase(str, enum.Enum):
+        pass
+
+    class CustomEnum(CustomBase):
+        OPTION = 'custom'
+
+    @to_aiida_type.register(CustomBase if register_base else CustomEnum)
+    def convert(value: CustomBase) -> Str:
+        return Str(f'converted: {value.value}')
+
+    node = to_aiida_type(CustomEnum.OPTION)
+    assert isinstance(node, Str)
+    assert node.value == 'converted: custom'
 
 
 def test_construct():

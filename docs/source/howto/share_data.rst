@@ -80,69 +80,20 @@ In order to get a quick overview of an archive file *without* importing it into 
 
     $ verdi archive info --detailed test.aiida
     metadata:
-        export_version: main_0001
-        aiida_version: 2.0.0
-        key_format: sha256
-        compression: 6
-        ctime: '2022-03-06T23:50:57.964429'
-        creation_parameters:
-            entities_starting_set:
-            node:
-            - 6af3f8a0-cf0d-4427-8472-f8907acfc87a
-            include_authinfos: false
-            include_comments: true
-            include_logs: true
-            graph_traversal_rules:
-            input_calc_forward: false
-            input_calc_backward: true
-            create_forward: true
-            create_backward: true
-            return_forward: true
-            return_backward: false
-            input_work_forward: false
-            input_work_backward: true
-            call_calc_forward: true
-            call_calc_backward: true
-            call_work_forward: true
-            call_work_backward: true
+        export_version: ...
+        aiida_version: ...
+        ...
     entities:
         Users:
-            count: 1
-            emails:
-            - aiida@epfl.ch
+            count: ...
         Computers:
-            count: 2
-            labels:
-            - computer1
-            - computer2
+            count: ...
         Nodes:
-            count: 53
-            node_types:
-            - data.core.array.trajectory.TrajectoryData.
-            - data.core.cif.CifData.
-            - data.core.code.Code.
-            - data.core.dict.Dict.
-            - data.core.folder.FolderData.
-            - data.core.remote.RemoteData.
-            - data.core.singlefile.SinglefileData.
-            - data.core.structure.StructureData.
-            - process.calculation.calcfunction.CalcFunctionNode.
-            - process.calculation.calcjob.CalcJobNode.
-            process_types:
-            - aiida.calculations:codtools.ciffilter
-            - aiida.calculations:quantumespresso.pw
-        Groups:
-            count: 0
-            type_strings: []
-        Comments:
-            count: 0
-        Logs:
-            count: 0
-        Links:
-            count: 59
+            count: ...
+        ...
     repository:
         objects:
-            count: 71
+            count: ...
 
 You can also use the Python API to inspect the archive file as a profile, see :ref:`how-to:data:share:archive:profile`.
 

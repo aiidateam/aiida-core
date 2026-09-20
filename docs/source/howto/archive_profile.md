@@ -9,15 +9,17 @@ kernelspec:
   display_name: Python 3
   language: python
   name: python3
+execution:
+  timeout: 120
 ---
 
 (how-to:data:share:archive:profile)=
 
 # How to inspect an archive
 
-```{note}
-This tutorial can be downloaded and run as a Jupyter Notebook: {nb-download}`archive_profile.ipynb` {octicon}`download`, together with the archive {download}`process.aiida`.
-```
+:::{tip}
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`archive_profile.ipynb` {octicon}`download`, together with the archive {download}`process.aiida`.
+:::
 
 The AiiDA archive is a file format for long term storage of data from a particular profile.
 See {ref}`how-to:share:archives` for information on how to create and migrate an archive.
@@ -26,9 +28,9 @@ The easiest way to inspect the contents of an archive is to create a profile tha
 
 ```{note}
 An archive can only be mounted if its version matches the version expected by your installed AiiDA code.
-If the archive was created by an older version of AiiDA, setting it up as a profile migrates the archive file to the newest version in place first.
-This is a one-way operation: after the migration, the archive file can no longer be read by the version of AiiDA that created it, so keep a copy of the original file if you still need it.
-See {ref}`how-to:share:migrate` to migrate the archive file explicitly beforehand instead.
+If the archive was created by an older version of AiiDA, migrate it first with `verdi archive migrate`.
+Migration is a one-way operation, so keep a copy of the original archive if you still need it.
+See {ref}`how-to:share:migrate` for details.
 ```
 
 ```{code-cell} ipython3

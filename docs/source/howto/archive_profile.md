@@ -18,13 +18,14 @@ execution:
 # How to inspect an archive
 
 :::{tip}
-This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`archive_profile.ipynb` {octicon}`download`, together with the archive {download}`process.aiida`.
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`archive_profile.ipynb` {octicon}`download`
 :::
 
 The AiiDA archive is a file format for long term storage of data from a particular profile.
 See {ref}`how-to:share:archives` for information on how to create and migrate an archive.
 
-The easiest way to inspect the contents of an archive is to create a profile that "mounts" the archive as its data storage:
+The easiest way to inspect the contents of an archive is to create a profile that "mounts" the archive as its data storage.
+This example first sets up a scratch profile to generate an archive containing a small provenance graph at runtime, then mounts that archive in a temporary profile.
 
 ```{note}
 An archive can only be mounted if its version matches the version expected by your installed AiiDA code.
@@ -34,15 +35,61 @@ See {ref}`how-to:share:migrate` for details.
 ```
 
 ```{code-cell} ipython3
-!verdi profile setup core.sqlite_zip -n --profile-name archive --filepath process.aiida
-```
+:tags: [remove-cell]
 
-You can now inspect the contents of the `process.aiida` archive by using the `archive` profile in the same way you would a standard AiiDA profile.
-For example, you can start an interactive shell using `verdi -p archive shell` or if you are already in a notebook simply load the profile:
+!verdi profile show howto-inspect-archive-source > /dev/null 2>&1 || verdi profile setup core.sqlite_dos -n --profile-name howto-inspect-archive-source --email aiida@example.com --first-name AiiDA --last-name Tutorial --institution AiiDA
+```
 
 ```{code-cell} ipython3
 from aiida import load_profile
-load_profile('archive', allow_switch=True)
+
+load_profile('howto-inspect-archive-source')
+```
+
+```{code-cell} ipython3
+:tags: [remove-cell]
+
+from pathlib import Path
+
+from aiida import orm
+from aiida.engine import calcfunction
+from aiida.tools.archive import create_archive
+
+
+@calcfunction
+def add(x, y):
+    return x + y
+
+
+@calcfunction
+def multiply(x, y):
+    return x * y
+
+
+result = multiply(add(orm.Int(1), orm.Int(2)), orm.Int(3))
+archive_path = Path.cwd().parents[1] / 'build' / 'howto-inspect-archive.aiida'
+if not archive_path.exists():
+    create_archive([result], filename=archive_path, overwrite=True)
+```
+
+```{code-cell} ipython3
+:tags: [hide-output]
+
+!verdi profile show howto-inspect-archive > /dev/null 2>&1 || verdi profile setup core.sqlite_zip -n --profile-name howto-inspect-archive --filepath {archive_path}
+```
+
+```{code-cell} ipython3
+:tags: [remove-cell]
+
+from aiida.manage.configuration import reset_config
+
+reset_config()
+```
+
+```{code-cell} ipython3
+from aiida import load_profile
+
+load_profile('howto-inspect-archive', allow_switch=True)
 ```
 
 ```{warning}
@@ -54,7 +101,10 @@ Just as with a normal profile, we can now use the {py:class}`~aiida.orm.QueryBui
 
 ```{code-cell} ipython3
 from aiida import orm
-process = orm.QueryBuilder().append(orm.ProcessNode).first(flat=True)
+process = orm.QueryBuilder().append(
+    orm.CalcFunctionNode,
+    filters=orm.CalcFunctionNode.fields.process_label == 'multiply',
+).first(flat=True)
 print(process)
 ```
 
@@ -63,16 +113,14 @@ and also use {py:class}`~aiida.tools.visualization.graph.Graph`, to [visualize d
 ```{code-cell} ipython3
 from aiida import orm
 from aiida.tools.visualization import Graph
-process = orm.QueryBuilder().append(orm.ProcessNode).first(flat=True)
+process = orm.QueryBuilder().append(
+    orm.CalcFunctionNode,
+    filters=orm.CalcFunctionNode.fields.process_label == 'multiply',
+).first(flat=True)
 graph = Graph(graph_attr={'rankdir': 'LR'})
-graph.add_incoming(process, annotate_links='both')
-graph.add_outgoing(process, annotate_links='both')
+graph.recurse_ancestors(process, annotate_links='both', include_process_outputs=True)
 graph.graphviz
 ```
 
-Once you are done inspecting the archive and you no longer want to keep the profile around, you can delete it:
-```{code-block} console
-verdi profile delete archive
-```
-You will be prompted whether you also want to keep the data.
-If you want to keep the `process.aiida` archive file, select not to delete the data.
+The mounted archive profile is read-only and the archive file itself only exists for this Python session.
+The `howto-inspect-archive` and `howto-inspect-archive-source` profiles are regular persistent profiles and stay in your configuration; remove them with `verdi profile delete howto-inspect-archive howto-inspect-archive-source` once you no longer need them.

@@ -330,9 +330,6 @@ exclude_also = [
 
 [tool.coverage.run]
 core = 'sysmon'
-omit = [
-  "src/aiida/tools/_dumping/**/*"
-]
 patch = ['subprocess']
 relative_files = true
 

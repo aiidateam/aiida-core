@@ -8,6 +8,8 @@
 ###########################################################################
 """Module to test AiiDA processes."""
 
+import asyncio
+import concurrent.futures
 import threading
 
 import plumpy
@@ -92,6 +94,68 @@ class ProcessStackTest(Process):
         """
         super().on_stop()
         assert self._thread_id is threading.current_thread().ident
+
+
+@pytest.mark.parametrize('method_name', ('pause', 'play', 'kill'))
+def test_control_requires_loop_thread(method_name):
+    """Process control methods should not mutate live state from another thread."""
+    loop = asyncio.new_event_loop()
+    process = object.__new__(Process)
+    process._loop = loop
+    loop_started = threading.Event()
+
+    def run_loop():
+        asyncio.set_event_loop(loop)
+        loop.call_soon(loop_started.set)
+        loop.run_forever()
+
+    thread = threading.Thread(target=run_loop)
+    thread.start()
+    assert loop_started.wait(timeout=5)
+
+    try:
+        method = getattr(process, method_name)
+        with pytest.raises(RuntimeError, match='event-loop thread'):
+            method()
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+        loop.close()
+
+
+@pytest.mark.parametrize('method_name', ('pause', 'play', 'kill'))
+def test_control_allows_loop_thread(method_name):
+    """Process control thread checks should allow calls from the process loop thread."""
+    loop = asyncio.new_event_loop()
+    process = object.__new__(Process)
+    process._loop = loop
+    loop_started = threading.Event()
+    result = concurrent.futures.Future()
+
+    def run_loop():
+        asyncio.set_event_loop(loop)
+        loop.call_soon(loop_started.set)
+        loop.run_forever()
+
+    thread = threading.Thread(target=run_loop)
+    thread.start()
+    assert loop_started.wait(timeout=5)
+
+    def check_control_thread():
+        try:
+            result.set_result(process._ensure_process_loop_thread(method_name))
+        except Exception as exception:
+            result.set_exception(exception)
+
+    try:
+        loop.call_soon_threadsafe(check_control_thread)
+        assert result.result(timeout=5) is None
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+        loop.close()
 
 
 @pytest.mark.requires_broker
@@ -192,12 +256,12 @@ class TestProcess:
 
         def on_entered(self, from_state):
             if self._state.LABEL.value == 'finished':
-                assert (
-                    self.node.is_finished_ok
-                ), 'Node state should have been updated before plumpy.Process.on_entered is invoked.'
-                assert (
-                    self.node.outputs.result.value == 2
-                ), 'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+                assert self.node.is_finished_ok, (
+                    'Node state should have been updated before plumpy.Process.on_entered is invoked.'
+                )
+                assert self.node.outputs.result.value == 2, (
+                    'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+                )
             original_on_entered(self, from_state)
 
         monkeypatch.setattr(plumpy.Process, 'on_entered', on_entered)

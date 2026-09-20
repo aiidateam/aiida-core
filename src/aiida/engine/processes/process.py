@@ -16,6 +16,7 @@ import copy
 import enum
 import inspect
 import logging
+import threading
 import traceback
 from collections.abc import Mapping
 from types import TracebackType
@@ -333,11 +334,45 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
+    def _ensure_process_loop_thread(self, method_name: str) -> None:
+        """Ensure process control state mutations run on the owning event-loop thread.
+
+        Process control methods mutate the live state machine. If the process loop is running, callers from other
+        threads should use the process controller, which schedules the command on the owning loop.
+        """
+        thread_id = getattr(self.loop, '_thread_id', None)
+        if thread_id is None or thread_id == threading.get_ident():
+            return
+
+        raise RuntimeError(
+            f'`Process.{method_name}()` can only be called from the process event-loop thread while the process '
+            'loop is running. Use a process controller to control a live process from another thread.'
+        )
+
+    def pause(self, msg_text: str | None = None) -> Union[bool, plumpy.futures.CancellableAction]:
+        """Pause the process.
+
+        This directly mutates the live process state machine and therefore may only be called from the owning
+        event-loop thread while the process loop is running. Use the process controller for cross-thread control.
+        """
+        self._ensure_process_loop_thread('pause')
+        return super().pause(msg_text)
+
+    def play(self) -> bool:
+        """Play the process.
+
+        This directly mutates the live process state machine and therefore may only be called from the owning
+        event-loop thread while the process loop is running. Use the process controller for cross-thread control.
+        """
+        self._ensure_process_loop_thread('play')
+        return super().play()
+
     def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
         """
+        self._ensure_process_loop_thread('kill')
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
         if self.killed():

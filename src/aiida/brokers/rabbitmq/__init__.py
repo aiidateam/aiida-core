@@ -4,7 +4,7 @@
 
 # fmt: off
 
-from .broker import *
+from aiida.brokers.rabbitmq.broker import *
 
 __all__ = (
     'RabbitmqBroker',

@@ -13,20 +13,20 @@ on them.
 
 from __future__ import annotations
 
-from typing import Any, Sequence, cast
+import typing as t
+from collections.abc import Sequence
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
 
 from aiida.common.exceptions import NotExistent
+from aiida.orm.nodes.data.array.array import ArrayData
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
-
-from .array import ArrayData
 
 __all__ = ('XyData',)
 
 
-def check_convert_single_to_tuple(item: Any | Sequence[Any]) -> Sequence[Any]:
+def check_convert_single_to_tuple(item: t.Any | Sequence[t.Any]) -> Sequence[t.Any]:
     """Checks if the item is a list or tuple, and converts it to a list if it is
     not already a list or tuple
 
@@ -93,13 +93,13 @@ class XyData(ArrayData):
         x_array: Sequence = OrmMetadataField(
             description='The x array, which must be a 1D numpy array of floats.',
             write_only=True,
-            orm_to_model=lambda node: cast(XyData, node).get_array('x_array').tolist(),
+            orm_to_model=lambda node: t.cast(XyData, node).get_array('x_array').tolist(),
         )
         y_arrays: Sequence = OrmMetadataField(
             description='The y array(s), which must be 1D numpy arrays of floats with the same shape as the x array.',
             write_only=True,
             orm_to_model=lambda node: [
-                cast(XyData, node).get_array(name).tolist()
+                t.cast(XyData, node).get_array(name).tolist()
                 for name in node.get_arraynames()
                 if name.startswith('y_array_')
             ],
@@ -112,7 +112,8 @@ class XyData(ArrayData):
                 return value
             if isinstance(value, np.ndarray):
                 return value.tolist()
-            raise TypeError(f'`x_array` should be an iterable but got: {value}')
+            msg = f'`x_array` should be an iterable but got: {value}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         @field_validator('y_arrays', mode='before')
         @classmethod
@@ -126,7 +127,8 @@ class XyData(ArrayData):
                 return value.tolist()
             if isinstance(value, Sequence):
                 return value
-            raise TypeError(f'`y_arrays` should be an iterable but got: {value}')
+            msg = f'`y_arrays` should be an iterable but got: {value}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
     def __init__(
         self,
@@ -242,7 +244,8 @@ class XyData(ArrayData):
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise ValueError(f'y_array {y_name} does not have the same shape as x_array!')
+                msg = f'y_array {y_name} does not have the same shape as x_array!'
+                raise ValueError(msg)
             self.set_array(f'y_array_{num}', y_array)
 
         # if the y_arrays pass the initial validation, sets each
@@ -285,5 +288,6 @@ class XyData(ArrayData):
             for i in range(len(y_names)):
                 y_arrays += [self.get_array(f'y_array_{i}')]
         except (KeyError, AttributeError):
-            raise NotExistent(f'Could not retrieve array associated with y array {y_names[i]}')
+            msg = f'Could not retrieve array associated with y array {y_names[i]}'
+            raise NotExistent(msg)
         return list(zip(y_names, y_arrays, y_units))

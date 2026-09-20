@@ -9,7 +9,7 @@ Plugins
 What a plugin can do
 ====================
 
-* Add a new class to AiiDA's :ref:`entry point groups <topics:plugins:entrypointgroups>`, including:: calculations, parsers, workflows, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
+* Add a new class to AiiDA's :ref:`entry point groups <topics:plugins:entrypointgroups>`, including calculations, parsers, workflows, calculation tools, workflow tools, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
   This typically involves subclassing the respective base class AiiDA provides for that purpose.
 * Install new commandline and/or GUI executables
 * Depend on, and build on top of any number of other plugins (as long as their requirements do not clash)
@@ -192,6 +192,49 @@ Usage::
    Therefore one cannot load these workflows with the ``WorkflowFactory``.
    The only way to run these, is to store their source code in the ``aiida/workflows/user`` directory and use normal python imports to load the classes.
 
+.. _topics:plugins:entrypointgroups:aiida.tools.calculations:
+
+``aiida.tools.calculations``
+----------------------------
+
+Plugins can ship helper methods for post-processing or analysing ``CalcJobNode`` outputs by registering a :py:class:`~aiida.tools.calculations.base.CalculationTools` subclass here.
+AiiDA automatically loads the right tools class based on the node's process type, so after loading a node users can call ``node.tools`` to access the plugin-specific helpers.
+The entry point name should match the corresponding ``aiida.calculations`` entry point.
+
+Spec::
+
+   [project.entry-points."aiida.tools.calculations"]
+   "mycode.mycode" = "aiida_mycode.tools.calculations:MycodeCalculationTools"
+
+``aiida_mycode/tools/calculations.py``::
+
+   from aiida.tools.calculations import CalculationTools
+
+   class MycodeCalculationTools(CalculationTools):
+      ...
+
+.. _topics:plugins:entrypointgroups:aiida.tools.workflows:
+
+``aiida.tools.workflows``
+-------------------------
+
+.. versionadded:: 2.9
+
+Plugins can ship helper methods for post-processing or analysing ``WorkChainNode`` outputs by registering a :py:class:`~aiida.tools.workflows.base.WorkflowTools` subclass here.
+AiiDA automatically loads the right tools class based on the node's process type, so after loading a node users can call ``node.tools`` to access the plugin-specific helpers.
+The entry point name should match the corresponding ``aiida.workflows`` entry point.
+
+Spec::
+
+   [project.entry-points."aiida.tools.workflows"]
+   "mycode.mywf" = "aiida_mycode.tools.workflows:MyWorkflowTools"
+
+``aiida_mycode/tools/workflows.py``::
+
+   from aiida.tools.workflows import WorkflowTools
+
+   class MyWorkflowTools(WorkflowTools):
+      ...
 
 ``aiida.cmdline``
 -----------------
@@ -308,7 +351,8 @@ Usage: The scheduler is used in the familiar way by entering 'myscheduler' as th
 ``aiida.transports``
 --------------------
 
-``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``core.ssh`` and ``core.local`` (stub for when the remote computer is actually the same).
+``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``core.ssh_async`` and ``core.local`` (stub for when the remote computer is actually the same).
+(A third one, ``core.ssh``, is deprecated since v2.8 and will be removed in v3.0; use ``core.ssh_async`` instead.)
 We recommend naming the plugin package after the mode of transport (e.g. ``aiida-mytransport``), so that the entry point name can simply equal the name of the transport:
 
 Spec::
@@ -359,7 +403,7 @@ The module provides the following fixtures:
 * :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yielder
 * :ref:`aiida_computer <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
 * :ref:`aiida_computer_local <topics:plugins:testfixtures:aiida-computer-local>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using local transport
-* :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport
+* :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport (``core.ssh`` is deprecated, prefer ``aiida_computer_ssh_async``)
 * :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Shortcut for <topics:plugins:testfixtures:aiida-computer-local> that immediately returns a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer instead of a factory
 * :ref:`aiida_code <topics:plugins:testfixtures:aiida-code>`: Setup a :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` instance
 * :ref:`aiida_code_installed <topics:plugins:testfixtures:aiida-code-installed>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on a given computer
@@ -367,12 +411,12 @@ The module provides the following fixtures:
 * :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
 * :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
 * :ref:`daemon_client <topics:plugins:testfixtures:daemon-client>`: Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance to control the daemon
-* :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points
+* :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.tools.pytest_fixtures.entry_points.EntryPointManager` instance to add and remove entry points
 
 .. note::
 
     Before v2.6, test fixtures were located in :mod:`aiida.manage.tests.pytest_fixtures`.
-    This module is now deprecated and will be removed in the future.
+    This module has been removed in v3.0.
     Some fixtures have analogs in :mod:`aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
 
 
@@ -465,7 +509,7 @@ Should be used for a test class:
     @pytest.mark.usefixtures('aiida_profile_clean_class')
     class TestClass:
 
-        def test():
+        def test(self):
             ...
 
 The storage is cleaned once when the class is initialized.
@@ -477,24 +521,23 @@ The storage is cleaned once when the class is initialized.
 -------------------------
 
 Create a temporary profile, add it to the config of the loaded AiiDA instance and load the profile.
-Can be useful to create a test profile for a custom storage backend:
+The factory is a context manager: on exit, the profile that was loaded before is restored.
+This can be useful to create a test profile for a custom storage backend:
 
 .. code-block:: python
 
     @pytest.fixture(scope='session')
-    def custom_storage_profile(aiida_profile_factory) -> Profile:
+    def custom_storage_profile(aiida_config, aiida_profile_factory) -> Profile:
         """Return a test profile for a custom :class:`~aiida.orm.implementation.storage_backend.StorageBackend`"""
-        from some_module import CustomStorage
-        configuration = {
-            'storage': {
-                'backend': 'plugin_package.custom_storage',
-                'config': {
-                    'username': 'joe'
-                    'api_key': 'super-secret-key'
-                }
-            }
-        }
-        yield aiida_profile_factory(configuration)
+        with aiida_profile_factory(
+            aiida_config,
+            storage_backend='plugin_package.custom_storage',
+            storage_config={
+                'username': 'joe',
+                'api_key': 'super-secret-key',
+            },
+        ) as profile:
+            yield profile
 
 Note that the configuration above is not actually functional and the actual configuration depends on the storage implementation that is used.
 
@@ -523,11 +566,15 @@ This can be used in combination with the ``aiida_profile_factory`` fixture to cr
 .. code-block:: python
 
     @pytest.fixture(scope='session')
-    def psql_dos_profile(aiida_profile_factory, config_psql_dos) -> Profile:
+    def psql_dos_profile(aiida_config, aiida_profile_factory, config_psql_dos) -> Profile:
         """Return a test profile configured for the :class:`~aiida.storage.psql_dos.PsqlDosStorage`."""
         configuration = config_psql_dos()
         configuration['repository_uri'] = '/some/custom/path'
-        with aiida_profile_factory(storage_backend='core.psql_dos', storage_config=configuration) as profile:
+        with aiida_profile_factory(
+            aiida_config,
+            storage_backend='core.psql_dos',
+            storage_config=configuration,
+        ) as profile:
             yield profile
 
 
@@ -545,8 +592,8 @@ Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup 
 .. code-block:: python
 
     @pytest.fixture()
-    def custom_postgres_cluster(postgres_cluster):
-        yield postgres_cluster(
+    def custom_postgres_database(postgres_cluster):
+        return postgres_cluster.create_database(
             database_name='some-database-name',
             database_username='guest',
             database_password='guest',
@@ -643,7 +690,16 @@ If you need a guarantee that the computer is not configured, make sure to clean 
 ``aiida_computer_ssh``
 ----------------------
 
-This fixture is a shortcut for ``aiida_computer`` to setup the localhost with SSH transport:
+This fixture is a shortcut for ``aiida_computer`` to setup the localhost with the (deprecated) ``core.ssh`` transport.
+For new tests use the ``aiida_computer_ssh_async`` fixture instead, which uses ``core.ssh_async``.
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh_async):
+        localhost = aiida_computer_ssh_async(backend='asyncssh')
+        assert localhost.transport_type == 'core.ssh_async'
+
+The ``aiida_computer_ssh`` fixture itself is used as follows:
 
 .. code-block:: python
 
@@ -723,7 +779,9 @@ By default it will wait for the process to reach ``ProcessState.FINISHED``:
 .. code-block:: python
 
     def test(aiida_code_installed, submit_and_await):
-        code = aiida_code_installed(filepath_executable='core.arithmetic.add', filepath_executable='/usr/bin/bash')
+        from aiida import orm
+
+        code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/usr/bin/bash')
         builder = code.get_builder()
         builder.x = orm.Int(1)
         builder.y = orm.Int(1)
@@ -782,7 +840,7 @@ At the end of the test session, this fixture automatically shuts down the daemon
 ``entry_points``
 ----------------
 
-Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points.
+Return a :class:`~aiida.tools.pytest_fixtures.entry_points.EntryPointManager` instance to add and remove entry points.
 
 .. code-block:: python
 

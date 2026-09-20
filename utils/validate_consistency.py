@@ -74,7 +74,8 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
     try:
         index_start, index_end = determine_block_positions(lines, block_start_marker, block_end_marker)
     except RuntimeError as exception:
-        raise RuntimeError(f'problem rewriting file `{filepath}`:: {exception}')
+        msg = f'problem rewriting file `{filepath}`:: {exception}'
+        raise RuntimeError(msg)
 
     lines = replace_line_block(lines, block, index_start, index_end)
 
@@ -110,7 +111,7 @@ def validate_verdi_documentation():
     # Generate the new block with the command help strings
     header = 'Commands'
     message = 'Below is a list with all available subcommands.'
-    block = [f"{header}\n{'=' * len(header)}\n{message}\n\n"]
+    block = [f'{header}\n{"=" * len(header)}\n{message}\n\n']
 
     for name, command in sorted(verdi.commands.items()):
         if name == 'tui':

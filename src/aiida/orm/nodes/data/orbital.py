@@ -11,9 +11,8 @@
 import copy
 
 from aiida.common.exceptions import ValidationError
+from aiida.orm.nodes.data.data import Data
 from aiida.plugins import OrbitalFactory
-
-from .data import Data
 
 __all__ = ('OrbitalData',)
 
@@ -54,7 +53,8 @@ class OrbitalData(Data):
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')
             except KeyError:
-                raise ValidationError(f'No _orbital_type found in: {orbital_dict}')
+                msg = f'No _orbital_type found in: {orbital_dict}'
+                raise ValidationError(msg)
 
             cls = OrbitalFactory(orbital_type)
             orbital = cls(**orbital_dict)
@@ -76,7 +76,8 @@ class OrbitalData(Data):
             try:
                 _orbital_type = orbital_dict['_orbital_type']
             except KeyError:
-                raise ValueError(f'No _orbital_type found in: {orbital_dict}')
+                msg = f'No _orbital_type found in: {orbital_dict}'
+                raise ValueError(msg)
             orbital_dicts.append(orbital_dict)
         self.base.attributes.set('orbital_dicts', orbital_dicts)
 

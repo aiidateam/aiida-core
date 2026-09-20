@@ -8,8 +8,9 @@
 ###########################################################################
 """Tests for :mod:`aiida.storage.utils`."""
 
+import typing as t
 from collections.abc import Generator
-from typing import cast
+from datetime import datetime, timezone
 
 import pytest
 import sqlalchemy as sa
@@ -64,6 +65,32 @@ def test_sqlite_batches_large_lists(sqlite_session: SqliteSessionFixture) -> Non
     assert ' OR ' in sql
 
 
+def test_sqlite_in_clause_datetime_values() -> None:
+    """SQLite: datetime values are serialized using the column bind processor."""
+    engine: sa.Engine = sa.create_engine(url='sqlite://')
+    metadata: sa.MetaData = sa.MetaData()
+    table: sa.Table = sa.Table(
+        'items',
+        metadata,
+        sa.Column(name='id', type_=sa.Integer, primary_key=True),
+        sa.Column(name='ctime', type_=sa.DateTime(timezone=True)),
+    )
+    metadata.create_all(bind=engine)
+
+    timestamp = datetime(2026, 7, 23, 12, 0, 0, 123456, tzinfo=timezone.utc)
+    with Session(bind=engine) as session:
+        session.execute(table.insert().values(id=1, ctime=timestamp))
+        session.execute(table.insert().values(id=2, ctime=datetime(2026, 7, 24, tzinfo=timezone.utc)))
+        session.commit()
+
+        in_clause: ColumnElement[bool] = _create_smarter_in_clause(
+            session=session, column=table.c.ctime, values=[timestamp]
+        )
+        result = session.execute(sa.select(table.c.id).where(in_clause)).scalars().all()
+
+    assert result == [1]
+
+
 @pytest.mark.requires_psql
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_psql_uses_unnest() -> None:
@@ -72,7 +99,7 @@ def test_psql_uses_unnest() -> None:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
     from aiida.storage.psql_dos.models.node import DbNode
 
-    storage: PsqlDosBackend = cast(PsqlDosBackend, get_manager().get_profile_storage())
+    storage: PsqlDosBackend = t.cast(PsqlDosBackend, get_manager().get_profile_storage())
     session: Session = storage.get_session()
     in_clause: ColumnElement[bool] = _create_smarter_in_clause(session=session, column=DbNode.id, values=[1, 2])
     sql: str = str(in_clause.compile(bind=session.bind))
@@ -89,7 +116,7 @@ def test_psql_batches_large_lists() -> None:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
     from aiida.storage.psql_dos.models.node import DbNode
 
-    storage: PsqlDosBackend = cast(PsqlDosBackend, get_manager().get_profile_storage())
+    storage: PsqlDosBackend = t.cast(PsqlDosBackend, get_manager().get_profile_storage())
     session: Session = storage.get_session()
     values: list[int] = list(range(IN_CLAUSE_BATCH_SIZE + 1))
     in_clause: ColumnElement[bool] = _create_smarter_in_clause(session=session, column=DbNode.id, values=values)

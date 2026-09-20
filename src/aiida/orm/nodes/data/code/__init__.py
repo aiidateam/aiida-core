@@ -4,11 +4,12 @@
 
 # fmt: off
 
-from .abstract import *
-from .containerized import *
-from .installed import *
-from .legacy import *
-from .portable import *
+from aiida.orm.nodes.data.code.abstract import *
+from aiida.orm.nodes.data.code.containerized import *
+from aiida.orm.nodes.data.code.installed import *
+from aiida.orm.nodes.data.code.legacy import *
+from aiida.orm.nodes.data.code.portable import *
+from aiida.orm.nodes.data.code.shell import *
 
 __all__ = (
     'AbstractCode',
@@ -16,6 +17,7 @@ __all__ = (
     'ContainerizedCode',
     'InstalledCode',
     'PortableCode',
+    'ShellCode',
 )
 
 # fmt: on

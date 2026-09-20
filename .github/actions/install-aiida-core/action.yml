@@ -4,7 +4,7 @@ description: Install aiida-core package and its Python dependencies
 inputs:
   python-version:
     description: Python version
-    default: '3.9'              # Lowest supported version
+    default: '3.10'             # Lowest supported version
     required: false
   extras:
     description: list of optional dependencies
@@ -30,9 +30,8 @@ runs:
       python-version: ${{ inputs.python-version }}
 
   - name: Set up uv
-    uses: astral-sh/setup-uv@v6
+    uses: astral-sh/setup-uv@v10.0.1
     with:
-      version: 0.9.8
       python-version: ${{ inputs.python-version }}
       activate-environment: true
 

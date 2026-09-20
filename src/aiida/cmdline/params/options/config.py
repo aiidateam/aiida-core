@@ -23,7 +23,7 @@ import typing as t
 
 import click
 
-from .overridable import OverridableOption
+from aiida.cmdline.params.options.overridable import OverridableOption
 
 if t.TYPE_CHECKING:
     from click.decorators import FC
@@ -83,9 +83,8 @@ def configuration_callback(
         unknown_params = set(specified_params).difference(set(valid_params))
 
         if unknown_params:
-            raise click.BadParameter(
-                f'Invalid configuration file, the following keys are not supported: {unknown_params}', ctx, param
-            )
+            msg = f'Invalid configuration file, the following keys are not supported: {unknown_params}'
+            raise click.BadParameter(msg, ctx, param)
 
         ctx.default_map.update(config)
 

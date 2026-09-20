@@ -11,11 +11,19 @@
 import pytest
 
 from aiida.engine.processes.ports import InputPort, PortNamespace
-from aiida.orm import Dict, Int, to_aiida_type
+from aiida.orm import Dict, Int, Str, to_aiida_type
 
 
 class TestInputPort:
     """Tests for the `InputPort` class."""
+
+    def test_valid_type_tuple(self):
+        """Test that a tuple of valid types is accepted."""
+        port = InputPort('port', valid_type=(Int, Str))
+
+        assert port.validate(Int(1)) is None
+        assert port.validate(Str('string')) is None
+        assert port.validate(Dict()) is not None
 
     def test_with_non_db(self):
         """Test the functionality of the `non_db` attribute upon construction and setting."""

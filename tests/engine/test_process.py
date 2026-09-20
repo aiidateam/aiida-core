@@ -12,14 +12,17 @@ import asyncio
 import concurrent.futures
 import threading
 
-import plumpy
 import pytest
-from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
+from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
-from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
+from aiida.engine import ExitCode, ExitCodesNamespace, Process, WorkChain, run, run_get_node, run_get_pk
+from aiida.engine.processes.generic import process as process_core
+from aiida.engine.processes.greenback import has_portal
+from aiida.engine.processes.persistence import CheckpointPayload
 from aiida.engine.processes.ports import PortNamespace
+from aiida.manage import get_manager
 from aiida.manage.caching import disable_caching, enable_caching
 from aiida.orm import to_aiida_type
 from aiida.orm.nodes.caching import NodeCaching
@@ -242,8 +245,9 @@ class TestProcess:
     def test_on_finish_node_updated_before_broadcast(self, monkeypatch):
         """Tests if the process state and output has been updated in the database before a broadcast is invoked.
 
-        In plumpy.Process.on_entered the state update is broadcasted. When a process is finished this results in the
-        next process being run. If the next process will access the process that just finished, it can result in not
+        In ``process_core.Process.on_entered`` the state update is broadcasted.
+        When a process is finished this results in the next process being run.
+        If the next process will access the process that just finished, it can result in not
         being able to retrieve the outputs or correct process state because this information has yet not been updated
         them in the database.
         """
@@ -252,19 +256,19 @@ class TestProcess:
         # By monkeypatching the parent class we can check the state when the
         # parents class method is invoked and check if the state has be
         # correctly updated.
-        original_on_entered = copy.deepcopy(plumpy.Process.on_entered)
+        original_on_entered = copy.deepcopy(process_core.Process.on_entered)
 
         def on_entered(self, from_state):
             if self._state.LABEL.value == 'finished':
                 assert self.node.is_finished_ok, (
-                    'Node state should have been updated before plumpy.Process.on_entered is invoked.'
+                    'Node state should have been updated before process_core.Process.on_entered is invoked.'
                 )
                 assert self.node.outputs.result.value == 2, (
-                    'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+                    'Outputs should have been attached before process_core.Process.on_entered is invoked.'
                 )
             original_on_entered(self, from_state)
 
-        monkeypatch.setattr(plumpy.Process, 'on_entered', on_entered)
+        monkeypatch.setattr(process_core.Process, 'on_entered', on_entered)
         # Ensure that process has run correctly otherwise the asserts in the
         # monkeypatched member function have been skipped
         assert run_get_node(test_processes.AddProcess, a=1, b=1).node.is_finished_ok, 'Process should not fail.'
@@ -274,9 +278,19 @@ class TestProcess:
         """Test save instance's state."""
         proc = test_processes.DummyProcess()
         # Save the instance state
-        bundle = plumpy.Bundle(proc)
+        payload = CheckpointPayload.from_object(proc)
         proc.close()
-        bundle.unbundle()
+        payload.decode()
+
+    @staticmethod
+    def test_save_instance_state_with_outputs():
+        """Test save/load roundtrip preserves outputs."""
+        proc = test_processes.DummyProcess()
+        proc.out('result', orm.Int(5).store())
+        payload = CheckpointPayload.from_object(proc)
+        proc.close()
+        loaded = payload.decode()
+        assert loaded.outputs['result'].value == 5
 
     def test_exit_codes(self):
         """Test the properties to return various (sub) sets of existing exit codes."""
@@ -447,7 +461,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ChildProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.output('output', valid_type=orm.Int)
                 spec.output('name.space', valid_type=orm.Int)
@@ -459,7 +473,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ParentProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.expose_outputs(ChildProcess)
 
@@ -497,7 +511,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ChildProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.output('output', valid_type=orm.Int)
                 spec.output('name.space', valid_type=orm.Int)
@@ -509,7 +523,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ParentProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.expose_outputs(ChildProcess, namespace='child')
 
@@ -688,3 +702,32 @@ def test_auto_default_serializer():
     assert AutoSerializeProcess.spec().inputs['non_metadata_input'].serializer is to_aiida_type
     assert AutoSerializeProcess.spec().inputs['metadata_input'].serializer is None
     assert AutoSerializeProcess.spec().inputs['custom_input'].serializer is custom_serializer
+
+
+class PortalProbeWorkChain(WorkChain):
+    """Record whether a greenback portal is available in an outline step and in ``on_terminated``."""
+
+    portal_in_step = None
+    portal_in_on_terminated = None
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.outline(cls.a_step)
+
+    def a_step(self):
+        PortalProbeWorkChain.portal_in_step = has_portal()
+
+    def on_terminated(self):
+        super().on_terminated()
+        PortalProbeWorkChain.portal_in_on_terminated = has_portal()
+
+
+def test_portal_available_in_on_terminated():
+    """A portal must still be available once the process transitions to a terminal state."""
+    runner = get_manager().get_runner()
+    process = runner.instantiate_process(PortalProbeWorkChain)
+    runner.loop.run_until_complete(process.step_until_terminated())
+
+    assert PortalProbeWorkChain.portal_in_step is True
+    assert PortalProbeWorkChain.portal_in_on_terminated is True

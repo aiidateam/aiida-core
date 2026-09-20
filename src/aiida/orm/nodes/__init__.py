@@ -12,11 +12,11 @@
 
 # fmt: off
 
-from .attributes import *
-from .data import *
-from .node import *
-from .process import *
-from .repository import *
+from aiida.orm.nodes.attributes import *
+from aiida.orm.nodes.data import *
+from aiida.orm.nodes.node import *
+from aiida.orm.nodes.process import *
+from aiida.orm.nodes.repository import *
 
 __all__ = (
     'AbstractCode',
@@ -32,6 +32,7 @@ __all__ = (
     'ContainerizedCode',
     'Data',
     'Dict',
+    'EntryPointData',
     'EnumData',
     'Float',
     'FolderData',
@@ -46,6 +47,7 @@ __all__ = (
     'NodeRepository',
     'NumericType',
     'OrbitalData',
+    'PickledData',
     'PortableCode',
     'ProcessNode',
     'ProjectionData',
@@ -54,6 +56,7 @@ __all__ = (
     'RemoteStashCustomData',
     'RemoteStashData',
     'RemoteStashFolderData',
+    'ShellCode',
     'SinglefileData',
     'Site',
     'Str',

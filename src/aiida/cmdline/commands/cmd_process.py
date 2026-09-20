@@ -74,7 +74,7 @@ def verdi_process():
 
 
 @verdi_process.command('list')
-@options.PROJECT(type=types.LazyChoice(valid_projections), default=lambda: default_projections())
+@options.PROJECT(type=types.LazyChoice(valid_projections), default=default_projections)
 @options.ORDER_BY()
 @options.ORDER_DIRECTION()
 @options.GROUP(help='Only include entries that are a member of this group.')
@@ -465,7 +465,7 @@ def process_watch(broker, processes, most_recent_node):
 
     from time import sleep
 
-    from kiwipy import BroadcastFilter
+    from aiida.brokers.filters import BroadcastFilter
 
     def _print(communicator, body, sender, subject, correlation_id):
         """Format the incoming broadcast data into a message and echo it to stdout."""
@@ -602,20 +602,19 @@ def process_repair(manager, broker, dry_run, force):
     # Revive zombie processes that no longer have a process task
     zombies = set_active_processes.difference(set_process_tasks)
     if zombies:
-        from aiida.brokers.zmq.broker import ZmqBroker
+        from aiida.brokers.zeromq.broker import ZeromqBroker
 
-        if isinstance(broker, ZmqBroker):
-            # For ZMQ, the broker runs inside the daemon (which must be stopped for repair).
+        if isinstance(broker, ZeromqBroker):
+            # For ZeroMQ, the broker runs inside the daemon (which must be stopped for repair).
             # Write revival tasks directly to the persistent queue on disk — the broker will
             # pick them up when the daemon is restarted.  This avoids starting a temporary
             # broker process and the timing issues that come with it.
             import uuid
 
-            from plumpy.process_comms import create_continue_body
+            from aiida.brokers.zeromq.queue import PersistentQueue
+            from aiida.engine.processes.communications import create_continue_body
 
-            from aiida.brokers.zmq.queue import PersistentQueue
-
-            queue_path = broker.storage_path / 'tasks'
+            queue_path = broker._storage_path / 'tasks'
             queue = PersistentQueue(queue_path)
             for pid in zombies:
                 task_id = uuid.uuid4().hex

@@ -31,8 +31,8 @@ Examples of invalid full types:
 
 """
 
+import typing as t
 from collections.abc import MutableMapping
-from typing import Any
 
 from aiida.common.escaping import escape_for_sql_like
 
@@ -53,13 +53,11 @@ def validate_full_type(full_type):
     type_check(full_type, str)
 
     if FULL_TYPE_CONCATENATOR not in full_type:
-        raise ValueError(
-            f'full type `{full_type}` does not include the required concatenator symbol `{FULL_TYPE_CONCATENATOR}`.'
-        )
+        msg = f'full type `{full_type}` does not include the required concatenator symbol `{FULL_TYPE_CONCATENATOR}`.'
+        raise ValueError(msg)
     elif full_type.count(FULL_TYPE_CONCATENATOR) > 1:
-        raise ValueError(
-            f'full type `{full_type}` includes the concatenator symbol `{FULL_TYPE_CONCATENATOR}` more than once.'
-        )
+        msg = f'full type `{full_type}` includes the concatenator symbol `{FULL_TYPE_CONCATENATOR}` more than once.'
+        raise ValueError(msg)
 
 
 def construct_full_type(node_type, process_type):
@@ -88,15 +86,17 @@ def get_full_type_filters(full_type):
     """
     validate_full_type(full_type)
 
-    filters: dict[str, Any] = {}
+    filters: dict[str, t.Any] = {}
     node_type, process_type = full_type.split(FULL_TYPE_CONCATENATOR)
 
     for entry in (node_type, process_type):
         if entry.count(LIKE_OPERATOR_CHARACTER) > 1:
-            raise ValueError(f'full type component `{entry}` contained more than one like-operator character')
+            msg = f'full type component `{entry}` contained more than one like-operator character'
+            raise ValueError(msg)
 
         if LIKE_OPERATOR_CHARACTER in entry and entry[-1] != LIKE_OPERATOR_CHARACTER:
-            raise ValueError(f'like-operator character in full type component `{entry}` is not at the end')
+            msg = f'like-operator character in full type component `{entry}` is not at the end'
+            raise ValueError(msg)
 
     if LIKE_OPERATOR_CHARACTER in node_type:
         # Remove the trailing `LIKE_OPERATOR_CHARACTER`, escape the string and reattach the character
@@ -148,7 +148,8 @@ def load_entry_point_from_full_type(full_type):
         try:
             return load_entry_point_from_string(process_type)
         except EntryPointError:
-            raise EntryPointError(f'could not load entry point `{process_type}`')
+            msg = f'could not load entry point `{process_type}`'
+            raise EntryPointError(msg)
 
     elif node_type.startswith(data_prefix):
         base_name = node_type.removeprefix(data_prefix)
@@ -157,7 +158,8 @@ def load_entry_point_from_full_type(full_type):
         try:
             return load_entry_point('aiida.data', entry_point_name)
         except EntryPointError:
-            raise EntryPointError(f'could not load entry point `{process_type}`')
+            msg = f'could not load entry point `{process_type}`'
+            raise EntryPointError(msg)
 
     # Here we are dealing with a `ProcessNode` with a `process_type` that is not an entry point string.
     # Which means it is most likely a full module path (the fallback option) and we cannot necessarily load the
@@ -313,7 +315,8 @@ class Namespace(MutableMapping):
         :raises: ValueError if any sub namespace is occupied by a non-Namespace port
         """
         if not isinstance(name, str):
-            raise ValueError(f'name has to be a string type, not {type(name)}')
+            msg = f'name has to be a string type, not {type(name)}'
+            raise ValueError(msg)
 
         if not name:
             raise ValueError('name cannot be an empty string')

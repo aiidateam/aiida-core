@@ -10,17 +10,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Union
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     import asyncio
 
-    from kiwipy.rmq import RmqThreadCommunicator
-    from plumpy.process_comms import RemoteProcessThreadController
-
     from aiida.brokers.broker import Broker
+    from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
     from aiida.engine.daemon.client import DaemonClient
-    from aiida.engine.persistence import AiiDAPersister
+    from aiida.engine.persistence import AiidaCheckpointPersister
+    from aiida.engine.processes.communications import RemoteProcessThreadController
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration.profile import Profile
@@ -28,10 +27,10 @@ if TYPE_CHECKING:
 
 __all__ = ('get_manager',)
 
-MANAGER: Optional['Manager'] = None
+MANAGER: Manager | None = None
 
 
-def get_manager() -> 'Manager':
+def get_manager() -> Manager:
     """Return the AiiDA global manager instance."""
     global MANAGER  # noqa: PLW0603
     if MANAGER is None:
@@ -71,35 +70,35 @@ class Manager:
         from aiida.common.log import AIIDA_LOGGER
 
         # note: the config currently references the global variables
-        self._broker: Optional['Broker'] = None
-        self._profile: Optional['Profile'] = None
-        self._profile_storage: Optional['StorageBackend'] = None
-        self._daemon_client: Optional['DaemonClient'] = None
-        self._process_controller: Optional['RemoteProcessThreadController'] = None
-        self._persister: Optional['AiiDAPersister'] = None
-        self._runner: Optional['Runner'] = None
+        self._broker: Broker | None = None
+        self._profile: Profile | None = None
+        self._profile_storage: StorageBackend | None = None
+        self._daemon_client: DaemonClient | None = None
+        self._process_controller: RemoteProcessThreadController | None = None
+        self._persister: AiidaCheckpointPersister | None = None
+        self._runner: Runner | None = None
         self.logger = AIIDA_LOGGER.getChild(__name__)
 
     @staticmethod
-    def get_config(create=False) -> 'Config':
+    def get_config(create=False) -> Config:
         """Return the current config.
 
         :return: current loaded config instance
         :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
 
         """
-        from .configuration import get_config
+        from aiida.manage.configuration import get_config
 
         return get_config(create=create)
 
-    def get_profile(self) -> Optional['Profile']:
+    def get_profile(self) -> Profile | None:
         """Return the current loaded profile, if any
 
         :return: current loaded profile instance
         """
         return self._profile
 
-    def load_profile(self, profile: Union[None, str, 'Profile'] = None, allow_switch=False) -> 'Profile':
+    def load_profile(self, profile: str | Profile | None = None, allow_switch=False) -> Profile:
         """Load a global profile, unloading any previously loaded profile.
 
         .. note:: If a profile is already loaded and no explicit profile is specified, nothing will be done.
@@ -122,17 +121,19 @@ class Manager:
         if profile is None or isinstance(profile, str):
             profile = self.get_config().get_profile(profile)
         elif not isinstance(profile, Profile):
-            raise TypeError(f'profile must be None, a string, or a Profile instance, got: {type(profile)}')
+            msg = f'profile must be None, a string, or a Profile instance, got: {type(profile)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         # If a profile is loaded and the specified profile UUID is that of the currently loaded, do nothing
         if self._profile and (self._profile.uuid == profile.uuid):
             return self._profile
 
         if self._profile and self.profile_storage_loaded and not allow_switch:
-            raise InvalidOperation(
+            msg = (
                 f'cannot switch to profile {profile.name!r} because profile {self._profile.name!r} storage '
                 'is already loaded and allow_switch is False'
             )
+            raise InvalidOperation(msg)
 
         self.unload_profile()
         self._profile = profile
@@ -140,11 +141,11 @@ class Manager:
         # Reconfigure the logging to make sure that profile specific logging config options are taken into account.
         # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded.
         # This should instead be done lazily in `Manager.get_profile_storage`.
-        configure_logging()
+        configure_logging(daemon_log_file=self.get_config(create=True).filepaths(self._profile)['profile']['log'])
 
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
-        self.check_version()
+        self._check_version()
         self._setup_event_loop_in_ipython()
 
         return self._profile
@@ -180,7 +181,7 @@ class Manager:
             if getattr(IPythonKernel, '_aiida_portal_patched', False):
                 return  # Already patched
 
-            from plumpy import ensure_portal
+            from aiida.engine.processes.greenback import ensure_portal
 
             _orig_do_execute = IPythonKernel.do_execute
 
@@ -239,7 +240,7 @@ class Manager:
         self.reset_profile()
         self._profile = None
 
-    def set_default_user_email(self, profile: 'Profile', user_email: str) -> None:
+    def set_default_user_email(self, profile: Profile, user_email: str) -> None:
         """Set the default user for the given profile.
 
         :param profile: The profile to update.
@@ -257,7 +258,7 @@ class Manager:
         """
         return self._profile_storage is not None
 
-    def get_option(self, option_name: str) -> Any:
+    def get_option(self, option_name: str) -> t.Any:
         """Return the value of a configuration option.
 
         In order of priority, the option is returned from:
@@ -274,19 +275,9 @@ class Manager:
         :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
         """
         from aiida.common.exceptions import ConfigurationError
-        from aiida.manage.configuration.options import get_option
+        from aiida.manage.configuration.options import get_option, resolve_deprecated_option_name
 
-        option = get_option(option_name)
-
-        if option.deprecated_by is not None:
-            import warnings
-
-            warnings.warn(
-                f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.',
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            option_name = option.deprecated_by
+        option_name = resolve_deprecated_option_name(option_name)
 
         # try the profile
         if self._profile and option_name in self._profile.options:
@@ -304,7 +295,7 @@ class Manager:
         option = get_option(option_name)
         return option.default
 
-    def get_backend(self) -> 'StorageBackend':
+    def get_backend(self) -> StorageBackend:
         """Return the current profile's storage backend, loading it if necessary.
 
         Deprecated: use `get_profile_storage` instead.
@@ -314,7 +305,7 @@ class Manager:
         warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3, stacklevel=3)
         return self.get_profile_storage()
 
-    def get_profile_storage(self) -> 'StorageBackend':
+    def get_profile_storage(self) -> StorageBackend:
         """Return the current profile's storage backend, loading it if necessary."""
         from aiida.common import ConfigurationError
         from aiida.common.log import configure_logging
@@ -344,11 +335,11 @@ class Manager:
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.
-        configure_logging(with_orm=True)
+        configure_logging(daemon_log_file=self.get_config().filepaths(profile)['profile']['log'], with_orm=True)
 
         return self._profile_storage
 
-    def get_broker(self) -> 'Broker' | None:
+    def get_broker(self) -> Broker | None:
         """Return an instance of :class:`aiida.brokers.broker.Broker` if the profile defines a broker.
 
         :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
@@ -368,15 +359,13 @@ class Manager:
             # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
             if entry_point == 'rabbitmq':
                 entry_point = 'core.rabbitmq'
-            elif entry_point == 'zmq':
-                entry_point = 'core.zmq'
 
             broker_cls = BrokerFactory(entry_point)
             self._broker = broker_cls(self._profile)
 
         return self._broker
 
-    def get_persister(self) -> 'AiiDAPersister':
+    def get_persister(self) -> AiidaCheckpointPersister:
         """Return the persister
 
         :return: the current persister instance
@@ -385,11 +374,11 @@ class Manager:
         from aiida.engine import persistence
 
         if self._persister is None:
-            self._persister = persistence.AiiDAPersister()
+            self._persister = persistence.AiidaCheckpointPersister()
 
         return self._persister
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
+    def get_communicator(self) -> RmqThreadCommunicator:
         """Return the communicator
 
         :return: a global communicator instance
@@ -401,13 +390,12 @@ class Manager:
 
         if broker is None:
             assert self._profile is not None
-            raise ConfigurationError(
-                f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
-            )
+            msg = f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
+            raise ConfigurationError(msg)
 
         return broker.get_communicator()
 
-    def get_daemon_client(self) -> 'DaemonClient':
+    def get_daemon_client(self) -> DaemonClient:
         """Return the daemon client for the current profile.
 
         :return: the daemon client
@@ -428,20 +416,20 @@ class Manager:
 
         return self._daemon_client
 
-    def get_process_controller(self) -> 'RemoteProcessThreadController':
+    def get_process_controller(self) -> RemoteProcessThreadController:
         """Return the process controller
 
         :return: the process controller instance
 
         """
-        from plumpy.process_comms import RemoteProcessThreadController
+        from aiida.engine.processes.communications import RemoteProcessThreadController
 
         if self._process_controller is None:
             self._process_controller = RemoteProcessThreadController(self.get_communicator())
 
         return self._process_controller
 
-    def get_runner(self, **kwargs) -> 'Runner':
+    def get_runner(self, **kwargs) -> Runner:
         """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
@@ -452,7 +440,7 @@ class Manager:
 
         return self._runner
 
-    def set_runner(self, new_runner: 'Runner') -> None:
+    def set_runner(self, new_runner: Runner) -> None:
         """Set the currently used runner
 
         :param new_runner: the new runner to use
@@ -463,7 +451,7 @@ class Manager:
 
         self._runner = new_runner
 
-    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> 'Runner':
+    def create_runner(self, with_persistence: bool = True, **kwargs: t.Any) -> Runner:
         """Create and return a new runner
 
         :param with_persistence: create a runner with persistence enabled
@@ -497,7 +485,7 @@ class Manager:
 
         return runners.Runner(**settings)  # type: ignore[arg-type]
 
-    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
+    def create_daemon_runner(self, loop: asyncio.AbstractEventLoop | None = None) -> Runner:
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.
@@ -507,10 +495,9 @@ class Manager:
         :return: a runner configured to work in the daemon configuration
 
         """
-        from plumpy.persistence import LoadSaveContext
-
-        from aiida.engine import persistence
+        from aiida.common.loaders import get_object_loader
         from aiida.engine.processes.launcher import ProcessLauncher
+        from aiida.engine.processes.persistence import CheckpointContext
 
         runner = self.create_runner(broker_submit=True, loop=loop)
         runner_loop = runner.loop
@@ -519,8 +506,8 @@ class Manager:
         task_receiver = ProcessLauncher(
             loop=runner_loop,
             persister=self.get_persister(),
-            load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader(),
+            load_context=CheckpointContext(runner=runner),
+            loader=get_object_loader(),
         )
 
         assert runner.communicator is not None, 'communicator not set for runner'
@@ -528,26 +515,42 @@ class Manager:
 
         return runner
 
-    def check_version(self):
-        """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
+    def check_version(self) -> None:
+        """Check the currently installed version of ``aiida-core`` and warn if it is a development version.
 
-        The ``aiida-core`` package maintains the protocol that the ``main`` branch will use a post release version
-        number. This means it will always append `.post0` to the version of the latest release. This should mean that if
-        this protocol is maintained properly, this method will print a warning if the currently installed version is a
-        post release development branch and not an actual release.
+        The ``aiida-core`` package maintains the protocol that the ``main`` branch carries a development version number,
+        appending `.dev0` to the version of the next anticipated release. Support branches that backport fixes on top of
+        a release use a post release number, appending `.post0`. This method emits a warning whenever the currently
+        installed version is such a development or post release and not an actual release. The warning is emitted
+        through the CLI utilities when a ``verdi`` command is being executed and through the manager logger otherwise.
+
+        If no profile is currently loaded, the default profile is loaded first to ensure that logging is configured
+        before the warning is emitted, so it does not get lost.
         """
+        self.load_profile()
+        self._check_version()
+
+    def _check_version(self) -> None:
         from packaging.version import parse
 
         from aiida import __version__
-        from aiida.cmdline.utils import echo
+        from aiida.common.log import CLI_ACTIVE
 
         # Showing of the warning can be turned off by setting the following option to false.
-        assert self._profile is not None
-        show_warning = self._profile.get_option('warnings.development_version')
+        show_warning = self.get_option('warnings.development_version')
         version = parse(__version__)
 
-        if version.is_postrelease and show_warning:
-            echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
-            echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
-            echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
-            echo.echo_warning('as you might not be able to automatically migrate your data.\n')
+        if (version.is_prerelease or version.is_postrelease) and show_warning:
+            message = (
+                f'You are using a development version of AiiDA ({version}). '
+                'Be aware that this is not recommended for production and is not officially supported. '
+                'Databases used with this version may not be compatible with future releases of AiiDA '
+                'as you might not be able to automatically migrate your data.\n'
+            )
+
+            if CLI_ACTIVE:
+                from aiida.cmdline.utils import echo
+
+                echo.echo_warning(message)
+            else:
+                self.logger.warning(message)

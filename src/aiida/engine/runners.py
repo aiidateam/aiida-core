@@ -15,59 +15,58 @@ import functools
 import logging
 import signal
 import threading
+import typing as t
 import uuid
-from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
+from collections.abc import Callable
 
-import kiwipy
-from plumpy import run_until_complete
-from plumpy.communications import wrap_communicator
-from plumpy.events import get_or_create_event_loop
-from plumpy.persistence import Persister
-from plumpy.process_comms import RemoteProcessThreadController
-
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers.filters import BroadcastFilter
 from aiida.common import exceptions
+from aiida.engine import transports, utils
+from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
+from aiida.engine.processes.calcjobs import manager
+from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
+from aiida.engine.processes.events import get_or_create_event_loop
+from aiida.engine.processes.greenback import run_until_complete
+from aiida.engine.processes.persistence import CheckpointPersister
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
-
-from . import transports, utils
-from .processes import Process, ProcessBuilder, ProcessState, futures
-from .processes.calcjobs import manager
 
 __all__ = ('Runner',)
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ResultAndNode(NamedTuple):
-    result: Dict[str, Any]
+class ResultAndNode(t.NamedTuple):
+    result: dict[str, t.Any]
     node: ProcessNode
 
 
-class ResultAndPk(NamedTuple):
-    result: Dict[str, Any]
+class ResultAndPk(t.NamedTuple):
+    result: dict[str, t.Any]
     pk: int | None
 
 
-TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]
+TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Union[Process, Type[Process], ProcessBuilder]
+TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
 
 
 class Runner:
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
-    _persister: Optional[Persister] = None
-    _communicator: Optional[kiwipy.Communicator] = None
-    _controller: Optional[RemoteProcessThreadController] = None
+    _persister: CheckpointPersister | None = None
+    _communicator: broker_communicator.Communicator | None = None
+    _controller: RemoteProcessThreadController | None = None
     _closed: bool = False
 
     def __init__(
         self,
-        poll_interval: Union[int, float] = 0,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        poll_interval: int | float = 0,
+        loop: asyncio.AbstractEventLoop | None = None,
+        communicator: broker_communicator.Communicator | None = None,
         broker_submit: bool = False,
-        persister: Optional[Persister] = None,
+        persister: CheckpointPersister | None = None,
     ):
         """Construct a new runner.
 
@@ -78,9 +77,9 @@ class Runner:
         :param persister: the persister to use to persist processes
 
         """
-        assert not (
-            broker_submit and persister is None
-        ), 'Must supply a persister if you want to submit using communicator'
+        assert not (broker_submit and persister is None), (
+            'Must supply a persister if you want to submit using communicator'
+        )
 
         self._loop = loop if loop else get_or_create_event_loop()
         self._poll_interval = poll_interval
@@ -89,6 +88,7 @@ class Runner:
         self._job_manager = manager.JobManager(self._transport)
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
+        self._process_tasks: set[asyncio.Task[t.Any]] = set()
 
         if communicator is not None:
             self._communicator = wrap_communicator(communicator, self._loop)
@@ -97,7 +97,7 @@ class Runner:
             LOGGER.warning('Disabling broker submission, no communicator provided')
             self._broker_submit = False
 
-    def __enter__(self) -> 'Runner':
+    def __enter__(self) -> Runner:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -113,12 +113,12 @@ class Runner:
         return self._transport
 
     @property
-    def persister(self) -> Optional[Persister]:
+    def persister(self) -> CheckpointPersister | None:
         """Get the persister used by this runner."""
         return self._persister
 
     @property
-    def communicator(self) -> Optional[kiwipy.Communicator]:
+    def communicator(self) -> broker_communicator.Communicator | None:
         """Get the communicator used by this runner."""
         return self._communicator
 
@@ -131,7 +131,7 @@ class Runner:
         return self._job_manager
 
     @property
-    def controller(self) -> Optional[RemoteProcessThreadController]:
+    def controller(self) -> RemoteProcessThreadController | None:
         """Get the controller used by this runner."""
         return self._controller
 
@@ -154,7 +154,7 @@ class Runner:
         """Stop the internal event loop."""
         self._loop.stop()
 
-    def run_until_complete(self, future: asyncio.Future) -> Any:
+    def run_until_complete(self, future: asyncio.Future) -> t.Any:
         """Run the loop until the future has finished and return the result."""
 
         with utils.loop_scope(self._loop):
@@ -169,11 +169,11 @@ class Runner:
         self._closed = True
 
     def instantiate_process(self, process: TYPE_RUN_PROCESS, **inputs):
-        from .utils import instantiate_process
+        from aiida.engine.utils import instantiate_process
 
         return instantiate_process(self, process, **inputs)
 
-    def submit(self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any):
+    def submit(self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any):
         """Submit the process with the supplied inputs to this runner immediately returning control to the interpreter.
 
         The return value will be the calculation node of the submitted process
@@ -201,12 +201,14 @@ class Runner:
             process_inited.close()
             self.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
         else:
-            self.loop.create_task(process_inited.step_until_terminated())
+            task = self.loop.create_task(process_inited.step_until_terminated())
+            self._process_tasks.add(task)
+            task.add_done_callback(self._process_tasks.discard)
 
         return process_inited.node
 
     def schedule(
-        self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+        self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
     ) -> ProcessNode:
         """Schedule a process to be executed by this runner.
 
@@ -219,12 +221,14 @@ class Runner:
 
         inputs = utils.prepare_inputs(inputs, **kwargs)
         process_inited = self.instantiate_process(process, **inputs)
-        self.loop.create_task(process_inited.step_until_terminated())
+        task = self.loop.create_task(process_inited.step_until_terminated())
+        self._process_tasks.add(task)
+        task.add_done_callback(self._process_tasks.discard)
         return process_inited.node
 
     def _run(
-        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
-    ) -> Tuple[Dict[str, Any], ProcessNode]:
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+    ) -> tuple[dict[str, t.Any], ProcessNode]:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process
@@ -265,7 +269,9 @@ class Runner:
 
             return process_inited.outputs, process_inited.node
 
-    def run(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> Dict[str, Any]:
+    def run(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+    ) -> dict[str, t.Any]:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process
@@ -278,7 +284,7 @@ class Runner:
         return result
 
     def run_get_node(
-        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
     ) -> ResultAndNode:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
@@ -291,7 +297,9 @@ class Runner:
         result, node = self._run(process, inputs, **kwargs)
         return ResultAndNode(result, node)
 
-    def run_get_pk(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> ResultAndPk:
+    def run_get_pk(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+    ) -> ResultAndPk:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process
@@ -303,7 +311,7 @@ class Runner:
         result, node = self._run(process, inputs, **kwargs)
         return ResultAndPk(result, node.pk)
 
-    def call_on_process_finish(self, pk: int, callback: Callable[[], Any]) -> None:
+    def call_on_process_finish(self, pk: int, callback: Callable[[], t.Any]) -> None:
         """Schedule a callback when the process of the given pk is terminated.
 
         This method will add a broadcast subscriber that will listen for state changes of the target process to be
@@ -333,7 +341,7 @@ class Runner:
                 if self.communicator:
                     self.communicator.remove_broadcast_subscriber(subscriber_identifier)
 
-        broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
+        broadcast_filter = BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
             broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 

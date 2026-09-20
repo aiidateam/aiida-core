@@ -16,20 +16,19 @@ import typing as t
 from aiida.common import InvalidOperation
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
+from aiida.engine.processes.builder import ProcessBuilder
+from aiida.engine.processes.functions import FunctionProcess
+from aiida.engine.processes.process import Process
+from aiida.engine.runners import ResultAndPk
+from aiida.engine.utils import instantiate_process, is_process_scoped, prepare_inputs
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
-from .processes.builder import ProcessBuilder
-from .processes.functions import FunctionProcess
-from .processes.process import Process
-from .runners import ResultAndPk
-from .utils import instantiate_process, is_process_scoped, prepare_inputs
-
 __all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
-TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
+TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
+TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
@@ -130,28 +129,31 @@ def submit(
     current_manager = manager.get_manager()
     profile = current_manager.get_profile()
 
-    if profile is not None and profile.process_control_backend == 'core.zmq':
+    if profile is not None and profile.process_control_backend == 'core.zeromq':
         daemon_client = current_manager.get_daemon_client()
         # Note: ``is_daemon_running`` only checks for a PID file, so a stale PID from a crashed daemon will let this
         # check pass.
         if not daemon_client.is_daemon_running:
             msg = (
-                'Cannot submit because the daemon is not running. The ZMQ broker is bundled into the daemon for this '
-                'profile, so submission requires `verdi daemon start`. To run the process locally without the daemon '
-                'instead, use `aiida.engine.run` (or `run_get_node`).'
+                'Cannot submit because the daemon is not running. The ZeroMQ broker is bundled into the daemon for '
+                'this profile, so submission requires `verdi daemon start`. To run the process locally without the '
+                'daemon instead, '
+                'use `aiida.engine.run` (or `run_get_node`).'
             )
             raise InvalidOperation(msg)
 
     runner = current_manager.get_runner()
 
     if runner.controller is None:
-        raise InvalidOperation(
+        msg = (
             'Cannot submit because the runner does not have a process controller, probably because the profile does '
             'not define a broker like RabbitMQ. If a RabbitMQ server is available, the profile can be configured to '
-            'use it with `verdi profile configure-rabbitmq`. Otherwise, use :meth:`aiida.engine.launch.run` instead to '
-            'run the process in the local Python interpreter instead of submitting it to the daemon. '
+            'use it with `verdi profile configure-broker core.rabbitmq`. Otherwise, use '
+            ':meth:`aiida.engine.launch.run` instead to run the process in the local Python interpreter instead of '
+            'submitting it to the daemon. '
             f'See {URL_NO_BROKER} for more details.'
         )
+        raise InvalidOperation(msg)
 
     assert runner.persister is not None, 'runner does not have a persister'
 
@@ -189,7 +191,8 @@ def await_processes(nodes: t.Sequence[ProcessNode], wait_interval: int = 1) -> N
     type_check(nodes, (list, tuple))
 
     if any(not isinstance(node, ProcessNode) for node in nodes):
-        raise TypeError(f'`nodes` should be a list of `ProcessNode`s but got: {nodes}')
+        msg = f'`nodes` should be a list of `ProcessNode`s but got: {nodes}'
+        raise TypeError(msg)
 
     start_time = time.time()
     terminated = False

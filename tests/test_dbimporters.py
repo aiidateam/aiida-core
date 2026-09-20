@@ -253,7 +253,7 @@ class TestNnincDbImporter:
         entry = results.at(0)
 
         path_pseudos = os.path.join(STATIC_DIR, 'pseudos')
-        with open(os.path.join(path_pseudos, f'{upf}.UPF'), 'r', encoding='utf8') as fpntr:
+        with open(os.path.join(path_pseudos, f'{upf}.UPF'), encoding='utf8') as fpntr:
             entry._contents = fpntr.read()
 
         upfnode = entry.get_upf_node()

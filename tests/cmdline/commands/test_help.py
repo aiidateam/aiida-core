@@ -8,8 +8,7 @@
 ###########################################################################
 """Tests for `verdi help`."""
 
-from importlib import metadata
-
+import importlib_metadata as metadata
 from packaging import version
 
 from aiida.cmdline.commands import cmd_verdi

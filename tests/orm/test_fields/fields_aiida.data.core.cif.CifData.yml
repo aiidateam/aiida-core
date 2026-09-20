@@ -30,4 +30,4 @@ spacegroup_numbers: QbArrayField('attributes.spacegroup_numbers', dtype=list[str
   | None, doc='List of space group numbers of the structure')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

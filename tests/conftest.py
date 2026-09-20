@@ -8,7 +8,7 @@
 ###########################################################################
 """Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
 
-Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
+Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.tools.pytest_fixtures`. They are
 loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
 """
 
@@ -19,14 +19,13 @@ import dataclasses
 import logging
 import os
 import pathlib
-import signal
 import subprocess
 import sys
-import time
 import types
 import typing as t
 import warnings
 from enum import Enum
+from importlib import import_module
 from pathlib import Path
 
 import click
@@ -38,18 +37,22 @@ from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
 
-try:
-    from typing import ParamSpec
-except ImportError:
-    # Fallback for Python 3.9 and older
-    from typing_extensions import ParamSpec  # type: ignore[assignment]
+# Alembic loads migration version scripts under synthetic module names derived from the file names, which do not
+# match the ``aiida`` package coverage is run over with ``--cov aiida``, so the executed lines would never be
+# attributed in the coverage report. Each version package eagerly imports all its scripts in its ``__init__``;
+# importing the packages here under the canonical names first makes coverage trace the files, so that the migration
+# tests count towards the report.
+
+import_module('aiida.storage.psql_dos.migrations.versions')
+import_module('aiida.storage.sqlite_dos.migrations.versions')
+import_module('aiida.storage.sqlite_zip.migrations.versions')
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
-P = ParamSpec('P')
+P = t.ParamSpec('P')
 
 
 class TestDbBackend(Enum):
@@ -63,65 +66,8 @@ class TestBrokerBackend(Enum):
     """Options for the '--broker-backend' CLI argument when running pytest."""
 
     RMQ = 'rmq'
-    ZMQ = 'zmq'
+    ZEROMQ = 'zmq'
     NONE = 'none'
-
-
-def start_zmq_broker(broker, timeout: float = 10.0):
-    """Start a ZMQ broker service subprocess for testing.
-
-    :param broker: A ``ZmqBroker`` instance (has ``base_path``, ``is_running``, etc.)
-    """
-    broker.base_path.mkdir(parents=True, exist_ok=True)
-
-    if broker.is_running:
-        return
-
-    subprocess.Popen(
-        [sys.executable, '-m', 'aiida.brokers.zmq.service', '--base-path', str(broker.base_path)],
-        start_new_session=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        stdin=subprocess.DEVNULL,
-    )
-
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if broker.is_running:
-            return
-        time.sleep(0.1)
-
-    raise TimeoutError(f'ZMQ broker did not start within {timeout}s')
-
-
-def stop_zmq_broker(broker, timeout: float = 5.0):
-    """Stop a ZMQ broker service subprocess for testing.
-
-    :param broker: A ``ZmqBroker`` instance
-    """
-    pid = broker.get_service_pid()
-    if pid is None or not broker.is_running:
-        broker._cleanup_stale_service_files()
-        return
-
-    try:
-        os.kill(pid, signal.SIGINT)
-    except OSError:
-        broker._cleanup_stale_service_files()
-        return
-
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if not broker.is_running:
-            broker._cleanup_stale_service_files()
-            return
-        time.sleep(0.1)
-
-    try:
-        os.kill(pid, signal.SIGKILL)
-    except OSError:
-        pass
-    broker._cleanup_stale_service_files()
 
 
 def pytest_collection_modifyitems(items, config):
@@ -129,7 +75,7 @@ def pytest_collection_modifyitems(items, config):
 
     Most notably, we add the 'presto' marker for all tests that
     are not marked with requires_rmq, requires_psql, or nightly.
-    Tests marked requires_broker are included in presto since ZMQ
+    Tests marked requires_broker are included in presto since ZeroMQ
     broker is available without external services.
     """
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
@@ -147,9 +93,9 @@ def pytest_collection_modifyitems(items, config):
     # Handle broker backend selection
     broker_backend = config.option.broker_backend
 
-    # If using ZMQ, skip tests that specifically require RabbitMQ (requires_rmq marker)
+    # If using ZeroMQ, skip tests that specifically require RabbitMQ (requires_rmq marker)
     # but allow tests with requires_broker marker (they work with any broker)
-    if broker_backend is TestBrokerBackend.ZMQ:
+    if broker_backend is TestBrokerBackend.ZEROMQ:
         if config.option.markexpr != '':
             config.option.markexpr += ' and (not requires_rmq)'
         else:
@@ -169,7 +115,7 @@ def pytest_collection_modifyitems(items, config):
         if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
             item.add_marker('nightly')
 
-        # Add 'requires_broker' for tests that depend on 'daemon_client' fixture (works with RMQ or ZMQ)
+        # Add 'requires_broker' for tests that depend on 'daemon_client' fixture (works with RMQ or ZeroMQ)
         if 'daemon_client' in item.fixturenames:
             item.add_marker('requires_broker')
 
@@ -178,7 +124,7 @@ def pytest_collection_modifyitems(items, config):
             item.add_marker('requires_psql')
 
         # Add 'presto' marker to tests that don't need external services.
-        # Tests with requires_broker ARE included (ZMQ broker needs no external service).
+        # Tests with requires_broker ARE included (ZeroMQ broker needs no external service).
         # Tests with requires_rmq, requires_psql, or nightly are excluded.
         markers = [marker.name for marker in item.iter_markers()]
         if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
@@ -276,7 +222,9 @@ def capture_aiida_and_verdi_logs(request, monkeypatch):
 
 
 @pytest.fixture(scope='session')
-def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
+def aiida_profile(
+    pytestconfig, tmp_path_factory, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos
+):
     """Create and load a profile with the specified storage and broker backends.
 
     This overrides the ``aiida_profile`` fixture provided by ``aiida-core`` which runs with ``core.sqlite_dos`` and
@@ -294,38 +242,65 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
 
     # Determine broker based on CLI option and markers
     if 'presto' in marker_opts:
-        # Presto tests use ZMQ broker (no external service required)
-        broker = 'core.zmq'
+        # Presto tests use ZeroMQ broker (no external service required)
+        broker = 'core.zeromq'
     elif broker_backend is TestBrokerBackend.RMQ:
         broker = 'core.rabbitmq'
-    elif broker_backend is TestBrokerBackend.ZMQ:
-        broker = 'core.zmq'
+    elif broker_backend is TestBrokerBackend.ZEROMQ:
+        broker = 'core.zeromq'
     else:  # TestBrokerBackend.NONE
         broker = None
 
     if db_backend is TestDbBackend.SQLITE:
         storage = 'core.sqlite_dos'
-        config = config_sqlite_dos()
+        worker_id = os.environ.get('PYTEST_XDIST_WORKER', 'master')
+        config = config_sqlite_dos(tmp_path_factory.mktemp(f'test_sqlite_dos_storage_{worker_id}'))
     elif db_backend is TestDbBackend.PSQL:
         storage = 'core.psql_dos'
         config = config_psql_dos()
     else:
         # This should be unreachable
-        raise ValueError(f'Invalid DB backend {db_backend}')
+        msg = f'Invalid DB backend {db_backend}'
+        raise ValueError(msg)
 
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
-        # Start ZMQ broker service if needed (tests don't use circus)
-        broker_instance = get_manager().get_broker()
-        if broker_instance is not None and hasattr(broker_instance, 'is_running'):
-            start_zmq_broker(broker_instance)
-            try:
-                yield profile
-            finally:
-                stop_zmq_broker(broker_instance)
-        else:
-            yield profile
+        yield profile
+
+
+@pytest.fixture(scope='session')
+def archive_main_0001():
+    """Return the path of the pinned ``main_0001`` reference archive."""
+    from tests.utils.archives import get_archive_file
+
+    return get_archive_file('export_main_0001_simple.aiida', filepath='export/migrate')
+
+
+@pytest.fixture(scope='session')
+def archive_main_0002(tmp_path_factory, aiida_config_factory, aiida_profile_factory):
+    """Generate the ``main_0002`` reference simple archive on demand."""
+    from tests.utils.archives import generate_archive_main_0002
+
+    with aiida_config_factory(tmp_path_factory.mktemp('gen_archive_main_0002_config')) as config:
+        with aiida_profile_factory(config):
+            return generate_archive_main_0002(tmp_path_factory.mktemp('archive_main_0002'))
+
+
+@pytest.fixture(scope='session')
+def archive_main_head(tmp_path_factory, aiida_config_factory, aiida_profile_factory):
+    """Generate the reference simple archive at the current head version on demand."""
+    from tests.utils.archives import generate_archive_head
+
+    with aiida_config_factory(tmp_path_factory.mktemp('gen_archive_head_config')) as config:
+        with aiida_profile_factory(config):
+            return generate_archive_head(tmp_path_factory.mktemp('archive_main_head'))
+
+
+@pytest.fixture(scope='session')
+def archive_head(archive_main_head):
+    """Return the head archive fixture under its former name."""
+    return archive_main_head
 
 
 @pytest.fixture()
@@ -719,19 +694,20 @@ def default_user():
 def override_logging(isolated_config):
     """Temporarily override the log level for the AiiDA logger and the database log handler to ``DEBUG``.
 
-    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and ``logging.db_loglevel``.
-    To ensure the changes are temporary, the are made on an isolated temporary configuration.
+    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and
+    ``logging.database_handler``. To ensure the changes are temporary, they are made on an isolated
+    temporary configuration.
     """
     from aiida.common.log import configure_logging
 
     try:
         isolated_config.set_option('logging.aiida_loglevel', 'DEBUG')
-        isolated_config.set_option('logging.db_loglevel', 'DEBUG')
+        isolated_config.set_option('logging.database_handler', 'DEBUG')
         configure_logging(with_orm=True)
         yield
     finally:
         isolated_config.unset_option('logging.aiida_loglevel')
-        isolated_config.unset_option('logging.db_loglevel')
+        isolated_config.unset_option('logging.database_handler')
         configure_logging(with_orm=True)
 
 
@@ -790,7 +766,7 @@ class CliResult:
 
     stderr_bytes: bytes
     stdout_bytes: bytes
-    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
+    exc_info: tuple[type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
         None,
         None,
         None,
@@ -909,7 +885,6 @@ def run_cli_command(reset_log_level, aiida_config, aiida_profile):
 def run_cli_command_subprocess(command, parameters, user_input, profile_name, suppress_warnings):
     """Run CLI command through ``subprocess``."""
     import subprocess
-    import sys
 
     env = os.environ.copy()
     command_path = cli_command_map()[command]
@@ -1132,8 +1107,8 @@ def construct_calculation_node_add(tmp_path_factory):
         output_content = f'{x + y}\n'.encode()
         retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
-        scheduler_stdout = '\n'.encode()
-        scheduler_stderr = '\n'.encode()
+        scheduler_stdout = b'\n'
+        scheduler_stderr = b'\n'
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
         retrieved_folder.store()
@@ -1189,7 +1164,7 @@ def create_file_hierarchy():
     :param target: the target where the hierarchy should be created.
     """
 
-    def _create_file_hierarchy(hierarchy: t.Dict, target: t.Union[pathlib.Path, Folder]) -> None:
+    def _create_file_hierarchy(hierarchy: dict, target: pathlib.Path | Folder) -> None:
         for filename, value in hierarchy.items():
             if isinstance(value, dict):
                 if isinstance(target, pathlib.Path):
@@ -1379,7 +1354,7 @@ def setup_multiply_add_group(generate_workchain_multiply_add) -> orm.Group:
 @pytest.fixture()
 def setup_duplicate_group():
     def _setup_duplicate_group(source_group: orm.Group, dest_group_label: str):
-        dupl_group, created = orm.Group.collection.get_or_create(label=dest_group_label)
+        dupl_group, _created = orm.Group.collection.get_or_create(label=dest_group_label)
         dupl_group.add_nodes(list(source_group.nodes))
         return dupl_group
 

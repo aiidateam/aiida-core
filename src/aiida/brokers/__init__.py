@@ -4,14 +4,38 @@
 
 # fmt: off
 
-from .broker import *
-from .rabbitmq import *
-from .zmq import *
+from aiida.brokers.broker import *
+from aiida.brokers.communicate import *
+from aiida.brokers.communicator import *
+from aiida.brokers.exceptions import *
+from aiida.brokers.filters import *
+from aiida.brokers.futures import *
+from aiida.brokers.rabbitmq import *
+from aiida.brokers.zeromq import *
 
 __all__ = (
+    'DEFAULT_COMM_URI',
+    'BroadcastFilter',
     'Broker',
+    'CancelledError',
+    'Communicator',
+    'CommunicatorClosed',
+    'DeliveryFailed',
+    'DuplicateSubscriberIdentifier',
+    'Future',
+    'QueueEmpty',
     'RabbitmqBroker',
-    'ZmqBroker',
+    'RemoteException',
+    'TaskRejected',
+    'TimeoutError',
+    'UnroutableError',
+    'ZeromqBroker',
+    'as_completed',
+    'capture_exceptions',
+    'chain',
+    'connect',
+    'copy_future',
+    'wait',
 )
 
 # fmt: on

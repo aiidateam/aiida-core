@@ -4,8 +4,8 @@
 
 # fmt: off
 
-from .base import *
-from .stash import *
+from aiida.orm.nodes.data.remote.base import *
+from aiida.orm.nodes.data.remote.stash import *
 
 __all__ = (
     'RemoteData',

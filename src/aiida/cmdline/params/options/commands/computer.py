@@ -18,7 +18,7 @@ from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import echo
 
 if t.TYPE_CHECKING:
-    from aiida.schedulers.datastructures import JobResource
+    from aiida.common.datastructures import JobResource
 
 
 def get_job_resource_cls(ctx: click.Context) -> 'type[JobResource]':
@@ -31,7 +31,8 @@ def get_job_resource_cls(ctx: click.Context) -> 'type[JobResource]':
         try:
             scheduler_cls = t.cast(Scheduler, scheduler_ep.load())
         except ImportError:
-            raise ImportError(f"Unable to load the '{scheduler_ep.name}' scheduler")
+            msg = f"Unable to load the '{scheduler_ep.name}' scheduler"
+            raise ImportError(msg)
     else:
         raise ValidationError(
             'The should_call_... function should always be run (and prompted) AFTER asking for a scheduler'

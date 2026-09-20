@@ -4,10 +4,10 @@
 
 # fmt: off
 
-from .base import *
-from .compress import *
-from .custom import *
-from .folder import *
+from aiida.orm.nodes.data.remote.stash.base import *
+from aiida.orm.nodes.data.remote.stash.compress import *
+from aiida.orm.nodes.data.remote.stash.custom import *
+from aiida.orm.nodes.data.remote.stash.folder import *
 
 __all__ = (
     'RemoteStashCompressedData',

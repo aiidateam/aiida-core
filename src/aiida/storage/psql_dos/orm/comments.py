@@ -15,8 +15,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.common import exceptions, lang
 from aiida.orm.implementation.comments import BackendComment, BackendCommentCollection
 from aiida.storage.psql_dos.models import comment as models
-
-from . import entities, users, utils
+from aiida.storage.psql_dos.orm import entities, users, utils
 
 
 class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
@@ -130,7 +129,8 @@ class SqlaCommentCollection(BackendCommentCollection):
             session.commit()
         except NoResultFound:
             session.rollback()
-            raise exceptions.NotExistent(f"Comment with id '{comment_id}' not found")
+            msg = f"Comment with id '{comment_id}' not found"
+            raise exceptions.NotExistent(msg)
 
     def delete_all(self):
         """Delete all Comment entries.
@@ -144,7 +144,8 @@ class SqlaCommentCollection(BackendCommentCollection):
             session.commit()
         except Exception as exc:
             session.rollback()
-            raise exceptions.IntegrityError(f'Could not delete all Comments. Full exception: {exc}')
+            msg = f'Could not delete all Comments. Full exception: {exc}'
+            raise exceptions.IntegrityError(msg)
 
     def delete_many(self, filters):
         """Delete Comments based on ``filters``

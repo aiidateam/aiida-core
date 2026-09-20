@@ -15,39 +15,41 @@ from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 @pytest.mark.parametrize('version', list(v for v in PsqlDosMigrator.get_schema_versions() if v.startswith('main')))
 def test_main(version, uninitialised_profile, reflect_schema, data_regression):
-    """Test that the migrations produce the expected database schema."""
+    """Test that the migrations produce the expected database schema.
+
+    Each parametrized case starts with an empty database and targets one
+    migration revision:
+
+      empty storage with no database schema
+      -> migrate_up(main@<revision>)
+      -> reopen storage
+      -> compare resulting database schema with <revision> snapshot
+
+    Reopening verifies that the Alembic revision was committed to the database,
+    rather than only being available through the migration connection.
+    """
     with PsqlDosMigrator(uninitialised_profile) as migrator:
         migrator.migrate_up(f'main@{version}')
 
-    data_regression.check(reflect_schema(uninitialised_profile))
-
-
-def test_main_initialized(uninitialised_profile):
-    """Test that ``migrate`` properly stamps the new schema version when updating database with existing schema."""
-
-    # Initialize database at first version of main branch
     with PsqlDosMigrator(uninitialised_profile) as migrator:
-        migrator.migrate_up('main@main_0001')
-        assert migrator.get_schema_version_profile(check_legacy=False) == 'main_0001'
-
-    # Reinitialize the migrator to make sure we are fetching actual state of database and not in-memory state and then
-    # migrate to head schema version.
-    with PsqlDosMigrator(uninitialised_profile) as migrator:
-        migrator.migrate()
-
-    # Reinitialize the migrator to make sure we are fetching actual state of database and not in-memory state and then
-    # assert that the database version is properly set to the head schema version
-    with PsqlDosMigrator(uninitialised_profile) as migrator:
-        assert migrator.get_schema_version_profile(check_legacy=False) == migrator.get_schema_version_head()
+        assert migrator.get_schema_version_profile(check_legacy=False) == version
+        data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_{version}')
 
 
-def test_head_vs_orm(uninitialised_profile, reflect_schema, data_regression):
-    """Test that the migrations produce the same database schema as the models."""
+def test_initialised_schema_matches_head(uninitialised_profile, reflect_schema, data_regression):
+    """Test that the initialized database schema matches the Alembic head.
+
+    Fresh storage initialization follows a separate path from applying the
+    migration chain:
+
+      empty storage with no database schema
+      -> initialise storage with schema from current code
+      -> compare resulting database schema with Alembic-head snapshot
+    """
     with PsqlDosMigrator(uninitialised_profile) as migrator:
         head_version = migrator.get_schema_version_head()
         migrator.initialise()
-
-    data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_main_{head_version}_')
+        data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_{head_version}')
 
 
 @pytest.mark.nightly

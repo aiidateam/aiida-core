@@ -297,7 +297,7 @@ Exposing inputs and outputs
 Any base restart work chain *needs* to *expose* the inputs of the subprocess it wraps, and most likely *wants* to do the same for the outputs it produces, although the latter is not necessary.
 For the simple example presented in the previous section, simply copy-pasting the input and output port definitions of the subprocess ``ArithmeticAddCalculation`` was not too troublesome.
 However, this quickly becomes tedious, and more importantly, error-prone once you start to wrap processes with quite a few more inputs.
-To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs` methods:
+To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_inputs` and :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_outputs` methods:
 
 .. code-block:: python
 

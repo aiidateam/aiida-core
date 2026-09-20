@@ -18,19 +18,21 @@ class CodDbImporter(DbImporter):
         """Returns SQL query predicate for querying integer fields."""
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
-                raise ValueError(f"incorrect value for keyword '{alias}' only integers and strings are accepted")
-        return f"{key} IN ({', '.join(str(int(i)) for i in values)})"
+                msg = f"incorrect value for keyword '{alias}' only integers and strings are accepted"
+                raise ValueError(msg)
+        return f'{key} IN ({", ".join(str(int(i)) for i in values)})'
 
     def _str_exact_clause(self, key, alias, values):
         """Returns SQL query predicate for querying string fields."""
         clause_parts = []
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
-                raise ValueError(f"incorrect value for keyword '{alias}' only integers and strings are accepted")
+                msg = f"incorrect value for keyword '{alias}' only integers and strings are accepted"
+                raise ValueError(msg)
             if isinstance(value, int):
                 value = str(value)  # noqa: PLW2901
             clause_parts.append(f"'{value}'")
-        return f"{key} IN ({', '.join(clause_parts)})"
+        return f'{key} IN ({", ".join(clause_parts)})'
 
     def _str_exact_or_none_clause(self, key, alias, values):
         """Returns SQL query predicate for querying string fields, allowing
@@ -53,7 +55,8 @@ class CodDbImporter(DbImporter):
         """Returns SQL query predicate for querying formula fields."""
         for value in values:
             if not isinstance(value, str):
-                raise ValueError(f"incorrect value for keyword '{alias}' only strings are accepted")
+                msg = f"incorrect value for keyword '{alias}' only strings are accepted"
+                raise ValueError(msg)
         return self._str_exact_clause(key, alias, [f'- {f} -' for f in values])
 
     def _str_fuzzy_clause(self, key, alias, values):
@@ -61,7 +64,8 @@ class CodDbImporter(DbImporter):
         clause_parts = []
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
-                raise ValueError(f"incorrect value for keyword '{alias}' only integers and strings are accepted")
+                msg = f"incorrect value for keyword '{alias}' only integers and strings are accepted"
+                raise ValueError(msg)
             if isinstance(value, int):
                 value = str(value)  # noqa: PLW2901
             clause_parts.append(f"{key} LIKE '%{value}%'")
@@ -72,7 +76,8 @@ class CodDbImporter(DbImporter):
         clause_parts = []
         for value in values:
             if not isinstance(value, str):
-                raise ValueError(f"incorrect value for keyword '{alias}' only strings are accepted")
+                msg = f"incorrect value for keyword '{alias}' only strings are accepted"
+                raise ValueError(msg)
             clause_parts.append(f"formula REGEXP ' {value}[0-9 ]'")
         return ' AND '.join(clause_parts)
 
@@ -80,7 +85,8 @@ class CodDbImporter(DbImporter):
         """Returns SQL query predicate for querying double-valued fields."""
         for value in values:
             if not isinstance(value, int) and not isinstance(value, float):
-                raise ValueError(f"incorrect value for keyword '{alias}' only integers and floats are accepted")
+                msg = f"incorrect value for keyword '{alias}' only integers and floats are accepted"
+                raise ValueError(msg)
         return ' OR '.join(f'{key} BETWEEN {d - precision} AND {d + precision}' for d in values)
 
     length_precision = 0.001
@@ -163,9 +169,10 @@ class CodDbImporter(DbImporter):
                 sql_parts.append(f'({self._keywords[key][1](self, self._keywords[key][0], key, values)})')
 
         if kwargs:
-            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
+            msg = f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}'
+            raise NotImplementedError(msg)
 
-        return f"SELECT file, svnrevision FROM data WHERE {' AND '.join(sql_parts)}"
+        return f'SELECT file, svnrevision FROM data WHERE {" AND ".join(sql_parts)}'
 
     def query(self, **kwargs):
         """Performs a query on the COD database using ``keyword = value`` pairs,
@@ -256,9 +263,9 @@ class CodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        url = f"{self._base_url + result_dict['id']}.cif"
+        url = f'{self._base_url + result_dict["id"]}.cif'
         if 'svnrevision' in result_dict and result_dict['svnrevision'] is not None:
-            return f"{url}@{result_dict['svnrevision']}"
+            return f'{url}@{result_dict["svnrevision"]}'
 
         return url
 

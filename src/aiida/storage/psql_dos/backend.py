@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import functools
 import pathlib
+import typing as t
+import weakref
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Union
 
 from disk_objectstore import Container, backup_utils
 from sqlalchemy import column, insert, update
@@ -30,17 +31,16 @@ from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.log import STORAGE_LOGGER
 from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
+from aiida.storage.psql_dos.orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from aiida.storage.utils import _create_smarter_in_clause
 
-from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
-
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('PsqlDosBackend',)
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
-CONTAINER_DEFAULTS: dict[str, Any] = {
+CONTAINER_DEFAULTS: dict[str, t.Any] = {
     'pack_size_target': 4 * 1024 * 1024 * 1024,
     'loose_prefix_len': 2,
     'hash_type': 'sha256',
@@ -57,19 +57,48 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
     try:
         parts = urlparse(profile.storage_config['repository_uri'])
     except KeyError:
-        raise KeyError(f'invalid profile {profile.name}: `repository_uri` not defined in `storage.config`.')
+        msg = f'invalid profile {profile.name}: `repository_uri` not defined in `storage.config`.'
+        raise KeyError(msg)
 
     if parts.scheme != 'file':
-        raise ConfigurationError(
-            f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
-        )
+        msg = f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
+        raise ConfigurationError(msg)
 
     filepath = pathlib.Path(url2pathname(parts.path))
 
     if not filepath.is_absolute():
-        raise ConfigurationError(f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute')
+        msg = f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute'
+        raise ConfigurationError(msg)
 
     return filepath.expanduser() / 'container'
+
+
+class _PsqlDosResources:
+    """Resources owned by a :class:`PsqlDosBackend`."""
+
+    def __init__(self) -> None:
+        self.session_factory: scoped_session | None = None
+
+    def release(self) -> None:
+        """Release the resources."""
+        if self.session_factory is not None:
+            engine = self.session_factory.bind
+            if engine is not None:
+                engine.dispose()  # type: ignore[union-attr]
+            self.session_factory.expunge_all()
+            self.session_factory.remove()
+            self.session_factory = None
+
+    @property
+    def has_pending_release(self) -> bool:
+        return self.session_factory is not None
+
+
+def _finalize_backend(resources: _PsqlDosResources, backend_repr: str) -> None:
+    """Release resources held by a backend that was not closed explicitly."""
+    if resources.has_pending_release:
+        LOGGER.info('StorageBackend {backend_repr} was not closed explicitly.')
+        resources.release()
 
 
 class PsqlDosBackend(StorageBackend):
@@ -114,7 +143,7 @@ class PsqlDosBackend(StorageBackend):
         return cls.migrator.get_schema_version_head()
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
+    def version_profile(cls, profile: Profile) -> str | None:
         with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile(check_legacy=True)
 
@@ -135,7 +164,8 @@ class PsqlDosBackend(StorageBackend):
         with self.migrator(profile) as migrator:
             migrator.validate_storage()
 
-        self._session_factory: Optional[scoped_session] = None
+        self._resources = _PsqlDosResources()
+        self._finalizer = weakref.finalize(self, _finalize_backend, self._resources, repr(self))
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
         self._db_url = self.get_session().get_bind().url  # type: ignore[union-attr]
@@ -150,7 +180,15 @@ class PsqlDosBackend(StorageBackend):
 
     @property
     def is_closed(self) -> bool:
-        return self._session_factory is None
+        return self._resources.session_factory is None
+
+    @property
+    def _session_factory(self) -> scoped_session | None:
+        return self._resources.session_factory
+
+    @_session_factory.setter
+    def _session_factory(self, value: scoped_session | None) -> None:
+        self._resources.session_factory = value
 
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'
@@ -168,26 +206,24 @@ class PsqlDosBackend(StorageBackend):
         """
         from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
-        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore[arg-type]
-        self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
+        self._resources.session_factory = scoped_session(
+            sessionmaker(
+                bind=create_sqlalchemy_engine(self._profile.storage_config),  # type: ignore[arg-type]
+                future=True,
+                expire_on_commit=True,
+            )
+        )
 
     def get_session(self) -> Session:
         """Return an SQLAlchemy session bound to the current thread."""
-        if self._session_factory is None:
+        if self._resources.session_factory is None:
             raise ClosedStorage(str(self))
-        return self._session_factory()
+        return self._resources.session_factory()
 
     def close(self) -> None:
-        if self._session_factory is None:
+        if self._resources.session_factory is None:
             return  # the instance is already closed, and so this is a no-op
-        # close the connection
-
-        engine = self._session_factory.bind
-        if engine is not None:
-            engine.dispose()  # type: ignore[union-attr]
-        self._session_factory.expunge_all()
-        self._session_factory.remove()
-        self._session_factory = None
+        self._resources.release()
 
     def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
@@ -214,7 +250,7 @@ class PsqlDosBackend(StorageBackend):
                     DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=repository_uuid)
                 )
 
-    def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+    def get_repository(self) -> DiskObjectStoreRepositoryBackend:
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
         container = Container(get_filepath_container(self.profile))
@@ -276,7 +312,7 @@ class PsqlDosBackend(StorageBackend):
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[t.Any, set[t.Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
@@ -306,7 +342,7 @@ class PsqlDosBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
-    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
@@ -316,11 +352,13 @@ class PsqlDosBackend(StorageBackend):
         if allow_defaults:
             for row in rows:
                 if not keys.issuperset(row):
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                    raise IntegrityError(msg)
         else:
             for row in rows:
                 if set(row) != keys:
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} != {keys}'
+                    raise IntegrityError(msg)
         # note for postgresql+psycopg2 we could also use `save_all` + `flush` with minimal performance degradation, see
         # https://docs.sqlalchemy.org/en/14/changelog/migration_14.html#orm-batch-inserts-with-psycopg2-now-batch-statements-with-returning-in-most-cases
         # by contrast, in sqlite, bulk_insert is faster: https://docs.sqlalchemy.org/en/14/faq/performance.html
@@ -329,15 +367,17 @@ class PsqlDosBackend(StorageBackend):
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
         for row in rows:
             if 'id' not in row:
-                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+                msg = f"'id' field not given for {entity_type}: {set(row)}"
+                raise IntegrityError(msg)
             if not keys.issuperset(row):
-                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                raise IntegrityError(msg)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)
@@ -405,7 +445,7 @@ class PsqlDosBackend(StorageBackend):
         return convert.get_backend_entity(model, self)
 
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite: bool = True
+        self, key: str, value: str | int | float | None, description: str | None = None, overwrite: bool = True
     ) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
@@ -415,18 +455,20 @@ class PsqlDosBackend(StorageBackend):
                 if overwrite:
                     session.query(DbSetting).filter(DbSetting.key == key).update(dict(val=value))
                 else:
-                    raise ValueError(f'The setting {key} already exists')
+                    msg = f'The setting {key} already exists'
+                    raise ValueError(msg)
             else:
                 session.add(DbSetting(key=key, val=value, description=description or ''))
 
-    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+    def get_global_variable(self, key: str) -> str | int | float | None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()
             if setting is None:
-                raise KeyError(f'No setting found with key {key}')
+                msg = f'No setting found with key {key}'
+                raise KeyError(msg)
             return setting.val
 
     def get_unreferenced_connections(self) -> list[tuple[int, str, int]]:
@@ -473,7 +515,7 @@ class PsqlDosBackend(StorageBackend):
 
         return terminated
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> None:
         from aiida.manage.profile_access import ProfileAccessManager
 
         repository = self.get_repository()
@@ -492,7 +534,7 @@ class PsqlDosBackend(StorageBackend):
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
-    def get_unreferenced_keyset(self, check_consistency: bool = True) -> Set[str]:
+    def get_unreferenced_keyset(self, check_consistency: bool = True) -> set[str]:
         """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
         This should be all the soft-deleted files.
@@ -522,7 +564,7 @@ class PsqlDosBackend(StorageBackend):
 
         return keyset_repository - keyset_database
 
-    def get_info(self, detailed: bool = False, **kwargs: Any) -> dict[str, Any]:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> dict[str, t.Any]:
         results = super().get_info(detailed=detailed)
         results['repository'] = self.get_repository().get_info(detailed)
         return results
@@ -531,7 +573,7 @@ class PsqlDosBackend(StorageBackend):
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
-        prev_backup: Optional[pathlib.Path] = None,
+        prev_backup: pathlib.Path | None = None,
     ) -> None:
         """Create a backup of the postgres database and disk-objectstore to the provided path.
 
@@ -555,7 +597,8 @@ class PsqlDosBackend(StorageBackend):
         # This command calls `rsync` and `pg_dump` executables. check that they are in PATH
         for exe in ['rsync', 'pg_dump']:
             if shutil.which(exe) is None:
-                raise exceptions.StorageBackupError(f"Required executable '{exe}' not found in PATH, please add it.")
+                msg = f"Required executable '{exe}' not found in PATH, please add it."
+                raise exceptions.StorageBackupError(msg)
 
         cfg = self._profile.storage_config
         container = Container(get_filepath_container(self.profile))
@@ -585,12 +628,14 @@ class PsqlDosBackend(StorageBackend):
             try:
                 subprocess.run(cmd, check=True, env=env)
             except subprocess.CalledProcessError as exc:
-                raise backup_utils.BackupError(f'pg_dump: {exc}')
+                msg = f'pg_dump: {exc}'
+                raise backup_utils.BackupError(msg)
 
             if psql_temp_loc.is_file():
                 STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
             else:
-                raise backup_utils.BackupError(f"'{psql_temp_loc!s}' was not created.")
+                msg = f"'{psql_temp_loc!s}' was not created."
+                raise backup_utils.BackupError(msg)
 
             # step 3: transfer the PostgreSQL database file
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
@@ -604,7 +649,7 @@ class PsqlDosBackend(StorageBackend):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ) -> None:
         try:
             backup_manager = backup_utils.BackupManager(dest, keep=keep)

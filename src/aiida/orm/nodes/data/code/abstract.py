@@ -23,10 +23,9 @@ from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.orm import Computer
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
 from aiida.plugins import CalculationFactory
-
-from ..data import Data
 
 if t.TYPE_CHECKING:
     from aiida.engine import ProcessBuilder
@@ -62,7 +61,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         )
 
     class CommonFields(OrmModel):
-        default_calc_job_plugin: t.Optional[str] = OrmMetadataField(
+        default_calc_job_plugin: str | None = OrmMetadataField(
             None,
             alias='input_plugin',
             title='Default `CalcJob` plugin',
@@ -75,7 +74,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             description='Whether the executable and arguments of the code in the submission script should be escaped '
             'with single or double quotes',
         )
-        with_mpi: t.Optional[bool] = OrmMetadataField(
+        with_mpi: bool | None = OrmMetadataField(
             None,
             title='Run with MPI',
             description='Whether the executable should be run as an MPI program. This option can be left unspecified '
@@ -142,10 +141,11 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         input_plugin = kwargs.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
         if input_plugin is not None:
             if default_calc_job_plugin is not None:
-                raise ValueError(
+                msg = (
                     f'Got both `{self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN}` and its replacement '
                     '`default_calc_job_plugin` as input, which is not allowed'
                 )
+                raise ValueError(msg)
             default_calc_job_plugin = input_plugin
 
         super().__init__(**kwargs)
@@ -222,12 +222,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'CliModel',
                 __base__=OrmModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.CliModel',
                 **model_fields,
             ),
         )
-        CliModel.__qualname__ = f'{cls.__name__}.CliModel'
-        CliModel.model_config['arbitrary_types_allowed'] = True
-        CliModel.model_rebuild(force=True)
         cls._CliModel = CliModel
 
     @abc.abstractmethod
@@ -436,7 +434,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         type_check(value, bool)
         self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
 
-    def get_builder(self) -> 'ProcessBuilder':
+    def get_builder(self) -> ProcessBuilder:
         """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
 
         The configured calculation plugin class is defined by the ``default_calc_job_plugin`` property.
@@ -455,7 +453,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         try:
             process_class = CalculationFactory(entry_point)
         except exceptions.EntryPointError:
-            raise exceptions.EntryPointError(f'The calculation entry point `{entry_point}` could not be loaded')
+            msg = f'The calculation entry point `{entry_point}` could not be loaded'
+            raise exceptions.EntryPointError(msg)
 
         builder = process_class.get_builder()  # type: ignore[union-attr]
         builder.code = self

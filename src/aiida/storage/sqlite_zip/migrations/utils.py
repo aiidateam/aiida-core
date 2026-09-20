@@ -11,8 +11,8 @@
 import os
 import shutil
 import tempfile
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Sequence
 
 from archive_path import TarPath, ZipPath
 
@@ -56,9 +56,8 @@ def verify_metadata_version(metadata, version=None):
         return metadata_version
 
     if metadata_version != version:
-        raise exceptions.StorageMigrationError(
-            f'expected archive file with version {version} but found version {metadata_version}'
-        )
+        msg = f'expected archive file with version {version} but found version {metadata_version}'
+        raise exceptions.StorageMigrationError(msg)
 
     return None
 
@@ -90,7 +89,8 @@ def copy_zip_to_zip(
         This allows for faster reading of these files, with ``archive_path.read_file_in_zip``.
     """
     if (not overwrite) and outpath.exists() and outpath.is_file():
-        raise FileExistsError(f'{outpath} already exists')
+        msg = f'{outpath} already exists'
+        raise FileExistsError(msg)
     with tempfile.TemporaryDirectory() as tmpdirname:
         temp_archive = Path(tmpdirname) / 'archive.zip'
         with ZipPath(temp_archive, mode='w', compresslevel=compression, info_order=info_order) as new_path:
@@ -138,7 +138,8 @@ def copy_tar_to_zip(
         This allows for faster reading of these files, with ``archive_path.read_file_in_zip``.
     """
     if (not overwrite) and outpath.exists() and outpath.is_file():
-        raise FileExistsError(f'{outpath} already exists')
+        msg = f'{outpath} already exists'
+        raise FileExistsError(msg)
     with tempfile.TemporaryDirectory() as tmpdirname:
         # for tar files we extract first, since the file is compressed as a single object
         temp_extracted = Path(tmpdirname) / 'extracted'

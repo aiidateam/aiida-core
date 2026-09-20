@@ -127,6 +127,14 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             )
             return instance
 
+        if data_class is orm.ShellCode:
+            instance = data_class(
+                label='test_shell_code',
+                computer=aiida_localhost,
+                filepath_executable='/bin/cat',
+            )
+            return instance
+
         if data_class is orm.PortableCode:
             (tmp_path / 'bash').touch()
             filepath_executable = 'bash'
@@ -146,10 +154,11 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
                 engine_command='docker {image_name}',
             )
 
-        raise RuntimeError(
-            'no instance generator implemented for class `{}`. If you have added a `_prepare_*` method '
-            'for this data class, add a generator of a dummy instance here'.format(data_class)
+        msg = (
+            f'no instance generator implemented for class `{data_class}`. If you have added a `_prepare_*` method '
+            'for this data class, add a generator of a dummy instance here'
         )
+        raise RuntimeError(msg)
 
     return _generate_class_instance
 

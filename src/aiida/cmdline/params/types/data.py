@@ -13,7 +13,7 @@ import typing as t
 if t.TYPE_CHECKING:
     from aiida.orm.utils.loaders import DataEntityLoader
 
-from .identifier import IdentifierParamType
+from aiida.cmdline.params.types.identifier import IdentifierParamType
 
 __all__ = ('DataParamType',)
 

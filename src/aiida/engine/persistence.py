@@ -6,69 +6,31 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Definition of AiiDA's process persister and the necessary object loaders."""
+"""Definition of AiiDA's checkpoint repository and object loader helpers."""
 
-import importlib
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Hashable, Optional
+import typing as t
+from collections.abc import Hashable
 
-import plumpy.loaders
-import plumpy.persistence
-from plumpy.exceptions import PersistenceError
-
+from aiida.common.loaders import DefaultObjectLoader as ObjectLoader
+from aiida.common.loaders import get_object_loader
+from aiida.engine.processes import persistence as process_persistence
+from aiida.engine.processes.exceptions import PersistenceError
 from aiida.orm.utils import serialize
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
-__all__ = ('AiiDAPersister', 'ObjectLoader', 'get_object_loader')
+__all__ = ('AiidaCheckpointPersister', 'ObjectLoader', 'get_object_loader')
 
 LOGGER = logging.getLogger(__name__)
-OBJECT_LOADER = None
 
 
-class ObjectLoader(plumpy.loaders.DefaultObjectLoader):
-    """Custom object loader for `aiida-core`."""
+class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
+    """Store process checkpoint payloads on process nodes."""
 
-    def load_object(self, identifier: str) -> Any:
-        """Attempt to load the object identified by the given `identifier`.
-
-        .. note:: We override the `plumpy.DefaultObjectLoader` to be able to throw an `ImportError` instead of a
-            `ValueError` which in the context of `aiida-core` is not as apt, since we are loading classes.
-
-        :param identifier: concatenation of module and resource name
-        :return: loaded object
-        :raises ImportError: if the object cannot be loaded
-        """
-        module_name, name = identifier.split(':')
-        try:
-            module = importlib.import_module(module_name)
-        except ImportError:
-            raise ImportError(f"module '{module_name}' from identifier '{identifier}' could not be loaded")
-
-        try:
-            return getattr(module, name)
-        except AttributeError:
-            raise ImportError(f"object '{name}' from identifier '{identifier}' could not be loaded")
-
-
-def get_object_loader() -> ObjectLoader:
-    """Return the global AiiDA object loader.
-
-    :return: The global object loader
-
-    """
-    global OBJECT_LOADER  # noqa: PLW0603
-    if OBJECT_LOADER is None:
-        OBJECT_LOADER = ObjectLoader()
-    return OBJECT_LOADER
-
-
-class AiiDAPersister(plumpy.persistence.Persister):
-    """Persister to take saved process instance states and persisting them to the database."""
-
-    def save_checkpoint(self, process: 'Process', tag: Optional[str] = None):  # type: ignore[override]
+    def save_checkpoint(self, process: 'Process', tag: str | None = None):  # type: ignore[override]
         """Persist a Process instance.
 
         :param process: :class:`aiida.engine.Process`
@@ -81,25 +43,28 @@ class AiiDAPersister(plumpy.persistence.Persister):
             raise NotImplementedError('Checkpoint tags not supported yet')
 
         try:
-            bundle = plumpy.persistence.Bundle(process, plumpy.persistence.LoadSaveContext(loader=get_object_loader()))
+            payload = process_persistence.CheckpointPayload.from_object(
+                process, process_persistence.CheckpointContext(loader=get_object_loader())
+            )
         except ImportError:
-            # Couldn't create the bundle
-            raise PersistenceError(f"Failed to create a bundle for '{process}': {traceback.format_exc()}")
+            msg = f"Failed to create a checkpoint payload for '{process}': {traceback.format_exc()}"
+            raise PersistenceError(msg)
 
         try:
-            process.node.set_checkpoint(serialize.serialize(bundle))
+            process.node.set_checkpoint(serialize.serialize(payload))
         except Exception:
-            raise PersistenceError(f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}")
+            msg = f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}"
+            raise PersistenceError(msg)
 
-        return bundle
+        return payload
 
-    def load_checkpoint(self, pid: Hashable, tag: Optional[str] = None) -> plumpy.persistence.Bundle:
+    def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> process_persistence.CheckpointPayload:
         """Load a process from a persisted checkpoint by its process id.
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
-        :return: a bundle with the process state
-        :rtype: :class:`plumpy.Bundle`
+        :return: a checkpoint payload with the process state
+        :rtype: :class:`aiida.engine.processes.persistence.CheckpointPayload`
         :raises: :class:`PersistenceError` Raised if there was a problem loading the checkpoint
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -111,19 +76,22 @@ class AiiDAPersister(plumpy.persistence.Persister):
         try:
             calculation = load_node(pid)
         except (MultipleObjectsError, NotExistent):
-            raise PersistenceError(f'Failed to load the node for process<{pid}>: {traceback.format_exc()}')
+            msg = f'Failed to load the node for process<{pid}>: {traceback.format_exc()}'
+            raise PersistenceError(msg)
 
         checkpoint = calculation.checkpoint
 
         if checkpoint is None:
-            raise PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
+            msg = f'Calculation<{calculation.pk}> does not have a saved checkpoint'
+            raise PersistenceError(msg)
 
         try:
-            bundle = serialize.deserialize_unsafe(checkpoint)
+            payload = serialize.deserialize_unsafe(checkpoint)
         except Exception:
-            raise PersistenceError(f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}')
+            msg = f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}'
+            raise PersistenceError(msg)
 
-        return bundle
+        return payload
 
     def get_checkpoints(self):
         """Return a list of all the current persisted process checkpoints
@@ -138,10 +106,10 @@ class AiiDAPersister(plumpy.persistence.Persister):
         :return: list of PersistedCheckpoint tuples with element containing the process id and optional checkpoint tag.
         """
 
-    def delete_checkpoint(self, pid: Hashable, tag: Optional[str] = None) -> None:
+    def delete_checkpoint(self, pid: Hashable, tag: str | None = None) -> None:
         """Delete a persisted process checkpoint, where no error will be raised if the checkpoint does not exist.
 
-        :param pid: the process id of the :class:`plumpy.Process`
+        :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
         """
         from aiida.orm import load_node

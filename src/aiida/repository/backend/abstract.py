@@ -10,14 +10,14 @@ import contextlib
 import hashlib
 import io
 import pathlib
+import typing as t
 from collections.abc import Iterable, Iterator
-from typing import Any, BinaryIO, List, Optional, Tuple, Union
 
 from aiida.common.hashing import chunked_file_hash
 
 __all__ = ('AbstractRepositoryBackend',)
 
-InfoDictType = dict[str, Union[int, str, dict[str, int], dict[str, float]]]
+InfoDictType = dict[str, int | str | dict[str, int] | dict[str, float]]
 
 
 class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
@@ -33,12 +33,12 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository."""
 
     @property
     @abc.abstractmethod
-    def key_format(self) -> Optional[str]:
+    def key_format(self) -> str | None:
         """Return the format for the keys of the repository.
 
         Important for when migrating between backends (e.g. archive -> main), as if they are not equal then it is
@@ -47,7 +47,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def initialise(self, **kwargs: Any) -> None:
+    def initialise(self, **kwargs: t.Any) -> None:
         """Initialise the repository if it hasn't already been initialised.
 
         :param kwargs: parameters for the initialisation.
@@ -68,10 +68,10 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @staticmethod
-    def is_readable_byte_stream(handle: Any) -> bool:
+    def is_readable_byte_stream(handle: t.Any) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
 
-    def put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -79,14 +79,15 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raises TypeError: if the handle is not a byte stream.
         """
         if not isinstance(handle, io.BufferedIOBase) and not self.is_readable_byte_stream(handle):
-            raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
+            msg = f'handle does not seem to be a byte stream: {type(handle)}.'
+            raise TypeError(msg)
         return self._put_object_from_filelike(handle)
 
     @abc.abstractmethod
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         pass
 
-    def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
+    def put_object_from_file(self, filepath: str | pathlib.Path) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
 
         :param filepath: absolute path of file whose contents to copy to the repository.
@@ -97,7 +98,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return self.put_object_from_filelike(handle)
 
     @abc.abstractmethod
-    def has_objects(self, keys: List[str]) -> List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         """Return whether the repository has an object with the given key.
 
         :param keys:
@@ -133,7 +134,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def open(self, key: str) -> contextlib.AbstractContextManager[BinaryIO]:
+    def open(self, key: str) -> contextlib.AbstractContextManager[t.BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -157,7 +158,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return handle.read()
 
     @abc.abstractmethod
-    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[tuple[str, t.BinaryIO]]:
         """Return an iterator over the (read-only) byte streams of objects identified by key.
 
         .. note:: handles should only be read within the context of this iterator.
@@ -184,7 +185,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return chunked_file_hash(handle, hashlib.sha256)
 
     @abc.abstractmethod
-    def delete_objects(self, keys: List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         """Delete the objects from the repository.
 
         :param keys: list of fully qualified identifiers for the objects within the repository.

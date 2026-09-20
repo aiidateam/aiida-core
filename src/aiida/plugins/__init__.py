@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .entry_point import *
-from .factories import *
-from .utils import *
+from aiida.plugins.entry_point import *
+from aiida.plugins.factories import *
+from aiida.plugins.utils import *
 
 __all__ = (
     'BaseFactory',

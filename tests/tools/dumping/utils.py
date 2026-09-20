@@ -7,13 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+import typing as t
 from pathlib import Path
-from typing import Any
 
 # TODO: Possibly move this under test directory
 
 
-def tree_to_dict(root_path: Path) -> dict[str, list[Any]]:
+def tree_to_dict(root_path: Path) -> dict[str, list[t.Any]]:
     """
     Convert a directory tree structure into a dictionary representation.
 
@@ -30,7 +30,8 @@ def tree_to_dict(root_path: Path) -> dict[str, list[Any]]:
         Dict[str, List[Any]]: Dictionary representation of the directory structure
     """
     if not root_path.exists() or not root_path.is_dir():
-        raise ValueError(f'The path {root_path} does not exist or is not a directory')
+        msg = f'The path {root_path} does not exist or is not a directory'
+        raise ValueError(msg)
 
     # Get the directory name
     dir_name = root_path.name
@@ -57,7 +58,7 @@ def tree_to_dict(root_path: Path) -> dict[str, list[Any]]:
     return {dir_name: contents}
 
 
-def tree_to_dict_dirs_only(root_path: Path) -> dict[str, list[Any]]:
+def tree_to_dict_dirs_only(root_path: Path) -> dict[str, list[t.Any]]:
     """
     Convert a directory tree structure into a dictionary representation,
     including only directories and ignoring files.
@@ -76,7 +77,8 @@ def tree_to_dict_dirs_only(root_path: Path) -> dict[str, list[Any]]:
                               containing only directories
     """
     if not root_path.exists() or not root_path.is_dir():
-        raise ValueError(f'The path {root_path} does not exist or is not a directory')
+        msg = f'The path {root_path} does not exist or is not a directory'
+        raise ValueError(msg)
 
     # Get the directory name
     dir_name = root_path.name

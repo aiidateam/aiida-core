@@ -12,15 +12,15 @@
 
 # fmt: off
 
-from .builder import *
-from .calcjobs import *
-from .exit_code import *
-from .functions import *
-from .futures import *
-from .ports import *
-from .process import *
-from .process_spec import *
-from .workchains import *
+from aiida.engine.processes.builder import *
+from aiida.engine.processes.calcjobs import *
+from aiida.engine.processes.exit_code import *
+from aiida.engine.processes.functions import *
+from aiida.engine.processes.futures import *
+from aiida.engine.processes.ports import *
+from aiida.engine.processes.process import *
+from aiida.engine.processes.process_spec import *
+from aiida.engine.processes.workchains import *
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',

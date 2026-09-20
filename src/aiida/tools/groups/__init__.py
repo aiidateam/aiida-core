@@ -18,7 +18,7 @@
 
 # fmt: off
 
-from .paths import *
+from aiida.tools.groups.paths import *
 
 __all__ = (
     'GroupNotFoundError',

@@ -125,7 +125,8 @@ class NodeTranslator(BaseTranslator):
             self._content_type = 'repo_contents'
             self._filename = filename
         else:
-            raise InputValidationError(f'invalid result/content value: {query_type}')
+            msg = f'invalid result/content value: {query_type}'
+            raise InputValidationError(msg)
 
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
@@ -174,9 +175,7 @@ class NodeTranslator(BaseTranslator):
         """
         ## Check the compatibility of query_type and id
         if query_type != 'default' and id is None:
-            raise ValidationError(
-                'non default result/content can only be ' 'applied to a specific node (specify an id)'
-            )
+            raise ValidationError('non default result/content can only be applied to a specific node (specify an id)')
 
         ## Set the type of query
         self.set_query_type(
@@ -344,7 +343,8 @@ class NodeTranslator(BaseTranslator):
                             path = init_path
                             break
                     else:
-                        raise ValueError(f'{full_path_base!r} is not a package')
+                        msg = f'{full_path_base!r} is not a package'
+                        raise ValueError(msg)
                 # passing [] to submodule_search_locations indicates its a package and python searches for sub-modules
                 spec = importlib.util.spec_from_file_location(full_path_base, path, submodule_search_locations=[])
                 if full_path_base in sys.modules:
@@ -406,7 +406,8 @@ class NodeTranslator(BaseTranslator):
             try:
                 node_cls = load_entry_point_from_full_type(full_type)
             except (TypeError, ValueError):
-                raise RestInputValidationError(f'The full type {full_type} is invalid.')
+                msg = f'The full type {full_type} is invalid.'
+                raise RestInputValidationError(msg)
             except EntryPointError:
                 raise RestFeatureNotAvailable('The download formats for this node type are not available.')
 
@@ -450,7 +451,7 @@ class NodeTranslator(BaseTranslator):
         # logic is cleaned where the correct translator sub class is instantiated based on the node type that is
         # referenced, this hack can be removed.
         if isinstance(node, Data):
-            from .data import DataTranslator
+            from aiida.restapi.translator.nodes.data import DataTranslator
 
             downloadable_data = DataTranslator.get_downloadable_data(node, download_format=download_format)
             return downloadable_data
@@ -468,7 +469,8 @@ class NodeTranslator(BaseTranslator):
         try:
             flist = node.base.repository.list_objects(filename)
         except NotADirectoryError:
-            raise RestInputValidationError(f'{filename} is not a directory in this repository')
+            msg = f'{filename} is not a directory in this repository'
+            raise RestInputValidationError(msg)
         response = []
         for fobj in flist:
             response.append({'name': fobj.name, 'type': fobj.file_type.name})

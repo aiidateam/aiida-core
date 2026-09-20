@@ -19,8 +19,8 @@ import click
 from click.shell_completion import CompletionItem
 from click.types import StringParamType
 
-from ...utils import decorators
-from .identifier import IdentifierParamType
+from aiida.cmdline.params.types.identifier import IdentifierParamType
+from aiida.cmdline.utils import decorators
 
 __all__ = ('ComputerParamType', 'MpirunCommandParamType', 'ShebangParamType')
 

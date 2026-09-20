@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -22,7 +22,7 @@ from aiida.tools._dumping.utils import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.facades')
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     pass
 
 

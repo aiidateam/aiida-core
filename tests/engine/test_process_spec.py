@@ -10,7 +10,7 @@
 
 import pytest
 
-from aiida.engine import Process
+from aiida.engine import Process, ProcessSpec
 from aiida.orm import Data, Node
 
 
@@ -26,6 +26,32 @@ class TestProcessSpec:
         self.spec.outputs.valid_type = Data
         yield
         assert Process.current() is None
+
+    @pytest.mark.parametrize(
+        ('expose_method', 'memory_attribute'),
+        (
+            ('expose_inputs', '_exposed_inputs'),
+            ('expose_outputs', '_exposed_outputs'),
+        ),
+    )
+    def test_repeated_exposure_accumulates_ports(self, expose_method, memory_attribute):
+        """Test repeated calls accumulate the exposed ports for a process class."""
+
+        class ChildProcess(Process):
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('first')
+                spec.input('second')
+                spec.output('first')
+                spec.output('second')
+
+        spec = ProcessSpec()
+        expose = getattr(spec, expose_method)
+        expose(ChildProcess, include=('first',))
+        expose(ChildProcess, include=('second',))
+
+        assert getattr(spec, memory_attribute)[None][ChildProcess] == ['first', 'second']
 
     def test_dynamic_input(self):
         """Test a process spec with dynamic input enabled."""

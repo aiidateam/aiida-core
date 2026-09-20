@@ -146,7 +146,8 @@ class BaseResource(Resource):
         node = load_node(node_id)
 
         if not isinstance(node, self.trans._aiida_class):
-            raise RestInputValidationError(f'node {node_id} is not of the required type {self.trans._aiida_class}')
+            msg = f'node {node_id} is not of the required type {self.trans._aiida_class}'
+            raise RestInputValidationError(msg)
 
         return node
 
@@ -622,7 +623,7 @@ class ProcessNode(Node):
         :return: http response
         """
         path, url, url_root, query_string = self.unquote_request()
-        resource_type, page, node_id, query_type = self.parse_path(path)
+        resource_type, _page, node_id, query_type = self.parse_path(path)
         profile = self.parse_query_string(query_string)[-1]
 
         try:
@@ -684,7 +685,7 @@ class CalcJobNode(ProcessNode):
         :return: http response
         """
         path, url, url_root, query_string = self.unquote_request()
-        resource_type, page, node_id, query_type = self.parse_path(path)
+        resource_type, _page, node_id, query_type = self.parse_path(path)
         profile = self.parse_query_string(query_string)[-1]
 
         try:

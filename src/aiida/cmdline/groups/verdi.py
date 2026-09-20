@@ -9,12 +9,12 @@ import typing as t
 
 import click
 
+from aiida.cmdline.params import options
 from aiida.cmdline.utils.echo import echo_deprecated
-from aiida.common.exceptions import ConfigurationError
+from aiida.common import log
+from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
 from aiida.common.extendeddicts import AttributeDict
 from aiida.manage.configuration import get_config
-
-from ..params import options
 
 __all__ = ('VerdiCommandGroup',)
 
@@ -95,7 +95,7 @@ class VerdiCommand(click.Command):
     message handled by ``click`` as that would result in the deprecation message being printed twice.
     """
 
-    def parse_args(self, ctx: click.Context, args: t.List[str]) -> t.List[str]:
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
         """Given a context and a list of arguments this creates the parser and parses the arguments.
 
         Then context is modified as necessary.
@@ -124,6 +124,34 @@ class VerdiCommandGroup(click.Group):
 
     context_class = VerdiContext
     command_class = VerdiCommand
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        """Parse arguments for the ``verdi`` command.
+
+        For the top-level command, parse the raw arguments once up front in order to resolve the selected profile and
+        load it before Click handles eager options such as ``--help``. This keeps profile-dependent CLI behavior, such
+        as version warnings and logging setup, consistent throughout the rest of command processing.
+        """
+        if ctx.parent is None and not ctx.resilient_parsing:
+            from aiida.manage import get_manager
+
+            log.CLI_ACTIVE = True
+
+            parser = self.make_parser(ctx)
+            opts, _, _ = parser.parse_args(list(args))
+            # Use the canonical parameter name of the top-level `verdi --profile` option. The option itself only
+            # resolves the requested profile; actual loading is centralized here so eager Click exit paths behave the
+            # same as normal command execution.
+            profile_name = opts.get(options.PROFILE_OPTION_NAME)
+            manager = get_manager()
+
+            try:
+                manager.load_profile(profile_name)
+            except (ConfigurationError, ProfileConfigurationError):
+                if profile_name is not None:
+                    raise
+
+        return super().parse_args(ctx, args)
 
     @staticmethod
     def add_verbosity_option(cmd: click.Command) -> click.Command:

@@ -50,18 +50,21 @@ class CalcJobResultManager:
         try:
             process_class = self._node.process_class
         except ValueError as exception:
-            raise ValueError(f'cannot load results because process class cannot be loaded: {exception}')
+            msg = f'cannot load results because process class cannot be loaded: {exception}'
+            raise ValueError(msg)
 
         process_spec = process_class.spec()
         default_output_node_label = process_spec.default_output_node
 
         if default_output_node_label is None:
-            raise ValueError(f'cannot load results as {process_class} does not specify a default output node')
+            msg = f'cannot load results as {process_class} does not specify a default output node'
+            raise ValueError(msg)
 
         try:
             default_output_node = self.node.base.links.get_outgoing().get_node_by_label(default_output_node_label)
         except exceptions.NotExistent as exception:
-            raise ValueError(f'cannot load results as the default node could not be retrieved: {exception}')
+            msg = f'cannot load results as the default node could not be retrieved: {exception}'
+            raise ValueError(msg)
 
         self._result_node = default_output_node
         self._results = default_output_node.get_dict()
@@ -83,8 +86,7 @@ class CalcJobResultManager:
 
     def __iter__(self):
         """Return an iterator over the keys of the result dictionary."""
-        for key in self.get_results().keys():
-            yield key
+        yield from self.get_results().keys()
 
     def __getattr__(self, name):
         """Return an attribute from the results dictionary.
@@ -98,7 +100,8 @@ class CalcJobResultManager:
         except ValueError as exception:
             raise AttributeError from exception
         except KeyError:
-            raise AttributeError(f"Default result node<{self._result_node.pk}> does not contain key '{name}'")
+            msg = f"Default result node<{self._result_node.pk}> does not contain key '{name}'"
+            raise AttributeError(msg)
 
     def __getitem__(self, name):
         """Return an attribute from the results dictionary.
@@ -112,4 +115,5 @@ class CalcJobResultManager:
         except ValueError as exception:
             raise KeyError from exception
         except KeyError:
-            raise KeyError(f"Default result node<{self._result_node.pk}> does not contain key '{name}'")
+            msg = f"Default result node<{self._result_node.pk}> does not contain key '{name}'"
+            raise KeyError(msg)

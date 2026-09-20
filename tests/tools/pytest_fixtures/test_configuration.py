@@ -2,6 +2,9 @@
 
 from pathlib import Path
 
+import pytest
+
+from aiida import orm
 from aiida.manage.configuration import get_config, load_config
 from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
 
@@ -55,3 +58,94 @@ def test_aiida_profile_tmp(aiida_profile, aiida_profile_tmp):
     assert isinstance(aiida_profile_tmp, Profile)
     assert aiida_profile_tmp.is_test_profile
     assert aiida_profile_tmp.uuid != aiida_profile.uuid
+
+
+def test_profile_reset_storage_uses_active_default_user(aiida_profile_tmp):
+    """Test that resetting a profile honours its active default user."""
+    from aiida.manage import get_manager
+
+    user = orm.User(email='updated@localhost').store()
+    get_manager().set_default_user_email(aiida_profile_tmp, user.email)
+
+    aiida_profile_tmp.reset_storage()
+
+    assert orm.User.collection.get_default().email == 'updated@localhost'
+
+
+def test_profile_reset_storage_isolates_inactive_profile(aiida_config, aiida_profile_factory):
+    """Test that resetting an inactive profile leaves the active storage unchanged."""
+    with aiida_profile_factory(aiida_config, email='active@localhost'):
+        with aiida_profile_factory(aiida_config, email='inactive@localhost') as inactive_profile:
+            pass
+
+        inactive_profile.reset_storage()
+
+        assert orm.User.collection.get_default().email == 'active@localhost'
+
+
+def test_profile_reset_storage_waits_for_daemon_to_stop(aiida_config, aiida_profile_factory, monkeypatch):
+    """Test that storage reset waits for a daemon shutdown to complete."""
+
+    class DaemonClient:
+        def __init__(self, profile):
+            self.running_states = iter((True, True, False))
+
+        @property
+        def is_daemon_running(self):
+            return next(self.running_states)
+
+        def stop_daemon(self, *, wait):
+            assert wait is True
+
+    sleep_calls = []
+    monkeypatch.setattr('aiida.engine.daemon.client.DaemonClient', DaemonClient)
+    monkeypatch.setattr('aiida.tools.pytest_fixtures.configuration.time.monotonic', lambda: 0)
+    monkeypatch.setattr('aiida.tools.pytest_fixtures.configuration.time.sleep', sleep_calls.append)
+
+    with aiida_profile_factory(aiida_config, broker_backend='core.zeromq') as profile:
+        profile.reset_storage()
+
+    assert sleep_calls == [0.1]
+
+
+def test_profile_reset_storage_raises_if_daemon_does_not_stop(aiida_config, aiida_profile_factory, monkeypatch):
+    """Test that storage is not cleared while the daemon remains running."""
+    from aiida.engine.daemon.client import DaemonTimeoutException
+
+    class DaemonClient:
+        def __init__(self, profile):
+            pass
+
+        @property
+        def is_daemon_running(self):
+            return True
+
+        def stop_daemon(self, *, wait):
+            assert wait is True
+
+    monotonic_times = iter((0, 5.1))
+    monkeypatch.setattr('aiida.engine.daemon.client.DaemonClient', DaemonClient)
+    monkeypatch.setattr('aiida.tools.pytest_fixtures.configuration.time.monotonic', lambda: next(monotonic_times))
+
+    with aiida_profile_factory(aiida_config, broker_backend='core.zeromq') as profile:
+        with pytest.raises(DaemonTimeoutException, match='failed to stop before resetting storage'):
+            profile.reset_storage()
+
+
+@pytest.mark.requires_psql
+def test_aiida_profile_factory_psql_dos(aiida_config, aiida_profile_factory, config_psql_dos):
+    """Test that the factory creates and resets a ``core.psql_dos`` profile."""
+    with aiida_profile_factory(
+        aiida_config,
+        storage_backend='core.psql_dos',
+        storage_config=config_psql_dos(),
+    ) as profile:
+        assert profile.storage_backend == 'core.psql_dos'
+        assert profile.storage_cls.version_profile(profile) == profile.storage_cls.version_head()
+
+
+def test_aiida_profile_factory_unsupported_broker(aiida_config_tmp, aiida_profile_factory):
+    """Test that ``aiida_profile_factory`` raises for a broker backend without a default configuration."""
+    with pytest.raises(ValueError, match='Unsupported broker backend: core\\.unsupported'):
+        with aiida_profile_factory(aiida_config_tmp, broker_backend='core.unsupported'):
+            pass

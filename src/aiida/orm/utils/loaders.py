@@ -8,15 +8,15 @@
 ###########################################################################
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
 
+import typing as t
 from abc import abstractmethod
 from enum import Enum
-from typing import TYPE_CHECKING
 
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.lang import classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Code, Computer, Group, Node
 
 __all__ = (
@@ -57,7 +57,8 @@ def load_entity(
     :raise aiida.common.MultipleObjectsError: if more than one Code was found
     """
     if entity_loader is None or not issubclass(entity_loader, OrmEntityLoader):
-        raise TypeError(f'entity_loader should be a sub class of {type(OrmEntityLoader)}')
+        msg = f'entity_loader should be a sub class of {type(OrmEntityLoader)}'
+        raise TypeError(msg)
 
     inputs_provided = [value is not None for value in (identifier, pk, uuid, label)].count(True)
 
@@ -236,7 +237,8 @@ def get_loader(orm_class):
     if issubclass(orm_class, Node):
         return NodeEntityLoader
 
-    raise ValueError(f'no OrmEntityLoader available for {orm_class}')
+    msg = f'no OrmEntityLoader available for {orm_class}'
+    raise ValueError(msg)
 
 
 class IdentifierType(Enum):
@@ -422,11 +424,13 @@ class OrmEntityLoader:
             return (cls.orm_base_class,)
 
         if not isinstance(sub_classes, tuple):
-            raise TypeError(f'sub_classes should be a tuple: {sub_classes}')
+            msg = f'sub_classes should be a tuple: {sub_classes}'
+            raise TypeError(msg)
 
         for sub_class in sub_classes:
             if not issubclass(sub_class, cls.orm_base_class):
-                raise ValueError(f'{sub_class} is not a sub class of the base orm class {cls.orm_base_class}')
+                msg = f'{sub_class} is not a sub class of the base orm class {cls.orm_base_class}'
+                raise ValueError(msg)
 
         return sub_classes
 

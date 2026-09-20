@@ -11,8 +11,8 @@
 
 # fmt: off
 
-from .main import *
-from .overridable import *
+from aiida.cmdline.params.arguments.main import *
+from aiida.cmdline.params.arguments.overridable import *
 
 __all__ = (
     'CALCULATION',

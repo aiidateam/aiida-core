@@ -13,9 +13,8 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.nodes.data.array.array import ArrayData
 from aiida.orm.pydantic import OrmMetadataField
-
-from .array import ArrayData
 
 if t.TYPE_CHECKING:
     import numpy as np
@@ -34,7 +33,7 @@ class TrajectoryData(ArrayData):
         symbols: list[str] = OrmMetadataField(
             description='List of symbols',
         )
-        pbc: t.Optional[tuple[bool, bool, bool]] = OrmMetadataField(
+        pbc: tuple[bool, bool, bool] | None = OrmMetadataField(
             None,
             description='Periodic boundary conditions',
         )
@@ -242,7 +241,8 @@ class TrajectoryData(ArrayData):
         if len(pbc_set) == 1:
             pbc = pbc_set.pop()
         else:
-            raise ValueError(f'All structures should have the same `pbc`, found: {pbc_set}')
+            msg = f'All structures should have the same `pbc`, found: {pbc_set}'
+            raise ValueError(msg)
         self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
 
     def _validate(self) -> bool:
@@ -264,9 +264,8 @@ class TrajectoryData(ArrayData):
             )
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
-            raise ValidationError(
-                f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
-            )
+            msg = f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
+            raise ValidationError(msg)
         return True
 
     @property
@@ -371,7 +370,8 @@ class TrajectoryData(ArrayData):
         try:
             return int(numpy.where(self.get_stepids() == stepid)[0][0])
         except IndexError:
-            raise ValueError(f'{stepid} not among the stepids')
+            msg = f'{stepid} not among the stepids'
+            raise ValueError(msg)
 
     def get_step_data(
         self, index: int
@@ -397,7 +397,8 @@ class TrajectoryData(ArrayData):
         :raises KeyError: if you did not store the trajectory yet.
         """
         if index >= self.numsteps:
-            raise IndexError(f'You have only {self.numsteps} steps, but you are looking beyond (index={index})')
+            msg = f'You have only {self.numsteps} steps, but you are looking beyond (index={index})'
+            raise IndexError(msg)
 
         vel = self.get_velocities()
         if vel is not None:
@@ -449,12 +450,13 @@ class TrajectoryData(ArrayData):
             if len(kind_names) != len(set(kind_names)):
                 raise ValueError('Multiple kinds with the same name passed as custom_kinds')
             if set(kind_names) != set(symbols):
-                raise ValueError(
+                msg = (
                     'If you pass custom_kinds, you have to '
                     'pass one Kind object for each symbol '
                     'that is present in the trajectory. You '
-                    'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
+                    f'passed {sorted(kind_names)}, but the symbols are {sorted(symbols)}'
                 )
+                raise ValueError(msg)
 
         struc = StructureData(cell=cell, pbc=self.pbc)
         if custom_kinds is not None:
@@ -599,11 +601,12 @@ class TrajectoryData(ArrayData):
         )
 
         if positions.shape != (numsteps, numsites, 3):
-            raise ValueError(
+            msg = (
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
+            raise ValueError(msg)
 
         self.set_array('positions', positions)
 
@@ -632,11 +635,12 @@ class TrajectoryData(ArrayData):
         )
 
         if velocities.shape != (numsteps, numsites, 3):
-            raise ValueError(
+            msg = (
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
+            raise ValueError(msg)
 
         self.set_array('velocities', velocities)
 
@@ -690,7 +694,8 @@ class TrajectoryData(ArrayData):
         elif color_scheme == 'cpk':
             from ase.data.colors import cpk_colors as colors
         else:
-            raise ValueError(f'Unknown color spec {color_scheme}')
+            msg = f'Unknown color spec {color_scheme}'
+            raise ValueError(msg)
 
         if element_list is None:
             # If not all elements are allowed
@@ -830,7 +835,7 @@ class TrajectoryData(ArrayData):
             xmin, ymin, zmin = _x.min(), _y.min(), _z.min()
             xmax, ymax, zmax = _x.max(), _y.max(), _z.max()
 
-            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]  # type: ignore[misc]
+            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
             coords = np.vstack([item.ravel() for item in [_xi, _yi, _zi]])
             density = kde(coords).reshape(_xi.shape)
 
@@ -912,20 +917,20 @@ def plot_positions_XYZ(  # noqa: N802
     trajectories = zip(*positions.tolist())  # only used in enumerate() below
     fig = plt.figure(figsize=(12, 7))
 
-    plt.suptitle(r'Trajectory of {}'.format(label), fontsize=16)
+    plt.suptitle(rf'Trajectory of {label}', fontsize=16)
     nr_of_axes = 3
     gridspec = GridSpec(nr_of_axes, 1, hspace=0.0)
 
     ax1 = fig.add_subplot(gridspec[0])
-    plt.ylabel(r'X Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'X Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax2 = fig.add_subplot(gridspec[1])
-    plt.ylabel(r'Y Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Y Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax3 = fig.add_subplot(gridspec[2])
-    plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Z Position $\left[{positions_unit}\right]$')
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
     n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times

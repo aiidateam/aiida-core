@@ -10,15 +10,13 @@
 
 import os
 import pathlib
-import typing as t
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
+from aiida.orm.nodes.data.code.abstract import AbstractCode
 from aiida.orm.pydantic import OrmMetadataField
-
-from .abstract import AbstractCode
 
 __all__ = ('Code',)
 
@@ -48,25 +46,23 @@ class Code(AbstractCode):
             '',
             description='The code that will be put in the scheduler script after the execution of the code',
         )
-        input_plugin: t.Optional[str] = OrmMetadataField(
-            description='The name of the input plugin to be used for this code'
-        )
-        local_executable: t.Optional[str] = OrmMetadataField(
+        input_plugin: str | None = OrmMetadataField(description='The name of the input plugin to be used for this code')
+        local_executable: str | None = OrmMetadataField(
             description='Path to a local executable',
         )
-        remote_exec_path: t.Optional[str] = OrmMetadataField(
+        remote_exec_path: str | None = OrmMetadataField(
             description='Remote path to executable',
         )
-        is_local: t.Optional[bool] = OrmMetadataField(
+        is_local: bool | None = OrmMetadataField(
             description='Whether the code is local or remote',
         )
 
     def __init__(
         self,
-        remote_computer_exec: t.Optional[str] = None,
-        local_executable: t.Optional[str] = None,
-        input_plugin_name: t.Optional[str] = None,
-        files: t.Optional[t.List[str]] = None,
+        remote_computer_exec: str | None = None,
+        local_executable: str | None = None,
+        input_plugin_name: str | None = None,
+        files: list[str] | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -229,7 +225,8 @@ class Code(AbstractCode):
             query.append(Computer, filters={'label': machinename}, with_node='code')
 
         if query.count() == 0:
-            raise NotExistent(f"'{label}' is not a valid code label.")
+            msg = f"'{label}' is not a valid code label."
+            raise NotExistent(msg)
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
@@ -239,7 +236,8 @@ class Code(AbstractCode):
         else:
             result = query.first()
             if not result:
-                raise NotExistent(f"code '{label}' does not exist.")
+                msg = f"code '{label}' does not exist."
+                raise NotExistent(msg)
 
             return result[0]
 
@@ -266,9 +264,11 @@ class Code(AbstractCode):
             try:
                 return load_code(pk=code_int)
             except exceptions.NotExistent:
-                raise ValueError(f'{pk} is not valid code pk')
+                msg = f'{pk} is not valid code pk'
+                raise ValueError(msg)
             except exceptions.MultipleObjectsError:
-                raise exceptions.MultipleObjectsError(f"More than one code in the DB with pk='{pk}'!")
+                msg = f"More than one code in the DB with pk='{pk}'!"
+                raise exceptions.MultipleObjectsError(msg)
 
         # check if label (and machinename) is provided
         elif label is not None:
@@ -310,9 +310,11 @@ class Code(AbstractCode):
         try:
             return cls.get_code_helper(label, machinename)
         except NotExistent:
-            raise NotExistent(f'{code_string} could not be resolved to a valid code label')
+            msg = f'{code_string} could not be resolved to a valid code label'
+            raise NotExistent(msg)
         except MultipleObjectsError:
-            raise MultipleObjectsError(f'{code_string} could not be uniquely resolved')
+            msg = f'{code_string} could not be uniquely resolved'
+            raise MultipleObjectsError(msg)
 
     @classmethod
     def list_for_plugin(cls, plugin, labels=True, backend=None):
@@ -349,9 +351,8 @@ class Code(AbstractCode):
                     'You have to set which file is the local executable using the set_exec_filename() method'
                 )
             if self.get_local_executable() not in self.base.repository.list_object_names():
-                raise exceptions.ValidationError(
-                    f"The local executable '{self.get_local_executable()}' is not in the list of files of this code"
-                )
+                msg = f"The local executable '{self.get_local_executable()}' is not in the list of files of this code"
+                raise exceptions.ValidationError(msg)
         else:
             if self.base.repository.list_object_names():
                 raise exceptions.ValidationError('The code is remote but it has files inside')
@@ -390,9 +391,8 @@ class Code(AbstractCode):
             )
 
         if not file_exists:
-            raise exceptions.ValidationError(
-                f'the provided remote absolute path `{filepath}` does not exist on the computer.'
-            )
+            msg = f'the provided remote absolute path `{filepath}` does not exist on the computer.'
+            raise exceptions.ValidationError(msg)
 
     def set_prepend_text(self, code):
         """Pass a string of code that will be put in the scheduler script before the

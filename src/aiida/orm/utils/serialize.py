@@ -16,17 +16,18 @@ for new types though.
 from __future__ import annotations
 
 import inspect
+import typing as t
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol, Type, overload
 
 import yaml
-from plumpy import Bundle, get_object_loader
-from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
 from aiida.common import AttributeDict
+from aiida.common.extendeddicts import AttributesFrozendict
+from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.persistence import CHECKPOINT_PAYLOAD_TAG, CheckpointPayload
 from aiida.orm.utils.managers import NodeLinksManager
 
 _ENUM_TAG = '!enum'
@@ -36,8 +37,7 @@ _NODE_LINKS_MANAGER_TAG = '!aiida_node_links_manager'
 _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
-_PLUMPY_ATTRIBUTES_FROZENDICT_TAG = '!plumpy:attributes_frozendict'
-_PLUMPY_BUNDLE = '!plumpy:bundle'
+_ATTRIBUTES_FROZENDICT_TAG = '!aiida:attributes_frozendict'
 
 
 def represent_enum(dumper: yaml.Dumper, enum: Enum) -> yaml.ScalarNode:
@@ -55,7 +55,7 @@ def enum_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Enum:
     return enum
 
 
-def represent_dataclass(dumper: yaml.Dumper, obj: Any) -> yaml.MappingNode:
+def represent_dataclass(dumper: yaml.Dumper, obj: t.Any) -> yaml.MappingNode:
     """Represent an arbitrary dataclass in yaml."""
     loader = get_object_loader()
     data = {
@@ -65,7 +65,7 @@ def represent_dataclass(dumper: yaml.Dumper, obj: Any) -> yaml.MappingNode:
     return dumper.represent_mapping(_DATACLASS_TAG, data)
 
 
-def dataclass_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Any:
+def dataclass_constructor(loader: yaml.Loader, serialized: yaml.Node) -> t.Any:
     """Construct a dataclass from the serialized representation."""
     deserialized = loader.construct_mapping(serialized, deep=True)  # type: ignore[arg-type]
     identifier = deserialized['__type__']
@@ -77,7 +77,8 @@ def dataclass_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Any:
 def represent_node(dumper: yaml.Dumper, node: orm.Node) -> yaml.ScalarNode:
     """Represent a node in yaml."""
     if not node.is_stored:
-        raise ValueError(f'node {type(node)}<{node.uuid}> cannot be represented because it is not stored')
+        msg = f'node {type(node)}<{node.uuid}> cannot be represented because it is not stored'
+        raise ValueError(msg)
     return dumper.represent_scalar(_NODE_TAG, f'{node.uuid}')
 
 
@@ -111,7 +112,8 @@ def node_links_manager_constructor(loader: yaml.Loader, node_links_manager: yaml
 def represent_group(dumper: yaml.Dumper, group: orm.Group) -> yaml.ScalarNode:
     """Represent a group in yaml."""
     if not group.is_stored:
-        raise ValueError(f'group {group} cannot be represented because it is not stored')
+        msg = f'group {group} cannot be represented because it is not stored'
+        raise ValueError(msg)
     return dumper.represent_scalar(_GROUP_TAG, f'{group.uuid}')
 
 
@@ -124,7 +126,8 @@ def group_constructor(loader: yaml.Loader, group: yaml.Node) -> orm.Group:
 def represent_computer(dumper: yaml.Dumper, computer: orm.Computer) -> yaml.ScalarNode:
     """Represent a computer in yaml."""
     if not computer.is_stored:
-        raise ValueError(f'computer {computer} cannot be represented because it is not stored')
+        msg = f'computer {computer} cannot be represented because it is not stored'
+        raise ValueError(msg)
     return dumper.represent_scalar(_COMPUTER_TAG, f'{computer.uuid}')
 
 
@@ -134,35 +137,32 @@ def computer_constructor(loader: yaml.Loader, computer: yaml.Node) -> orm.Comput
     return orm.Computer.collection.get(uuid=yaml_node)
 
 
-def represent_mapping(tag: str, dumper: yaml.Dumper, mapping: Any) -> yaml.MappingNode:
+def represent_mapping(tag: str, dumper: yaml.Dumper, mapping: t.Any) -> yaml.MappingNode:
     """Represent a mapping in yaml."""
     return dumper.represent_mapping(tag, mapping)
 
 
-class _MappingType(Protocol):
+class _MappingType(t.Protocol):
     def __init__(self, mapping: dict) -> None: ...
 
 
 def mapping_constructor(
-    mapping_type: Type[_MappingType], loader: yaml.Loader, mapping: yaml.MappingNode
+    mapping_type: type[_MappingType], loader: yaml.Loader, mapping: yaml.MappingNode
 ) -> _MappingType:
     """Construct a mapping from the representation."""
     yaml_node = loader.construct_mapping(mapping, deep=True)
     return mapping_type(yaml_node)
 
 
-def represent_bundle(dumper: yaml.Dumper, bundle: Bundle) -> yaml.MappingNode:
-    """Represent an `plumpy.Bundle` in yaml."""
-    as_dict = dict(bundle)
-    return dumper.represent_mapping(_PLUMPY_BUNDLE, as_dict)
+def represent_checkpoint_payload(dumper: yaml.Dumper, payload: CheckpointPayload) -> yaml.MappingNode:
+    """Represent a :class:`aiida.engine.processes.persistence.CheckpointPayload` in YAML."""
+    return dumper.represent_mapping(CHECKPOINT_PAYLOAD_TAG, dict(payload))
 
 
-def bundle_constructor(loader: yaml.Loader, bundle: yaml.Node) -> Bundle:
-    """Construct an `plumpy.Bundle` from the representation."""
-    yaml_node = loader.construct_mapping(bundle)  # type: ignore[arg-type]
-    bundle_inst = Bundle.__new__(Bundle)
-    bundle_inst.update(yaml_node)
-    return bundle_inst
+def checkpoint_payload_constructor(loader: yaml.Loader, node: yaml.Node) -> CheckpointPayload:
+    """Construct an :class:`aiida.engine.processes.persistence.CheckpointPayload` from the representation."""
+    saved_state = loader.construct_mapping(node)  # type: ignore[arg-type]
+    return CheckpointPayload.from_saved_state(t.cast(dict[str, t.Any], saved_state))
 
 
 class AiiDADumper(yaml.Dumper):
@@ -195,16 +195,12 @@ class AiiDALoader(yaml.Loader):
 
 
 yaml.add_representer(Enum, represent_enum, Dumper=AiiDADumper)
-yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
+yaml.add_representer(CheckpointPayload, represent_checkpoint_payload, Dumper=AiiDADumper)
 yaml.add_representer(AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
 yaml.add_constructor(_ATTRIBUTE_DICT_TAG, partial(mapping_constructor, AttributeDict), Loader=AiiDALoader)
-yaml.add_representer(
-    AttributesFrozendict, partial(represent_mapping, _PLUMPY_ATTRIBUTES_FROZENDICT_TAG), Dumper=AiiDADumper
-)
-yaml.add_constructor(
-    _PLUMPY_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader
-)
-yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
+yaml.add_representer(AttributesFrozendict, partial(represent_mapping, _ATTRIBUTES_FROZENDICT_TAG), Dumper=AiiDADumper)
+yaml.add_constructor(_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader)
+yaml.add_constructor(CHECKPOINT_PAYLOAD_TAG, checkpoint_payload_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
@@ -213,15 +209,15 @@ yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_DATACLASS_TAG, dataclass_constructor, Loader=AiiDALoader)
 
 
-@overload
-def serialize(data: Any, encoding: None = None) -> str: ...
+@t.overload
+def serialize(data: t.Any, encoding: None = None) -> str: ...
 
 
-@overload
-def serialize(data: Any, encoding: str) -> bytes: ...
+@t.overload
+def serialize(data: t.Any, encoding: str) -> bytes: ...
 
 
-def serialize(data: Any, encoding: str | None = None) -> str | bytes:
+def serialize(data: t.Any, encoding: str | None = None) -> str | bytes:
     """Serialize the given data structure into a yaml dump.
 
     The function supports standard data containers such as maps and lists as well as AiiDA nodes which will be
@@ -241,7 +237,7 @@ def serialize(data: Any, encoding: str | None = None) -> str | bytes:
     return serialized
 
 
-def deserialize_unsafe(serialized: str) -> Any:
+def deserialize_unsafe(serialized: str) -> t.Any:
     """Deserialize a yaml dump that represents a serialized data structure.
 
     .. note:: This function should not be used on untrusted input, since it is built upon `yaml.Loader` which is unsafe.

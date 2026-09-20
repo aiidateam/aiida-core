@@ -1,11 +1,9 @@
-import typing
-
 from aiida.engine import calcfunction
 from aiida.orm import Int
 
 
 @calcfunction
-def add_multiply(x: Int, y: Int, z: typing.Optional[Int] = None):
+def add_multiply(x: Int, y: Int, z: Int | None = None):
     if z is None:
         z = Int(3)
 

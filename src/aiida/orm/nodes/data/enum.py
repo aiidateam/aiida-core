@@ -20,13 +20,11 @@ from __future__ import annotations
 import typing as t
 from enum import Enum
 
-from plumpy.loaders import get_object_loader
-
 from aiida.common.lang import type_check
+from aiida.common.loaders import get_object_loader
+from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
-
-from .base import to_aiida_type
-from .data import Data
 
 __all__ = ('EnumData',)
 
@@ -105,7 +103,7 @@ class EnumData(Data):
         """Return the enum member wrapped by this node."""
         return self.get_member()
 
-    def get_enum(self) -> t.Type[EnumType]:
+    def get_enum(self) -> type[EnumType]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
@@ -114,9 +112,10 @@ class EnumData(Data):
         try:
             return get_object_loader().load_object(identifier)
         except ValueError as exc:
-            raise ImportError(f'Could not reconstruct enum class because `{identifier}` could not be loaded.') from exc
+            msg = f'Could not reconstruct enum class because `{identifier}` could not be loaded.'
+            raise ImportError(msg) from exc
 
-    def get_member(self) -> EnumType:  # type: ignore[misc, type-var]
+    def get_member(self) -> EnumType:  # type: ignore[type-var]
         """Return the enum member reconstructed from the serialized data stored in the database.
 
         For the enum member to be successfully reconstructed, the class of course has to still be importable and its
@@ -127,15 +126,16 @@ class EnumData(Data):
         :raises `ValueError`: if the stored enum member value is no longer valid for the imported enum class.
         """
         value = self.base.attributes.get(self.KEY_VALUE)
-        enum: t.Type[EnumType] = self.get_enum()
+        enum: type[EnumType] = self.get_enum()
 
         try:
             return enum(value)
         except ValueError as exc:
-            raise ValueError(
+            msg = (
                 f'The stored value `{value}` is no longer a valid value for the enum `{enum}`. The definition must '
                 'have changed since storing the node.'
-            ) from exc
+            )
+            raise ValueError(msg) from exc
 
     def __eq__(self, other: t.Any) -> bool:
         """Return whether the other object is equivalent to ourselves."""

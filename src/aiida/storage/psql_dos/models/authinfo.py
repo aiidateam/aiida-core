@@ -14,7 +14,7 @@ from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Boolean, Integer
 
-from .base import Base
+from aiida.storage.psql_dos.models.base import Base
 
 
 class DbAuthInfo(Base):

@@ -18,11 +18,10 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
-
-from ..utils.echo import ExitCode
 
 
 class ServiceStatus(enum.IntEnum):
@@ -60,9 +59,8 @@ STATUS_SYMBOLS = {
 def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     """Print status of AiiDA services."""
     from aiida import __version__
-    from aiida.cmdline.utils.daemon import get_daemon_package_drift_lines
+    from aiida.cmdline.utils.daemon import validate_daemon_env
     from aiida.common.docs import URL_NO_BROKER
-    from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
     from aiida.manage.configuration.settings import AiiDAConfigDir
     from aiida.manage.manager import get_manager
@@ -134,12 +132,12 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     # Getting the daemon and broker status
     broker = manager.get_broker()
 
-    from aiida.brokers.zmq.broker import ZmqBroker
+    from aiida.brokers.zeromq.broker import ZeromqBroker
 
     if broker:
         # For RabbitMQ: verify broker connectivity as a separate status line
-        # For ZMQ: broker info is shown alongside the daemon status below
-        if not isinstance(broker, ZmqBroker):
+        # For ZeroMQ: broker info is shown alongside the daemon status below
+        if not isinstance(broker, ZeromqBroker):
             try:
                 broker.get_communicator()
             except Exception as exc:
@@ -151,56 +149,64 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
             finally:
                 broker.close()
 
-    if not broker:
-        print_status(
-            ServiceStatus.WARNING,
-            'broker',
-            f'No broker defined for this profile: certain functionality not available.\nSee {URL_NO_BROKER}',
-        )
-
     # Getting the daemon status
-    try:
-        daemon_client = manager.get_daemon_client()
-        status = daemon_client.get_status()
-    except ConfigurationError:
-        print_status(
-            ServiceStatus.WARNING,
-            'daemon',
-            f'No broker defined for this profile: daemon is not available. See {URL_NO_BROKER}',
-        )
-    except DaemonNotRunningException as exception:
-        print_status(ServiceStatus.WARNING, 'daemon', str(exception))
-    except DaemonException as exception:
-        print_status(ServiceStatus.ERROR, 'daemon', str(exception))
-    except Exception as exception:
-        message = 'Error getting daemon status'
-        print_status(ServiceStatus.ERROR, 'daemon', message, exception=exception, print_traceback=print_traceback)
-        exit_code = ExitCode.CRITICAL
+    if profile.process_control_backend is None:
+        try:
+            daemon_client = manager.get_daemon_client()
+            is_daemon_running = daemon_client.is_daemon_running
+        except Exception as exception:
+            message = 'Error getting daemon status'
+            print_status(ServiceStatus.ERROR, 'daemon', message, exception=exception, print_traceback=print_traceback)
+            exit_code = ExitCode.CRITICAL
+        else:
+            if is_daemon_running:
+                print_status(
+                    ServiceStatus.WARNING,
+                    'daemon',
+                    'Daemon appears to be running but no broker is defined for this profile. '
+                    'The daemon has no functionality because messages cannot passed to workers.\n'
+                    f'See {URL_NO_BROKER}.',
+                )
     else:
-        daemon_status = ServiceStatus.UP
-        daemon_msg = f'Daemon is running with PID {status["pid"]}'
-        # Append broker info for managed brokers (e.g., ZMQ)
+        try:
+            daemon_client = manager.get_daemon_client()
+            status = daemon_client.get_status()
+        except DaemonNotRunningException as exception:
+            print_status(ServiceStatus.WARNING, 'daemon', str(exception))
+        except DaemonException as exception:
+            print_status(ServiceStatus.ERROR, 'daemon', str(exception))
+            exit_code = ExitCode.CRITICAL
+        except Exception as exception:
+            message = 'Error getting daemon status'
+            print_status(ServiceStatus.ERROR, 'daemon', message, exception=exception, print_traceback=print_traceback)
+            exit_code = ExitCode.CRITICAL
+        else:
+            daemon_status = ServiceStatus.UP
+            daemon_msg = f'Daemon is running with PID {status["pid"]}'
+            # Append broker info for managed brokers (e.g., ZeroMQ)
 
-        if broker and isinstance(broker, ZmqBroker):
-            if broker.is_running:
-                status_info = broker.get_service_status()
-                if status_info:
+            if broker and isinstance(broker, ZeromqBroker):
+                status_info = broker.probe_service_status()
+                if status_info.get('connected', False):
                     broker_pid = status_info.get('pid', '?')
-                    pending = status_info.get('pending_tasks', 0)
-                    processing = status_info.get('processing_tasks', 0)
+                    pending = status_info.get('pending_tasks', '?')
+                    processing = status_info.get('processing_tasks', '?')
                     daemon_msg += f', Broker PID {broker_pid} [{pending} pending, {processing} processing]'
-            else:
-                daemon_msg += ', Broker is NOT running'
+                else:
+                    daemon_msg += ', Broker is NOT running (run `verdi daemon status` for more information)'
+                    daemon_status = ServiceStatus.ERROR
+                    exit_code = ExitCode.CRITICAL
 
-        daemon_lines = [daemon_msg]
+            daemon_lines = [daemon_msg]
 
-        # Check for package mismatches
-        drift_lines = get_daemon_package_drift_lines(daemon_client)
-        if drift_lines:
-            daemon_status = ServiceStatus.WARNING
-            daemon_lines.extend(drift_lines)
+            # Check for package mismatches
+            drift_error = validate_daemon_env(daemon_client)
+            if drift_error is not None:
+                if daemon_status == ServiceStatus.UP:
+                    daemon_status = ServiceStatus.WARNING
+                daemon_lines.append(drift_error)
 
-        print_status(daemon_status, 'daemon', '\n'.join(daemon_lines))
+            print_status(daemon_status, 'daemon', '\n'.join(daemon_lines))
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     if exit_code != ExitCode.SUCCESS:
@@ -223,12 +229,12 @@ def print_status(
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    echo.echo(f"{service + ':':12s} ", nl=False)
+    echo.echo(f' {symbol["string"]} ', fg=symbol['color'], nl=False)
+    echo.echo(f'{service + ":":12s} ', nl=False)
     lines = msg.split('\n')
     echo.echo(lines[0])
     for line in lines[1:]:
-        echo.echo(f"{'':15s} {line}")
+        echo.echo(f'{"":15s} {line}')
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

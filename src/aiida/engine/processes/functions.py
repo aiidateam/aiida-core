@@ -18,11 +18,12 @@ import signal
 import typing as t
 from inspect import get_annotations
 from types import UnionType
-from typing import TYPE_CHECKING, ParamSpec
 
 import docstring_parser
 
 from aiida.common.lang import override
+from aiida.engine.processes.process import Process
+from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.manage import get_manager
 from aiida.orm import (
     Bool,
@@ -39,11 +40,8 @@ from aiida.orm import (
 )
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-from .process import Process
-from .process_spec import ProcessSpec
-
-if TYPE_CHECKING:
-    from .exit_code import ExitCode
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.exit_code import ExitCode
 
 __all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
 
@@ -52,7 +50,7 @@ LOGGER = logging.getLogger(__name__)
 FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])
 
 
-P = ParamSpec('P')
+P = t.ParamSpec('P')
 R_co = t.TypeVar('R_co', covariant=True)
 N = t.TypeVar('N', bound=ProcessNode)
 
@@ -70,9 +68,9 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
 
     is_process_function: bool
 
-    node_class: t.Type[N]
+    node_class: type[N]
 
-    process_class: t.Type[Process]
+    process_class: type[Process]
 
     recreate_from: t.Callable[[N], Process]
 
@@ -131,7 +129,7 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionType], FunctionType]:
+def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
@@ -145,7 +143,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
         """
         process_class = FunctionProcess.build(function, node_class=node_class)
 
-        def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, 'ProcessNode']:
+        def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
 
             :param args: input arguments to construct the FunctionProcess
@@ -170,7 +168,8 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
 
             # If any kwargs remain, the spec should be dynamic, so we raise if it isn't
             if kwargs and not process_class.spec().inputs.dynamic:
-                raise ValueError(f'{function.__name__} does not support these kwargs: {kwargs.keys()}')
+                msg = f'{function.__name__} does not support these kwargs: {kwargs.keys()}'
+                raise ValueError(msg)
 
             process: Process = process_class(inputs=inputs, runner=runner)
 
@@ -247,14 +246,16 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
     """
 
     def get_type_from_annotation(annotation):
+        # `t.Dict`/`t.List` are distinct runtime keys from `dict`/`list` (`t.Dict != dict`) and map the
+        # pre-PEP-585 annotation spelling; UP006 would collapse them into duplicate builtin keys.
         valid_type_map = {
             bool: Bool,
             dict: Dict,
-            t.Dict: Dict,
+            t.Dict: Dict,  # noqa: UP006
             float: Float,
             int: Int,
             list: List,
-            t.List: List,
+            t.List: List,  # noqa: UP006
             str: Str,
         }
 
@@ -290,7 +291,7 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func: FunctionType, node_class: t.Type['ProcessNode']) -> t.Type['FunctionProcess']:
+    def build(func: FunctionType, node_class: type[ProcessNode]) -> type[FunctionProcess]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -351,7 +352,7 @@ class FunctionProcess(Process):
 
         def define(cls, spec):
             """Define the spec dynamically"""
-            from plumpy.ports import UNSPECIFIED
+            from aiida.engine.processes.generic.ports import UNSPECIFIED
 
             super().define(spec)
 
@@ -447,7 +448,8 @@ class FunctionProcess(Process):
         # be completely lost. If the function supports variadic arguments, however, additional args should be accepted.
         if nargs > nparameters and cls._var_positional is None:
             name = cls._func.__name__
-            raise TypeError(f'{name}() takes {nparameters} positional arguments but {nargs} were given')
+            msg = f'{name}() takes {nparameters} positional arguments but {nargs} were given'
+            raise TypeError(msg)
 
     @classmethod
     def create_inputs(cls, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
@@ -473,17 +475,18 @@ class FunctionProcess(Process):
                 for index, arg in enumerate(arguments):
                     label = f'{cls._var_positional}_{index}'
                     if label in inputs:
-                        raise RuntimeError(
+                        msg = (
                             f'variadic argument with index `{index}` would get the label `{label}` but this is already '
                             'in use by another function argument with the exact same name. To avoid this error, please '
                             f'change the name of argument `{label}` to something else.'
                         )
+                        raise RuntimeError(msg)
                     inputs[label] = arg
 
         return inputs
 
     @classmethod
-    def get_or_create_db_record(cls) -> 'ProcessNode':
+    def get_or_create_db_record(cls) -> ProcessNode:
         return cls._node_class()
 
     def __init__(self, *args, **kwargs) -> None:
@@ -521,9 +524,9 @@ class FunctionProcess(Process):
         self.node.store_source_info(self._func)
 
     @override
-    async def run(self) -> 'ExitCode' | None:
+    async def run(self) -> ExitCode | None:
         """Run the process."""
-        from .exit_code import ExitCode
+        from aiida.engine.processes.exit_code import ExitCode
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
         # state of `Finished` the cached process will still enter the running state. The process state will have then
@@ -554,7 +557,7 @@ class FunctionProcess(Process):
         # The remaining inputs have to be keyword arguments.
         kwargs.update(**inputs)
 
-        from plumpy import run_with_portal
+        from aiida.engine.processes.greenback import run_with_portal
 
         result = await run_with_portal(self._func, *args, **kwargs)
 
@@ -567,9 +570,10 @@ class FunctionProcess(Process):
             for name, value in result.items():
                 self.out(name, value)
         else:
-            raise TypeError(
-                "Function process returned an output with unsupported type '{}'\n"
-                'Must be a Data type or a mapping of {{string: Data}}'.format(result.__class__)
+            msg = (  # type: ignore[unreachable]
+                f"Function process returned an output with unsupported type '{result.__class__}'\n"
+                'Must be a Data type or a mapping of {string: Data}'
             )
+            raise TypeError(msg)
 
         return ExitCode()

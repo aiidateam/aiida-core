@@ -9,7 +9,7 @@
 """Module with resources common to the repository."""
 
 import enum
-import typing
+import typing as t
 
 __all__ = ('File', 'FileType')
 
@@ -28,8 +28,8 @@ class File:
         self,
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
-        key: typing.Union[str, None] = None,
-        objects: typing.Optional[typing.Dict[str, 'File']] = None,
+        key: str | None = None,
+        objects: dict[str, 'File'] | None = None,
     ) -> None:
         """Construct a new instance.
 
@@ -65,7 +65,7 @@ class File:
         self._objects = objects or {}
 
     @classmethod
-    def from_serialized(cls, serialized: dict[str, typing.Any], name: str = '') -> 'File':
+    def from_serialized(cls, serialized: dict[str, t.Any], name: str = '') -> 'File':
         """Construct a new instance from a serialized instance.
 
         :param serialized: the serialized instance.
@@ -82,7 +82,7 @@ class File:
 
         return cls(name, file_type, key, objects)
 
-    def serialize(self) -> dict[str, typing.Any]:
+    def serialize(self) -> dict[str, t.Any]:
         """Serialize the metadata into a JSON-serializable format.
 
         .. note:: the serialization format is optimized to reduce the size in bytes.
@@ -114,12 +114,12 @@ class File:
         return self.file_type == FileType.DIRECTORY
 
     @property
-    def key(self) -> typing.Union[str, None]:
+    def key(self) -> str | None:
         """Return the key of the file object."""
         return self._key
 
     @property
-    def objects(self) -> typing.Dict[str, 'File']:
+    def objects(self) -> dict[str, 'File']:
         """Return the objects of the file object."""
         return self._objects
 

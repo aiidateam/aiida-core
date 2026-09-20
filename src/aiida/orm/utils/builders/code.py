@@ -75,9 +75,8 @@ class CodeBuilder:
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.CodeValidationError(
-                f"Unknown parameters passed to the CodeBuilder: {', '.join(sorted(passed_keys - used))}"
-            )
+            msg = f'Unknown parameters passed to the CodeBuilder: {", ".join(sorted(passed_keys - used))}'
+            raise self.CodeValidationError(msg)
 
         return code
 
@@ -126,7 +125,8 @@ class CodeBuilder:
             try:
                 return self._code_spec[key]
             except KeyError:
-                raise KeyError(f"Attribute '{key}' not set")
+                msg = f"Attribute '{key}' not set"
+                raise KeyError(msg)
         return None
 
     def _get(self, key):
@@ -172,9 +172,8 @@ class CodeBuilder:
     def validate_code_type(self):
         """Make sure the code type is set correctly"""
         if self._get('code_type') and self.code_type not in self.CodeType:
-            raise self.CodeValidationError(
-                f'invalid code type: must be one of {list(self.CodeType)}, not {self.code_type}'
-            )
+            msg = f'invalid code type: must be one of {list(self.CodeType)}, not {self.code_type}'
+            raise self.CodeValidationError(msg)
 
     def validate_upload(self):
         """If the code is stored and uploaded, catch invalid on-computer attributes"""
@@ -185,7 +184,8 @@ class CodeBuilder:
             if self._get('remote_abs_path'):
                 messages.append('invalid option for store-and-upload code: "remote_abs_path"')
         if messages:
-            raise self.CodeValidationError(f'{messages}')
+            msg = f'{messages}'
+            raise self.CodeValidationError(msg)
 
     def validate_installed(self):
         """If the code is on-computer, catch invalid store-and-upload attributes"""
@@ -196,7 +196,8 @@ class CodeBuilder:
             if self._get('code_rel_path'):
                 messages.append('invalid options for on-computer code: "code_rel_path"')
         if messages:
-            raise self.CodeValidationError(f'{messages}')
+            msg = f'{messages}'
+            raise self.CodeValidationError(msg)
 
     class CodeValidationError(ValueError):
         """A CodeBuilder instance may raise this

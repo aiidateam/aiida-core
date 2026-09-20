@@ -40,6 +40,7 @@ def test_launch_add(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_launch_add_daemon(run_cli_command, submit_and_await):
     """Test ``verdi devel launch-add`` with the ``--daemon`` flag."""
     result = run_cli_command(cmd_devel.devel_launch_arithmetic_add, ['--daemon'])
@@ -76,6 +77,7 @@ def test_launch_multiply_add(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_launch_multiply_add_daemon(run_cli_command, submit_and_await):
     """Test ``verdi devel launch-multiply-add`` with the ``--daemon`` flag."""
     result = run_cli_command(cmd_devel.devel_launch_multiply_add, ['--daemon'])

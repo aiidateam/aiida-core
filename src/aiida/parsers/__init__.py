@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .parser import *
+from aiida.parsers.parser import *
 
 __all__ = (
     'Parser',

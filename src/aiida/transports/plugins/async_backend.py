@@ -21,7 +21,6 @@ import logging
 import posixpath
 import re
 import subprocess
-from typing import Optional
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
@@ -33,7 +32,7 @@ from aiida.transports.transport import (
 )
 
 
-def get_openssh_version() -> Optional[int]:
+def get_openssh_version() -> int | None:
     """Get the major version of the local OpenSSH client.
 
     Returns the major version number (e.g., 9 for OpenSSH_9.0), or None if detection fails.
@@ -56,9 +55,10 @@ class _AsynchronousSSHBackend(abc.ABC):
     Note: Subclasses should not be part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(self, machine: str, data_machine: str, logger: logging.LoggerAdapter, bash_command: str):
         self.bash_command = bash_command + '-c '
         self.machine = machine
+        self.data_machine = data_machine
         self.logger = logger
 
     @abc.abstractmethod
@@ -96,7 +96,7 @@ class _AsynchronousSSHBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         """Run a command on the remote machine.
         :param command: The command to run
         :param stdin: The input to send to the command
@@ -227,14 +227,29 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        super().__init__(machine, logger, bash_command)
-
     async def open(self):
-        self._conn = await asyncssh.connect(self.machine)
-        self._sftp = await self._conn.start_sftp_client()
+        conn = await asyncssh.connect(self.machine)
+        data_conn = None
+        try:
+            data_conn = conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+            sftp = await data_conn.start_sftp_client()
+        except BaseException:
+            # `BaseException` rather than `Exception`, to also release them when the open is cancelled.
+            if data_conn is not None and data_conn is not conn:
+                data_conn.close()
+                await data_conn.wait_closed()
+            conn.close()
+            await conn.wait_closed()
+            raise
+
+        self._conn = conn
+        self._data_conn = data_conn
+        self._sftp = sftp
 
     async def close(self):
+        if self._data_conn is not self._conn:
+            self._data_conn.close()
+            await self._data_conn.wait_closed()
         self._conn.close()
         await self._conn.wait_closed()
 
@@ -262,7 +277,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         except asyncssh.Error as exc:
             raise OSError from exc
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         result = await self._conn.run(
             self.bash_command + escape_for_bash(command),
             input=stdin,
@@ -296,20 +311,24 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         except SFTPFileAlreadyExists:
             # SFTPFileAlreadyExists is only supported in asyncssh version 6.0.0 and later
             if not exist_ok:
-                raise FileExistsError(f'Directory already exists: {path}')
+                msg = f'Directory already exists: {path}'
+                raise FileExistsError(msg)
         except asyncssh.sftp.SFTPFailure as exc:
             if self._sftp.version < 6:
                 if not exist_ok:
-                    raise FileExistsError(f'Directory already exists: {path}')
+                    msg = f'Directory already exists: {path}'
+                    raise FileExistsError(msg)
             else:
-                raise TransportInternalError(f'Error while creating directory {path}: {exc}')
+                msg = f'Error while creating directory {path}: {exc}'
+                raise TransportInternalError(msg)
 
     async def remove(self, path: str):
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
         # if that's the case, we can get rid of the isfile check
         # https://github.com/aiidateam/aiida-core/issues/6719
         if await self.isdir(path):
-            raise OSError(f'The path {path} is a directory')
+            msg = f'The path {path} is a directory'
+            raise OSError(msg)
         else:
             await self._sftp.remove(path)
 
@@ -320,13 +339,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         try:
             await self._sftp.rmdir(path)
         except asyncssh.sftp.SFTPFailure:
-            raise OSError(f'Error while removing directory {path}: probably directory is not empty')
+            msg = f'Error while removing directory {path}: probably directory is not empty'
+            raise OSError(msg)
 
     async def rmtree(self, path: str):
         try:
             await self._sftp.rmtree(path, ignore_errors=False)
         except asyncssh.Error as exc:
-            raise OSError(f'Error while removing directory tree {path}: {exc}')
+            msg = f'Error while removing directory tree {path}: {exc}'
+            raise OSError(msg)
 
     async def path_exists(self, path: str):
         return await self._sftp.exists(path)
@@ -344,7 +365,8 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             if ignore_nonexisting:
                 self.logger.debug(f'Glob pattern {path} did not match any files or directories. Ignoring.')
                 return []
-            raise OSError(f'Either the remote path {path} does not exist, or a matching file/folder not found.')
+            msg = f'Either the remote path {path} does not exist, or a matching file/folder not found.'
+            raise OSError(msg)
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         await self._sftp.chmod(path, mode, follow_symlinks=follow_symlinks)
@@ -375,7 +397,8 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                     )
                 else:
                     if not await self.path_exists(remotesource):
-                        raise FileNotFoundError(f'The remote path {remotesource} does not exist')
+                        msg = f'The remote path {remotesource} does not exist'
+                        raise FileNotFoundError(msg)
                     await self._sftp.copy(
                         remotesource,
                         remotedestination,
@@ -387,12 +410,14 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             except asyncssh.sftp.SFTPNoSuchFile as exc:
                 # note: one could just create directories, but aiida engine expects this behavior
                 # see `execmanager.py`::_copy_remote_files for more details
-                raise FileNotFoundError(
+                msg = (
                     f'The remote path {remotedestination} is not reachable,'
                     f'perhaps the parent folder does not exists: {exc}'
                 )
+                raise FileNotFoundError(msg)
             except asyncssh.sftp.SFTPFailure as exc:
-                raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
+                msg = f'Error while copying {remotesource} to {remotedestination}: {exc}'
+                raise OSError(msg)
         else:
             self.logger.debug(
                 'The SSH server does not support SFTP remote copy (SFTP >= v9.0), '
@@ -412,18 +437,18 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                         self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
                 else:
                     self.logger.error(
-                        "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                            retval, stdout, stderr, command
-                        )
+                        f'Problem executing cp. Exit code: {retval}, '
+                        f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
                     if 'No such file or directory' in str(stderr):
-                        raise FileNotFoundError(f'Error while executing cp: {stderr}')
+                        msg = f'Error while executing cp: {stderr}'
+                        raise FileNotFoundError(msg)
 
-                    raise OSError(
-                        'Error while executing cp. Exit code: {}, '
-                        "stdout: '{}', stderr: '{}', "
-                        "command: '{}'".format(retval, stdout, stderr, command)
+                    msg = (
+                        f'Error while executing cp. Exit code: {retval}, '
+                        f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
+                    raise OSError(msg)
 
             cp_exe = 'cp'
             cp_flags = '-f'
@@ -458,22 +483,49 @@ class _OpenSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        super().__init__(machine, logger, bash_command)
+    def __init__(
+        self,
+        machine: str,
+        data_machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        use_sftp: bool,
+    ):
+        super().__init__(machine, data_machine, logger, bash_command)
+        self.use_sftp = use_sftp
+        self.scp_options: list[str] = []
 
         # Check if the local OpenSSH client version is 9.0 or higher.
         # OpenSSH 9.0+ changed scp to use SFTP protocol by default instead of RCP.
         # This affects how paths are interpreted - SFTP treats paths as binary data,
         # so shell quoting is not needed and can cause issues.
         openssh_version = get_openssh_version()
-        if openssh_version is not None and openssh_version >= 9:
-            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using SFTP mode for scp commands.')
-            self.is_openssh_9_or_higher = True
-        else:
-            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands.')
-            self.is_openssh_9_or_higher = False
+        self.is_openssh_9_or_higher = openssh_version is not None and openssh_version >= 9
 
-    async def openssh_execute(self, commands, stdin: Optional[str] = None, timeout: Optional[float] = None):
+        if openssh_version is None:
+            self.logger.warning(
+                'Could not detect your OpenSSH version. '
+                'Not applied: `use_sftp=False`. In addition quoting paths might not function properly. '
+                'Report to maintainers.'
+            )
+            self.use_sftp = False
+        elif self.is_openssh_9_or_higher and self.use_sftp:
+            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using SFTP mode for scp commands.')
+        elif self.is_openssh_9_or_higher and not self.use_sftp:
+            # `-O` forces the legacy protocol, for servers that do not implement SFTP.
+            self.scp_options = ['-O']
+            self.logger.debug(
+                f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands as configured.'
+            )
+        else:
+            self.logger.debug(
+                f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands. '
+                'Configuration overrides: `use_sftp=False`'
+            )
+            # Override the setting, as in legacy versions are not using sftp anuways
+            self.use_sftp = False
+
+    async def openssh_execute(self, commands, stdin: str | None = None, timeout: float | None = None):
         """
         Execute a command using the _OpenSSH command line client.
         :param commands: The list of commands to execute
@@ -523,7 +575,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return ''.join(result)
 
     def _escape_for_scp(self, path: str) -> str:
-        """Prepare a path for use in scp commands.
+        """Prepare a remote path for use in scp commands.
 
         OpenSSH >= 9.0 uses SFTP mode: paths are sent as binary, no
         escaping needed. OpenSSH < 9.0 uses RCP mode: paths are interpreted
@@ -539,7 +591,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         else:
             return f'{self._escape_for_rcp(path)}'
 
-    def ssh_command_generator(self, command_template: str, paths: Optional[list[str]] = None):
+    def ssh_command_generator(self, command_template: str, paths: list[str] | None = None):
         """Generate an SSH command with properly quoted paths.
 
         :param command_template: The command template with {} placeholders for paths
@@ -568,26 +620,30 @@ class _OpenSSH(_AsynchronousSSHBackend):
     async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
         if parents and not exist_ok:
             if await self.path_exists(path):
-                raise FileExistsError(f'Directory already exists: {path}')
+                msg = f'Directory already exists: {path}'
+                raise FileExistsError(msg)
 
-        commands = self.ssh_command_generator(f"mkdir {'-p' if parents else ''} {{}}", paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        commands = self.ssh_command_generator(f'mkdir {"-p" if parents else ""} {{}}', paths=[path])
+        returncode, _stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             if 'File exists' in stderr:
                 if not exist_ok:
-                    raise FileExistsError(f'Directory already exists: {path}')
+                    msg = f'Directory already exists: {path}'
+                    raise FileExistsError(msg)
             else:
-                raise OSError(f'Failed to create directory: {path}')
+                msg = f'Failed to create directory: {path}'
+                raise OSError(msg)
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         # chmod works with octal numbers, so we have to convert the mode to octal
         mode = oct(mode)[2:]  # type: ignore[assignment]
-        commands = self.ssh_command_generator(f"chmod {'-h' if not follow_symlinks else ''} {mode} {{}}", paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        commands = self.ssh_command_generator(f'chmod {"-h" if not follow_symlinks else ""} {mode} {{}}', paths=[path])
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to change permissions: {path}')
+            msg = f'Failed to change permissions: {path}'
+            raise OSError(msg)
 
     def _escape_for_glob(self, s):
         """Escape dangerous shell characters while preserving glob wildcards (* ? [ ])
@@ -606,13 +662,14 @@ class _OpenSSH(_AsynchronousSSHBackend):
     async def glob(self, path: str, ignore_nonexisting: bool = True):
         escaped_path = self._escape_for_glob(path)
         commands = self.ssh_command_generator(f'find {escaped_path} -maxdepth 0')
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             if ignore_nonexisting:
                 self.logger.debug(f'Glob pattern {path} did not match any files or directories. Ignoring.')
                 return []
-            raise OSError(f'Either the path {path} does not exist, or a matching file/folder not found.')
+            msg = f'Either the path {path} does not exist, or a matching file/folder not found.'
+            raise OSError(msg)
 
         return list(stdout.strip().split())
 
@@ -622,72 +679,78 @@ class _OpenSSH(_AsynchronousSSHBackend):
         """
 
         commands = self.ssh_command_generator('ln -s {} {}', paths=[source, destination])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to create symlink: {source} -> {destination}')
+            msg = f'Failed to create symlink: {source} -> {destination}'
+            raise OSError(msg)
 
     async def path_exists(self, path: str):
         commands = self.ssh_command_generator('test -e {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, stderr = await self.openssh_execute(commands)
 
         if stderr:
-            # this should not happen, but just in case for debugging
-            self.logger.debug(f'Unexpected stderr: {stderr}')
-            raise OSError(stderr)
+            self.logger.debug(f'Stderr from `test -e {path}`: {stderr}')
+
+        if returncode not in (0, 1):
+            msg = f'Failed to check whether path exists: {path} (exit code {returncode}): {stderr}'
+            raise OSError(msg)
         return returncode == 0
 
     async def rmtree(self, path: str):
         commands = self.ssh_command_generator('rm -rf {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to remove path: {path}')
+            msg = f'Failed to remove path: {path}'
+            raise OSError(msg)
 
     async def rmdir(self, path: str):
         commands = self.ssh_command_generator('rmdir {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError('Failed to remove directory')
 
     async def rename(self, oldpath: str, newpath: str):
         commands = self.ssh_command_generator('mv {} {}', paths=[oldpath, newpath])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to rename path: {oldpath} -> {newpath}')
+            msg = f'Failed to rename path: {oldpath} -> {newpath}'
+            raise OSError(msg)
 
     async def remove(self, path: str):
         commands = self.ssh_command_generator('rm {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to remove path: {path}')
+            msg = f'Failed to remove path: {path}'
+            raise OSError(msg)
 
     async def listdir(self, path: str):
         commands = self.ssh_command_generator('ls {}', paths=[path])
         # '-d' is used prevents recursive listing of directories.
         # This is useful when 'path' includes glob patterns.
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, stdout, _stderr = await self.openssh_execute(commands)
         if returncode != 0:
             raise FileNotFoundError
         return list(stdout.strip().split())
 
     async def isdir(self, path: str):
         commands = self.ssh_command_generator('test -d {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
         return returncode == 0
 
     async def isfile(self, path: str):
         commands = self.ssh_command_generator('test -f {}', paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        returncode, _stdout, _stderr = await self.openssh_execute(commands)
         return returncode == 0
 
     async def lstat(self, path: str):
         # order of stat matters
         commands = self.ssh_command_generator("stat -c '%s %u %g %a %X %Y' {}", paths=[path])
-        returncode, stdout, stderr = await self.openssh_execute(commands)
+        _returncode, stdout, _stderr = await self.openssh_execute(commands)
 
         stdout = stdout.strip()
         if not stdout:
@@ -696,13 +759,13 @@ class _OpenSSH(_AsynchronousSSHBackend):
         # order matters
         return Stat(*stdout.split())
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[float] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: float | None = None):
         commands = self.ssh_command_generator(command)
         returncode, stdout, stderr = await self.openssh_execute(commands, stdin, timeout)
         return returncode, stdout, stderr
 
     async def get(self, remotepath: str, localpath: str, dereference: bool, preserve: bool, recursive: bool):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -712,14 +775,19 @@ class _OpenSSH(_AsynchronousSSHBackend):
         if recursive:
             options.append('-r')
 
-        returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, f'{self.machine}:{self._escape_for_scp(remotepath)}', self._escape_for_scp(localpath)]
+        returncode, _stdout, stderr = await self.openssh_execute(
+            [
+                'scp',
+                *options,
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+                self._escape_for_scp(localpath),
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
 
     async def put(self, localpath: str, remotepath: str, dereference: bool, preserve: bool, recursive: bool):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -729,8 +797,13 @@ class _OpenSSH(_AsynchronousSSHBackend):
         if recursive:
             options.append('-r')
 
-        returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, self._escape_for_scp(localpath), f'{self.machine}:{self._escape_for_scp(remotepath)}']
+        returncode, _stdout, stderr = await self.openssh_execute(
+            [
+                'scp',
+                *options,
+                self._escape_for_scp(localpath),
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -749,7 +822,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         recursive: bool,
         preserve: bool,
     ):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -767,27 +840,30 @@ class _OpenSSH(_AsynchronousSSHBackend):
                     raise OSError("Can't copy more than one file in the same destination file")
 
         elif not await self.path_exists(remotesource):
-            raise FileNotFoundError(f'The remote path {remotesource} does not exist')
+            msg = f'The remote path {remotesource} does not exist'
+            raise FileNotFoundError(msg)
 
         parent_directory = posixpath.dirname(remotedestination)
         if not await self.path_exists(parent_directory):
             # note: one could just create directories, but aiida engine expects this behavior
             # see `execmanager.py`::_copy_remote_files for more details
-            raise FileNotFoundError(
+            msg = (
                 f'The remote path {remotedestination} is not reachable,'
                 f'perhaps the parent folder does not exist: {parent_directory}'
             )
+            raise FileNotFoundError(msg)
 
-        returncode, stdout, stderr = await self.openssh_execute(
+        returncode, _stdout, stderr = await self.openssh_execute(
             [
                 'scp',
                 *options,
-                f'{self.machine}:{self._escape_for_scp(remotesource)}',
-                f'{self.machine}:{self._escape_for_scp(remotedestination)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotesource)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotedestination)}',
             ]
         )
         if returncode != 0:
-            raise OSError(f'Failed to copy from {remotesource} to {remotedestination} : {stderr}')
+            msg = f'Failed to copy from {remotesource} to {remotedestination} : {stderr}'
+            raise OSError(msg)
 
 
 class Stat:

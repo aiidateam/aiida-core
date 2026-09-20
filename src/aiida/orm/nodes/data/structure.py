@@ -22,9 +22,8 @@ from pydantic import field_validator
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
-
-from .data import Data
 
 __all__ = ('Kind', 'Site', 'StructureData')
 
@@ -210,9 +209,8 @@ def validate_symbols_tuple(symbols_tuple):
     else:
         valid = all(is_valid_symbol(sym) for sym in symbols_tuple)
     if not valid:
-        raise UnsupportedSpeciesError(
-            f'At least one element of the symbol list {symbols_tuple} has not been recognized.'
-        )
+        msg = f'At least one element of the symbol list {symbols_tuple} has not been recognized.'
+        raise UnsupportedSpeciesError(msg)
 
 
 def is_ase_atoms(ase_atoms):
@@ -701,7 +699,7 @@ class StructureData(Data):
             False,
             description='Whether periodic in the c direction',
         )
-        cell: t.Optional[list[list[float]]] = OrmMetadataField(
+        cell: list[list[float]] | None = OrmMetadataField(
             None,
             description='The cell parameters',
         )
@@ -714,12 +712,12 @@ class StructureData(Data):
 
         @field_validator('kinds', mode='before')
         @classmethod
-        def _validate_kinds(cls, value: list[Kind | dict[str, t.Any]]) -> list[t.Dict]:
+        def _validate_kinds(cls, value: list[Kind | dict[str, t.Any]]) -> list[dict]:
             return [kind.get_raw() if isinstance(kind, Kind) else kind for kind in value]
 
         @field_validator('sites', mode='before')
         @classmethod
-        def _validate_sites(cls, value: list[Site | dict[str, t.Any]]) -> list[t.Dict]:
+        def _validate_sites(cls, value: list[Site | dict[str, t.Any]]) -> list[dict]:
             return [site.get_raw() if isinstance(site, Site) else site for site in value]
 
     def __init__(
@@ -751,7 +749,8 @@ class StructureData(Data):
 
         for left, right in self._set_incompatibilities:
             if args[left] is not None and args[right] is not None:
-                raise ValueError(f'cannot pass {left} and {right} at the same time')
+                msg = f'cannot pass {left} and {right} at the same time'
+                raise ValueError(msg)
 
         super().__init__(**kwargs)
 
@@ -827,7 +826,8 @@ class StructureData(Data):
         try:
             func = getattr(self, f'set_pymatgen_{typestr.lower()}')
         except AttributeError:
-            raise AttributeError(f"Converter for '{typestr}' to AiiDA structure does not exist")
+            msg = f"Converter for '{typestr}' to AiiDA structure does not exist"
+            raise AttributeError(msg)
         func(obj, **kwargs)
 
     def set_pymatgen_molecule(self, mol, margin=5):
@@ -937,12 +937,14 @@ class StructureData(Data):
         try:
             _get_valid_cell(self.cell)
         except ValueError as exc:
-            raise ValidationError(f'Invalid cell: {exc}')
+            msg = f'Invalid cell: {exc}'
+            raise ValidationError(msg)
 
         try:
             get_valid_pbc(self.pbc)
         except ValueError as exc:
-            raise ValidationError(f'Invalid periodic boundary conditions: {exc}')
+            msg = f'Invalid periodic boundary conditions: {exc}'
+            raise ValidationError(msg)
 
         _validate_dimensionality(self.pbc, self.cell)
 
@@ -950,30 +952,33 @@ class StructureData(Data):
             # This will try to create the kinds objects
             kinds = self.kinds
         except ValueError as exc:
-            raise ValidationError(f'Unable to validate the kinds: {exc}')
+            msg = f'Unable to validate the kinds: {exc}'
+            raise ValidationError(msg)
 
         from collections import Counter
 
         counts = Counter([k.name for k in kinds])
         for count in counts:
             if counts[count] != 1:
-                raise ValidationError(f"Kind with name '{count}' appears {counts[count]} times instead of only one")
+                msg = f"Kind with name '{count}' appears {counts[count]} times instead of only one"
+                raise ValidationError(msg)
 
         try:
             # This will try to create the sites objects
             sites = self.sites
         except ValueError as exc:
-            raise ValidationError(f'Unable to validate the sites: {exc}')
+            msg = f'Unable to validate the sites: {exc}'
+            raise ValidationError(msg)
 
         for site in sites:
             if site.kind_name not in [k.name for k in kinds]:
-                raise ValidationError(f'A site has kind {site.kind_name}, but no specie with that name exists')
+                msg = f'A site has kind {site.kind_name}, but no specie with that name exists'
+                raise ValidationError(msg)
 
         kinds_without_sites = set(k.name for k in kinds) - set(s.kind_name for s in sites)
         if kinds_without_sites:
-            raise ValidationError(
-                f'The following kinds are defined, but there are no sites with that kind: {list(kinds_without_sites)}'
-            )
+            msg = f'The following kinds are defined, but there are no sites with that kind: {list(kinds_without_sites)}'
+            raise ValidationError(msg)
 
     def _prepare_xsf(self, main_file_name=''):
         """Write the given structure to a string of format XSF (for XCrySDen)."""
@@ -992,7 +997,7 @@ class StructureData(Data):
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
             return_string += f'{_atomic_numbers[self.get_kind(site.kind_name).symbols[0]]} '
-            return_string += '%18.10f %18.10f %18.10f\n' % tuple(site.position)
+            return_string += '{:18.10f} {:18.10f} {:18.10f}\n'.format(*tuple(site.position))
         return return_string.encode('utf-8'), {}
 
     def _prepare_cif(self, main_file_name=''):
@@ -1075,28 +1080,16 @@ class StructureData(Data):
 
         return_list = [f'{len(sites)}']
         return_list.append(
-            'Lattice="{} {} {} {} {} {} {} {} {}" pbc="{} {} {}"'.format(
-                cell[0][0],
-                cell[0][1],
-                cell[0][2],
-                cell[1][0],
-                cell[1][1],
-                cell[1][2],
-                cell[2][0],
-                cell[2][1],
-                cell[2][2],
-                self.pbc[0],
-                self.pbc[1],
-                self.pbc[2],
-            )
+            f'Lattice="{cell[0][0]} {cell[0][1]} {cell[0][2]} {cell[1][0]} {cell[1][1]} {cell[1][2]} '
+            f'{cell[2][0]} {cell[2][1]} {cell[2][2]}" '
+            f'pbc="{self.pbc[0]} {self.pbc[1]} {self.pbc[2]}"'
         )
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
             return_list.append(
-                '{:6s} {:18.10f} {:18.10f} {:18.10f}'.format(
-                    self.get_kind(site.kind_name).symbols[0], site.position[0], site.position[1], site.position[2]
-                )
+                f'{self.get_kind(site.kind_name).symbols[0]:6s} '
+                f'{site.position[0]:18.10f} {site.position[1]:18.10f} {site.position[2]:18.10f}'
             )
 
         return_string = '\n'.join(return_list)
@@ -1265,7 +1258,8 @@ class StructureData(Data):
             sum_comp = sum(symbols_list.count(symbol) for symbol in symbols_set)
             return {symbol: symbols_list.count(symbol) / sum_comp for symbol in symbols_set}
 
-        raise ValueError(f'mode `{mode}` is invalid, choose from `full`, `reduced` or `fractional`.')
+        msg = f'mode `{mode}` is invalid, choose from `full`, `reduced` or `fractional`.'
+        raise ValueError(msg)
 
     def get_ase(self):
         """Get the ASE object.
@@ -1346,7 +1340,8 @@ class StructureData(Data):
         new_kind = Kind(kind=kind)  # So we make a copy
 
         if kind.name in [k.name for k in self.kinds]:
-            raise ValueError(f'A kind with the same name ({kind.name}) already exists.')
+            msg = f'A kind with the same name ({kind.name}) already exists.'
+            raise ValueError(msg)
 
         # If here, no exceptions have been raised, so I add the site.
         self.base.attributes.all.setdefault('kinds', []).append(new_kind.get_raw())
@@ -1371,9 +1366,8 @@ class StructureData(Data):
         new_site = Site(site=site)  # So we make a copy
 
         if site.kind_name not in [kind.name for kind in self.kinds]:
-            raise ValueError(
-                f"No kind with name '{site.kind_name}', available kinds are: {[kind.name for kind in self.kinds]}"
-            )
+            msg = f"No kind with name '{site.kind_name}', available kinds are: {[kind.name for kind in self.kinds]}"
+            raise ValueError(msg)
 
         # If here, no exceptions have been raised, so I add the site.
         self.base.attributes.all.setdefault('sites', []).append(new_site.get_raw())
@@ -1469,12 +1463,13 @@ class StructureData(Data):
                 if is_the_same:
                     kind = old_kind
                 else:
-                    raise ValueError(
+                    msg = (
                         'You are explicitly setting the name '
-                        "of the kind to '{}', that already "
+                        f"of the kind to '{kind.name}', that already "
                         'exists, but the two kinds are different!'
-                        ' (first difference: {})'.format(kind.name, firstdiff)
+                        f' (first difference: {firstdiff})'
                     )
+                    raise ValueError(msg)
 
         site = Site(kind_name=kind.name, position=position)
         self.append_site(site)
@@ -1544,7 +1539,8 @@ class StructureData(Data):
         try:
             return kinds_dict[kind_name]
         except KeyError:
-            raise ValueError(f"Kind name '{kind_name}' unknown")
+            msg = f"Kind name '{kind_name}' unknown"
+            raise ValueError(msg)
 
     def get_kind_names(self):
         """Return a list of kind names (in the same order of the ``self.kinds``
@@ -1558,7 +1554,7 @@ class StructureData(Data):
         return [k.name for k in self.kinds]
 
     @property
-    def cell(self) -> t.List[t.List[float]]:
+    def cell(self) -> list[list[float]]:
         """Returns the cell shape.
 
         :return: a 3x3 list of lists.
@@ -1628,10 +1624,12 @@ class StructureData(Data):
                 try:
                     this_pos = [float(j) for j in new_positions[i]]
                 except ValueError:
-                    raise ValueError(f'Expecting a list of floats. Found instead {new_positions[i]}')
+                    msg = f'Expecting a list of floats. Found instead {new_positions[i]}'
+                    raise ValueError(msg)
 
                 if len(this_pos) != 3:
-                    raise ValueError(f'Expecting a list of lists of length 3. found instead {len(this_pos)}')
+                    msg = f'Expecting a list of lists of length 3. found instead {len(this_pos)}'
+                    raise ValueError(msg)
 
                 # now append this Site to the new_site list.
                 new_site = Site(site=self.sites[i])  # So we make a copy
@@ -1784,15 +1782,15 @@ class StructureData(Data):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` node.
         """
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.tools.data import structure as structure_tools
-
-        from .dict import Dict
 
         param = Dict(kwargs)
         try:
             conv_f = getattr(structure_tools, f'_get_cif_{converter}_inline')
         except AttributeError:
-            raise ValueError(f"No such converter '{converter}' available")
+            msg = f"No such converter '{converter}' available"
+            raise ValueError(msg)
         ret_dict = conv_f(struct=self, parameters=param, metadata={'store_provenance': store})
         return ret_dict['cif']
 
@@ -1899,7 +1897,8 @@ class StructureData(Data):
                 additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}
 
         if kwargs:
-            raise ValueError(f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}')
+            msg = f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}'
+            raise ValueError(msg)
 
         positions = [list(x.position) for x in self.sites]
 
@@ -1923,7 +1922,8 @@ class StructureData(Data):
         from pymatgen.core.structure import Molecule
 
         if kwargs:
-            raise ValueError(f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}')
+            msg = f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}'
+            raise ValueError(msg)
 
         species = []
         for site in self.sites:
@@ -2008,11 +2008,12 @@ class Kind:
                 self.name = oldkind.name
                 self._internal_tag = oldkind._internal_tag
             except AttributeError:
-                raise ValueError(
+                msg = (
                     'Error using the Kind object. Are you sure '
                     'it is a Kind object? [Introspection says it is '
-                    '{}]'.format(str(type(oldkind)))
+                    f'{type(oldkind)!s}]'
                 )
+                raise ValueError(msg)
 
         elif 'ase' in kwargs:
             aseatom = kwargs['ase']
@@ -2029,11 +2030,12 @@ class Kind:
                 else:
                     self.reset_mass()
             except AttributeError:
-                raise ValueError(
+                msg = (
                     'Error using the aseatom object. Are you sure '
                     'it is a ase.atom.Atom object? [Introspection says it is '
-                    '{}]'.format(str(type(aseatom)))
+                    f'{type(aseatom)!s}]'
                 )
+                raise ValueError(msg)
             if aseatom.tag != 0:
                 self.set_automatic_kind_name(tag=aseatom.tag)
                 self._internal_tag = aseatom.tag
@@ -2057,7 +2059,8 @@ class Kind:
             except KeyError:
                 self.set_automatic_kind_name()
             if kwargs:
-                raise ValueError(f'Unrecognized parameters passed to Kind constructor: {kwargs.keys()}')
+                msg = f'Unrecognized parameters passed to Kind constructor: {kwargs.keys()}'
+                raise ValueError(msg)
 
     def get_raw(self):
         """Return the raw version of the site, mapped to a suitable dictionary.
@@ -2224,7 +2227,8 @@ class Kind:
         if len(self._symbols) == 1:
             return self._symbols[0]
 
-        raise ValueError(f'This kind has more than one symbol (it is an alloy): {self._symbols}')
+        msg = f'This kind has more than one symbol (it is an alloy): {self._symbols}'
+        raise ValueError(msg)
 
     @property
     def symbols(self):
@@ -2327,7 +2331,8 @@ class Site:
                 self.kind_name = raw['kind_name']
                 self.position = raw['position']
             except KeyError as exc:
-                raise ValueError(f'Invalid raw object, it does not contain any key {exc.args[0]}')
+                msg = f'Invalid raw object, it does not contain any key {exc.args[0]}'
+                raise ValueError(msg)
             except TypeError:
                 raise ValueError('Invalid raw object, it is not a dictionary')
 
@@ -2336,9 +2341,11 @@ class Site:
                 self.kind_name = kwargs.pop('kind_name')
                 self.position = kwargs.pop('position')
             except KeyError as exc:
-                raise ValueError(f'You need to specify {exc.args[0]}')
+                msg = f'You need to specify {exc.args[0]}'
+                raise ValueError(msg)
             if kwargs:
-                raise ValueError(f'Unrecognized parameters: {kwargs.keys}')
+                msg = f'Unrecognized parameters: {kwargs.keys}'
+                raise ValueError(msg)
 
     def get_raw(self):
         """Return the raw version of the site, mapped to a suitable dictionary.
@@ -2411,7 +2418,8 @@ class Site:
                 found = True
                 break
         if not found:
-            raise ValueError(f"No kind '{self.kind_name}' has been found in the list of kinds")
+            msg = f"No kind '{self.kind_name}' has been found in the list of kinds"
+            raise ValueError(msg)
 
         if kind.is_alloy or kind.has_vacancies:
             raise ValueError('Cannot convert to ASE if the kind represents an alloy or it has vacancies.')
@@ -2483,7 +2491,8 @@ def _get_dimensionality(pbc, cell):
     retdict['label'] = StructureData._dimensionality_label[dim]
 
     if dim not in (0, 1, 2, 3):
-        raise ValueError(f'Dimensionality {dim} must be one of 0, 1, 2, 3')
+        msg = f'Dimensionality {dim} must be one of 0, 1, 2, 3'
+        raise ValueError(msg)
 
     if dim == 0:
         # We have no concept of 0d volume. Let's return a value of 0 for a consistent output dictionary
@@ -2509,6 +2518,7 @@ def _validate_dimensionality(pbc, cell):
 
     # finite-d structures should have a cell with finite volume
     if dim['value'] == 0:
-        raise ValueError(f'Structure has periodicity {pbc} but {dim["dim"]}-d volume 0.')
+        msg = f'Structure has periodicity {pbc} but {dim["dim"]}-d volume 0.'
+        raise ValueError(msg)
 
     return

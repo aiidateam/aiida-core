@@ -31,7 +31,8 @@ def calc_info(node: orm.ProcessNode, call_link_label: bool = False) -> str:
     from aiida.orm import ProcessNode, WorkChainNode
 
     if not isinstance(node, ProcessNode):
-        raise TypeError(f'Unknown type: {type(node)}')
+        msg = f'Unknown type: {type(node)}'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
     process_label = node.process_label
     process_state = 'None' if node.process_state is None else node.process_state.value.capitalize()

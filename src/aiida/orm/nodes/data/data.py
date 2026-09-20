@@ -10,15 +10,12 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.orm.entities import from_backend_entity
+from aiida.orm.nodes.node import Node
 from aiida.orm.pydantic import OrmMetadataField
-
-from ..node import Node
 
 __all__ = ('Data',)
 
@@ -42,14 +39,14 @@ class Data(Node):
     # By default, if not found here,
     # The fileformat string is assumed to match the extension.
     # Example: {'dat': 'dat_multicolumn'}
-    _export_format_replacements: Dict[str, str] = {}
+    _export_format_replacements: dict[str, str] = {}
 
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
     class AttributesModel(Node.AttributesModel):
-        source: Optional[dict] = OrmMetadataField(
+        source: dict | None = OrmMetadataField(
             None,
             description='Source of the data',
         )
@@ -86,7 +83,7 @@ class Data(Node):
         return clone
 
     @property
-    def source(self) -> Optional[dict]:
+    def source(self) -> dict | None:
         """Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.
@@ -116,7 +113,8 @@ class Data(Node):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError(f'Unknown source parameters: {", ".join(unknown_attrs)}')
+            msg = f'Unknown source parameters: {", ".join(unknown_attrs)}'
+            raise KeyError(msg)
 
         self.base.attributes.set('source', source)
 
@@ -169,11 +167,11 @@ class Data(Node):
                     )
                 )
             else:
-                raise ValueError(
-                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
-                        fileformat, self.__class__.__name__
-                    )
+                msg = (
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
+                raise ValueError(msg)
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
         assert isinstance(string, bytes), 'export function `{}` did not return the content as a byte string.'
@@ -198,7 +196,8 @@ class Data(Node):
             raise ValueError('Path not recognized')
 
         if os.path.exists(path) and not overwrite:
-            raise OSError(f'A file was already found at {path}')
+            msg = f'A file was already found at {path}'
+            raise OSError(msg)
 
         if fileformat is None:
             extension = os.path.splitext(path)[1]
@@ -219,10 +218,12 @@ class Data(Node):
         if not overwrite:
             for fname in extra_files:
                 if os.path.exists(fname):
-                    raise OSError(f'The file {fname} already exists, stopping.')
+                    msg = f'The file {fname} already exists, stopping.'
+                    raise OSError(msg)
 
             if os.path.exists(path):
-                raise OSError(f'The file {path} already exists, stopping.')
+                msg = f'The file {path} already exists, stopping.'
+                raise OSError(msg)
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
@@ -277,11 +278,11 @@ class Data(Node):
                     )
                 )
             else:
-                raise ValueError(
-                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
-                        fileformat, self.__class__.__name__
-                    )
+                msg = (
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
+                raise ValueError(msg)
 
         # func is bound to self by getattr in _get_importers()
         func(inputstring, **kwargs)
@@ -295,7 +296,7 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
+        with open(fname, encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
             self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):
@@ -334,11 +335,11 @@ class Data(Node):
                     )
                 )
             else:
-                raise ValueError(
-                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
-                        object_format, self.__class__.__name__
-                    )
+                msg = (
+                    f'The format {object_format} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
+                raise ValueError(msg)
 
         return func(*args)
 
@@ -354,13 +355,3 @@ class Data(Node):
         valid_format_names = [i[len(exporter_prefix) :] for i in method_names if i.startswith(exporter_prefix)]
         valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats
-
-    @classmethod
-    def _get_patched_node_type_field(cls):
-        node_type_field = super()._get_patched_node_type_field()
-        if cls.__name__ == 'Data':
-            # `Data` is not to be used directly! It is only ever used when a subclass
-            # from an uninstalled plugin regresses to `Data`, in which case, the node
-            # type should not be validated against a `Literal`, only as a `str`.
-            return (str, node_type_field[1])
-        return node_type_field

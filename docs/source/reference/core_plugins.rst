@@ -23,20 +23,6 @@ This page lists common AiiDA plugins which are not specific to any research doma
 
          Go to GitHub
 
-   .. grid-item-card:: AiiDA shell
-      :text-align: center
-      :shadow: md
-
-      Plugin that makes running shell commands easy.
-
-      +++++++++++++++++++++++++++++++++++++++++++++
-
-      .. button-link:: https://github.com/sphuber/aiida-shell
-         :color: primary
-         :outline:
-
-         Go to GitHub
-
    .. grid-item-card:: AiiDA submission controller
       :text-align: center
       :shadow: md

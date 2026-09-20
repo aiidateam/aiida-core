@@ -12,8 +12,7 @@
 def setup(app):
     """Setup function to add the extension classes / nodes to Sphinx."""
     import aiida
-
-    from . import calcjob, process, workchain
+    from aiida.sphinxext import calcjob, process, workchain
 
     process.setup_extension(app)
     workchain.setup_extension(app)

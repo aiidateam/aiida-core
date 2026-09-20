@@ -641,3 +641,10 @@ def test_fail_on_missing_with_missing_file(aiida_localhost, tmp_path, stash_mode
     else:
         assert node.is_failed
         assert node.exit_status == 160  # ERROR_STASHING_FAILED
+        logs = orm.Log.collection.get_logs_for(node)
+        assert any(
+            log.levelname == 'ERROR'
+            and f'stashing calculation<{node.pk}> failed' in log.message
+            and 'missing.txt' in log.message
+            for log in logs
+        )

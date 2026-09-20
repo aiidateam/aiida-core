@@ -13,8 +13,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import column, select, table, text
 
 from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
-
-from .integrity import infer_calculation_entry_point, write_database_integrity_violation
+from aiida.storage.psql_dos.migrations.utils.integrity import (
+    infer_calculation_entry_point,
+    write_database_integrity_violation,
+)
 
 SELECT_CALCULATIONS_WITH_OUTGOING_CALL = """
     SELECT node_in.uuid, node_out.uuid, link.type, link.label

@@ -10,11 +10,20 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
 
 from aiida.orm import RemoteData
+
+# ``RemoteData._get_size_on_disk_du`` invokes ``du --block-size=1``, but ``--block-size`` is a GNU coreutils extension
+# that BSD ``du``, as shipped with macOS, does not understand. The command therefore exits non-zero there and the
+# implementation falls back to ``stat``, so the expected disk-usage values can never be met.
+requires_gnu_du = pytest.mark.skipif(
+    sys.platform == 'darwin',
+    reason='`du --block-size=1` is a GNU coreutils option, unavailable on macOS',
+)
 
 
 @pytest.fixture
@@ -29,7 +38,8 @@ def remote_data_factory(tmp_path, aiida_localhost, aiida_computer_ssh):
             # (or repeated calls within the same session) cannot collide on ``Computer.label``.
             computer = aiida_computer_ssh()
         else:
-            raise ValueError(f'Unknown mode: {mode}')
+            msg = f'Unknown mode: {mode}'
+            raise ValueError(msg)
 
         node = RemoteData(computer=computer)
         node.set_remote_path(str(tmp_path))
@@ -57,8 +67,8 @@ def test_clean(remote_data_factory, mode):
 @pytest.mark.parametrize(
     'setup, results',
     (
-        (('du', False), ('8.00 KB', 'du')),
-        (('du', True), (8192, 'du')),
+        pytest.param(('du', False), ('8.00 KB', 'du'), marks=requires_gnu_du),
+        pytest.param(('du', True), (8192, 'du'), marks=requires_gnu_du),
         (('stat', False), ('12.00 B', 'stat')),
         (('stat', True), (12, 'stat')),
     ),
@@ -83,6 +93,7 @@ def test_get_size_on_disk_params(remote_data_factory, mode, setup, results):
     ),
     ids=['1-byte', '10-bytes', '1000-bytes', '1e6-bytes'],
 )
+@requires_gnu_du
 def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
     """Test the different implementations to obtain the size of a ``RemoteData`` on disk."""
 
@@ -112,6 +123,7 @@ def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
         (int(1e6), 'subdir1', {'du': 2015232, 'stat': 2004096, 'human': '1.92 MB'}),
     ),
 )
+@requires_gnu_du
 def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
     # TODO: Use create file hierarchy fixture from test_execmanager?
     sub_dir1 = tmp_path / 'subdir1'
@@ -153,15 +165,16 @@ def test_get_size_on_disk_excs(remote_data_factory, mode):
     remote_data = remote_data_factory(mode=mode)
 
     # Path/file non-existent
-    with pytest.raises(FileNotFoundError, match='.*does not exist.*'):
+    with pytest.raises(FileNotFoundError, match=r'.*does not exist'):
         remote_data.get_size_on_disk(relpath=Path('non-existent'))
 
     # Non-valid method
-    with pytest.raises(ValueError, match='.*is not an valid input. Please choose either.*.'):
+    with pytest.raises(ValueError, match=r'.*is not an valid input. Please choose either'):
         remote_data.get_size_on_disk(method='fake-du')
 
 
 @pytest.mark.parametrize('mode', ('local', 'ssh'))
+@requires_gnu_du
 def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_du` private method."""
     # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.
@@ -181,7 +194,7 @@ def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
         raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.')
 
     monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
-    with pytest.raises(NotImplementedError, match='`exec_command_wait` not implemented.*'):
+    with pytest.raises(NotImplementedError, match='`exec_command_wait` not implemented'):
         remote_data._get_size_on_disk_du(full_path, transport)
 
     # Monkeypatch transport exec_command_wait command to simulate `du` failure
@@ -189,7 +202,7 @@ def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
         return (1, '', 'Error executing `du` command')
 
     monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
-    with pytest.raises(RuntimeError, match='Error executing `du`.*'):
+    with pytest.raises(RuntimeError, match='Error executing `du`'):
         remote_data._get_size_on_disk_du(full_path, transport)
 
 
@@ -208,5 +221,5 @@ def test_get_size_on_disk_stat(remote_data_factory, mode):
         assert size_on_disk == 12
 
         # Raises OSError for non-existent directory
-        with pytest.raises(OSError, match='The required remote folder.*'):
+        with pytest.raises(OSError, match='The required remote folder'):
             remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path / 'non-existent')

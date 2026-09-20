@@ -45,7 +45,8 @@ def _load_pyproject():
         with open(ROOT / 'pyproject.toml', 'rb') as handle:
             return tomli.load(handle)
     except tomli.TOMLDecodeError as error:
-        raise DependencySpecificationError(f"Error while parsing 'pyproject.toml' file: {error}")
+        msg = f"Error while parsing 'pyproject.toml' file: {error}"
+        raise DependencySpecificationError(msg)
     except FileNotFoundError:
         raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
 
@@ -56,7 +57,8 @@ def _load_environment_yml():
         with open(ROOT / 'environment.yml', encoding='utf8') as file:
             return yaml.load(file, Loader=yaml.SafeLoader)
     except yaml.error.YAMLError as error:
-        raise DependencySpecificationError(f"Error while parsing 'environment.yml':\n{error}")
+        msg = f"Error while parsing 'environment.yml':\n{error}"
+        raise DependencySpecificationError(msg)
     except FileNotFoundError as error:
         raise DependencySpecificationError(str(error))
 
@@ -169,12 +171,14 @@ def validate_environment_yml():
             'defaults',
         ], "channels should be 'conda-forge', 'defaults'."
     except AssertionError as error:
-        raise DependencySpecificationError(f"Error in 'environment.yml': {error}")
+        msg = f"Error in 'environment.yml': {error}"
+        raise DependencySpecificationError(msg)
 
     try:
         conda_dependencies = {Requirement(d) for d in environment_yml['dependencies']}
     except TypeError as error:
-        raise DependencySpecificationError(f"Error while parsing requirements from 'environment_yml': {error}")
+        msg = f"Error while parsing requirements from 'environment_yml': {error}"
+        raise DependencySpecificationError(msg)
 
     # Attempt to find the specification of Python among the 'environment.yml' dependencies.
     for dependency in conda_dependencies:
@@ -189,9 +193,8 @@ def validate_environment_yml():
     for spec in conda_python_dependency.specifier:
         expected_classifier = 'Programming Language :: Python :: ' + spec.version
         if expected_classifier not in pyproject['project']['classifiers']:
-            raise DependencySpecificationError(
-                f"Trove classifier '{expected_classifier}' missing from 'pyproject.toml'."
-            )
+            msg = f"Trove classifier '{expected_classifier}' missing from 'pyproject.toml'."
+            raise DependencySpecificationError(msg)
 
         # The Python version should be specified as supported in 'pyproject.toml'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
@@ -202,7 +205,8 @@ def validate_environment_yml():
 
         break
     else:
-        raise DependencySpecificationError(f"Missing specifier: '{conda_python_dependency}'.")
+        msg = f"Missing specifier: '{conda_python_dependency}'."
+        raise DependencySpecificationError(msg)
 
     # Check that all requirements specified in the pyproject.toml file are found in the
     # conda environment specification.
@@ -213,13 +217,14 @@ def validate_environment_yml():
         try:
             conda_dependencies.remove(_setuptools_to_conda(req))
         except KeyError:
-            raise DependencySpecificationError(f"Requirement '{req}' not specified in 'environment.yml'.")
+            msg = f"Requirement '{req}' not specified in 'environment.yml'."
+            raise DependencySpecificationError(msg)
 
     # The only dependency left should be the one for Python itself, which is not part of
     # the install_requirements for setuptools.
     if conda_dependencies:
         raise DependencySpecificationError(
-            "The 'environment.yml' file contains dependencies that are missing " "in 'pyproject.toml':\n- {}".format(
+            "The 'environment.yml' file contains dependencies that are missing in 'pyproject.toml':\n- {}".format(
                 '\n- '.join(map(str, conda_dependencies))
             )
         )

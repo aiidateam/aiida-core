@@ -183,8 +183,8 @@ In many cases it is convenient for work chains to expose the inputs of the subpr
 For the simple example presented in the previous section, simply copy-pasting the input and output port definitions of the subprocess ``MultiplyAddWorkChain`` was not too troublesome.
 However, this quickly becomes tedious and error-prone once you start to wrap processes with quite a few more inputs.
 
-To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs` methods.
-Calling :meth:`~plumpy.ProcessSpec.expose_inputs` for a particular ``Process`` class, will automatically copy the inputs of the class into the inputs namespace of the process specification:
+To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_inputs` and :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_outputs` methods.
+Calling :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_inputs` for a particular ``Process`` class, will automatically copy the inputs of the class into the inputs namespace of the process specification:
 
 .. code-block:: python
 
@@ -260,7 +260,7 @@ After running the ``MultiplyAddIsEvenWorkChain``, you can see a hierarchical ove
 
 Note that this command also recursively shows the processes called by the subprocesses of the ``MultiplyAddIsEvenWorkChain`` work chain.
 
-As mentioned earlier, you can also expose the outputs of the ``MultiplyAddWorkChain`` using the :meth:`~plumpy.ProcessSpec.expose_outputs` method.
+As mentioned earlier, you can also expose the outputs of the ``MultiplyAddWorkChain`` using the :meth:`~aiida.engine.processes.process_spec.ProcessSpec.expose_outputs` method.
 Say we want to add the ``result`` of the ``MultiplyAddWorkChain`` as one of the outputs of the extended work chain:
 
 .. code-block:: python

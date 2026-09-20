@@ -8,15 +8,14 @@
 ###########################################################################
 """The file format implementation"""
 
+import typing as t
 from pathlib import Path
-from typing import Any, Literal, Union, overload
 
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from aiida.storage.sqlite_zip.utils import read_version
 from aiida.tools.archive.abstract import ArchiveFormatAbstract
-
-from .reader import ArchiveReaderSqlZip
-from .writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
+from aiida.tools.archive.implementations.sqlite_zip.reader import ArchiveReaderSqlZip
+from aiida.tools.archive.implementations.sqlite_zip.writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
 
 
 class ArchiveFormatSqlZip(ArchiveFormatAbstract):
@@ -38,31 +37,31 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
     def latest_version(self) -> str:
         return get_schema_version_head()
 
-    def read_version(self, path: Union[str, Path]) -> str:
+    def read_version(self, path: str | Path) -> str:
         return read_version(path)
 
     @property
     def key_format(self) -> str:
         return 'sha256'
 
-    @overload
+    @t.overload
     def open(
-        self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['r'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveReaderSqlZip: ...
 
-    @overload
+    @t.overload
     def open(
-        self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['x', 'w'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveWriterSqlZip: ...
 
-    @overload
+    @t.overload
     def open(
-        self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['a'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveAppenderSqlZip: ...
 
     def open(
-        self, path: Union[str, Path], mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
-    ) -> Union[ArchiveReaderSqlZip, ArchiveWriterSqlZip, ArchiveAppenderSqlZip]:
+        self, path: str | Path, mode: t.Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: t.Any
+    ) -> ArchiveReaderSqlZip | ArchiveWriterSqlZip | ArchiveAppenderSqlZip:
         if mode == 'r':
             return ArchiveReaderSqlZip(path, **kwargs)
         if mode == 'a':
@@ -71,8 +70,8 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
 
     def migrate(
         self,
-        inpath: Union[str, Path],
-        outpath: Union[str, Path],
+        inpath: str | Path,
+        outpath: str | Path,
         version: str,
         *,
         force: bool = False,

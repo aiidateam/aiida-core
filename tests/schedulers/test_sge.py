@@ -11,8 +11,7 @@
 import logging
 import unittest
 
-from aiida.common.datastructures import CodeRunMode
-from aiida.schedulers.datastructures import JobState
+from aiida.common.datastructures import CodeRunMode, JobState
 from aiida.schedulers.plugins.sge import SgeScheduler
 from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError
 
@@ -300,7 +299,7 @@ class TestCommand(unittest.TestCase):
 
     def test_submit_script(self):
         """Test the submit script."""
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import JobTemplate
 
         sge = SgeScheduler()
 
@@ -336,7 +335,7 @@ class TestCommand(unittest.TestCase):
 
     def test_submit_script_rerunnable(self):
         """Test the `rerunnable` option of the submit script."""
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import JobTemplate
 
         sge = SgeScheduler()
 
@@ -367,7 +366,8 @@ class TestCommand(unittest.TestCase):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            raise ValueError(f'Unable to parse time string {string}, the message was {exc}')
+            msg = f'Unable to parse time string {string}, the message was {exc}'
+            raise ValueError(msg)
 
         # I convert from a time_struct to a datetime object going through
         # the seconds since epoch, as suggested on stackoverflow:
@@ -376,7 +376,7 @@ class TestCommand(unittest.TestCase):
 
     def test_job_name_cleaning(self):
         """Test that invalid characters are cleaned from job name."""
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import JobTemplate
 
         scheduler = SgeScheduler()
 

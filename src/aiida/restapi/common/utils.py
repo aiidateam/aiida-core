@@ -109,7 +109,8 @@ class Utils:
         if path.startswith(self.prefix):
             return path[len(self.prefix) :]
 
-        raise ValidationError(f'path has to start with {self.prefix}')
+        msg = f'path has to start with {self.prefix}'
+        raise ValidationError(msg)
 
     @staticmethod
     def split_path(path):
@@ -231,7 +232,7 @@ class Utils:
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
             raise RestValidationError(
-                'perpage key requires that a page is ' 'requested (i.e. the path must contain ' '/page/)'
+                'perpage key requires that a page is requested (i.e. the path must contain /page/)'
             )
         # 4. No querystring if query type = projectable_properties'
         if query_type in ('projectable_properties',) and is_querystring_defined:
@@ -277,15 +278,14 @@ class Utils:
         if total_count == 0:
             last_page = 1
         else:
-            last_page = int(ceil(total_count / perpage))
+            last_page = ceil(total_count / perpage)
 
         ## Check validity of required page and calculate limit, offset,
         # previous,
         #  and next page
         if page > last_page or page < 1:
-            raise RestInputValidationError(
-                f'Non existent page requested. The page range is [{first_page} : {last_page}]'
-            )
+            msg = f'Non existent page requested. The page range is [{first_page} : {last_page}]'
+            raise RestInputValidationError(msg)
 
         limit = perpage
         offset = (page - 1) * perpage
@@ -351,7 +351,7 @@ class Utils:
 
         def make_rel_url(rel, page):
             new_path_elems = path_elems + ['page', str(page)]
-            return f"<{'/'.join(new_path_elems)}{question_mark}{query_string}>; rel={rel}, "
+            return f'<{"/".join(new_path_elems)}{question_mark}{query_string}>; rel={rel}, '
 
         ## Setting non-mandatory parameters
         # set links to related pages

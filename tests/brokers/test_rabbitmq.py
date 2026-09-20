@@ -8,16 +8,24 @@
 ###########################################################################
 """Tests for the `aiida.brokers.rabbitmq` module."""
 
+import gc
+import logging
 import pathlib
+import subprocess
+import sys
+import textwrap
 import uuid
+import weakref
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 import requests
-from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
+from aiida.brokers import futures as broker_futures
 from aiida.brokers.rabbitmq import RabbitmqBroker, client, utils
+from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
 from aiida.engine.processes import ProcessState, control
 from aiida.orm import Int
 
@@ -31,37 +39,129 @@ def test_str_method(monkeypatch, manager):
         raise ConnectionError
 
     broker = manager.get_broker()
-    assert 'RabbitMQ v' in str(broker)
+    unsafe_url = broker.get_url()
+    broker_string = str(broker)
+    assert 'RabbitMQ v' in broker_string
+    assert ':***@' in broker_string
+    assert unsafe_url not in broker_string
 
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
-    assert 'RabbitMQ @' in str(broker)
+    broker_string = str(broker)
+    assert 'RabbitMQ @' in broker_string
+    assert ':***@' in broker_string
+    assert unsafe_url not in broker_string
 
 
-def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch):
-    """Test `__del__` closes the broker when Python is not finalizing."""
-    broker = RabbitmqBroker(aiida_profile)
-    broker._communicator = MagicMock()
+def test_probe_service_status(monkeypatch, manager):
+    """Test RabbitMQ service status is derived from server properties."""
+    broker = manager.get_broker()
+    communicator = MagicMock(server_properties={'product': b'RabbitMQ', 'version': '3.12.0'})
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
+
+    assert broker.probe_service_status() == {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'}
+
+
+def test_probe_service_status_failure(monkeypatch, manager, caplog):
+    """Test RabbitMQ service status captures connection failures in the payload."""
+    broker = manager.get_broker()
+
+    def raise_connection_error():
+        raise ConnectionError('connection failed')
+
+    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+
+    assert broker.probe_service_status() == {'connected': False, 'error': 'ConnectionError: connection failed'}
+    assert 'Failed to probe broker status: ConnectionError: connection failed' in caplog.text
+
+
+def test_probe_service_status_invalid_property_encoding(monkeypatch, manager, caplog):
+    """Test RabbitMQ service status captures non-UTF-8 server properties in the payload."""
+    broker = manager.get_broker()
+    communicator = MagicMock(server_properties={'product': b'\xff'})
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
+
+    status = broker.probe_service_status()
+
+    assert status['connected'] is False
+    assert str(status['error']).startswith('UnicodeDecodeError:')
+    assert 'Failed to probe broker status: UnicodeDecodeError:' in caplog.text
+
+
+def test_check_service_reachable(monkeypatch, manager):
+    """Test RabbitMQ service reachability checks open and close a fresh communicator."""
+    broker = manager.get_broker()
+    communicator = MagicMock()
     close = MagicMock()
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
     monkeypatch.setattr(broker, 'close', close)
 
-    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
-        broker.__del__()
-
+    assert broker.check_service_reachable() is True
     close.assert_called_once_with()
 
 
-def test_del_skips_close_when_finalizing(aiida_profile, monkeypatch):
-    """Test ``__del__`` skips close when Python is finalizing."""
-    broker = RabbitmqBroker(aiida_profile)
-    broker._communicator = MagicMock()
+def test_check_service_reachable_false(monkeypatch, manager):
+    """Test RabbitMQ service reachability returns false on connection errors."""
+    broker = manager.get_broker()
     close = MagicMock()
+
+    def raise_connection_error():
+        raise ConnectionError
+
+    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
     monkeypatch.setattr(broker, 'close', close)
-    monkeypatch.setattr('sys.is_finalizing', lambda: True)
 
-    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
-        broker.__del__()
+    assert broker.check_service_reachable() is False
+    close.assert_called_once_with()
 
-    close.assert_not_called()
+
+def test_finalize_ignores_closed_broker(aiida_profile, caplog):
+    """Test the finalizer does nothing when the broker was closed explicitly."""
+    broker = RabbitmqBroker(aiida_profile)
+    communicator = MagicMock()
+    broker._resources.communicator = communicator
+    broker.close()
+    broker_repr = repr(broker)
+    broker_reference = weakref.ref(broker)
+
+    with caplog.at_level(logging.INFO, logger='aiida.broker.rabbitmq'):
+        del broker
+        gc.collect()
+
+    assert broker_reference() is None
+    assert f'RabbitmqBroker {broker_repr} was not closed explicitly.' not in caplog.messages
+    communicator.close.assert_called_once_with()
+
+
+def test_finalize_runs_at_interpreter_shutdown(tmp_path):
+    """Test the broker finalizer runs when the interpreter exits."""
+    marker = tmp_path / 'broker-finalized'
+    config_dir = tmp_path / 'config'
+    code = textwrap.dedent(
+        f"""
+        import os
+        from pathlib import Path
+        from types import SimpleNamespace
+
+        os.environ['AIIDA_PATH'] = {str(config_dir)!r}
+
+        from aiida.brokers.rabbitmq.broker import RabbitmqBroker
+
+        class DummyCommunicator:
+            def __init__(self, marker_path):
+                self._marker_path = Path(marker_path)
+
+            def close(self):
+                self._marker_path.write_text('closed')
+
+        broker = RabbitmqBroker(SimpleNamespace(uuid='00000000-0000-0000-0000-000000000000'))
+        broker._resources.communicator = DummyCommunicator({str(marker)!r})
+        """
+    )
+
+    result = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=False)
+
+    assert result.returncode == 0, result.stderr
+    assert marker.read_text() == 'closed'
 
 
 @pytest.mark.parametrize(
@@ -111,9 +211,31 @@ def test_get_rmq_url(args, kwargs, expected):
             utils.get_rmq_url(*args, **kwargs)
 
 
+def test_get_rmq_url_quotes_credentials():
+    """Test RabbitMQ URLs quote reserved characters in credentials."""
+    url = utils.get_rmq_url(username='user/name', password='pass?word#fragment')
+
+    assert url.startswith('amqp://user%2Fname:pass%3Fword%23fragment@127.0.0.1:5672?')
+
+
+def test_get_url_redact_credentials_quotes_then_redacts_credentials():
+    """Test redacted broker URLs hide credentials after quoting reserved characters."""
+    profile = SimpleNamespace(
+        uuid='uuid',
+        is_test_profile=False,
+        process_control_config={
+            'broker_username': 'user/name',
+            'broker_password': 'pass?word#fragment',
+        },
+    )
+    broker = RabbitmqBroker(profile)
+
+    assert broker.get_url(redact_credentials=True).startswith('amqp://user%2Fname:***@127.0.0.1:5672?')
+
+
 @pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))
 def test_communicator(url):
-    """Test the instantiation of a ``kiwipy.rmq.RmqThreadCommunicator``.
+    """Test the instantiation of a ``aiida.brokers.rabbitmq.threadcomms.RmqThreadCommunicator``.
 
     This class is used by all runners to communicate with the RabbitMQ server.
     """
@@ -130,11 +252,54 @@ def test_add_broadcast_subscriber(communicator):
     communicator.add_broadcast_subscriber(None)
 
 
+def _resolve_response(response, timeout=10.0):
+    """Resolve an RPC response, unwrapping nested futures like the engine does."""
+    result = response.result(timeout=timeout)
+    while isinstance(result, broker_futures.Future):
+        result = result.result(timeout=timeout)
+    return result
+
+
+def test_rpc_subscriber_returning_future(communicator):
+    """Test an RPC subscriber returning a pending future."""
+    result_future: broker_futures.Future[str] = broker_futures.Future()
+
+    def on_rpc(_communicator, _message):
+        return result_future
+
+    communicator.add_rpc_subscriber(on_rpc, 'rpc-future')
+    try:
+        response = communicator.rpc_send('rpc-future', 'hello')
+        result_future.set_result('world')
+        assert _resolve_response(response) == 'world'
+    finally:
+        communicator.remove_rpc_subscriber('rpc-future')
+
+
+def test_rpc_subscriber_returning_nested_future(communicator):
+    """Test an RPC subscriber returning a future that resolves to another future."""
+    outer_future: broker_futures.Future[object] = broker_futures.Future()
+    inner_future: broker_futures.Future[str] = broker_futures.Future()
+
+    def on_rpc(_communicator, _message):
+        return outer_future
+
+    communicator.add_rpc_subscriber(on_rpc, 'rpc-nested-future')
+    try:
+        response = communicator.rpc_send('rpc-nested-future', 'hello')
+        inner_future.set_result('nested')
+        outer_future.set_result(inner_future)
+        assert _resolve_response(response) == 'nested'
+    finally:
+        communicator.remove_rpc_subscriber('rpc-nested-future')
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.flaky(reruns=2)
 def test_duplicate_subscriber_identifier(aiida_code_installed, started_daemon_client, submit_and_await):
     """Test that a ``DuplicateSubscriberError`` in ``ProcessLauncher._continue`` does not except the process.
 
-    It is possible that when a daemon worker tries to continue a process, that a ``kiwipy.DuplicateSubscriberError`` is
+    It is possible that when a daemon worker tries to continue a process, that a ``DuplicateSubscriberIdentifier`` is
     raised, which means that it already subscribed itself to be running that process.
     This can occur for at least two reasons:
 

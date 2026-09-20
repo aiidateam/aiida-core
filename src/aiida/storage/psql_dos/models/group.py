@@ -15,8 +15,7 @@ from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-
-from .base import Base
+from aiida.storage.psql_dos.models.base import Base
 
 
 class DbGroupNode(Base):

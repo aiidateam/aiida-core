@@ -20,11 +20,10 @@ import typing as t
 from typing_extensions import override
 
 from aiida.common import AttributeDict, FeatureNotAvailable
+from aiida.common.datastructures import JobInfo, JobState, JobTemplate, MachineInfo, NodeNumberJobResource
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, MachineInfo, NodeNumberJobResource
-
-from .bash import BashCliScheduler
+from aiida.schedulers.plugins.bash import BashCliScheduler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -173,7 +172,7 @@ class PbsBaseClass(BashCliScheduler):
                 command.append(f'{escape_for_bash(jobs)}')  # type: ignore[unreachable]
             else:
                 try:
-                    command.append(f"{' '.join(escape_for_bash(j) for j in jobs)}")
+                    command.append(f'{" ".join(escape_for_bash(j) for j in jobs)}')
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or an iterable of strings")
 
@@ -271,8 +270,7 @@ class PbsBaseClass(BashCliScheduler):
             lines.append('#PBS -j oe')
             if job_tmpl.sched_error_path:
                 _LOGGER.info(
-                    'sched_join_files is True, but sched_error_path is set in '
-                    'PBSPro script; ignoring sched_error_path'
+                    'sched_join_files is True, but sched_error_path is set in PBSPro script; ignoring sched_error_path'
                 )
         elif job_tmpl.sched_error_path:
             lines.append(f'#PBS -e {job_tmpl.sched_error_path}')
@@ -363,7 +361,8 @@ class PbsBaseClass(BashCliScheduler):
         if filtered_stderr.strip():
             _LOGGER.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
             if retval != 0:
-                raise SchedulerError(f'Error during qstat parsing, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+                msg = f'Error during qstat parsing, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+                raise SchedulerError(msg)
 
         jobdata_raw: list[dict[str, t.Any]] = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
@@ -386,16 +385,21 @@ class PbsBaseClass(BashCliScheduler):
                     # _LOGGER.warning("I found some text before the "
                     # "first job: {}".format(l))
                 elif line.startswith(' '):
-                    # If it starts with a space, it is a new field
-                    jobdata_raw[-1]['lines'].append(line)
+                    # If it starts with a space, it is usually a new field. However, multi-line values such as
+                    # bash functions in `Variable_List` may contain space-indented lines without an equals sign.
+                    # Append as-is when this is the first line, to avoid indexing an empty list.
+                    if '=' in line or not jobdata_raw[-1]['lines']:
+                        jobdata_raw[-1]['lines'].append(line)
+                    else:
+                        jobdata_raw[-1]['lines'][-1] += f'\n{line}'
+                        jobdata_raw[-1]['warning_lines_idx'].append(len(jobdata_raw[-1]['lines']) - 1)
                 elif line.startswith('\t'):
                     # If a line starts with a TAB,
                     # I append to the previous string
                     # stripping the TAB
                     if not jobdata_raw[-1]['lines']:
-                        raise SchedulerParsingError(
-                            f'Line {line_num} is the first line of the job, but it starts with a TAB! ({line})'
-                        )
+                        msg = f'Line {line_num} is the first line of the job, but it starts with a TAB! ({line})'
+                        raise SchedulerParsingError(msg)
                     jobdata_raw[-1]['lines'][-1] += line[1:]
                 else:
                     # raise SchedulerParsingError(
@@ -505,10 +509,11 @@ class PbsBaseClass(BashCliScheduler):
                             node.job_index = int(jobidx_and_ncpu[0])
                             node.num_cpus = int(jobidx_and_ncpu[1])
                         else:
-                            raise ValueError(
+                            msg = (
                                 f'Wrong number of pieces: {len(jobidx_and_ncpu)} '
                                 f'instead of 1 or 2 in exec_hosts: {exec_hosts}'
                             )
+                            raise ValueError(msg)
                         exec_host_list.append(node)
                     this_job.allocated_machines = exec_host_list
                 except Exception as exc:
@@ -531,7 +536,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.ncpus' is not an integer "
-                    f"({raw_data['resource_list.ncpus']}) for job id {this_job.job_id}!"
+                    f'({raw_data["resource_list.ncpus"]}) for job id {this_job.job_id}!'
                 )
 
             try:
@@ -542,7 +547,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.mpiprocs' is not an integer "
-                    f"({raw_data['resource_list.mpiprocs']}) for job id {this_job.job_id}!"
+                    f'({raw_data["resource_list.mpiprocs"]}) for job id {this_job.job_id}!'
                 )
 
             try:
@@ -552,7 +557,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.nodect' is not an integer "
-                    f"{raw_data['resource_list.nodect']}) for job id {this_job.job_id}!"
+                    f'{raw_data["resource_list.nodect"]}) for job id {this_job.job_id}!'
                 )
 
             # Double check of redundant info
@@ -686,7 +691,8 @@ class PbsBaseClass(BashCliScheduler):
         """
         if retval != 0:
             _LOGGER.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}; stdout={stdout}; stderr={stderr}')
+            msg = f'Error during submission, retval={retval}; stdout={stdout}; stderr={stderr}'
+            raise SchedulerError(msg)
 
         if stderr.strip():
             _LOGGER.warning(f'in _parse_submit_output there was some text in stderr: {stderr}')

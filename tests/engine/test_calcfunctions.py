@@ -103,7 +103,7 @@ class TestCalcFunction:
         a different module, because we cannot define it in the same module (as the name clashes, on purpose) and we
         cannot inline the calcfunction in this test, since inlined process functions are not valid cache sources.
         """
-        from .calcfunctions import add_calcfunction
+        from tests.engine.calcfunctions import add_calcfunction
 
         result_original = self.test_calcfunction(self.default_int)
 

@@ -8,19 +8,19 @@
 ###########################################################################
 """Abstraction for an archive file format."""
 
+import typing as t
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
 
 from typing_extensions import Self
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import QueryBuilder
     from aiida.orm.entities import Entity, EntityTypes
     from aiida.orm.implementation import StorageBackend
     from aiida.tools.visualization.graph import Graph
 
-EntityType = TypeVar('EntityType', bound='Entity')
+EntityType = t.TypeVar('EntityType', bound='Entity')
 
 
 class ArchiveWriterAbstract(ABC):
@@ -28,12 +28,12 @@ class ArchiveWriterAbstract(ABC):
 
     def __init__(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         fmt: 'ArchiveFormatAbstract',
         *,
-        mode: Literal['x', 'w', 'a'] = 'x',
+        mode: t.Literal['x', 'w', 'a'] = 'x',
         compression: int = 6,
-        **kwargs: Any,
+        **kwargs: t.Any,
     ):
         """Initialise the writer.
 
@@ -43,10 +43,12 @@ class ArchiveWriterAbstract(ABC):
         """
         self._path = Path(path)
         if mode not in ('x', 'w', 'a'):
-            raise ValueError(f'mode not in x, w, a: {mode}')
+            msg = f'mode not in x, w, a: {mode}'
+            raise ValueError(msg)
         self._mode = mode
         if compression not in range(10):
-            raise ValueError(f'compression not in range 0-9: {compression}')
+            msg = f'compression not in range 0-9: {compression}'
+            raise ValueError(msg)
         self._compression = compression
         self._format = fmt
         self._kwargs = kwargs
@@ -57,7 +59,7 @@ class ArchiveWriterAbstract(ABC):
         return self._path
 
     @property
-    def mode(self) -> Literal['x', 'w', 'a']:
+    def mode(self) -> t.Literal['x', 'w', 'a']:
         """Return the mode of the archive."""
         return self._mode
 
@@ -74,14 +76,14 @@ class ArchiveWriterAbstract(ABC):
         """Finalise the archive."""
 
     @abstractmethod
-    def update_metadata(self, data: Dict[str, Any], overwrite: bool = False) -> None:
+    def update_metadata(self, data: dict[str, t.Any], overwrite: bool = False) -> None:
         """Add key, values to the top-level metadata."""
 
     @abstractmethod
     def bulk_insert(
         self,
         entity_type: 'EntityTypes',
-        rows: List[Dict[str, Any]],
+        rows: list[dict[str, t.Any]],
         allow_defaults: bool = False,
     ) -> None:
         """Add multiple rows of entity data to the archive.
@@ -96,7 +98,7 @@ class ArchiveWriterAbstract(ABC):
         """
 
     @abstractmethod
-    def put_object(self, stream: BinaryIO, *, buffer_size: Optional[int] = None, key: Optional[str] = None) -> str:
+    def put_object(self, stream: t.BinaryIO, *, buffer_size: int | None = None, key: str | None = None) -> str:
         """Add an object to the archive.
 
         :param stream: byte stream to read the object from
@@ -117,7 +119,7 @@ class ArchiveWriterAbstract(ABC):
 class ArchiveReaderAbstract(ABC):
     """Reader of an archive, that will be used as a context manager."""
 
-    def __init__(self, path: Union[str, Path], **kwargs: Any):
+    def __init__(self, path: str | Path, **kwargs: t.Any):
         """Initialise the reader.
 
         :param path: archive path
@@ -137,7 +139,7 @@ class ArchiveReaderAbstract(ABC):
         """Finalise the archive."""
 
     @abstractmethod
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, t.Any]:
         """Return the top-level metadata.
 
         :raises: ``CorruptStorage`` if the top-level metadata cannot be read from the archive
@@ -149,13 +151,13 @@ class ArchiveReaderAbstract(ABC):
 
     # below are convenience methods for some common use cases
 
-    def querybuilder(self, **kwargs: Any) -> 'QueryBuilder':
+    def querybuilder(self, **kwargs: t.Any) -> 'QueryBuilder':
         """Return a ``QueryBuilder`` instance, initialised with the archive backend."""
         from aiida.orm import QueryBuilder
 
         return QueryBuilder(backend=self.get_backend(), **kwargs)
 
-    def get(self, entity_cls: Type[EntityType], **filters: Any) -> EntityType:
+    def get(self, entity_cls: type[EntityType], **filters: t.Any) -> EntityType:
         """Return the entity for the given filters.
 
         Example::
@@ -169,7 +171,7 @@ class ArchiveReaderAbstract(ABC):
             filters['id'] = filters.pop('pk')
         return self.querybuilder().append(entity_cls, filters=filters).one()[0]
 
-    def graph(self, **kwargs: Any) -> 'Graph':
+    def graph(self, **kwargs: t.Any) -> 'Graph':
         """Return a provenance graph generator for the archive."""
         from aiida.tools.visualization.graph import Graph
 
@@ -190,7 +192,7 @@ class ArchiveFormatAbstract(ABC):
         """Return the format of repository keys."""
 
     @abstractmethod
-    def read_version(self, path: Union[str, Path]) -> str:
+    def read_version(self, path: str | Path) -> str:
         """Read the version of the archive from a file.
 
         This method should account for reading all versions of the archive format.
@@ -201,28 +203,28 @@ class ArchiveFormatAbstract(ABC):
         :raises: ``CorruptStorage`` if a version cannot be read from the archive
         """
 
-    @overload
+    @t.overload
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['r'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveReaderAbstract: ...
 
-    @overload
+    @t.overload
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['x', 'w'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveWriterAbstract: ...
 
-    @overload
+    @t.overload
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['a'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveWriterAbstract: ...
 
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
-    ) -> Union[ArchiveReaderAbstract, ArchiveWriterAbstract]:
+        self, path: str | Path, mode: t.Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: t.Any
+    ) -> ArchiveReaderAbstract | ArchiveWriterAbstract:
         """Open an archive (latest version only).
 
         :param path: archive path
@@ -235,8 +237,8 @@ class ArchiveFormatAbstract(ABC):
     @abstractmethod
     def migrate(
         self,
-        inpath: Union[str, Path],
-        outpath: Union[str, Path],
+        inpath: str | Path,
+        outpath: str | Path,
         version: str,
         *,
         force: bool = False,

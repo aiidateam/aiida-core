@@ -13,13 +13,13 @@ import contextlib
 import contextvars
 import logging
 import traceback
-from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Dict, Hashable, Optional
+import typing as t
+from collections.abc import AsyncIterator, Awaitable, Hashable
 
-from plumpy import get_or_create_event_loop
-
+from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.orm import AuthInfo
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.transports import Transport
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,10 +45,10 @@ class TransportQueue:
     be minimised.
     """
 
-    def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
+    def __init__(self, loop: asyncio.AbstractEventLoop | None = None):
         """:param loop: An asyncio event, will use `get_or_create_event_loop()` if not supplied"""
         self._loop = loop if loop else get_or_create_event_loop()
-        self._transport_requests: Dict[Hashable, TransportRequest] = {}
+        self._transport_requests: dict[Hashable, TransportRequest] = {}
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -70,7 +70,7 @@ class TransportQueue:
         :return: A future that can be yielded to give the transport
         """
 
-        from plumpy import ensure_portal
+        from aiida.engine.processes.greenback import ensure_portal
 
         # NOTE: We need to ensure the portal here only because
         # our scheduler has only a sync interface and _get_jobs_from_scheduler is using that

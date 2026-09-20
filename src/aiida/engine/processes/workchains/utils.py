@@ -8,19 +8,19 @@
 ###########################################################################
 """Utilities for `WorkChain` implementations."""
 
+import typing as t
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType
-from typing import List, NamedTuple, Optional, Union
 
 from wrapt import decorator
 
-from ..exit_code import ExitCode
+from aiida.engine.processes.exit_code import ExitCode
 
 __all__ = ('ProcessHandlerReport', 'process_handler')
 
 
-class ProcessHandlerReport(NamedTuple):
+class ProcessHandlerReport(t.NamedTuple):
     """A namedtuple to define a process handler report for a :class:`aiida.engine.BaseRestartWorkChain`.
 
     This namedtuple should be returned by a process handler of a work chain instance if the condition of the handler was
@@ -43,10 +43,10 @@ class ProcessHandlerReport(NamedTuple):
 
 
 def process_handler(
-    wrapped: Optional[FunctionType] = None,
+    wrapped: FunctionType | None = None,
     *,
     priority: int = 0,
-    exit_codes: Union[None, ExitCode, List[ExitCode]] = None,
+    exit_codes: ExitCode | list[ExitCode] | None = None,
     enabled: bool = True,
 ) -> FunctionType:
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.
@@ -99,7 +99,8 @@ def process_handler(
     handler_args = getfullargspec(wrapped)[0]
 
     if len(handler_args) != 2:
-        raise TypeError(f'process handler `{wrapped.__name__}` has invalid signature: should be (self, node)')
+        msg = f'process handler `{wrapped.__name__}` has invalid signature: should be (self, node)'
+        raise TypeError(msg)
 
     wrapped.decorator = process_handler  # type: ignore[attr-defined]
     wrapped.priority = priority  # type: ignore[attr-defined]

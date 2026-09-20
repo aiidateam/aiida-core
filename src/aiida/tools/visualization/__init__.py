@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .graph import *
+from aiida.tools.visualization.graph import *
 
 __all__ = (
     'Graph',

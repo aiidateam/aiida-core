@@ -85,7 +85,7 @@ AVAILABLE_PROJECTORS = (
 )
 
 
-def echo_response(response: 'requests.Response', exit_on_error: bool = True) -> None:
+def echo_response(response: requests.Response, exit_on_error: bool = True) -> None:
     """Echo the response of a request.
 
     :param response: The response to the request.
@@ -166,7 +166,8 @@ def cmd_queues_list(client, project, raw, filter_name):
         try:
             re.match(filter_name, '')
         except re.error as exception:
-            raise click.BadParameter(f'invalid regex pattern: {exception}', param_hint='`--filter-name`')
+            msg = f'invalid regex pattern: {exception}'
+            raise click.BadParameter(msg, param_hint='`--filter-name`')
 
     queues = [queue for queue in response.json() if re.match(filter_name or '', queue['name'])]
     output = [
@@ -238,7 +239,7 @@ def cmd_tasks_analyze(ctx, fix):
 
     Use ``-v INFO`` to be more verbose and print more information.
     """
-    from .cmd_process import process_repair
+    from aiida.cmdline.commands.cmd_process import process_repair
 
     ctx.invoke(process_repair, dry_run=not fix)
 

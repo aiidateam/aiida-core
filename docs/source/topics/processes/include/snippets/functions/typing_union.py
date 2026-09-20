@@ -1,11 +1,9 @@
-import typing as t
-
 from aiida.engine import calcfunction
 from aiida.orm import Float, Int
 
 
 @calcfunction
-def add(x: t.Union[Int, Float], y: t.Union[Int, Float]):
+def add(x: Int | Float, y: Int | Float):
     return x + y
 
 

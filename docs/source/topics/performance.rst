@@ -35,7 +35,7 @@ Services
 For the default setup, AiiDA essentially has three services that influence its performance:
 
 * PostgreSQL (the database in which the provenance graph is stored)
-* Message broker (RabbitMQ or the built-in ZMQ broker, used by daemon workers to communicate)
+* Message broker (RabbitMQ or the built-in ZeroMQ broker, used by daemon workers to communicate)
 * Filesystem (files are stored by AiiDA in the file repository on a filesytem)
 
 For the simplest installations, PostgreSQL and the message broker are typically running on the same machine as AiiDA itself.

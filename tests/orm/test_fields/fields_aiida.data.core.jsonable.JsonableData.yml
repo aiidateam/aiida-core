@@ -22,4 +22,4 @@ the_module: QbStrField('attributes.@module', '@module', dtype=<class 'str'>, doc
   module name of the wrapped object')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

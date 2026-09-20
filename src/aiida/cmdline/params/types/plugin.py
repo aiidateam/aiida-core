@@ -15,6 +15,8 @@ import typing as t
 
 import click
 
+from aiida.cmdline.params._shims import shim_add_ctx
+from aiida.cmdline.params.types.strings import EntryPointType
 from aiida.common import exceptions
 from aiida.plugins import factories
 from aiida.plugins.entry_point import (
@@ -28,11 +30,8 @@ from aiida.plugins.entry_point import (
     get_entry_points,
 )
 
-from .._shims import shim_add_ctx
-from .strings import EntryPointType
-
 if t.TYPE_CHECKING:
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
 __all__ = ('PluginParamType',)
 
@@ -98,7 +97,8 @@ class PluginParamType(EntryPointType):
                 grp = ENTRY_POINT_GROUP_PREFIX + grp  # noqa: PLW2901
 
             if grp not in valid_entry_point_groups:
-                raise ValueError(f'entry point group {grp} is not recognized')
+                msg = f'entry point group {grp} is not recognized'
+                raise ValueError(msg)
 
             groups.append(grp)
 
@@ -169,7 +169,7 @@ class PluginParamType(EntryPointType):
             entry_point = entry_points_by_name.get(p)
             if entry_point is not None:
                 try:
-                    plugin = entry_point.load()
+                    plugin = entry_point.load()  # type: ignore[no-untyped-call]
                     if plugin.__doc__:
                         # extract the initial/summary paragraph (before double newline)
                         doc_summary = plugin.__doc__.strip().split('\n\n')[0]
@@ -214,7 +214,7 @@ class PluginParamType(EntryPointType):
                 )
             elif not matching_groups:
                 raise ValueError(
-                    "entry point '{}' is not valid for any of the allowed " 'entry point groups: {}'.format(
+                    "entry point '{}' is not valid for any of the allowed entry point groups: {}".format(
                         name, ' '.join(self.groups)
                     )
                 )
@@ -222,7 +222,8 @@ class PluginParamType(EntryPointType):
             group = matching_groups.pop()
 
         else:
-            raise ValueError(f'invalid entry point string format: {entry_point_string}')
+            msg = f'invalid entry point string format: {entry_point_string}'
+            raise ValueError(msg)
 
         try:
             return get_entry_point(group, name)
@@ -231,15 +232,16 @@ class PluginParamType(EntryPointType):
 
     def validate_entry_point_group(self, group: str) -> None:
         if group not in self.groups:
-            raise ValueError(f'entry point group `{group}` is not supported by this parameter.')
+            msg = f'entry point group `{group}` is not supported by this parameter.'
+            raise ValueError(msg)
 
     def convert(  # type: ignore[override]
         self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None
-    ) -> t.Union[EntryPoint, t.Any]:
+    ) -> EntryPoint | t.Any:
         """Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """
-        from importlib.metadata import EntryPoint
+        from importlib_metadata import EntryPoint
 
         # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
         # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
@@ -260,7 +262,7 @@ class PluginParamType(EntryPointType):
 
         if self.load:
             try:
-                return entry_point.load()
+                return entry_point.load()  # type: ignore[no-untyped-call]
             except exceptions.LoadingEntryPointError as exception:
                 raise click.BadParameter(str(exception))
         else:

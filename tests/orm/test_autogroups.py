@@ -22,7 +22,7 @@ def test_get_or_create(backend):
     # Check that there are no groups to begin with
     queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': label_prefix})
     assert not list(queryb.all())
-    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': r'{}\_%'.format(label_prefix)}})
+    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': rf'{label_prefix}\_%'}})
     assert not list(queryb.all())
 
     # First group (no existing one)
@@ -30,27 +30,27 @@ def test_get_or_create(backend):
     autogroup.set_group_label_prefix(label_prefix)
     group = autogroup.get_or_create_group()
     expected_label = label_prefix
-    assert (
-        group.label == expected_label
-    ), f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    assert group.label == expected_label, (
+        f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    )
 
     # Second group (only one with no suffix existing)
     autogroup = AutogroupManager(backend)
     autogroup.set_group_label_prefix(label_prefix)
     group = autogroup.get_or_create_group()
     expected_label = f'{label_prefix}_1'
-    assert (
-        group.label == expected_label
-    ), f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    assert group.label == expected_label, (
+        f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    )
 
     # Second group (only one suffix _1 existing)
     autogroup = AutogroupManager(backend)
     autogroup.set_group_label_prefix(label_prefix)
     group = autogroup.get_or_create_group()
     expected_label = f'{label_prefix}_2'
-    assert (
-        group.label == expected_label
-    ), f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    assert group.label == expected_label, (
+        f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    )
 
     # I create a group with a large integer suffix (9)
     AutoGroup(label=f'{label_prefix}_9').store()
@@ -59,9 +59,9 @@ def test_get_or_create(backend):
     autogroup.set_group_label_prefix(label_prefix)
     group = autogroup.get_or_create_group()
     expected_label = f'{label_prefix}_10'
-    assert (
-        group.label == expected_label
-    ), f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    assert group.label == expected_label, (
+        f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    )
 
     # I create a group with a non-integer suffix (15a), it should be ignored
     AutoGroup(label=f'{label_prefix}_15b').store()
@@ -70,9 +70,9 @@ def test_get_or_create(backend):
     autogroup.set_group_label_prefix(label_prefix)
     group = autogroup.get_or_create_group()
     expected_label = f'{label_prefix}_11'
-    assert (
-        group.label == expected_label
-    ), f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    assert group.label == expected_label, (
+        f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    )
 
 
 def test_get_or_create_invalid_prefix(backend):
@@ -87,7 +87,7 @@ def test_get_or_create_invalid_prefix(backend):
     # Check that there are no groups to begin with
     queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': label_prefix})
     assert not list(queryb.all())
-    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': r'{}\_%'.format(label_prefix)}})
+    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': rf'{label_prefix}\_%'}})
     assert not list(queryb.all())
 
     # First group (no existing one)
@@ -95,15 +95,15 @@ def test_get_or_create_invalid_prefix(backend):
     autogroup.set_group_label_prefix(label_prefix)
     group = autogroup.get_or_create_group()
     expected_label = label_prefix
-    assert (
-        group.label == expected_label
-    ), f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    assert group.label == expected_label, (
+        f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    )
 
     # Second group (only one with no suffix existing)
     autogroup = AutogroupManager(backend)
     autogroup.set_group_label_prefix(label_prefix)
     group = autogroup.get_or_create_group()
     expected_label = f'{label_prefix}_1'
-    assert (
-        group.label == expected_label
-    ), f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    assert group.label == expected_label, (
+        f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
+    )

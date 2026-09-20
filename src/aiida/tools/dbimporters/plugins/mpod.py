@@ -17,7 +17,8 @@ class MpodDbImporter(DbImporter):
     def _str_clause(self, key, alias, values):
         """Returns part of HTTP GET query for querying string fields."""
         if not isinstance(values, str) and not isinstance(values, int):
-            raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
+            msg = f"incorrect value for keyword '{alias}' -- only strings and integers are accepted"
+            raise ValueError(msg)
         return f'{key}={values}'
 
     _keywords = {
@@ -54,14 +55,15 @@ class MpodDbImporter(DbImporter):
                 get_parts.append(value[1](self, value[0], key, values))
 
         if kwargs:
-            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
+            msg = f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}'
+            raise NotImplementedError(msg)
 
         queries = []
         for element in elements:
             clauses = [self._str_clause('formula', 'element', element)]
-            queries.append(f"{self._query_url}?{'&'.join(get_parts + clauses)}")
+            queries.append(f'{self._query_url}?{"&".join(get_parts + clauses)}')
         if not queries:
-            queries.append(f"{self._query_url}?{'&'.join(get_parts)}")
+            queries.append(f'{self._query_url}?{"&".join(get_parts)}')
 
         return queries
 
@@ -94,7 +96,8 @@ class MpodDbImporter(DbImporter):
             self._query_url = query_url
 
         if kwargs:
-            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
+            msg = f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}'
+            raise NotImplementedError(msg)
 
     def get_supported_keywords(self):
         """Returns the list of all supported query keywords.
@@ -129,7 +132,7 @@ class MpodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return f"{self._base_url + result_dict['id']}.mpod"
+        return f'{self._base_url + result_dict["id"]}.mpod'
 
 
 class MpodEntry(CifEntry):

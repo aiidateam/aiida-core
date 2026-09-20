@@ -8,6 +8,6 @@
 ###########################################################################
 """Implementation of QueryBuilder backend."""
 
-from .main import SqlaQueryBuilder
+from aiida.storage.psql_dos.orm.querybuilder.main import SqlaQueryBuilder
 
 __all__ = ('SqlaQueryBuilder',)

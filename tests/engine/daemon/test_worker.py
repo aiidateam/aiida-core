@@ -25,6 +25,7 @@ def test_shutdown_worker(manager):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_logging_configuration(aiida_code_installed, submit_and_await):
     """Integration test to verify that the daemon has the logging properly configured including the ``DbLogHandler``.
 

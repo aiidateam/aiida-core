@@ -11,17 +11,16 @@
 from __future__ import annotations
 
 import logging
+import typing as t
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Type, cast
 from uuid import UUID
 
 from aiida.common import timezone
 from aiida.manage import get_manager
+from aiida.orm import entities
+from aiida.orm.pydantic import OrmMetadataField
 
-from . import entities
-from .pydantic import OrmMetadataField
-
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Node
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.logs import BackendLog
@@ -42,13 +41,13 @@ class LogCollection(entities.Collection['Log']):
     and retrieve logs.
     """
 
-    collection_type: ClassVar[str] = 'logs'
+    collection_type: t.ClassVar[str] = 'logs'
 
     @staticmethod
-    def _entity_base_cls() -> Type[Log]:
+    def _entity_base_cls() -> type[Log]:
         return Log
 
-    def create_entry_from_record(self, record: logging.LogRecord) -> Optional[Log]:
+    def create_entry_from_record(self, record: logging.LogRecord) -> Log | None:
         """Helper function to create a log entry from a record created as by the python logging library
 
         :param record: The record created by the logging module
@@ -86,7 +85,7 @@ class LogCollection(entities.Collection['Log']):
             backend=self.backend,
         )
 
-    def get_logs_for(self, entity: Node, order_by: Optional[OrderByType] = None) -> List[Log]:
+    def get_logs_for(self, entity: Node, order_by: OrderByType | None = None) -> list[Log]:
         """Get all the log messages for a given node and optionally sort
 
         :param entity: the entity to get logs for
@@ -94,7 +93,7 @@ class LogCollection(entities.Collection['Log']):
 
         :return: the list of log entries
         """
-        from . import nodes
+        from aiida.orm import nodes
 
         if not isinstance(entity, nodes.Node):
             raise Exception('Only node logs are stored')
@@ -117,7 +116,7 @@ class LogCollection(entities.Collection['Log']):
         """
         return self._backend.logs.delete_all()
 
-    def delete_many(self, filters: FilterType) -> List[int]:
+    def delete_many(self, filters: FilterType) -> list[int]:
         """Delete Logs based on ``filters``
 
         :param filters: filters to pass to the QueryBuilder
@@ -158,7 +157,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             description='The time at which the log was created',
             examples=['2024-01-01T12:00:00+00:00'],
         )
-        metadata: dict[str, Any] = OrmMetadataField(
+        metadata: dict[str, t.Any] = OrmMetadataField(
             default_factory=dict,
             description='The metadata of the log',
             examples=[{'key': 'value'}],
@@ -166,7 +165,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         node: int = OrmMetadataField(
             description='Associated node',
             orm_class='core.node',
-            orm_to_model=lambda log: cast(Log, log).dbnode_id,
+            orm_to_model=lambda log: t.cast(Log, log).dbnode_id,
             examples=[42],
         )
 
@@ -175,11 +174,11 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         time: datetime,
         loggername: str,
         levelname: str,
-        dbnode_id: Optional[int] = None,
+        dbnode_id: int | None = None,
         message: str = '',
-        metadata: Optional[Dict[str, Any]] = None,
-        backend: Optional['StorageBackend'] = None,
-        node: Optional[Node] = None,
+        metadata: dict[str, t.Any] | None = None,
+        backend: StorageBackend | None = None,
+        node: Node | None = None,
     ):
         """Construct a new log
 
@@ -259,7 +258,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def node(self) -> Node:
-        from .utils.loaders import load_node
+        from aiida.orm.utils.loaders import load_node
 
         return load_node(self.dbnode_id)
 
@@ -272,7 +271,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         return self._backend_entity.message
 
     @property
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, t.Any]:
         """Get the metadata corresponding to the entry
 
         :return: The entry metadata

@@ -7,12 +7,13 @@ import typing as t
 
 import numpy as np
 import pytest
-from plumpy import get_object_loader
 from typing_extensions import NotRequired
 
 from aiida import orm
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import UnsupportedSchemaError
+from aiida.engine.persistence import get_object_loader
+from aiida.orm.pydantic import OrmModel
 
 orm_to_test = (
     orm.AuthInfo,
@@ -92,12 +93,13 @@ class RequiredNodeArguments(t.TypedDict):
 
 @pytest.fixture
 def required_arguments(request, default_user, aiida_localhost, tmp_path):
+    test_name = f'{request.node.module.__name__}.{request.node.originalname}'
+
     if request.param is orm.AuthInfo:
-        random_email = f'user{orm.User.collection.count() + 1}@aiida'
         return {
             'cls': orm.AuthInfo,
             'kwargs': {
-                'user': orm.User(email=random_email).store(),
+                'user': orm.User(email=f'{test_name}-authinfo@aiida').store(),
                 'computer': aiida_localhost,
             },
         }
@@ -141,7 +143,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is orm.User:
         return {
             'cls': orm.User,
-            'kwargs': {'email': 'user42@aiida'},
+            'kwargs': {'email': f'{test_name}-user@aiida'},
         }
     if request.param is orm.ArrayData:
         buffered_array = io.BytesIO()
@@ -515,6 +517,37 @@ def test_minimal_model_idempotency():
     DynamicModel = orm.Int.ReadModel._as_minimal_model()  # noqa: N806
     RepeatedDynamicModel = DynamicModel._as_minimal_model()  # noqa: N806
     assert RepeatedDynamicModel is DynamicModel
+
+
+def test_minimal_model_idempotency_with_submodels():
+    ParentMinimalModel = orm.Node.ReadModel._as_minimal_model()  # noqa: N806
+    ChildMinimalModel = orm.Data.ReadModel._as_minimal_model()  # noqa: N806
+    assert ChildMinimalModel is not ParentMinimalModel
+
+
+def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
+    """Test generated ORM models are not rebuilt eagerly during class setup."""
+    rebuilt: list[type[OrmModel]] = []
+
+    def model_rebuild(cls, *args, **kwargs):
+        rebuilt.append(cls)
+        return True
+
+    with monkeypatch.context() as context:
+        context.setattr(OrmModel, 'model_rebuild', classmethod(model_rebuild))
+
+        class TestData(orm.Data):
+            class AttributesModel(orm.Data.AttributesModel):
+                value: int
+
+            class ConstructorArgsModel(OrmModel):
+                value: int
+
+        assert rebuilt == []
+
+    model = TestData.WriteModel(node_type=TestData.class_node_type, attributes={'value': '1'})
+    assert model.attributes.value == 1
+    assert TestData.ReadModel.model_config.get('title') == 'TestDataReadModel'
 
 
 @pytest.mark.parametrize(

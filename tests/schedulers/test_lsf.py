@@ -13,8 +13,8 @@ import uuid
 
 import pytest
 
+from aiida.common.datastructures import JobState
 from aiida.common.exceptions import ConfigurationError
-from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.lsf import LsfScheduler
 from aiida.schedulers.scheduler import SchedulerError
 
@@ -115,8 +115,7 @@ def test_parse_common_joblist_output():
 
 def test_submit_script():
     """Test the creation of a simple submission script"""
-    from aiida.common.datastructures import CodeRunMode
-    from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+    from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
     scheduler = LsfScheduler()
 
@@ -145,8 +144,7 @@ def test_submit_script():
 
 def test_submit_script_rerunnable():
     """Test the `rerunnable` option of the submit script."""
-    from aiida.common.datastructures import CodeRunMode
-    from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+    from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
     scheduler = LsfScheduler()
 
@@ -220,8 +218,7 @@ def test_kill_output():
 
 def test_job_tmpl_errors():
     """Test the raising of the appropriate errors"""
-    from aiida.common.datastructures import CodeRunMode
-    from aiida.schedulers.datastructures import JobTemplate
+    from aiida.common.datastructures import CodeRunMode, JobTemplate
 
     scheduler = LsfScheduler()
     job_tmpl = JobTemplate()

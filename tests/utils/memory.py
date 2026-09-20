@@ -10,8 +10,9 @@
 
 import asyncio
 
-from plumpy import get_or_create_event_loop
 from pympler import muppy
+
+from aiida.engine.processes.events import get_or_create_event_loop
 
 
 def get_instances(classes, delay=0.0):

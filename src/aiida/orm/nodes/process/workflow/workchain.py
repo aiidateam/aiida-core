@@ -8,14 +8,13 @@
 ###########################################################################
 """Module with `Node` sub class for workchain processes."""
 
-from typing import TYPE_CHECKING, Optional, Tuple
+import typing as t
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
+from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
 
-from .workflow import WorkflowNode
-
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools.workflows import WorkflowTools
 
 __all__ = ('WorkChainNode',)
@@ -62,11 +61,11 @@ class WorkChainNode(WorkflowNode):
         return self._tools
 
     @classproperty
-    def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
 
     @property
-    def stepper_state_info(self) -> Optional[str]:
+    def stepper_state_info(self) -> str | None:
         """Return the stepper state info
 
         :returns: string representation of the stepper state info

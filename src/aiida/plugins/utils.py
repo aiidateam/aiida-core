@@ -17,8 +17,7 @@ from types import FunctionType
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.exceptions import EntryPointError
-
-from .entry_point import load_entry_point_from_string
+from aiida.plugins.entry_point import load_entry_point_from_string
 
 __all__ = ('PluginVersionProvider',)
 
@@ -62,10 +61,12 @@ class PluginVersionProvider:
             try:
                 plugin = load_entry_point_from_string(plugin)
             except EntryPointError as exc:
-                raise EntryPointError(f'got string `{plugin}` but could not load corresponding entry point') from exc
+                msg = f'got string `{plugin}` but could not load corresponding entry point'
+                raise EntryPointError(msg) from exc
 
         if not isclass(plugin) and not isfunction(plugin):
-            raise TypeError(f'`{plugin}` is not a class nor a function.')
+            msg = f'`{plugin}` is not a class nor a function.'
+            raise TypeError(msg)
 
         # If the `plugin` already exists in the cache, simply return it. On purpose we do not verify whether the version
         # information is completed. If it failed the first time, we don't retry. If the failure was temporarily, whoever

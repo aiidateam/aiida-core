@@ -9,4 +9,4 @@ scheduler_type: QbStrField('scheduler_type', dtype=<class 'str'>, doc='Scheduler
   of the computer')
 transport_type: QbStrField('transport_type', dtype=<class 'str'>, doc='Transport type
   of the computer')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the computer')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the computer')

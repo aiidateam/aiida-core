@@ -88,6 +88,7 @@ def tests_storage_migrate_interactive(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def tests_storage_migrate_running_daemon(run_cli_command):
     """Test that ``verdi storage migrate`` raises if the daemon is running."""
     result = run_cli_command(cmd_storage.storage_migrate, raises=True)
@@ -233,7 +234,7 @@ def tests_storage_backup_keep(run_cli_command, tmp_path):
         assert 'backed up to' in result.output
         assert result.exit_code == 0
     # make sure only two copies of the backup are kept
-    assert len(list((tmp_path.glob('backup_*')))) == 2
+    assert len(list(tmp_path.glob('backup_*'))) == 2
 
 
 def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):

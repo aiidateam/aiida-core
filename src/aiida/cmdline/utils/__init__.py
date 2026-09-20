@@ -12,10 +12,10 @@
 
 # fmt: off
 
-from .ascii_vis import *
-from .common import *
-from .decorators import *
-from .echo import *
+from aiida.cmdline.utils.ascii_vis import *
+from aiida.cmdline.utils.common import *
+from aiida.cmdline.utils.decorators import *
+from aiida.cmdline.utils.echo import *
 
 __all__ = (
     'dbenv',

@@ -4,7 +4,7 @@ import logging
 
 import click
 
-from .echo import COLORS
+from aiida.cmdline.utils.echo import COLORS
 
 
 class CliHandler(logging.Handler):

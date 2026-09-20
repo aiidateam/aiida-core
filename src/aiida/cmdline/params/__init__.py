@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .types import *
+from aiida.cmdline.params.types import *
 
 __all__ = (
     'AbsolutePathParamType',

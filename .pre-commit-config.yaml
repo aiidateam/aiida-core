@@ -1,12 +1,11 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: check-merge-conflict
   - id: check-added-large-files
     exclude: uv.lock
   - id: check-yaml
-  - id: double-quote-string-fixer
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
       (?x)^(
@@ -14,33 +13,36 @@ repos:
         docs/source/.+\.aiida/repo/.+|
         CHANGELOG.md|
       )$
-  - id: fix-encoding-pragma
-    args: [--remove]
   - id: mixed-line-ending
     args: [--fix=lf]
   - id: trailing-whitespace
     exclude: *exclude_pre_commit_hooks
 
 - repo: https://github.com/python-jsonschema/check-jsonschema
-  rev: 0.30.0
+  rev: 0.38.0
   hooks:
   - id: check-github-workflows
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.8.6
+  rev: v0.16.7
   hooks:
   - id: ruff-format
-  - id: ruff
+    # v0.16 added Markdown to this hook's default file types, which reformats fenced
+    # examples in the changelog and the docs. Keep it to Python until that is wanted.
+    types_or: [python, pyi, jupyter]
+  - id: ruff-check
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.14.0
+  rev: v2.16.0
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
+    additional_dependencies: [toml-sort~=0.24.0]
     exclude: uv.lock
   - id: pretty-format-yaml
     args: [--autofix]
+    additional_dependencies: [toml-sort~=0.24.0]
     exclude: >-
       (?x)^(
         tests/.*|
@@ -48,13 +50,13 @@ repos:
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.9.8
+  rev: 0.12.13
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
 
 - repo: https://github.com/kynan/nbstripout
-  rev: 0.8.1
+  rev: 0.9.1
   hooks:
   - id: nbstripout
     files: \.ipynb$
@@ -62,15 +64,6 @@ repos:
 - repo: local
 
   hooks:
-
-  - id: imports
-    name: imports
-    entry: python utils/autogenerate_all_imports.py
-    language: python
-    types: [python]
-    require_serial: true
-    pass_filenames: false
-    files: src/aiida/.*py
 
   - id: mypy
     name: mypy

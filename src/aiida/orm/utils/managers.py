@@ -124,8 +124,7 @@ class NodeLinksManager:
 
     def __iter__(self):
         node_attributes = self._get_keys()
-        for k in node_attributes:
-            yield k
+        yield from node_attributes
 
     def __getattr__(self, name):
         """:param name: name of the attribute to be asked to the parser results."""
@@ -136,9 +135,8 @@ class NodeLinksManager:
             # `AttributeError`, so that `getattr(node.inputs, 'some_label', some_default)` returns `some_default`.
             # Otherwise, the exception is not caught by `getattr` and is propagated, instead of returning the default.
             prefix = 'input' if self._incoming else 'output'
-            raise NotExistentAttributeError(
-                f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
-            ) from exception
+            msg = f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
+            raise NotExistentAttributeError(msg) from exception
 
     def __contains__(self, key):
         """Override the operator of the base class to emit deprecation warning if double underscore is used in key."""
@@ -172,9 +170,8 @@ class NodeLinksManager:
             # `KeyError` - in this way, users can use the standard construct `try/except KeyError` and this will behave
             # like a standard dictionary.
             prefix = 'input' if self._incoming else 'output'
-            raise NotExistentKeyError(
-                f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
-            ) from exception
+            msg = f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
+            raise NotExistentKeyError(msg) from exception
 
     def __str__(self):
         """Return a string representation of the manager"""
@@ -208,8 +205,7 @@ class AttributeManager:
 
     def __iter__(self):
         """Return the keys as an iterator"""
-        for k in self._node.base.attributes.keys():
-            yield k
+        yield from self._node.base.attributes.keys()
 
     def _get_dict(self):
         """Return the internal dictionary"""

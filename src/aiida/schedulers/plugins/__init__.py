@@ -11,7 +11,7 @@
 
 # fmt: off
 
-from .bash import *
+from aiida.schedulers.plugins.bash import *
 
 __all__ = (
     'BashCliScheduler',

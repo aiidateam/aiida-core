@@ -12,7 +12,7 @@ description: QbStrField('description', dtype=<class 'str'>, doc='The node descri
 extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 input_plugin: QbStrField('attributes.input_plugin', dtype=str | None, doc='The name
   of the input plugin to be used for this code')
-is_local: QbAnyField('attributes.is_local', dtype=bool | None, doc='Whether the code
+is_local: QbBoolField('attributes.is_local', dtype=bool | None, doc='Whether the code
   is local or remote')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 local_executable: QbStrField('attributes.local_executable', dtype=str | None, doc='Path
@@ -31,17 +31,17 @@ remote_exec_path: QbStrField('attributes.remote_exec_path', dtype=str | None, do
 repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.Any],
   doc='Virtual hierarchy of the file repository')
 source: QbDictField('attributes.source', dtype=dict | None, doc='Source of the data')
-use_double_quotes: QbAnyField('attributes.use_double_quotes', dtype=<class 'bool'>,
+use_double_quotes: QbBoolField('attributes.use_double_quotes', dtype=<class 'bool'>,
   doc='Whether the executable and arguments of the code in the submission script should
   be escaped with single or double quotes')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
-with_mpi: QbAnyField('attributes.with_mpi', dtype=bool | None, doc='Whether the executable
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+with_mpi: QbBoolField('attributes.with_mpi', dtype=bool | None, doc='Whether the executable
   should be run as an MPI program. This option can be left unspecified in which case
   `None` will be set and it is left up to the calculation job plugin or inputs whether
   to run with MPI')
-wrap_cmdline_params: QbAnyField('attributes.wrap_cmdline_params', dtype=<class 'bool'>,
+wrap_cmdline_params: QbBoolField('attributes.wrap_cmdline_params', dtype=<class 'bool'>,
   doc='Whether all command line parameters to be passed to the engine command should
   be wrapped in a double quotes to form a single argument. This should be set to `True`
   for Docker')

@@ -12,17 +12,17 @@
 
 # fmt: off
 
-from .authinfos import *
-from .comments import *
-from .computers import *
-from .entities import *
-from .groups import *
-from .logs import *
-from .nodes import *
-from .querybuilder import *
-from .storage_backend import *
-from .users import *
-from .utils import *
+from aiida.orm.implementation.authinfos import *
+from aiida.orm.implementation.comments import *
+from aiida.orm.implementation.computers import *
+from aiida.orm.implementation.entities import *
+from aiida.orm.implementation.groups import *
+from aiida.orm.implementation.logs import *
+from aiida.orm.implementation.nodes import *
+from aiida.orm.implementation.querybuilder import *
+from aiida.orm.implementation.storage_backend import *
+from aiida.orm.implementation.users import *
+from aiida.orm.implementation.utils import *
 
 __all__ = (
     'BackendAuthInfo',

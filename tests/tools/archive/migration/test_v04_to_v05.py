@@ -23,14 +23,14 @@ def test_migrate_external(migrate_from_func):
         for computer in data['export_data']['Computer'].values():
             assert change not in computer, f"'{change}' unexpectedly found for {computer}"
         # metadata.json
-        assert (
-            change not in metadata['all_fields_info']['Computer']
-        ), f"'{change}' unexpectedly found in metadata.json for Computer"
+        assert change not in metadata['all_fields_info']['Computer'], (
+            f"'{change}' unexpectedly found in metadata.json for Computer"
+        )
     for change in removed_node_attrs:
         # data.json
         for node in data['export_data']['Node'].values():
             assert change not in node, f"'{change}' unexpectedly found for {node}"
         # metadata.json
-        assert (
-            change not in metadata['all_fields_info']['Node']
-        ), f"'{change}' unexpectedly found in metadata.json for Node"
+        assert change not in metadata['all_fields_info']['Node'], (
+            f"'{change}' unexpectedly found in metadata.json for Node"
+        )

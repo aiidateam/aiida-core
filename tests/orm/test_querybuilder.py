@@ -38,6 +38,17 @@ class TestBasic:
         builder = orm.QueryBuilder().append(orm.Node, filters={'ctime': {'>': date.today() - timedelta(days=1)}})
         assert builder.count() == 1
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_datetime_in_filter_support(self):
+        """Verify that ``datetime`` values are supported for ``in`` and negated ``in`` filters."""
+        node = orm.Data().store()
+
+        builder = orm.QueryBuilder().append(orm.Data, filters={'ctime': {'in': [node.ctime]}})
+        assert builder.count() == 1
+
+        builder = orm.QueryBuilder().append(orm.Data, filters={'ctime': {'!in': [node.ctime]}})
+        assert builder.count() == 0
+
     def test_ormclass_type_classification(self):
         """This tests the classifications of the QueryBuilder"""
         from aiida.common.exceptions import DbContentError
@@ -903,12 +914,12 @@ class TestQueryBuilderCornerCases:
 
         # AbstractCode query should find all code types
         abstract_results = qb().append(orm.AbstractCode).all(flat=True)
-        assert (
-            installed_code in abstract_results
-        ), f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
-        assert (
-            portable_code in abstract_results
-        ), f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
+        assert installed_code in abstract_results, (
+            f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
+        )
+        assert portable_code in abstract_results, (
+            f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
+        )
         assert legacy_code in abstract_results, f'Code not found with AbstractCode query. Result: {abstract_results}'
         assert len(abstract_results) == 3
 

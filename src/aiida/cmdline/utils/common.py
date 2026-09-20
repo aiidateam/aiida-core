@@ -14,20 +14,20 @@ import logging
 import os
 import sys
 import textwrap
+import typing as t
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 from click import style
 
-from . import echo
+from aiida.cmdline.utils import echo
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import MutableMapping
     from datetime import datetime
 
-    import plumpy
-
     from aiida import engine, orm
+    from aiida.engine.processes.ports import PortNamespace
 
 __all__ = ('is_verbose',)
 
@@ -64,7 +64,7 @@ def get_env_with_venv_bin() -> MutableMapping:
     config = get_config()
 
     currenv = os.environ.copy()
-    currenv['PATH'] = f"{os.path.dirname(sys.executable)}:{currenv['PATH']}"
+    currenv['PATH'] = f'{os.path.dirname(sys.executable)}:{currenv["PATH"]}'
     currenv['AIIDA_PATH'] = config.dirpath
     currenv['PYTHONUNBUFFERED'] = 'True'
 
@@ -85,7 +85,7 @@ def format_local_time(timestamp: datetime | float, format_str: str = '%Y-%m-%d %
     return timestamp.strftime(format_str)
 
 
-def print_last_process_state_change(process_type: Literal['work'] | Literal['calculation'] | None = None) -> None:
+def print_last_process_state_change(process_type: t.Literal['work'] | t.Literal['calculation'] | None = None) -> None:
     """Print the last time that a process of the specified type has changed its state.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
@@ -113,12 +113,11 @@ def get_node_summary(node: orm.Node) -> str:
     :param node: a Node instance
     :return: a string summary of the node
     """
-    from plumpy import ProcessState
-
+    from aiida.common.processes import ProcessState
     from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
-    table: list[list[str | Any]] = []
+    table: list[list[str | t.Any]] = []
 
     if isinstance(node, ProcessNode):
         table.append(['type', node.process_label])
@@ -180,18 +179,18 @@ def get_node_info(node: orm.Node, include_summary: bool = True) -> str:
     nodes_output = node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
 
     if nodes_input:
-        result += f"\n{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_input.nested(), headers=["Inputs", "PK", "Type"])}'
 
     if nodes_output:
-        result += f"\n{format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_output.nested(), headers=["Outputs", "PK", "Type"])}'
 
     if nodes_caller:
         links = sorted(nodes_caller.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Caller', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Caller", "PK", "Type"])}'
 
     if nodes_called:
         links = sorted(nodes_called.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Called', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Called", "PK", "Type"])}'
 
     log_messages = orm.Log.collection.get_logs_for(node)
 
@@ -253,7 +252,7 @@ def format_nested_links(links: dict, headers: Sequence[str]) -> str:
     table = []
 
     for depth, label, pk, class_name in format_recursive(links):
-        table.append([f"{' ' * (depth * indent_size)}{label}", pk, class_name])
+        table.append([f'{" " * (depth * indent_size)}{label}', pk, class_name])
 
     result = f'\n{tabulate(table, headers=headers)}'
     tb.PRESERVE_WHITESPACE = False
@@ -279,7 +278,7 @@ def get_calcjob_report(calcjob: orm.CalcJobNode) -> str:
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = f"{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else '(unknown)'}"
+        state_string = f'{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else "(unknown)"}'
     else:
         state_string = f'{calcjob_state}'
 
@@ -431,7 +430,7 @@ def print_process_spec(process_spec: engine.ProcessSpec) -> None:
     :param process_spec: a `ProcessSpec` instance
     """
 
-    def build_entries(ports: plumpy.PortNamespace) -> list[tuple]:
+    def build_entries(ports: PortNamespace) -> list[tuple]:
         """Build a list of entries to be printed for a `PortNamespace.
 
         :param ports: the port namespace
@@ -506,9 +505,9 @@ def validate_output_filename(
         output_file = Path(output_file)
 
     if output_file.is_dir():
-        raise IsADirectoryError(
-            f'A directory with the name `{output_file.resolve()}` already exists. Remove manually and try again.'
-        )
+        msg = f'A directory with the name `{output_file.resolve()}` already exists. Remove manually and try again.'
+        raise IsADirectoryError(msg)
 
     if output_file.is_file() and not overwrite:
-        raise FileExistsError(f'File `{output_file}` already exists, use `--overwrite` to overwrite.')
+        msg = f'File `{output_file}` already exists, use `--overwrite` to overwrite.'
+        raise FileExistsError(msg)

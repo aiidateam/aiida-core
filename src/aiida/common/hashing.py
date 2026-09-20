@@ -23,9 +23,8 @@ from operator import itemgetter
 
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
+from aiida.common.folders import Folder
 from aiida.common.utils import DatetimePrecision
-
-from .folders import Folder
 
 
 def get_random_string(length: int = 12) -> str:
@@ -113,7 +112,8 @@ def _make_hash(object_to_hash: t.Any, **_: t.Any) -> list[bytes]:
     """Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
-    raise HashingError(f'Value of type {type(object_to_hash)} cannot be hashed')
+    msg = f'Value of type {type(object_to_hash)} cannot be hashed'
+    raise HashingError(msg)
 
 
 def _single_digest(obj_type: str, obj_bytes: bytes = b'') -> bytes:
@@ -212,10 +212,10 @@ def _(val: Decimal, **kwargs: t.Any) -> list[bytes]:
     exponent = val.as_tuple().exponent
     # This is a fallback for Decimal('NaN') and similar
     if isinstance(exponent, str):
-        return [_single_digest('str', f'{val}'.encode('utf-8'))]
+        return [_single_digest('str', f'{val}'.encode())]
     if exponent < 0:
         return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
-    return [_single_digest('int', f'{val}'.encode('utf-8'))]
+    return [_single_digest('int', f'{val}'.encode())]
 
 
 @_make_hash.register(numbers.Complex)
@@ -224,9 +224,8 @@ def _(val: numbers.Complex, **kwargs: t.Any) -> list[bytes]:
     return [
         _single_digest(
             'complex',
-            '{}!{}'.format(
-                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
-            ).encode('utf-8'),
+            f'{float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION)}!'
+            f'{float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)}'.encode(),
         )
     ]
 
@@ -234,7 +233,7 @@ def _(val: numbers.Complex, **kwargs: t.Any) -> list[bytes]:
 @_make_hash.register(numbers.Integral)
 def _(val: numbers.Integral, **kwargs: t.Any) -> list[bytes]:
     """Get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', f'{val}'.encode('utf-8'))]
+    return [_single_digest('int', f'{val}'.encode())]
 
 
 @_make_hash.register(bool)
@@ -302,8 +301,7 @@ def _(folder: Folder, **kwargs: t.Any) -> list[bytes]:
                     yield _single_digest('fcontent', fhandle.read())
             else:
                 yield _single_digest('dir(', name.encode('utf-8'))
-                for digest in folder_digests(subfolder.get_subfolder(name)):
-                    yield digest
+                yield from folder_digests(subfolder.get_subfolder(name))
                 yield _END_DIGEST
 
     return [_single_digest('folder')] + list(folder_digests(folder))

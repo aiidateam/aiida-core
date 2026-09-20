@@ -10,9 +10,8 @@
 
 import numpy
 
+from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 from aiida.orm.pydantic import OrmMetadataField
-
-from .base import BaseType, to_aiida_type
 
 __all__ = ('Bool',)
 

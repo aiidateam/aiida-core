@@ -37,6 +37,7 @@ AiiDA (www.aiida.net) is a workflow manager for computational science with a str
 ## Installation
 
 Please see AiiDA's [documentation](https://aiida-core.readthedocs.io/en/latest/).
+**Warning:** Do not use AiiDA directly from the GitHub `main` branch. It changes rapidly and may put your AiiDA storage in an unrecoverable state.
 
 ## How to contribute [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![GitHub issues by-label](https://img.shields.io/github/issues/aiidateam/aiida-core/good%20first%20issue)](https://github.com/aiidateam/aiida-core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 

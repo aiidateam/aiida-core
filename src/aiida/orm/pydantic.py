@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import datetime
 import typing as t
+from copy import deepcopy
 
 import pydantic as pdt
-from pydantic import create_model
 from pydantic_core import PydanticUndefined
 
 from aiida.common.exceptions import EntryPointError, NotExistent
@@ -18,6 +18,8 @@ __all__ = ('OrmModel',)
 
 class OrmModel(AiiDABaseModel):
     """Base class for Read/Write/Attributes models."""
+
+    _AIIDA_MINIMAL_MODEL: type[OrmModel] | None = None
 
     model_config = pdt.ConfigDict(
         extra='forbid',
@@ -45,11 +47,13 @@ class OrmModel(AiiDABaseModel):
                     try:
                         orm_class = BaseFactory('aiida.orm', orm_class)
                     except EntryPointError as exception:
-                        raise EntryPointError(f'invalid `orm_class` on `{key}`: {exception}') from exception
+                        msg = f'invalid `orm_class` on `{key}`: {exception}'
+                        raise EntryPointError(msg) from exception
                 try:
                     fields[field_name] = orm_class.collection.get(id=field_value)
                 except NotExistent as exception:
-                    raise NotExistent(f'no `{orm_class}` found with pk={field_value}') from exception
+                    msg = f'no `{orm_class}` found with pk={field_value}'
+                    raise NotExistent(msg) from exception
             elif model_to_orm := get_metadata(field, 'model_to_orm'):
                 fields[field_name] = model_to_orm(self)
             else:
@@ -58,39 +62,47 @@ class OrmModel(AiiDABaseModel):
         return fields
 
     @classmethod
-    def _as_minimal_model(cls: t.Type[OrmModel]) -> type[OrmModel]:
+    def _as_minimal_model(cls: type[OrmModel]) -> type[OrmModel]:
         """Return a derived model class excluding fields marked as "may_be_large"."""
-        cached = cls.__dict__.get('_AIIDA_MINIMAL_MODEL')
+        if cls.__name__.startswith('Minimal'):
+            return cls
+
+        cached = vars(cls).get('_AIIDA_MINIMAL_MODEL')
         if isinstance(cached, type) and issubclass(cached, OrmModel):
             return cached
+
         try:
             orm_class_name, model_name = cls.__qualname__.split('.')
         except ValueError as exception:
-            raise ValueError(f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'") from exception
-        MinimalModel = create_model(  # noqa: N806
-            f'Minimal{model_name}',
-            __base__=OrmModel,
-            __module__=cls.__module__,
-        )
-        MinimalModel.__qualname__ = f'{orm_class_name}.Minimal{model_name}'
-        MinimalModel.model_config['extra'] = 'ignore'
+            msg = f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'"
+            raise ValueError(msg) from exception
 
+        model_fields: dict[str, t.Any] = {}
         for key, field in cls.model_fields.items():
             annotation = field.annotation
+            field_copy = deepcopy(field)
             if get_metadata(field, 'may_be_large'):
                 continue
             if isinstance(annotation, type) and issubclass(annotation, OrmModel):
                 sub_minimal_model = annotation._as_minimal_model()
-                field.annotation = sub_minimal_model
+                field_copy.annotation = sub_minimal_model
                 if any(f.is_required() for f in sub_minimal_model.model_fields.values()):
-                    field.default_factory = None
-            MinimalModel.model_fields[key] = field
+                    field_copy.default_factory = None
+            model_fields[key] = (field_copy.annotation, field_copy)
 
-        MinimalModel.model_rebuild(force=True)
+        MinimalModel = t.cast(  # noqa: N806
+            type[OrmModel],
+            pdt.create_model(
+                f'Minimal{model_name}',
+                __config__=deepcopy(cls.model_config) | {'extra': 'ignore'},
+                __base__=OrmModel,
+                __module__=cls.__module__,
+                __qualname__=f'{orm_class_name}.Minimal{model_name}',
+                **model_fields,
+            ),
+        )
 
-        # Make subsequent calls idempotent for this specific class and the derived model
-        cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
-        MinimalModel._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
+        cls._AIIDA_MINIMAL_MODEL = MinimalModel  # cache the derived model on the original class
 
         return MinimalModel
 

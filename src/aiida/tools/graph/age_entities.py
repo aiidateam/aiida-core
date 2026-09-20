@@ -10,11 +10,12 @@
 
 from __future__ import annotations
 
+import typing as t
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from typing import Any, Literal, TypedDict, overload
 
-from typing_extensions import Self, TypeAlias
+# Import TypedDict from typing_extensions to get "closed" support (PEP728)
+from typing_extensions import Self, TypedDict
 
 from aiida import orm
 from aiida.orm.utils.links import LinkQuadruple
@@ -23,10 +24,10 @@ VALID_ENTITY_CLASSES = (orm.Node, orm.Group)
 
 GroupNodeEdge = namedtuple('GroupNodeEdge', ['node_id', 'group_id'])
 
-_NodeOrGroupCls: TypeAlias = 'type[orm.Node] | type[orm.Group]'
-_ContainerTypes: TypeAlias = 'list[Any] | tuple[Any, ...] | set[Any]'
-_EdgeType: TypeAlias = 'type[LinkQuadruple] | type[GroupNodeEdge]'
-_EdgeIdentifiers: TypeAlias = tuple[tuple[str, str], ...]
+_NodeOrGroupCls: t.TypeAlias = 'type[orm.Node] | type[orm.Group]'
+_ContainerTypes: t.TypeAlias = 'list[t.Any] | tuple[t.Any, ...] | set[t.Any]'
+_EdgeType: t.TypeAlias = 'type[LinkQuadruple] | type[GroupNodeEdge]'
+_EdgeIdentifiers: t.TypeAlias = tuple[tuple[str, str], ...]
 
 
 class AbstractSetContainer(metaclass=ABCMeta):
@@ -47,7 +48,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
     def __init__(self) -> None:
         """Initialization method"""
         super().__init__()
-        self._keyset: set[Any] = set()
+        self._keyset: set[t.Any] = set()
         self._additional_identifiers = ()
 
     @abstractmethod
@@ -63,7 +64,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _check_input_for_set(self, input_for_set: Any) -> Any:
+    def _check_input_for_set(self, input_for_set: t.Any) -> t.Any:
         """Utility function
 
         When provinding input keys for the internal set, this utility function will
@@ -79,12 +80,12 @@ class AbstractSetContainer(metaclass=ABCMeta):
         """Create new instance with the same defining attributes."""
 
     @property
-    def keyset(self) -> set[Any]:
+    def keyset(self) -> set[t.Any]:
         """Set containing the keys of the entities"""
         return self._keyset
 
     @keyset.setter
-    def keyset(self, inpset: set[Any] | None) -> None:
+    def keyset(self, inpset: set[t.Any] | None) -> None:
         """Setter for the keyset
 
         Use with care! There is no way to check if the keys are consistent ids here.
@@ -101,7 +102,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
             raise ValueError('keyset must be assigned a set or None')
 
     @property
-    def additional_identifiers(self) -> tuple[Any, ...]:
+    def additional_identifiers(self) -> tuple[t.Any, ...]:
         """Additional identifiers for the entities"""
         return self._additional_identifiers
 
@@ -135,12 +136,12 @@ class AbstractSetContainer(metaclass=ABCMeta):
         return len(self.keyset)
 
     def __repr__(self) -> str:
-        return f"{{{','.join(map(str, self.keyset))}}}"
+        return f'{{{",".join(map(str, self.keyset))}}}'
 
-    def __eq__(self, other: Any) -> Any:
+    def __eq__(self, other: t.Any) -> t.Any:
         return self.keyset == other.keyset
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: t.Any) -> bool:
         return not self == other
 
     def set_entities(self, new_entitites: _ContainerTypes) -> None:
@@ -183,11 +184,12 @@ class AiidaEntitySet(AbstractSetContainer):
         """
         super().__init__()
         if aiida_cls not in VALID_ENTITY_CLASSES:
-            raise TypeError(f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}')
+            msg = f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}'
+            raise TypeError(msg)
         self._aiida_cls = aiida_cls
         self.keyset = set()
         # Currently only 'id' is supported
-        self._identifier: Literal['id'] = 'id'
+        self._identifier: t.Literal['id'] = 'id'
         self._identifier_type = int
 
     def _check_self_and_other(self, other: Self) -> None:
@@ -200,24 +202,25 @@ class AiidaEntitySet(AbstractSetContainer):
         if self._identifier_type != other.identifier_type:
             raise TypeError('The two instances do not have the same identifier type!')
 
-    def _check_input_for_set(self, input_for_set: _NodeOrGroupCls | int) -> Any:
+    def _check_input_for_set(self, input_for_set: orm.Node | orm.Group | int) -> t.Any:
         if isinstance(input_for_set, self._aiida_cls):
             return getattr(input_for_set, self._identifier)
 
         if isinstance(input_for_set, self._identifier_type):
             return input_for_set
 
-        raise ValueError(
-            '{} is not a valid input\n'
+        msg = (
+            f'{input_for_set} is not a valid input\n'
             'You can either pass an AiiDA instance or a key to an instance that'
-            'matches the identifier you defined ({})'.format(input_for_set, self._identifier_type)
+            f'matches the identifier you defined ({self._identifier_type})'
         )
+        raise ValueError(msg)
 
     def get_template(self) -> AiidaEntitySet:
         return AiidaEntitySet(aiida_cls=self.aiida_cls)
 
     @property
-    def identifier(self) -> Literal['id']:
+    def identifier(self) -> t.Literal['id']:
         """Identifier used for the nodes or groups (currently always id)"""
         return self._identifier
 
@@ -249,7 +252,8 @@ class DirectedEdgeSet(AbstractSetContainer):
         super().__init__()
         for aiida_cls in (aiida_cls_to, aiida_cls_from):
             if aiida_cls not in VALID_ENTITY_CLASSES:
-                raise TypeError(f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}')
+                msg = f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}'
+                raise TypeError(msg)
         self._aiida_cls_to = aiida_cls_to
         self._aiida_cls_from = aiida_cls_from
         self.keyset = set()
@@ -269,9 +273,11 @@ class DirectedEdgeSet(AbstractSetContainer):
                 self._edge_identifiers = (('nodes', 'id'), ('groups', 'id'))
                 self._edge_namedtuple = GroupNodeEdge
             else:
-                raise TypeError(f'Unexpted types aiida_cls_from={aiida_cls_from} and aiida_cls_to={aiida_cls_to}')
+                msg = f'Unexpted types aiida_cls_from={aiida_cls_from} and aiida_cls_to={aiida_cls_to}'
+                raise TypeError(msg)
         else:
-            raise TypeError(f'Unexpted types aiida_cls_from={aiida_cls_from} and aiida_cls_to={aiida_cls_to}')
+            msg = f'Unexpted types aiida_cls_from={aiida_cls_from} and aiida_cls_to={aiida_cls_to}'
+            raise TypeError(msg)
 
     def _check_self_and_other(self, other: Self) -> None:
         if not isinstance(other, DirectedEdgeSet):
@@ -283,13 +289,15 @@ class DirectedEdgeSet(AbstractSetContainer):
         if self.edge_namedtuple != other.edge_namedtuple:
             raise ValueError('The two instances do not have the same identifiers!')
 
-    def _check_input_for_set(self, input_for_set: tuple[Any, ...]) -> tuple[Any, ...]:
+    def _check_input_for_set(self, input_for_set: tuple[t.Any, ...]) -> tuple[t.Any, ...]:
         if not isinstance(input_for_set, tuple):
-            raise TypeError(f'value for `input_for_set` {input_for_set} is not a tuple')
+            msg = f'value for `input_for_set` {input_for_set} is not a tuple'  # type: ignore[unreachable]
+            raise TypeError(msg)
         if len(input_for_set) != len(self._edge_identifiers):
             inputs_len = len(input_for_set)
             inside_len = len(self._edge_identifiers)
-            raise ValueError(f'tuple passed has len = {inputs_len}, but there are {inside_len} identifiers')
+            msg = f'tuple passed has len = {inputs_len}, but there are {inside_len} identifiers'
+            raise ValueError(msg)
         return input_for_set
 
     def get_template(self) -> DirectedEdgeSet:
@@ -316,20 +324,15 @@ class DirectedEdgeSet(AbstractSetContainer):
         return self._edge_identifiers
 
 
-# NOTE: Lot of the remaining type-ignores in the Basket class
-# will be removed once we can mark this TypedDict as "closed" per PEP728:
-# https://peps.python.org/pep-0728/#the-closed-class-parameter
-# https://github.com/python/mypy/issues/18176
-# https://github.com/python/mypy/issues/7981#issuecomment-2080161813
-class _BasketDict(TypedDict):
+class _BasketDict(TypedDict, closed=True, total=True):
     nodes: AiidaEntitySet
     groups: AiidaEntitySet
     nodes_nodes: DirectedEdgeSet
     groups_nodes: DirectedEdgeSet
 
 
-_BasketKeys: TypeAlias = Literal['nodes', 'groups', 'nodes_nodes', 'groups_nodes']
-_BasketValues: TypeAlias = 'AiidaEntitySet | DirectedEdgeSet'
+_BasketKeys: t.TypeAlias = t.Literal['nodes', 'groups', 'nodes_nodes', 'groups_nodes']
+_BasketValues: t.TypeAlias = 'AiidaEntitySet | DirectedEdgeSet'
 
 
 class Basket:
@@ -372,15 +375,17 @@ class Basket:
 
             if isinstance(input_object, AiidaEntitySet):
                 if input_object.aiida_cls is not aiida_class:
-                    raise TypeError(f'{keyword}  has to  have {aiida_class} as aiida_cls')
+                    msg = f'{keyword}  has to  have {aiida_class} as aiida_cls'
+                    raise TypeError(msg)
                 return input_object
 
             else:
-                raise ValueError(
-                    'Input object is of type {}.\n'
+                msg = (  # type: ignore[unreachable]
+                    f'Input object is of type {input_object}.\n'
                     'Instead, it should be either None or one of:\n'
-                    ' - {}\n - {}\n - {}\n - {}\n'.format(input_object, AiidaEntitySet, list, tuple, set)
+                    f' - {AiidaEntitySet}\n - {list}\n - {tuple}\n - {set}\n'
                 )
+                raise ValueError(msg)
 
         def get_check_set_directed_edge_set(
             var: DirectedEdgeSet | None, keyword: str, cls_from: _NodeOrGroupCls, cls_to: _NodeOrGroupCls
@@ -389,12 +394,15 @@ class Basket:
                 return DirectedEdgeSet(aiida_cls_to=cls_to, aiida_cls_from=cls_from)
 
             if not isinstance(var, DirectedEdgeSet):
-                raise TypeError(f'{keyword} has to be an instance of DirectedEdgeSet or None')
+                msg = f'{keyword} has to be an instance of DirectedEdgeSet or None'  # type: ignore[unreachable]
+                raise TypeError(msg)
 
             if var.aiida_cls_from is not cls_from:
-                raise TypeError(f'{keyword} has to have {cls_from} as aiida_cls_from')
+                msg = f'{keyword} has to have {cls_from} as aiida_cls_from'
+                raise TypeError(msg)
             elif var.aiida_cls_to is not cls_to:
-                raise TypeError(f'{keyword} has to have {cls_to} as aiida_cls_to')
+                msg = f'{keyword} has to have {cls_to} as aiida_cls_to'
+                raise TypeError(msg)
             else:
                 return var
 
@@ -402,10 +410,10 @@ class Basket:
         groups = get_check_set_entity_set(groups, 'groups', orm.Group)
         nodes_nodes = get_check_set_directed_edge_set(nodes_nodes, 'nodes-nodes', orm.Node, orm.Node)
         groups_nodes = get_check_set_directed_edge_set(groups_nodes, 'groups-nodes', orm.Node, orm.Group)
-        self._dict: _BasketDict = dict(nodes=nodes, groups=groups, nodes_nodes=nodes_nodes, groups_nodes=groups_nodes)
+        self._dict = _BasketDict(nodes=nodes, groups=groups, nodes_nodes=nodes_nodes, groups_nodes=groups_nodes)
 
     @property
-    def sets(self) -> tuple[Any, ...]:
+    def sets(self) -> tuple[t.Any, ...]:
         """All sets in the basket returned as an ordered list.
         The order is: 'groups', 'groups_nodes', 'nodes', 'nodes_nodes'.
         """
@@ -428,60 +436,70 @@ class Basket:
         """Set of groups stored in the basket"""
         return self._dict['groups']
 
-    @overload
-    def __getitem__(self, key: Literal['nodes', 'groups']) -> AiidaEntitySet: ...
+    @t.overload
+    def __getitem__(self, key: t.Literal['nodes', 'groups']) -> AiidaEntitySet: ...
 
-    @overload
-    def __getitem__(self, key: Literal['nodes_nodes', 'groups_nodes']) -> DirectedEdgeSet: ...
+    @t.overload
+    def __getitem__(self, key: t.Literal['nodes_nodes', 'groups_nodes']) -> DirectedEdgeSet: ...
 
     def __getitem__(self, key: _BasketKeys) -> _BasketValues:
         return self._dict[key]
 
+    @t.overload
+    def __setitem__(self, key: t.Literal['nodes', 'groups'], val: AiidaEntitySet) -> None: ...
+
+    @t.overload
+    def __setitem__(self, key: t.Literal['nodes_nodes', 'groups_nodes'], val: DirectedEdgeSet) -> None: ...
+
     def __setitem__(self, key: _BasketKeys, val: _BasketValues) -> None:
         self._dict[key] = val
 
-    def __add__(self, other: Self) -> 'Basket':
+    def __add__(self, other: object) -> Basket:
+        if not isinstance(other, Basket):
+            return NotImplemented
         new_dict = {}
         for key, value in self._dict.items():
             new_dict[key] = value + other.dict[key]  # type: ignore[literal-required]
         return Basket(**new_dict)
 
-    def __iadd__(self, other: Self) -> Self:
+    def __iadd__(self, other: object) -> Self:
+        if not isinstance(other, Basket):
+            return NotImplemented
         for key in self._dict:
-            self[key] += other[key]  # type: ignore[index,call-overload]
+            self[key] += other[key]  # type: ignore[call-overload]
         return self
 
-    def __sub__(self, other: Self) -> 'Basket':
+    def __sub__(self, other: object) -> Basket:
+        if not isinstance(other, Basket):
+            return NotImplemented
         new_dict = {}
         for key in self._dict:
             new_dict[key] = self[key] - other[key]  # type: ignore[call-overload]
         return Basket(**new_dict)
 
-    def __isub__(self, other: Self) -> Self:
+    def __isub__(self, other: object) -> Self:
+        if not isinstance(other, Basket):
+            return NotImplemented
         for key in other.dict:
-            self[key] -= other[key]  # type: ignore[call-overload,index]
+            self[key] -= other[key]  # type: ignore[call-overload]
         return self
 
     def __len__(self) -> int:
         return sum(len(s) for s in self.sets)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Basket):
-            return False
+            return NotImplemented
         for key in self._dict:
             if self[key] != other[key]:  # type: ignore[call-overload]
                 return False
         return True
 
-    def __ne__(self, other: Any) -> bool:
-        return not self == other
-
     def __repr__(self) -> str:
         """Return string representation."""
         ret_str = ''
         for key, val in self._dict.items():
-            ret_str += f'  {key}: '
-            ret_str += f'{val!s}\n'
+            ret_str += f'  {key}: {val!s}\n'
         return ret_str
 
     def empty(self) -> None:
@@ -489,14 +507,14 @@ class Basket:
         for set_ in self._dict.values():
             set_.empty()  # type: ignore[attr-defined]
 
-    def get_template(self) -> 'Basket':
+    def get_template(self) -> Basket:
         """Create new nasket with the same defining attributes for its internal containers."""
         new_dict = {}
         for key, val in self._dict.items():
             new_dict[key] = val.get_template()  # type: ignore[attr-defined]
         return Basket(**new_dict)
 
-    def copy(self) -> 'Basket':
+    def copy(self) -> Basket:
         """Create new instance with the same defining attributes and content."""
         new_dict = {}
         for key, val in self._dict.items():

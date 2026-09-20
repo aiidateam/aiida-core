@@ -48,7 +48,7 @@ class AutogroupManager:
         self._exclude: list[str] | None = None
         self._include: list[str] | None = None
 
-        self._group_label_prefix = f"Verdi autogroup on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        self._group_label_prefix = f'Verdi autogroup on {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'
         self._group_label = None  # Actual group label, set by `get_or_create_group`
 
     @property
@@ -93,13 +93,11 @@ class AutogroupManager:
         for string in strings:
             pieces = string.split(':')
             if len(pieces) != 2:
-                raise exceptions.ValidationError(
-                    f"'{string}' is not a valid include/exclude filter, must contain two parts split by a colon"
-                )
+                msg = f"'{string}' is not a valid include/exclude filter, must contain two parts split by a colon"
+                raise exceptions.ValidationError(msg)
             if pieces[0] not in valid_prefixes:
-                raise exceptions.ValidationError(
-                    f"'{string}' has an invalid prefix, must be among: {sorted(valid_prefixes)}"
-                )
+                msg = f"'{string}' has an invalid prefix, must be among: {sorted(valid_prefixes)}"
+                raise exceptions.ValidationError(msg)
 
     def set_exclude(self, exclude: list[str] | str | None) -> None:
         """Set the list of classes to exclude in the autogrouping.
@@ -134,7 +132,7 @@ class AutogroupManager:
     def set_group_label_prefix(self, label_prefix: str | None) -> None:
         """Set the label of the group to be created (or use a default)."""
         if label_prefix is None:
-            label_prefix = f"Verdi autogroup on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            label_prefix = f'Verdi autogroup on {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'
         if not isinstance(label_prefix, str):
             raise exceptions.ValidationError('group label must be a string')
         self._group_label_prefix = label_prefix
@@ -220,7 +218,7 @@ class AutogroupManager:
             filters={
                 'or': [
                     {'label': {'==': label_prefix}},
-                    {'label': {'like': f"{escape_for_sql_like(f'{label_prefix}_')}%"}},
+                    {'label': {'like': f'{escape_for_sql_like(f"{label_prefix}_")}%'}},
                 ]
             },
             project='label',

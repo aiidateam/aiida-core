@@ -4,7 +4,7 @@
 
 # fmt: off
 
-from .backend import *
+from aiida.storage.sqlite_dos.backend import *
 
 __all__ = (
     'SqliteDosStorage',

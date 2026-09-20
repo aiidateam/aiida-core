@@ -1,6 +1,6 @@
 [build-system]
 build-backend = 'flit_core.buildapi'
-requires = ['flit_core >=3.4,<4']
+requires = ["flit_core >=4.0.2,<5"]
 
 # The "dev" dependency group is automatically synced by uv
 # and should thus contain all necessary deps for local development.
@@ -29,22 +29,27 @@ classifiers = [
 # you need to also update the versions of corresponding stub packages
 # in the 'pre-commit' group e.g. 'types-requests'
 dependencies = [
+  'aio-pika~=9.5.0',
   'alembic~=1.8',
   'archive-path~=0.4.2',
   "asyncssh~=2.22.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
+  'dill>=0.3.6,<1',
   'disk-objectstore~=1.5.0',
   'docstring-parser',
   'graphviz~=0.19',
-  'plumpy~=0.26.0',
+  'greenback~=1.0',
+  'greenlet>=3.2.4',
+  'importlib-metadata~=6.0',
   'ipython>=7.6',
   'jedi<0.19',
   'jinja2~=3.0',
-  'kiwipy[rmq]~=0.9.0',
   'numpy>=1.21,<3',
+  'pamqp~=3.2',
   'paramiko~=3.0',
+  'pytray>=0.3.4,<0.4.0',
   'pgsu~=0.3.0',
   'psutil~=7.0',
   'psycopg[binary]>=3.0.2,<4',
@@ -52,10 +57,11 @@ dependencies = [
   'pytz~=2021.1',
   'pyyaml~=6.0',
   'requests~=2.0',
+  'shortuuid',
   'sqlalchemy>=2.0.20,<3',
   'tabulate>=0.9.0,<0.10.0',
   'tqdm~=4.45',
-  'typing-extensions~=4.1',
+  'typing-extensions~=4.13',
   'upf_to_json~=0.9.2',
   'wrapt~=1.11',
   'chardet~=5.2.0;platform_system=="Windows"'
@@ -70,10 +76,11 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.brokers']
 'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'
-'core.zmq' = 'aiida.brokers.zmq.broker:ZmqBroker'
+'core.zeromq' = 'aiida.brokers.zeromq.broker:ZeromqBroker'
 
 [project.entry-points.'aiida.calculations']
 'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
+'core.shell' = 'aiida.calculations.shell:ShellJob'
 'core.stash' = 'aiida.calculations.stash:StashCalculation'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
@@ -116,8 +123,10 @@ requires-python = '>=3.10'
 'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
 'core.code.containerized' = 'aiida.orm.nodes.data.code.containerized:ContainerizedCode'
 'core.code.installed' = 'aiida.orm.nodes.data.code.installed:InstalledCode'
+'core.code.installed.shell' = 'aiida.orm.nodes.data.code.shell:ShellCode'
 'core.code.portable' = 'aiida.orm.nodes.data.code.portable:PortableCode'
 'core.dict' = 'aiida.orm.nodes.data.dict:Dict'
+'core.entry_point' = 'aiida.orm.nodes.data.entry_point:EntryPointData'
 'core.enum' = 'aiida.orm.nodes.data.enum:EnumData'
 'core.float' = 'aiida.orm.nodes.data.float:Float'
 'core.folder' = 'aiida.orm.nodes.data.folder:FolderData'
@@ -126,6 +135,7 @@ requires-python = '>=3.10'
 'core.list' = 'aiida.orm.nodes.data.list:List'
 'core.numeric' = 'aiida.orm.nodes.data.numeric:NumericType'
 'core.orbital' = 'aiida.orm.nodes.data.orbital:OrbitalData'
+'core.pickled' = 'aiida.orm.nodes.data.pickled:PickledData'
 'core.remote' = 'aiida.orm.nodes.data.remote.base:RemoteData'
 'core.remote.stash' = 'aiida.orm.nodes.data.remote.stash.base:RemoteStashData'
 'core.remote.stash.compress' = 'aiida.orm.nodes.data.remote.stash.compress:RemoteStashCompressedData'
@@ -165,6 +175,7 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.parsers']
 'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
+'core.shell' = 'aiida.parsers.plugins.shell.parser:ShellParser'
 'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'
 
 [project.entry-points.'aiida.schedulers']
@@ -245,7 +256,7 @@ notebook = [
 # https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
   'aiida-core[tests]',
-  'mypy~=1.19.0',
+  'mypy~=2.3.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
@@ -280,11 +291,11 @@ tests = [
   'nbformat~=5.10',
   'pg8000~=1.13',
   'pgtest~=1.3,>=1.3.1',
-  'pytest~=7.0',
+  'pytest~=9.0',
   'pytest-asyncio~=0.12,<0.17',
   'pytest-timeout~=2.0',
   'pytest-cov~=7.0',
-  'pytest-rerunfailures~=12.0',
+  'pytest-rerunfailures~=16.2',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
   'pytest-instafail~=0.5',
@@ -296,6 +307,11 @@ tests = [
 tui = [
   'trogon'
 ]
+tutorials = [
+  'aiida-shell>=0.9.0',
+  'aiida-workgraph>=0.9.0',
+  'gsrd>=0.2.0'
+]
 
 [project.scripts]
 runaiida = 'aiida.cmdline.commands.cmd_run:run'
@@ -306,6 +322,11 @@ Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/CHANGELOG.md'
 Documentation = 'https://aiida.readthedocs.io'
 Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
+
+[tool.coverage.report]
+exclude_also = [
+  'if t\.TYPE_CHECKING:'
+]
 
 [tool.coverage.run]
 core = 'sysmon'
@@ -320,8 +341,26 @@ name = 'aiida'
 
 [tool.flit.sdist]
 exclude = [
+  '**/.mypy_cache/',
+  '.claude/',
+  '.devcontainer/',
+  '.docker/',
+  '.git-blame-ignore-revs',
+  '.github/',
+  '.gitignore',
+  '.molecule/',
+  '.pre-commit-config.yaml',
+  '.readthedocs.yml',
+  'AGENTS.md',
+  'AI_POLICY.md',
+  'CLAUDE.md',
+  'CODE_OF_CONDUCT.md',
+  'codecov.yml',
   'docs/',
-  'tests/'
+  'environment.yml',
+  'tests/',
+  'utils/',
+  'uv.lock'
 ]
 
 [tool.mypy]
@@ -364,10 +403,16 @@ disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
   'aiida.brokers.*',
+  'aiida.calculations.shell',
   'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
   'aiida.cmdline.commands.cmd_status',
   'aiida.common.*',
+  'aiida.orm.nodes.data.code.shell',
+  'aiida.orm.nodes.data.entry_point',
+  'aiida.orm.nodes.data.pickled',
+  'aiida.orm.utils.data',
+  'aiida.parsers.plugins.shell.parser',
   'aiida.repository.*',
   'aiida.schedulers.*',
   'aiida.storage.psql_dos.migrator',
@@ -387,9 +432,9 @@ module = [
   'bpython.*',
   'bs4.*',
   'circus.*',
+  'dill.*',
   'flask_restful.*',
   'graphviz.*',
-  'kiwipy.*',
   'mayavi.*',
   'pgsu.*',
   'pgtest.*',
@@ -419,10 +464,8 @@ filterwarnings = [
   'ignore:Identity map already had an identity for .* inside of an event handler within the flush?:sqlalchemy.exc.SAWarning',
   'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
-  # https://github.com/aiidateam/plumpy/issues/283
-  'ignore:There is no current event loop:DeprecationWarning:plumpy',
   "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning:pytest_asyncio",
-  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio|kiwipy",
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio",
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
   # https://github.com/aiidateam/archive-path/issues/21
@@ -439,8 +482,8 @@ filterwarnings = [
 ]
 markers = [
   'nightly: long running tests that should rarely be affected and so only run nightly',
-  'requires_rmq: requires RabbitMQ specifically (not compatible with ZMQ broker)',
-  'requires_broker: requires a message broker (RabbitMQ or ZMQ)',
+  'requires_rmq: requires RabbitMQ specifically (not compatible with ZeroMQ broker)',
+  'requires_broker: requires a message broker (RabbitMQ or ZeroMQ)',
   'requires_psql: requires a connection to PostgreSQL DB',
   'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql)',
   'sphinx: set parameters for the sphinx `app` fixture'
@@ -467,11 +510,14 @@ quote-style = 'single'
 ignore = [
   'F403',  # Star imports unable to detect undefined names
   'F405',  # Import may be undefined or defined from star imports
+  'PLC0415',  # import-outside-top-level
   'PLR0911',  # Too many return statements
   'PLR0912',  # Too many branches
   'PLR0913',  # Too many arguments in function definition
   'PLR0915',  # Too many statements
+  'PLR0917',  # Too many positional arguments
   'PLR2004',  # Magic value used in comparison
+  'PLW1641',  # Checks for classes that implement `__eq__` but not `__hash__`
   'RUF005',  # Consider iterable unpacking instead of concatenation
   'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]
@@ -479,7 +525,9 @@ select = [
   'E',  # pydocstyle
   'W',  # pydocstyle
   'F',  # pyflakes
+  'UP',  # pyupgrade
   'I',  # isort
+  'ICN',  # flake8-import-conventions
   'N',  # pep8-naming
   'PLC',  # pylint-convention
   'PLE',  # pylint-error
@@ -487,8 +535,17 @@ select = [
   'PLW',  # pylint-warning
   'RUF',  # ruff
   'FLY',  # flynt
-  'NPY201'  # numpy compatibility
+  'EM102',  # flake8-errmsg
+  'NPY201',  # numpy compatibility
+  'TID'  # flake8-tidy-imports
 ]
+
+[tool.ruff.lint.flake8-import-conventions]
+aliases = {typing = "t"}  # Only listed imports are checked
+banned-from = ["typing"]  # Only listed from-imports are banned
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 # Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
 # Needed due to https://github.com/astral-sh/ruff/issues/9298
@@ -555,6 +612,8 @@ setenv =
 commands =
     sphinx-autobuild \
         --re-ignore build/.* \
+        --re-ignore .*/.aiida-tutorial/.* \
+        --re-ignore .*/tutorials/(results.npz|input.yaml|input_bad.yaml)$ \
         --port 0 --open-browser \
         -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
 
@@ -587,5 +646,4 @@ commands = molecule {posargs:test}
 # NOTE: When you bump the minimum uv version, you might also need to change it in:
 # .pre-commit-config.yaml
 # .github/actions/install-aiida-core/action.yml
-# .readthedocs.yml
 required-version = ">=0.8.4"

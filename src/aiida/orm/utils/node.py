@@ -28,7 +28,7 @@ def load_node_class(type_string):
     :param type_string: the `type` string of the node
     :return: a sub class of `Node`
     """
-    from aiida.orm import Data, Node
+    from aiida.orm import Data, Node, ProcessNode
     from aiida.plugins.entry_point import load_entry_point
 
     if type_string == '':
@@ -38,7 +38,8 @@ def load_node_class(type_string):
         return Data
 
     if not type_string.endswith('.'):
-        raise exceptions.DbContentError(f'The type string `{type_string}` is invalid')
+        msg = f'The type string `{type_string}` is invalid'
+        raise exceptions.DbContentError(msg)
 
     base_path = type_string.rsplit('.', 2)[0]
 
@@ -47,8 +48,7 @@ def load_node_class(type_string):
     if base_path.startswith('node.'):
         base_path = base_path.removeprefix('node.')
 
-    # Data nodes are the only ones with sub classes that are still external, so if the plugin is not available
-    # we fall back on the base node type
+    # If the Data plugin is not available we fall back on the base Data class
     if base_path.startswith('data.'):
         entry_point_name = base_path.removeprefix('data.')
         try:
@@ -56,8 +56,12 @@ def load_node_class(type_string):
         except exceptions.MissingEntryPointError:
             return Data
 
+    # If the Process plugin is not available we fall back on the base ProcessNode class
     if base_path.startswith('process'):
-        return load_entry_point('aiida.node', base_path)
+        try:
+            return load_entry_point('aiida.node', base_path)
+        except exceptions.MissingEntryPointError:
+            return ProcessNode
 
     # At this point we really have an anomalous type string. At some point, storing nodes with unresolvable type strings
     # was allowed, for example by creating a sub class in a shell and then storing an instance. Attempting to load the
@@ -120,7 +124,8 @@ def is_valid_node_type_string(type_string, raise_on_false=False):
     # as well as the usual type strings like 'data.parameter.ParameterData.'
     if type_string.count('.') == 1 or not type_string.endswith('.'):
         if raise_on_false:
-            raise exceptions.DbContentError(f'The type string {type_string} is invalid')
+            msg = f'The type string {type_string} is invalid'
+            raise exceptions.DbContentError(msg)
         return False
 
     return True
@@ -148,7 +153,7 @@ def get_query_type_from_type_string(type_string):
 class AbstractNodeMeta(ABCMeta):
     """Some python black magic to set correctly the logger also in subclasses."""
 
-    def __new__(mcs, name, bases, namespace, **kwargs):  # noqa: N804
+    def __new__(mcs, name, bases, namespace, **kwargs):
         newcls = super().__new__(mcs, name, bases, namespace, **kwargs)
         newcls._logger = logging.getLogger(f'{namespace["__module__"]}.{name}')
         return newcls

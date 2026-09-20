@@ -30,7 +30,7 @@ pytestmark = pytest.mark.requires_broker
 def test_ipc_socket_file_length_limit():
     """The maximum length of socket filepaths is often limited by the operating system.
     For MacOS it is limited to 103 bytes, versus 107 bytes on Unix. This limit is
-    exposed by the Zmq library which is used by Circus library that is used to
+    exposed by the ZeroMQ library which is used by Circus library that is used to
     daemonize the daemon runners. This test verifies that the three endpoints used
     for the Circus client have a filepath that does not exceed that path limit.
 
@@ -91,7 +91,7 @@ def test_get_daemon_client_does_not_switch_profile(empty_config, profile_factory
 
 def test_get_status_daemon_not_running(stopped_daemon_client):
     """Test ``DaemonClient.get_status`` output when the daemon is not running."""
-    with pytest.raises(DaemonNotRunningException, match='The daemon is not running.'):
+    with pytest.raises(DaemonNotRunningException, match='The daemon is not running'):
         stopped_daemon_client.get_status()
 
 
@@ -103,31 +103,31 @@ def raise_daemon_timeout():
 @patch.object(DaemonClient, 'get_status', lambda _: raise_daemon_timeout())
 def test_get_status_timeout(stopped_daemon_client):
     """Test ``DaemonClient.get_status`` output when the circus daemon process cannot be reached."""
-    with pytest.raises(DaemonTimeoutException, match='Connection to the daemon timed out.'):
+    with pytest.raises(DaemonTimeoutException, match='Connection to the daemon timed out'):
         stopped_daemon_client.get_status()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-class TestDaemonVersionInfo:
-    """Tests for the daemon version info methods."""
+class TestDaemonEnvInfo:
+    """Tests for the daemon env info methods."""
 
     @staticmethod
     def test_get_package_version_snapshot():
-        """Test that ``get_package_version_snapshot`` returns at least ``aiida-core``."""
-        from importlib.metadata import version as metadata_version
+        """Test that ``_get_package_version_snapshot`` returns at least ``aiida-core``."""
+        from importlib_metadata import version as metadata_version
 
-        versions = DaemonClient.get_package_version_snapshot()
+        versions = DaemonClient._get_package_version_snapshot()
         assert 'aiida-core' in versions
         assert versions['aiida-core']['version'].startswith(metadata_version('aiida-core'))
 
     @staticmethod
-    def test_get_daemon_package_snapshot_no_file(stopped_daemon_client):
-        """Test that ``get_daemon_package_snapshot`` returns None when no version file exists."""
-        assert stopped_daemon_client.get_daemon_package_snapshot() is None
+    def test_get_daemon_env_info_no_file(stopped_daemon_client):
+        """Test that ``_get_daemon_env_info`` returns None when no version file exists."""
+        assert stopped_daemon_client._get_daemon_env_info() is None
 
     @staticmethod
-    def test_daemon_package_snapshot_file_missing_configuration(stopped_daemon_client, monkeypatch):
-        """Test that ``daemon_package_snapshot_file`` raises ``ConfigurationError`` when the filepath is missing."""
+    def test_daemon_env_info_file_missing_configuration(stopped_daemon_client, monkeypatch):
+        """Test that ``_daemon_env_info_file`` raises ``ConfigurationError`` when the filepath is missing."""
         from aiida.common.exceptions import ConfigurationError
 
         filepaths = stopped_daemon_client._config.filepaths(stopped_daemon_client.profile)
@@ -135,39 +135,42 @@ class TestDaemonVersionInfo:
             stopped_daemon_client._config, 'filepaths', lambda profile: {'daemon': {'pid': filepaths['daemon']['pid']}}
         )
 
-        with pytest.raises(ConfigurationError, match='daemon package snapshot file path is not configured'):
-            _ = stopped_daemon_client.daemon_package_snapshot_file
+        with pytest.raises(ConfigurationError, match='daemon env info file path is not configured'):
+            _ = stopped_daemon_client._daemon_env_info_file
 
     @staticmethod
-    def test_get_daemon_package_snapshot_missing_configuration(stopped_daemon_client, monkeypatch):
-        """Test that ``get_daemon_package_snapshot`` returns None when the filepath is missing."""
+    def test_get_daemon_env_info_missing_configuration(stopped_daemon_client, monkeypatch):
+        """Test that ``_get_daemon_env_info`` returns None when the filepath is missing."""
         filepaths = stopped_daemon_client._config.filepaths(stopped_daemon_client.profile)
         modified_filepaths = dict(filepaths)
         modified_filepaths['daemon'] = dict(filepaths['daemon'])
-        modified_filepaths['daemon'].pop('package_snapshot', None)
+        modified_filepaths['daemon'].pop('daemon_env_info', None)
         monkeypatch.setattr(stopped_daemon_client._config, 'filepaths', lambda profile: modified_filepaths)
 
-        assert stopped_daemon_client.get_daemon_package_snapshot() is None
+        assert stopped_daemon_client._get_daemon_env_info() is None
 
     @staticmethod
-    def test_get_daemon_package_snapshot_corrupt_file(stopped_daemon_client):
-        """Test that ``get_daemon_package_snapshot`` returns None for corrupt version file."""
-        version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
+    def test_get_daemon_env_info_corrupt_file(stopped_daemon_client):
+        """Test that ``_get_daemon_env_info`` returns None for corrupt version file."""
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
         version_file.write_text('not valid json {{{', encoding='utf8')
-        assert stopped_daemon_client.get_daemon_package_snapshot() is None
+        assert stopped_daemon_client._get_daemon_env_info() is None
 
     @staticmethod
-    def test_daemon_version_info_roundtrip(stopped_daemon_client):
+    def test_daemon_env_info_roundtrip(stopped_daemon_client):
         """Test that version info can be written and read back."""
-        version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
-        expected = {
+        packages = {
             'aiida-core': {'version': '2.6.0', 'editable_path': '/tmp/aiida-core'},
             'some-plugin': {'version': '1.0.0'},
         }
-        version_file.write_text(json.dumps(expected), encoding='utf8')
-        assert stopped_daemon_client.get_daemon_package_snapshot() == expected
+        snapshot = {'packages': packages, 'python_binary': '/usr/bin/python3'}
+        version_file.write_text(json.dumps(snapshot), encoding='utf8')
+        info = stopped_daemon_client._get_daemon_env_info()
+        assert info['packages'] == packages
+        assert info['python_binary'] == '/usr/bin/python3'
 
     @staticmethod
     def test_get_dist_commit_hash_vcs_install():
@@ -236,7 +239,7 @@ class TestDaemonVersionInfo:
             entry_point = SimpleNamespace(group='aiida.transports', dist=dist)
 
             with patch('aiida.plugins.entry_point.eps', return_value=[entry_point]):
-                versions = DaemonClient.get_package_version_snapshot()
+                versions = DaemonClient._get_package_version_snapshot()
 
             assert versions == {
                 'aiida-core': {'version': '2.8.0.post0', 'editable_path': str(pathlib.Path(tmpdir).resolve())}
@@ -244,7 +247,7 @@ class TestDaemonVersionInfo:
 
     @staticmethod
     def test_get_package_version_snapshot_parses_direct_url_once():
-        """Test that ``get_package_version_snapshot`` reads ``direct_url.json`` at most once per distribution."""
+        """Test that ``_get_package_version_snapshot`` reads ``direct_url.json`` at most once per distribution."""
         from types import SimpleNamespace
         from unittest.mock import MagicMock, patch
 
@@ -255,14 +258,14 @@ class TestDaemonVersionInfo:
         entry_point = SimpleNamespace(group='aiida.transports', dist=dist)
 
         with patch('aiida.plugins.entry_point.eps', return_value=[entry_point]):
-            DaemonClient.get_package_version_snapshot()
+            DaemonClient._get_package_version_snapshot()
 
         dist.read_text.assert_called_once_with('direct_url.json')
 
     @staticmethod
     def test_stop_daemon_cleans_version_file(stopped_daemon_client):
         """Test that ``stop_daemon`` removes the version file."""
-        version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
         version_file.write_text('{"aiida-core": "2.6.0"}', encoding='utf8')
         assert version_file.exists()
@@ -281,7 +284,7 @@ class TestDaemonVersionInfo:
         filepaths = stopped_daemon_client._config.filepaths(stopped_daemon_client.profile)
         modified_filepaths = dict(filepaths)
         modified_filepaths['daemon'] = dict(filepaths['daemon'])
-        modified_filepaths['daemon'].pop('package_snapshot', None)
+        modified_filepaths['daemon'].pop('daemon_env_info', None)
         monkeypatch.setattr(stopped_daemon_client._config, 'filepaths', lambda profile: modified_filepaths)
 
         with (
@@ -293,7 +296,7 @@ class TestDaemonVersionInfo:
     @staticmethod
     def test_start_daemon_writes_version_file(stopped_daemon_client):
         """Test that ``start_daemon`` writes the version file after a successful spawn."""
-        version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
         version_file.unlink(missing_ok=True)
 
@@ -302,18 +305,20 @@ class TestDaemonVersionInfo:
             patch.object(DaemonClient, '_await_condition'),
             patch.object(DaemonClient, '_clean_potentially_stale_pid_file'),
             patch.object(
-                DaemonClient, 'get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
+                DaemonClient, '_get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
             ),
         ):
             stopped_daemon_client.start_daemon()
 
         assert version_file.exists()
-        assert json.loads(version_file.read_text(encoding='utf8')) == {'aiida-core': {'version': '2.6.0'}}
+        written = json.loads(version_file.read_text(encoding='utf8'))
+        assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
+        assert 'python_binary' in written
 
     @staticmethod
     def test_start_daemon_no_version_file_on_await_failure(stopped_daemon_client):
         """Test that ``start_daemon`` does not write the version file if ``_await_condition`` fails."""
-        version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
         version_file.unlink(missing_ok=True)
 
@@ -326,7 +331,7 @@ class TestDaemonVersionInfo:
             ),
             patch.object(DaemonClient, '_clean_potentially_stale_pid_file'),
             patch.object(
-                DaemonClient, 'get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
+                DaemonClient, '_get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
             ),
         ):
             with pytest.raises(DaemonTimeoutException):
@@ -340,7 +345,7 @@ class TestDaemonVersionInfo:
         filepaths = stopped_daemon_client._config.filepaths(stopped_daemon_client.profile)
         modified_filepaths = dict(filepaths)
         modified_filepaths['daemon'] = dict(filepaths['daemon'])
-        modified_filepaths['daemon'].pop('package_snapshot', None)
+        modified_filepaths['daemon'].pop('daemon_env_info', None)
         monkeypatch.setattr(stopped_daemon_client._config, 'filepaths', lambda profile: modified_filepaths)
 
         with (
@@ -348,7 +353,7 @@ class TestDaemonVersionInfo:
             patch.object(DaemonClient, '_await_condition'),
             patch.object(DaemonClient, '_clean_potentially_stale_pid_file'),
             patch.object(
-                DaemonClient, 'get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
+                DaemonClient, '_get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
             ),
         ):
             stopped_daemon_client.start_daemon()
@@ -356,19 +361,21 @@ class TestDaemonVersionInfo:
     @staticmethod
     def test_restart_daemon_writes_version_file(stopped_daemon_client):
         """Test that ``restart_daemon`` updates the version file after a successful restart."""
-        version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
+        version_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
         version_file.write_text('{"aiida-core": {"version": "1.0.0"}}', encoding='utf8')
 
         with (
             patch.object(DaemonClient, 'call_client', return_value={'status': 'ok'}),
             patch.object(
-                DaemonClient, 'get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
+                DaemonClient, '_get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
             ),
         ):
             stopped_daemon_client.restart_daemon()
 
-        assert json.loads(version_file.read_text(encoding='utf8')) == {'aiida-core': {'version': '2.6.0'}}
+        written = json.loads(version_file.read_text(encoding='utf8'))
+        assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
+        assert 'python_binary' in written
 
     @staticmethod
     def test_restart_daemon_missing_version_file_configuration(stopped_daemon_client, monkeypatch):
@@ -376,13 +383,73 @@ class TestDaemonVersionInfo:
         filepaths = stopped_daemon_client._config.filepaths(stopped_daemon_client.profile)
         modified_filepaths = dict(filepaths)
         modified_filepaths['daemon'] = dict(filepaths['daemon'])
-        modified_filepaths['daemon'].pop('package_snapshot', None)
+        modified_filepaths['daemon'].pop('daemon_env_info', None)
         monkeypatch.setattr(stopped_daemon_client._config, 'filepaths', lambda profile: modified_filepaths)
 
         with (
             patch.object(DaemonClient, 'call_client', return_value={'status': 'ok'}),
             patch.object(
-                DaemonClient, 'get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
+                DaemonClient, '_get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
             ),
         ):
             assert stopped_daemon_client.restart_daemon() == {'status': 'ok'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+# Flaky: Circus can reject the next worker command while completing the preceding asynchronous command.
+@pytest.mark.flaky(reruns=2, reruns_delay=5)
+def test_change_workers_without_wait(started_daemon_client):
+    """Test that by default the calls return on acknowledgement, before the workers have been spawned or stopped."""
+    client = started_daemon_client
+    number_workers = client.get_numprocesses()['numprocesses']
+
+    def await_workers(target):
+        """Let the daemon settle, since while acting on a command it holds a lock that fails any concurrent one."""
+        client._await_condition(
+            lambda: client.get_number_of_workers() == target,
+            DaemonTimeoutException(f'The number of workers failed to reach {target}.'),
+            timeout=15,
+        )
+
+    # The acknowledgement carries no ``numprocesses``, as the daemon replies before having acted on the command
+    response = client.increase_workers(1)
+    assert response['status'] == 'ok'
+    assert 'numprocesses' not in response
+    await_workers(number_workers + 1)
+
+    response = client.decrease_workers(1)
+    assert response['status'] == 'ok'
+    assert 'numprocesses' not in response
+    await_workers(number_workers)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.flaky(reruns=2)
+def test_change_workers_with_wait(started_daemon_client):
+    """Test that with ``wait=True`` the workers have been spawned or stopped by the time the call returns."""
+    number_workers = started_daemon_client.get_numprocesses()['numprocesses']
+
+    response = started_daemon_client.increase_workers(1, timeout=10, wait=True)
+    assert response['numprocesses'] == number_workers + 1
+    assert started_daemon_client.get_number_of_workers() == number_workers + 1
+
+    response = started_daemon_client.decrease_workers(1, timeout=10, wait=True)
+    assert response['numprocesses'] == number_workers
+    assert started_daemon_client.get_number_of_workers() == number_workers
+
+
+@pytest.mark.parametrize('method', ('increase_workers', 'decrease_workers'))
+def test_change_workers_with_wait_timeout(stopped_daemon_client, method):
+    """Test that with ``wait=True`` a call that outlasts the timeout raises, since the response is only sent once the
+    daemon acted on the command."""
+    from circus.exc import CallError
+
+    with (
+        patch.object(DaemonClient, 'get_daemon_pid', return_value=1),
+        patch.object(DaemonClient, '_is_pid_file_stale', False),
+        patch.object(DaemonClient, 'get_client') as get_client,
+    ):
+        get_client.return_value.__enter__.return_value.call.side_effect = CallError('Timed out.')
+
+        with pytest.raises(DaemonTimeoutException, match=r'Connection to the daemon timed out\.'):
+            getattr(stopped_daemon_client, method)(1, timeout=1, wait=True)

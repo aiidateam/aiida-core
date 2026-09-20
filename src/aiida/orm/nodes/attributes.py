@@ -9,14 +9,15 @@
 """Interface to the attributes of a node instance."""
 
 import copy
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple
+import typing as t
+from collections.abc import Iterable
 
-if TYPE_CHECKING:
-    from .node import Node
+if t.TYPE_CHECKING:
+    from aiida.orm.nodes.node import Node
 
 __all__ = ('NodeAttributes',)
 
-_NO_DEFAULT: Any = tuple()
+_NO_DEFAULT: t.Any = tuple()
 
 
 class NodeAttributes:
@@ -39,7 +40,7 @@ class NodeAttributes:
         return key in self._backend_node.attributes
 
     @property
-    def all(self) -> Dict[str, Any]:
+    def all(self) -> dict[str, t.Any]:
         """Return the complete attributes dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
@@ -59,7 +60,7 @@ class NodeAttributes:
 
         return attributes
 
-    def get(self, key: str, default=_NO_DEFAULT) -> Any:
+    def get(self, key: str, default=_NO_DEFAULT) -> t.Any:
         """Return the value of an attribute.
 
         .. warning:: While the entity is unstored, this will return a reference of the attribute on the database model,
@@ -85,7 +86,7 @@ class NodeAttributes:
 
         return attribute
 
-    def get_many(self, keys: List[str]) -> List[Any]:
+    def get_many(self, keys: list[str]) -> list[t.Any]:
         """Return the values of multiple attributes.
 
         .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
@@ -107,7 +108,7 @@ class NodeAttributes:
 
         return attributes
 
-    def set(self, key: str, value: Any) -> None:
+    def set(self, key: str, value: t.Any) -> None:
         """Set an attribute to the given value.
 
         :param key: name of the attribute
@@ -118,7 +119,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes([key])
         self._backend_node.set_attribute(key, value)
 
-    def set_many(self, attributes: Dict[str, Any]) -> None:
+    def set_many(self, attributes: dict[str, t.Any]) -> None:
         """Set multiple attributes.
 
         .. note:: This will override any existing attributes that are present in the new dictionary.
@@ -130,7 +131,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes(list(attributes))
         self._backend_node.set_attribute_many(attributes)
 
-    def reset(self, attributes: Dict[str, Any]) -> None:
+    def reset(self, attributes: dict[str, t.Any]) -> None:
         """Reset the attributes.
 
         .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
@@ -152,7 +153,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes([key])
         self._backend_node.delete_attribute(key)
 
-    def delete_many(self, keys: List[str]) -> None:
+    def delete_many(self, keys: list[str]) -> None:
         """Delete multiple attributes.
 
         :param keys: names of the attributes to delete
@@ -167,7 +168,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes()
         self._backend_node.clear_attributes()
 
-    def items(self) -> Iterable[Tuple[str, Any]]:
+    def items(self) -> Iterable[tuple[str, t.Any]]:
         """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs

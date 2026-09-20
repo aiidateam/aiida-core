@@ -4,8 +4,8 @@
 
 # fmt: off
 
-from .dynamic import *
-from .verdi import *
+from aiida.cmdline.groups.dynamic import *
+from aiida.cmdline.groups.verdi import *
 
 __all__ = (
     'DynamicEntryPointCommandGroup',

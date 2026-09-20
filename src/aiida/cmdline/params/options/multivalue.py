@@ -14,7 +14,7 @@ import typing as t
 
 import click
 
-from .. import types
+from aiida.cmdline.params import types
 
 __all__ = ('MultipleValueOption',)
 

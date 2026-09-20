@@ -9,17 +9,16 @@
 """Convenience classes to help building the input dictionaries for Processes."""
 
 import json
+import typing as t
 from collections.abc import Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
 from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.utils import prune_mapping
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
 
-from .utils import prune_mapping
-
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
@@ -96,7 +95,7 @@ class ProcessBuilderNamespace(MutableMapping):
         child_class = type(class_name, (self.__class__,), dynamic_properties)
         self.__class__ = child_class
 
-    def __setattr__(self, attr: str, value: Any) -> None:
+    def __setattr__(self, attr: str, value: t.Any) -> None:
         """Assign the given value to the port with key `attr`.
 
         .. note:: Any attributes without a leading underscore being set correspond to inputs and should hence be
@@ -110,13 +109,15 @@ class ProcessBuilderNamespace(MutableMapping):
                 port = self._port_namespace[attr]
             except KeyError as exception:
                 if not self._port_namespace.dynamic:
-                    raise AttributeError(f'Unknown builder parameter: {attr}') from exception
+                    msg = f'Unknown builder parameter: {attr}'
+                    raise AttributeError(msg) from exception
                 port = None
             else:
                 value = port.serialize(value)  # type: ignore[union-attr]
                 validation_error = port.validate(value)  # type: ignore[union-attr]
                 if validation_error:
-                    raise ValueError(f'invalid attribute value {validation_error.message}')
+                    msg = f'invalid attribute value {validation_error.message}'
+                    raise ValueError(msg)
 
             # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
             # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become
@@ -138,8 +139,7 @@ class ProcessBuilderNamespace(MutableMapping):
         return sorted(set(self._valid_fields + [key for key, _ in self.__dict__.items() if key.startswith('_')]))
 
     def __iter__(self):
-        for key in self._data:
-            yield key
+        yield from self._data
 
     def __len__(self):
         return len(self._data)
@@ -177,7 +177,8 @@ class ProcessBuilderNamespace(MutableMapping):
         :param kwds: keyword value pairs that should be mapped onto the ports.
         """
         if len(args) > 1:
-            raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
+            msg = f'update expected at most 1 arguments, got {len(args)}'
+            raise TypeError(msg)
 
         if args:
             for key, value in args[0].items():
@@ -223,7 +224,7 @@ class ProcessBuilderNamespace(MutableMapping):
 class ProcessBuilder(ProcessBuilderNamespace):
     """A process builder that helps setting up the inputs for creating a new process."""
 
-    def __init__(self, process_class: Type['Process']):
+    def __init__(self, process_class: type['Process']):
         """Construct a `ProcessBuilder` instance for the given `Process` class.
 
         :param process_class: the `Process` subclass
@@ -233,7 +234,7 @@ class ProcessBuilder(ProcessBuilderNamespace):
         super().__init__(self._process_spec.inputs)
 
     @property
-    def process_class(self) -> Type['Process']:
+    def process_class(self) -> type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
 

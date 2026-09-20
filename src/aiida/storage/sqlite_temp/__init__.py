@@ -17,7 +17,7 @@ and destroys it when it is garbage collected.
 
 # fmt: off
 
-from .backend import *
+from aiida.storage.sqlite_temp.backend import *
 
 __all__ = (
     'SqliteTempBackend',

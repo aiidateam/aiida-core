@@ -1,4 +1,5 @@
 ---
+orphan: true
 jupytext:
   text_representation:
     extension: .md
@@ -19,7 +20,7 @@ execution:
 
 (tutorial)=
 (tutorial:basic)=
-# Basic tutorial
+# A provenance deep dive
 
 The goal of this tutorial is to give you an idea of how AiiDA helps you in executing data-driven workflows.
 At the end of this tutorial, you will know how to:
@@ -73,13 +74,12 @@ profile
 Before we dive in, we need to briefly introduce one of the most important concepts for AiiDA: *provenance*.
 An AiiDA database does not only contain the results of your calculations, but also their inputs and each step that was executed to obtain them.
 All of this information is stored in the form of a *directed acyclic graph* (DAG).
-As an example, {numref}`fig_intro_workchain_graph` shows the provenance of the calculations of this tutorial.
-
-(fig_intro_workchain_graph)=
+As an example, the {ref}`figure below <fig_intro_workchain_graph>` shows the provenance of the calculations of this tutorial.
 
 :::{figure} include/workchain_graph.png
 :align: center
 :scale: 30
+:name: fig_intro_workchain_graph
 
 Provenance Graph of a basic AiiDA WorkChain.
 :::
@@ -88,7 +88,7 @@ In the provenance graph, you can see different types of *nodes* represented by d
 The green ellipses are `Data` nodes, the blue ellipse is a `Code` node, and the rectangles represent *processes*, i.e. the calculations performed in your *workflow*.
 
 The provenance graph allows us to not only see what data we have, but also how it was produced.
-During this tutorial, we will be using AiiDA to generate the provenance graph in {numref}`fig_intro_workchain_graph` step by step.
+During this tutorial, we will be using AiiDA to generate the provenance graph {ref}`shown above <fig_intro_workchain_graph>` step by step.
 
 ## Data nodes
 
@@ -606,7 +606,7 @@ graph.graphviz
 ```
 
 Look familiar?
-The provenance graph should be similar to the one we showed at the start of this tutorial ({numref}`fig_intro_workchain_graph`).
+The provenance graph should be similar to the {ref}`one we showed at the start of this tutorial <fig_intro_workchain_graph>`.
 
 (tutorial:daemon)=
 

@@ -19,9 +19,9 @@ import codecs
 import json
 import os
 import shutil
+import typing as t
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import (
     BaseModel,
@@ -33,12 +33,73 @@ from pydantic import (
 )
 
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
-from aiida.common.log import AIIDA_LOGGER, LogLevels
-
-from .options import Option, get_option, get_option_names, parse_option
-from .profile import Profile
+from aiida.common.log import AIIDA_LOGGER, AdvancedLogLevels, LogLevels
+from aiida.manage.configuration.options import (
+    Option,
+    get_option,
+    get_option_names,
+    parse_option,
+    resolve_deprecated_option_name,
+)
+from aiida.manage.configuration.profile import Profile
 
 LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
+
+
+CircusEndpointName: t.TypeAlias = t.Literal['controller', 'pubsub', 'stats']
+
+
+class CircusEndpointFilepaths(t.TypedDict):
+    """Typed dictionary for Circus endpoint socket file names."""
+
+    controller: str
+    pubsub: str
+    stats: str
+
+
+class CircusSocketFilepaths(CircusEndpointFilepaths):
+    """Typed dictionary for Circus socket file paths."""
+
+    file: str
+
+
+class ProfileFilepaths(t.TypedDict):
+    """Typed dictionary for profile log file paths."""
+
+    log: str
+
+
+class CircusFilepaths(t.TypedDict):
+    """Typed dictionary for Circus file paths."""
+
+    log: str
+    pid: str
+    port: str
+    socket: CircusSocketFilepaths
+
+
+class DaemonFilepaths(t.TypedDict):
+    """Typed dictionary for daemon file paths."""
+
+    log: str
+    pid: str
+    daemon_env_info: str
+
+
+class ZeromqBrokerServiceFilepaths(t.TypedDict):
+    """Typed dictionary for ZeroMQ broker file paths."""
+
+    dir: str
+    log: str
+
+
+class ConfigFilepaths(t.TypedDict):
+    """Typed dictionary for profile-related file paths."""
+
+    profile: ProfileFilepaths
+    circus: CircusFilepaths
+    daemon: DaemonFilepaths
+    broker_service: ZeromqBrokerServiceFilepaths
 
 
 class ConfigVersionSchema(BaseModel, defer_build=True):
@@ -53,18 +114,30 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
 
     model_config = ConfigDict(use_enum_values=True)
 
-    runner__poll__interval: int = Field(60, description='Polling interval in seconds to be used by process runners.')
+    runner__poll__interval: int = Field(
+        60,
+        description='Polling interval in seconds to be used by process runners.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
     daemon__default_workers: int = Field(
-        1, description='Default number of workers to be launched by `verdi daemon start`.'
+        1,
+        description='Default number of workers to be launched by `verdi daemon start`.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     daemon__timeout: int = Field(
         2,
         description='Used to set default timeout in the `DaemonClient` for calls to the daemon.',
     )
     daemon__worker_process_slots: int = Field(
-        200, description='Maximum number of concurrent process tasks that each daemon worker can handle.'
+        200,
+        description='Maximum number of concurrent process tasks that each daemon worker can handle.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
-    daemon__recursion_limit: int = Field(3000, description='Maximum recursion depth for the daemon workers.')
+    daemon__recursion_limit: int = Field(
+        3000,
+        description='Maximum recursion depth for the daemon workers.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
     db__batch_size: int = Field(
         100000,
         description='Batch size for bulk CREATE operations in the database. Avoids hitting MaxAllocSize of PostgreSQL '
@@ -74,65 +147,126 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         ':',
         description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.',
     )
+    logging__terminal_handler: LogLevels = Field(
+        t.cast(LogLevels, 'REPORT'),
+        description=(
+            'Minimum log level needed for outputting a log into the terminal. '
+            'This only filters log messages and does not change the actual emitted log messages. '
+            'To take effect you need to also change one of the log levels to the same or higher verbosity '
+            '(e.g. `logging.aiida_loglevel`).'
+        ),
+    )
     logging__aiida_loglevel: LogLevels = Field(
-        'REPORT', description='Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger.'
+        t.cast(LogLevels, 'REPORT'),
+        description=(
+            'Minimum level for the AiiDA logging stack. Can be changed for individual aiida packages in the advanced'
+            ' options.'
+        ),
+        json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
-    logging__verdi_loglevel: LogLevels = Field(
-        'REPORT', description='Minimum level to log to console when running a `verdi` command.'
+    logging__aiida_core_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'INHERIT'),
+        description='Minimum level for the aiida-core logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__disk_objectstore_loglevel: LogLevels = Field(
-        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for `disk_objectstore` logger.'
+    logging__verdi_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'INHERIT'),
+        description='Minimum level for the `verdi` command logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__db_loglevel: LogLevels = Field('REPORT', description='Minimum level to log to the DbLog table.')
-    logging__plumpy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger.'
+    logging__disk_objectstore_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'INHERIT'),
+        description='Minimum level for the `disk_objectstore` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__kiwipy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger'
+    logging__database_handler: LogLevels = Field(
+        t.cast(LogLevels, 'REPORT'),
+        description=(
+            'Minimum log level needed for log messages bound to a stored node to be written to the `DbLog` '
+            'table (what `verdi process report` displays). This only filters log messages and does not change '
+            'the actual emitted log messages. To take effect you need to also change one of the log levels '
+            'to the same or higher verbosity (e.g. `logging.aiida_loglevel`).'
+        ),
+        json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
-    logging__paramiko_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger'
+    logging__db_loglevel: LogLevels = Field(
+        t.cast(LogLevels, 'REPORT'),
+        description='Deprecated: use ``logging.database_handler`` instead.',
+        json_schema_extra={
+            'deprecated_by': 'logging.database_handler',
+            'advanced': True,
+            'requires_daemon_restart': True,
+        },
     )
-    logging__alembic_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger'
+    logging__paramiko_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'WARNING'),
+        description='Minimum level for the `paramiko` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__sqlalchemy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger'
+    logging__alembic_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'WARNING'),
+        description='Minimum level for the `alembic` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__circus_loglevel: LogLevels = Field(
-        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for the `circus` logger'
+    logging__sqlalchemy_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'WARNING'),
+        description='Minimum level for the `sqlalchemy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
-    logging__aiopika_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `aiopika` logger'
+    logging__circus_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'INFO'),
+        description='Minimum level for the `circus` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
+    )
+    logging__aiopika_loglevel: AdvancedLogLevels = Field(
+        t.cast(AdvancedLogLevels, 'WARNING'),
+        description='Minimum level for the `aio_pika` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     warnings__showdeprecations: bool = Field(True, description='Whether to print AiiDA deprecation warnings.')
     warnings__rabbitmq_version: bool = Field(
         True, description='Whether to print a warning when an incompatible version of RabbitMQ is configured.'
     )
     transport__task_retry_initial_interval: int = Field(
-        20, description='Initial time interval for the exponential backoff mechanism.'
+        20,
+        description='Initial time interval for the exponential backoff mechanism.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     transport__task_maximum_attempts: int = Field(
-        5, description='Maximum number of transport task attempts before a Process is Paused.'
+        5,
+        description='Maximum number of transport task attempts before a Process is Paused.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     broker__task_timeout: int = Field(
-        10, description='Timeout in seconds for task/RPC communications with the message broker.'
+        10,
+        description='Timeout in seconds for task/RPC communications with the message broker.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     rmq__task_timeout: int = Field(
         10,
         description='Timeout in seconds for communications with RabbitMQ.',
-        json_schema_extra={'deprecated_by': 'broker.task_timeout'},
+        json_schema_extra={'deprecated_by': 'broker.task_timeout', 'requires_daemon_restart': True},
     )
-    storage__sandbox: Optional[str] = Field(
-        None, description='Absolute path to the directory to store sandbox folders.'
+    storage__sandbox: str | None = Field(None, description='Absolute path to the directory to store sandbox folders.')
+    caching__default_enabled: bool = Field(
+        False,
+        description='Enable calculation caching by default.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
-    caching__default_enabled: bool = Field(False, description='Enable calculation caching by default.')
-    caching__enabled_for: List[str] = Field([], description='Calculation entry points to enable caching on.')
-    caching__disabled_for: List[str] = Field([], description='Calculation entry points to disable caching on.')
+    caching__enabled_for: list[str] = Field(
+        [],
+        description='Calculation entry points to enable caching on.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    caching__disabled_for: list[str] = Field(
+        [],
+        description='Calculation entry points to disable caching on.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod
-    def validate_caching_identifier_pattern(cls, value: List[str]) -> List[str]:
+    def validate_caching_identifier_pattern(cls, value: list[str]) -> list[str]:
         """Validate the caching identifier patterns."""
         from aiida.manage.caching import _validate_identifier_pattern
 
@@ -144,16 +278,14 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
 class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
     """Schema for the global options of an AiiDA instance."""
 
-    autofill__user__email: Optional[str] = Field(
-        None, description='Default user email to use when creating new profiles.'
-    )
-    autofill__user__first_name: Optional[str] = Field(
+    autofill__user__email: str | None = Field(None, description='Default user email to use when creating new profiles.')
+    autofill__user__first_name: str | None = Field(
         None, description='Default user first name to use when creating new profiles.'
     )
-    autofill__user__last_name: Optional[str] = Field(
+    autofill__user__last_name: str | None = Field(
         None, description='Default user last name to use when creating new profiles.'
     )
-    autofill__user__institution: Optional[str] = Field(
+    autofill__user__institution: str | None = Field(
         None, description='Default user institution to use when creating new profiles.'
     )
     rest_api__profile_switching: bool = Field(
@@ -169,21 +301,21 @@ class ProfileStorageConfig(BaseModel, defer_build=True):
     """Schema for the storage backend configuration of an AiiDA profile."""
 
     backend: str
-    config: Dict[str, Any]
+    config: dict[str, t.Any]
 
 
 class ProcessControlConfig(BaseModel, defer_build=True):
-    """Schema for the process control configuration of an AiiDA profile."""
+    """Schema for the process control configuration of an AiiDA profile.
 
-    broker_protocol: str = Field('amqp', description='Protocol for connecting to the message broker.')
-    broker_username: str = Field('guest', description='Username for message broker authentication.')
-    broker_password: str = Field('guest', description='Password for message broker.')
-    broker_host: str = Field('127.0.0.1', description='Hostname of the message broker.')
-    broker_port: int = Field(5432, description='Port of the message broker.')
-    broker_virtual_host: str = Field('', description='Virtual host to use for the message broker.')
-    broker_parameters: dict[str, Any] = Field(
-        default_factory=dict, description='Arguments to be encoded as query parameters.'
+    The ``config`` entries are broker plugin specific: each broker plugin declares its supported fields and their
+    defaults through ``aiida.brokers.broker.Broker._config_fields``, which is the source of truth for its
+    configuration.
+    """
+
+    backend: str | None = Field(
+        None, description='Entry point name of the broker plugin, or ``None`` if no broker is configured.'
     )
+    config: dict[str, t.Any] | None = Field(None, description='Configuration of the broker plugin.')
 
 
 class ProfileSchema(BaseModel, defer_build=True):
@@ -192,9 +324,9 @@ class ProfileSchema(BaseModel, defer_build=True):
     uuid: str = Field(description='A UUID that uniquely identifies the profile.', default_factory=uuid.uuid4)
     storage: ProfileStorageConfig
     process_control: ProcessControlConfig
-    default_user_email: Optional[str] = None
+    default_user_email: str | None = None
     test_profile: bool = False
-    options: Optional[ProfileOptionsSchema] = None
+    options: ProfileOptionsSchema | None = None
 
     @field_serializer('uuid')
     def serialize_dt(self, value: uuid.UUID, _info):
@@ -204,10 +336,10 @@ class ProfileSchema(BaseModel, defer_build=True):
 class ConfigSchema(BaseModel, defer_build=True):
     """Schema for the configuration of an AiiDA instance."""
 
-    CONFIG_VERSION: Optional[ConfigVersionSchema] = None
-    profiles: Optional[dict[str, ProfileSchema]] = None
-    options: Optional[GlobalOptionsSchema] = None
-    default_profile: Optional[str] = None
+    CONFIG_VERSION: ConfigVersionSchema | None = None
+    profiles: dict[str, ProfileSchema] | None = None
+    options: GlobalOptionsSchema | None = None
+    default_profile: str | None = None
 
 
 class Config:
@@ -233,8 +365,7 @@ class Config:
         :return: `Config` instance
         """
         from aiida.cmdline.utils import echo
-
-        from .migrations import check_and_migrate_config, config_needs_migrating
+        from aiida.manage.configuration.migrations import check_and_migrate_config, config_needs_migrating
 
         try:
             with open(filepath, 'rb') as handle:
@@ -244,6 +375,7 @@ class Config:
             config.store()
         else:
             migrated = False
+            current_version = config.get(cls.KEY_VERSION, {}).get(cls.KEY_VERSION_CURRENT, 0)
 
             # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
             if config_needs_migrating(config, filepath):
@@ -255,6 +387,9 @@ class Config:
             config = Config(filepath, check_and_migrate_config(config))
 
             if migrated:
+                echo.echo_report(
+                    f'configuration file `{filepath}` migrated from v{current_version} to v{config.version}'
+                )
                 config.store()
 
         return config
@@ -281,12 +416,13 @@ class Config:
         return filepath_backup
 
     @staticmethod
-    def validate(config: dict, filepath: Optional[str] = None):
+    def validate(config: dict, filepath: str | None = None):
         """Validate a configuration dictionary."""
         try:
             ConfigSchema(**config)
         except ValidationError as exception:
-            raise ConfigurationError(f'invalid config schema: {filepath}: {exception!s}')
+            msg = f'invalid config schema: {filepath}: {exception!s}'
+            raise ConfigurationError(msg)
 
     def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
@@ -297,7 +433,7 @@ class Config:
         :param config: the content of the configuration file in dictionary form
         :param validate: validate the dictionary against the schema
         """
-        from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
+        from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 
         if validate:
             self.validate(config, filepath)
@@ -438,9 +574,10 @@ class Config:
         from aiida.common import exceptions
 
         if name not in self.profile_names:
-            raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
+            msg = f'profile `{name}` does not exist'
+            raise exceptions.ProfileConfigurationError(msg)
 
-    def get_profile(self, name: Optional[str] = None) -> Profile:
+    def get_profile(self, name: str | None = None) -> Profile:
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
@@ -449,9 +586,8 @@ class Config:
         from aiida.common import exceptions
 
         if not name and not self.default_profile_name:
-            raise exceptions.ProfileConfigurationError(
-                f'no default profile defined: {self._default_profile}\n{self.dictionary}'
-            )
+            msg = f'no default profile defined: {self._default_profile}\n{self.dictionary}'
+            raise exceptions.ProfileConfigurationError(msg)
 
         if not name:
             name = self.default_profile_name
@@ -464,9 +600,9 @@ class Config:
         self,
         name: str,
         storage_backend: str,
-        storage_config: dict[str, Any],
+        storage_config: dict[str, t.Any],
         broker_backend: str | None = None,
-        broker_config: dict[str, Any] | None = None,
+        broker_config: dict[str, t.Any] | None = None,
         is_test_profile: bool = False,
     ) -> Profile:
         """Create a new profile and initialise its storage.
@@ -490,18 +626,21 @@ class Config:
         from aiida.plugins.entry_point import load_entry_point
 
         if name in self.profile_names:
-            raise ValueError(f'The profile `{name}` already exists.')
+            msg = f'The profile `{name}` already exists.'
+            raise ValueError(msg)
 
         try:
             storage_cls = load_entry_point('aiida.storage', storage_backend)
         except EntryPointError as exception:
-            raise ValueError(f'The entry point `{storage_backend}` could not be loaded.') from exception
+            msg = f'The entry point `{storage_backend}` could not be loaded.'
+            raise ValueError(msg) from exception
         else:
             if not issubclass(storage_cls, StorageBackend):
-                raise TypeError(
+                msg = (
                     f'The `storage_backend={storage_backend}` is not a subclass of '
                     '`aiida.orm.implementation.storage_backend.StorageBackend`.'
                 )
+                raise TypeError(msg)
 
         storage_config = storage_cls.CliModel(**(storage_config or {})).model_dump()
 
@@ -509,12 +648,12 @@ class Config:
             try:
                 broker_cls = load_entry_point('aiida.brokers', broker_backend)
             except EntryPointError as exception:
-                raise ValueError(f'The entry point `{broker_backend}` could not be loaded.') from exception
+                msg = f'The entry point `{broker_backend}` could not be loaded.'
+                raise ValueError(msg) from exception
             else:
                 if not issubclass(broker_cls, Broker):
-                    raise TypeError(
-                        f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
-                    )
+                    msg = f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
+                    raise TypeError(msg)
 
         profile = Profile(
             name,
@@ -535,9 +674,10 @@ class Config:
         try:
             profile.storage_cls.initialise(profile)
         except Exception as exception:
-            raise StorageMigrationError(
+            msg = (
                 f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
             )
+            raise StorageMigrationError(msg)
         LOGGER.report('Storage initialisation completed.')
 
         self.add_profile(profile)
@@ -618,7 +758,7 @@ class Config:
                 daemon_pid = client.get_daemon_pid()
                 if daemon_pid is None:
                     LOGGER.warning(
-                        'Failed to stop the daemon for profile `%s`: %s. ' 'The daemon may still be running.',
+                        'Failed to stop the daemon for profile `%s`: %s. The daemon may still be running.',
                         profile.name,
                         exception,
                     )
@@ -643,11 +783,9 @@ class Config:
                     )
                 elif not Path(filepath).exists():
                     LOGGER.warning(
-                        (
-                            f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the aiida archive file '
-                            f"at `{filepath}` doesn't exist anymore. "
-                            'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
-                        )
+                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the aiida archive file '
+                        f"at `{filepath}` doesn't exist anymore. "
+                        'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
                     )
                 else:
                     storage = storage_cls(profile)
@@ -727,6 +865,7 @@ class Config:
 
         :returns: the parsed value (potentially cast to a valid type)
         """
+        option_name = resolve_deprecated_option_name(option_name)
         option, parsed_value = parse_option(option_name, option_value)
 
         if parsed_value is not None:
@@ -749,6 +888,7 @@ class Config:
         :param option_name: the name of the configuration option
         :param scope: unset the option for this profile or globally if not specified
         """
+        option_name = resolve_deprecated_option_name(option_name)
         option = get_option(option_name)
 
         if scope is not None:
@@ -764,6 +904,7 @@ class Config:
         :param default: boolean, If True will return the option default, even if not defined within the given scope
         :return: the option value or None if not set for the given scope
         """
+        option_name = resolve_deprecated_option_name(option_name)
         option = get_option(option_name)
         default_value = option.default if default else None
 
@@ -774,7 +915,7 @@ class Config:
 
         return value
 
-    def get_options(self, scope: Optional[str] = None) -> Dict[str, Tuple[Option, str, Any]]:
+    def get_options(self, scope: str | None = None) -> dict[str, tuple[Option, str, t.Any]]:
         """Return a dictionary of all option values and their source ('profile', 'global', or 'default').
 
         :param scope: the profile name or globally if not specified
@@ -809,8 +950,7 @@ class Config:
         import tempfile
 
         from aiida.common.files import md5_file, md5_from_filelike
-
-        from .settings import DEFAULT_CONFIG_INDENT_SIZE
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.
         if not os.path.isfile(self.filepath):
@@ -842,7 +982,7 @@ class Config:
         """
         import tempfile
 
-        from .settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
 
         umask = os.umask(DEFAULT_UMASK)
 
@@ -862,7 +1002,7 @@ class Config:
             handle.close()
             shutil.move(handle.name, self.filepath)
 
-    def filepaths(self, profile: Profile):
+    def filepaths(self, profile: Profile) -> ConfigFilepaths:
         """Return the filepaths used by a profile.
 
         :return: a dictionary of filepaths
@@ -872,8 +1012,13 @@ class Config:
         _config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(Path(self.dirpath))
         daemon_dir = _config_path_resolver.daemon_dir
         daemon_log_dir = _config_path_resolver.daemon_log_dir
+        profile_log_dir = _config_path_resolver.profile_log_dir
+        zmq_broker_service_base_dir = _config_path_resolver._zmq_broker_service_base_dir
 
         return {
+            'profile': {
+                'log': str(profile_log_dir / f'aiida-{profile.name}.log'),
+            },
             'circus': {
                 'log': str(daemon_log_dir / f'circus-{profile.name}.log'),
                 'pid': str(daemon_dir / f'circus-{profile.name}.pid'),
@@ -888,6 +1033,10 @@ class Config:
             'daemon': {
                 'log': str(daemon_log_dir / f'aiida-{profile.name}.log'),
                 'pid': str(daemon_dir / f'aiida-{profile.name}.pid'),
-                'package_snapshot': str(daemon_dir / f'aiida-{profile.name}.package_snapshot'),
+                'daemon_env_info': str(daemon_dir / f'aiida-{profile.name}-env-info.json'),
+            },
+            'broker_service': {
+                'dir': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}'),
+                'log': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}' / 'broker.log'),
             },
         }

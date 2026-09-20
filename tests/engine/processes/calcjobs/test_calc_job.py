@@ -8,6 +8,7 @@
 ###########################################################################
 """Test for the `CalcJob` process sub class."""
 
+import asyncio
 import io
 import json
 import os
@@ -23,6 +24,7 @@ import pytest
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common.datastructures import FileCopyOperation
+from aiida.common.processes import ProcessState
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
@@ -751,7 +753,7 @@ class TestCalcJob:
         _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
         job_tmpl_file = os.path.join(node.dry_run_info['folder'], '.aiida', 'job_tmpl.json')
 
-        with open(job_tmpl_file, mode='r', encoding='utf8') as in_f:
+        with open(job_tmpl_file, encoding='utf8') as in_f:
             job_tmpl = json.load(in_f)
 
         assert job_tmpl['rerunnable']
@@ -825,15 +827,17 @@ class TestCalcJob:
 
 
 @pytest.fixture
-def generate_process(aiida_code_installed):
+def generate_process(aiida_code_installed, aiida_localhost):
     """Instantiate a process with default inputs and return the `Process` instance."""
     from aiida.engine.utils import instantiate_process
     from aiida.manage import get_manager
 
-    def _generate_process(inputs=None):
+    def _generate_process(inputs=None, computer=None):
         base_inputs = {
             'code': aiida_code_installed(
-                default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'
+                default_calc_job_plugin='core.arithmetic.add',
+                filepath_executable='/bin/bash',
+                computer=computer or aiida_localhost,
             ),
             'x': orm.Int(1),
             'y': orm.Int(2),
@@ -857,12 +861,29 @@ def generate_process(aiida_code_installed):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('override_logging')
-def test_parse_insufficient_data(generate_process):
+@pytest.mark.parametrize(
+    'scheduler_type, expected_log',
+    (
+        # The `core.direct` scheduler does not implement detailed job info parsing, so the missing
+        # `detailed_job_info` attribute is expected and is logged at `info` level instead of `warning`.
+        (
+            'core.direct',
+            'could not parse scheduler output: scheduler `DirectScheduler` does not parse detailed job info',
+        ),
+        # The `core.slurm` scheduler does implement it, so a missing attribute means the retrieval or parsing of the
+        # detailed job info failed, which is logged at `warning` level.
+        ('core.slurm', 'could not parse scheduler output: raised exception during parsing'),
+    ),
+)
+def test_parse_insufficient_data(generate_process, aiida_computer, scheduler_type, expected_log):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly that the parsing does not except even if the required information is not available.
     """
-    process = generate_process()
+    computer = aiida_computer(label=f'computer-{scheduler_type}', scheduler_type=scheduler_type)
+    computer.configure()
+
+    process = generate_process(computer=computer)
 
     retrieved = orm.FolderData().store()
     retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
@@ -877,7 +898,7 @@ def test_parse_insufficient_data(generate_process):
     # process but should log a warning, so here we check that those expected warnings are attached to the node
     logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
     expected_logs = [
-        'could not parse scheduler output: the `detailed_job_info` attribute is missing',
+        expected_log,
         f'could not parse scheduler output: the `{filename_stderr}` file is missing',
         f'could not parse scheduler output: the `{filename_stdout}` file is missing',
     ]
@@ -1047,6 +1068,43 @@ def test_parse_exit_code_priority(
 
 
 @pytest.mark.requires_broker
+def test_presubmit_requires_stored_node(arithmetic_add_inputs, fixture_sandbox, monkeypatch, runner):
+    """Test that a non-dry-run calculation has to be stored before submission."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    monkeypatch.setattr(type(process.node), 'is_stored', property(lambda _: False))
+
+    with pytest.raises(exceptions.InvalidOperation, match='calculation node is not stored'):
+        process.presubmit(fixture_sandbox)
+
+
+def test_presubmit_validates_code_computer(arithmetic_add_inputs, fixture_sandbox, monkeypatch, runner):
+    """Test that a code which cannot run on the computer is rejected."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    monkeypatch.setattr(type(process.inputs.code), 'can_run_on_computer', lambda *_: False)
+
+    with pytest.raises(exceptions.InputValidationError, match='cannot run on computer'):
+        process.presubmit(fixture_sandbox)
+
+
+def test_presubmit_joins_scheduler_output_and_error(arithmetic_add_inputs, fixture_sandbox, runner):
+    """Test that identical scheduler output and error paths are joined."""
+    inputs = {
+        **arithmetic_add_inputs,
+        'metadata': {
+            'dry_run': True,
+            'options': {'scheduler_stdout': 'scheduler.out', 'scheduler_stderr': 'scheduler.out'},
+        },
+    }
+    process = instantiate_process(runner, ArithmeticAddCalculation, **inputs)
+
+    process.presubmit(fixture_sandbox)
+
+    with fixture_sandbox.get_subfolder('.aiida').open('job_tmpl.json') as handle:
+        job_template = json.load(handle)
+
+    assert job_template['sched_join_files'] is True
+
+
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
@@ -1299,11 +1357,13 @@ def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
 
 def monitor_disable_self(node, transport, **kwargs):
     """Monitor that will disable itself."""
+    node.base.extras.set('disable_self_monitor_called', True)
     return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF, message='Disable self.')
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures('override_logging')
-def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog):
+async def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog, runner):
     """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
 
     If set to ``CalcJobMonitorAction.DISABLE_SELF``, the calculation should continue running and the monitor should not
@@ -1312,14 +1372,33 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
     The ``override_logging`` fixture is necessary to set the logging level to ``DEBUG`` because the monitor message is
     logged at the ``INFO`` level and so without this change, it would not be captured.
     """
+    from aiida.engine.processes.communications import LocalProcessController
+    from aiida.engine.processes.exceptions import KilledError
+
     entry_points.add(monitor_disable_self, group='aiida.calculations.monitors', name='core.disable_self')
 
     builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 1
+    # Keep the job alive until the monitor has run, then terminate it explicitly below.
+    builder.metadata.options.sleep = 300
     builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
-    _, node = launch.run_get_node(builder)
-    assert node.is_finished_ok
-    assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+
+    process = runner.instantiate_process(builder)
+    controller = LocalProcessController(process, runner.loop)
+    runner.schedule(process)
+
+    async def monitor_called():
+        while not process.node.base.extras.get('disable_self_monitor_called', False):
+            await asyncio.sleep(0.1)
+
+    try:
+        await asyncio.wait_for(monitor_called(), timeout=30)
+        assert not process.has_terminated()
+        assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+    finally:
+        if not process.has_terminated():
+            assert await controller.kill_process(process.pid)
+        with pytest.raises(KilledError):
+            await process.future()
 
 
 def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
@@ -1343,15 +1422,13 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
 
 
 @pytest.mark.requires_broker
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
     """Test that a job can be restarted when it is launched and the daemon is restarted.
 
     This is a regression test for https://github.com/aiidateam/aiida-core/issues/5882.
     """
-    import time
-
-    import plumpy
-
     daemon_client.start_daemon()
 
     # Launch a job with a one second sleep to ensure it doesn't finish before we get the chance to restart the daemon.
@@ -1359,21 +1436,14 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
     builder = get_calcjob_builder()
     builder.metadata.options.sleep = 1
     builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'disabled': True})}
-    node = submit_and_await(builder, plumpy.ProcessState.WAITING)
+    node = submit_and_await(builder, ProcessState.WAITING)
 
     daemon_client.restart_daemon(wait=True)
 
-    start_time = time.time()
-    timeout = 10
+    # The full stop/restart/reload/resume/finish cycle is heavy, so allow more than the fixture default: under CPU
+    # contention the post-restart wait alone approaches the 10 seconds this test used to allow.
+    submit_and_await(node, ProcessState.FINISHED, timeout=30)
 
-    while node.process_state not in [plumpy.ProcessState.FINISHED, plumpy.ProcessState.EXCEPTED]:
-        if node.is_excepted:
-            raise AssertionError(f'The process excepted: {node.exception}')
-
-        if time.time() - start_time >= timeout:
-            raise AssertionError(f'process failed to terminate within timeout, current state: {node.process_state}')
-
-    assert node.is_finished, node.process_state
     assert node.is_finished_ok, node.exit_status
 
 

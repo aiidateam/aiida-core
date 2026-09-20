@@ -269,6 +269,53 @@ def aiida_profile(
         yield profile
 
 
+@pytest.fixture(scope='session', autouse=True)
+def rabbitmq_message_exchange_held(request, aiida_profile):
+    """Hold the RabbitMQ message exchange alive while ``requires_rmq`` tests run.
+
+    All tests share one session profile and so one message-exchange name
+    (``aiida-<uuid>.messages``). Test profiles declare it with ``auto_delete``, so every
+    per-test communicator teardown deletes the exchange and the next setup re-creates it.
+    The server-side delete can land between the next test's ``declare_exchange`` and ``bind``,
+    flaking with ``NOT_FOUND - no exchange '....messages'`` (e.g.
+    ``test_add_broadcast_subscriber`` right after ``test_add_rpc_subscriber``).
+
+    A single session-lived broadcast binding keeps the exchange at >= 1 binding, so it is
+    never auto-deleted mid-suite. Per-test exclusive queues still come and go as before. This
+    mirrors production, where the exchange is long-lived and shared.
+
+    Bound to the collected ``requires_rmq`` mark rather than the profile, so suites that never
+    touch the broker (even with an RMQ profile) pay nothing.
+    """
+    if not any(item.get_closest_marker('requires_rmq') for item in getattr(request.session, 'items', [])):
+        yield
+        return
+    if aiida_profile.process_control_backend != 'core.rabbitmq':
+        yield
+        return
+
+    from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
+    from aiida.brokers.rabbitmq.utils import get_message_exchange_name
+
+    try:
+        holder = RmqThreadCommunicator.connect(
+            connection_params={'url': get_manager().get_broker().get_url()},
+            message_exchange=get_message_exchange_name(f'aiida-{aiida_profile.uuid}'),
+            testing_mode=aiida_profile.is_test_profile,
+        )
+    except Exception:
+        # RabbitMQ unreachable: leave individual tests to fail as before.
+        yield
+        return
+    # A callable no-op: unlike the ``None`` the broker tests pass, this survives any broadcast
+    # (e.g. from daemon tests) delivered to the holder's queue.
+    holder.add_broadcast_subscriber(lambda *args, **kwargs: None)
+    try:
+        yield holder
+    finally:
+        holder.close()
+
+
 @pytest.fixture(scope='session')
 def archive_main_0001():
     """Return the path of the pinned ``main_0001`` reference archive."""

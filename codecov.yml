@@ -15,6 +15,3 @@ coverage:
     patch:
       default:
         threshold: 0.1%
-
-ignore:
-- src/aiida/tools/_dumping/**/*

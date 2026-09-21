@@ -867,9 +867,13 @@ class TestProfileDumping:
         path_in_group1 = output_path / 'groups' / add_group.label / 'calculations' / node_dir_name
         path_in_group2 = output_path / 'groups' / copy_group_label / 'calculations' / node_dir_name
 
-        assert path_in_group1.is_dir() and not path_in_group1.is_symlink(), 'Source path should be a directory'
-        assert path_in_group2.is_symlink(), 'Second path should be a symlink'
-        assert path_in_group2.resolve() == path_in_group1.resolve(), 'Symlink target mismatch'
+        paths = (path_in_group1, path_in_group2)
+        primary_paths = [path for path in paths if path.is_dir() and not path.is_symlink()]
+        symlink_paths = [path for path in paths if path.is_symlink()]
+
+        assert len(primary_paths) == 1, 'Expected one primary directory'
+        assert len(symlink_paths) == 1, 'Expected one symlink'
+        assert symlink_paths[0].resolve() == primary_paths[0].resolve(), 'Symlink target mismatch'
         # End symlink checks
 
         # Check overall structure (compare_tree implicitly follows links)

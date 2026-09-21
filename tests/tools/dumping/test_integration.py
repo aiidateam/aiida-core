@@ -393,10 +393,10 @@ class TestProcessDumping:
         assert (dump_target_path / readme_filename).is_file()
         assert (dump_target_path / log_filename).is_file()
 
-    def test_dump_facade_multiply_add(self, tmp_path, generate_workchain_multiply_add):
+    def test_dump_facade_multiply_add(self, tmp_path, construct_workchain_multiply_add):
         """Test dumping MultiplyAddWorkChain using (nested and flat)."""
 
-        wc_node = generate_workchain_multiply_add()
+        wc_node = construct_workchain_multiply_add()
         wc_pk = wc_node.pk
         child_pks = tuple(sorted([n.pk for n in wc_node.called_descendants]))
         assert len(child_pks) == 2
@@ -476,9 +476,9 @@ class TestProcessDumping:
         assert (dump_target_path / 'default.npy').is_file()
         # Add more specific checks if needed based on expected flat output
 
-    def test_dump_facade_calculation_add(self, tmp_path, generate_calculation_node_add):
+    def test_dump_facade_calculation_add(self, tmp_path, construct_calculation_node_add):
         """Test dumping ArithmeticAddCalculation."""
-        calculation_node = generate_calculation_node_add()  # Fixture runs and seals
+        calculation_node = construct_calculation_node_add()  # Manually built and sealed, no engine run
         calc_pk = calculation_node.pk
         process_label = calculation_node.process_label
         dump_label = f'{process_label}-{calc_pk}'
@@ -537,10 +537,10 @@ class TestGroupDumping:
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
     @pytest.mark.usefixtures('aiida_profile_clean')
-    def test_dump_add_node_to_group(self, tmp_path, setup_add_group, generate_calculation_node_add):
+    def test_dump_add_node_to_group(self, tmp_path, setup_add_group, construct_calculation_node_add):
         add_group = setup_add_group
         node1 = add_group.nodes[0]
-        node2 = generate_calculation_node_add()
+        node2 = construct_calculation_node_add()
 
         output_path = tmp_path / add_group_label
         add_group.dump(output_path=output_path)
@@ -585,9 +585,9 @@ class TestGroupDumping:
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
     @pytest.mark.usefixtures('aiida_profile_clean')
-    def test_dump_sub_calc_group(self, tmp_path, generate_workchain_multiply_add):
+    def test_dump_sub_calc_group(self, tmp_path, construct_workchain_multiply_add):
         """Test dumping a group containing only sub-calculations of a workflow."""
-        wf_node = generate_workchain_multiply_add()
+        wf_node = construct_workchain_multiply_add()
         sub_calcs = list(wf_node.called_descendants)
         assert len(sub_calcs) == 2
         multiply_child = next(n for n in sub_calcs if 'multiply' in n.process_label)
@@ -741,8 +741,8 @@ class TestProfileDumping:
         tmp_path,
         setup_add_group,
         setup_multiply_add_group,
-        generate_calculation_node_add,
-        generate_workchain_multiply_add,
+        construct_calculation_node_add,
+        construct_workchain_multiply_add,
     ):
         """Tests dumping grouped and optionally ungrouped nodes."""
         # Setup grouped nodes
@@ -753,8 +753,8 @@ class TestProfileDumping:
         grouped_wc_child_pks = tuple(sorted([n.pk for n in grouped_wc_node.called_descendants]))
 
         # Create ungrouped nodes
-        ungrouped_add_node = generate_calculation_node_add()
-        ungrouped_wc_node = generate_workchain_multiply_add()
+        ungrouped_add_node = construct_calculation_node_add()
+        ungrouped_wc_node = construct_workchain_multiply_add()
         ungrouped_wc_child_pks = tuple(sorted([n.pk for n in ungrouped_wc_node.called_descendants]))
 
         output_path = tmp_path / profile_dump_label
@@ -798,10 +798,10 @@ class TestProfileDumping:
         compare_tree(expected=expected_tree_all, base_path=tmp_path)
 
     @pytest.mark.usefixtures('aiida_profile_clean')
-    def test_dump_add_node_to_group(self, tmp_path, setup_add_group, generate_calculation_node_add):
+    def test_dump_add_node_to_group(self, tmp_path, setup_add_group, construct_calculation_node_add):
         add_group = setup_add_group
         node1 = add_group.nodes[0]
-        node2 = generate_calculation_node_add()  # Created but not in group yet
+        node2 = construct_calculation_node_add()  # Created but not in group yet
 
         output_path = tmp_path / profile_dump_label
         profile = load_profile()
@@ -884,9 +884,9 @@ class TestProfileDumping:
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
     @pytest.mark.usefixtures('aiida_profile_clean')
-    def test_dump_sub_calc_group(self, tmp_path, generate_workchain_multiply_add):
+    def test_dump_sub_calc_group(self, tmp_path, construct_workchain_multiply_add):
         """Test dumping a group containing only sub-calculations of a workflow."""
-        wf_node = generate_workchain_multiply_add()
+        wf_node = construct_workchain_multiply_add()
         sub_calcs = list(wf_node.called_descendants)
         assert len(sub_calcs) == 2
         multiply_child = next(n for n in sub_calcs if 'multiply' in n.process_label)
@@ -1108,7 +1108,7 @@ class TestProfileDumping:
         compare_tree(expected=initial_tree, base_path=tmp_path)  # Structure remains identical
 
     @pytest.mark.usefixtures('aiida_profile_clean')
-    def test_dump_filter_by_last_dump_time(self, tmp_path, setup_add_group, generate_calculation_node_add):
+    def test_dump_filter_by_last_dump_time(self, tmp_path, setup_add_group, construct_calculation_node_add):
         """Tests that unmodified nodes are skipped in incremental dumps."""
         add_group = setup_add_group
         original_node = add_group.nodes[0]
@@ -1129,7 +1129,7 @@ class TestProfileDumping:
         time.sleep(0.1)  # Ensure timestamp changes
 
         # Add a new node
-        new_node = generate_calculation_node_add()
+        new_node = construct_calculation_node_add()
         add_group.add_nodes([new_node])
 
         # Dump 2: Incremental dump, filtering by time

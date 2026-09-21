@@ -300,8 +300,10 @@ class QbAttributesField(QbDictField):
     are defined by the node's `AttributesModel`.
     """
 
-    _typed_children: dict[str, QbField]
-    _allow_extra: bool = False
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._typed_children: dict[str, QbField] = {}
+        self._allow_extra = False
 
     def __getattr__(self, key: str) -> QbField:
         """Return a typed child field if known; otherwise raise AttributeError.
@@ -311,33 +313,29 @@ class QbAttributesField(QbDictField):
             orm.Data.fields.attributes.source
         """
         if key.startswith('_'):
-            # normal attribute lookup
             raise AttributeError(key)
 
-        children = getattr(self, '_typed_children', None) or {}
-        if key in children:
-            return children[key]
-
-        if self._allow_extra:
-            return QbDictField.__getattr__(self, key)
+        try:
+            return self._typed_children[key]
+        except KeyError:
+            if self._allow_extra:
+                return super().__getattr__(key)
 
         raise AttributeError(key)
 
     def __getitem__(self, key: str) -> QbField:
         """Return a typed child field if known; otherwise return a generic QbAnyField."""
-        children = getattr(self, '_typed_children', None) or {}
-        if key in children:
-            return children[key]
-
-        if self._allow_extra:
-            return QbDictField.__getattr__(self, key)
+        try:
+            return self._typed_children[key]
+        except KeyError:
+            if self._allow_extra:
+                return super().__getattr__(key)
 
         raise KeyError(key)
 
     def __dir__(self) -> list[str]:
         """Expose typed children for autocompletion."""
-        children = getattr(self, '_typed_children', None) or {}
-        return sorted(set(super().__dir__()) | set(children.keys()))
+        return sorted(set(super().__dir__()) | set(self._typed_children.keys()))
 
 
 class QbAnyField(QbNumericField, QbArrayField, QbStrField, QbDictField):

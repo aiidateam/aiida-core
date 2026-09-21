@@ -13,10 +13,12 @@ from __future__ import annotations
 import dataclasses
 import io
 import json
+import logging
 import os
 import shutil
 import typing as t
-from collections.abc import Hashable
+import uuid as uuid_module
+from collections.abc import Hashable, Iterator, Mapping, MutableMapping
 
 from aiida import orm
 from aiida.common import AttributeDict, exceptions
@@ -34,7 +36,7 @@ from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process, ProcessState
 from aiida.engine.processes.process_spec import CalcJobProcessSpec
 
-__all__ = ('CalcJob',)
+__all__ = ('CalcJob', 'JobDescription')
 
 
 def validate_calc_job(inputs: t.Any, ctx: PortNamespace) -> str | None:
@@ -229,6 +231,116 @@ def validate_additional_retrieve_list(additional_retrieve_list: t.Any, _: t.Any)
         return f'`additional_retrieve_list` should only contain relative filepaths but got: {additional_retrieve_list}'
 
     return None
+
+
+@dataclasses.dataclass
+class JobDescription:
+    """What a calculation job would run, worked out from its inputs.
+
+    The `CalcInfo` is what the plugin produced; the two lists are what the node used to be told, which anything
+    running the job in steps has to carry from the step that works it out to the step that brings files back.
+    """
+
+    calc_info: CalcInfo
+    retrieve_list: list[t.Any]
+    retrieve_temporary_list: list[t.Any]
+
+
+def _nodes_of(inputs: Mapping[str, t.Any]) -> Iterator[t.Any]:
+    """Yield what was given, however deeply the namespaces nest."""
+    for value in inputs.values():
+        if isinstance(value, Mapping):
+            yield from _nodes_of(value)
+        else:
+            yield value
+
+
+def _options_of(inputs: Mapping[str, t.Any]) -> Mapping[str, t.Any]:
+    """Return the options the inputs carry, which is where they are before a node holds them."""
+    return (inputs.get('metadata') or {}).get('options') or {}
+
+
+def _options_with_defaults(process_class: type[CalcJob], given: Mapping[str, t.Any]) -> dict[str, t.Any]:
+    """Return the options as a run would have them, which is what was given on top of what the spec says.
+
+    A run has its defaults filled in by the port namespace on the way in, and reads them back off the node. A
+    description has no node, so the same defaults are filled in here.
+    """
+    options: dict[str, t.Any] = {}
+    namespace = t.cast(PortNamespace, process_class.spec().inputs['metadata'])['options']
+
+    for name, port in t.cast(PortNamespace, namespace).items():
+        if not port.has_default():
+            continue
+
+        default = port.default
+        options[name] = default() if callable(default) else default
+
+    options.update(given)
+
+    return options
+
+
+def _computer_of(inputs: Mapping[str, t.Any]) -> orm.Computer | None:
+    """Return the computer the calculation would run on, which is the one its code is installed on."""
+    for value in _nodes_of(inputs):
+        if isinstance(value, orm.AbstractCode):
+            return value.computer
+
+    return None
+
+
+class _Preparing:
+    """Stands in for the process while what it would run is worked out.
+
+    `prepare_for_submission` is written against a running process, so the process itself is handed to it
+    wherever there is one. Where there is not, this answers the few things it reads: what was given, the
+    options, and the node's own way of reaching them.
+    """
+
+    def __init__(
+        self,
+        process_class: type[CalcJob],
+        inputs: Mapping[str, t.Any],
+        options: Mapping[str, t.Any],
+        computer: orm.Computer | None,
+        uuid: str,
+        label: str,
+    ) -> None:
+        self._process_class = process_class
+        self._raw_inputs = inputs
+        self.inputs = AttributeDict(inputs)
+        self.metadata = self.inputs.get('metadata', AttributeDict())
+        self.options = AttributeDict(options)
+        self.node = _PreparedNode(options, computer, uuid, label)
+        self.logger = logging.getLogger(process_class.__module__)
+
+    def spec(self) -> CalcJobProcessSpec:
+        return t.cast(CalcJobProcessSpec, self._process_class.spec())
+
+    @property
+    def exit_codes(self) -> t.Any:
+        return self._process_class.spec().exit_codes
+
+    def prepare_for_submission(self, folder: Folder) -> CalcInfo:
+        return self._process_class.prepare_for_submission(self, folder)  # type: ignore[arg-type]
+
+
+class _PreparedNode:
+    """What a plugin reads off the node while its inputs are being written, with nothing stored."""
+
+    def __init__(self, options: Mapping[str, t.Any], computer: orm.Computer | None, uuid: str, label: str) -> None:
+        self._options = dict(options)
+        self.computer = computer
+        self.uuid = uuid
+        self.pk = None
+        self.label = label
+
+    def get_option(self, name: str) -> t.Any:
+        return self._options.get(name)
+
+    def get_options(self) -> dict[str, t.Any]:
+        return dict(self._options)
 
 
 class CalcJob(Process):
@@ -934,46 +1046,98 @@ class CalcJob(Process):
         :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
 
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode, JobTemplate, JobTemplateCodeInfo
-        from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
-        from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import AbstractCode, Computer, load_code
-
-        inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
+        from aiida.common.exceptions import InvalidOperation
 
         if not self.inputs.metadata.dry_run and not self.node.is_stored:
             raise InvalidOperation('calculation node is not stored.')
 
-        computer = self.node.computer
+        described = type(self).describe(
+            dict(self.inputs),
+            folder,
+            computer=self.node.computer,
+            # Read through the spec rather than `node.get_options()`, which resolves the process class from
+            # its entry point and so refuses a class that has none, such as one defined in a test.
+            options={name: self.node.get_option(name) for name in type(self).spec_options.keys()},
+            uuid=str(self.node.uuid),
+            label=f'aiida-{self.node.pk}',
+            preparing=self,
+        )
+
+        self.node.set_retrieve_list(described.retrieve_list)
+        self.node.set_retrieve_temporary_list(described.retrieve_temporary_list)
+
+        return described.calc_info
+
+    @classmethod
+    def describe(
+        cls,
+        inputs: MutableMapping[str, t.Any],
+        folder: Folder,
+        *,
+        computer: orm.Computer | None = None,
+        options: Mapping[str, t.Any] | None = None,
+        uuid: str | None = None,
+        label: str | None = None,
+        preparing: t.Any = None,
+    ) -> JobDescription:
+        """Return what this calculation would run, worked out from its inputs.
+
+        This is `presubmit` without the node: the options are given rather than read off one, what the job is
+        called is given rather than taken from a pk, and the retrieve lists are returned rather than written
+        back. So what a calculation job would do can be worked out wherever its inputs are, with nothing
+        stored, which is what lets its steps be run as separate processes.
+
+        :param inputs: what the calculation takes, as its ports were filled in.
+        :param folder: where the input files and the submit script are written.
+        :param computer: the computer it would run on, taken from its code where not given.
+        :param options: `metadata.options`, taken from the inputs where not given.
+        :param uuid: what `calc_info.uuid` carries, which for a run is the node's.
+        :param label: what the job is called on the scheduler.
+        :param preparing: what `prepare_for_submission` is called on, which is the running process where there
+            is one, and a stand-in holding the inputs and the options where there is not.
+        """
+        options = _options_with_defaults(cls, options if options is not None else _options_of(inputs))
+        computer = computer if computer is not None else _computer_of(inputs)
+        uuid = uuid if uuid is not None else str(uuid_module.uuid4())
+        label = label if label is not None else 'aiida'
+        preparing = preparing if preparing is not None else _Preparing(cls, inputs, options, computer, uuid, label)
+        raw_inputs = getattr(preparing, '_raw_inputs', None) or inputs
+
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.common.exceptions import InputValidationError, PluginInternalError, ValidationError
+        from aiida.common.utils import validate_list_of_string_tuples
+        from aiida.orm import AbstractCode, Computer, load_code
+        from aiida.common.datastructures import JobTemplate, JobTemplateCodeInfo
+
         assert computer is not None
-        codes = [_ for _ in inputs.all_nodes() if isinstance(_, AbstractCode)]
+        codes = [value for value in _nodes_of(inputs) if isinstance(value, AbstractCode)]
 
         for code in codes:
             if not code.can_run_on_computer(computer):
                 msg = (
-                    f'The selected code {code.pk} for calculation {self.node.pk} '
+                    f'The selected code {code.pk} for calculation {label} '
                     f'cannot run on computer {computer.label}'
                 )
                 raise InputValidationError(msg)
 
             code.validate_working_directory(folder)
 
-        calc_info = self.prepare_for_submission(folder)
-        calc_info.uuid = str(self.node.uuid)
+        calc_info = preparing.prepare_for_submission(folder)
+        calc_info.uuid = uuid
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
         job_tmpl.submit_as_hold = False
-        job_tmpl.rerunnable = self.options.get('rerunnable', False)
+        job_tmpl.rerunnable = options.get('rerunnable', False)
         # 'email', 'email_on_started', 'email_on_terminated',
-        job_tmpl.job_name = f'aiida-{self.node.pk}'
-        job_tmpl.sched_output_path = self.options.scheduler_stdout
+        job_tmpl.job_name = label
+        job_tmpl.sched_output_path = options.get('scheduler_stdout')
         if computer is not None:
             job_tmpl.shebang = computer.get_shebang()
-        if self.options.scheduler_stderr == self.options.scheduler_stdout:
+        if options.get('scheduler_stderr') == options.get('scheduler_stdout'):
             job_tmpl.sched_join_files = True
         else:
-            job_tmpl.sched_error_path = self.options.scheduler_stderr
+            job_tmpl.sched_error_path = options.get('scheduler_stderr')
             job_tmpl.sched_join_files = False
 
         # Set retrieve path, add also scheduler STDOUT and STDERR
@@ -983,16 +1147,14 @@ class CalcJob(Process):
         if not job_tmpl.sched_join_files:
             if job_tmpl.sched_error_path is not None and job_tmpl.sched_error_path not in retrieve_list:
                 retrieve_list.append(job_tmpl.sched_error_path)
-        retrieve_list.extend(self.node.get_option('additional_retrieve_list') or [])
-        self.node.set_retrieve_list(retrieve_list)
+        retrieve_list.extend(options.get('additional_retrieve_list') or [])
 
         # Handle the retrieve_temporary_list
         retrieve_temporary_list = calc_info.retrieve_temporary_list or []
-        self.node.set_retrieve_temporary_list(retrieve_temporary_list)
 
         # If the inputs contain a ``remote_folder`` input node, we are in an import scenario and can skip the rest
-        if 'remote_folder' in inputs.all_link_labels():
-            return calc_info
+        if 'remote_folder' in inputs:
+            return JobDescription(calc_info, retrieve_list, retrieve_temporary_list)
 
         # The remaining code is only necessary for actual runs, for example, creating the submission script
         scheduler = computer.get_scheduler()
@@ -1006,19 +1168,19 @@ class CalcJob(Process):
         prepend_texts = (
             [computer.get_prepend_text()]
             + [code.prepend_text for code in codes]
-            + [calc_info.prepend_text, self.node.get_option('prepend_text')]
+            + [calc_info.prepend_text, options.get('prepend_text')]
         )
         job_tmpl.prepend_text = '\n\n'.join(prepend_text for prepend_text in prepend_texts if prepend_text)
 
         append_texts = (
-            [self.node.get_option('append_text'), calc_info.append_text]
+            [options.get('append_text'), calc_info.append_text]
             + [code.append_text for code in codes]
             + [computer.get_append_text()]
         )
         job_tmpl.append_text = '\n\n'.join(append_text for append_text in append_texts if append_text)
 
         # Set resources, also with get_default_mpiprocs_per_machine
-        resources = self.node.get_option('resources')
+        resources = options.get('resources')
         scheduler.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
         job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore[arg-type]
 
@@ -1027,7 +1189,7 @@ class CalcJob(Process):
         for key, value in job_tmpl.job_resource.items():
             subst_dict[key] = value
         mpi_args = [arg.format(**subst_dict) for arg in computer.get_mpirun_command()]
-        extra_mpirun_params = self.node.get_option('mpirun_extra_params')  # same for all codes in the same calc
+        extra_mpirun_params = options.get('mpirun_extra_params')  # same for all codes in the same calc
 
         # set the codes_info
         if not isinstance(calc_info.codes_info, (list, tuple)):
@@ -1045,9 +1207,9 @@ class CalcJob(Process):
 
             # Here are the three values that will determine whether the code is to be run with MPI _if_ they are not
             # ``None``. If any of them are explicitly defined but are not equivalent, an exception is raised. We use the
-            # ``self._raw_inputs`` to determine the actual value passed for ``metadata.options.withmpi`` and
+            # ``raw_inputs`` to determine the actual value passed for ``metadata.options.withmpi`` and
             # distinghuish it from the default.
-            raw_inputs = self._raw_inputs or {}  # type: ignore[var-annotated]
+            raw_inputs = raw_inputs or {}
             with_mpi_option = raw_inputs.get('metadata', {}).get('options', {}).get('withmpi', None)
             with_mpi_plugin = code_info.withmpi
             with_mpi_code = code.with_mpi
@@ -1074,7 +1236,7 @@ class CalcJob(Process):
                 # Fall back to the default, which is the default of the option in the process input specification with
                 # ``False`` as final fallback if the default is not even specified
                 try:
-                    with_mpi = self.spec().inputs['metadata']['options']['withmpi'].default  # type: ignore[index]
+                    with_mpi = cls.spec().inputs['metadata']['options']['withmpi'].default  # type: ignore[index]
                 except RuntimeError:
                     # ``InputPort.default`` raises a ``RuntimeError`` if no default has been set. This is bad
                     # design and should be changed, but we have to deal with it like this for now.
@@ -1108,7 +1270,7 @@ class CalcJob(Process):
         job_tmpl.codes_run_mode = codes_run_mode
 
         if calc_info.file_copy_operation_order is not None:
-            if not isinstance(calc_info.file_copy_operation_order, list) or any(  # type: ignore[redundant-expr]
+            if not isinstance(calc_info.file_copy_operation_order, list) or any(
                 not isinstance(e, FileCopyOperation) for e in calc_info.file_copy_operation_order
             ):
                 raise PluginInternalError(
@@ -1124,39 +1286,39 @@ class CalcJob(Process):
 
         ########################################################################
 
-        custom_sched_commands = self.node.get_option('custom_scheduler_commands')
+        custom_sched_commands = options.get('custom_scheduler_commands')
         if custom_sched_commands:
             job_tmpl.custom_scheduler_commands = custom_sched_commands
 
-        job_tmpl.import_sys_environment = self.node.get_option('import_sys_environment')
+        job_tmpl.import_sys_environment = options.get('import_sys_environment')
 
-        job_tmpl.job_environment = self.node.get_option('environment_variables')
-        job_tmpl.environment_variables_double_quotes = self.node.get_option('environment_variables_double_quotes')
+        job_tmpl.job_environment = options.get('environment_variables')
+        job_tmpl.environment_variables_double_quotes = options.get('environment_variables_double_quotes')
 
-        queue_name = self.node.get_option('queue_name')
-        account = self.node.get_option('account')
-        qos = self.node.get_option('qos')
+        queue_name = options.get('queue_name')
+        account = options.get('account')
+        qos = options.get('qos')
         if queue_name is not None:
             job_tmpl.queue_name = queue_name
         if account is not None:
             job_tmpl.account = account
         if qos is not None:
             job_tmpl.qos = qos
-        priority = self.node.get_option('priority')
+        priority = options.get('priority')
         if priority is not None:
             job_tmpl.priority = priority
 
-        job_tmpl.max_memory_kb = self.node.get_option('max_memory_kb') or computer.get_default_memory_per_machine()
+        job_tmpl.max_memory_kb = options.get('max_memory_kb') or computer.get_default_memory_per_machine()
 
-        max_wallclock_seconds = self.node.get_option('max_wallclock_seconds')
+        max_wallclock_seconds = options.get('max_wallclock_seconds')
         if max_wallclock_seconds is not None:
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
-        submit_script_filename = self.node.get_option('submit_script_filename')
+        submit_script_filename = options.get('submit_script_filename')
         assert submit_script_filename is not None
         script_content = scheduler.get_submit_script(job_tmpl)
         # TODO: mypy error: Argument 2 to "create_file_from_filelike" of "Folder"
-        # has incompatible type "Any | None"; expected "str | PurePath"
+        # has incompatible type "t.Any | None"; expected "str | PurePath"
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         def encoder(obj):
@@ -1178,7 +1340,7 @@ class CalcJob(Process):
             calc_info.remote_copy_list = []
 
         # Some validation
-        this_pk = self.node.pk if self.node.pk is not None else '[UNSTORED]'
+        this_pk = label
         local_copy_list = calc_info.local_copy_list
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
@@ -1211,4 +1373,4 @@ class CalcJob(Process):
                 )
                 raise PluginInternalError(msg)
 
-        return calc_info
+        return JobDescription(calc_info, retrieve_list, retrieve_temporary_list)

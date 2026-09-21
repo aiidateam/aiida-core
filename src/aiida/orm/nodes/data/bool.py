@@ -12,12 +12,12 @@ import numpy
 import pydantic as pdt
 
 from aiida.orm.decorators import attribute
-from aiida.orm.nodes.data.base import PrimitiveType, to_aiida_type
+from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
 __all__ = ('Bool',)
 
 
-class Bool(PrimitiveType):
+class Bool(BaseType):
     """`Data` sub class to represent a boolean value."""
 
     _type = bool

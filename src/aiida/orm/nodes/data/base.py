@@ -18,10 +18,10 @@ from typing_extensions import Self
 
 from aiida.orm.nodes.data.data import Data
 
-__all__ = ('PrimitiveType', 'to_aiida_type')
+__all__ = ('BaseType', 'to_aiida_type')
 
 
-class PrimitiveType(Data, abc.ABC):
+class BaseType(Data, abc.ABC):
     """Base class for AiiDA data types wrapping Python primitives."""
 
     _type: type[t.Any]
@@ -35,7 +35,7 @@ class PrimitiveType(Data, abc.ABC):
         return f'{super().__str__()} value: {self.value}'
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, PrimitiveType):
+        if isinstance(other, BaseType):
             return self.value == other.value
         return self.value == other
 

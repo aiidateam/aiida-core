@@ -38,7 +38,7 @@ def validate_attribute_extra_key(key):
 
 def clean_value(value):
     """Get value from input and (recursively) replace, if needed, all occurrences
-    of PrimitiveType AiiDA data nodes with their value, and List with a standard list.
+    of BaseType AiiDA data nodes with their value, and List with a standard list.
     It also makes a deep copy of everything
     The purpose of this function is to convert data to a type which can be serialized and deserialized
     for storage in the DB without its value changing.
@@ -52,10 +52,10 @@ def clean_value(value):
         values replaced where needed.
     """
     # Must be imported in here to avoid recursive imports
-    from aiida.orm import PrimitiveType
+    from aiida.orm import BaseType
 
     def clean_builtin(val):
-        """A function to clean build-in python values (`PrimitiveType`).
+        """A function to clean build-in python values (`BaseType`).
 
         It mainly checks that we don't store NaN or Inf.
         """
@@ -94,7 +94,7 @@ def clean_value(value):
         msg = f'type `{type(val)}` is not supported as it is not json-serializable'
         raise exceptions.ValidationError(msg)
 
-    if isinstance(value, PrimitiveType):
+    if isinstance(value, BaseType):
         return clean_builtin(value.value)
 
     if isinstance(value, Mapping):

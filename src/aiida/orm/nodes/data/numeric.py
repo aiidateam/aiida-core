@@ -10,7 +10,7 @@
 
 import abc
 
-from aiida.orm.nodes.data.base import PrimitiveType, to_aiida_type
+from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
 __all__ = ('NumericType',)
 
@@ -41,7 +41,7 @@ def _right_operator(func):
     return inner
 
 
-class NumericType(PrimitiveType, abc.ABC):
+class NumericType(BaseType, abc.ABC):
     """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
 
     @property

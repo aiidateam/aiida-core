@@ -59,6 +59,17 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 
 ### Behavior changes
 
+#### Carried bytes are files in the profile's storage
+
+A checkpoint stays where it always was, in the `checkpoints` attribute of its node, inside the transaction that records the rest of the row.
+What a name cannot recover, which today means the process class of a notebook cell, no longer travels inside it: those bytes are written to a `checkpoint_classes` directory beside the `container` directory of the profile's storage, and the checkpoint refers to them by digest.
+The `attributes` column is where the provenance graph keeps what it holds about a node, read by the `QueryBuilder` and rewritten whole on every state transition, so a blob does not belong in it.
+
+The file is named `<node uuid>-<digest>.pkl`, so every write lands on a path of its own and the bytes a checkpoint refers to are never the ones being overwritten; the superseded file goes once the checkpoint refers to the new one, and all of them go when the process seals.
+
+Nothing about the attribute changes, so there is no migration: a checkpoint written before this is a bundle, and so is one written after.
+A storage plugin has to implement `StorageBackend.get_checkpoint_classes_dirpath` for a process whose class travels in its checkpoint to be persisted on it.
+
 ### Fixes
 
 ### Deprecations

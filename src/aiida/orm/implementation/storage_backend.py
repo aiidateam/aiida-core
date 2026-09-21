@@ -14,6 +14,7 @@ import abc
 import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
+from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
 
@@ -61,6 +62,13 @@ class StorageBackend(abc.ABC):
     """
 
     read_only = False
+
+    _CHECKPOINT_CLASSES_DIRNAME: str = 'checkpoint_classes'
+    """Name of the directory holding pickled process classes, which checkpoints refer to by digest.
+
+    It sits beside the profile's ``container`` directory, and each file lives as long as the checkpoint
+    that refers to it.
+    """
 
     @classmethod
     @abc.abstractmethod
@@ -151,7 +159,14 @@ class StorageBackend(abc.ABC):
 
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
         """
+        import shutil
+
         from aiida.orm.autogroup import AutogroupManager
+
+        try:
+            shutil.rmtree(path=self.get_checkpoint_classes_dirpath(), ignore_errors=True)
+        except NotImplementedError:
+            pass
 
         self.reset_default_user()
         self._autogroup = AutogroupManager(self)
@@ -274,6 +289,25 @@ class StorageBackend(abc.ABC):
     @abc.abstractmethod
     def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""
+
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        """Return the directory holding the bytes that the checkpoints of this profile refer to.
+
+        A checkpoint is a node attribute; what lives here is what a name cannot recover, the process class among
+        it. Any worker can be handed any process, so this has to be storage they all reach, as node files are.
+
+        Every storage a process can be persisted on has to implement this, since a class that travels in a
+        checkpoint needs somewhere to go.
+
+        :raises NotImplementedError: if this storage keeps no such files: an archive, or a plugin written before
+            this method existed.
+        """
+        msg: str = (
+            f'`{self.__class__.__name__}` defines no directory for checkpoint class files, so a process whose '
+            'class travels in its checkpoint cannot be persisted on it: implement '
+            '`get_checkpoint_classes_dirpath`.'
+        )
+        raise NotImplementedError(msg)
 
     @abc.abstractmethod
     def set_global_variable(

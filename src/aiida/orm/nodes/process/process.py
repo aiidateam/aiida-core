@@ -154,6 +154,8 @@ class ProcessNode(Sealable, Node):
     _CLS_NODE_CACHING = ProcessNodeCaching
 
     CHECKPOINT_KEY = 'checkpoints'
+    CLASS_BYTES_PREFIX: str = 'sha256:'
+    """Marks a bundle entry as the digest of process class bytes kept in the profile's storage."""
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
     EXIT_STATUS_KEY = 'exit_status'
@@ -549,21 +551,30 @@ class ProcessNode(Sealable, Node):
 
     @property
     def checkpoint(self) -> str | None:
-        """Return the checkpoint payload for the process
+        """Return the checkpoint bundle for the process.
 
-        :returns: checkpoint payload if it exists, None otherwise
+        A bundle that carries the process class holds its digest in place of the bytes, which live in the profile's
+        process class byte file directory. Use
+        :meth:`aiida.engine.persistence.AiidaCheckpointPersister.load_checkpoint` to get a bundle with those bytes
+        back in it.
+
+        :returns: the checkpoint bundle, or None if the process has none
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
     def set_checkpoint(self, checkpoint: str) -> None:
-        """Set the checkpoint payload for the process
+        """Set the checkpoint bundle for the process.
 
-        :param state: string representation of the stepper state info
+        :param checkpoint: the serialized bundle, whose carried class is a digest rather than the bytes themselves
         """
         return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
 
     def delete_checkpoint(self) -> None:
-        """Delete the checkpoint payload for the process"""
+        """Delete the checkpoint bundle from this node's attributes.
+
+        Class bytes the bundle refers to are files under the profile storage and stay behind;
+        :meth:`~aiida.engine.persistence.AiidaCheckpointPersister.delete_checkpoint` removes both.
+        """
         try:
             self.base.attributes.delete(self.CHECKPOINT_KEY)
         except AttributeError:

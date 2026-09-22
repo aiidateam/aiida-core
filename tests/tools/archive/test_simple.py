@@ -56,7 +56,8 @@ def test_base_data_nodes(aiida_profile_clean, tmp_path, entities):
 
 def test_calc_of_structuredata(aiida_profile, tmp_path, aiida_localhost):
     """Simple ex-/import of CalcJobNode with input StructureData"""
-    struct = orm.StructureData(pbc=False)
+    struct = orm.StructureData()
+    struct.set_pbc(pbc=False)
     struct.store()
 
     calc = orm.CalcJobNode()
@@ -92,7 +93,8 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, aiida_localhost):
 def test_check_for_export_format_version(aiida_profile, tmp_path):
     """Test the check for the export format version."""
     # first create an archive
-    struct = orm.StructureData(pbc=False)
+    struct = orm.StructureData()
+    struct.set_pbc(pbc=False)
     struct.store()
     filename = str(tmp_path / 'export.aiida')
     create_archive([struct], filename=filename)
@@ -119,7 +121,8 @@ def test_check_for_export_format_version(aiida_profile, tmp_path):
 
 def test_control_of_licenses(tmp_path):
     """Test control of licenses."""
-    struct = orm.StructureData(pbc=False)
+    struct = orm.StructureData()
+    struct.set_pbc(pbc=False)
     struct.source = {'license': 'GPL'}
     struct.store()
 
@@ -162,7 +165,7 @@ def test_export_filter_size(tmp_path, aiida_profile_clean):
     nb_nodes = 5
     nodes = []
     for i in range(nb_nodes):
-        node = orm.Int(i)
+        node = orm.Int(value=i)
         node.label = f'node_{i}'
         node.store()
         nodes.append(node)

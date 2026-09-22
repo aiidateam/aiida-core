@@ -8,13 +8,63 @@
 ###########################################################################
 """Data plugin to model an atomic orbital."""
 
+from __future__ import annotations
+
 import copy
+import typing as t
+
+import pydantic as pdt
 
 from aiida.common.exceptions import ValidationError
+from aiida.orm import qb_fields
+from aiida.orm.decorators import attribute
+from aiida.orm.models.modeling import ModelAdapter
 from aiida.orm.nodes.data.data import Data
 from aiida.plugins import OrbitalFactory
 
 __all__ = ('OrbitalData',)
+
+
+@t.runtime_checkable
+class Orbital(t.Protocol):
+    def get_orbital_dict(self) -> dict[str, t.Any]: ...
+
+
+def _orbital_to_dict(orbital: Orbital) -> dict[str, t.Any]:
+    """Convert an orbital to its raw dictionary representation."""
+    orbital_dict = copy.deepcopy(orbital.get_orbital_dict())
+
+    if '_orbital_type' not in orbital_dict:
+        msg = f'No _orbital_type found in: {orbital_dict}'
+        raise ValueError(msg)
+
+    return orbital_dict
+
+
+def _orbital_from_dict(orbital_dict: dict[str, t.Any]) -> Orbital:
+    """Construct an orbital from its raw dictionary representation."""
+    orbital_dict = copy.deepcopy(orbital_dict)
+
+    try:
+        orbital_type = orbital_dict.pop('_orbital_type')
+    except KeyError:
+        msg = f'No _orbital_type found in: {orbital_dict}'
+        raise ValidationError(msg)
+
+    orbital_cls = OrbitalFactory(orbital_type)
+    return orbital_cls(**orbital_dict)
+
+
+class OrbitalsAdapter(ModelAdapter[list[Orbital], list[dict[str, t.Any]], qb_fields.QbArrayField]):
+    """Adapt orbitals between the ORM and model representations."""
+
+    @classmethod
+    def to_model(cls, value: list[Orbital], *, context: t.Any = None) -> list[dict[str, t.Any]]:
+        return [_orbital_to_dict(orbital) for orbital in value]
+
+    @classmethod
+    def to_orm(cls, value: list[dict[str, t.Any]], *, context: t.Any = None) -> list[Orbital]:
+        return [_orbital_from_dict(orbital_dict) for orbital_dict in value]
 
 
 class OrbitalData(Data):
@@ -22,13 +72,29 @@ class OrbitalData(Data):
     providing methods for accessing them internally.
     """
 
-    def clear_orbitals(self):
+    @attribute(
+        model_adapter=OrbitalsAdapter(),
+        model_field_info=pdt.fields.FieldInfo(default_factory=list),
+    )
+    def orbitals(self) -> list[Orbital]:
+        """The orbitals."""
+        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbitals', []))
+        return [_orbital_from_dict(orbital_dict) for orbital_dict in orbital_dicts]
+
+    @orbitals.setter
+    def orbitals(self, value: list[Orbital | dict[str, t.Any]]) -> None:
+        self.base.attributes.set(
+            'orbitals',
+            [_orbital_to_dict(orbital) if isinstance(orbital, Orbital) else orbital for orbital in value],
+        )
+
+    def clear_orbitals(self) -> None:
         """Remove all orbitals that were added to the class
         Cannot work if OrbitalData has been already stored
         """
-        self.base.attributes.set('orbital_dicts', [])
+        self.base.attributes.set('orbitals', [])
 
-    def get_orbitals(self, **kwargs):
+    def get_orbitals(self, **kwargs: t.Any) -> list[Orbital]:
         """Returns all orbitals by default. If a site is provided, returns
         all orbitals cooresponding to the location of that site, additional
         arguments may be provided, which act as filters on the retrieved
@@ -38,48 +104,26 @@ class OrbitalData(Data):
         :kwargs: attributes than can filter the set of returned orbitals
         :return list_of_outputs: a list of orbitals
         """
-        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbital_dicts', None))
-        if orbital_dicts is None:
-            raise AttributeError('Orbitals must be set before being retrieved')
+        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbitals', []))
 
-        filter_dict = {}
-        filter_dict.update(kwargs)
-        # prevents KeyError from occuring
-        orbital_dicts = [x for x in orbital_dicts if all(y in x for y in filter_dict)]
-        orbital_dicts = [x for x in orbital_dicts if all(x[y] == z for y, z in filter_dict.items())]
+        orbital_dicts = [
+            orbital_dict
+            for orbital_dict in orbital_dicts
+            if all(key in orbital_dict and orbital_dict[key] == value for key, value in kwargs.items())
+        ]
 
-        list_of_outputs = []
-        for orbital_dict in orbital_dicts:
-            try:
-                orbital_type = orbital_dict.pop('_orbital_type')
-            except KeyError:
-                msg = f'No _orbital_type found in: {orbital_dict}'
-                raise ValidationError(msg)
-
-            cls = OrbitalFactory(orbital_type)
-            orbital = cls(**orbital_dict)
-            list_of_outputs.append(orbital)
-        return list_of_outputs
+        return [_orbital_from_dict(orbital_dict) for orbital_dict in orbital_dicts]
 
     def set_orbitals(self, orbitals):
         """Sets the orbitals into the database. Uses the orbital's inherent
         set_orbital_dict method to generate a orbital dict string.
 
-        :param orbital: an orbital or list of orbitals to be set
+        :param orbitals: an orbital or list of orbitals to be set
         """
         if not isinstance(orbitals, list):
             orbitals = [orbitals]
-        orbital_dicts = []
 
-        for orbital in orbitals:
-            orbital_dict = copy.deepcopy(orbital.get_orbital_dict())
-            try:
-                _orbital_type = orbital_dict['_orbital_type']
-            except KeyError:
-                msg = f'No _orbital_type found in: {orbital_dict}'
-                raise ValueError(msg)
-            orbital_dicts.append(orbital_dict)
-        self.base.attributes.set('orbital_dicts', orbital_dicts)
+        self.orbitals = orbitals
 
 
 ##########################################################################

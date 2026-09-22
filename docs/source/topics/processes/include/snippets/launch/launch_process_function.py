@@ -7,8 +7,8 @@ def add(x, y):
     return x + y
 
 
-x = Int(1)
-y = Int(2)
+x = Int(value=1)
+y = Int(value=2)
 
 result = add(x, y)
 result, node = add.run_get_node(x, y)

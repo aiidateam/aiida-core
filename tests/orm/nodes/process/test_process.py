@@ -84,8 +84,8 @@ def test_get_builder_restart(aiida_code_installed):
     """Test :meth:`aiida.orm.nodes.process.process.ProcessNode.get_builder_restart`."""
     inputs = {
         'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
-        'x': Int(1),
-        'y': Int(1),
+        'x': Int(value=1),
+        'y': Int(value=1),
         'metadata': {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
     }
     _, node = launch.run_get_node(ArithmeticAddCalculation, inputs)

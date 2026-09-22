@@ -21,7 +21,7 @@ import pytest
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
-from aiida.orm import Code, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
+from aiida.orm import AbstractCode, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
 from aiida.plugins import DataFactory
 
 
@@ -125,7 +125,7 @@ def test_code_list_also_no_computer(run_cli_command, code, tmp_path):
     filepath = tmp_path / 'script.sh'
     filepath.write_text('fake script')
 
-    code_portable = PortableCode(filepath_executable='script.sh', filepath_files=tmp_path)
+    code_portable = PortableCode.from_directory(filepath_executable='script.sh', filepath_files=tmp_path)
     code_portable.label = 'code_portable'
     code_portable.store()
 
@@ -621,7 +621,7 @@ def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_
     filepath.write_text('fake bash')
 
     label = 'some-label'
-    code = PortableCode(filepath_executable='bash', filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable='bash', filepath_files=tmp_path)
     code.label = label
     code.store()
     assert isinstance(load_code(label), PortableCode)
@@ -639,7 +639,7 @@ def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command, 
     tmp_bin_dir = tmp_path / 'bin'
     tmp_bin_dir.mkdir()
     (tmp_bin_dir / 'bash').touch()
-    code = PortableCode(filepath_executable='bash', filepath_files=tmp_bin_dir)
+    code = PortableCode.from_directory(filepath_executable='bash', filepath_files=tmp_bin_dir)
     code.label = label
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'bash')
     code.store()
@@ -753,5 +753,5 @@ def test_code_create(run_cli_command, command_options, non_interactive_editor):
     cls = DataFactory(entry_point)
     result = run_cli_command(cmd_code.code_create, options)
     assert f'Success: Created {cls.__name__}' in result.output
-    code = QueryBuilder().append(Code).one()[0]
+    code = QueryBuilder().append(AbstractCode).one()[0]
     assert code.entry_point.name == entry_point

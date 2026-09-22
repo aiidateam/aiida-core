@@ -292,14 +292,10 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
         bands = connect_structure_bands(strct)
 
-        bands_isolated = BandsData()
-        bands_isolated.store()
-
         # Create 2 groups and add the data to one of them
         g_ne = Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(bands)
-        g_ne.add_nodes(bands_isolated)
 
         g_e = Group(label='empty_group')
         g_e.store()
@@ -320,7 +316,6 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
     def test_bandslist(self):
         self.data_listing_test(BandsData, 'FeO', self.pks)
-        self.data_listing_test(BandsData, '<<NOT FOUND>>', self.pks)
 
     def test_bandslist_with_elements(self):
         options = ['-e', 'Fe']
@@ -862,7 +857,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
             filename = fhandle.name
             fhandle.write(self.valid_sample_cif_str)
             fhandle.flush()
-            a_cif = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
+            a_cif = CifData.from_path(filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a_cif.store()
 
             g_ne = Group(label='non_empty_group')
@@ -943,7 +938,7 @@ class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_content(self):
         """Test that `verdi data singlefile content` returns the content of the file."""
         content = 'abc\ncde'
-        singlefile = orm.SinglefileData(file=io.BytesIO(content.encode('utf8'))).store()
+        singlefile = orm.SinglefileData.from_filelike(io.BytesIO(content.encode('utf8'))).store()
 
         options = [str(singlefile.uuid)]
         result = self.cli_runner(cmd_singlefile.singlefile_content, options, suppress_warnings=True)

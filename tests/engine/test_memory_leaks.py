@@ -45,7 +45,7 @@ def check_memory_leaks():
 @pytest.mark.usefixtures('aiida_profile', 'check_memory_leaks')
 def test_leak_run_process():
     """Test whether running a dummy process leaks memory."""
-    inputs = {'a': orm.Int(2), 'b': orm.Str('test')}
+    inputs = {'a': orm.Int(value=2), 'b': orm.Str(value='test')}
     run_finished_ok(test_processes.DummyProcess, **inputs)
 
 
@@ -53,8 +53,8 @@ def test_leak_run_process():
 def test_leak_local_calcjob(aiida_code_installed):
     """Test whether running a local CalcJob leaks memory."""
     inputs = {
-        'x': orm.Int(1),
-        'y': orm.Int(2),
+        'x': orm.Int(value=1),
+        'y': orm.Int(value=2),
         'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
     }
     run_finished_ok(ArithmeticAddCalculation, **inputs)
@@ -75,5 +75,5 @@ def test_leak_ssh_calcjob(aiida_computer_ssh):
     code = orm.InstalledCode(
         default_calc_job_plugin='core.arithmetic.add', computer=computer, filepath_executable='/bin/bash'
     )
-    inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': code}
+    inputs = {'x': orm.Int(value=1), 'y': orm.Int(value=2), 'code': code}
     run_finished_ok(ArithmeticAddCalculation, **inputs)

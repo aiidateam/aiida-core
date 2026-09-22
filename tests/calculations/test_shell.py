@@ -78,7 +78,7 @@ def test_nodes_folder_data(generate_shell_calc_job, generate_shell_code, tmp_pat
     (tmp_path / 'file_a.txt').write_text('content a')
     (tmp_path / 'file_b.txt').write_text('content b')
 
-    folder_flat = FolderData(tree=tmp_path.absolute())
+    folder_flat = FolderData.from_tree(tmp_path.absolute())
     folder_nested = FolderData()
     folder_nested.put_object_from_tree(tmp_path.absolute(), 'dir')
     inputs = {
@@ -167,9 +167,9 @@ def test_nodes_base_types(generate_shell_calc_job, generate_shell_code):
         'code': generate_shell_code(),
         'arguments': ['{float}', '{int}', '{str}'],
         'nodes': {
-            'float': Float(1.0),
-            'int': Int(2),
-            'str': Str('string'),
+            'float': Float(value=1.0),
+            'int': Int(value=2),
+            'str': Str(value='string'),
         },
     }
     _, calc_info = generate_shell_calc_job('core.shell', inputs)
@@ -219,7 +219,7 @@ def test_nodes_single_file_data_filename(generate_shell_calc_job, generate_shell
 def test_arguments_invalid(generate_shell_calc_job, generate_shell_code, arguments, exception):
     """Test the ``arguments`` input with invalid placeholders."""
     inputs = {
-        'arguments': List(arguments),
+        'arguments': List(list=arguments),
         'code': generate_shell_code(),
     }
     with pytest.raises(ValueError, match=exception):
@@ -246,7 +246,7 @@ def test_arguments(generate_shell_calc_job, generate_shell_code, arguments):
 
 def test_arguments_files(generate_shell_calc_job, generate_shell_code):
     """Test the ``arguments`` with placeholders for inputs."""
-    arguments = List(['{file_a}'])
+    arguments = List(list=['{file_a}'])
     inputs = {
         'code': generate_shell_code(),
         'arguments': arguments,
@@ -262,7 +262,7 @@ def test_arguments_files_filenames(generate_shell_calc_job, generate_shell_code)
 
     Nested directories should be created automatically.
     """
-    arguments = List(['{file_a}'])
+    arguments = List(list=['{file_a}'])
     inputs = {
         'code': generate_shell_code(),
         'arguments': arguments,
@@ -282,7 +282,7 @@ def test_arguments_files_filenames(generate_shell_calc_job, generate_shell_code)
 
 def test_arguments_escaped_braces(generate_shell_calc_job, generate_shell_code):
     """Test the ``arguments`` with arguments containing escaped curly braces."""
-    arguments = List(['some{{escaped}}braces'])
+    arguments = List(list=['some{{escaped}}braces'])
     inputs = {
         'code': generate_shell_code(),
         'arguments': arguments,
@@ -312,7 +312,7 @@ def test_filename_stdin(generate_shell_calc_job, generate_shell_code, file_regre
         # may differ across systems (Linux vs. MacOS), while `diff` seems
         # to be (by default) more consistent (in /usr/bin).
         'code': generate_shell_code('diff'),
-        'arguments': List(['{filename}']),
+        'arguments': List(list=['{filename}']),
         'nodes': {'filename': SinglefileData.from_string('content')},
         'metadata': {'options': {'filename_stdin': 'filename'}},
     }
@@ -447,7 +447,7 @@ def test_parser_invalid_not_callable(generate_shell_calc_job, generate_shell_cod
     """Test the ``parser`` validation when input is not callable."""
     with pytest.raises(ValueError, match=r'The `parser` is not a callable function: .* is not a callable object'):
         generate_shell_calc_job(
-            'core.shell', inputs={'code': generate_shell_code(), 'parser': PickledData('not-callable')}
+            'core.shell', inputs={'code': generate_shell_code(), 'parser': PickledData.from_object('not-callable')}
         )
 
 
@@ -465,7 +465,7 @@ def test_parser_over_daemon(generate_shell_code, submit_and_await):
     def parser(dirpath):
         from aiida.orm import Str
 
-        return {'string': Str((dirpath / 'stdout').read_text().strip())}
+        return {'string': Str(value=(dirpath / 'stdout').read_text().strip())}
 
     builder = generate_shell_code('/bin/echo').get_builder()
     builder.arguments = [value]
@@ -526,7 +526,7 @@ def test_input_output_filename_overlap(generate_shell_calc_job, generate_shell_c
     # also not automatically solve the problem by renaming the overlapping file/directory, as is done in the case of the
     # ``SinglefileData``, because it is not the plugin copying the content of the ``FolderData`` but the engine.
     (tmp_path / 'stdout').mkdir()
-    folder_data = FolderData(tree=tmp_path)
+    folder_data = FolderData.from_tree(tmp_path)
     with pytest.raises(RuntimeError, match=r'node `.*` contains the file .* which overlaps with a reserved .*'):
         dirpath, calc_info = generate_shell_calc_job(
             'core.shell',

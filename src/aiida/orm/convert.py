@@ -11,7 +11,6 @@
 from collections.abc import Iterator, Mapping, Sized
 from functools import singledispatch
 
-from aiida.orm.entities import from_backend_entity
 from aiida.orm.implementation import (
     BackendAuthInfo,
     BackendComment,
@@ -74,42 +73,42 @@ def _(backend_entity):
     from aiida.orm.groups import load_group_class
 
     group_class = load_group_class(backend_entity.type_string)
-    return from_backend_entity(group_class, backend_entity)
+    return group_class.from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendComputer)
 def _(backend_entity):
-    from aiida.orm import computers
+    from aiida.orm import Computer
 
-    return from_backend_entity(computers.Computer, backend_entity)
+    return Computer.from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendUser)
 def _(backend_entity):
-    from aiida.orm import users
+    from aiida.orm import User
 
-    return from_backend_entity(users.User, backend_entity)
+    return User.from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendAuthInfo)
 def _(backend_entity):
-    from aiida.orm import authinfos
+    from aiida.orm import AuthInfo
 
-    return from_backend_entity(authinfos.AuthInfo, backend_entity)
+    return AuthInfo.from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendLog)
 def _(backend_entity):
-    from aiida.orm import logs
+    from aiida.orm import Log
 
-    return from_backend_entity(logs.Log, backend_entity)
+    return Log.from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendComment)
 def _(backend_entity):
-    from aiida.orm import comments
+    from aiida.orm import Comment
 
-    return from_backend_entity(comments.Comment, backend_entity)
+    return Comment.from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendNode)
@@ -117,7 +116,7 @@ def _(backend_entity):
     from aiida.orm.utils.node import load_node_class
 
     node_class = load_node_class(backend_entity.node_type)
-    return from_backend_entity(node_class, backend_entity)
+    return node_class.from_backend_entity(backend_entity)
 
 
 class ConvertIterator(Iterator, Sized):

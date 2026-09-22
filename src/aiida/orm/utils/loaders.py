@@ -17,7 +17,7 @@ from aiida.common.lang import classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
 if t.TYPE_CHECKING:
-    from aiida.orm import Code, Computer, Group, Node
+    from aiida.orm import AbstractCode, Computer, Group, Node
 
 __all__ = (
     'CalculationEntityLoader',
@@ -96,7 +96,14 @@ def load_entity(
     )
 
 
-def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'Code':
+def load_code(
+    identifier=None,
+    pk=None,
+    uuid=None,
+    label=None,
+    sub_classes=None,
+    query_with_dashes=True,
+) -> 'AbstractCode':
     """Load a Code instance by one of its identifiers: pk, uuid or label
 
     If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
@@ -223,9 +230,9 @@ def get_loader(orm_class):
     :returns: a subclass of OrmEntityLoader
     :raises ValueError: if no OrmEntityLoader subclass can be found for the given orm class
     """
-    from aiida.orm import Code, Computer, Group, Node
+    from aiida.orm import AbstractCode, Computer, Group, Node
 
-    if issubclass(orm_class, Code):
+    if issubclass(orm_class, AbstractCode):
         return CodeEntityLoader
 
     if issubclass(orm_class, Computer):
@@ -619,9 +626,9 @@ class CodeEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm import Code
+        from aiida.orm import AbstractCode
 
-        return Code
+        return AbstractCode
 
     @classmethod
     def _get_query_builder_label_identifier(cls, identifier, classes, operator='==', project='*'):

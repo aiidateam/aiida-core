@@ -24,7 +24,7 @@ def test_basic(tmp_path):
     path = Path(tmp_path / 'test.txt')
     text_data = 'test'
     path.write_text(text_data, encoding='utf-8')
-    orm.SinglefileData(str(path), backend=backend1).store()
+    orm.SinglefileData.from_path(str(path), backend=backend1).store()
 
     # export to archive
     create_archive(None, backend=backend1, filename=filename)

@@ -9,9 +9,10 @@
 """`Data` sub class to represent a boolean value."""
 
 import numpy
+import pydantic as pdt
 
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('Bool',)
 
@@ -21,11 +22,14 @@ class Bool(BaseType):
 
     _type = bool
 
-    class AttributesModel(BaseType.AttributesModel):
-        value: bool = OrmMetadataField(
-            title='Boolean value',
-            description='The value of the boolean',
-        )
+    @attribute(model_field_info=pdt.fields.FieldInfo(title='Boolean value'))
+    def value(self) -> bool:
+        """The boolean value stored in this node."""
+        return self.base.attributes.get('value', False)
+
+    @value.setter
+    def value(self, value: bool) -> None:
+        self.base.attributes.set('value', bool(value))
 
     def __int__(self):
         return int(bool(self))
@@ -37,7 +41,7 @@ class Bool(BaseType):
 @to_aiida_type.register(bool)
 @to_aiida_type.register(numpy.bool_)
 def _(value):
-    return Bool(value)
+    return Bool(value=bool(value))
 
 
 def get_true_node():
@@ -48,7 +52,7 @@ def get_true_node():
 
     :return: a `Bool` instance with the value `True`
     """
-    return Bool(True)
+    return Bool(value=True)
 
 
 def get_false_node():
@@ -59,4 +63,4 @@ def get_false_node():
 
     :return: a `Bool` instance with the value `False`
     """
-    return Bool(False)
+    return Bool(value=False)

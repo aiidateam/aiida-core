@@ -48,8 +48,8 @@ computer = orm.Computer(
     scheduler_type='core.direct',
 ).store()
 code = orm.InstalledCode(computer=computer, filepath_executable='/bin/true', label='example-code').store()
-dict1 = orm.Dict({}).store()
-int1 = orm.Int(3).store()
+dict1 = orm.Dict().store()
+int1 = orm.Int(value=3).store()
 
 workflow = orm.WorkChainNode()
 for node, label in ((dict1, 'input1'), (int1, 'input2'), (code, 'code')):
@@ -66,14 +66,14 @@ remote = orm.RemoteData(computer=computer, remote_path='/x/y.py')
 remote.base.links.add_incoming(calc1, LinkType.CREATE, 'output')
 remote.store()
 
-string = orm.Str('abc').store()
+string = orm.Str(value='abc').store()
 calcfunction = orm.CalcFunctionNode(label='calcf1')
 for node, label in ((remote, 'input1'), (string, 'input2')):
     calcfunction.base.links.add_incoming(node, LinkType.INPUT_CALC, label)
 calcfunction.base.links.add_incoming(workflow, LinkType.CALL_CALC, 'call2')
 calcfunction.store()
 
-for node, label in ((orm.Dict({}), 'output1'), (orm.FolderData(), 'output2')):
+for node, label in ((orm.Dict(), 'output1'), (orm.FolderData(), 'output2')):
     node.base.links.add_incoming(calcfunction, LinkType.CREATE, label)
     node.store()
     node.base.links.add_incoming(workflow, LinkType.RETURN, label)

@@ -59,8 +59,8 @@ def main(code, number, daemon):
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir=tempfile.gettempdir(),
         ).store()
+        computer.set_workdir(tempfile.gettempdir())
         computer.configure(safe_interval=0.0, use_login_shell=False)
         echo.echo_success(f'Created and configured temporary `Computer` {label} for localhost.')
         computer_created = True
@@ -77,8 +77,8 @@ def main(code, number, daemon):
     cls = CalculationFactory('core.arithmetic.add')
     builder = cls.get_builder()
     builder.code = code
-    builder.x = orm.Int(1)
-    builder.y = orm.Int(1)
+    builder.x = orm.Int(value=1)
+    builder.y = orm.Int(value=1)
 
     time_start = time.time()
     nodes = []

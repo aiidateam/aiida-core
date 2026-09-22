@@ -12,13 +12,15 @@ from __future__ import annotations
 
 import os
 import typing as t
-from uuid import UUID
+
+import pydantic as pdt
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
 from aiida.manage import get_manager
 from aiida.orm import entities, users
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm.decorators import column
+from aiida.orm.models.adapters import StrUuidAdapter
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 if t.TYPE_CHECKING:
@@ -30,14 +32,10 @@ if t.TYPE_CHECKING:
 __all__ = ('Computer',)
 
 
-class ComputerCollection(entities.Collection['Computer']):
+class ComputerCollection(entities.EntityCollection['Computer']):
     """The collection of Computer entries."""
 
     collection_type: t.ClassVar[str] = 'computers'
-
-    @staticmethod
-    def _entity_base_cls() -> type[Computer]:
-        return Computer
 
     def get_or_create(self, label: str, **kwargs: t.Any) -> tuple[bool, Computer]:
         """Try to retrieve a Computer from the DB with the given arguments;
@@ -56,6 +54,18 @@ class ComputerCollection(entities.Collection['Computer']):
         except exceptions.NotExistent:
             return True, Computer(backend=self.backend, label=label, **kwargs)
 
+    def get_one_by_identifier(self, identifier: object) -> Computer:
+        """Get a single computer by its identifier.
+
+        :param identifier: the primary key or label of the computer to get
+        :return: the computer instance
+        """
+        if isinstance(identifier, int):
+            return self.get(pk=identifier)
+        if isinstance(identifier, str):
+            return self.get(label=identifier)
+        raise TypeError('Identifier must be an int or str')
+
     def list_labels(self) -> list[tuple[str]]:
         """Return a list with all the labels of the computers in the DB."""
         return self._backend.computers.list_names()
@@ -64,9 +74,13 @@ class ComputerCollection(entities.Collection['Computer']):
         """Delete the computer with the given id"""
         return self._backend.computers.delete(pk)
 
+    @staticmethod
+    def _entity_base_cls() -> type[Computer]:
+        return Computer
+
 
 class Computer(entities.Entity['BackendComputer', ComputerCollection]):
-    """Computer entity."""
+    """ORM representation of an AiiDA computer."""
 
     _logger = AIIDA_LOGGER.getChild('orm.computers')
 
@@ -77,40 +91,6 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     _CLS_COLLECTION = ComputerCollection
 
-    class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = OrmMetadataField(
-            description='The UUID of the computer',
-            read_only=True,
-            examples=['123e4567-e89b-12d3-a456-426614174000'],
-        )
-        label: str = OrmMetadataField(
-            description='Label for the computer',
-            examples=['localhost'],
-        )
-        description: str = OrmMetadataField(
-            '',
-            description='Description of the computer',
-            examples=['My local machine'],
-        )
-        hostname: str = OrmMetadataField(
-            description='Hostname of the computer',
-            examples=['localhost'],
-        )
-        transport_type: str = OrmMetadataField(
-            description='Transport type of the computer',
-            examples=['core.local'],
-        )
-        scheduler_type: str = OrmMetadataField(
-            description='Scheduler type of the computer',
-            examples=['core.direct'],
-        )
-        metadata: dict[str, t.Any] = OrmMetadataField(
-            default_factory=dict,
-            description='Metadata of the computer',
-            may_be_large=True,
-            examples=[{'key': 'value'}],
-        )
-
     def __init__(
         self,
         label: str | None = None,
@@ -118,13 +98,12 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         description: str = '',
         transport_type: str = '',
         scheduler_type: str = '',
-        workdir: str | None = None,
         metadata: dict[str, t.Any] | None = None,
         backend: StorageBackend | None = None,
     ) -> None:
         """Construct a new computer."""
         backend = backend or get_manager().get_profile_storage()
-        model = backend.computers.create(
+        self._backend_entity = backend.computers.create(
             label=label,
             hostname=hostname,
             description=description,
@@ -132,9 +111,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             scheduler_type=scheduler_type,
             metadata=metadata,
         )
-        super().__init__(model)
-        if workdir is not None:
-            self.set_workdir(workdir)
+        self.finalize()
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
@@ -142,161 +119,89 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     def __str__(self) -> str:
         return f'{self.label} ({self.hostname}), pk: {self.pk}'
 
-    @property
+    @column
+    def label(self) -> str:
+        """The label of the computer."""
+        return self._backend_entity.label
+
+    @label.setter
+    def label(self, value: str) -> None:
+        self._backend_entity.set_label(value)
+
+    @column(
+        updatable=True,
+        model_field_info=pdt.fields.FieldInfo(default=''),
+    )
+    def description(self) -> str:
+        """The description of the computer."""
+        return self._backend_entity.description
+
+    @description.setter
+    def description(self, value: str) -> None:
+        self._backend_entity.set_description(value)
+
+    @column(
+        readonly=True,
+        model_adapter=StrUuidAdapter(),
+    )
     def uuid(self) -> str:
-        """Return the UUID for this computer.
-
-        This identifier is unique across all entities types and backend instances.
-
-        :return: the entity uuid
-        """
+        """The UUID of the computer."""
         return self._backend_entity.uuid
+
+    @column
+    def hostname(self) -> str:
+        """The hostname of the computer."""
+        return self._backend_entity.hostname
+
+    @hostname.setter
+    def hostname(self, value: str) -> None:
+        self._backend_entity.set_hostname(value)
+
+    @column
+    def transport_type(self) -> str:
+        """The transport type of the computer."""
+        return self._backend_entity.get_transport_type()
+
+    @transport_type.setter
+    def transport_type(self, value: str) -> None:
+        self._backend_entity.set_transport_type(value)
+
+    @column
+    def scheduler_type(self) -> str:
+        """The scheduler type of the computer."""
+        return self._backend_entity.get_scheduler_type()
+
+    @scheduler_type.setter
+    def scheduler_type(self, value: str) -> None:
+        self._backend_entity.set_scheduler_type(value)
+
+    @column(
+        updatable=True,
+        may_be_large=True,
+        model_field_info=pdt.fields.FieldInfo(default_factory=dict),
+    )
+    def metadata(self) -> dict[str, t.Any]:
+        """The metadata of the computer."""
+        return self._backend_entity.get_metadata()
+
+    @metadata.setter
+    def metadata(self, value: dict[str, t.Any]) -> None:
+        self._backend_entity.set_metadata(value)
 
     @property
     def logger(self) -> AiidaLoggerType:
         return self._logger
 
-    @classmethod
-    def _label_validator(cls, label: str) -> None:
-        """Validates the label."""
-        if not label.strip():
-            raise exceptions.ValidationError('No label specified')
-
-    @classmethod
-    def _hostname_validator(cls, hostname: str) -> None:
-        """Validates the hostname."""
-        if not (hostname or hostname.strip()):
-            raise exceptions.ValidationError('No hostname specified')
-
-    @classmethod
-    def _description_validator(cls, description: str) -> None:
-        """Validates the description."""
-        # The description is always valid
-
-    @classmethod
-    def _transport_type_validator(cls, transport_type: str) -> None:
-        """Validates the transport string."""
-        from aiida.plugins.entry_point import get_entry_point_names
-
-        if transport_type not in get_entry_point_names('aiida.transports'):
-            raise exceptions.ValidationError('The specified transport is not a valid one')
-
-    @classmethod
-    def _scheduler_type_validator(cls, scheduler_type: str) -> None:
-        """Validates the transport string."""
-        from aiida.plugins.entry_point import get_entry_point_names
-
-        if scheduler_type not in get_entry_point_names('aiida.schedulers'):
-            msg = f'The specified scheduler `{scheduler_type}` is not a valid one'
-            raise exceptions.ValidationError(msg)
-
-    @classmethod
-    def _prepend_text_validator(cls, prepend_text: str) -> None:
-        """Validates the prepend text string."""
-        # no validation done
-
-    @classmethod
-    def _append_text_validator(cls, append_text: str) -> None:
-        """Validates the append text string."""
-        # no validation done
-
-    @classmethod
-    def _workdir_validator(cls, workdir: str) -> None:
-        """Validates the transport string."""
-        if not workdir.strip():
-            raise exceptions.ValidationError('No workdir specified')
-
-        try:
-            convertedwd = workdir.format(username='test')
-        except KeyError as exc:
-            msg = f'In workdir there is an unknown replacement field {exc.args[0]}'
-            raise exceptions.ValidationError(msg)
-        except ValueError as exc:
-            msg = f"Error in the string: '{exc}'"
-            raise exceptions.ValidationError(msg)
-
-        if not os.path.isabs(convertedwd):
-            raise exceptions.ValidationError('The workdir must be an absolute path')
-
-    def _mpirun_command_validator(self, mpirun_cmd: list[str] | tuple[str, ...]) -> None:
-        """Validates the mpirun_command variable. MUST be called after properly
-        checking for a valid scheduler.
-        """
-        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):  # type: ignore[redundant-expr]
-            raise exceptions.ValidationError('the mpirun_command must be a list of strings')
-
-        try:
-            job_resource_keys = self.get_scheduler().job_resource_class.get_valid_keys()
-        except exceptions.EntryPointError:
-            raise exceptions.ValidationError('Unable to load the scheduler for this computer')
-
-        subst = {i: 'value' for i in job_resource_keys}
-        subst['tot_num_mpiprocs'] = 'value'
-
-        try:
-            for arg in mpirun_cmd:
-                arg.format(**subst)
-        except KeyError as exc:
-            msg = f'In workdir there is an unknown replacement field {exc.args[0]}'
-            raise exceptions.ValidationError(msg)
-        except ValueError as exc:
-            msg = f"Error in the string: '{exc}'"
-            raise exceptions.ValidationError(msg)
-
-    def validate(self) -> None:
-        """Check if the attributes and files retrieved from the DB are valid.
-        Raise a ValidationError if something is wrong.
-
-        Must be able to work even before storing: therefore, use the get_attr and similar methods
-        that automatically read either from the DB or from the internal attribute cache.
-
-        For the base class, this is always valid. Subclasses will reimplement this.
-        In the subclass, always call the super().validate() method first!
-        """
-        if not self.label.strip():
-            raise exceptions.ValidationError('No name specified')
-
-        self._label_validator(self.label)
-        self._hostname_validator(self.hostname)
-        self._description_validator(self.description)
-        self._transport_type_validator(self.transport_type)
-        self._scheduler_type_validator(self.scheduler_type)
-        self._workdir_validator(self.get_workdir())
-        self.default_memory_per_machine_validator(self.get_default_memory_per_machine())
-
-        try:
-            mpirun_cmd = self.get_mpirun_command()
-        except exceptions.DbContentError:
-            raise exceptions.ValidationError('Error in the DB content of the metadata')
-
-        # To be called AFTER the validation of the scheduler
-        self._mpirun_command_validator(mpirun_cmd)
-
-    @classmethod
-    def _default_mpiprocs_per_machine_validator(cls, def_cpus_per_machine: int | None) -> None:
-        """Validates the default number of CPUs per machine (node)"""
-        if def_cpus_per_machine is None:
-            return
-
-        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:  # type: ignore[redundant-expr]
-            raise exceptions.ValidationError(
-                'Invalid value for default_mpiprocs_per_machine, must be a positive integer, or an empty string if you '
-                'do not want to provide a default value.'
-            )
-
-    @classmethod
-    def default_memory_per_machine_validator(cls, def_memory_per_machine: int | None) -> None:
-        """Validates the default amount of memory (kB) per machine (node)"""
-        if def_memory_per_machine is None:
-            return
-
-        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:  # type: ignore[redundant-expr]
-            msg = f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
-            raise exceptions.ValidationError(msg)
+    @property
+    def is_configured(self) -> bool:
+        """Return whether the computer is configured for the current default user."""
+        user = users.User.get_collection(self.backend).get_default()
+        assert user is not None
+        return self.is_user_configured(user)
 
     def copy(self) -> Computer:
         """Return a copy of the current object to work with, not stored yet."""
-        return entities.from_backend_entity(Computer, self._backend_entity.copy())
+        return Computer.from_backend_entity(self._backend_entity.copy())
 
     def store(self) -> Computer:
         """Store the computer in the DB.
@@ -304,104 +209,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         Differently from Nodes, a computer can be re-stored if its properties
         are to be changed (e.g. a new mpirun command, etc.)
         """
-        self.validate()
+        self._validate()
         return super().store()
-
-    @property
-    def label(self) -> str:
-        """Return the computer label.
-
-        :return: the label.
-        """
-        return self._backend_entity.label
-
-    @label.setter
-    def label(self, value: str) -> None:
-        """Set the computer label.
-
-        :param value: the label to set.
-        """
-        self._backend_entity.set_label(value)
-
-    @property
-    def description(self) -> str:
-        """Return the computer computer.
-
-        :return: the description.
-        """
-        return self._backend_entity.description
-
-    @description.setter
-    def description(self, value: str) -> None:
-        """Set the computer description.
-
-        :param value: the description to set.
-        """
-        self._backend_entity.set_description(value)
-
-    @property
-    def hostname(self) -> str:
-        """Return the computer hostname.
-
-        :return: the hostname.
-        """
-        return self._backend_entity.hostname
-
-    @hostname.setter
-    def hostname(self, value: str) -> None:
-        """Set the computer hostname.
-
-        :param value: the hostname to set.
-        """
-        self._backend_entity.set_hostname(value)
-
-    @property
-    def scheduler_type(self) -> str:
-        """Return the computer scheduler type.
-
-        :return: the scheduler type.
-        """
-        return self._backend_entity.get_scheduler_type()
-
-    @scheduler_type.setter
-    def scheduler_type(self, value: str) -> None:
-        """Set the computer scheduler type.
-
-        :param value: the scheduler type to set.
-        """
-        self._backend_entity.set_scheduler_type(value)
-
-    @property
-    def transport_type(self) -> str:
-        """Return the computer transport type.
-
-        :return: the transport_type.
-        """
-        return self._backend_entity.get_transport_type()
-
-    @transport_type.setter
-    def transport_type(self, value: str) -> None:
-        """Set the computer transport type.
-
-        :param value: the transport_type to set.
-        """
-        self._backend_entity.set_transport_type(value)
-
-    @property
-    def metadata(self) -> dict[str, t.Any]:
-        """Return the computer metadata.
-
-        :return: the metadata.
-        """
-        return self._backend_entity.get_metadata()
-
-    @metadata.setter
-    def metadata(self, value: dict[str, t.Any]) -> None:
-        """Set the computer metadata.
-
-        :param value: the metadata to set.
-        """
-        self._backend_entity.set_metadata(value)
 
     def delete_property(self, name: str, raise_exception: bool = True) -> None:
         """Delete a property from this computer
@@ -518,7 +327,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """Set the default amount of memory (kB) per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
-        self.default_memory_per_machine_validator(def_memory_per_machine)
+        self._default_memory_per_machine_validator(def_memory_per_machine)
         self.set_property('default_memory_per_machine', def_memory_per_machine)
 
     def get_minimum_job_poll_interval(self) -> float:
@@ -586,22 +395,12 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
         except exceptions.NotExistent as exc:
             msg = (
-                f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.get_short_name()}` '
+                f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.short_name}` '
                 f'(ID={user.pk}) - use `verdi computer configure` first'
             )
             raise exceptions.NotExistent(msg) from exc
 
         return authinfo
-
-    @property
-    def is_configured(self) -> bool:
-        """Return whether the computer is configured for the current default user.
-
-        :return: Boolean, ``True`` if the computer is configured for the current default user, ``False`` otherwise.
-        """
-        user = users.User.get_collection(self.backend).get_default()
-        assert user is not None
-        return self.is_user_configured(user)
 
     def is_user_configured(self, user: User) -> bool:
         """Is the user configured on this computer?
@@ -718,3 +517,141 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             return {}
 
         return authinfo.get_auth_params()
+
+    def _validate(self) -> None:
+        """Check if the attributes and files retrieved from the DB are valid.
+        Raise a ValidationError if something is wrong.
+
+        Must be able to work even before storing: therefore, use the get_attr and similar methods
+        that automatically read either from the DB or from the internal attribute cache.
+
+        For the base class, this is always valid. Subclasses will reimplement this.
+        In the subclass, always call the super().validate() method first!
+        """
+        if not self.label.strip():
+            raise exceptions.ValidationError('No name specified')
+
+        self._label_validator(self.label)
+        self._hostname_validator(self.hostname)
+        self._description_validator(self.description)
+        self._transport_type_validator(self.transport_type)
+        self._scheduler_type_validator(self.scheduler_type)
+        self._workdir_validator(self.get_workdir())
+        self._default_memory_per_machine_validator(self.get_default_memory_per_machine())
+
+        try:
+            mpirun_cmd = self.get_mpirun_command()
+        except exceptions.DbContentError:
+            raise exceptions.ValidationError('Error in the DB content of the metadata')
+
+        # To be called AFTER the validation of the scheduler
+        self._mpirun_command_validator(mpirun_cmd)
+
+    @classmethod
+    def _label_validator(cls, label: str) -> None:
+        """Validates the label."""
+        if not label.strip():
+            raise exceptions.ValidationError('No label specified')
+
+    @classmethod
+    def _hostname_validator(cls, hostname: str) -> None:
+        """Validates the hostname."""
+        if not (hostname or hostname.strip()):
+            raise exceptions.ValidationError('No hostname specified')
+
+    @classmethod
+    def _description_validator(cls, description: str) -> None:
+        """Validates the description."""
+        # The description is always valid
+
+    @classmethod
+    def _transport_type_validator(cls, transport_type: str) -> None:
+        """Validates the transport string."""
+        from aiida.plugins.entry_point import get_entry_point_names
+
+        if transport_type not in get_entry_point_names('aiida.transports'):
+            raise exceptions.ValidationError('The specified transport is not a valid one')
+
+    @classmethod
+    def _scheduler_type_validator(cls, scheduler_type: str) -> None:
+        """Validates the transport string."""
+        from aiida.plugins.entry_point import get_entry_point_names
+
+        if scheduler_type not in get_entry_point_names('aiida.schedulers'):
+            msg = f'The specified scheduler `{scheduler_type}` is not a valid one'
+            raise exceptions.ValidationError(msg)
+
+    @classmethod
+    def _prepend_text_validator(cls, prepend_text: str) -> None:
+        """Validates the prepend text string."""
+        # no validation done
+
+    @classmethod
+    def _append_text_validator(cls, append_text: str) -> None:
+        """Validates the append text string."""
+        # no validation done
+
+    @classmethod
+    def _workdir_validator(cls, workdir: str) -> None:
+        """Validates the transport string."""
+        if not workdir.strip():
+            raise exceptions.ValidationError('No workdir specified')
+
+        try:
+            convertedwd = workdir.format(username='test')
+        except KeyError as exc:
+            msg = f'In workdir there is an unknown replacement field {exc.args[0]}'
+            raise exceptions.ValidationError(msg)
+        except ValueError as exc:
+            msg = f"Error in the string: '{exc}'"
+            raise exceptions.ValidationError(msg)
+
+        if not os.path.isabs(convertedwd):
+            raise exceptions.ValidationError('The workdir must be an absolute path')
+
+    def _mpirun_command_validator(self, mpirun_cmd: list[str] | tuple[str, ...]) -> None:
+        """Validates the mpirun_command variable. MUST be called after properly
+        checking for a valid scheduler.
+        """
+        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):  # type: ignore[redundant-expr]
+            raise exceptions.ValidationError('the mpirun_command must be a list of strings')
+
+        try:
+            job_resource_keys = self.get_scheduler().job_resource_class.get_valid_keys()
+        except exceptions.EntryPointError:
+            raise exceptions.ValidationError('Unable to load the scheduler for this computer')
+
+        subst = {i: 'value' for i in job_resource_keys}
+        subst['tot_num_mpiprocs'] = 'value'
+
+        try:
+            for arg in mpirun_cmd:
+                arg.format(**subst)
+        except KeyError as exc:
+            msg = f'In workdir there is an unknown replacement field {exc.args[0]}'
+            raise exceptions.ValidationError(msg)
+        except ValueError as exc:
+            msg = f"Error in the string: '{exc}'"
+            raise exceptions.ValidationError(msg)
+
+    @classmethod
+    def _default_mpiprocs_per_machine_validator(cls, def_cpus_per_machine: int | None) -> None:
+        """Validates the default number of CPUs per machine (node)"""
+        if def_cpus_per_machine is None:
+            return
+
+        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:  # type: ignore[redundant-expr]
+            raise exceptions.ValidationError(
+                'Invalid value for default_mpiprocs_per_machine, must be a positive integer, or an empty string if you '
+                'do not want to provide a default value.'
+            )
+
+    @classmethod
+    def _default_memory_per_machine_validator(cls, def_memory_per_machine: int | None) -> None:
+        """Validates the default amount of memory (kB) per machine (node)"""
+        if def_memory_per_machine is None:
+            return
+
+        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:  # type: ignore[redundant-expr]
+            msg = f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
+            raise exceptions.ValidationError(msg)

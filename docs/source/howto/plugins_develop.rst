@@ -182,8 +182,8 @@ They usually allow creating some resources that are required by the test, such a
 
         code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
         builder = code.get_builder()
-        builder.x = orm.Int(1)
-        builder.y = orm.Int(2)
+        builder.x = orm.Int(value=1)
+        builder.y = orm.Int(value=2)
 
         results, node = run.get_node(builder)
 

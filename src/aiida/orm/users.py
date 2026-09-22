@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import typing as t
 
+import pydantic as pdt
+
 from aiida.common import exceptions
 from aiida.manage import get_manager
 from aiida.orm import entities
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm.decorators import column
 
 if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
@@ -24,14 +26,10 @@ if t.TYPE_CHECKING:
 __all__ = ('User',)
 
 
-class UserCollection(entities.Collection['User']):
+class UserCollection(entities.EntityCollection['User']):
     """The collection of users stored in a backend."""
 
     collection_type: t.ClassVar[str] = 'users'
-
-    @staticmethod
-    def _entity_base_cls() -> type[User]:
-        return User
 
     def get_or_create(self, email: str, **kwargs) -> tuple[bool, User]:
         """Get the existing user with a given email address or create an unstored one
@@ -50,32 +48,27 @@ class UserCollection(entities.Collection['User']):
         """Get the current default user"""
         return self.backend.default_user
 
+    def get_one_by_identifier(self, identifier: object) -> User:
+        """Get a single user by its identifier.
+
+        :param identifier: the primary key or email of the user to get
+        :return: the user instance
+        """
+        if isinstance(identifier, int):
+            return self.get(pk=identifier)
+        if isinstance(identifier, str):
+            return self.get(email=identifier)
+        raise TypeError('Identifier must be an int or str')
+
+    @staticmethod
+    def _entity_base_cls() -> type[User]:
+        return User
+
 
 class User(entities.Entity['BackendUser', UserCollection]):
-    """AiiDA User"""
+    """ORM representation of an AiiDA user."""
 
     _CLS_COLLECTION = UserCollection
-
-    class ReadModel(entities.Entity.ReadModel):
-        email: str = OrmMetadataField(
-            description='The user email',
-            examples=['verdi@opera.net'],
-        )
-        first_name: str = OrmMetadataField(
-            '',
-            description='The user first name',
-            examples=['Giuseppe'],
-        )
-        last_name: str = OrmMetadataField(
-            '',
-            description='The user last name',
-            examples=['Verdi'],
-        )
-        institution: str = OrmMetadataField(
-            '',
-            description='The user institution',
-            examples=['Opera National de Paris'],
-        )
 
     def __init__(
         self,
@@ -88,10 +81,13 @@ class User(entities.Entity['BackendUser', UserCollection]):
         """Create a new `User`."""
         backend = backend or get_manager().get_profile_storage()
         email = self.normalize_email(email)
-        backend_entity = backend.users.create(
-            email=email, first_name=first_name, last_name=last_name, institution=institution
+        self._backend_entity = backend.users.create(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            institution=institution,
         )
-        super().__init__(backend_entity)
+        self.finalize()
 
     def __str__(self) -> str:
         return self.email
@@ -101,6 +97,72 @@ class User(entities.Entity['BackendUser', UserCollection]):
             return False
 
         return self.email == other.email
+
+    @column
+    def email(self) -> str:
+        """The email of the user."""
+        return self._backend_entity.email
+
+    @email.setter
+    def email(self, email: str) -> None:
+        self._backend_entity.email = email
+
+    @column(model_field_info=pdt.fields.FieldInfo(default=''))
+    def first_name(self) -> str:
+        """The first name of the user."""
+        return self._backend_entity.first_name
+
+    @first_name.setter
+    def first_name(self, first_name: str) -> None:
+        self._backend_entity.first_name = first_name
+
+    @column(model_field_info=pdt.fields.FieldInfo(default=''))
+    def last_name(self) -> str:
+        """The last name of the user."""
+        return self._backend_entity.last_name
+
+    @last_name.setter
+    def last_name(self, last_name: str) -> None:
+        self._backend_entity.last_name = last_name
+
+    @column(model_field_info=pdt.fields.FieldInfo(default=''))
+    def institution(self) -> str:
+        """The institution of the user."""
+        return self._backend_entity.institution
+
+    @institution.setter
+    def institution(self, institution: str) -> None:
+        self._backend_entity.institution = institution
+
+    @property
+    def uuid(self) -> None:
+        """For now users do not have UUIDs so always return None"""
+        return None
+
+    @property
+    def is_default(self) -> bool:
+        """Return whether the user is the default user."""
+        default_user = self.collection.get_default()
+        return default_user is not None and self.pk == default_user.pk
+
+    @property
+    def full_name(self) -> str:
+        """Return the user full name"""
+        if self.first_name and self.last_name:
+            full_name = f'{self.first_name} {self.last_name} ({self.email})'
+        elif self.first_name:
+            full_name = f'{self.first_name} ({self.email})'
+        elif self.last_name:
+            full_name = f'{self.last_name} ({self.email})'
+        else:
+            full_name = f'{self.email}'
+
+        return full_name
+
+    @property
+    def short_name(self) -> str:
+        """Return the user short name (typically, this returns the email)"""
+        return self.email
 
     @staticmethod
     def normalize_email(email: str) -> str:
@@ -113,72 +175,3 @@ class User(entities.Entity['BackendUser', UserCollection]):
         else:
             email = f'{email_name}@{domain_part.lower()}'
         return email
-
-    @property
-    def is_default(self) -> bool:
-        """Return whether the user is the default user.
-
-        :returns: Boolean, ``True`` if the user is the default, ``False`` otherwise.
-        """
-        default_user = self.collection.get_default()
-        return default_user is not None and self.pk == default_user.pk
-
-    @property
-    def email(self) -> str:
-        return self._backend_entity.email
-
-    @email.setter
-    def email(self, email: str) -> None:
-        self._backend_entity.email = email
-
-    @property
-    def first_name(self) -> str:
-        return self._backend_entity.first_name
-
-    @first_name.setter
-    def first_name(self, first_name: str) -> None:
-        self._backend_entity.first_name = first_name
-
-    @property
-    def last_name(self) -> str:
-        return self._backend_entity.last_name
-
-    @last_name.setter
-    def last_name(self, last_name: str) -> None:
-        self._backend_entity.last_name = last_name
-
-    @property
-    def institution(self) -> str:
-        return self._backend_entity.institution
-
-    @institution.setter
-    def institution(self, institution: str) -> None:
-        self._backend_entity.institution = institution
-
-    def get_full_name(self) -> str:
-        """Return the user full name
-
-        :return: the user full name
-        """
-        if self.first_name and self.last_name:
-            full_name = f'{self.first_name} {self.last_name} ({self.email})'
-        elif self.first_name:
-            full_name = f'{self.first_name} ({self.email})'
-        elif self.last_name:
-            full_name = f'{self.last_name} ({self.email})'
-        else:
-            full_name = f'{self.email}'
-
-        return full_name
-
-    def get_short_name(self) -> str:
-        """Return the user short name (typically, this returns the email)
-
-        :return: The short name
-        """
-        return self.email
-
-    @property
-    def uuid(self) -> None:
-        """For now users do not have UUIDs so always return None"""
-        return None

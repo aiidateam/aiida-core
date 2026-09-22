@@ -12,4 +12,4 @@ def multiply(x, y):
     return x * y
 
 
-result = multiply(add(Int(1), Int(2)), Int(3))
+result = multiply(add(Int(value=1), Int(value=2)), Int(value=3))

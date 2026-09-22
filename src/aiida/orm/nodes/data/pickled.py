@@ -11,10 +11,13 @@
 from __future__ import annotations
 
 import importlib.metadata
-import io
 import typing as t
 
+from typing_extensions import Self
+
+from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.singlefile import SinglefileData
 
 __all__ = ('PickledData',)
@@ -37,71 +40,49 @@ class PickledData(SinglefileData):
     KEY_ATTRIBUTES_PICKLER_KWARGS: str = 'pickler_kwargs'
     """Attribute key that stores the keyword arguments passed to the constructor which are forwarded to the pickler."""
 
-    def __init__(self, obj: t.Any, **kwargs: t.Any) -> None:
+    @classmethod
+    def from_object(cls, obj: t.Any, **kwargs: t.Any) -> Self:
         """Construct a new instance by pickling the provided Python object.
 
         :param obj: The Python object to pickle and store.
         :param kwargs: Keyword arguments forwarded to the pickler, and recorded on the node.
         :raises TypeError: If the Python object cannot be pickled.
         """
-        pickled = self._get_pickler()(obj, **kwargs)
+        pickled = cls._get_pickler()(obj, **kwargs)
 
-        super().__init__(file=io.BytesIO(pickled))
+        instance = cls.from_bytes(pickled)
+        instance._set_unpickler_information()
+        instance.pickler_kwargs = kwargs
 
-        self._set_unpickler_information()
-        self.base.attributes.set(self.KEY_ATTRIBUTES_PICKLER_KWARGS, kwargs)
+        return instance
 
-    @classmethod
-    def _get_pickler(cls) -> t.Callable[[t.Any], bytes]:
-        """Return the function that should be used to pickle the object stored by this node.
+    @attribute(readonly=True)
+    def unpickler_module(self) -> str:
+        """The module of the function that can unpickle this object."""
+        return t.cast(str, self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_MODULE))
 
-        Subclasses override this, and :meth:`_get_default_unpickler`, to store objects with a different pickler.
+    @attribute(readonly=True)
+    def unpickler_name(self) -> str:
+        """The name of the function that can unpickle this object."""
+        return t.cast(str, self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_NAME))
 
-        :returns: A callable that is used to pickle the object to be stored by this node.
-        """
-        import dill
+    @attribute(readonly=True)
+    def pickler_version(self) -> str | None:
+        """The version of the package whose function can unpickle this object."""
+        return t.cast(str | None, self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_VERSION, None))
 
-        pickler: t.Callable[[t.Any], bytes] = dill.dumps
-        return pickler
+    @attribute
+    def pickler_kwargs(self) -> dict[str, t.Any]:
+        """The keyword arguments forwarded to the pickler."""
+        return t.cast(dict[str, t.Any], self.base.attributes.get(self.KEY_ATTRIBUTES_PICKLER_KWARGS, {}))
 
-    @classmethod
-    def _get_default_unpickler(cls) -> t.Callable[[bytes], t.Any]:
-        """Return the function that this class records as being able to unpickle the objects it stores.
-
-        This is the counterpart of :meth:`_get_pickler`. It is not :meth:`get_unpickler`, which returns the
-        function that a given node recorded when it was created.
-
-        :returns: A callable that takes a number of bytes and unpickles it into the original Python object.
-        """
-        import dill
-
-        unpickler: t.Callable[[bytes], t.Any] = dill.loads
-        return unpickler
-
-    def _set_unpickler_information(self) -> None:
-        """Store the module, function and version of the package that can be used for unpickling this object.
-
-        .. note:: If the version of the package cannot be determined, it will be set to ``None``.
-        """
-        unpickler = self._get_default_unpickler()
-        package = unpickler.__module__.split('.', maxsplit=1)[0]
-
-        try:
-            version = importlib.metadata.version(package)
-        except importlib.metadata.PackageNotFoundError:
-            version = None
-
-        self.base.attributes.set(self.KEY_ATTRIBUTES_UNPICKLER_MODULE, unpickler.__module__)
-        self.base.attributes.set(self.KEY_ATTRIBUTES_UNPICKLER_NAME, unpickler.__name__)
-        self.base.attributes.set(self.KEY_ATTRIBUTES_UNPICKLER_VERSION, version)
+    @pickler_kwargs.setter
+    def pickler_kwargs(self, value: dict[str, t.Any]) -> None:
+        self.base.attributes.set(self.KEY_ATTRIBUTES_PICKLER_KWARGS, value)
 
     def get_unpickler_information(self) -> tuple[str, str, str | None]:
         """Return tuple of module name, function name and version of the package that can unpickle this object."""
-        return (
-            self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_MODULE),
-            self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_NAME),
-            self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_VERSION),
-        )
+        return self.unpickler_module, self.unpickler_name, self.pickler_version
 
     def get_unpickler(self) -> t.Callable[[bytes], t.Any]:
         """Return the method to be used for unpickling the object.
@@ -161,3 +142,57 @@ class PickledData(SinglefileData):
             raise ValueError(msg) from exception
 
         return unpickled
+
+    @classmethod
+    def _get_pickler(cls) -> t.Callable[..., bytes]:
+        """Return the function that should be used to pickle the object stored by this node.
+
+        Subclasses override this, and :meth:`_get_default_unpickler`, to store objects with a different pickler.
+
+        :returns: A callable that is used to pickle the object to be stored by this node.
+        """
+        import dill
+
+        pickler: t.Callable[..., bytes] = dill.dumps
+        return pickler
+
+    @classmethod
+    def _get_default_unpickler(cls) -> t.Callable[[bytes], t.Any]:
+        """Return the function that this class records as being able to unpickle the objects it stores.
+
+        This is the counterpart of :meth:`_get_pickler`. It is not :meth:`get_unpickler`, which returns the
+        function that a given node recorded when it was created.
+
+        :returns: A callable that takes a number of bytes and unpickles it into the original Python object.
+        """
+        import dill
+
+        unpickler: t.Callable[[bytes], t.Any] = dill.loads
+        return unpickler
+
+    def _set_unpickler_information(self) -> None:
+        """Store the module, function and version of the package that can be used for unpickling this object.
+
+        .. note:: If the version of the package cannot be determined, it will be set to ``None``.
+        """
+        unpickler = self._get_default_unpickler()
+        package = unpickler.__module__.split('.', maxsplit=1)[0]
+
+        try:
+            version = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            version = None
+
+        self.base.attributes.set(self.KEY_ATTRIBUTES_UNPICKLER_MODULE, unpickler.__module__)
+        self.base.attributes.set(self.KEY_ATTRIBUTES_UNPICKLER_NAME, unpickler.__name__)
+        self.base.attributes.set(self.KEY_ATTRIBUTES_UNPICKLER_VERSION, version)
+
+    def _validate(self) -> None:
+        """Validate the node before storing."""
+        super()._validate()
+
+        try:
+            self.unpickler_module
+            self.unpickler_name
+        except AttributeError as exception:
+            raise exceptions.ValidationError('missing unpickler information') from exception

@@ -23,4 +23,4 @@ class AddAndMultiplyWorkChain(WorkChain):
         self.ctx.product = self.ctx.sum * self.inputs.z
 
     def results(self):
-        self.out('result', Int(self.ctx.product))
+        self.out('result', Int(value=self.ctx.product))

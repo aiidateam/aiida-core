@@ -50,8 +50,8 @@ class TestProcessControl:
         """Test launch with inputs."""
 
         async def do_launch():
-            term_a = Int(5)
-            term_b = Int(10)
+            term_a = Int(value=5)
+            term_b = Int(value=10)
 
             calc_node = self.runner.submit(test_processes.AddProcess, a=term_a, b=term_b)
             await self.wait_for_process(calc_node)
@@ -63,7 +63,7 @@ class TestProcessControl:
     def test_submit_bad_input(self):
         """Test that submitting with bad input raises ValueError."""
         with pytest.raises(ValueError):
-            self.runner.submit(test_processes.AddProcess, a=Int(5))
+            self.runner.submit(test_processes.AddProcess, a=Int(value=5))
 
     def test_exception_process(self):
         """Test process that raises an exception."""

@@ -28,7 +28,6 @@ __all__ = (
     'CalcJobNode',
     'CalculationNode',
     'CifData',
-    'Code',
     'ContainerizedCode',
     'Data',
     'Dict',

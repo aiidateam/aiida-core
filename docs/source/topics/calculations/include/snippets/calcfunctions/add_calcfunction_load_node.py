@@ -8,4 +8,4 @@ def add(x, y):
     return result
 
 
-result = add(Int(1), Int(2))
+result = add(Int(value=1), Int(value=2))

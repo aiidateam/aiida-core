@@ -788,8 +788,8 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida',
         )
+        computer_temp.set_workdir('/tmp/aiida')
         computer_temp.store()
         computer_temp.configure(safe_interval=0)
 
@@ -827,8 +827,8 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida',
         )
+        computer_temp.set_workdir('/tmp/aiida')
         computer_temp.store()
 
         # A successul delete, including all associated nodes
@@ -850,8 +850,8 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida',
         )
+        computer_temp.set_workdir('/tmp/aiida')
         computer_temp.store()
         computer_temp.configure(safe_interval=0)
 

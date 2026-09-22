@@ -16,21 +16,22 @@ import warnings
 from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
-from uuid import UUID
 
+import pydantic as pdt
 from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm import convert, entities, extras, users
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm.decorators import column
+from aiida.orm.models.adapters import EntityPkAdapter, StrUuidAdapter
+from aiida.orm.users import User
 
 if t.TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
-    from aiida.orm import Node, User
+    from aiida.orm import Node
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.groups import BackendGroup
 
@@ -58,14 +59,10 @@ def load_group_class(type_string: str) -> type[Group]:
     return group_class
 
 
-class GroupCollection(entities.Collection['Group']):
+class GroupCollection(entities.EntityCollection['Group']):
     """Collection of Groups"""
 
     collection_type: t.ClassVar[str] = 'groups'
-
-    @staticmethod
-    def _entity_base_cls() -> type[Group]:
-        return Group
 
     def get_or_create(self, label: str | None = None, **kwargs) -> tuple[Group, bool]:
         """Try to retrieve a group from the DB with the given arguments;
@@ -89,12 +86,28 @@ class GroupCollection(entities.Collection['Group']):
 
         return res[0], False
 
+    def get_one_by_identifier(self, identifier: object) -> Group:
+        """Get a single group by its identifier.
+
+        :param identifier: the primary key or label of the group to get
+        :return: the group instance
+        """
+        if isinstance(identifier, int):
+            return self.get(pk=identifier)
+        if isinstance(identifier, str):
+            return self.get(label=identifier)
+        raise TypeError('Identifier must be an int or str')
+
     def delete(self, pk: int) -> None:
         """Delete a group
 
         :param pk: the id of the group to delete
         """
         self._backend.groups.delete(pk)
+
+    @staticmethod
+    def _entity_base_cls() -> type[Group]:
+        return Group
 
 
 class GroupBase:
@@ -111,51 +124,11 @@ class GroupBase:
 
 
 class Group(entities.Entity['BackendGroup', GroupCollection]):
-    """An AiiDA ORM implementation of group of nodes."""
-
-    __type_string: t.ClassVar[str | None]
+    """ORM representation of an AiiDA group."""
 
     identity_field = 'uuid'
 
-    class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = OrmMetadataField(
-            description='The UUID of the group',
-            read_only=True,
-            examples=['123e4567-e89b-12d3-a456-426614174000'],
-        )
-        type_string: str = OrmMetadataField(
-            description='The type of the group',
-            read_only=True,
-            examples=['my_custom_group_type'],
-        )
-        user: int = OrmMetadataField(
-            description='The PK of the group owner',
-            orm_class='core.user',
-            orm_to_model=lambda group: t.cast(Group, group).user.pk,
-            read_only=True,
-            examples=[1],
-        )
-        time: datetime.datetime = OrmMetadataField(
-            description='The creation time of the node, defaults to now (timezone-aware)',
-            read_only=True,
-            examples=['2024-01-01T12:00:00+00:00'],
-        )
-        label: str = OrmMetadataField(
-            description='The group label',
-            examples=['my_group_label'],
-        )
-        description: str = OrmMetadataField(
-            '',
-            description='The group description',
-            examples=['This is my group description.'],
-        )
-        extras: dict[str, t.Any] = OrmMetadataField(
-            default_factory=dict,
-            description='The group extras',
-            orm_to_model=lambda group: t.cast(Group, group).base.extras.all,
-            may_be_large=True,
-            examples=[{'key': 'value'}],
-        )
+    __type_string: t.ClassVar[str | None]
 
     _CLS_COLLECTION = GroupCollection
 
@@ -164,7 +137,6 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         label: str | None = None,
         user: User | None = None,
         description: str = '',
-        type_string: str | None = None,
         time: datetime.datetime | None = None,
         extras: dict[str, t.Any] | None = None,
         backend: StorageBackend | None = None,
@@ -176,49 +148,26 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         :param label: The group label, required on creation
         :param description: The group description (by default, an empty string)
         :param user: The owner of the group (by default, the automatic user)
-        :param type_string: a string identifying the type of group (by default,
-            an empty string, indicating an user-defined group.
         """
         if not label:
             raise ValueError('Group label must be provided')
-
-        if type_string:
-            warn_deprecation('Passing the `type_string` is deprecated, it is determined automatically', version=3)
 
         backend = backend or get_manager().get_profile_storage()
         user = t.cast(users.User, user or backend.default_user)
         type_check(user, users.User)
 
-        model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=self._type_string, time=time
+        self._backend_entity = backend.groups.create(
+            label=label,
+            user=user.backend_entity,
+            description=description,
+            type_string=self._type_string,
+            time=time,
         )
-        super().__init__(model)
+
         if extras is not None:
             self.base.extras.set_many(extras)
 
-    @classproperty
-    def _type_string(cls) -> str | None:  # noqa: N805
-        from aiida.plugins.entry_point import get_entry_point_from_class
-
-        if hasattr(cls, '__type_string'):
-            return cls.__type_string
-
-        mod, name = cls.__module__, cls.__name__
-        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
-
-        if entry_point_group is None or entry_point_group != 'aiida.groups':
-            cls.__type_string = None  # type: ignore[misc]
-            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
-            warnings.warn(message)
-        else:
-            assert entry_point is not None
-            cls.__type_string = entry_point.name  # type: ignore[misc]
-        return cls.__type_string
-
-    @cached_property
-    def base(self) -> GroupBase:
-        """Return the group base namespace."""
-        return GroupBase(self)
+        self.finalize()
 
     def __repr__(self) -> str:
         return (
@@ -229,15 +178,70 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def __str__(self) -> str:
         return f'{self.__class__.__name__}<{self.label}>'
 
-    def store(self) -> Self:
-        """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""
-        if self._type_string is None:
-            raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')
+    @column(updatable=True)
+    def label(self) -> str:
+        """The label of the group."""
+        return self._backend_entity.label
 
-        return super().store()
+    @label.setter
+    def label(self, value: str) -> None:
+        self._backend_entity.label = value
+
+    @column(updatable=True)
+    def description(self) -> str:
+        """The description of the group."""
+        return self._backend_entity.description
+
+    @description.setter
+    def description(self, value: str) -> None:
+        self._backend_entity.description = value
+
+    @column(readonly=True)
+    def type_string(self) -> str:
+        """The string defining the type of the group"""
+        return self._backend_entity.type_string
+
+    @column(
+        readonly=True,
+        model_adapter=StrUuidAdapter(),
+    )
+    def uuid(self) -> str:
+        """The UUID of the group."""
+        return self._backend_entity.uuid
+
+    @column(readonly=True)
+    def time(self) -> datetime.datetime:
+        """The creation time of the group."""
+        return self._backend_entity.time
+
+    @column(
+        readonly=True,
+        model_adapter=EntityPkAdapter(users.User),
+    )
+    def user(self) -> User:
+        """The user of the group."""
+        return User.from_backend_entity(self._backend_entity.user)
+
+    @column(
+        updatable=True,
+        may_be_large=True,
+        model_field_info=pdt.fields.FieldInfo(default_factory=dict),
+    )
+    def extras(self) -> dict[str, t.Any]:
+        """The extras of the group."""
+        return self.base.extras.all
+
+    @extras.setter
+    def extras(self, value: dict[str, t.Any]) -> None:
+        self.base.extras.reset(value)
+
+    @cached_property
+    def base(self) -> GroupBase:
+        """Return the group base namespace."""
+        return GroupBase(self)
 
     @classproperty
-    def entry_point(cls) -> EntryPoint | None:  # noqa: N805
+    def entry_point(cls: type[Group]) -> EntryPoint | None:  # noqa: N805
         """Return the entry point associated this group type.
 
         :return: the associated entry point or ``None`` if it isn't known.
@@ -245,75 +249,6 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         from aiida.plugins.entry_point import get_entry_point_from_class
 
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
-
-    @property
-    def uuid(self) -> str:
-        """Return the UUID for this group.
-
-        This identifier is unique across all entities types and backend instances.
-
-        :return: the entity uuid
-        """
-        return self._backend_entity.uuid
-
-    @property
-    def label(self) -> str:
-        """:return: the label of the group as a string"""
-        return self._backend_entity.label
-
-    @label.setter
-    def label(self, label: str) -> None:
-        """Attempt to change the label of the group instance. If the group is already stored
-        and the another group of the same type already exists with the desired label, a
-        UniquenessError will be raised
-
-        :param label: the new group label
-        :type label: str
-
-        :raises aiida.common.UniquenessError: if another group of same type and label already exists
-        """
-        self._backend_entity.label = label
-
-    @property
-    def description(self) -> str:
-        """:return: the description of the group as a string"""
-        return self._backend_entity.description or ''
-
-    @description.setter
-    def description(self, description: str) -> None:
-        """:param description: the description of the group as a string"""
-        self._backend_entity.description = description
-
-    @property
-    def type_string(self) -> str:
-        """:return: the string defining the type of the group"""
-        return self._backend_entity.type_string
-
-    @property
-    def time(self) -> datetime.datetime:
-        """:return: the creation time"""
-        return self._backend_entity.time
-
-    @property
-    def user(self) -> User:
-        """:return: the user associated with this group"""
-        return entities.from_backend_entity(users.User, self._backend_entity.user)
-
-    @user.setter
-    def user(self, user: User) -> None:
-        """Set the user.
-
-        :param user: the user
-        """
-        type_check(user, users.User)
-        self._backend_entity.user = user.backend_entity
-
-    def count(self) -> int:
-        """Return the number of entities in this group.
-
-        :return: integer number of entities contained within the group
-        """
-        return self._backend_entity.count()
 
     @property
     def nodes(self) -> convert.ConvertIterator:
@@ -325,15 +260,26 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     @property
     def is_empty(self) -> bool:
-        """Return whether the group is empty, i.e. it does not contain any nodes.
-
-        :return: True if it contains no nodes, False otherwise
-        """
+        """Return whether the group is empty, i.e. it does not contain any nodes."""
         try:
             self.nodes[0]
         except IndexError:
             return True
         return False
+
+    def store(self) -> Self:
+        """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""
+        if self._type_string is None:
+            raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')
+
+        return super().store()
+
+    def count(self) -> int:
+        """Return the number of entities in this group.
+
+        :return: integer number of entities contained within the group
+        """
+        return self._backend_entity.count()
 
     def clear(self) -> None:
         """Remove all the nodes from this group."""
@@ -464,34 +410,24 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         return target_path
 
-    _deprecated_extra_methods = {
-        'extras': 'all',
-        'get_extra': 'get',
-        'get_extra_many': 'get_many',
-        'set_extra': 'set',
-        'set_extra_many': 'set_many',
-        'reset_extras': 'reset',
-        'delete_extra': 'delete',
-        'delete_extra_many': 'delete_many',
-        'clear_extras': 'clear',
-        'extras_items': 'items',
-        'extras_keys': 'keys',
-    }
+    @classproperty
+    def _type_string(cls: type[Group]) -> str | None:  # noqa: N805
+        from aiida.plugins.entry_point import get_entry_point_from_class
 
-    def __getattr__(self, name: str) -> t.Any:
-        """This method is called when an extras is not found in the instance.
+        if hasattr(cls, '__type_string'):
+            return cls.__type_string
 
-        It allows for the handling of deprecated mixin methods.
-        """
-        if name in self._deprecated_extra_methods:
-            new_name = self._deprecated_extra_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.extras.{new_name}` instead.', version=3, stacklevel=3
-            )
-            return getattr(self.base.extras, new_name)
+        mod, name = cls.__module__, cls.__name__
+        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
-        raise AttributeError(name)
+        if entry_point_group is None or entry_point_group != 'aiida.groups':
+            cls.__type_string = None
+            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
+            warnings.warn(message)
+        else:
+            assert entry_point is not None
+            cls.__type_string = entry_point.name
+        return cls.__type_string
 
 
 class AutoGroup(Group):

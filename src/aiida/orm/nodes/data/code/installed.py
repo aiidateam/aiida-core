@@ -17,86 +17,80 @@ using an ``InstalledCode``, it will run its executable on the associated compute
 from __future__ import annotations
 
 import pathlib
-import typing as t
+
+import pydantic as pdt
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
-from aiida.orm import Computer
-from aiida.orm.entities import from_backend_entity
+from aiida.common.typing import FilePath
+from aiida.orm.cli import CliFieldInfo
+from aiida.orm.computers import Computer
+from aiida.orm.decorators import attribute, column
+from aiida.orm.models.adapters import EntityPkAdapter, LabelPkAdapter, PathStrAdapter
 from aiida.orm.nodes.data.code.abstract import AbstractCode
-from aiida.orm.nodes.data.code.legacy import Code
-from aiida.orm.pydantic import OrmMetadataField
-from aiida.orm.utils.loaders import load_computer
 
 __all__ = ('InstalledCode',)
 
 
-class InstalledCode(Code):
+class InstalledCode(AbstractCode):
     """Data plugin representing an executable code on a remote computer."""
 
-    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
-    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class CommonField(AbstractCode.CommonFields):
-        filepath_executable: str = OrmMetadataField(
-            title='Filepath executable',
-            description='Filepath of the executable on the remote computer',
-            orm_to_model=lambda node: str(t.cast(InstalledCode, node).filepath_executable),
-            short_name='-X',
-            priority=1,
-        )
-
-    class AttributesModel(CommonField, AbstractCode.AttributesModel): ...
-
-    class ConstructorArgsModel(CommonField, AbstractCode.ConstructorArgsModel):
-        computer: str = OrmMetadataField(
-            title='Computer',
-            description='The label of the remote computer on which the executable resides',
+    @column(
+        model_field_info=pdt.fields.FieldInfo(description='The PK of the associated computer.'),
+        model_adapter=EntityPkAdapter(Computer),
+        cli_field_info=CliFieldInfo(
+            help='The label of the associated computer.',
             short_name='-Y',
             priority=2,
-            write_only=True,
-            model_to_orm=lambda model: load_computer(t.cast(InstalledCode.ReadModel, model).computer),
-            orm_to_model=lambda node: t.cast(InstalledCode, node).computer.label,
-        )
+        ),
+        cli_adapter=LabelPkAdapter(Computer),
+    )
+    def computer(self) -> Computer:
+        """The remote computer on which the executable resides."""
+        if self.backend_entity.computer is None:
+            raise AttributeError('The computer is not set.')
 
-    class ReadModel(AbstractCode.ReadModel):
-        computer: int = OrmMetadataField(
-            title='Computer',
-            description='The pk of the remote computer on which the executable resides',
-            orm_to_model=lambda node: t.cast(InstalledCode, node).computer.pk,
-            orm_class=Computer,
-        )
+        return Computer.from_backend_entity(self.backend_entity.computer)
 
-    def __init__(self, computer: Computer | str, filepath_executable: str, **kwargs):
-        """Construct a new instance.
+    @computer.setter
+    def computer(self, computer: Computer) -> None:
+        if self.is_stored:
+            raise exceptions.ModificationNotAllowed('cannot set the computer on a stored node')
 
-        :param computer: The remote computer on which the executable is located.
-        :param filepath_executable: The absolute filepath of the executable on the remote computer.
+        type_check(computer, Computer)
+        self.backend_entity.computer = computer.backend_entity
+
+    @attribute(
+        model_adapter=PathStrAdapter(),
+        cli_field_info=CliFieldInfo(
+            short_name='-X',
+            priority=1,
+        ),
+    )
+    def filepath_executable(self) -> pathlib.PurePath:
+        """The absolute filepath of the executable that this code represents."""
+        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
+
+    @filepath_executable.setter
+    def filepath_executable(self, value: FilePath) -> None:
+        type_check(value, (str, pathlib.PurePath))
+        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, str(value))
+
+    @property
+    def full_label(self) -> str:
+        """Return the full label of this code.
+
+        The full label can be just the label itself but it can be something else. However, it at the very least has to
+        include the label of the code.
+
+        :return: The full label of the code.
         """
-        super().__init__(**kwargs)
-        if isinstance(computer, str):
-            computer = load_computer(computer)
-        self.computer = computer
-        self.filepath_executable = filepath_executable
+        return f'{self.label}@{self.computer.label}'
 
-    def _validate(self):
-        """Validate the instance by checking that a computer has been defined.
-
-        :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
-        """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
-
-        if not self.computer:  # type: ignore[truthy-bool]
-            raise exceptions.ValidationError('The `computer` is undefined.')
-
-        try:
-            self.filepath_executable
-        except TypeError as exception:
-            raise exceptions.ValidationError('The `filepath_executable` is not set.') from exception
-
-    def validate_filepath_executable(self):
+    def validate_filepath_executable(self) -> None:
         """Validate the ``filepath_executable`` attribute.
 
         Checks whether the executable exists on the remote computer if a transport can be opened to it. This method
@@ -112,14 +106,11 @@ class InstalledCode(Code):
             return
 
         try:
-            with override_log_level():  # Temporarily suppress noisy logging
+            with override_log_level():
                 with self.computer.get_transport() as transport:
                     file_exists = transport.isfile(str(self.filepath_executable))
                     if file_exists:
                         mode = transport.get_mode(str(self.filepath_executable))
-                        # `format(mode, 'b')` with default permissions
-                        # gives 110110100, representing rw-rw-r--
-                        # Check on index 2 if user has execute
                         user_has_execute = format(mode, 'b')[2] == '1'
 
         except Exception as exception:
@@ -132,11 +123,11 @@ class InstalledCode(Code):
             raise exceptions.ValidationError(msg)
 
         if not user_has_execute:
-            execute_msg = (
+            msg = (
                 f'The file at the remote absolute path `{self.filepath_executable}` exists, '
                 'but might not actually be executable. Check the permissions.'
             )
-            raise exceptions.ValidationError(execute_msg)
+            raise exceptions.ValidationError(msg)
 
     def can_run_on_computer(self, computer: Computer) -> bool:
         """Return whether the code can run on a given computer.
@@ -154,48 +145,19 @@ class InstalledCode(Code):
         """
         return self.filepath_executable
 
-    @property
-    def computer(self) -> Computer:
-        """Return the computer of this code."""
-        assert self.backend_entity.computer is not None
-        return from_backend_entity(Computer, self.backend_entity.computer)
+    def _validate(self) -> None:
+        """Validate the instance by checking that the required code configuration is defined.
 
-    @computer.setter
-    def computer(self, computer: Computer) -> None:
-        """Set the computer of this code.
-
-        :param computer: A `Computer`.
+        :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot set the computer on a stored node')
+        super()._validate()
 
-        type_check(computer, Computer, allow_none=False)
-        self.backend_entity.computer = computer.backend_entity
+        try:
+            self.computer
+        except AttributeError as exc:
+            raise exceptions.ValidationError('The `computer` is undefined.') from exc
 
-    @property
-    def full_label(self) -> str:
-        """Return the full label of this code.
-
-        The full label can be just the label itself but it can be something else. However, it at the very least has to
-        include the label of the code.
-
-        :return: The full label of the code.
-        """
-        return f'{self.label}@{self.computer.label}'
-
-    @property
-    def filepath_executable(self) -> pathlib.PurePath:
-        """Return the absolute filepath of the executable that this code represents.
-
-        :return: The absolute filepath of the executable.
-        """
-        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
-
-    @filepath_executable.setter
-    def filepath_executable(self, value: str) -> None:
-        """Set the absolute filepath of the executable that this code represents.
-
-        :param value: The absolute filepath of the executable.
-        """
-        type_check(value, str)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
+        try:
+            self.filepath_executable
+        except (AttributeError, TypeError) as exc:
+            raise exceptions.ValidationError('The `filepath_executable` is not set.') from exc

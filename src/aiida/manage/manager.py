@@ -189,7 +189,7 @@ class Manager:
                 await ensure_portal()
                 return await _orig_do_execute(self, code, silent, *args, **kwargs)
 
-            IPythonKernel.do_execute = _patched_do_execute  # type: ignore[method-assign]
+            IPythonKernel.do_execute = _patched_do_execute
             IPythonKernel._aiida_portal_patched = True  # type: ignore[attr-defined]
             self.logger.debug(
                 'Patched IPythonKernel.do_execute for portal. '

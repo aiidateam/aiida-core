@@ -15,7 +15,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.common.utils import Capturing
 from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
 from aiida.orm.nodes.data.cif import has_pycifrw
@@ -120,7 +120,7 @@ class TestCifData:
             basename = os.path.split(filename)[1]
             tmpf.write(file_content)
             tmpf.flush()
-            a = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
+            a = CifData.from_path(filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
 
         # Key 'db_kind' is not allowed in source description:
         with pytest.raises(KeyError):
@@ -180,7 +180,7 @@ class TestCifData:
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(file_content)
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
 
         assert list(a.values.keys()) == ['test']
 
@@ -192,7 +192,7 @@ class TestCifData:
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(file_content_1)
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
 
         assert a.values['test']['_cell_length_a'] == '10(1)'
 
@@ -233,7 +233,7 @@ O 0.5 0.5 0.5
             """
             )
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
 
         with pytest.raises(ValueError):
             a.get_structure(converter='none')
@@ -276,7 +276,7 @@ O 0.5 0.5 0.5
             """
             )
             tmpf.flush()
-            c = CifData(file=tmpf.name)
+            c = CifData.from_path(tmpf.name)
 
         assert c.get_structure(converter='ase', primitive_cell=False).get_ase().get_global_number_of_atoms() == 15
         assert c.get_structure(converter='ase').get_ase().get_global_number_of_atoms() == 15
@@ -331,7 +331,7 @@ Te2 0.00000 0.00000 0.79030 0.01912
             """
             )
             tmpf.flush()
-            c = CifData(file=tmpf.name)
+            c = CifData.from_path(tmpf.name)
 
         ase = c.get_structure(converter='pymatgen', primitive_cell=False).get_ase()
         assert ase.get_global_number_of_atoms() == 15
@@ -441,7 +441,7 @@ _tag   {'a' * 5000}
  """
             )
             tmpf.flush()
-            _ = CifData(file=tmpf.name)
+            _ = CifData.from_path(tmpf.name)
 
     @skip_ase
     @skip_pycifrw
@@ -469,14 +469,14 @@ _tag   {'a' * 5000}
             """
             )
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
 
-        b = CifData(values=a.values)
-        c = CifData(values=b.values)
+        b = CifData.from_values(a.values)
+        c = CifData.from_values(b.values)
         assert b._prepare_cif() == c._prepare_cif()
 
-        b = CifData(ase=a.ase)
-        c = CifData(ase=b.ase)
+        b = CifData.from_ase(a.ase)
+        c = CifData.from_ase(b.ase)
         assert b._prepare_cif() == c._prepare_cif()
 
     def test_symop_string_from_symop_matrix_tr(self):
@@ -515,7 +515,7 @@ _tag   {'a' * 5000}
             """
             )
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
 
         assert a.has_attached_hydrogens is False
 
@@ -541,7 +541,7 @@ _tag   {'a' * 5000}
             """
             )
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
 
         assert a.has_attached_hydrogens is True
 
@@ -576,7 +576,7 @@ _tag   {'a' * 5000}
             """
             )
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
 
         ret_dict = refine_inline(a)
         b = ret_dict['cif']
@@ -609,7 +609,7 @@ _tag   {'a' * 5000}
             """
             )
             tmpf.flush()
-            c = CifData(file=tmpf.name)
+            c = CifData.from_path(tmpf.name)
 
         with pytest.raises(ValueError):
             ret_dict = refine_inline(c)
@@ -621,11 +621,11 @@ _tag   {'a' * 5000}
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
 
-            default = CifData(file=tmpf.name)
-            default2 = CifData(file=tmpf.name, scan_type='standard')
+            default = CifData.from_path(tmpf.name)
+            default2 = CifData.from_path(tmpf.name, scan_type='standard')
             assert default._prepare_cif() == default2._prepare_cif()
 
-            flex = CifData(file=tmpf.name, scan_type='flex')
+            flex = CifData.from_path(tmpf.name, scan_type='flex')
             assert default._prepare_cif() == flex._prepare_cif()
 
     @skip_pycifrw
@@ -641,14 +641,18 @@ _tag   {'a' * 5000}
             # empty cifdata should be possible
             a = CifData()
 
-            # but it does not have a file
-            with pytest.raises(AttributeError):
-                _ = a.filename
+            assert a.filename is None
+
+            # but it doesn't have a file, so we can't store it
+            with pytest.raises(ValidationError):
+                a.store()
 
             # now it has
             a.set_file(tmpf.name)
-            _ = a.filename
 
+            assert a.filename is not None
+
+            # so we can store it
             a.store()
 
     @skip_pycifrw
@@ -659,11 +663,11 @@ _tag   {'a' * 5000}
             tmpf.flush()
 
             # this will parse the cif
-            eager = CifData(file=tmpf.name, parse_policy='eager')
+            eager = CifData.from_path(tmpf.name, parse_policy='eager')
             assert eager._values is not None
 
             # this should not parse the cif
-            lazy = CifData(file=tmpf.name, parse_policy='lazy')
+            lazy = CifData.from_path(tmpf.name, parse_policy='lazy')
             assert lazy._values is None
 
             # also lazy-loaded nodes should be storable
@@ -680,7 +684,7 @@ _tag   {'a' * 5000}
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
 
-            a = CifData(file=tmpf.name)
+            a = CifData.from_path(tmpf.name)
             f1 = a.get_formulae()
             assert f1 is not None
 
@@ -700,12 +704,17 @@ _tag   {'a' * 5000}
 
             # empty cifdata should be possible
             a = CifData()
-            # but it does not have a file
-            with pytest.raises(AttributeError):
-                _ = a.filename
+
+            # but it doesn't have a file, so we can't store it
+            with pytest.raises(ValidationError):
+                a.store()
+
             # now it has
             a.set_file(tmpf.name)
+
             a.parse()
+
+            # so it must a filename (assigned, derived from the file, or set to the 'file.txt' default)
             _ = a.filename
 
         assert f1 != f2
@@ -739,7 +748,7 @@ _tag   {'a' * 5000}
                 """
                 )
                 handle.flush()
-                cif = CifData(file=handle.name)
+                cif = CifData.from_path(handle.name)
                 assert cif.has_partial_occupancies == result
 
     @skip_pycifrw
@@ -757,7 +766,7 @@ _tag   {'a' * 5000}
                 formula_string = f"_chemical_formula_sum '{formula}'" if formula else '\n'
                 handle.write(f"""data_test\n{formula_string}\n""")
                 handle.flush()
-                cif = CifData(file=handle.name)
+                cif = CifData.from_path(handle.name)
                 assert cif.has_unknown_species == result, formula_string
 
     @skip_pycifrw
@@ -775,7 +784,7 @@ _tag   {'a' * 5000}
                 atomic_site_string = f'{base}\n{test_string}' if test_string else ''
                 handle.write(f"""data_test\n{atomic_site_string}\n""")
                 handle.flush()
-                cif = CifData(file=handle.name)
+                cif = CifData.from_path(handle.name)
                 assert cif.has_undefined_atomic_sites == result
 
 
@@ -975,42 +984,50 @@ class TestStructureDataInit:
         """Wrong pbc parameter (not bool or iterable)"""
         with pytest.raises(ValueError):
             cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
-            StructureData(cell=cell, pbc=1)
+            a = StructureData(cell=cell)
+            a.set_pbc(1)
 
     def test_wrong_pbc_2(self):
         """Wrong pbc parameter (iterable but with wrong len)"""
         with pytest.raises(ValueError):
             cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
-            StructureData(cell=cell, pbc=[True, True])
+            a = StructureData(cell=cell)
+            a.set_pbc([True, True])
 
     def test_wrong_pbc_3(self):
         """Wrong pbc parameter (iterable but with wrong len)"""
         with pytest.raises(ValueError):
             cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
-            StructureData(cell=cell, pbc=[])
+            a = StructureData(cell=cell)
+            a.set_pbc([])
 
     def test_ok_pbc_1(self):
         """Single pbc value"""
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
-        a = StructureData(cell=cell, pbc=True)
+        a = StructureData(cell=cell)
+        a.set_pbc(True)
         assert a.pbc == tuple([True, True, True])
 
-        a = StructureData(cell=cell, pbc=False)
+        a = StructureData(cell=cell)
+        a.set_pbc(False)
         assert a.pbc == tuple([False, False, False])
 
     def test_ok_pbc_2(self):
         """One-element list"""
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
-        a = StructureData(cell=cell, pbc=[True])
+        a = StructureData(cell=cell)
+        a.set_pbc([True])
         assert a.pbc == tuple([True, True, True])
 
-        a = StructureData(cell=cell, pbc=[False])
+        a = StructureData(cell=cell)
+        a.set_pbc([False])
         assert a.pbc == tuple([False, False, False])
 
     def test_ok_pbc_3(self):
         """Three-element list"""
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
-        a = StructureData(cell=cell, pbc=[True, False, True])
+        a = StructureData(cell=cell)
+        a.set_pbc([True, False, True])
         assert a.pbc == tuple([True, False, True])
 
 
@@ -1343,7 +1360,7 @@ class TestStructureData:
         asecell[1].mass = 12.0
         asecell[2].mass = 12.0
 
-        s = StructureData(ase=asecell)
+        s = StructureData.from_ase(asecell)
 
         # I expect only two species, the first one with name 'Fe', mass 12,
         # and referencing the first three atoms; the second with name
@@ -1373,7 +1390,7 @@ class TestStructureData:
         asecell[1].mass = 12.0
         asecell[2].mass = 12.0
 
-        s = StructureData(ase=asecell)
+        s = StructureData.from_ase(asecell)
 
         # I expect only two species, the first one with name 'X', mass 12,
         # and referencing the first three atoms; the second with name
@@ -1715,7 +1732,7 @@ def test_lock():
     cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
     a = StructureData(cell=cell)
 
-    a.pbc = [False, True, True]
+    a.set_pbc([False, True, True])
 
     k = Kind(symbols='Ba', name='Ba')
     s = Site(position=(0.0, 0.0, 0.0), kind_name='Ba')
@@ -1739,7 +1756,7 @@ def test_lock():
     with pytest.raises(ModificationNotAllowed):
         a.cell = cell
     with pytest.raises(ModificationNotAllowed):
-        a.pbc = [True, True, True]
+        a.set_pbc([True, True, True])
 
     _ = a.get_cell_volume()
     _ = a.is_alloy
@@ -1752,7 +1769,7 @@ def test_lock():
     # I check that the original did not change
     assert len(a.sites) != 0
     b.cell = cell
-    b.pbc = [True, True, True]
+    b.set_pbc([True, True, True])
 
 
 class TestStructureDataReload:
@@ -1765,7 +1782,7 @@ class TestStructureDataReload:
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell)
 
-        a.pbc = [False, True, True]
+        a.set_pbc([False, True, True])
 
         a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
         a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
@@ -1808,7 +1825,7 @@ class TestStructureDataReload:
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell)
 
-        a.pbc = [False, True, True]
+        a.set_pbc([False, True, True])
 
         a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
         a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
@@ -1865,7 +1882,7 @@ class TestStructureDataFromAse:
         )
         a[1].mass = 110.2
 
-        b = StructureData(ase=a)
+        b = StructureData.from_ase(a)
         c = b.get_ase()
 
         assert a[0].symbol == c[0].symbol
@@ -1883,7 +1900,7 @@ class TestStructureDataFromAse:
         """Tests that importing a molecule from ASE works."""
         from ase.build import molecule
 
-        s = StructureData(ase=molecule('H2O'))
+        s = StructureData.from_ase(molecule('H2O'))
 
         assert s.pbc == (False, False, False)
         retdict = s.get_dimensionality()
@@ -1896,7 +1913,7 @@ class TestStructureDataFromAse:
             s.store()
 
         # after setting a cell, we should be able to store
-        s.set_cell([[5, 0, 0], [0, 5, 0], [0, 0, 5]])
+        s.cell = [[5, 0, 0], [0, 5, 0], [0, 0, 5]]
         s.store()
 
     @skip_ase
@@ -1920,7 +1937,7 @@ class TestStructureDataFromAse:
 
         a.set_tags((0, 1, 2, 3, 4, 5, 6, 7))
 
-        b = StructureData(ase=a)
+        b = StructureData.from_ase(a)
         assert [k.name for k in b.kinds] == ['Si', 'Si1', 'Si2', 'Si3', 'Ge4', 'Ge5', 'Ge6', 'Ge7']
         c = b.get_ase()
 
@@ -1949,7 +1966,7 @@ class TestStructureDataFromAse:
         a[2].mass = 100.0
         a[3].mass = 300.0
 
-        b = StructureData(ase=a)
+        b = StructureData.from_ase(a)
         # This will give funny names to the kinds, because I am using
         # both tags and different properties (mass). I just check to have
         # 4 kinds
@@ -1957,7 +1974,7 @@ class TestStructureDataFromAse:
 
         # Do I get the same tags after one full iteration back and forth?
         c = b.get_ase()
-        d = StructureData(ase=c)
+        d = StructureData.from_ase(c)
         e = d.get_ase()
         c_tags = list(c.get_tags())
         e_tags = list(e.get_tags())
@@ -1999,7 +2016,7 @@ class TestStructureDataFromAse:
         atoms[3].tag = 1
         atoms[4].tag = 4
         atoms.set_cell([1, 1, 1])
-        s = StructureData(ase=atoms)
+        s = StructureData.from_ase(atoms)
         kindnames = {k.name for k in s.kinds}
         assert kindnames == set(['Fe', 'Fe1', 'Fe4'])
         # check roundtrip ASE -> StructureData -> ASE
@@ -2020,7 +2037,7 @@ class TestStructureDataFromAse:
         atoms[2].tag = 1
         atoms[3].tag = 4
         atoms.set_cell([1, 1, 1])
-        s = StructureData(ase=atoms)
+        s = StructureData.from_ase(atoms)
         kindnames = {k.name for k in s.kinds}
         assert kindnames == set(['Fe', 'Fe1', 'Fe4'])
         # check roundtrip ASE -> StructureData -> ASE
@@ -2042,7 +2059,7 @@ class TestStructureDataFromAse:
         assert b.get_chemical_symbols() == ['Ni', 'Ni', 'Cl', 'Cl']
         assert list(b.get_tags()) == [1, 2, 0, 0]
 
-        c = StructureData(ase=b)
+        c = StructureData.from_ase(b)
         assert c.get_site_kindnames() == ['Ni1', 'Ni2', 'Cl', 'Cl']
         assert [k.symbol for k in c.kinds] == ['Ni', 'Ni', 'Cl']
         assert [s.position for s in c.sites] == [(0.0, 0.0, 0.0), (2.0, 2.0, 2.0), (1.0, 0.0, 1.0), (1.0, 3.0, 1.0)]
@@ -2094,7 +2111,10 @@ class TestStructureDataFromPymatgen:
             pymatgen_parser = CifParser(tmpf.name)
             pymatgen_struct = pymatgen_parser.parse_structures(primitive=True)[0]
 
-        structs_to_test = [StructureData(pymatgen=pymatgen_struct), StructureData(pymatgen_structure=pymatgen_struct)]
+        structs_to_test = [
+            StructureData.from_pymatgen(pymatgen_struct),
+            StructureData.from_pymatgen_structure(pymatgen_struct),
+        ]
 
         for struct in structs_to_test:
             assert struct.get_site_kindnames() == ['Bi', 'Bi', 'SeTe', 'SeTe', 'SeTe']
@@ -2115,7 +2135,7 @@ class TestStructureDataFromPymatgen:
                 [0.33333, 0.66667],
             ]
 
-        struct = StructureData(pymatgen_structure=pymatgen_struct)
+        struct = StructureData.from_pymatgen_structure(pymatgen_struct)
 
         # Testing pymatgen Structure -> StructureData -> pymatgen Structure roundtrip.
         pymatgen_struct_roundtrip = struct.get_pymatgen_structure()
@@ -2176,7 +2196,7 @@ class TestStructureDataFromPymatgen:
             pymatgen_xyz = XYZ.from_file(tmpf.name)
             pymatgen_mol = pymatgen_xyz.molecule
 
-        for struct in [StructureData(pymatgen=pymatgen_mol), StructureData(pymatgen_molecule=pymatgen_mol)]:
+        for struct in [StructureData.from_pymatgen(pymatgen_mol), StructureData.from_pymatgen_molecule(pymatgen_mol)]:
             assert struct.get_site_kindnames() == ['H', 'H', 'H', 'H', 'C']
             assert struct.pbc == (False, False, False)
             assert [round(x, 2) for x in list(struct.sites[0].position)] == [5.77, 5.89, 6.81]
@@ -2211,7 +2231,7 @@ class TestStructureDataFromPymatgen:
         )
 
         with pytest.raises(ValueError):
-            StructureData(pymatgen=a)
+            StructureData.from_pymatgen(a)
 
         # same, with vacancies
         Fe1 = Composition({Fe_spin_up: 0.5})
@@ -2221,7 +2241,7 @@ class TestStructureDataFromPymatgen:
         )
 
         with pytest.raises(ValueError):
-            StructureData(pymatgen=a)
+            StructureData.from_pymatgen(a)
 
     @skip_pymatgen
     @staticmethod
@@ -2239,7 +2259,7 @@ class TestStructureDataFromPymatgen:
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Mg1, Mg2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
-        StructureData(pymatgen=a)
+        StructureData.from_pymatgen(a)
 
     @skip_pymatgen
     @staticmethod
@@ -2259,7 +2279,7 @@ class TestStructureDataFromPymatgen:
             coords=[[0, 0, 0], [0.5, 0.5, 0.5]],
         )
 
-        StructureData(pymatgen=a)
+        StructureData.from_pymatgen(a)
 
 
 class TestPymatgenFromStructureData:
@@ -2277,7 +2297,8 @@ class TestPymatgenFromStructureData:
 
         cell = np.diag((1, 1, 1)).tolist()
         symbols = ['Ba', 'Ba', 'Zr', 'Zr', 'O', 'O', 'O', 'O', 'O', 'O']
-        structure = StructureData(cell=cell, pbc=pbc)
+        structure = StructureData(cell=cell)
+        structure.set_pbc(pbc)
 
         for symbol in symbols:
             structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
@@ -2296,7 +2317,8 @@ class TestPymatgenFromStructureData:
         from pymatgen.core.structure import Molecule
 
         symbol, pbc = 'Si', (False, False, False)
-        structure = StructureData(pbc=pbc)
+        structure = StructureData()
+        structure.set_pbc(pbc)
         structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
 
         pymatgen = structure.get_pymatgen()
@@ -2322,7 +2344,7 @@ class TestPymatgenFromStructureData:
             )
         )
 
-        a_struct = StructureData(ase=aseatoms)
+        a_struct = StructureData.from_ase(aseatoms)
         p_struct = a_struct.get_pymatgen_structure()
 
         p_struct_dict = p_struct.as_dict()
@@ -2350,7 +2372,7 @@ class TestPymatgenFromStructureData:
             )
         )
 
-        a_struct = StructureData(ase=aseatoms)
+        a_struct = StructureData.from_ase(aseatoms)
         p_mol = a_struct.get_pymatgen_molecule()
 
         p_mol_dict = p_mol.as_dict()
@@ -2377,7 +2399,7 @@ class TestPymatgenFromStructureData:
         a.append_atom(position=(0, 0, 2.8), symbols='Na')
 
         b = a.get_pymatgen()
-        c = StructureData(pymatgen=b)
+        c = StructureData.from_pymatgen(b)
         assert c.get_site_kindnames() == ['Cl', 'Cl', 'Cl', 'Cl', 'Na', 'Na', 'Na', 'Na']
         assert [k.symbol for k in c.kinds] == ['Cl', 'Na']
         assert [s.position for s in c.sites] == [
@@ -2418,7 +2440,7 @@ class TestPymatgenFromStructureData:
             'Na4',
         ]
 
-        c = StructureData(pymatgen=b)
+        c = StructureData.from_pymatgen(b)
         assert c.get_site_kindnames() == ['Cl', 'Cl10', 'Cla', 'cl_x', 'Na1', 'Na2', 'Na_Na', 'Na4']
         assert c.get_symbols_set() == set(['Cl', 'Na'])
         assert [s.position for s in c.sites] == [
@@ -2454,7 +2476,7 @@ class TestPymatgenFromStructureData:
         except KeyError:
             assert [s.as_dict()['properties']['spin'] for s in b.species] == [-1, -1, -1, -1, 1, 1, 1, 1]
         # back to StructureData
-        c = StructureData(pymatgen=b)
+        c = StructureData.from_pymatgen(b)
         assert c.get_site_kindnames() == ['Mn1', 'Mn1', 'Mn1', 'Mn1', 'Mn2', 'Mn2', 'Mn2', 'Mn2']
         assert [k.symbol for k in c.kinds] == ['Mn', 'Mn']
         assert [s.position for s in c.sites] == [
@@ -2512,7 +2534,7 @@ class TestPymatgenFromStructureData:
         ]
 
         # back to StructureData
-        c = StructureData(pymatgen=b)
+        c = StructureData.from_pymatgen(b)
         assert c.cell == [[4.0, 0.0, 0.0], [-2.0, 3.5, 0.0], [0.0, 0.0, 16.0]]
         assert c.get_symbols_set() == set(['Mn', 'Si', 'N'])
         assert c.get_site_kindnames() == ['Mn', 'Mn', 'Mn', 'Mn', 'MnX', 'MnX', 'Si', 'Si', 'N', 'N', 'N', 'N']
@@ -3058,7 +3080,7 @@ class TestTrajectoryData:
                 struct.append_atom(symbols=symbol, position=positions[i][j])
             structurelist.append(struct)
 
-        td = TrajectoryData(structurelist=structurelist)
+        td = TrajectoryData.from_structure_list(structurelist)
         assert td.get_cells().tolist() == cells
         assert td.symbols == symbols[0]
         assert td.get_positions().tolist() == positions
@@ -3072,7 +3094,7 @@ class TestTrajectoryData:
             structurelist.append(struct)
 
         with pytest.raises(ValueError):
-            td = TrajectoryData(structurelist=structurelist)
+            td = TrajectoryData.from_structure_list(structurelist)
 
     @staticmethod
     def test_export_to_file():
@@ -3579,7 +3601,7 @@ def test_seekpath_explicit_path():
     ]
 
     ret_k = return_value['explicit_kpoints']
-    assert to_list_of_lists(ret_k.labels) == [
+    assert to_list_of_lists(ret_k.get_labels()) == [
         [0, 'GAMMA'],
         [30, 'X'],
         [60, 'M'],
@@ -3594,7 +3616,7 @@ def test_seekpath_explicit_path():
         [265, 'A'],
     ]
     kpts = ret_k.get_kpoints(cartesian=False)
-    highsympoints_relcoords = [kpts[idx] for idx, label in ret_k.labels]
+    highsympoints_relcoords = [kpts[idx] for idx, label in ret_k.get_labels()]
     assert (
         round(
             abs(

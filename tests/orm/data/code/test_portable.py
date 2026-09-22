@@ -24,24 +24,24 @@ def test_constructor_raises(tmp_path, bash_path):
         PortableCode()
 
     with pytest.raises(ValueError, match=r'The `filepath_executable` should not be absolute.'):
-        PortableCode(filepath_executable=bash_path, filepath_files=tmp_path)
+        PortableCode.from_directory(filepath_executable=bash_path, filepath_files=tmp_path)
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
-        PortableCode(filepath_executable=5, filepath_files=tmp_path)
+        PortableCode.from_directory(filepath_executable=5, filepath_files=tmp_path)
 
     with pytest.raises(ValueError, match=r'The filepath `string` does not exist.'):
-        PortableCode(filepath_executable='bash', filepath_files='string')
+        PortableCode.from_directory(filepath_executable='bash', filepath_files='string')
 
     file = tmp_path / 'string'
     file.touch()
     with pytest.raises(ValueError, match=r'The filepath .* is not a directory.'):
-        PortableCode(filepath_executable='bash', filepath_files=file)
+        PortableCode.from_directory(filepath_executable='bash', filepath_files=file)
 
 
 def test_constructor_warns():
     """Test the constructor when it is supposed to warn."""
     with pytest.warns(UserWarning, match=r'No `filepath_files` provided.*'):
-        PortableCode(filepath_executable='bash')
+        PortableCode.from_directory(filepath_executable='bash', filepath_files=None)
 
 
 def test_constructor(tmp_path):
@@ -49,7 +49,7 @@ def test_constructor(tmp_path):
     (tmp_path / 'bash').touch()
     (tmp_path / 'alternate').touch()
     filepath_executable = 'bash'
-    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable=filepath_executable, filepath_files=tmp_path)
     assert code.filepath_executable == pathlib.PurePath(filepath_executable)
     assert sorted(code.base.repository.list_object_names()) == ['alternate', 'bash']
 
@@ -57,7 +57,7 @@ def test_constructor(tmp_path):
 def test_validate(tmp_path):
     """Test the validator is called before storing."""
     filepath_executable = 'bash'
-    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable=filepath_executable, filepath_files=tmp_path)
 
     code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
 
@@ -76,14 +76,14 @@ def test_validate(tmp_path):
 
 def test_can_run_on_computer(aiida_localhost, tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.can_run_on_computer` method."""
-    code = PortableCode(filepath_executable='./bash', filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable='./bash', filepath_files=tmp_path)
     assert code.can_run_on_computer(aiida_localhost)
 
 
 def test_filepath_executable(tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.filepath_executable` property."""
     filepath_executable = 'mycode.py'
-    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable=filepath_executable, filepath_files=tmp_path)
 
     with pytest.raises(ValueError, match=r'The `filepath_executable` should not be absolute.'):
         code.filepath_executable = '/usr/bin/cat'
@@ -102,7 +102,7 @@ def test_filepath_executable(tmp_path):
 def test_filepath_executable_dotslash(tmp_path):
     """Test that the executable filepath is correctly prefixed with './' if in the top folder."""
     filepath_executable = 'mycode.py'
-    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable=filepath_executable, filepath_files=tmp_path)
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)
     code.store()
     # ./ is prepended
@@ -112,7 +112,7 @@ def test_filepath_executable_dotslash(tmp_path):
 def test_filepath_executable_dotslash_alreadythere(tmp_path):
     """Test that the executable filepath is not duplicated with './' if already there."""
     filepath_executable = './mycode.py'
-    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable=filepath_executable, filepath_files=tmp_path)
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)
     code.store()
     # ./ is not duplicated if already there
@@ -122,7 +122,7 @@ def test_filepath_executable_dotslash_alreadythere(tmp_path):
 def test_filepath_executable_dotslash_subfolder(tmp_path):
     """Test that the executable filepath is not prefixed with './' if in a subfolder."""
     filepath_executable = 'a/mycode.py'
-    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable=filepath_executable, filepath_files=tmp_path)
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)
     code.store()
 
@@ -133,13 +133,13 @@ def test_filepath_executable_dotslash_subfolder(tmp_path):
 def test_full_label(tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.full_label` property."""
     label = 'some-label'
-    code = PortableCode(label=label, filepath_executable='bash', filepath_files=tmp_path)
+    code = PortableCode.from_directory(label=label, filepath_executable='bash', filepath_files=tmp_path)
     assert code.full_label == label
 
 
 def test_get_execname(tmp_path):
     """Test the deprecated :meth:`aiida.orm.nodes.data.code.portable.PortableCode.get_execname` method."""
-    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=tmp_path)
+    code = PortableCode.from_directory(label='some-label', filepath_executable='bash', filepath_files=tmp_path)
     with pytest.warns(AiidaDeprecationWarning):
         assert code.get_execname() == 'bash'
 
@@ -151,7 +151,7 @@ def test_portablecode_extra_files(tmp_path, chdir_tmp_path):
     (filepath_files / 'bash').write_text('bash')
     (filepath_files / 'subdir').mkdir()
     (filepath_files / 'subdir/test').write_text('test')
-    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
+    code = PortableCode.from_directory(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
     code.store()
     result, extra_args = code._prepare_yaml()
     ref_result = f"""label: some-label

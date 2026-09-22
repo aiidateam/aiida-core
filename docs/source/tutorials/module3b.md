@@ -14,6 +14,7 @@ execution:
 ---
 
 (tutorial:module3b)=
+
 # Module 3b: `for`-loops as workflows
 
 {bdg-secondary}`⏱️ ~75 min read` {bdg-primary}`Intermediate`
@@ -28,6 +29,7 @@ This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 ```bash
 uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" "aiida-workgraph>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
+
 :::
 
 :::{note}
@@ -187,8 +189,8 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
         msg = "gsrd stdout did not contain 'Variance of V field' / 'Mean of V field' diagnostics"
         raise ValueError(msg)
     return {
-        'variance_V': orm.Float(float(variance_match.group(1))),
-        'mean_V': orm.Float(float(mean_match.group(1))),
+        'variance_V': orm.Float(value=float(variance_match.group(1))),
+        'mean_V': orm.Float(value=float(mean_match.group(1))),
     }
 
 
@@ -317,7 +319,7 @@ def gray_scott_sweep(
     }
 ```
 
-Note where the two steps sit relative to the `Map` zone: `map_zone.gather(...)` is the last step *inside* it, naming the per-iteration outputs to accumulate, while `make_transition_plot` runs *once, after* the zone closes, reducing the gathered results into the final plot.
+Note where the two steps sit relative to the `Map` zone: `map_zone.gather(...)` is the last step _inside_ it, naming the per-iteration outputs to accumulate, while `make_transition_plot` runs _once, after_ the zone closes, reducing the gathered results into the final plot.
 
 The signature also uses two annotations you have not seen yet:
 
@@ -329,7 +331,7 @@ Two things to watch with `Map`:
 
 - The keys of your source dict become labels in the provenance graph and the names of the gathered outputs, so use meaningful, identifier-safe keys (`F_0_040`, not an integer index). **Avoid dots**: WorkGraph treats them as namespace separators and will silently collapse entries.
 - `map_zone.key` and `map_zone.value` are sockets, not Python values. You can pass them to tasks, but you cannot branch on them or build strings from them inside the graph function.
-:::
+  :::
 
 Again, that's the blueprint; no execution yet.
 We now construct a `param_sweep` dict with one entry per iteration, printing each as we go so you can see what flows into the `Map`:
@@ -401,7 +403,7 @@ for key in sorted(variances):
 ```
 
 The numbers are exactly what you would get by running the pipeline once per `F` yourself, as in the earlier modules: the simulation is unchanged.
-What changed is the *shape* of the provenance: instead of separate runs with no parent node tying them together, the sweep is one workflow node that branches into one sub-workflow per `F` value and recombines through `make_transition_plot`:
+What changed is the _shape_ of the provenance: instead of separate runs with no parent node tying them together, the sweep is one workflow node that branches into one sub-workflow per `F` value and recombines through `make_transition_plot`:
 
 ```{code-cell} ipython3
 print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
@@ -429,10 +431,10 @@ plot_provenance(wg_sweep.process)
 ```
 
 It's deliberately busy: every input, output, and linked sub-process is represented.
-The point here is not to read it in detail but to see how rich the provenance becomes *for free* as workflows nest.
+The point here is not to read it in detail but to see how rich the provenance becomes _for free_ as workflows nest.
 For a zoomable view, right-click the image and open it in a new tab, or run `verdi node graph generate <PK>` from the command line to get a standalone SVG.
 
-And finally, the workflow's *real* output: the transition curve PNG produced by the reduction step inside the workflow itself, loaded from the database via its process node:
+And finally, the workflow's _real_ output: the transition curve PNG produced by the reduction step inside the workflow itself, loaded from the database via its process node:
 
 ```{code-cell} ipython3
 from IPython.display import Image
@@ -450,19 +452,23 @@ The curve's two regimes look strikingly different in the simulated concentration
 :gutter: 2
 
 :::{grid-item}
+
 ```{image} https://raw.githubusercontent.com/aiidateam/gsrd/v0.2.0/gallery/fields.png
 :width: 100%
 :align: center
 ```
-*Below the transition (`F=0.040`): rich spatial pattern.*
+
+_Below the transition (`F=0.040`): rich spatial pattern._
 :::
 
 :::{grid-item}
+
 ```{image} https://raw.githubusercontent.com/aiidateam/gsrd/v0.2.0/gallery/dissolved.png
 :width: 100%
 :align: center
 ```
-*Above the transition (`F=0.050`): pattern dissolving.*
+
+_Above the transition (`F=0.050`): pattern dissolving._
 :::
 ::::
 
@@ -483,6 +489,7 @@ Twenty-five simulations is a lot to run inside a docs page, so we do not execute
 The full code is folded below, driven by the exact same `gray_scott_sweep` graph; only the input dict grows from a 1D list to a 2D grid. Run it yourself to reproduce the heatmap shown below.
 
 :::{dropdown} Full 2D-scan code
+
 ```python
 F_GRID = [0.038, 0.044, 0.050, 0.056, 0.062]
 K_GRID = [0.059, 0.061, 0.063, 0.065, 0.067]
@@ -516,6 +523,7 @@ for key, value in results_2d['variance_V'].items():
 plot_variance_heatmap(grid, F_GRID, K_GRID, dead_threshold=1e-6)
 plt.show()
 ```
+
 :::
 
 ```{image} https://raw.githubusercontent.com/aiidateam/gsrd/v0.2.0/gallery/heatmap.png

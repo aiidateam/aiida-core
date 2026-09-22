@@ -34,6 +34,6 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
                 raise ValueError(msg)
 
             return {
-                'x': Int(matches.group(1)),
-                'y': Int(matches.group(2)),
+                'x': Int(value=matches.group(1)),
+                'y': Int(value=matches.group(2)),
             }

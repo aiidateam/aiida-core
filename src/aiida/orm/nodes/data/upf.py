@@ -8,13 +8,22 @@
 ###########################################################################
 """Module of `Data` sub class to represent a pseudopotential single file in UPF format and related utilities."""
 
+from __future__ import annotations
+
 import json
 import re
+import typing as t
 
+from typing_extensions import Self
 from upf_to_json import upf_to_json
 
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.singlefile import SinglefileData
+
+if t.TYPE_CHECKING:
+    from aiida.common.typing import FilePath
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('UpfData',)
 
@@ -283,7 +292,56 @@ class UpfData(SinglefileData):
     CHECK_FILENAME = True
 
     @classmethod
-    def get_or_create(cls, filepath, use_first=False, store_upf=True, backend=None):
+    def from_md5(cls, md5: str, backend: StorageBackend | None = None) -> list[Self]:
+        """Return a list of all `UpfData` that match the given md5 hash.
+
+        .. note:: assumes hash of stored `UpfData` nodes is stored in the `md5` attribute
+
+        :param md5: the file hash
+        :return: list of existing `UpfData` nodes that have the same md5 hash
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+
+        builder = QueryBuilder(backend=backend)
+        builder.append(cls, filters={'attributes.md5': {'==': md5}})
+        return builder.all(flat=True)
+
+    def initialize(self) -> None:
+        super().initialize()
+        emit_deprecation()
+
+    @attribute(
+        readonly=True,
+        required_once_stored=True,
+    )
+    def element(self) -> str | None:
+        """The element of the UPF pseudopotential."""
+        return self.base.attributes.get('element', None)
+
+    @attribute(
+        readonly=True,
+        required_once_stored=True,
+    )
+    def md5(self) -> str | None:
+        """The MD5 checksum of the UPF pseudopotential file."""
+        return self.base.attributes.get('md5', None)
+
+    @property
+    def md5sum(self) -> str | None:
+        """Return the md5 checksum of the UPF pseudopotential file.
+
+        :return: the md5 checksum
+        """
+        return self.md5
+
+    @classmethod
+    def get_or_create(
+        cls,
+        filepath: FilePath,
+        use_first: bool = False,
+        store_upf: bool = True,
+        backend: StorageBackend | None = None,
+    ) -> tuple[Self, bool]:
         """Get the `UpfData` with the same md5 of the given file, or create it if it does not yet exist.
 
         :param filepath: an absolute filepath on disk
@@ -304,14 +362,14 @@ class UpfData(SinglefileData):
         pseudos = cls.from_md5(md5_file(filepath), backend=backend)
 
         if not pseudos:
-            instance = cls(file=filepath, backend=backend)
+            instance = cls.from_path(filepath, backend=backend)
             if store_upf:
                 instance.store()
-            return (instance, True)
+            return instance, True
 
         if len(pseudos) > 1:
             if use_first:
-                return (pseudos[0], False)
+                return pseudos[0], False
 
             raise ValueError(
                 'More than one copy of a pseudopotential with the same MD5 has been found in the DB. pks={}'.format(
@@ -319,162 +377,10 @@ class UpfData(SinglefileData):
                 )
             )
 
-        return (pseudos[0], False)
-
-    def __init__(self, *args, **kwargs):
-        emit_deprecation()
-        super().__init__(*args, **kwargs)
-
-    def store(self, *args, **kwargs):
-        """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
-        from aiida.common.exceptions import ParsingError
-        from aiida.common.files import md5_from_filelike
-
-        if self.is_stored:
-            return self
-
-        # Do not check the filename because it will fail since we are passing in a handle, which doesn't have a filename
-        # and so `parse_upf` will raise. The reason we have to pass in a handle is because this is the repository does
-        # not allow to get an absolute filepath. Anyway, the filename was already checked in `set_file` when the file
-        # was set for the first time. All the logic in this method is duplicated in `store` and `_validate` and badly
-        # needs to be refactored, but that is for another time.
-        with self.open(mode='r') as handle:
-            parsed_data = parse_upf(handle, check_filename=False)
-
-        # Open in binary mode which is required for generating the md5 checksum
-        with self.open(mode='rb') as handle:
-            md5 = md5_from_filelike(handle)
-
-        try:
-            element = parsed_data['element']
-        except KeyError:
-            msg = f'Could not parse the element from the UPF file {self.filename}'
-            raise ParsingError(msg)
-
-        self.base.attributes.set('element', str(element))
-        self.base.attributes.set('md5', md5)
-
-        return super().store(*args, **kwargs)
+        return pseudos[0], False
 
     @classmethod
-    def from_md5(cls, md5, backend=None):
-        """Return a list of all `UpfData` that match the given md5 hash.
-
-        .. note:: assumes hash of stored `UpfData` nodes is stored in the `md5` attribute
-
-        :param md5: the file hash
-        :return: list of existing `UpfData` nodes that have the same md5 hash
-        """
-        from aiida.orm.querybuilder import QueryBuilder
-
-        builder = QueryBuilder(backend=backend)
-        builder.append(cls, filters={'attributes.md5': {'==': md5}})
-        return builder.all(flat=True)
-
-    def set_file(self, file, filename=None):
-        """Store the file in the repository and parse it to set the `element` and `md5` attributes.
-
-        :param file: filepath or filelike object of the UPF potential file to store.
-            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
-        :param filename: specify filename to use (defaults to name of provided file).
-        """
-        from aiida.common.exceptions import ParsingError
-        from aiida.common.files import md5_file, md5_from_filelike
-
-        parsed_data = parse_upf(file, check_filename=self.CHECK_FILENAME)
-
-        try:
-            md5sum = md5_file(file)
-        except TypeError:
-            md5sum = md5_from_filelike(file)
-
-        try:
-            element = parsed_data['element']
-        except KeyError:
-            msg = f"No 'element' parsed in the UPF file {self.filename}; unable to store"
-            raise ParsingError(msg)
-
-        super().set_file(file, filename=filename)
-
-        self.base.attributes.set('element', str(element))
-        self.base.attributes.set('md5', md5sum)
-
-    def get_upf_family_names(self):
-        """Get the list of all upf family names to which the pseudo belongs."""
-        from aiida.orm import QueryBuilder, UpfFamily
-
-        query = QueryBuilder(backend=self.backend)
-        query.append(UpfFamily, tag='group', project='label')
-        query.append(UpfData, filters={'id': {'==': self.pk}}, with_group='group')
-        return query.all(flat=True)
-
-    @property
-    def element(self):
-        """Return the element of the UPF pseudopotential.
-
-        :return: the element
-        """
-        return self.base.attributes.get('element', None)
-
-    @property
-    def md5sum(self):
-        """Return the md5 checksum of the UPF pseudopotential file.
-
-        :return: the md5 checksum
-        """
-        return self.base.attributes.get('md5', None)
-
-    def _validate(self):
-        """Validate the UPF potential file stored for this node."""
-        from aiida.common.exceptions import ValidationError
-        from aiida.common.files import md5_from_filelike
-
-        super()._validate()
-
-        # Do not check the filename because it will fail since we are passing in a handle, which doesn't have a filename
-        # and so `parse_upf` will raise. The reason we have to pass in a handle is because this is the repository does
-        # not allow to get an absolute filepath. Anyway, the filename was already checked in `set_file` when the file
-        # was set for the first time. All the logic in this method is duplicated in `store` and `_validate` and badly
-        # needs to be refactored, but that is for another time.
-        with self.open(mode='r') as handle:
-            parsed_data = parse_upf(handle, check_filename=False)
-
-        # Open in binary mode which is required for generating the md5 checksum
-        with self.open(mode='rb') as handle:
-            md5 = md5_from_filelike(handle)
-
-        try:
-            element = parsed_data['element']
-        except KeyError:
-            msg = f"No 'element' could be parsed in the UPF {self.filename}"
-            raise ValidationError(msg)
-
-        try:
-            attr_element = self.base.attributes.get('element')
-        except AttributeError:
-            raise ValidationError("attribute 'element' not set.")
-
-        try:
-            attr_md5 = self.base.attributes.get('md5')
-        except AttributeError:
-            raise ValidationError("attribute 'md5' not set.")
-
-        if attr_element != element:
-            msg = f"Attribute 'element' says '{attr_element}' but '{element}' was parsed instead."
-            raise ValidationError(msg)
-
-        if attr_md5 != md5:
-            msg = f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead."
-            raise ValidationError(msg)
-
-    def _prepare_upf(self, main_file_name=''):
-        """Return UPF content."""
-        return_string = self.get_content()
-
-        return return_string.encode('utf-8'), {}
-
-    @classmethod
-    def get_upf_group(cls, group_label):
+    def get_upf_group(cls, group_label: str):
         """Return the UPF family group with the given label.
 
         :param group_label: the family group label
@@ -513,7 +419,111 @@ class UpfData(SinglefileData):
 
         return builder.all(flat=True)
 
-    def _prepare_json(self, main_file_name=''):
+    def store(self, *args: t.Any, **kwargs: t.Any) -> Self:
+        """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
+        if self.is_stored:
+            return self
+
+        # Ensure that SinglefileData has first resolved and validated the filename in case the repository was populated
+        # directly instead of through `set_file`.
+        super()._validate()
+
+        element, md5 = self._parse_repository_file()
+        self.base.attributes.set('element', element)
+        self.base.attributes.set('md5', md5)
+
+        return super().store(*args, **kwargs)
+
+    def set_file(self, file: FilePath | t.BinaryIO, filename: str | None = None) -> None:
+        """Store the file in the repository and parse it to set the `element` and `md5` attributes.
+
+        :param file: filepath or filelike object of the UPF potential file to store.
+            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
+        :param filename: specify filename to use (defaults to name of provided file).
+        """
+        from aiida.common.exceptions import ParsingError
+        from aiida.common.files import md5_file, md5_from_filelike
+
+        parsed_data = parse_upf(file, check_filename=self.CHECK_FILENAME)
+
+        try:
+            md5 = md5_file(file)
+        except TypeError:
+            md5 = md5_from_filelike(file)
+
+        try:
+            element = str(parsed_data['element'])
+        except KeyError:
+            msg = f"No 'element' parsed in the UPF file {self.filename}; unable to store"
+            raise ParsingError(msg)
+
+        super().set_file(file, filename=filename)
+
+        self.base.attributes.set('element', element)
+        self.base.attributes.set('md5', md5)
+
+    def get_upf_family_names(self) -> list[str]:
+        """Get the list of all upf family names to which the pseudo belongs."""
+        from aiida.orm import QueryBuilder, UpfFamily
+
+        query = QueryBuilder(backend=self.backend)
+        query.append(UpfFamily, tag='group', project='label')
+        query.append(UpfData, filters={'id': {'==': self.pk}}, with_group='group')
+        return query.all(flat=True)
+
+    def _parse_repository_file(self) -> tuple[str, str]:
+        """Parse the repository file and return its element and MD5 checksum."""
+        from aiida.common.exceptions import ParsingError
+        from aiida.common.files import md5_from_filelike
+
+        # The repository only provides a handle and not the original absolute path, so filename validation cannot be
+        # performed here. It is performed when going through `set_file`.
+        with self.open(mode='r') as handle:
+            parsed_data = parse_upf(handle, check_filename=False)
+
+        with self.open(mode='rb') as handle:
+            md5 = md5_from_filelike(handle)
+
+        try:
+            element = str(parsed_data['element'])
+        except KeyError:
+            msg = f'Could not parse the element from the UPF file {self.filename}'
+            raise ParsingError(msg)
+
+        return element, md5
+
+    def _validate(self) -> None:
+        """Validate the UPF potential file stored for this node."""
+        from aiida.common.exceptions import ParsingError, ValidationError
+
+        super()._validate()
+
+        try:
+            element, md5 = self._parse_repository_file()
+        except ParsingError as exception:
+            raise ValidationError(str(exception)) from exception
+
+        if self.element is None:
+            raise ValidationError("attribute 'element' not set.")
+
+        if self.md5 is None:
+            raise ValidationError("attribute 'md5' not set.")
+
+        if self.element != element:
+            msg = f"Attribute 'element' says '{self.element}' but '{element}' was parsed instead."
+            raise ValidationError(msg)
+
+        if self.md5 != md5:
+            msg_0 = f"Attribute 'md5' says '{self.md5}' but '{md5}' was parsed instead."
+            raise ValidationError(msg_0)
+
+    def _prepare_upf(self, main_file_name: str = '') -> tuple[bytes, dict[str, t.Any]]:
+        """Return UPF content."""
+        return_string = self.get_content()
+
+        return return_string.encode('utf-8'), {}
+
+    def _prepare_json(self, main_file_name: str = '') -> tuple[bytes, dict[str, t.Any]]:
         """Returns UPF PP in json format."""
         with self.open() as file_handle:
             upf_json = upf_to_json(file_handle.read(), fname=self.filename)

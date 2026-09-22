@@ -191,10 +191,11 @@ class TestTrajectory:
     def test_trajectory_pbc_structures(self, trajectory_data):
         """Test the `pbc` for the `TrajectoryData` using structure inputs."""
         # Test non-pbc structure with no cell
-        structure = StructureData(cell=None, pbc=[False, False, False])
+        structure = StructureData()
+        structure.set_pbc(pbc=[False, False, False])
         structure.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
 
-        trajectory = TrajectoryData(structurelist=(structure,))
+        trajectory = TrajectoryData.from_structure_list((structure,))
 
         trajectory.get_step_structure(0).store()  # Verify that the `StructureData` can be stored
         assert trajectory.get_step_structure(0).pbc == structure.pbc
@@ -210,11 +211,12 @@ class TestTrajectory:
         cell = [[3.0, 0.1, 0.3], [-0.05, 3.0, -0.2], [0.02, -0.08, 3.0]]
         structure_periodic = StructureData(cell=cell)
         structure_periodic.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
-        structure_non_periodic = StructureData(cell=cell, pbc=[False, False, False])
+        structure_non_periodic = StructureData(cell=cell)
+        structure_non_periodic.set_pbc(pbc=[False, False, False])
         structure_non_periodic.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
 
         with pytest.raises(ValueError, match='All structures should have the same `pbc`'):
-            TrajectoryData(structurelist=(structure_periodic, structure_non_periodic))
+            TrajectoryData.from_structure_list((structure_periodic, structure_non_periodic))
 
     def test_trajectory_pbc_set_trajectory(self):
         """Test the `pbc` for the `TrajectoryData` using `set_trajectory`."""

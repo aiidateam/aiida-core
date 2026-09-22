@@ -146,7 +146,7 @@ def test_import_checkpoints(aiida_profile_clean, tmp_path):
     node.set_checkpoint(12)
     node.seal()
     node_uuid = node.uuid
-    assert node.checkpoint == 12
+    assert node.checkpoints == 12
 
     archive_path = tmp_path / 'archive.aiida'
     nodes = [node]

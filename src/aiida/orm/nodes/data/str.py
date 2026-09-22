@@ -8,8 +8,10 @@
 ###########################################################################
 """`Data` sub class to represent a string value."""
 
+import pydantic as pdt
+
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('Str',)
 
@@ -19,13 +21,16 @@ class Str(BaseType):
 
     _type = str
 
-    class AttributesModel(BaseType.AttributesModel):
-        value: str = OrmMetadataField(
-            title='String value',
-            description='The value of the string',
-        )
+    @attribute(model_field_info=pdt.fields.FieldInfo(title='String value'))
+    def value(self) -> str:
+        """The string value stored in this node."""
+        return self.base.attributes.get('value', '')
+
+    @value.setter
+    def value(self, value: str) -> None:
+        self.base.attributes.set('value', str(value))
 
 
 @to_aiida_type.register(str)
 def _(value):
-    return Str(value)
+    return Str(value=str(value))

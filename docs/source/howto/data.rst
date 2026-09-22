@@ -43,12 +43,12 @@ As the output suggests, you can get more information about each type by appendin
     A ``singlefile`` node can be created from an existing file on the local filesystem in two ways.
     By passing the absolute path of the file:
 
-        singlefile = SinglefileData(file='/absolute/path/to/file.txt')
+        singlefile = SinglefileData.from_path('/absolute/path/to/file.txt')
 
     or by passing a filelike object:
 
         with open('/absolute/path/to/file.txt', 'rb') as handle:
-            singlefile = SinglefileData(file=handle)
+            singlefile = SinglefileData.from_filelike(handle)
 
     The filename of the resulting file in the database will be based on the filename passed in the ``file`` argument.
     This default can be overridden by passing an explicit name for the ``filename`` argument to the constructor.
@@ -59,7 +59,7 @@ If you have such a file that you would like to store in AiiDA, you can use the `
 .. code-block:: python
 
     SinglefileData = DataFactory('core.singlefile')
-    singlefile = SinglefileData(file='/absolute/path/to/file.txt')
+    singlefile = SinglefileData.from_path('/absolute/path/to/file.txt')
     singlefile.store()
 
 The first step is to load the class that corresponds to the data type, which you do by passing the name (listed by ``verdi plugin list aiida.data``) to the :py:class:`~aiida.plugins.factories.DataFactory`.
@@ -1020,7 +1020,7 @@ The specifications of what to copy are provided through an input of type
         ... instructions_cont['symlink_files'] = [
         ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
         ... ]
-        ... instructions_node = orm.Dict(dict=instructions_cont)
+        ... instructions_node = orm.Dict(**instructions_cont)
 
 The ``'source/path/filename'`` and ``'target/path/filename'`` are both relative paths (to their respective folders).
 The ``node_keyname`` is a string that will be used when providing the source :py:class:`~aiida.orm.RemoteData` node to the calculation.
@@ -1051,7 +1051,7 @@ For this you first have to adapt the instructions to set ``'retrieve_files'`` to
         ... instructions_cont['local_files'] = [
         ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
         ... ]
-        ... instructions_node = orm.Dict(dict=instructions_cont)
+        ... instructions_node = orm.Dict(**instructions_cont)
 
 It is also relevant to note that, in this case, the ``source_node`` will be of type :py:class:`~aiida.orm.nodes.data.folder.FolderData` so you will have to manually select the computer to where you want to copy the files.
 You can do this by looking at your available computers running ``verdi computer list`` and using the label shown to load it with :py:func:`~aiida.orm.load_computer`:

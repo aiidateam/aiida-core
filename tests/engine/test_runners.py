@@ -53,7 +53,7 @@ def the_hans_klok_comeback(loop):
 def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
     loop = runner.loop
-    proc = Proc(runner=runner, inputs={'a': Str('input')})
+    proc = Proc(runner=runner, inputs={'a': Str(value='input')})
     future = Future()
     event = threading.Event()
 
@@ -78,7 +78,7 @@ def test_call_on_process_finish(runner):
 
 def test_submit(runner):
     """Test that inputs can be specified either as a positional dictionary or through keyword arguments."""
-    inputs = {'a': Str('input')}
+    inputs = {'a': Str(value='input')}
 
     with pytest.raises(ValueError, match='Cannot specify both `inputs` and `kwargs`'):
         runner.submit(Proc, inputs, **inputs)
@@ -94,8 +94,8 @@ def test_run_return_value_cached(aiida_code_installed):
     """
     inputs = {
         'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
-        'x': Int(1),
-        'y': Int(-2),
+        'x': Int(value=1),
+        'y': Int(value=-2),
     }
     results_source, node_source = launch.run_get_node(ArithmeticAddCalculation, **inputs)
     assert node_source.base.caching.is_valid_cache

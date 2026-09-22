@@ -322,8 +322,8 @@ def test_duplicate_subscriber_identifier(aiida_code_installed, started_daemon_cl
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
 
     builder = code.get_builder()
-    builder.x = Int(1)
-    builder.y = Int(1)
+    builder.x = Int(value=1)
+    builder.y = Int(value=1)
     builder.metadata.options.sleep = 2  # Add a sleep to give time to send duplicate task before it finishing
 
     # Submit the process to the daemon and wait for it to be picked up (signalled by it going in waiting state).

@@ -452,8 +452,8 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
         code = load_code('add@localhost')
         builder = code.get_builder()
-        builder.x = Int(4)
-        builder.y = Int(5)
+        builder.x = Int(value=4)
+        builder.y = Int(value=5)
         builder.metadata.options.withmpi = False
         builder.metadata.options.resources = {
             'num_machines': 1,
@@ -606,9 +606,9 @@ The next section will show how this entry point is used to assign it to a calcul
             import secrets
             return CalcJobMonitorResult(
                 outputs={
-                    'some_output': Int(2),
+                    'some_output': Int(value=2),
                     'messages': {
-                        f'key_{secrets.token_hex(4)}': Str('some random message')
+                        f'key_{secrets.token_hex(4)}': Str(value='some random message')
                     }
                 }
             )
@@ -625,7 +625,7 @@ It takes a dictionary of monitors, where each monitor is defined by a `Dict` nod
 
 .. code-block:: python
 
-    monitor = Dict({
+    monitor = Dict(**{
         'entry_point': 'some.monitor'
     })
 
@@ -636,8 +636,8 @@ It is possible to assign multiple monitors to a single calculation:
 
     builder = code.get_builder()
     builder.monitors = {
-        'monitor_a': Dict({'entry_point': 'some.monitor'}),
-        'monitor_b': Dict({'entry_point': 'some.other.monitor'}),
+        'monitor_a': Dict(**{'entry_point': 'some.monitor'}),
+        'monitor_b': Dict(**{'entry_point': 'some.other.monitor'}),
     }
 
 Note that the keys used in the `monitors` input can be any valid attribute name and does not influence the behavior whatsoever.
@@ -649,7 +649,7 @@ For example, if the monitor accepts a boolean value for the keyword ``custom_key
 
     builder = code.get_builder()
     builder.monitors = {
-        'monitor_a': Dict({'entry_point': 'some.monitor', 'kwargs': {'custom_keyword': True}}),
+        'monitor_a': Dict(**{'entry_point': 'some.monitor', 'kwargs': {'custom_keyword': True}}),
     }
 
 If a keyword is specified that is not declared explicitly by the monitor, the validation of the ``CalcJob`` will fail.
@@ -663,8 +663,8 @@ The order can be controlled using the ``priority`` key in the ``monitors`` input
 .. code-block:: python
 
     builder.monitors = {
-        'monitor_one': Dict({'entry_point': 'entry_point_one', 'priority': 100})
-        'monitor_one': Dict({'entry_point': 'entry_point_one'})
+        'monitor_one': Dict(**{'entry_point': 'entry_point_one', 'priority': 100})
+        'monitor_one': Dict(**{'entry_point': 'entry_point_one'})
     }
 
 Higher priorities will be executed first.
@@ -681,7 +681,7 @@ The frequency of monitor execution can be reduced by setting a larger interval f
 .. code-block:: python
 
     builder.monitors = {
-        'monitor_one': Dict({'entry_point': 'entry_point_one', 'minimum_poll_interval': 600})
+        'monitor_one': Dict(**{'entry_point': 'entry_point_one', 'minimum_poll_interval': 600})
     }
 
 The engine will guarantee that the interval between calls of the monitor is at least the value specified by ``minimum_poll_interval``.

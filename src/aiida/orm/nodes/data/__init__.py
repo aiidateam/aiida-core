@@ -42,7 +42,6 @@ __all__ = (
     'BaseType',
     'Bool',
     'CifData',
-    'Code',
     'ContainerizedCode',
     'Data',
     'Dict',

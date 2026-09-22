@@ -172,6 +172,7 @@ class ProcessNode(Sealable, Node):
     PROCESS_LABEL_KEY = 'process_label'
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
+    RECORD_KEY = 'record'
     METADATA_INPUTS_KEY: str = 'metadata_inputs'
     _process_class_binding: type[Process] | None = None
     """The class of the process running now, bound by that process, for as long as this instance lives.
@@ -204,6 +205,7 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_LABEL_KEY,
             cls.PROCESS_STATE_KEY,
             cls.PROCESS_STATUS_KEY,
+            cls.RECORD_KEY,
         )
 
     class AttributesModel(Node.AttributesModel, Sealable.AttributesModel):
@@ -614,6 +616,28 @@ class ProcessNode(Sealable, Node):
         :returns: the checkpoint bundle, or None if the process has none
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
+
+    @property
+    def record(self) -> dict[str, Any]:
+        """Return what this process has already done outside the database.
+
+        A step that has to be safe to run again writes down what it did before it did it, and reads that back
+        before doing it a second time: the identifier a scheduler gave a job, the handle an external service
+        answered with. The engine resumes a process against the same node, so what is written here survives a
+        worker that dies, while running the process afresh gives a new node and so an empty record.
+
+        It is updatable until the node is sealed and it takes no part in the hash, so noting something here
+        neither changes what the process caches against nor outlives it. It is no part of the node's model
+        either: this is what a process needed while it ran, rather than something the run produced.
+        """
+        return self.base.attributes.get(self.RECORD_KEY, {})
+
+    def set_record(self, **entries: Any) -> None:
+        """Note what has been done outside the database, next to whatever was noted before.
+
+        :param entries: what to record, which is merged into what is already there.
+        """
+        self.base.attributes.set(self.RECORD_KEY, {**self.record, **entries})
 
     def set_checkpoint(self, checkpoint: str) -> None:
         """Set the checkpoint bundle for the process.

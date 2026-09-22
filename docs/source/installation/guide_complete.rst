@@ -384,7 +384,7 @@ After the user has been created, create a database:
 
 .. code-block:: sql
 
-   CREATE DATABASE aiida-database OWNER aiida-user ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';
+   CREATE DATABASE aiida-database OWNER aiida-user ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE template0;
 
 Again, the selected database name ``aiida-database`` is purely an example and can be customized.
 Make sure that the ``OWNER`` is set to the user that was created in the previous step.

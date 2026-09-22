@@ -210,6 +210,12 @@ Run in your terminal (or maybe even better, add to your ``.bashrc``, but then re
 
 and then run ``verdi setup`` again.
 
+Note that on minimal Linux installations and on WSL, the locale may be *set* but not *generated*, in which case the ``export`` above is not sufficient.
+Check with ``locale -a`` that ``en_US.UTF-8`` is listed (it may appear as the equivalent spelling ``en_US.utf8``; ``validlocale en_US.UTF-8`` is an alternative): 
+if it is not, generate the locale: on Debian/Ubuntu, uncomment the exact ``en_US.UTF-8 UTF-8`` entry in ``/etc/locale.gen``, run ``sudo locale-gen``, and restart your shell.
+As a separate encoding check, ``python -c "import locale; print(locale.getpreferredencoding())"`` should print ``UTF-8``.
+On WSL, if PostgreSQL still rejects ``en_US.UTF-8`` when creating the AiiDA database, use ``C.UTF-8`` as the collation and character type instead, and create the database with ``TEMPLATE template0`` (as in the :ref:`installation guide <installation:guide-complete:create-profile:core-psql-dos>`) so the locale is not inherited from ``template1``.
+
 .. _this issue: https://code.djangoproject.com/ticket/16017
 
 Possible Ubuntu dependencies

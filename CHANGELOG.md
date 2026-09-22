@@ -118,6 +118,20 @@ A graph wires into a single field, `relax(given={'structure': prepared.structure
 
 See {ref}`topics:workflows:graphs` for the whole of it.
 
+#### `ProcessNode.record`: what a process did outside the database
+
+A step that has to be safe to run again writes down what it did before it did it, and reads that back before doing it a second time: the identifier a scheduler gave a job, the handle an external service answered with.
+
+```python
+node = task_node()
+
+if node.record.get('job_id') is None:
+    node.set_record(job_id=scheduler.submit_job(workdir, script))
+```
+
+The engine resumes a process against the same node, so what is written survives a worker that dies, while running the process afresh gives a new node and so an empty record.
+It is updatable until the node is sealed and takes no part in the hash, so noting something neither changes what the process caches against nor outlives it.
+
 ### Behavior changes
 
 ### Fixes

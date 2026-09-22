@@ -125,6 +125,7 @@ __all__ = (
     'subgraph',
     'submit',
     'task',
+    'task_node',
     'tasks',
     'wait_for',
     'while_',

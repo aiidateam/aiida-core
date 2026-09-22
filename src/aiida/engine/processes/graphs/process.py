@@ -29,10 +29,10 @@ from aiida.engine.processes.ports import as_written
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Data, Dict, GraphNode
+from aiida.orm import Data, Dict, GraphNode, ProcessNode
 from aiida.orm.nodes.data.base import to_aiida_type
 
-__all__ = ('GraphProcess', 'TaskProcess', 'launched_as')
+__all__ = ('GraphProcess', 'TaskProcess', 'launched_as', 'task_node')
 
 
 class TaskProcess(FunctionProcess):
@@ -278,3 +278,25 @@ def launched_as(start: Start) -> tuple[type[Process], dict[str, t.Any]]:
         return process_class, start.inputs
 
     raise ValueError(f'`{start.task.name}` is of kind `{start.task.kind}`, which this version of AiiDA cannot run.')
+
+
+def task_node() -> ProcessNode:
+    """Return the node of the task that is running.
+
+    A step that has to be safe to run twice records what it has already done on its own node, and reads it back
+    before doing it again. The node is what makes that possible: the engine resumes a task against the same
+    one, so what was written is still there, while running the task afresh gives a new node and so a clean
+    slate. Anything a step would otherwise have to invent an identity for, a remote directory or a job id,
+    belongs here.
+
+    :raises RuntimeError: if no process is running, since there is then no node to record anything against.
+    """
+    # `current` is declared on the state machine, which knows nothing of nodes; what runs here is always
+    # this package's `Process`, and that is what carries one.
+    process = t.cast('Process | None', Process.current())
+
+    if process is None:
+        msg = 'no process is running, so there is no task node to record against.'
+        raise RuntimeError(msg)
+
+    return process.node

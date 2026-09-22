@@ -244,6 +244,7 @@ class JobDescription:
     calc_info: CalcInfo
     retrieve_list: list[t.Any]
     retrieve_temporary_list: list[t.Any]
+    options: dict[str, t.Any] = dataclasses.field(default_factory=dict)
 
 
 def _nodes_of(inputs: Mapping[str, t.Any]) -> Iterator[t.Any]:
@@ -1154,7 +1155,7 @@ class CalcJob(Process):
 
         # If the inputs contain a ``remote_folder`` input node, we are in an import scenario and can skip the rest
         if 'remote_folder' in inputs:
-            return JobDescription(calc_info, retrieve_list, retrieve_temporary_list)
+            return JobDescription(calc_info, retrieve_list, retrieve_temporary_list, options)
 
         # The remaining code is only necessary for actual runs, for example, creating the submission script
         scheduler = computer.get_scheduler()
@@ -1373,4 +1374,4 @@ class CalcJob(Process):
                 )
                 raise PluginInternalError(msg)
 
-        return JobDescription(calc_info, retrieve_list, retrieve_temporary_list)
+        return JobDescription(calc_info, retrieve_list, retrieve_temporary_list, options)

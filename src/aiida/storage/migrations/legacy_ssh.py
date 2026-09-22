@@ -26,8 +26,6 @@ from sqlalchemy.sql import text
 
 from aiida.storage.log import MIGRATE_LOGGER
 
-__all__ = ('CONFIG_NAME', 'migrate_legacy_ssh_computers')
-
 #: The ``auth_params`` of a computer configured with the legacy ``core.ssh`` plugin.
 LEGACY_PARAM_NAMES: t.Final = (
     'username',
@@ -259,7 +257,7 @@ def _include(name: str) -> None:
     _write(target, f'Include {name}\n\n{content}', target.stat().st_mode & 0o777 if exists else 0o600)
 
 
-def migrate_legacy_ssh_computers(connection: Connection) -> int:
+def _migrate_legacy_ssh_computers(connection: Connection) -> int:
     """Replace the stored connection parameters of every legacy computer with a configuration entry.
 
     Must run *before* the ``core.ssh_async`` computers are renamed, which is what still tells the two
@@ -336,3 +334,21 @@ def migrate_legacy_ssh_computers(connection: Connection) -> int:
         )
 
     return len(rows)
+
+
+def _rename_ssh_async_transport(connection: Connection) -> None:
+    """Rename ``core.ssh_async`` computers to ``core.ssh``."""
+    result = connection.execute(
+        text("UPDATE db_dbcomputer SET transport_type = 'core.ssh' WHERE transport_type = 'core.ssh_async'")
+    )
+
+    if result.rowcount > 0:
+        MIGRATE_LOGGER.report(
+            f'Renamed the transport of {result.rowcount} computer(s) from `core.ssh_async` to `core.ssh`.'
+        )
+
+
+def migrate_ssh_transports(connection: Connection) -> None:
+    """Migrate legacy SSH computers before renaming asynchronous SSH computers."""
+    _migrate_legacy_ssh_computers(connection)
+    _rename_ssh_async_transport(connection)

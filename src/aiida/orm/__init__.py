@@ -121,6 +121,7 @@ __all__ = (
     'load_node',
     'load_node_class',
     'pycifrw_from_cif',
+    'reject_attributes',
     'to_aiida_type',
     'validate_link',
 )

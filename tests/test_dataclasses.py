@@ -15,7 +15,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.common.utils import Capturing
 from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
 from aiida.orm.nodes.data.cif import has_pycifrw
@@ -641,14 +641,18 @@ _tag   {'a' * 5000}
             # empty cifdata should be possible
             a = CifData()
 
-            # but it does not have a file
-            with pytest.raises(AttributeError):
-                _ = a.filename
+            assert a.filename is None
+
+            # but it doesn't have a file, so we can't store it
+            with pytest.raises(ValidationError):
+                a.store()
 
             # now it has
             a.set_file(tmpf.name)
-            _ = a.filename
 
+            assert a.filename is not None
+
+            # so we can store it
             a.store()
 
     @skip_pycifrw
@@ -700,12 +704,17 @@ _tag   {'a' * 5000}
 
             # empty cifdata should be possible
             a = CifData()
-            # but it does not have a file
-            with pytest.raises(AttributeError):
-                _ = a.filename
+
+            # but it doesn't have a file, so we can't store it
+            with pytest.raises(ValidationError):
+                a.store()
+
             # now it has
             a.set_file(tmpf.name)
+
             a.parse()
+
+            # so it must a filename (assigned, derived from the file, or set to the 'file.txt' default)
             _ = a.filename
 
         assert f1 != f2
@@ -1723,7 +1732,7 @@ def test_lock():
     cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
     a = StructureData(cell=cell)
 
-    a.pbc = [False, True, True]
+    a.set_pbc([False, True, True])
 
     k = Kind(symbols='Ba', name='Ba')
     s = Site(position=(0.0, 0.0, 0.0), kind_name='Ba')
@@ -1747,7 +1756,7 @@ def test_lock():
     with pytest.raises(ModificationNotAllowed):
         a.cell = cell
     with pytest.raises(ModificationNotAllowed):
-        a.pbc = [True, True, True]
+        a.set_pbc([True, True, True])
 
     _ = a.get_cell_volume()
     _ = a.is_alloy
@@ -1760,7 +1769,7 @@ def test_lock():
     # I check that the original did not change
     assert len(a.sites) != 0
     b.cell = cell
-    b.pbc = [True, True, True]
+    b.set_pbc([True, True, True])
 
 
 class TestStructureDataReload:
@@ -1773,7 +1782,7 @@ class TestStructureDataReload:
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell)
 
-        a.pbc = [False, True, True]
+        a.set_pbc([False, True, True])
 
         a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
         a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
@@ -1816,7 +1825,7 @@ class TestStructureDataReload:
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell)
 
-        a.pbc = [False, True, True]
+        a.set_pbc([False, True, True])
 
         a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
         a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
@@ -1904,7 +1913,7 @@ class TestStructureDataFromAse:
             s.store()
 
         # after setting a cell, we should be able to store
-        s.set_cell([[5, 0, 0], [0, 5, 0], [0, 0, 5]])
+        s.cell = [[5, 0, 0], [0, 5, 0], [0, 0, 5]]
         s.store()
 
     @skip_ase
@@ -2187,7 +2196,7 @@ class TestStructureDataFromPymatgen:
             pymatgen_xyz = XYZ.from_file(tmpf.name)
             pymatgen_mol = pymatgen_xyz.molecule
 
-        for struct in [StructureData.from_pymatgen(pymatgen_mol), StructureData.from_pymatgen_structure(pymatgen_mol)]:
+        for struct in [StructureData.from_pymatgen(pymatgen_mol), StructureData.from_pymatgen_molecule(pymatgen_mol)]:
             assert struct.get_site_kindnames() == ['H', 'H', 'H', 'H', 'C']
             assert struct.pbc == (False, False, False)
             assert [round(x, 2) for x in list(struct.sites[0].position)] == [5.77, 5.89, 6.81]
@@ -2289,7 +2298,7 @@ class TestPymatgenFromStructureData:
         cell = np.diag((1, 1, 1)).tolist()
         symbols = ['Ba', 'Ba', 'Zr', 'Zr', 'O', 'O', 'O', 'O', 'O', 'O']
         structure = StructureData(cell=cell)
-        structure.set_pbc(pbc=pbc)
+        structure.set_pbc(pbc)
 
         for symbol in symbols:
             structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
@@ -2309,7 +2318,7 @@ class TestPymatgenFromStructureData:
 
         symbol, pbc = 'Si', (False, False, False)
         structure = StructureData()
-        structure.set_pbc(pbc=pbc)
+        structure.set_pbc(pbc)
         structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
 
         pymatgen = structure.get_pymatgen()
@@ -3592,7 +3601,7 @@ def test_seekpath_explicit_path():
     ]
 
     ret_k = return_value['explicit_kpoints']
-    assert to_list_of_lists(ret_k.labels) == [
+    assert to_list_of_lists(ret_k.get_labels()) == [
         [0, 'GAMMA'],
         [30, 'X'],
         [60, 'M'],
@@ -3607,7 +3616,7 @@ def test_seekpath_explicit_path():
         [265, 'A'],
     ]
     kpts = ret_k.get_kpoints(cartesian=False)
-    highsympoints_relcoords = [kpts[idx] for idx, label in ret_k.labels]
+    highsympoints_relcoords = [kpts[idx] for idx, label in ret_k.get_labels()]
     assert (
         round(
             abs(

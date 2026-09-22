@@ -26,7 +26,7 @@ class KpointsDataTranslator(DataTranslator):
     _result_type = __label__
 
     @staticmethod
-    def get_derived_properties(node):
+    def get_derived_properties(node: KpointsData):
         """Returns: data in a format required by dr.js to visualize a 2D plot
         with multiple data series.
 
@@ -92,13 +92,14 @@ class KpointsDataTranslator(DataTranslator):
         # Add labels field
         has_labels = False
         if explicit_kpoints:
-            if node.labels is not None:
+            labels = node.get_labels()
+            if labels is not None:
                 has_labels = True
                 high_symm_rel = {}
                 path = []
                 old_label = None
 
-                for idx, label in node.labels:
+                for idx, label in labels:
                     high_symm_rel[label] = explicit_kpoints_rel[idx].tolist()
 
                     if idx > 0:
@@ -112,7 +113,7 @@ class KpointsDataTranslator(DataTranslator):
                 if has_cell:
                     high_symm_abs = {}
 
-                    for idx, label in node.labels:
+                    for idx, label in labels:
                         high_symm_abs[label] = explicit_kpoints_abs[idx].tolist()
 
                     response['labelled_kpoints_abs'] = high_symm_abs

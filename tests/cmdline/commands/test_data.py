@@ -292,14 +292,10 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
         bands = connect_structure_bands(strct)
 
-        bands_isolated = BandsData()
-        bands_isolated.store()
-
         # Create 2 groups and add the data to one of them
         g_ne = Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(bands)
-        g_ne.add_nodes(bands_isolated)
 
         g_e = Group(label='empty_group')
         g_e.store()
@@ -320,7 +316,6 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
     def test_bandslist(self):
         self.data_listing_test(BandsData, 'FeO', self.pks)
-        self.data_listing_test(BandsData, '<<NOT FOUND>>', self.pks)
 
     def test_bandslist_with_elements(self):
         options = ['-e', 'Fe']

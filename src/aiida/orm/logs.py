@@ -171,7 +171,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             raise exceptions.ValidationError('Either dbnode_id or node must be provided to create a Log entry')
 
         backend = backend or get_manager().get_profile_storage()
-        model = backend.logs.create(
+        self._backend_entity = backend.logs.create(
             time=time,
             loggername=loggername,
             levelname=levelname,
@@ -179,7 +179,8 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             message=message,
             metadata=metadata,
         )
-        super().__init__(model)
+
+        self.finalize()
 
         self.store()  # Logs are immutable and automatically stored
 

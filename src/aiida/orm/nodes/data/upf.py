@@ -306,6 +306,10 @@ class UpfData(SinglefileData):
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
 
+    def initialize(self) -> None:
+        super().initialize()
+        emit_deprecation()
+
     @attribute(
         readonly=True,
         required_once_stored=True,
@@ -466,10 +470,6 @@ class UpfData(SinglefileData):
         query.append(UpfFamily, tag='group', project='label')
         query.append(UpfData, filters={'id': {'==': self.pk}}, with_group='group')
         return query.all(flat=True)
-
-    def initialize(self) -> None:
-        super().initialize()
-        emit_deprecation()
 
     def _parse_repository_file(self) -> tuple[str, str]:
         """Parse the repository file and return its element and MD5 checksum."""

@@ -19,9 +19,9 @@ import pydantic as pdt
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.common.typing import FilePath
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import attribute, column
-from aiida.orm.entities import from_backend_entity
 from aiida.orm.models.adapters import EntityPkAdapter
 from aiida.orm.nodes.data.data import Data
 from aiida.transports import Transport
@@ -43,10 +43,7 @@ class RemoteData(Data):
     KEY_EXTRA_CLEANED = 'cleaned'
 
     @column(
-        model_field_info=pdt.fields.FieldInfo(
-            default=None,
-            description='The PK of the associated computer.',
-        ),
+        model_field_info=pdt.fields.FieldInfo(description='The PK of the associated computer.'),
         model_adapter=EntityPkAdapter(Computer),
     )
     def computer(self) -> Computer:
@@ -54,7 +51,7 @@ class RemoteData(Data):
         if self.backend_entity.computer is None:
             raise AttributeError('The computer is not set.')
 
-        return from_backend_entity(Computer, self.backend_entity.computer)
+        return Computer.from_backend_entity(self.backend_entity.computer)
 
     @computer.setter
     def computer(self, computer: Computer) -> None:
@@ -70,9 +67,8 @@ class RemoteData(Data):
         return self.base.attributes.get('remote_path')
 
     @remote_path.setter
-    def remote_path(self, value: str) -> None:
-        type_check(value, str)
-        self.base.attributes.set('remote_path', value)
+    def remote_path(self, value: FilePath) -> None:
+        self.base.attributes.set('remote_path', str(value))
 
     @property
     def is_cleaned(self) -> bool:

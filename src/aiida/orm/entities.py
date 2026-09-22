@@ -203,9 +203,37 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
 
     _cli_spec: t.ClassVar[EntityCliCreateSpec | None] = None
 
-    def __init__(self, backend_entity: _BackendEntityT) -> None:
-        """:param backend_entity: the backend model supporting this entity."""
-        self._backend_entity = backend_entity
+    _backend_entity: _BackendEntityT
+
+    @classmethod
+    def from_backend_entity(cls, backend_entity: _BackendEntityT) -> Self:
+        """Construct an entity from a backend entity instance
+
+        :param backend_entity: the backend entity
+
+        :return: an AiiDA entity instance
+        """
+        from aiida.orm.implementation.entities import BackendEntity
+
+        type_check(backend_entity, BackendEntity)
+        entity = cls.__new__(cls)
+        entity._backend_entity = backend_entity
+        entity.finalize()
+        return entity
+
+    @super_check
+    def initialize(self) -> None:
+        """Initialize instance attributes.
+
+        This will be called after the constructor is called or an entity is created from an existing backend entity.
+        """
+
+    def finalize(self) -> None:
+        """Finalize the entity after initialization.
+
+        This calls the internal :py:meth:`_initialize` hook, which subclasses can implement to perform
+        post-construction logic (e.g., instance register initialization, validation, etc.).
+        """
         call_with_super_check(self.initialize)
 
     def __eq__(self, other: t.Any) -> bool:
@@ -294,13 +322,6 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
         """
         return cls._CLS_COLLECTION.get_cached(cls, backend)
 
-    @super_check
-    def initialize(self) -> None:
-        """Initialize instance attributes.
-
-        This will be called after the constructor is called or an entity is created from an existing backend entity.
-        """
-
     def store(self) -> Self:
         """Store the entity."""
         self._backend_entity.store()
@@ -339,19 +360,3 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
             exclude_unset=exclude_unset,
             exclude_none=exclude_none,
         )
-
-
-def from_backend_entity(cls: type[_EntityT], backend_entity: BackendEntity) -> _EntityT:
-    """Construct an entity from a backend entity instance
-
-    :param backend_entity: the backend entity
-
-    :return: an AiiDA entity instance
-    """
-    from aiida.orm.implementation.entities import BackendEntity
-
-    type_check(backend_entity, BackendEntity)
-    entity = cls.__new__(cls)
-    entity._backend_entity = backend_entity
-    call_with_super_check(entity.initialize)
-    return entity

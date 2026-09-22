@@ -22,11 +22,13 @@ import pydantic as pdt
 from typing_extensions import Self
 
 from aiida.common.constants import elements
-from aiida.common.exceptions import UnsupportedSpeciesError
+from aiida.common.exceptions import UnsupportedSpeciesError, ValidationError
+from aiida.common.lang import type_check
 from aiida.orm import qb_fields
 from aiida.orm.decorators import attribute
 from aiida.orm.models.modeling import ModelAdapter
 from aiida.orm.nodes.data.data import Data
+from aiida.orm.utils.node import reject_attributes
 
 __all__ = ('Kind', 'Site', 'StructureData')
 
@@ -36,7 +38,7 @@ _MASS_THRESHOLD = 1.0e-3
 # Threshold to check if the sum is one or not
 _SUM_THRESHOLD = 1.0e-6
 # Default cell
-_DEFAULT_CELL = ((0, 0, 0), (0, 0, 0), (0, 0, 0))
+_DEFAULT_CELL = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
@@ -1232,6 +1234,7 @@ class StructureData(Data):
     _dimensionality_label = {0: '', 1: 'length', 2: 'surface', 3: 'volume'}
 
     @classmethod
+    @reject_attributes
     def from_ase(cls, aseatoms: t.Any, **kwargs: t.Any) -> Self:
         """Construct a structure from an ASE Atoms object."""
         instance = cls(**kwargs)
@@ -1239,6 +1242,7 @@ class StructureData(Data):
         return instance
 
     @classmethod
+    @reject_attributes
     def from_pymatgen(cls, obj: t.Any, **kwargs: t.Any) -> Self:
         """Construct a structure from a pymatgen object."""
         instance = cls(**kwargs)
@@ -1246,6 +1250,7 @@ class StructureData(Data):
         return instance
 
     @classmethod
+    @reject_attributes
     def from_pymatgen_structure(cls, structure: t.Any, **kwargs: t.Any) -> Self:
         """Construct a structure from a pymatgen Structure object."""
         instance = cls(**kwargs)
@@ -1253,11 +1258,26 @@ class StructureData(Data):
         return instance
 
     @classmethod
+    @reject_attributes
     def from_pymatgen_molecule(cls, molecule: t.Any, margin: float = 5, **kwargs: t.Any) -> Self:
         """Construct a structure from a pymatgen Molecule object."""
         instance = cls(**kwargs)
         instance.set_pymatgen_molecule(molecule, margin=margin)
         return instance
+
+    def initialize(self) -> None:
+        super().initialize()
+        self._internal_kind_tags: dict[int, t.Any] | None = None
+
+        if 'cell' not in self.attributes:
+            self.cell = _DEFAULT_CELL
+
+        pbc_keys = ('pbc1', 'pbc2', 'pbc3')
+
+        if not any(key in self.attributes for key in pbc_keys):
+            self.set_pbc(True)
+        elif not all(key in self.attributes for key in pbc_keys):
+            self.set_pbc(tuple(self.attributes.get(key, False) for key in pbc_keys))
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def pbc1(self) -> bool:
@@ -1266,8 +1286,7 @@ class StructureData(Data):
 
     @pbc1.setter
     def pbc1(self, value: bool) -> None:
-        if not isinstance(value, bool):
-            raise TypeError('pbc1 must be a boolean.')
+        type_check(value, bool)
         self.base.attributes.set('pbc1', value)
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
@@ -1277,8 +1296,7 @@ class StructureData(Data):
 
     @pbc2.setter
     def pbc2(self, value: bool) -> None:
-        if not isinstance(value, bool):
-            raise TypeError('pbc2 must be a boolean.')
+        type_check(value, bool)
         self.base.attributes.set('pbc2', value)
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
@@ -1288,11 +1306,10 @@ class StructureData(Data):
 
     @pbc3.setter
     def pbc3(self, value: bool) -> None:
-        if not isinstance(value, bool):
-            raise TypeError('pbc3 must be a boolean.')
+        type_check(value, bool)
         self.base.attributes.set('pbc3', value)
 
-    @attribute
+    @attribute(model_field_info=pdt.fields.FieldInfo(default_factory=lambda: _DEFAULT_CELL))
     def cell(self) -> list[list[float]]:
         """The cell parameters."""
         return copy.deepcopy(self.base.attributes.get('cell'))
@@ -1363,8 +1380,7 @@ class StructureData(Data):
 
     @pbc.setter
     def pbc(self, value: bool | t.Iterable[bool]) -> None:
-        """Set the periodic boundary conditions."""
-        self.set_pbc(value)
+        raise AttributeError("cannot set 'pbc' directly; use 'set_pbc' instead")
 
     @property
     def cell_lengths(self):
@@ -1380,7 +1396,7 @@ class StructureData(Data):
 
     @cell_lengths.setter
     def cell_lengths(self, value):
-        self.set_cell_lengths(value)
+        raise AttributeError("cannot set 'cell_lengths' directly; use 'set_cell_lengths' instead")
 
     @property
     def cell_angles(self):
@@ -1422,7 +1438,7 @@ class StructureData(Data):
 
     @cell_angles.setter
     def cell_angles(self, value):
-        self.set_cell_angles(value)
+        raise AttributeError("cannot set 'cell_angles' directly; use 'set_cell_angles' instead")
 
     @property
     def is_alloy(self) -> bool:
@@ -1440,10 +1456,6 @@ class StructureData(Data):
         """
         return any(kind.has_vacancies for kind in self.kinds)
 
-    def initialize(self) -> None:
-        super().initialize()
-        self._internal_kind_tags: dict[int, t.Any] | None = None
-
     def get_dimensionality(self):
         """Return the dimensionality of the structure and its length/surface/volume.
 
@@ -1458,7 +1470,7 @@ class StructureData(Data):
         """Load the structure from a ASE object"""
         if is_ase_atoms(aseatoms):
             self.cell = aseatoms.cell
-            self.pbc = aseatoms.pbc
+            self.set_pbc(aseatoms.pbc)
             self.clear_kinds()
             for atom in aseatoms:
                 self.append_atom(ase=atom)
@@ -1494,7 +1506,7 @@ class StructureData(Data):
             max(x.coords.tolist()[2] for x in mol.sites) - min(x.coords.tolist()[2] for x in mol.sites) + 2 * margin,
         ]
         self.set_pymatgen_structure(mol.get_boxed_structure(*box))
-        self.pbc = [False, False, False]
+        self.set_pbc([False, False, False])
 
     def set_pymatgen_structure(self, struct: t.Any) -> None:
         """Load the structure from a pymatgen Structure object.
@@ -1550,7 +1562,7 @@ class StructureData(Data):
             return None
 
         self.cell = struct.lattice.matrix.tolist()
-        self.pbc = [True, True, True]
+        self.set_pbc(True)
         self.clear_kinds()
 
         for site in struct.sites:
@@ -1919,8 +1931,6 @@ class StructureData(Data):
         """Performs some standard validation tests."""
         from collections import Counter
 
-        from aiida.common.exceptions import ValidationError
-
         super()._validate()
 
         try:
@@ -2086,7 +2096,7 @@ class StructureData(Data):
             raise TypeError('The data does not contain any XYZ data')
 
         self.clear_kinds()
-        self.pbc = (False, False, False)
+        self.set_pbc((False, False, False))
 
         for sym, position in atoms:
             self.append_atom(symbols=sym, position=position)
@@ -2113,7 +2123,7 @@ class StructureData(Data):
         minimal_orthorhombic_cell_dimensions += vacuum_addition
 
         newcell = np.diag(minimal_orthorhombic_cell_dimensions)
-        self.set_cell(newcell.tolist())
+        self.cell = newcell.tolist()
         self.set_pbc(pbc)
 
         return self
@@ -2126,7 +2136,7 @@ class StructureData(Data):
         from phonopy.structure.atoms import PhonopyAtoms
 
         atoms = PhonopyAtoms(symbols=[_.kind_name for _ in self.sites])
-        atoms.set_cell(self.cell)
+        atoms.cell = self.cell
         atoms.set_positions([_.position for _ in self.sites])
 
         return atoms

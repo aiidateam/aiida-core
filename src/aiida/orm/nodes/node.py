@@ -28,7 +28,7 @@ from aiida.orm.cli.node import NodeCliCreateSpec
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import column
 from aiida.orm.decorators.attributes import attributes_column, iter_attributes
-from aiida.orm.entities import Entity, EntityCollection, from_backend_entity
+from aiida.orm.entities import Entity, EntityCollection
 from aiida.orm.extras import EntityExtras
 from aiida.orm.models.adapters import EntityPkAdapter, StrUuidAdapter
 from aiida.orm.models.node import NodeModelsNamespace
@@ -240,7 +240,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             msg = f'provided node_type `{node_type}` does not match the class node type `{self.class_node_type}`'
             raise ValueError(msg)
 
-        backend_entity = backend.nodes.create(
+        self._backend_entity = backend.nodes.create(
             label=label,
             description=description,
             node_type=self.class_node_type,
@@ -248,8 +248,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             user=user.backend_entity,
             computer=backend_computer,
         )
-
-        super().__init__(backend_entity)
 
         attributes = attributes or {}
 
@@ -265,6 +263,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             self.base.extras.set_many(extras)
 
         self._validate_and_attach_files(files, repository_metadata)
+
+        self.finalize()
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -411,8 +411,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     )
     def computer(self) -> Computer | None:
         """The computer associated with the node."""
-        if self.backend_entity.computer:
-            return from_backend_entity(Computer, self.backend_entity.computer)
+        if self._backend_entity.computer:
+            return Computer.from_backend_entity(self._backend_entity.computer)
 
         return None
 
@@ -422,7 +422,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             raise exceptions.ModificationNotAllowed('cannot set the computer on a stored node')
 
         type_check(computer, Computer, allow_none=True)
-        self.backend_entity.computer = None if computer is None else computer.backend_entity
+        self._backend_entity.computer = None if computer is None else computer.backend_entity
 
     @column(
         readonly=True,
@@ -431,7 +431,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     )
     def user(self) -> User:
         """The user associated with the node."""
-        return from_backend_entity(User, self._backend_entity.user)
+        return User.from_backend_entity(self._backend_entity.user)
 
     @cached_property
     def base(self) -> NodeBase:

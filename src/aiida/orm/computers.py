@@ -103,7 +103,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     ) -> None:
         """Construct a new computer."""
         backend = backend or get_manager().get_profile_storage()
-        backend_entity = backend.computers.create(
+        self._backend_entity = backend.computers.create(
             label=label,
             hostname=hostname,
             description=description,
@@ -111,7 +111,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             scheduler_type=scheduler_type,
             metadata=metadata,
         )
-        super().__init__(backend_entity)
+        self.finalize()
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
@@ -201,7 +201,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     def copy(self) -> Computer:
         """Return a copy of the current object to work with, not stored yet."""
-        return entities.from_backend_entity(Computer, self._backend_entity.copy())
+        return Computer.from_backend_entity(self._backend_entity.copy())
 
     def store(self) -> Computer:
         """Store the computer in the DB.

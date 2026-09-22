@@ -336,6 +336,11 @@ class CifData(SinglefileData):
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
 
+    def initialize(self) -> None:
+        super().initialize()
+        self._values: CifFile | None = None
+        self._ase: Atoms | None = None
+
     @attribute(readonly=True)
     def formulae(self) -> list[str | None] | None:
         """The formulae contained in the CIF file."""
@@ -817,11 +822,6 @@ class CifData(SinglefileData):
         )
 
         return result['structure']
-
-    def initialize(self) -> None:
-        super().initialize()
-        self._values: CifFile | None = None
-        self._ase: Atoms | None = None
 
     def _prepare_cif(self, **kwargs: t.Any) -> tuple[bytes, dict[str, t.Any]]:
         """Return CIF string of CifData object.

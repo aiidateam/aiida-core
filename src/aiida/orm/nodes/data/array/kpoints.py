@@ -165,7 +165,7 @@ class KpointsData(ArrayData):
                 return self.node_type
 
     def get_labels(self) -> list[tuple[int, str]] | None:
-        """Return the labels associated with the list of kpoints."""
+        """Return the list of (number, label) tuples associated with the kpoints."""
         if self.labels is None or self.label_numbers is None:
             return None
 

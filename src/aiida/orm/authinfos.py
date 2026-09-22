@@ -14,7 +14,7 @@ import typing as t
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
-from aiida.orm import entities, users
+from aiida.orm import entities
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import column
 from aiida.orm.models.adapters import EntityPkAdapter
@@ -68,14 +68,14 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         :param backend: the backend to use for the instance, or use the default backend if None
         """
         backend = backend or get_manager().get_profile_storage()
-        model = backend.authinfos.create(
+        self._backend_entity = backend.authinfos.create(
             computer=computer.backend_entity,
             user=user.backend_entity,
             enabled=enabled,
             auth_params=auth_params or {},
             metadata=metadata or {},
         )
-        super().__init__(model)
+        self.finalize()
 
     def __str__(self) -> str:
         if self.enabled:
@@ -110,16 +110,18 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     )
     def computer(self) -> Computer:
         """The computer associated with this instance."""
-        from aiida.orm import computers
+        from aiida.orm import Computer
 
-        return entities.from_backend_entity(computers.Computer, self._backend_entity.computer)
+        return Computer.from_backend_entity(self._backend_entity.computer)
 
     @column(
         model_adapter=EntityPkAdapter(User),
     )
     def user(self) -> User:
         """The user associated with this instance."""
-        return entities.from_backend_entity(users.User, self._backend_entity.user)
+        from aiida.orm import User
+
+        return User.from_backend_entity(self._backend_entity.user)
 
     @column
     def auth_params(self) -> dict[str, t.Any]:

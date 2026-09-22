@@ -16,7 +16,6 @@ from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.orm.decorators import attribute
-from aiida.orm.entities import from_backend_entity
 from aiida.orm.nodes.node import Node
 
 __all__ = ('Data',)
@@ -78,7 +77,7 @@ class Data(Node):
         import copy
 
         backend_clone = self.backend_entity.clone()
-        clone = from_backend_entity(self.__class__, backend_clone)
+        clone = self.__class__.from_backend_entity(backend_clone)
         clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
         clone.base.repository._clone(self.base.repository)
 

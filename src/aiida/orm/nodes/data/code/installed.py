@@ -27,7 +27,6 @@ from aiida.common.typing import FilePath
 from aiida.orm.cli import CliFieldInfo
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import attribute, column
-from aiida.orm.entities import from_backend_entity
 from aiida.orm.models.adapters import EntityPkAdapter, LabelPkAdapter, PathStrAdapter
 from aiida.orm.nodes.data.code.abstract import AbstractCode
 
@@ -54,7 +53,7 @@ class InstalledCode(AbstractCode):
         if self.backend_entity.computer is None:
             raise AttributeError('The computer is not set.')
 
-        return from_backend_entity(Computer, self.backend_entity.computer)
+        return Computer.from_backend_entity(self.backend_entity.computer)
 
     @computer.setter
     def computer(self, computer: Computer) -> None:

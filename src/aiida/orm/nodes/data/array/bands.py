@@ -238,11 +238,11 @@ class BandsData(KpointsData):
         if not isinstance(kpointsdata, KpointsData):
             raise ValueError('kpointsdata must be of the KpointsData class')
         try:
-            self.cell = kpointsdata.cell
-        except AttributeError:
+            self.set_cell(kpointsdata.cell)
+        except (AttributeError, ValueError):
             pass
         try:
-            self.pbc = kpointsdata.pbc
+            self.set_pbc(kpointsdata.pbc)
         except AttributeError:
             pass
         try:
@@ -255,9 +255,9 @@ class BandsData(KpointsData):
             the_weights = None
         self.set_kpoints(the_kpoints, weights=the_weights)
         try:
-            self.labels = kpointsdata.labels
+            self.set_labels(kpointsdata.get_labels())
         except (AttributeError, TypeError):
-            self.labels = []
+            self.set_labels([])
 
     def set_bands(self, bands, units=None, occupations=None, labels=None):
         """Set an array of band energies of dimension (nkpoints x nbands).
@@ -443,9 +443,10 @@ class BandsData(KpointsData):
             kpoints = self.get_kpoints()
         # I take advantage of the path to recognize discontinuities
         try:
-            labels = self.labels
+            labels = self.get_labels()
+            assert labels is not None
             labels_indices = [i[0] for i in labels]
-        except (AttributeError, TypeError):
+        except (AssertionError, AttributeError, TypeError):
             labels = []
             labels_indices = []
 

@@ -191,7 +191,7 @@ class TestTrajectory:
     def test_trajectory_pbc_structures(self, trajectory_data):
         """Test the `pbc` for the `TrajectoryData` using structure inputs."""
         # Test non-pbc structure with no cell
-        structure = StructureData(cell=None)
+        structure = StructureData()
         structure.set_pbc(pbc=[False, False, False])
         structure.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
 

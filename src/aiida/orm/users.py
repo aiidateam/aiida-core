@@ -81,13 +81,13 @@ class User(entities.Entity['BackendUser', UserCollection]):
         """Create a new `User`."""
         backend = backend or get_manager().get_profile_storage()
         email = self.normalize_email(email)
-        backend_entity = backend.users.create(
+        self._backend_entity = backend.users.create(
             email=email,
             first_name=first_name,
             last_name=last_name,
             institution=institution,
         )
-        super().__init__(backend_entity)
+        self.finalize()
 
     def __str__(self) -> str:
         return self.email

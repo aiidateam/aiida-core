@@ -90,12 +90,12 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         :return: a Comment object associated to the given node and user
         """
         backend = backend or get_manager().get_profile_storage()
-        model = backend.comments.create(
+        self._backend_entity = backend.comments.create(
             node=node.backend_entity,
             user=user.backend_entity,
             content=content,
         )
-        super().__init__(model)
+        self.finalize()
 
     def __str__(self) -> str:
         arguments = [self.uuid, self.node.pk, self.user.email, self.content]
@@ -136,7 +136,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         """The user associated with this comment."""
         from aiida.orm.users import User
 
-        return entities.from_backend_entity(User, self._backend_entity.user)
+        return User.from_backend_entity(self._backend_entity.user)
 
     @user.setter
     def user(self, value: User) -> None:

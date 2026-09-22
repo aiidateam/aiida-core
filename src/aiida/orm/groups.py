@@ -156,16 +156,18 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         user = t.cast(users.User, user or backend.default_user)
         type_check(user, users.User)
 
-        model = backend.groups.create(
+        self._backend_entity = backend.groups.create(
             label=label,
             user=user.backend_entity,
             description=description,
             type_string=self._type_string,
             time=time,
         )
-        super().__init__(model)
+
         if extras is not None:
             self.base.extras.set_many(extras)
+
+        self.finalize()
 
     def __repr__(self) -> str:
         return (
@@ -218,7 +220,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     )
     def user(self) -> User:
         """The user of the group."""
-        return entities.from_backend_entity(User, self._backend_entity.user)
+        return User.from_backend_entity(self._backend_entity.user)
 
     @column(
         updatable=True,

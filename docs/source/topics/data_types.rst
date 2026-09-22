@@ -1044,9 +1044,9 @@ In this case, you can also associate labels to (some of the) points, which is ve
 
 .. code-block:: ipython
 
-  In [3]: kpoints_list.labels = [[0, "G"]]
+  In [3]: kpoints_list.set_labels([[0, "G"]])
 
-  In [4]: kpoints_list.labels
+  In [4]: kpoints_list.get_labels()
   Out[4]: [(0, 'G')]
 
 .. _topics:data_types:materials:kpoints:automatic:
@@ -1191,7 +1191,7 @@ The dropdown panels below explain some expanded use cases on how to create a :py
               (6, 'X'),
               (11, 'U')]
 
-    bands_data.labels = labels
+    bands_data.set_labels(labels)
     bands_data.show_mpl() # to visualize the bands
 
   The resulting band structure will look as follows
@@ -1207,16 +1207,16 @@ The dropdown panels below explain some expanded use cases on how to create a :py
 
   .. code-block:: python
 
-      bands_data.labels = [(0, 'GAMMA'),
+      bands_data.set_labels([(0, 'GAMMA'),
                 (5, 'X'),
                 (6, 'Y'),
-                (11, 'U')]
+                (11, 'U')])
       bands_data.show_mpl()
 
-      bands_data.labels = [(0, 'GAMMA'),
+      bands_data.set_labels([(0, 'GAMMA'),
                 (5, 'X'),
                 (7, 'Y'),
-                (11, 'U')]
+                (11, 'U')])
       bands_data.show_mpl()
 
   In the first case two neighboring kpoints with ``X`` and ``Y`` labels will look like ``X|Y``, while in the second case they will be separated by a certain distance.

@@ -23,12 +23,12 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
 
     def _generate_class_instance(data_class):
         if data_class is orm.CifData:
-            instance = data_class(file=os.path.join(STATIC_DIR, 'data', 'Si.cif'))
+            instance = data_class.from_path(os.path.join(STATIC_DIR, 'data', 'Si.cif'))
             return instance
 
         if data_class is orm.UpfData:
             filename = os.path.join(STATIC_DIR, 'pseudos', 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
-            instance = data_class(file=filename)
+            instance = data_class.from_path(filename)
             return instance
 
         if data_class is orm.StructureData:
@@ -128,13 +128,14 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
                 label='test_shell_code',
                 computer=aiida_localhost,
                 filepath_executable='/bin/cat',
+                default_calc_job_plugin='core.shell',
             )
             return instance
 
         if data_class is orm.PortableCode:
             (tmp_path / 'bash').touch()
             filepath_executable = 'bash'
-            instance = data_class(
+            instance = data_class.from_directory(
                 label='test_portable_code',
                 filepath_executable=filepath_executable,
                 filepath_files=tmp_path,

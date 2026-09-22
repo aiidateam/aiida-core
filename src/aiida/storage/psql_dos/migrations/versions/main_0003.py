@@ -29,10 +29,8 @@ Create Date: 2026-09-07
 """
 
 from alembic import op
-from sqlalchemy.sql import text
 
-from aiida.storage.log import MIGRATE_LOGGER
-from aiida.storage.migrations.legacy_ssh import migrate_legacy_ssh_computers
+from aiida.storage.migrations.legacy_ssh import migrate_ssh_transports
 
 revision = 'main_0003'
 down_revision = 'main_0002'
@@ -40,23 +38,9 @@ branch_labels = None
 depends_on = None
 
 
-def rename_ssh_async_transport() -> None:
-    """Rewrite the ``transport_type`` of all ``core.ssh_async`` computers."""
-    result = op.get_bind().execute(
-        text("UPDATE db_dbcomputer SET transport_type = 'core.ssh' WHERE transport_type = 'core.ssh_async'")
-    )
-
-    if result.rowcount > 0:
-        MIGRATE_LOGGER.report(
-            f'Renamed the transport of {result.rowcount} computer(s) from `core.ssh_async` to `core.ssh`.'
-        )
-
-
 def upgrade():
     """Migrations for the upgrade."""
-    # Before the rename, which is what still tells the two kinds of computer apart.
-    migrate_legacy_ssh_computers(op.get_bind())
-    rename_ssh_async_transport()
+    migrate_ssh_transports(op.get_bind())
 
 
 def downgrade():

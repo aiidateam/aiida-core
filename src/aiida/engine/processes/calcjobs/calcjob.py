@@ -25,6 +25,7 @@ from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
+from aiida.engine.code_protocols import CodeExecutionProtocol
 from aiida.engine.processes import states as process_states
 from aiida.engine.processes.calcjobs.importer import CalcJobImporter
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
@@ -948,15 +949,15 @@ class CalcJob(Process):
         assert computer is not None
         codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
 
-        for code in codes:
-            if not code.can_run_on_computer(computer):
+        for code_node in codes:
+            if not code_node.can_run_on_computer(computer):
                 msg = (
-                    f'The selected code {code.pk} for calculation {self.node.pk} '
+                    f'The selected code {code_node.pk} for calculation {self.node.pk} '
                     f'cannot run on computer {computer.label}'
                 )
                 raise InputValidationError(msg)
 
-            code.validate_working_directory(folder)
+            code_node.validate_working_directory(folder)
 
         calc_info = self.prepare_for_submission(folder)
         calc_info.uuid = str(self.node.uuid)
@@ -1041,7 +1042,7 @@ class CalcJob(Process):
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
 
-            code = load_code(code_info.code_uuid)
+            code: CodeExecutionProtocol = load_code(code_info.code_uuid)
 
             # Here are the three values that will determine whether the code is to be run with MPI _if_ they are not
             # ``None``. If any of them are explicitly defined but are not equivalent, an exception is raised. We use the

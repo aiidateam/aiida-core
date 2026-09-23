@@ -14,7 +14,6 @@ import pathlib
 import pytest
 
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.nodes.data.code.portable import PortableCode
 
 
@@ -135,13 +134,6 @@ def test_full_label(tmp_path):
     label = 'some-label'
     code = PortableCode(label=label, filepath_executable='bash', filepath_files=tmp_path)
     assert code.full_label == label
-
-
-def test_get_execname(tmp_path):
-    """Test the deprecated :meth:`aiida.orm.nodes.data.code.portable.PortableCode.get_execname` method."""
-    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=tmp_path)
-    with pytest.warns(AiidaDeprecationWarning):
-        assert code.get_execname() == 'bash'
 
 
 def test_portablecode_extra_files(tmp_path, chdir_tmp_path):

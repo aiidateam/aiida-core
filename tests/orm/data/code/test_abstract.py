@@ -6,17 +6,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :class:`aiida.orm.nodes.data.code.abstract.AbstractCode` class."""
+"""Tests for the abstract :class:`aiida.orm.Code` base class."""
 
 import pathlib
 
 import pytest
 
-from aiida.orm.nodes.data.code.abstract import AbstractCode
+from aiida.orm.nodes.data.code.abstract import Code
+from aiida.orm.nodes.data.code.containerized import ContainerizedCode
+from aiida.orm.nodes.data.code.installed import InstalledCode
+from aiida.orm.nodes.data.code.portable import PortableCode
+from aiida.orm.nodes.data.code.shell import ShellCode
 
 
-class MockCode(AbstractCode):
-    """Implementation of :class:`aiida.orm.nodes.data.code.abstract.AbstractCode`."""
+class MockCode(Code):
+    """Implementation of :class:`aiida.orm.nodes.data.code.abstract.Code`."""
 
     def can_run_on_computer(self, computer) -> bool:
         """Return whether the code can run on a given computer."""
@@ -32,8 +36,17 @@ class MockCode(AbstractCode):
         return ''
 
 
+def test_code_base_class():
+    """Test that the concrete code plugins inherit the abstract ``Code`` base."""
+    for cls in (InstalledCode, PortableCode, ContainerizedCode, ShellCode, MockCode):
+        assert issubclass(cls, Code)
+
+    with pytest.raises(TypeError, match='abstract class'):
+        Code()  # type: ignore[abstract]
+
+
 def test_set_label():
-    """Test the :meth:`aiida.orm.nodes.data.code.abstract.AbstractCode.label` property setter."""
+    """Test the :meth:`aiida.orm.nodes.data.code.abstract.Code.label` property setter."""
     label = 'some-label'
     code = MockCode(label=label)
     assert code.label == label
@@ -46,7 +59,7 @@ def test_set_label():
 
 
 def test_with_mpi():
-    """Test the :meth:`aiida.orm.nodes.data.code.abstract.AbstractCode.with_mpi` property setter."""
+    """Test the :meth:`aiida.orm.nodes.data.code.abstract.Code.with_mpi` property setter."""
     code = MockCode()
     assert code.with_mpi is None
 

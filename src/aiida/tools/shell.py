@@ -23,7 +23,7 @@ from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine import Process, WorkChain, run_get_node
 from aiida.engine import submit as submit_process
 from aiida.orm import (
-    AbstractCode,
+    Code,
     Computer,
     Data,
     Dict,
@@ -40,7 +40,7 @@ LOGGER = AIIDA_LOGGER.getChild('tools.shell')
 
 
 def launch_shell_job(
-    command: str | AbstractCode,
+    command: str | Code,
     arguments: list[str] | str | None = None,
     nodes: t.Mapping[str, str | pathlib.Path | Data] | None = None,
     filenames: dict[str, str] | None = None,
@@ -53,9 +53,9 @@ def launch_shell_job(
 ) -> tuple[dict[str, Data], ProcessNode]:
     """Launch a :class:`~aiida.calculations.shell.ShellJob` job for the given command.
 
-    :param command: The shell command to run. Should be the relative command name, e.g., ``date``. An ``AbstractCode``
+    :param command: The shell command to run. Should be the relative command name, e.g., ``date``. A ``Code``
         instance will be automatically created for this command if it doesn't already exist. Alternatively, a pre-
-        configured ``AbstractCode`` instance can be passed directly.
+        configured ``Code`` instance can be passed directly.
     :param arguments: Optional list of command line arguments optionally containing placeholders for input nodes. The
         arguments can also be specified as a single string. In this case, it will be split into separate parameters
         using ``shlex.split``.
@@ -69,7 +69,7 @@ def launch_shell_job(
     :param submit: Boolean, if ``True`` will submit the job to the daemon instead of running in current interpreter.
     :param resolve_command: Whether to resolve the command to the absolute path of the executable. If set to ``True``,
         the ``which`` command is executed on the target computer to attempt and determine the absolute path. Otherwise,
-        the command is set as the ``filepath_executable`` attribute of the created ``AbstractCode`` instance.
+        the command is set as the ``filepath_executable`` attribute of the created ``Code`` instance.
     :param monitors: Optional dictionary of ``Dict`` nodes to be used as monitors for the job (see AiiDA
         documentation on how to define monitors).
     :raises TypeError: If the value specified for ``metadata.options.computer`` is not a ``Computer``.
@@ -104,7 +104,7 @@ def launch_shell_job(
 
 
 def prepare_shell_job_inputs(
-    command: str | AbstractCode,
+    command: str | Code,
     arguments: list[str] | str | None = None,
     nodes: t.Mapping[str, str | pathlib.Path | Data] | None = None,
     filenames: dict[str, str] | None = None,
@@ -116,9 +116,9 @@ def prepare_shell_job_inputs(
 ) -> dict[str, t.Any]:
     """Prepare inputs for the ShellJob based on the provided parameters.
 
-    :param command: The shell command to run. Should be the relative command name, e.g., ``date``. An ``AbstractCode``
+    :param command: The shell command to run. Should be the relative command name, e.g., ``date``. A ``Code``
         instance will be automatically created for this command if it doesn't already exist. Alternatively, a pre-
-        configured ``AbstractCode`` instance can be passed directly.
+        configured ``Code`` instance can be passed directly.
     :param arguments: Optional list of command line arguments optionally containing placeholders for input nodes. The
         arguments can also be specified as a single string. In this case, it will be split into separate parameters
         using ``shlex.split``.
@@ -131,7 +131,7 @@ def prepare_shell_job_inputs(
     :param metadata: Optional dictionary of metadata inputs to be passed to the ``ShellJob``.
     :param resolve_command: Whether to resolve the command to the absolute path of the executable. If set to ``True``,
         the ``which`` command is executed on the target computer to attempt and determine the absolute path. Otherwise,
-        the command is set as the ``filepath_executable`` attribute of the created ``AbstractCode`` instance.
+        the command is set as the ``filepath_executable`` attribute of the created ``Code`` instance.
     :param monitors: Optional dictionary of ``Dict`` nodes to be used as monitors for the job (see AiiDA
         documentation on how to define monitors).
     :raises TypeError: If the value specified for ``metadata.options.computer`` is not a ``Computer``.
@@ -156,7 +156,7 @@ def prepare_shell_job_inputs(
     if isinstance(command, str):
         code = prepare_code(command, computer, resolve_command)
     else:
-        lang.type_check(command, AbstractCode)
+        lang.type_check(command, Code)
         code = command
 
     if isinstance(arguments, str):
@@ -179,7 +179,7 @@ def prepare_shell_job_inputs(
     return inputs
 
 
-def prepare_code(command: str, computer: Computer | None = None, resolve_command: bool = True) -> AbstractCode:
+def prepare_code(command: str, computer: Computer | None = None, resolve_command: bool = True) -> Code:
     """Prepare a code for the given command and computer.
 
     This will automatically prepare the computer.
@@ -188,15 +188,15 @@ def prepare_code(command: str, computer: Computer | None = None, resolve_command
     :param computer: The computer on which the command should be run. If not defined the localhost will be used.
     :param resolve_command: Whether to resolve the command to the absolute path of the executable. If set to ``True``,
         the ``which`` command is executed on the target computer to attempt and determine the absolute path. Otherwise,
-        the command is set as the ``filepath_executable`` attribute of the created ``AbstractCode`` instance.
-    :return: A :class:`aiida.orm.nodes.code.abstract.AbstractCode` instance.
+        the command is set as the ``filepath_executable`` attribute of the created ``Code`` instance.
+    :return: A :class:`aiida.orm.Code` instance.
     :raises ValueError: If ``resolve_command=True`` and the code fails to determine the absolute path of the command.
     """
     computer = prepare_computer(computer)
     code_label = f'{command}@{computer.label}'
 
     try:
-        code: AbstractCode = load_code(code_label)
+        code: Code = load_code(code_label)
     except exceptions.NotExistent as exception:
         LOGGER.info('No code exists yet for `%s`, creating it now.', code_label)
 

@@ -21,7 +21,7 @@ class CodeTranslator(DataTranslator):
 
     _aiida_class = Code
     # The string name of the AiiDA class
-    _aiida_type = 'data.core.code.Code'
+    _aiida_type = 'data.code.abstract.Code'
 
     _result_type = __label__
 

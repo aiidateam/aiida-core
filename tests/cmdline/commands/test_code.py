@@ -50,9 +50,7 @@ def test_help(run_cli_command):
 def test_code_create_help(run_cli_command):
     """Test the help message of the ``verdi code create`` group.
 
-    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: the ``core.code.abstract`` entry
-    point resolves to the abstract base class ``AbstractCode`` which cannot be created through the CLI. Rendering
-    the help of the dynamic group used to crash with an ``UnsupportedSchemaError`` while building its options.
+    The abstract `Code` base is not a registered data plugin and cannot be created through the CLI.
     """
     result = run_cli_command(cmd_code.code_create, ['--help'])
     assert 'core.code.containerized' in result.output

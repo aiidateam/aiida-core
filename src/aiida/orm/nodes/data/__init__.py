@@ -36,7 +36,6 @@ from aiida.orm.nodes.data.structure import *
 from aiida.orm.nodes.data.upf import *
 
 __all__ = (
-    'AbstractCode',
     'ArrayData',
     'BandsData',
     'BaseType',

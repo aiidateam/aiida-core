@@ -139,7 +139,7 @@ def test_migrate_full_downgrade(load_config_sample, monkeypatch):
     assert downgraded['CONFIG_VERSION']['CURRENT'] == 0
 
 
-@pytest.mark.parametrize('initial, target', ((m.down_revision, m.up_revision) for m in MIGRATIONS))
+@pytest.mark.parametrize('initial, target', [(m.down_revision, m.up_revision) for m in MIGRATIONS])
 def test_migrate_individual(load_config_sample, initial, target, monkeypatch):
     """Test the individual config migrations."""
     config_initial = load_config_sample(f'input/{initial}.json')

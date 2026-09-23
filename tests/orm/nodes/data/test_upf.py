@@ -144,7 +144,7 @@ class TestUpfParser:
 
         # Filter on element and user that should not match anything
         groups = {group.label for group in orm.UpfData.get_upf_groups(filter_elements='Ba', user=user.email)}
-        assert groups == set([])
+        assert groups == set()
 
     def test_upf_version_one(self):
         """Check if parsing for regular UPF file (version 1) succeeds."""

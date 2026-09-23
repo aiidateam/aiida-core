@@ -95,7 +95,7 @@ def test_calculation_basic(
 
 @pytest.mark.parametrize(
     'stash_mode',
-    [mode for mode in StashMode],
+    list(StashMode),
 )
 def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test that the `StashCalculation` raises an error if the `code` input is not compatible with the `stash_mode`."""

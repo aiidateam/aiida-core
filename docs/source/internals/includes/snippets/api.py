@@ -20,7 +20,7 @@ class NewResource(Resource):
         result = query.first()
 
         # Results are returned as a dictionary, datetime objects are serialized as ISO 8601
-        return dict(id=result[0], ctime=result[1].isoformat(), attributes=result[2])
+        return {'id': result[0], 'ctime': result[1].isoformat(), 'attributes': result[2]}
 
 
 class NewApi(AiidaApi):

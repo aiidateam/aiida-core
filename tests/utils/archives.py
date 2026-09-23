@@ -195,7 +195,7 @@ def generate_archive_main_0002(dest_dir) -> str:
 def generate_archive_main_0003(dest_dir) -> str:
     """Natively build the ``main_0003`` reference dataset and export it.
 
-    The ``main_0003`` migration is an empty placeholder, so the reference
+    The ``main_0003`` migration only rewrites legacy ``Code`` nodes, so the reference
     data is unchanged from ``main_0001``. Once a revision changes the
     schema, give it its own builder instead of delegating here.
 

@@ -187,6 +187,23 @@ A monitor that has seen enough says so by returning :class:`~aiida.engine.proces
 The monitor then ends with exit status 411, every task waiting on it is skipped, and the graph finishes with whatever else it had to do.
 The reason is the exit message on the monitor's node, which is where someone reading the graph afterwards finds why that part of it did not run.
 
+What a monitor found while looking is passed on by declaring ``outputs`` and answering with :class:`~aiida.engine.processes.graphs.monitors.Met`, so a task after it reads what it saw:
+
+.. code-block:: python
+
+    @monitor(outputs=['path'])
+    def data_arrives(directory: str) -> Met | bool:
+        found = next(Path(directory).glob('*.nc'), None)
+
+        return Met(path=str(found)) if found else False
+
+    @graph
+    def read_what_arrives(directory):
+        arrived = data_arrives(directory=directory, interval=5)
+        return {'size': size_of(path=arrived.path).size}
+
+A monitor is looked at over and over because what it watches changes, so it is never taken from the cache.
+
 .. warning::
 
     A monitor waits resident, holding one of the process slots a worker has.

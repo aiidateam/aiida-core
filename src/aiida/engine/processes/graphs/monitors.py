@@ -22,13 +22,13 @@ from aiida.engine.processes.graphs.process import TaskProcess
 from aiida.engine.processes.graphs.run import STOPPED
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.states import Wait
-from aiida.orm import Float, Int, WorkflowNode, WorkFunctionNode, load_node
+from aiida.orm import CalcFunctionNode, Float, Int, WorkflowNode, load_node
 from aiida.orm.nodes.data.base import to_aiida_type
 
 if t.TYPE_CHECKING:
     from aiida.orm import Data
 
-__all__ = ('MonitorProcess', 'Stop', 'WaitProcess')
+__all__ = ('Met', 'MonitorProcess', 'Stop', 'WaitProcess')
 
 INTERVAL = 'interval'
 """How long to wait between one look and the next."""
@@ -56,6 +56,27 @@ class Stop:
     message: str
 
 
+@dataclasses.dataclass(frozen=True, init=False)
+class Met:
+    """What a monitor returns to say that the condition is met and what it found while looking.
+
+    A monitor that declares outputs answers with this, since what it found is what the tasks after it read:
+
+    >>> @monitor(outputs=['path'])
+    >>> def data_arrives(directory: str) -> Met | bool:
+    >>>     found = next(Path(directory).glob('*.nc'), None)
+    >>>
+    >>>     return Met(path=str(found)) if found else False
+
+    A monitor that declares no outputs says the same thing by returning ``True``.
+    """
+
+    outputs: dict[str, t.Any]
+
+    def __init__(self, **outputs: t.Any) -> None:
+        object.__setattr__(self, 'outputs', outputs)
+
+
 class MonitorProcess(TaskProcess):
     """Look at a condition until it holds, so that what waits on it goes on only then.
 
@@ -67,7 +88,7 @@ class MonitorProcess(TaskProcess):
     needs a free slot to be produced holds the slot that would produce it, and only the timeout ends that.
     """
 
-    _node_class = WorkFunctionNode
+    _node_class = CalcFunctionNode
 
     @classmethod
     def define(cls, spec: t.Any) -> None:
@@ -100,6 +121,10 @@ class MonitorProcess(TaskProcess):
     @override
     async def run(self) -> ExitCode | None:
         """Look at the condition until it holds, or until there is no time left to look again."""
+        # What a monitor answers is about the world outside the database, so the answer it gave once is no
+        # answer to the same question asked again.
+        self.node.base.caching.is_valid_cache = False
+
         if self.node.exit_status is not None:
             return ExitCode(self.node.exit_status, self.node.exit_message)
 
@@ -108,6 +133,7 @@ class MonitorProcess(TaskProcess):
         interval, timeout = self.inputs[INTERVAL].value, self.inputs[TIMEOUT].value
         args, kwargs = self._function_arguments()
         deadline = time.monotonic() + timeout
+        declared = sorted(self.spec().outputs)
 
         while True:
             answer = await run_with_portal(self._func, *args, **kwargs)
@@ -116,7 +142,19 @@ class MonitorProcess(TaskProcess):
                 self.report(f'nothing more to wait for: {answer.message}')
                 return self.exit_codes.STOPPED.format(message=answer.message)
 
-            if answer:
+            if isinstance(answer, Met) or answer:
+                found = answer.outputs if isinstance(answer, Met) else {}
+
+                if sorted(found) != declared:
+                    msg = (
+                        f'`{self.process_class.__name__}` declares the outputs {declared}, and the condition was '
+                        f'met with {sorted(found)}. Answer with `Met(...)`, giving every output it declares.'
+                    )
+                    raise ValueError(msg)
+
+                if found:
+                    self._out_result(found)
+
                 return ExitCode()
 
             if time.monotonic() + interval > deadline:

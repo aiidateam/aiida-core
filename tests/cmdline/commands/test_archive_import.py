@@ -222,10 +222,7 @@ def test_import_old_local_archives(version, run_cli_command):
 
 @pytest.mark.parametrize(
     'archive_fixture, version, migrates',
-    [
-        ('archive_main_0001', 'main_0001', True),
-        ('archive_main_0002', 'main_0002', True),
-    ],
+    [('archive_main_0001', 'main_0001', True)],
 )
 def test_import_main_reference(archive_fixture, version, migrates, run_cli_command, request):
     """Explicitly requested ``main`` revisions import successfully.

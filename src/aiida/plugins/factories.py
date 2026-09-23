@@ -36,12 +36,12 @@ if t.TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from aiida.brokers import Broker
+    from aiida.common.datastructures import Orbital
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.orm.implementation import StorageBackend
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
-    from aiida.tools.data.orbital import Orbital
     from aiida.tools.dbimporters import DbImporter
     from aiida.transports import Transport
 
@@ -293,12 +293,12 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> EntryPoint | typ
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
-    :return: sub class of :py:class:`~aiida.tools.data.orbital.orbital.Orbital`
+    :return: sub class of :py:class:`~aiida.common.datastructures.Orbital`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
-    from aiida.tools.data.orbital import Orbital
+    from aiida.common.datastructures import Orbital
 
     entry_point_group = 'aiida.tools.data.orbitals'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)

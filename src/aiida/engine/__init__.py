@@ -82,6 +82,7 @@ __all__ = (
     'Runner',
     'Start',
     'Step',
+    'Stop',
     'Subgraph',
     'SubgraphTask',
     'TaskHandle',

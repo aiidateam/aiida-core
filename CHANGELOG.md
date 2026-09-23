@@ -99,6 +99,7 @@ So a workflow can be read and checked before anything starts, and the same decla
 
 Fan-out, branching, loops and nested graphs are written the same way, with `each`, `branch`, `loop` and `subgraph`.
 A task says how to recover from a failure with `handlers=`, waits on something outside the graph with `monitor`, and a finished graph runs again from one of its tasks with `rerun_from`.
+A monitor that returns `Stop` ends the waiting and skips what waited on it, leaving the rest of the graph to carry on.
 
 A parameter annotated with a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model names a namespace of ports, one per field, and a returned one says which output each field is:
 

@@ -106,8 +106,9 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
         assert text in message_list
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_info(monkeypatch):
-    """Test the ``get_info`` method."""
+    """Test the ``get_info`` method with no nodes from previous tests."""
     from aiida import orm
 
     storage_backend = get_manager().get_profile_storage()

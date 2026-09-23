@@ -1468,6 +1468,7 @@ class AnyValue:
         return True
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestNodeDeletion:
     def _check_existence(self, uuids_check_existence, uuids_check_deleted):
         """I get 2 lists of uuids

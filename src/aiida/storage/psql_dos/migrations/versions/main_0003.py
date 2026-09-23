@@ -5,10 +5,14 @@
 # The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Prepare the storage schema for AiiDA v3.0.0.
+"""Prepare the storage schema for main_0003.
 
-Rename the ``core.ssh_async`` transport plugin to ``core.ssh``. The legacy paramiko-based
-``core.ssh`` transport plugin was removed in v3.0, and the asynchronous plugin (formerly
+Migration steps:
+
+1. :func:`~aiida.storage.migrations.legacy_ssh.migrate_ssh_transports`: migrate SSH computers to the
+   asynchronous ``core.ssh`` transport plugin.
+
+The legacy paramiko-based ``core.ssh`` transport plugin was removed in v3.0, and the asynchronous plugin (formerly
 ``core.ssh_async``) took over its entry point name. Consequently:
 
 * computers configured with ``core.ssh_async`` have their ``transport_type`` rewritten to

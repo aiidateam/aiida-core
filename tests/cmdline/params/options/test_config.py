@@ -9,6 +9,7 @@
 """Unit tests for the :class:`aiida.cmdline.params.options.config.ConfigOption`."""
 
 import functools
+import io
 import textwrap
 
 import click
@@ -55,6 +56,22 @@ def test_config_handle_closed_on_callback_error(contents, error, tmp_path):
         )
 
     assert handle.closed
+
+
+def test_config_url_closed_on_callback_error(monkeypatch):
+    """Register URL responses for the same Click context cleanup as local files."""
+    response = io.BytesIO(b'unknown: 1')
+    monkeypatch.setattr('aiida.cmdline.params.types.path.convert_possible_url', lambda value, timeout: response)
+    context = click.Context(cmd)
+    param = next(param for param in cmd.params if param.name == 'config')
+    handle = param.type.convert('https://example.invalid/config.yml', param, context)
+
+    with pytest.raises(click.BadParameter):
+        configuration_callback(
+            None, '--config', 'config', None, yaml_config_file_provider, False, context, param, handle
+        )
+
+    assert response.closed
 
 
 def test_config_handle_left_open_for_saved_callback(tmp_path):

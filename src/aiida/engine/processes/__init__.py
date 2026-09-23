@@ -79,6 +79,7 @@ __all__ = (
     'Region',
     'Start',
     'Step',
+    'Stop',
     'Subgraph',
     'SubgraphTask',
     'TaskHandle',

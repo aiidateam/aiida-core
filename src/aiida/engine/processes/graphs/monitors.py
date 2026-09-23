@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import functools
 import time
 import typing as t
@@ -18,6 +19,7 @@ import typing as t
 from aiida.common.lang import override
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.process import TaskProcess
+from aiida.engine.processes.graphs.run import STOPPED
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.states import Wait
 from aiida.orm import Float, Int, WorkflowNode, WorkFunctionNode, load_node
@@ -26,13 +28,32 @@ from aiida.orm.nodes.data.base import to_aiida_type
 if t.TYPE_CHECKING:
     from aiida.orm import Data
 
-__all__ = ('MonitorProcess', 'WaitProcess')
+__all__ = ('MonitorProcess', 'Stop', 'WaitProcess')
 
 INTERVAL = 'interval'
 """How long to wait between one look and the next."""
 
 TIMEOUT = 'timeout'
 """How long to keep looking before giving up."""
+
+
+@dataclasses.dataclass(frozen=True)
+class Stop:
+    """What a monitor returns to say that the thing it waits for is not going to happen.
+
+    A monitor answers whether the condition is met, and answering no means looking again. This is the third
+    answer, given by a monitor that has seen enough: what waits on it is skipped, the graph goes on with
+    whatever else it has to do, and the message says why this part of it did not.
+
+    >>> @monitor
+    >>> def data_arrives(path: str) -> bool | Stop:
+    >>>     if Path(path).with_suffix('.failed').exists():
+    >>>         return Stop('the run that produces it gave up')
+    >>>
+    >>>     return Path(path).exists()
+    """
+
+    message: str
 
 
 class MonitorProcess(TaskProcess):
@@ -70,6 +91,11 @@ class MonitorProcess(TaskProcess):
             'ERROR_TIMED_OUT',
             message='Waited {timeout} seconds for the condition to be met, and it was not.',
         )
+        spec.exit_code(
+            STOPPED,
+            'STOPPED',
+            message='{message}',
+        )
 
     @override
     async def run(self) -> ExitCode | None:
@@ -84,7 +110,13 @@ class MonitorProcess(TaskProcess):
         deadline = time.monotonic() + timeout
 
         while True:
-            if await run_with_portal(self._func, *args, **kwargs):
+            answer = await run_with_portal(self._func, *args, **kwargs)
+
+            if isinstance(answer, Stop):
+                self.report(f'nothing more to wait for: {answer.message}')
+                return self.exit_codes.STOPPED.format(message=answer.message)
+
+            if answer:
                 return ExitCode()
 
             if time.monotonic() + interval > deadline:

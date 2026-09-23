@@ -20,6 +20,7 @@ from __future__ import annotations
 import functools
 import os
 import typing as t
+from contextlib import ExitStack
 
 import click
 
@@ -72,23 +73,31 @@ def configuration_callback(
         param.default = default_value
         value = value or default_value
 
-    if value:
-        try:
-            config = provider(value, cmd_name)
-        except Exception as exception:
-            raise click.BadOptionUsage(option_name, f'Error reading configuration file: {exception}', ctx)
+    # Click closes registered resources after a successful parse, but not when a callback fails during parsing.
+    with ExitStack() as cleanup:
+        cleanup.callback(ctx.close)
 
-        valid_params = [param.name for param in ctx.command.params if param.name != option_name]
-        specified_params = list(config.keys())
-        unknown_params = set(specified_params).difference(set(valid_params))
+        if value:
+            try:
+                config = provider(value, cmd_name)
+            except Exception as exception:
+                raise click.BadOptionUsage(
+                    option_name, f'Error reading configuration file: {exception}', ctx
+                ) from exception
 
-        if unknown_params:
-            msg = f'Invalid configuration file, the following keys are not supported: {unknown_params}'
-            raise click.BadParameter(msg, ctx, param)
+            valid_params = [param.name for param in ctx.command.params if param.name != option_name]
+            specified_params = list(config.keys())
+            unknown_params = set(specified_params).difference(set(valid_params))
 
-        ctx.default_map.update(config)
+            if unknown_params:
+                msg = f'Invalid configuration file, the following keys are not supported: {unknown_params}'
+                raise click.BadParameter(msg, ctx, param)
 
-    return saved_callback(ctx, param, value) if saved_callback else value
+            ctx.default_map.update(config)
+
+        result = saved_callback(ctx, param, value) if saved_callback else value
+        cleanup.pop_all()  # Let Click close its context after a successful parse.
+        return result
 
 
 def configuration_option(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC], FC]:

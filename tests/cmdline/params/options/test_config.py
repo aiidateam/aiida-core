@@ -15,6 +15,7 @@ import click
 import pytest
 
 from aiida.cmdline.params.options import CONFIG_FILE
+from aiida.cmdline.params.options.config import configuration_callback, yaml_config_file_provider
 
 
 @pytest.fixture
@@ -31,6 +32,50 @@ def cmd(integer, boolean):
     """Test command for :class:`aiida.cmdline.params.options.config.ConfigOption`."""
     click.echo(f'Integer: {integer}')
     click.echo(f'Boolean: {boolean}')
+
+
+@pytest.mark.parametrize(
+    'contents, error',
+    [
+        ('unknown: 1', click.BadParameter),
+        ('invalid: [', click.BadOptionUsage),
+    ],
+)
+def test_config_handle_closed_on_callback_error(contents, error, tmp_path):
+    """Release the Click-owned config handle when reading or validating it fails."""
+    path = tmp_path / 'config.yml'
+    path.write_text(contents)
+    context = click.Context(cmd)
+    param = next(param for param in cmd.params if param.name == 'config')
+    handle = param.type.convert(str(path), param, context)
+
+    with pytest.raises(error):
+        configuration_callback(
+            None, '--config', 'config', None, yaml_config_file_provider, False, context, param, handle
+        )
+
+    assert handle.closed
+
+
+def test_config_handle_left_open_for_saved_callback(tmp_path):
+    """Click still owns the handle after a successful config callback."""
+    path = tmp_path / 'config.yml'
+    path.write_text('integer: 1')
+    context = click.Context(cmd)
+    param = next(param for param in cmd.params if param.name == 'config')
+    handle = param.type.convert(str(path), param, context)
+
+    def saved_callback(ctx, option, value):
+        assert not value.closed
+        return value
+
+    result = configuration_callback(
+        None, '--config', 'config', saved_callback, yaml_config_file_provider, False, context, param, handle
+    )
+    assert result is handle
+    assert not handle.closed
+    context.close()
+    assert handle.closed
 
 
 def test_valid(run_cli_command, tmp_path):
@@ -50,13 +95,8 @@ def test_valid(run_cli_command, tmp_path):
     assert 'Boolean: False' in result.output_lines[1]
 
 
-@pytest.mark.filterwarnings('ignore')
 def test_invalid_unknown_keys(run_cli_command, tmp_path):
-    """Test the option for an invalid configuration file containing unknown keys.
-
-    The test emits a ``ResourceWarning`` because the config file is not closed since the command errors, but this is
-    just a side-effect of how the test is run and doesn't apply to the real CLI command invocation.
-    """
+    """Test the option for a configuration file containing unknown keys."""
     filepath = tmp_path / 'config.yml'
     filepath.write_text(
         textwrap.dedent(

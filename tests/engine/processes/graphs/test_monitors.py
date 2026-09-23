@@ -14,7 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from aiida.engine import WaitProcess, graph, monitor, run_get_node, submit, task, tasks, wait_for
+from aiida.engine import Met, WaitProcess, graph, monitor, run_get_node, submit, task, tasks, wait_for
+from aiida.manage.caching import enable_caching
 
 
 @monitor
@@ -35,6 +36,26 @@ def never(path) -> bool:
 @task(outputs=['looks'])
 def count_marks(path) -> dict:
     return {'looks': len(Path(path).read_text())}
+
+
+@monitor(outputs=['looks'])
+def marks_at_least_three(path) -> Met | bool:
+    """Say yes on the third look, and hand on how many looks it took."""
+    marks = Path(path)
+    marks.write_text(f'{marks.read_text()}x' if marks.exists() else 'x')
+    seen = len(marks.read_text())
+
+    return Met(looks=seen) if seen >= 3 else False
+
+
+@monitor(outputs=['looks'])
+def says_yes_without_the_looks(path) -> bool:
+    return True
+
+
+@task(outputs=['doubled'])
+def double(looks) -> dict:
+    return {'doubled': looks * 2}
 
 
 def test_a_monitor_holds_back_what_waits_for_it(tmp_path):
@@ -78,6 +99,45 @@ def test_a_monitor_is_a_task_of_the_graph(tmp_path):
     assert sorted(ran) == ['count_marks', 'looked_at_three_times']
     assert ran['looked_at_three_times'].pk < ran['count_marks'].pk
     assert ran['looked_at_three_times'].is_finished_ok
+
+
+def test_a_monitor_hands_on_what_it_found(tmp_path):
+    """A monitor that declares outputs is depended on for its values, the way any other task is."""
+    marks = tmp_path / 'marks'
+
+    @graph
+    def double_the_looks(path):
+        settled = marks_at_least_three(path=path, interval=0.01)
+        return {'doubled': double(looks=settled.looks).doubled}
+
+    results, node = run_get_node(double_the_looks, path=str(marks))
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['doubled'] == 6
+
+
+def test_a_monitor_that_declares_outputs_has_to_give_them(tmp_path):
+    """Saying yes without them would finish the monitor and leave what waits with nothing to read."""
+    with pytest.raises(ValueError, match=r"declares the outputs \['looks'\]"):
+        run_get_node(says_yes_without_the_looks, path=str(tmp_path), interval=0.01)
+
+
+def test_a_monitor_looks_again_where_a_task_would_be_taken_from_the_cache(tmp_path):
+    """What it answers is about the world outside the database, so an answer it gave once is not reused."""
+    marks = tmp_path / 'marks'
+
+    with enable_caching():
+        run_get_node(marks_at_least_three, path=str(marks), interval=0.01)
+        _, second = run_get_node(marks_at_least_three, path=str(marks), interval=0.01)
+
+    assert second.base.caching.get_cache_source() is None
+    assert marks.read_text() == 'xxxx', 'the second run looked, so it left a fourth mark'
+
+
+def test_how_a_monitor_answers_declares_no_ports():
+    """The return annotation of a monitor says how it answers, so the ports come from `outputs` alone."""
+    assert list(looked_at_three_times.task_spec.outputs) == []
+    assert list(marks_at_least_three.task_spec.outputs) == ['looks']
 
 
 def test_what_a_monitor_waits_between_looks_is_an_input(tmp_path):

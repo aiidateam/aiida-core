@@ -1406,7 +1406,12 @@ def task(
     return decorator
 
 
-def monitor(function: t.Callable[P, t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
+def monitor(
+    function: t.Callable[P, t.Any] | None = None,
+    *,
+    outputs: t.Sequence[str] | type | None = None,
+    identifier: str | None = None,
+) -> t.Any:
     """Declare a function a condition a graph waits for.
 
     The function returns whether the condition is met, and is called again every ``interval`` seconds until it
@@ -1434,13 +1439,29 @@ def monitor(function: t.Callable[P, t.Any] | None = None, *, identifier: str | N
     hearing about. A process finishing is not one of those: the engine is told, so waiting for one is an
     ordinary dependency where a graph runs it, and what is left is a condition outside AiiDA altogether.
 
+    A monitor that has seen enough returns :class:`~aiida.engine.processes.graphs.monitors.Stop` with the
+    reason, which skips what waits on it and leaves the rest of the graph to carry on.
+
+    What a monitor found while looking is passed on by declaring ``outputs`` and answering with
+    :class:`~aiida.engine.processes.graphs.monitors.Met`, so a task after it reads what it saw:
+
+    >>> @monitor(outputs=['path'])
+    >>> def data_arrives(directory: str) -> Met | bool:
+    >>>     found = next(Path(directory).glob('*.nc'), None)
+    >>>
+    >>>     return Met(path=str(found)) if found else False
+
+    The return annotation of a monitor says how it answers, so it declares no ports; only ``outputs`` does.
+
     :param function: The function to decorate, which returns whether the condition is met.
+    :param outputs: Names of the output ports to declare, or a structured container whose fields name them.
     :param identifier: Name of the task, which defaults to the name of the function.
     :return: The decorated function, carrying its ``task_spec``, as :func:`task` returns one.
     """
 
     def decorator(function: t.Callable[P, t.Any]) -> t.Any:
-        decorated = process_function(node_class=WorkFunctionNode, base_class=MonitorProcess)(function)
+        declared = () if outputs is None else outputs
+        decorated = process_function(node_class=CalcFunctionNode, base_class=MonitorProcess, outputs=declared)(function)
         decorated.process_class.spec()  # type: ignore[attr-defined]
 
         spec = TaskSpec.from_process(decorated, identifier=identifier)

@@ -29,7 +29,15 @@ from aiida.engine.processes.graphs.spec import (
 from aiida.orm import Dict, List, Node, ProcessNode, load_node
 from aiida.orm.nodes.data.base import BaseType
 
-__all__ = ('GraphRun', 'Orchestrated', 'Start', 'Step', 'TaskNodes', 'rerun_from', 'tasks')
+__all__ = ('STOPPED', 'GraphRun', 'Orchestrated', 'Start', 'Step', 'TaskNodes', 'rerun_from', 'tasks')
+
+STOPPED = 411
+"""Exit status a task ends with to say that what waits on it will not happen.
+
+A task that fails stops the graph around it, since something went wrong. A task that stops has decided:
+the tasks after it are skipped, the way the arm of a branch that was not taken is, and the rest of the
+graph carries on. A monitor that has seen enough ends this way.
+"""
 
 
 def holds(condition: t.Any) -> bool:
@@ -353,15 +361,28 @@ class GraphRun:
         }
 
     @property
+    def stopped(self) -> set[str]:
+        """Return the tasks that ended by saying that what waits on them will not happen.
+
+        This is a decision rather than a failure, so the graph goes on and what waits is skipped. See
+        :data:`STOPPED`.
+        """
+        return {
+            name
+            for name in self.finished
+            if all(load_node(self.done[instance]).exit_status == STOPPED for instance in self.instances[name])
+        }
+
+    @property
     def failed(self) -> list[str]:
         """Return the tasks that finished without success, in the order in which they were declared."""
-        finished, succeeded = self.finished, self.succeeded
-        return [task.name for task in self.graph.tasks if task.name in finished and task.name not in succeeded]
+        finished, done = self.finished, self.succeeded | self.stopped
+        return [task.name for task in self.graph.tasks if task.name in finished and task.name not in done]
 
     @property
     def settled(self) -> set[str]:
         """Return the tasks the ones after them can be decided on: those that succeeded, and those that will not run."""
-        return self.succeeded | self.skipped
+        return self.succeeded | self.skipped | self.stopped
 
     @property
     def decided(self) -> set[str]:
@@ -461,8 +482,8 @@ class GraphRun:
         )
 
     def _begin(self, name: str, step: Step) -> None:
-        """Begin one task, unless something it takes an input from never ran, leaving it nothing to run on."""
-        missing = sorted(self.graph.predecessors(name) & self.skipped)
+        """Begin one task, unless what it waits on never ran or ended by saying it never will."""
+        missing = sorted(self.graph.predecessors(name) & (self.skipped | self.stopped))
 
         if missing:
             step.note(f'task `{name}` will not run, since `{missing[0]}` did not')

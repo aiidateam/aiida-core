@@ -173,6 +173,20 @@ A :func:`~aiida.engine.processes.graphs.build.monitor` is a task whose function 
 
 ``after`` is what orders a task against one it takes no value from, which is how anything waits for a monitor.
 
+A monitor that has seen enough says so by returning :class:`~aiida.engine.processes.graphs.monitors.Stop` with the reason:
+
+.. code-block:: python
+
+    @monitor
+    def file_is_there(path: str) -> bool | Stop:
+        if Path(path).with_suffix('.failed').exists():
+            return Stop('the run that produces it gave up')
+
+        return Path(path).exists()
+
+The monitor then ends with exit status 411, every task waiting on it is skipped, and the graph finishes with whatever else it had to do.
+The reason is the exit message on the monitor's node, which is where someone reading the graph afterwards finds why that part of it did not run.
+
 .. warning::
 
     A monitor waits resident, holding one of the process slots a worker has.

@@ -141,4 +141,7 @@ class FileOrUrl(click.File):
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
-            return convert_possible_url(value, self.timeout_seconds)
+            handle = convert_possible_url(value, self.timeout_seconds)
+            if ctx is not None:
+                ctx.call_on_close(handle.close)
+            return handle

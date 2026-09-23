@@ -125,7 +125,7 @@ There is no ``return`` statement in ``define``: the ``define`` method directly m
 
         .. code-block:: python
 
-            spec.input('code', valid_type=orm.AbstractCode, help='The `Code` to use for this job.')
+            spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
 
 .. admonition:: Further reading
 
@@ -649,7 +649,7 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
 .. |RemoteData| replace:: :py:class:`~aiida.orm.RemoteData`
 .. |Dict| replace:: :py:class:`~aiida.orm.nodes.data.dict.Dict`
-.. |Code| replace:: :py:class:`~aiida.orm.nodes.data.code.abstract.AbstractCode`
+.. |Code| replace:: :py:class:`~aiida.orm.Code`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`
 .. |parse| replace:: :py:class:`~aiida.parsers.parser.Parser.parse`
 .. |folder| replace:: :py:class:`~aiida.common.folders.Folder`

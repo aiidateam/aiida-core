@@ -5,11 +5,13 @@
 # The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Add the settings table and rename the ``core.ssh_async`` transport plugin to ``core.ssh``.
+"""Prepare the storage schema for main_0003.
 
-The initial SQLite migration was based on the archive schema, which does not
-contain the settings table. The ``sqlite_dos`` backend, however, requires it
-for the repository UUID.
+Migration steps:
+
+1. :func:`add_settings_table`: backfill the settings table.
+2. :func:`~aiida.storage.migrations.legacy_ssh.migrate_ssh_transports`: migrate SSH computers to the
+   asynchronous ``core.ssh`` transport plugin.
 
 See the ``main_0003`` revision of the ``psql_dos`` backend for the rationale of the transport
 rename, which likewise has no inverse: the downgrade only restores the schema revision.
@@ -32,7 +34,12 @@ depends_on = None
 
 
 def add_settings_table() -> None:
-    """Create the settings table, unless the database was initialised with it already."""
+    """Backfill the settings table if absent.
+
+    The initial SQLite migration was based on the archive schema, which does not contain the settings table.
+    The ``sqlite_dos`` backend, however, requires it for the repository UUID. Fresh profiles created before
+    this migration therefore miss the table, while other databases already have it.
+    """
     if sa.inspect(op.get_bind()).has_table('db_dbsetting'):
         return
 

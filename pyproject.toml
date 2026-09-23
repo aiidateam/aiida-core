@@ -230,7 +230,7 @@ atomic_tools = [
   'pymatgen>=2024.3.1',
   'pymysql~=0.9.3',
   'seekpath~=1.9,>=1.9.3',
-  'spglib>=1.14,<3.0'
+  'spglib~=2.0'
 ]
 bpython = [
   'bpython~=0.20'

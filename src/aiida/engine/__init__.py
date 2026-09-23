@@ -62,6 +62,7 @@ __all__ = (
     'MapTask',
     'MappedOutput',
     'MappedOutputs',
+    'Met',
     'MonitorProcess',
     'ObjectLoader',
     'Orchestrated',

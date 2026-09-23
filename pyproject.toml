@@ -224,7 +224,7 @@ requires-python = '>=3.10'
 
 [project.optional-dependencies]
 atomic_tools = [
-  'PyCifRW~=4.4',
+  'PyCifRW~=5.0',
   'ase~=3.21',
   'matplotlib~=3.3,>=3.3.4',
   'pymatgen>=2024.3.1',

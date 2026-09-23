@@ -21,12 +21,14 @@ class OrmModel(AiiDABaseModel):
 
     _AIIDA_MINIMAL_MODEL: type[OrmModel] | None = None
 
-    model_config = pdt.ConfigDict(
-        extra='forbid',
-        json_encoders={
-            datetime.datetime: lambda dt: dt.isoformat().replace('Z', '+00:00'),
-        },
-    )
+    model_config = pdt.ConfigDict(extra='forbid')
+
+    @pdt.field_serializer('*', mode='wrap', when_used='json', check_fields=False)
+    def _serialize_json_field(self, value: t.Any, handler: pdt.SerializerFunctionWrapHandler) -> t.Any:
+        """Preserve the ISO representation of datetimes in ORM JSON models."""
+        if isinstance(value, datetime.datetime):
+            return value.isoformat().replace('Z', '+00:00')
+        return handler(value)
 
     def _to_orm_field_values(self) -> dict[str, t.Any]:
         """Return the field values for ORM instantiation."""

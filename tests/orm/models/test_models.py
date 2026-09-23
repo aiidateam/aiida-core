@@ -49,6 +49,18 @@ entities_to_test = tuple(orm_class for orm_class in orm_to_test if not issubclas
 nodes_to_test = tuple(orm_class for orm_class in orm_to_test if issubclass(orm_class, orm.Node))
 
 
+def test_orm_model_datetime_json_serialization():
+    """Datetime fields retain the ISO offset while other fields use Pydantic serialization."""
+
+    class Model(OrmModel):
+        time: datetime.datetime
+        count: int
+
+    model = Model(time=datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc), count=2)
+    assert model.model_dump(mode='json') == {'time': '2020-01-01T00:00:00+00:00', 'count': 2}
+    assert model.model_dump_json() == '{"time":"2020-01-01T00:00:00+00:00","count":2}'
+
+
 class DummyEnum(enum.Enum):
     """Dummy enum for testing."""
 

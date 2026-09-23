@@ -485,7 +485,7 @@ Defining a pre-configured code
 ==============================
 
 The first argument, ``command``, of ``launch_shell_job`` takes the name of the command to be run as a string.
-Under the hood, this is automatically converted into an :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode`.
+Under the hood, this is automatically converted into an :class:`~aiida.orm.Code`.
 The ``command`` argument also accepts a pre-configured code instance directly:
 
 .. code-block:: python

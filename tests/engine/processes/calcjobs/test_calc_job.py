@@ -131,9 +131,9 @@ class MultiCodesCalcJob(CalcJob):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('code_info_with_mpi_none', valid_type=orm.AbstractCode, required=False)
-        spec.input('code_info_with_mpi_true', valid_type=orm.AbstractCode, required=False)
-        spec.input('code_info_with_mpi_false', valid_type=orm.AbstractCode, required=False)
+        spec.input('code_info_with_mpi_none', valid_type=orm.Code, required=False)
+        spec.input('code_info_with_mpi_true', valid_type=orm.Code, required=False)
+        spec.input('code_info_with_mpi_false', valid_type=orm.Code, required=False)
         spec.input('parallel_run', valid_type=orm.Bool, default=lambda: orm.Bool(True))
 
     def prepare_for_submission(self, folder):
@@ -202,7 +202,7 @@ def test_multi_codes_with_mpi(
     """Test the functionality that controls whether the calculation is to be run with MPI.
 
     The value specified by the ``metadata.options.withmpi`` input is the default. This value can be overidden by either
-    the plugin (through the ``CodeInfo.withmpi`` attribute) or the code input (through the ``AbstractCode.with_mpi``
+    the plugin (through the ``CodeInfo.withmpi`` attribute) or the code input (through the ``Code.with_mpi``
     property). If both of these are explicitly defined, i.e. are not ``None``, they have to be equivalent or an
     exception is raised. The parametrization represents the matrix of all possible combinations. If the final value for
     ``with_mpi`` is ``True`` we can check that this is correctly propagated by checking the length of the

@@ -266,7 +266,7 @@ class CalcJob(Process):
         spec.inputs.validator = validate_calc_job  # type: ignore[assignment]  # takes only PortNamespace not Port
         spec.input(
             'code',
-            valid_type=orm.AbstractCode,
+            valid_type=orm.Code,
             required=False,
             help='The `Code` to use for this job. This input is required, unless the `remote_folder` input is '
             'specified, which means an existing job is being imported and no code will actually be run.',
@@ -937,7 +937,7 @@ class CalcJob(Process):
         from aiida.common.datastructures import CodeInfo, CodeRunMode, JobTemplate, JobTemplateCodeInfo
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import AbstractCode, Computer, load_code
+        from aiida.orm import Code, Computer, load_code
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
@@ -946,7 +946,7 @@ class CalcJob(Process):
 
         computer = self.node.computer
         assert computer is not None
-        codes = [_ for _ in inputs.all_nodes() if isinstance(_, AbstractCode)]
+        codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
 
         for code in codes:
             if not code.can_run_on_computer(computer):

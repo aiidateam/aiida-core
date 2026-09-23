@@ -29,8 +29,7 @@ from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.common.typing import FilePath
 from aiida.orm import Computer
-from aiida.orm.nodes.data.code.abstract import AbstractCode
-from aiida.orm.nodes.data.code.legacy import Code
+from aiida.orm.nodes.data.code.abstract import Code
 from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('PortableCode',)
@@ -40,11 +39,9 @@ _LOGGER = logging.getLogger(__name__)
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
-    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
-    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class CommonFields(AbstractCode.CommonFields):
+    class CommonFields(Code.CommonFields):
         filepath_executable: str = OrmMetadataField(
             title='Filepath executable',
             description='Relative filepath of executable with directory of code files',
@@ -53,9 +50,9 @@ class PortableCode(Code):
             orm_to_model=lambda node: str(t.cast(PortableCode, node).filepath_executable),
         )
 
-    class AttributesModel(CommonFields, AbstractCode.AttributesModel): ...
+    class AttributesModel(CommonFields, Code.AttributesModel): ...
 
-    class ConstructorArgsModel(CommonFields, AbstractCode.ConstructorArgsModel):
+    class ConstructorArgsModel(CommonFields, Code.ConstructorArgsModel):
         filepath_files: str = OrmMetadataField(
             title='Code directory',
             description='Filepath to directory containing code files',
@@ -122,7 +119,7 @@ class PortableCode(Code):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
+        super()._validate()
 
         try:
             filepath_executable = self.filepath_executable
@@ -162,7 +159,7 @@ class PortableCode(Code):
         This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
         calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
         for the calculation to create the input files for the working directory. This method can be overridden by
-        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
+        implementations of the ``Code`` class that need to validate the contents of that folder.
 
         :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
             working directory for the corresponding calculation job instance.

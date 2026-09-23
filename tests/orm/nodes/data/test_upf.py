@@ -74,7 +74,7 @@ class TestUpfParser:
     """Tests UPF version / element_name parser function."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, tmp_path):
+    def init_profile(self, tmp_path, aiida_profile_clean):
         """Initialize the profile."""
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         self.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')

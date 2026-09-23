@@ -18,6 +18,7 @@ from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.graph.deletions import delete_nodes
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestGroups:
     """Test backend entities and their collections"""
 

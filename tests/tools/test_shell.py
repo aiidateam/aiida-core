@@ -19,7 +19,7 @@ import pytest
 from aiida.calculations.shell import ShellJob
 from aiida.engine import WorkChain, run_get_node, workfunction
 from aiida.orm import (
-    AbstractCode,
+    Code,
     Computer,
     Float,
     InstalledCode,
@@ -95,14 +95,14 @@ def test_default():
 def test_command(aiida_code_installed):
     """Test the ``command`` argument accepts a pre-configured code instance."""
     code = aiida_code_installed(filepath_executable='/bin/true', default_calc_job_plugin='core.shell')
-    assert isinstance(code, AbstractCode)
+    assert isinstance(code, Code)
 
     _, node = launch_shell_job(code)
     assert node.is_finished_ok
 
 
 def test_command_invalid():
-    """Test the ``command`` argument raises a ``TypeError`` if anything but a ``str`` or ``AbstractCode`` is passed."""
+    """Test the ``command`` argument raises a ``TypeError`` if anything but a ``str`` or ``Code`` is passed."""
     with pytest.raises(TypeError, match=r'Got object of type .*, expecting .*'):
         launch_shell_job(None)
 

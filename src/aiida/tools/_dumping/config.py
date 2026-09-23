@@ -65,7 +65,7 @@ def _validate_computers_input(value: list[orm.Computer] | list[str] | None) -> l
 
 
 def _validate_codes_input(value: list[orm.Code] | list[str] | None) -> list[orm.Code] | None:
-    """Load Code objects from identifiers."""
+    """Load code objects from identifiers."""
     if not value:
         return None
 
@@ -177,7 +177,7 @@ class EntityFilterMixin(BaseModel):
     computers: list[orm.Computer] | None = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: list[orm.Code] | None = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
+    codes: list[orm.Code] | None = Field(default=None, description='List of code objects or UUIDs/labels to filter by')
 
     @field_validator('user', mode='before')
     @classmethod

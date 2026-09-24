@@ -370,6 +370,15 @@ class GraphTask(abc.ABC):
     def produces(self, port: str) -> bool:
         """Return whether this task produces an output under the given name."""
 
+    @property
+    @abc.abstractmethod
+    def has_outputs(self) -> bool:
+        """Return whether this task produces anything at all.
+
+        A task that produces nothing is run for what it does, so nothing taking its outputs says nothing about
+        whether it is wired into the graph correctly.
+        """
+
     def takes_namespace(self, port: str) -> bool:
         """Return whether the name stands for an input namespace, which takes everything under it at once."""
         return False
@@ -421,6 +430,10 @@ class ProcessTask(GraphTask):
 
     def accepts(self, port: str) -> bool:
         return has_port(self.spec.inputs, port)
+
+    @property
+    def has_outputs(self) -> bool:
+        return bool(self.spec.outputs)
 
     def produces(self, port: str) -> bool:
         return has_port(self.spec.outputs, port)
@@ -476,6 +489,10 @@ class BodyTask(GraphTask):
 
     body: GraphSpec
     """The graph to run."""
+
+    @property
+    def has_outputs(self) -> bool:
+        return bool(self.body.outputs)
 
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'body': self.body.to_dict()}
@@ -728,6 +745,21 @@ class GraphSpec:
     def predecessors(self, name: str) -> set[str]:
         """Return the names of the tasks the given one waits for, whether it takes a value from them or not."""
         return {edge.source for edge in self.dependencies if edge.target == name}
+
+    @property
+    def unread(self) -> tuple[str, ...]:
+        """Return the tasks that produce something nothing looks at, in the order they were declared.
+
+        Such a task runs, since it was declared, and runs beside whatever was meant to wait for it, which is
+        what a forgotten ``after`` or a forgotten wiring of an output looks like from here.
+
+        A task that produces nothing is left out: it is run for what it does.
+        """
+        waited_on = {edge.source for edge in self.dependencies}
+        returned = {source.task for source in self.outputs.values() if source.task is not None}
+        read = waited_on | returned
+
+        return tuple(task.name for task in self.tasks if task.has_outputs and task.name not in read)
 
     def ready(self, done: t.Container[str], dispatched: t.Container[str]) -> list[str]:
         """Return the tasks whose predecessors have all finished and that have not been dispatched yet.

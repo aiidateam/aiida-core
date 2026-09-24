@@ -1123,3 +1123,86 @@ def test_a_task_is_handed_the_plain_values():
 
     assert node.is_finished_ok, node.exit_message
     assert results['kind'] == 'int and str'
+
+
+@task(outputs=['total'])
+def adds(x, y) -> int:
+    return x + y
+
+
+@task(outputs=['product'])
+def multiplies(x, y) -> int:
+    return x * y
+
+
+@task
+def notes(what: str) -> None:
+    """Stand for a task run for what it does, which produces nothing."""
+
+
+def test_a_task_nothing_takes_from_is_reported_where_it_is_written():
+    """Forgetting to wire a task leaves it running beside what was meant to wait for it."""
+    with pytest.warns(UserWarning, match=r'task `adds` produces outputs that nothing in this graph takes'):
+
+        @graph
+        def forgot(x, y):
+            adds(x=x, y=y)
+
+            return {'product': multiplies(x=3, y=4).product}
+
+        forgot.build()
+
+
+def test_ordering_a_task_counts_as_taking_from_it(recwarn):
+    """`after` is how a task is waited for without taking a value, so it is wired in."""
+
+    @graph
+    def ordered(x, y):
+        first = adds(x=x, y=y)
+
+        return {'product': multiplies(x=3, y=4).after(first).product}
+
+    ordered.build()
+
+    assert [str(warning.message) for warning in recwarn] == []
+
+
+def test_a_task_that_produces_nothing_is_not_reported(recwarn):
+    """It is run for what it does, so nothing taking its outputs says nothing about how it is wired."""
+
+    @graph
+    def writes_a_note(x, y):
+        notes(what='done')
+
+        return {'total': adds(x=x, y=y).total}
+
+    writes_a_note.build()
+
+    assert [str(warning.message) for warning in recwarn] == []
+
+
+def test_a_task_the_graph_returns_is_not_reported(recwarn):
+    """Returning an output is the other way a task is read."""
+
+    @graph
+    def returns_both(x, y):
+        return {'total': adds(x=x, y=y).total, 'product': multiplies(x=x, y=y).product}
+
+    returns_both.build()
+
+    assert [str(warning.message) for warning in recwarn] == []
+
+
+def test_what_is_unread_is_asked_of_the_declaration():
+    """The check is a question the graph answers, so something reading a stored one can ask it too."""
+
+    @graph
+    def forgot(x, y):
+        adds(x=x, y=y)
+
+        return {'product': multiplies(x=3, y=4).product}
+
+    with pytest.warns(UserWarning):
+        built = forgot.build()
+
+    assert built.unread == ('adds',)

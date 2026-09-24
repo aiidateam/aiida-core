@@ -43,7 +43,7 @@ class Code(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
     _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
-    _KEY_EXTRA_IS_HIDDEN: str = 'hidden'
+    _KEY_EXTRA_IS_HIDDEN: str = 'is_hidden'
 
     class BaseNodeModel(Data.BaseNodeModel):
         label: str = OrmMetadataField(

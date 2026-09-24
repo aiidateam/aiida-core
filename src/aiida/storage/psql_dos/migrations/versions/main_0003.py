@@ -12,6 +12,7 @@ Migration steps:
 1. :func:`~aiida.storage.migrations.legacy_ssh.migrate_ssh_transports`: migrate SSH computers to the
    asynchronous ``core.ssh`` transport plugin.
 2. :func:`_migrate_legacy_codes`: migrate the deprecated ``Code`` data plugin.
+3. :func:`_migrate_code_hidden_extra`: rename the visibility extra on built-in Code nodes.
 
 The legacy paramiko-based ``core.ssh`` transport plugin was removed in v3.0, and the asynchronous plugin (formerly
 ``core.ssh_async``) took over its entry point name. Consequently:
@@ -115,11 +116,22 @@ def _migrate_legacy_codes(conn):
         conn.execute(text(statement))
 
 
+def _migrate_code_hidden_extra(conn):
+    """Rename the visibility extra on all built-in code types."""
+    conn.execute(
+        text(
+            "UPDATE db_dbnode SET extras = (extras - 'hidden') || jsonb_build_object('is_hidden', extras -> 'hidden') "
+            "WHERE node_type LIKE 'data.core.code.%' AND extras ? 'hidden'"
+        )
+    )
+
+
 def upgrade():
     """Migrations for the upgrade."""
     conn = op.get_bind()
     migrate_ssh_transports(conn)
     _migrate_legacy_codes(conn)
+    _migrate_code_hidden_extra(conn)
 
 
 def downgrade():

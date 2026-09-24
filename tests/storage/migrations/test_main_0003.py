@@ -8,8 +8,26 @@
 ###########################################################################
 """Tests shared by profile storage backends for ``main_0003``."""
 
+import pytest
+from sqlalchemy import create_engine, text
+
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
+from aiida.storage.migrations.legacy_code import check_sqlite_executables
+
+
+def test_missing_legacy_executable_is_rejected():
+    """Do not silently turn legacy codes without a recoverable executable into broken modern codes."""
+    engine = create_engine('sqlite:///:memory:')
+    with engine.begin() as conn:
+        conn.execute(text('CREATE TABLE db_dbnode (node_type TEXT, attributes TEXT)'))
+        conn.execute(
+            text('INSERT INTO db_dbnode VALUES (:node_type, :attributes)'),
+            {'node_type': 'data.core.code.Code.', 'attributes': '{"is_local": true}'},
+        )
+        with pytest.raises(ValueError, match='without an executable path'):
+            check_sqlite_executables(conn)
+    engine.dispose()
 
 
 def test_migrate_legacy_code(migration_profile):
@@ -66,7 +84,7 @@ def test_migrate_legacy_code(migration_profile):
                 description='',
                 node_type='data.core.code.Code.',
                 repository_metadata={},
-                attributes={'is_local': True, 'filepath_executable': 'existing.sh'},
+                attributes={'is_local': True, 'local_executable': '', 'filepath_executable': 'existing.sh'},
                 extras={},
             )
             installed = node_model(

@@ -21,8 +21,8 @@ SQLITE_MISSING_EXECUTABLE = f"""
     WHERE node_type = '{LEGACY_NODE_TYPE}'
       AND COALESCE(
           CASE WHEN COALESCE(json_extract(attributes, '$.is_local'), 0) = 1
-               THEN json_extract(attributes, '$.local_executable')
-               ELSE json_extract(attributes, '$.remote_exec_path') END,
+               THEN NULLIF(json_extract(attributes, '$.local_executable'), '')
+               ELSE NULLIF(json_extract(attributes, '$.remote_exec_path'), '') END,
           json_extract(attributes, '$.filepath_executable'), ''
       ) = '';
 """
@@ -51,7 +51,8 @@ SQLITE_UPGRADE_STATEMENTS = (
         attributes = json_set(
             json_remove(attributes, '$.is_local', '$.local_executable', '$.remote_exec_path'),
             '$.filepath_executable', COALESCE(
-                json_extract(attributes, '$.remote_exec_path'), json_extract(attributes, '$.filepath_executable')
+                NULLIF(json_extract(attributes, '$.remote_exec_path'), ''),
+                json_extract(attributes, '$.filepath_executable')
             )
         ),
         extras = json_remove(extras, '$._aiida_hash')
@@ -64,7 +65,8 @@ SQLITE_UPGRADE_STATEMENTS = (
         attributes = json_set(
             json_remove(attributes, '$.is_local', '$.local_executable', '$.remote_exec_path'),
             '$.filepath_executable', COALESCE(
-                json_extract(attributes, '$.local_executable'), json_extract(attributes, '$.filepath_executable')
+                NULLIF(json_extract(attributes, '$.local_executable'), ''),
+                json_extract(attributes, '$.filepath_executable')
             )
         ),
         extras = json_remove(extras, '$._aiida_hash')

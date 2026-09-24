@@ -55,7 +55,8 @@ UPGRADE_STATEMENTS = (
     SET node_type = '{INSTALLED_NODE_TYPE}',
         attributes = (attributes - 'is_local' - 'local_executable' - 'remote_exec_path')
             || jsonb_build_object('filepath_executable',
-                COALESCE(NULLIF(attributes -> 'remote_exec_path', 'null'::jsonb), attributes -> 'filepath_executable')),
+                COALESCE(NULLIF(NULLIF(attributes -> 'remote_exec_path', 'null'::jsonb), '""'::jsonb),
+                    attributes -> 'filepath_executable')),
         extras = extras - '_aiida_hash'
     WHERE node_type = '{LEGACY_NODE_TYPE}'
       AND COALESCE((attributes ->> 'is_local')::boolean, false) IS FALSE;
@@ -65,7 +66,8 @@ UPGRADE_STATEMENTS = (
     SET node_type = '{PORTABLE_NODE_TYPE}',
         attributes = (attributes - 'is_local' - 'local_executable' - 'remote_exec_path')
             || jsonb_build_object('filepath_executable',
-                COALESCE(NULLIF(attributes -> 'local_executable', 'null'::jsonb), attributes -> 'filepath_executable')),
+                COALESCE(NULLIF(NULLIF(attributes -> 'local_executable', 'null'::jsonb), '""'::jsonb),
+                    attributes -> 'filepath_executable')),
         extras = extras - '_aiida_hash'
     WHERE node_type = '{LEGACY_NODE_TYPE}'
       AND COALESCE((attributes ->> 'is_local')::boolean, false) IS TRUE;
@@ -104,7 +106,8 @@ def _migrate_legacy_codes(conn):
         text(
             f"SELECT count(*) FROM db_dbnode WHERE node_type = '{LEGACY_NODE_TYPE}' AND "
             "COALESCE(CASE WHEN COALESCE((attributes ->> 'is_local')::boolean, false) "
-            "THEN attributes ->> 'local_executable' ELSE attributes ->> 'remote_exec_path' END, "
+            "THEN NULLIF(attributes ->> 'local_executable', '') "
+            "ELSE NULLIF(attributes ->> 'remote_exec_path', '') END, "
             "attributes ->> 'filepath_executable', '') = ''"
         )
     ).scalar()

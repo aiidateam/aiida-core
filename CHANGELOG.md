@@ -30,6 +30,15 @@ Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in rep
 
 ### New features
 
+#### Processes defined in a notebook cell
+
+A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter notebook, or in any script run as `__main__`, can now be submitted to the daemon.
+Such a class belongs to a module that resolves to something different in every interpreter, so the worker used to fail with `ImportError: object 'MyWorkChain' from identifier '__main__:MyWorkChain' could not be loaded`.
+The checkpoint now carries the class itself whenever the recorded name would not resolve for the worker, which also covers a class importable here but absent from the `sys.path` the daemon froze at startup.
+
+`Parser.process_class` returns the class whose outputs are being parsed, which the running `CalcJob` supplies while it runs.
+A parser built from a stored node falls back to `ProcessNode.process_class`, so exit codes and the output specification of a `CalcJob` defined in a notebook resolve during parsing.
+
 #### `ShellJob`: run any command without writing a plugin
 
 The `aiida-shell` package has been integrated into `aiida-core`.

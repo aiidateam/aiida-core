@@ -357,8 +357,11 @@ For example, when we want to run an instance of the :py:class:`~aiida.calculatio
 
 The function will submit the calculation to the daemon and immediately return control to the interpreter, returning the node that is used to represent the process in the provenance graph.
 
-.. warning::
-    For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
+.. note::
+    A process class the daemon cannot import, such as one defined in a Jupyter notebook cell or in a script run as ``__main__``, travels to the worker with its checkpoint, together with the modules it needs and the worker lacks.
+    Those modules are worked out from the import paths the daemon recorded when it started, so a daemon started from a different environment carries the class but not them: such a process still runs where its class needs only installed packages, and otherwise fails in the worker with an error naming the cause.
+    ``verdi daemon restart`` from the environment you submit from is what fixes that, and ``verdi status`` reports the mismatch.
+    Giving the class an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` of the daemon workers is what makes it resolvable anywhere, and stays the right choice for a plugin.
 
 .. versionadded:: 2.5
     Waiting on a process

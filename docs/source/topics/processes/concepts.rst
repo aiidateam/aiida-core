@@ -152,7 +152,11 @@ When a process is 'submitted', an instance of the ``Process`` is created, along 
 This is called a 'process checkpoint', more information on which :ref:`will follow later<topics:processes:concepts:checkpoints>`.
 Subsequently, the process instance is shut down and a 'continuation task' is sent to the process queue of RabbitMQ.
 This task is simply a small message that just contains an identifier for the process.
-In order to reconstruct the process from a `checkpoint`, the process needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
+In order to reconstruct the process from a `checkpoint`, the daemon worker has to get the process class back.
+It does so from the name the checkpoint recorded, which resolves where the class has an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or where :ref:`its module path<how-to:faq:process-not-importable-daemon>` is on the ``PYTHONPATH`` of the daemon workers.
+Where neither reaches it, as for a class defined in a notebook cell, the class is pickled with `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and written to a ``checkpoint_classes`` directory beside the ``container`` of the profile's storage, and the checkpoint records the SHA-256 digest of those bytes in place of the name.
+The modules the class needs and the worker lacks are carried alongside it, worked out from the import paths the daemon recorded when it started.
+A daemon started from a different environment carries the class but not those modules, so such a process still runs where its class needs only installed packages, and otherwise fails in the worker with an error naming the cause.
 
 All the daemon runners, when they are launched, subscribe to the process queue and RabbitMQ will distribute the continuation tasks to them as they come in, making sure that each task is only sent to one runner at a time.
 The receiving daemon runner can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.

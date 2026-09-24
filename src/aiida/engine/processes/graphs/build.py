@@ -14,6 +14,7 @@ import contextvars
 import functools
 import inspect
 import typing as t
+import warnings
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from inspect import get_annotations
@@ -674,13 +675,23 @@ class GraphBuilder:
         # graph then takes as an input of its own, and the inputs have to be read after that has happened.
         outputs = self._declared_outputs(returned)
 
-        return GraphSpec(
+        graph = GraphSpec(
             tasks=tuple(self._tasks),
             dependencies=tuple(self._dependencies),
             inputs={name: tuple(targets) for name, targets in self._inputs.items()},
             outputs=outputs,
             identifier=identifier,
         )
+
+        for name in graph.unread:
+            message = (
+                f'task `{name}` produces outputs that nothing in this graph takes, so it runs beside the tasks '
+                f'that were meant to follow it. Take one of its outputs, return it from the graph, or order '
+                f'what should wait for it with `.after({name})`.'
+            )
+            warnings.warn(message, UserWarning, stacklevel=3)
+
+        return graph
 
     def _declared_outputs(self, returned: t.Any) -> dict[str, Endpoint]:
         """Return the outputs of the graph, from what its function returned."""

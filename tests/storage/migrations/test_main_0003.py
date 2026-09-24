@@ -79,7 +79,7 @@ def test_migrate_legacy_code(migration_profile):
                 node_type='data.core.code.installed.InstalledCode.',
                 repository_metadata={},
                 attributes={'filepath_executable': '/usr/bin/bash'},
-                extras={'_aiida_hash': 'hash'},
+                extras={'_aiida_hash': 'hash', 'hidden': False},
             )
             session.add_all((remote, local, local_with_filepath, installed))
             session.commit()
@@ -104,7 +104,8 @@ def test_migrate_legacy_code(migration_profile):
                 'prepend_text': 'module load add',
                 'append_text': '',
             }
-            assert remote.extras == {'hidden': True}
+            assert remote.extras == {'is_hidden': True}
+            assert remote.extras['is_hidden'] is True
 
             local = session.query(node_model).filter(node_model.id == local_id).one()
             assert local.node_type == 'data.core.code.portable.PortableCode.'
@@ -118,7 +119,8 @@ def test_migrate_legacy_code(migration_profile):
             installed = session.query(node_model).filter(node_model.id == installed_id).one()
             assert installed.node_type == 'data.core.code.installed.InstalledCode.'
             assert installed.attributes == {'filepath_executable': '/usr/bin/bash'}
-            assert installed.extras == {'_aiida_hash': 'hash'}
+            assert installed.extras == {'_aiida_hash': 'hash', 'is_hidden': False}
+            assert installed.extras['is_hidden'] is False
 
         # Downgrade only restores the schema revision; it cannot reconstruct the original legacy codes.
         migrator.migrate_down('main@main_0002')

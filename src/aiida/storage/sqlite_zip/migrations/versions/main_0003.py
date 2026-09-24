@@ -12,6 +12,7 @@ Migration steps:
 
 1. Rename the ``core.ssh_async`` transport plugin to ``core.ssh``.
 2. Migrate the deprecated ``Code`` data plugin to modern code plugins.
+3. Rename the visibility extra on built-in Code nodes.
 
 Bring archives in line with the profile database ``main_0003``, so that a computer exported from a
 profile that used ``core.ssh_async`` can be imported into a v3 profile. Archives carry no client
@@ -35,7 +36,11 @@ Create Date: 2026-09-07
 from alembic import op
 from sqlalchemy.sql import text
 
-from aiida.storage.migrations.legacy_code import SQLITE_UPGRADE_STATEMENTS, check_sqlite_executables
+from aiida.storage.migrations.legacy_code import (
+    SQLITE_HIDDEN_UPGRADE_STATEMENT,
+    SQLITE_UPGRADE_STATEMENTS,
+    check_sqlite_executables,
+)
 
 revision = 'main_0003'
 down_revision = 'main_0002'
@@ -51,6 +56,7 @@ def upgrade():
     check_sqlite_executables(conn)
     for statement in SQLITE_UPGRADE_STATEMENTS:
         conn.execute(text(statement))
+    conn.execute(text(SQLITE_HIDDEN_UPGRADE_STATEMENT))
 
 
 def downgrade():

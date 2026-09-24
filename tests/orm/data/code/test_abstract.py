@@ -79,3 +79,6 @@ def test_constructor_defaults():
     assert code.prepend_text == ''
     assert code.use_double_quotes is False
     assert code.is_hidden is False
+    code.is_hidden = True
+    assert code.base.extras.get('is_hidden') is True
+    assert 'hidden' not in code.base.extras.all

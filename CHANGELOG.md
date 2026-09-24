@@ -44,6 +44,9 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 ### New features
 
+`Parser.process_class` returns the class whose outputs are being parsed, which the running `CalcJob` supplies while it runs.
+A parser built from a stored node falls back to `ProcessNode.process_class`, so exit codes and the output specification of a `CalcJob` defined in a notebook resolve during parsing.
+
 #### `ShellJob`: run any command without writing a plugin
 
 The `aiida-shell` package has been integrated into `aiida-core`.

@@ -491,6 +491,25 @@ class TestProcess:
         assert node.process_label == custom_process_label
 
 
+def test_the_running_process_binds_its_class_on_its_node():
+    """The process holds its own class, where the node carries only the name it was recorded under.
+
+    A class the name reaches nothing for is the case this is for, a notebook definition among them: the parser reads
+    the output specification off the node, and resolving the name there would raise.
+    """
+
+    class LocallyDefinedProcess(test_processes.DummyProcess):
+        """Defined inside a function, so nothing in its module is bound to the name recorded for it."""
+
+    _, node = run_get_node(LocallyDefinedProcess)
+
+    assert node.process_class is LocallyDefinedProcess
+
+    with pytest.raises(ValueError, match='could not load process class'):
+        # A node loaded fresh has no process to bind anything, so `_bind_node` is the only route to the class.
+        _ = orm.load_node(node.pk).process_class
+
+
 class TestValidateDynamicNamespaceProcess(Process):
     """Simple process with dynamic input namespace."""
 

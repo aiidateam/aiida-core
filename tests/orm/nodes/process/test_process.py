@@ -183,3 +183,21 @@ class TestProcessNodeDump:
 
             assert result_path.exists()
             assert (result_path / 'aiida_node_metadata.yaml').exists()
+
+
+def test_process_class_returns_the_bound_class():
+    """``process_type`` is a name, and the running process binds the class that name stands for.
+
+    Binding is the only route to a class defined in a notebook cell, whose ``__main__`` is a different module in
+    every other interpreter.
+    """
+    node = WorkflowNode(process_type='aiida.workflows:core.arithmetic.multiply_add')
+    bound = CalculationFactory('core.templatereplacer')
+
+    assert node.process_class is not bound, (
+        'the name resolves elsewhere, so the binding this test makes is what is observed'
+    )
+
+    node._bind_process_class(process_class=bound)
+
+    assert node.process_class is bound

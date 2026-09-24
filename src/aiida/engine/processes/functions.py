@@ -283,6 +283,23 @@ class FunctionProcess(Process):
     _var_positional: str | None = None
     _var_keyword: str | None = None
 
+    _binds_process_class: t.ClassVar[bool] = False
+    """The object the recorded name stands for is not one this process holds.
+
+    ``build_process_type`` reads ``__module__`` and ``__name__``, which :meth:`build` copies off the function, so the
+    name on the node resolves to the decorated function in its module. ``_func`` is the undecorated one, and binding
+    it would change what every reader of ``ProcessNode.process_class`` gets while the process runs.
+    """
+
+    @classmethod
+    @override
+    def _source_to_record(cls) -> t.Any:
+        """Return the wrapped function, whose source is what a reader of the node has to see.
+
+        :meth:`build` generates the class, so it has no source of its own, and its name is the function's.
+        """
+        return cls._func
+
     @staticmethod
     def _func(*_args, **_kwargs) -> dict:
         """This is used internally to store the actual function that is being

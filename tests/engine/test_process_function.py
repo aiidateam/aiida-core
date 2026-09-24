@@ -491,6 +491,13 @@ def test_function_return_nested():
     assert node.outputs.nested.output == DEFAULT_INT
 
 
+def test_node_process_class_is_the_function():
+    """`process_class` resolves to the decorated function while class binding remains disabled."""
+    _, node = function_return_input.run_get_node(data=orm.Int(DEFAULT_INT))
+
+    assert node.process_class is function_return_input
+
+
 def test_simple_workflow():
     """Test construction of simple workflow by chaining process functions."""
 

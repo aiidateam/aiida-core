@@ -162,6 +162,12 @@ class ProcessNode(Sealable, Node):
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
     METADATA_INPUTS_KEY: str = 'metadata_inputs'
+    _process_class_binding: type[Process] | None = None
+    """The class of the process running now, bound by that process, for as long as this instance lives.
+
+    ``process_type`` is a name, and one recorded for a class defined in a notebook cell or a script resolves to
+    nothing in any other interpreter. The running process holds the class itself, so it binds it here.
+    """
 
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
@@ -279,11 +285,18 @@ class ProcessNode(Sealable, Node):
     def process_class(self) -> type[Process]:
         """Return the process class that was used to create this node.
 
+        While the process runs, this is the class it bound on this instance, which is the only route to a class
+        defined in a notebook cell or a script: ``process_type`` records a name that resolves to nothing elsewhere.
+        Every other reader gets the class that name resolves to.
+
         :return: `Process` class
         :raises ValueError: if no process type is defined, it is an invalid process type string or cannot be resolved
             to load the corresponding class
         """
         from aiida.plugins.entry_point import load_entry_point_from_string
+
+        if self._process_class_binding is not None:
+            return self._process_class_binding
 
         if not self.process_type:
             msg = f'no process type for Node<{self.pk}>: cannot recreate process class'
@@ -316,6 +329,13 @@ class ProcessNode(Sealable, Node):
                 raise ValueError(msg) from exception
 
         return process_class
+
+    def _bind_process_class(self, *, process_class: type[Process]) -> None:
+        """Bind the running process's class to this node instance.
+
+        :param process_class: The running process instance's class.
+        """
+        self._process_class_binding = process_class
 
     def set_process_type(self, process_type_string: str) -> None:
         """Set the process type string.

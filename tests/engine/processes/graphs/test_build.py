@@ -996,9 +996,9 @@ def test_calling_a_graph_is_refused():
         add_twice(1, 2)
 
 
-def test_a_graph_can_be_submitted():
+def test_a_graph_can_be_submitted(submit_and_await):
     """A graph is handed to the launchers like any other process."""
-    node = submit(add_twice, x=1, y=2)
+    node = submit_and_await(submit(add_twice, x=1, y=2), timeout=60)
 
     assert isinstance(node, orm.GraphNode)
 

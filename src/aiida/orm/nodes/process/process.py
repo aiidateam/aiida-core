@@ -604,7 +604,7 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
     @property
-    def record(self) -> dict[str, Any]:
+    def record(self) -> dict[str, t.Any]:
         """Return what this process has already done outside the database.
 
         A step that has to be safe to run again writes down what it did before it did it, and reads that back
@@ -618,7 +618,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.base.attributes.get(self.RECORD_KEY, {})
 
-    def set_record(self, **entries: Any) -> None:
+    def set_record(self, **entries: t.Any) -> None:
         """Note what has been done outside the database, next to whatever was noted before.
 
         :param entries: what to record, which is merged into what is already there.

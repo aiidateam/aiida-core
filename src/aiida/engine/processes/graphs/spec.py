@@ -172,7 +172,8 @@ class ExecutorReference:
         name = getattr(process, '__name__', None)
 
         if module is None or name is None:
-            raise ValueError(f'`{process}` cannot be referenced because it has no module and name.')
+            msg = f'`{process}` cannot be referenced because it has no module and name.'
+            raise ValueError(msg)
 
         return cls(module=module, name=name)
 
@@ -670,7 +671,8 @@ class GraphSpec:
         for task in self.tasks:
             if task.name == name:
                 return task
-        raise KeyError(f'no task named `{name}` in this graph.')
+        msg = f'no task named `{name}` in this graph.'
+        raise KeyError(msg)
 
     def serializer_for_input(self, name: str) -> t.Callable[[t.Any], t.Any]:
         """Return what stores a value given for one of the graph's own inputs.
@@ -749,7 +751,8 @@ class GraphSpec:
         duplicates = {name for name in names if names.count(name) > 1}
 
         if duplicates:
-            raise ValueError(f'task names have to be unique, got more than one of {sorted(duplicates)}.')
+            msg = f'task names have to be unique, got more than one of {sorted(duplicates)}.'
+            raise ValueError(msg)
 
         for edge in self.dependencies:
             referrer = f'dependency {edge}'
@@ -776,7 +779,8 @@ class GraphSpec:
         for output, source in self.outputs.items():
             if source.task is None:
                 if source.port not in self.inputs:
-                    raise ValueError(f'output `{output}` passes on `{source.port}`, which is not an input.')
+                    msg = f'output `{output}` passes on `{source.port}`, which is not an input.'
+                    raise ValueError(msg)
 
                 continue
 
@@ -784,9 +788,8 @@ class GraphSpec:
 
         for task in self.tasks:
             if isinstance(task, MapTask) and not task.accepts(task.item_port):
-                raise ValueError(
-                    f'`{task.name}` maps over `{task.item_port}`, which is not an input of `{task.spec.identifier}`.'
-                )
+                msg = f'`{task.name}` maps over `{task.item_port}`, which is not an input of `{task.spec.identifier}`.'
+                raise ValueError(msg)
 
         for task in self.tasks:
             if isinstance(task, BranchTask):
@@ -805,7 +808,8 @@ class GraphSpec:
         """
         for name in (edge.source, edge.target):
             if name not in self.task_names:
-                raise ValueError(f'{referrer} refers to unknown task `{name}`.')
+                msg = f'{referrer} refers to unknown task `{name}`.'
+                raise ValueError(msg)
 
     def _check_shapes_match(self, edge: Dependency, source_port: str, target_port: str, referrer: str) -> None:
         """Raise if one end of a dependency is a namespace and the other holds a single value.
@@ -825,10 +829,11 @@ class GraphSpec:
         namespace, other = (edge.source, edge.target) if produces == 'namespace' else (edge.target, edge.source)
         under, single = (source_port, target_port) if produces == 'namespace' else (target_port, source_port)
 
-        raise ValueError(
+        msg = (
             f'{referrer} wires `{under}` of `{namespace}`, which is a namespace, onto `{single}` of `{other}`, '
             f'which holds one value. Name a port inside the namespace, or wire it onto a namespace.'
         )
+        raise ValueError(msg)
 
     def _check_gathered(self, edge: Dependency, target_port: str, referrer: str) -> None:
         """Raise if what ran once per item is taken somewhere that holds one value.
@@ -840,14 +845,16 @@ class GraphSpec:
             namespace.
         """
         if edge.target not in self.task_names:
-            raise ValueError(f'{referrer} refers to unknown task `{edge.target}`.')
+            msg = f'{referrer} refers to unknown task `{edge.target}`.'
+            raise ValueError(msg)
 
         if not self.task(edge.target).takes_namespace(target_port):
-            raise ValueError(
+            msg = (
                 f'`{edge.target}` takes `{target_port}` from `{edge.source}`, which runs once per item and so '
                 f'produces one result per item, gathered under the key of each. `{target_port}` holds one '
                 f'value, so it has to be a namespace to take them, or the graph can return them as an output.'
             )
+            raise ValueError(msg)
 
     @staticmethod
     def _check_loop(task: LoopTask) -> None:
@@ -859,14 +866,16 @@ class GraphSpec:
         :raises ValueError: if the body does not return the value the loop goes round on, or may run no times.
         """
         if task.condition_port not in task.body.outputs:
-            raise ValueError(
+            msg = (
                 f'`{task.name}` goes round while `{task.condition_port}` holds, so its body has to return '
                 f'`{task.condition_port}`, and it returns {sorted(task.body.outputs)}. A loop goes on from what '
                 f'its body returned, so the body is what decides when to stop.'
             )
+            raise ValueError(msg)
 
         if task.max_iterations < 1:
-            raise ValueError(f'`{task.name}` may run at most {task.max_iterations} times, which is never.')
+            msg = f'`{task.name}` may run at most {task.max_iterations} times, which is never.'
+            raise ValueError(msg)
 
     @staticmethod
     def _check_branches(task: BranchTask) -> None:
@@ -877,17 +886,19 @@ class GraphSpec:
         """
         for branch in task.branches:
             if task.condition_port in branch.inputs:
-                raise ValueError(
+                msg = (
                     f'`{task.name}` takes its condition on `{task.condition_port}`, which a branch also takes as '
                     f'an input, so the two would arrive on one port. Rename either of them.'
                 )
+                raise ValueError(msg)
 
         if task.otherwise is not None and set(task.otherwise.outputs) != set(task.body.outputs):
-            raise ValueError(
+            msg = (
                 f'`{task.name}` produces {sorted(task.body.outputs)} when its condition holds and '
                 f'{sorted(task.otherwise.outputs)} when it does not, so what it produces would depend on which '
                 f'branch ran. Both branches have to return the same outputs.'
             )
+            raise ValueError(msg)
 
     def _check_endpoint(self, name: str, port: str, direction: t.Literal['input', 'output'], referrer: str) -> None:
         """Raise if a task referred to somewhere in the graph does not exist, or has no port under that name.
@@ -896,7 +907,8 @@ class GraphSpec:
         :raises ValueError: if there is no such task, or no such port on it.
         """
         if name not in self.task_names:
-            raise ValueError(f'{referrer} refers to unknown task `{name}`.')
+            msg = f'{referrer} refers to unknown task `{name}`.'
+            raise ValueError(msg)
 
         task = self.task(name)
 
@@ -906,7 +918,8 @@ class GraphSpec:
             known = task.produces(port) or task.produces_namespace(port)
 
         if not known:
-            raise ValueError(f'{referrer} refers to `{port}`, which is not an {direction} of `{name}`.')
+            msg = f'{referrer} refers to `{port}`, which is not an {direction} of `{name}`.'
+            raise ValueError(msg)
 
     def _check_acyclic(self) -> None:
         """Raise if the dependencies contain a cycle, by peeling off tasks with nothing left to wait for."""
@@ -916,7 +929,8 @@ class GraphSpec:
             free = [name for name, waiting in remaining.items() if not waiting & remaining.keys()]
 
             if not free:
-                raise ValueError(f'the dependencies contain a cycle between {sorted(remaining)}.')
+                msg = f'the dependencies contain a cycle between {sorted(remaining)}.'
+                raise ValueError(msg)
 
             for name in free:
                 del remaining[name]

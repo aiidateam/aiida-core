@@ -119,7 +119,8 @@ def _process_class_of(process: object) -> type[Process]:
     if inspect.isclass(process) and issubclass(process, Process):
         return process
 
-    raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
+    msg = f'invalid process {type(process)}, needs to be Process or ProcessBuilder'
+    raise ValueError(msg)
 
 
 class InterruptableFuture(asyncio.Future):

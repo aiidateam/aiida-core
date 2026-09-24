@@ -8,9 +8,9 @@
 ###########################################################################
 """Tests for saying what a namespace of ports holds with a structured container."""
 
+import typing as t
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Annotated, NamedTuple, TypedDict
 
 import pytest
 from pydantic import BaseModel, ConfigDict, field_serializer
@@ -20,7 +20,7 @@ from aiida.engine.processes.containers import as_dict, build, fields_of, is_a_co
 from aiida.orm import Float, Int, JsonableData, Str, load_node
 
 
-class AsTypedDict(TypedDict):
+class AsTypedDict(t.TypedDict):
     structure: str
     steps: int
 
@@ -36,7 +36,7 @@ class AsDataclass:
     steps: int = 10
 
 
-class AsTuple(NamedTuple):
+class AsTuple(t.NamedTuple):
     structure: str
     steps: int = 10
 
@@ -57,7 +57,7 @@ def test_the_fields_of_a_container_are_read(container):
 
 @KINDS
 def test_which_fields_have_to_be_given(container):
-    """A field with a default need not be given, and a `TypedDict` gives no default so all of them do."""
+    """A field with a default need not be given, and a `t.TypedDict` gives no default so all of them do."""
     required = {field.name for field in fields_of(container) if field.required}
 
     assert required == ({'structure', 'steps'} if container is AsTypedDict else {'structure'})
@@ -76,7 +76,7 @@ def test_a_container_is_read_and_written_back(container):
     values = {'structure': 'si', 'steps': 3}
     built = build(container, values)
 
-    # An instance of a `TypedDict` is a dict, so it is already what it would be flattened into.
+    # An instance of a `t.TypedDict` is a dict, so it is already what it would be flattened into.
     assert (built if container is AsTypedDict else as_dict(built)) == values
 
 
@@ -411,18 +411,18 @@ class Conf(BaseModel):
 
 class Opaque(BaseModel):
     structure: str
-    config: Annotated[Conf, Whole] = Conf()
+    config: t.Annotated[Conf, Whole] = Conf()
 
 
 @dataclass
 class OpaqueDataclass:
     structure: str
-    config: Annotated[Conf, Whole] = field(default_factory=Conf)
+    config: t.Annotated[Conf, Whole] = field(default_factory=Conf)
 
 
-class OpaqueTypedDict(TypedDict):
+class OpaqueTypedDict(t.TypedDict):
     structure: str
-    config: Annotated[Conf, Whole]
+    config: t.Annotated[Conf, Whole]
 
 
 @task(outputs=['seen'])
@@ -456,7 +456,7 @@ def test_a_field_marked_whole_is_one_port_holding_the_object():
 
 
 @task(outputs=['seen'])
-def takes_a_whole_parameter(given: Annotated[Conf, Whole]) -> str:
+def takes_a_whole_parameter(given: t.Annotated[Conf, Whole]) -> str:
     return f'{type(given).__name__}/{given.tolerance}'
 
 
@@ -502,7 +502,7 @@ class HoldsANode(BaseModel):
 
 class KeptWhole(BaseModel):
     label: str
-    config: Annotated[HoldsANode, Whole]
+    config: t.Annotated[HoldsANode, Whole]
 
 
 @task(outputs=['seen'])

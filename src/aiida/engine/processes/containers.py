@@ -65,12 +65,21 @@ def is_a_container(annotation: t.Any) -> bool:
     return fields_of(annotation) is not None
 
 
+def is_a_plain_class(annotation: t.Any) -> bool:
+    """Return whether the annotation is a class, and not a class with type arguments such as ``Many[int]``.
+
+    Python 3.10 answers `isinstance(list[int], type)` with `True` where 3.11 and up answer `False`, and
+    `issubclass` refuses a subscripted class on every version, so asking whether it is a type is not enough.
+    """
+    return isinstance(annotation, type) and t.get_origin(annotation) is None
+
+
 def fields_of(annotation: t.Any) -> tuple[Field, ...] | None:
     """Return the fields of a structured container, or ``None`` where the annotation is not one.
 
     :param annotation: what a parameter or a return value is annotated with.
     """
-    if not isinstance(annotation, type):
+    if not is_a_plain_class(annotation):
         return None
 
     for recognises, read in READERS:

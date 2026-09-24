@@ -44,6 +44,13 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 ### New features
 
+#### Processes defined in a notebook cell
+
+A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter notebook, or in any script run as `__main__`, can now be submitted to the daemon.
+Such a class belongs to a module that resolves to something different in every interpreter, so the worker used to fail with `ImportError: object 'MyWorkChain' from identifier '__main__:MyWorkChain' could not be loaded`.
+The checkpoint now carries the class itself whenever the recorded name would not resolve for the worker.
+What the class refers to travels as a reference, so the worker has to be able to import it: a helper module beside the notebook, on the kernel's `sys.path` only, has to be installed or put on the `PYTHONPATH` the daemon is started with.
+
 `Parser.process_class` returns the class whose outputs are being parsed, which the running `CalcJob` supplies while it runs.
 A parser built from a stored node falls back to `ProcessNode.process_class`, so exit codes and the output specification of a `CalcJob` defined in a notebook resolve during parsing.
 

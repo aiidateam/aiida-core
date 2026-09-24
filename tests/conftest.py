@@ -14,6 +14,7 @@ loaded in this file as well, such that they can also be used for the tests of ``
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import dataclasses
 import logging
@@ -21,6 +22,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import textwrap
 import types
 import typing as t
 import warnings
@@ -1459,3 +1461,34 @@ def setup_duplicate_group():
         return dupl_group
 
     return _setup_duplicate_group
+
+
+@pytest.fixture
+def importable_module(tmp_path):
+    """Return a factory for modules that only this interpreter can import.
+
+    That is what a module sitting next to a user's own script looks like to a daemon worker, which imports from the
+    ``sys.path`` frozen when the daemon started. The directory is ``tmp_path``, so a test that also takes that
+    fixture can name it to describe a worker which lacks it.
+    """
+    written: list[str] = []
+
+    def factory(name: str, source: str, **alongside: str) -> types.ModuleType:
+        """Write ``<name>.py`` and a file per keyword into the directory, and return ``name`` imported."""
+        for module_name, module_source in {name: source, **alongside}.items():
+            (tmp_path / f'{module_name}.py').write_text(textwrap.dedent(module_source))
+            written.append(module_name)
+
+        if str(tmp_path) not in sys.path:
+            sys.path.insert(0, str(tmp_path))
+
+        return import_module(name)
+
+    yield factory
+
+    with contextlib.suppress(ValueError):
+        sys.path.remove(str(tmp_path))
+
+    # A module written alongside is imported by the one under test, so it ends up here too.
+    for module_name in written:
+        sys.modules.pop(module_name, None)

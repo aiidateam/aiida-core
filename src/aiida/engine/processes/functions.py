@@ -325,10 +325,11 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
     fields = fields_of(container)
 
     if fields is None:
-        raise TypeError(
+        msg = (
             f'`{getattr(container, "__name__", container)}` is not a structured container, so there is nothing to '
             f'declare the inputs from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
         )
+        raise TypeError(msg)
 
     takes_anything = any(parameter.kind is parameter.VAR_KEYWORD for parameter in signature.parameters.values())
     unreachable = sorted(
@@ -336,10 +337,11 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
     )
 
     if unreachable:
-        raise TypeError(
+        msg = (
             f'`{getattr(container, "__name__", container)}` names {unreachable}, which the function does not take, '
             f'so nothing given there would reach it.'
         )
+        raise TypeError(msg)
 
     for field in fields:
         if fields_of(field.annotation) is not None and not field.whole:
@@ -368,12 +370,13 @@ def _declare_output_types(
     if outputs is not None:
         if isinstance(outputs, str):
             # A bare string is a sequence of strings, so it would silently declare one port per character.
-            raise TypeError(f'`outputs` should be a sequence of port names, got the string `{outputs}`.')
+            msg = f'`outputs` should be a sequence of port names, got the string `{outputs}`.'
+            raise TypeError(msg)
 
         if (fields := fields_of(outputs)) is not None:
             return {field.name: infer_valid_type_from_type_annotation(field.annotation) or (Data,) for field in fields}
 
-        return {name: (Data,) for name in t.cast(t.Sequence[str], outputs)}
+        return dict.fromkeys(t.cast(t.Sequence[str], outputs), (Data,))
 
     if return_annotation is None or return_annotation is type(None):
         return None
@@ -749,7 +752,7 @@ class FunctionProcess(Process):
             for name, value in result.items():
                 self.out(name, value)
         else:
-            msg = (  # type: ignore[unreachable]
+            msg = (
                 f"Function process returned an output with unsupported type '{result.__class__}'\n"
                 'Must be a Data type or a mapping of {string: Data}'
             )

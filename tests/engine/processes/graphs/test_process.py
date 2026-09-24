@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from dataclasses import replace
-from typing import TypedDict
 
 import pytest
 
@@ -130,7 +130,7 @@ def sum_product(x, y):
     return x + y, x * y
 
 
-class Stats(TypedDict):
+class Stats(t.TypedDict):
     """Return annotation declaring one output socket per field."""
 
     minimum: int
@@ -361,7 +361,7 @@ def test_declared_outputs_from_kwarg():
 
 
 def test_declared_outputs_from_return_annotation():
-    """A ``TypedDict`` return annotation declares one output port per field."""
+    """A ``t.TypedDict`` return annotation declares one output port per field."""
     assert list(stats.task_spec.outputs.keys()) == ['minimum', 'maximum']
 
     results, node = run_get_node(stats, items=[3, 1, 2])

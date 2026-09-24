@@ -85,10 +85,11 @@ class TaskProcess(FunctionProcess):
             values = result if isinstance(result, tuple) else (result,)
 
             if len(values) != len(declared):
-                raise ValueError(
+                msg = (
                     f'`{self.process_class.__name__}` declares {len(declared)} outputs {declared} but the function '
                     f'returned {len(values)} value(s).'
                 )
+                raise ValueError(msg)
 
             result = dict(zip(declared, values, strict=True))
 
@@ -277,7 +278,8 @@ def launched_as(start: Start) -> tuple[type[Process], dict[str, t.Any]]:
 
         return process_class, start.inputs
 
-    raise ValueError(f'`{start.task.name}` is of kind `{start.task.kind}`, which this version of AiiDA cannot run.')
+    msg = f'`{start.task.name}` is of kind `{start.task.kind}`, which this version of AiiDA cannot run.'
+    raise ValueError(msg)
 
 
 def task_node() -> ProcessNode:

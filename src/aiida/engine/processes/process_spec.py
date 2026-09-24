@@ -156,10 +156,11 @@ class ProcessSpec(spec.ProcessSpec):
         fields = fields_of(container)
 
         if fields is None:
-            raise TypeError(
+            msg = (
                 f'`{getattr(container, "__name__", container)}` is not a structured container, so there is nothing '
                 f'to declare `{name}` from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
             )
+            raise TypeError(msg)
 
         kwargs.setdefault('validator', _against(container))
         self.input_namespace(name, **kwargs)

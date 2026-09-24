@@ -1104,21 +1104,17 @@ class CalcJob(Process):
         preparing = preparing if preparing is not None else _Preparing(cls, inputs, options, computer, uuid, label)
         raw_inputs = getattr(preparing, '_raw_inputs', None) or inputs
 
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.common.datastructures import CodeInfo, CodeRunMode, JobTemplate, JobTemplateCodeInfo
         from aiida.common.exceptions import InputValidationError, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import AbstractCode, Computer, load_code
-        from aiida.common.datastructures import JobTemplate, JobTemplateCodeInfo
 
         assert computer is not None
         codes = [value for value in _nodes_of(inputs) if isinstance(value, AbstractCode)]
 
         for code in codes:
             if not code.can_run_on_computer(computer):
-                msg = (
-                    f'The selected code {code.pk} for calculation {label} '
-                    f'cannot run on computer {computer.label}'
-                )
+                msg = f'The selected code {code.pk} for calculation {label} cannot run on computer {computer.label}'
                 raise InputValidationError(msg)
 
             code.validate_working_directory(folder)

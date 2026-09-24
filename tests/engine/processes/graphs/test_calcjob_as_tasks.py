@@ -35,11 +35,10 @@ import pytest
 
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.common.datastructures import StashMode
+from aiida.common.datastructures import JobState, StashMode
 from aiida.common.folders import SandboxFolder
 from aiida.engine import graph, monitor, run_get_node, task, task_node
 from aiida.engine.processes.greenback import sync_await
-from aiida.schedulers.datastructures import JobState
 
 
 def _options(stash_to: Path | None = None) -> dict:

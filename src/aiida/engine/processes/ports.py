@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import inspect
 import re
 import typing as t
 import warnings
@@ -18,7 +17,7 @@ from collections.abc import Callable, Mapping, Sequence
 from types import UnionType
 
 from aiida.common.links import validate_link_label
-from aiida.engine.processes.containers import build, fields_of, marked_whole
+from aiida.engine.processes.containers import build, fields_of, is_a_plain_class, marked_whole
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, to_aiida_type
@@ -326,14 +325,14 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
             str: Str,
         }
 
-        if inspect.isclass(annotation) and issubclass(annotation, Data):
+        if is_a_plain_class(annotation) and issubclass(annotation, Data):
             return annotation
 
         return valid_type_map.get(annotation)
 
     inferred_valid_type: tuple[t.Any, ...] = ()
 
-    if inspect.isclass(annotation):
+    if is_a_plain_class(annotation):
         inferred_valid_type = (get_type_from_annotation(annotation),)
     elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
         inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
@@ -373,7 +372,7 @@ def as_written(annotation: t.Any, value: t.Any) -> t.Any:
     if fields is None or not isinstance(value, Mapping):
         # What was asked for is what is handed over: a node where the annotation names one, and the value it
         # holds where the annotation names that.
-        if isinstance(annotation, type) and issubclass(annotation, Data):
+        if is_a_plain_class(annotation) and issubclass(annotation, Data):
             return value
 
         return _plain(value)

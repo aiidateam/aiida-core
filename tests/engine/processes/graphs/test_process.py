@@ -388,9 +388,9 @@ def test_a_task_that_cannot_be_imported_still_runs_where_it_was_defined():
     assert results['total'] == 5
 
 
-def test_submit_standalone():
+def test_submit_standalone(submit_and_await):
     """A task can be submitted on its own."""
-    node = submit(count, items=[1, 2, 3])
+    node = submit_and_await(submit(count, items=[1, 2, 3]), timeout=60)
 
     assert isinstance(node, orm.CalcFunctionNode)
 

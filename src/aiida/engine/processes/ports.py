@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import inspect
 import re
 import typing as t
 import warnings
@@ -19,7 +18,7 @@ from enum import Enum
 from types import UnionType
 
 from aiida.common.links import validate_link_label
-from aiida.engine.processes.containers import build, fields_of, marked_whole
+from aiida.engine.processes.containers import build, fields_of, is_a_plain_class, marked_whole
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.orm import Bool, Data, Dict, EnumData, Float, Int, List, Node, Str, to_aiida_type
@@ -327,17 +326,17 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
             str: Str,
         }
 
-        if inspect.isclass(annotation) and issubclass(annotation, Data):
+        if is_a_plain_class(annotation) and issubclass(annotation, Data):
             return annotation
 
-        if inspect.isclass(annotation) and issubclass(annotation, Enum):
+        if is_a_plain_class(annotation) and issubclass(annotation, Enum):
             return EnumData
 
         return valid_type_map.get(annotation)
 
     inferred_valid_type: tuple[t.Any, ...] = ()
 
-    if inspect.isclass(annotation):
+    if is_a_plain_class(annotation):
         inferred_valid_type = (get_type_from_annotation(annotation),)
     elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
         inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
@@ -355,7 +354,7 @@ def serializer_for(annotation: t.Any) -> t.Callable[[t.Any], t.Any]:
     type and a member of ``class Spin(str, Enum)`` is a ``str`` before it is an ``Enum``, so the string wins and
     the enum is stored as its ``str()``.
     """
-    if inspect.isclass(annotation) and issubclass(annotation, Enum):
+    if is_a_plain_class(annotation) and issubclass(annotation, Enum):
 
         def as_a_member(value: t.Any) -> t.Any:
             return EnumData(value) if isinstance(value, Enum) else to_aiida_type(value)
@@ -399,7 +398,7 @@ def as_written(annotation: t.Any, value: t.Any) -> t.Any:
     if fields is None or not isinstance(value, Mapping):
         # What was asked for is what is handed over: a node where the annotation names one, and the value it
         # holds where the annotation names that.
-        if isinstance(annotation, type) and issubclass(annotation, Data):
+        if is_a_plain_class(annotation) and issubclass(annotation, Data):
             return value
 
         return _plain(value)

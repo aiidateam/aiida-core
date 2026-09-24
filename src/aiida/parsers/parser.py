@@ -21,6 +21,7 @@ from aiida.engine.processes.ports import CalcJobOutputPort
 
 if t.TYPE_CHECKING:
     from aiida import orm
+    from aiida.engine.processes.calcjobs.calcjob import CalcJob
     from aiida.orm import CalcJobNode, Data, FolderData
 
 __all__ = ('Parser',)
@@ -44,6 +45,7 @@ class Parser(ABC):
         self._logger = create_logger_adapter(AIIDA_LOGGER.getChild('parser').getChild(self.__class__.__name__), node)
         self._node = node
         self._outputs = extendeddicts.AttributeDict()
+        self._process_class: type[CalcJob] | None = None
 
     @property
     def logger(self):
@@ -62,17 +64,41 @@ class Parser(ABC):
         return self._node
 
     @property
+    def process_class(self) -> type[CalcJob]:
+        """Return the class of the process whose outputs are being parsed.
+
+        The process supplies this while it is running, because a class that cannot be imported back, such as one
+        defined in a notebook, is not recoverable from the node's ``process_type`` afterwards. Parsing a stored node
+        has no process to supply it and falls back to that, which is what :meth:`parse_from_node` does.
+
+        :return: The :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` class whose outputs are being parsed.
+        """
+        if self._process_class is not None:
+            return self._process_class
+
+        return self.node.process_class  # type: ignore[return-value]
+
+    def _bind_process_class(self, *, process_class: type[CalcJob]) -> None:
+        """Bind the class that is running, which only the engine holds.
+
+        Not a setter on :meth:`process_class`, because a parser plugin has no reason to write it: the running
+        :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` binds it before parsing, and a parser built from
+        a stored node leaves it unset and falls back to the node.
+        """
+        self._process_class = process_class
+
+    @property
     def exit_codes(self) -> ExitCodesNamespace:
         """Return the exit codes defined for the process class of the node being parsed.
 
         :returns: ExitCodesNamespace of ExitCode named tuples
         """
-        return self.node.process_class.exit_codes
+        return self.process_class.exit_codes
 
     @property
     def retrieved(self) -> FolderData:
         return self.node.base.links.get_outgoing().get_node_by_label(
-            self.node.process_class.link_label_retrieved  # type: ignore[attr-defined, return-value]
+            self.process_class.link_label_retrieved  # type: ignore[return-value]
         )
 
     @property
@@ -106,7 +132,7 @@ class Parser(ABC):
         link_triples = self.node.base.links.get_outgoing()
         result = {}
 
-        for label, port in self.node.process_class.spec().outputs.items():
+        for label, port in self.process_class.spec().outputs.items():
             if isinstance(port, CalcJobOutputPort) and port.pass_to_parser:
                 try:
                     result[label] = link_triples.get_node_by_label(label)

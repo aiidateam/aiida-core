@@ -905,6 +905,8 @@ class CalcJob(Process):
             return None
 
         parser = parser_class(self.node)
+        # The running process holds its own class, where the node carries only the name it was recorded under.
+        parser._bind_process_class(process_class=type(self))
         parse_kwargs = parser.get_outputs_for_parsing()
 
         if retrieved_temporary_folder:

@@ -13,6 +13,7 @@ Migration steps:
 2. :func:`~aiida.storage.migrations.legacy_ssh.migrate_ssh_transports`: migrate SSH computers to the
    asynchronous ``core.ssh`` transport plugin.
 3. :func:`_migrate_legacy_codes`: migrate the deprecated ``Code`` data plugin.
+4. Rename the visibility extra on built-in Code nodes.
 
 See the ``main_0003`` revision of the ``psql_dos`` backend for the rationale of the transport
 rename, which likewise has no inverse: the downgrade only restores the schema revision.
@@ -28,7 +29,12 @@ from sqlalchemy import text
 from sqlalchemy.dialects.sqlite import JSON
 
 from aiida.storage.log import MIGRATE_LOGGER
-from aiida.storage.migrations.legacy_code import LEGACY_NODE_TYPE, SQLITE_UPGRADE_STATEMENTS, check_sqlite_executables
+from aiida.storage.migrations.legacy_code import (
+    LEGACY_NODE_TYPE,
+    SQLITE_HIDDEN_UPGRADE_STATEMENT,
+    SQLITE_UPGRADE_STATEMENTS,
+    check_sqlite_executables,
+)
 from aiida.storage.migrations.legacy_ssh import migrate_ssh_transports
 
 revision = 'main_0003'
@@ -97,6 +103,7 @@ def upgrade():
     conn = op.get_bind()
     migrate_ssh_transports(conn)
     _migrate_legacy_codes(conn)
+    conn.execute(text(SQLITE_HIDDEN_UPGRADE_STATEMENT))
 
 
 def downgrade():

@@ -36,6 +36,14 @@ def check_sqlite_executables(conn) -> None:
         raise ValueError(msg)
 
 
+# Rename the visibility extra on all built-in Code types, not just migrated legacy codes. Preserve JSON booleans
+# rather than converting them to SQLite integers.
+SQLITE_HIDDEN_UPGRADE_STATEMENT = """
+    UPDATE db_dbnode
+    SET extras = json_set(json_remove(extras, '$.hidden'), '$.is_hidden', json(json_type(extras, '$.hidden')))
+    WHERE node_type LIKE 'data.core.code.%' AND json_type(extras, '$.hidden') IS NOT NULL;
+"""
+
 SQLITE_UPGRADE_STATEMENTS = (
     f"""
     UPDATE db_dbnode

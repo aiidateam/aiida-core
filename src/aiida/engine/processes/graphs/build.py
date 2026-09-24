@@ -219,7 +219,8 @@ class TaskOutputs:
         ports = self.__dict__.get('ports')
 
         if ports is None or name not in ports:
-            raise AttributeError(f'`{self.__dict__.get("task")}` has no output `{self._path(name)}`.')
+            msg = f'`{self.__dict__.get("task")}` has no output `{self._path(name)}`.'
+            raise AttributeError(msg)
 
         return self._reference(name)
 
@@ -250,17 +251,19 @@ class TaskOutputs:
         builder = ACTIVE_BUILDER.get()
 
         if builder is None:
-            raise ValueError(
+            msg = (
                 f'`{self.task}` is told to wait for something, which orders it against another task, so it '
                 f'says nothing outside a graph.'
             )
+            raise ValueError(msg)
 
         for other in others:
             if not isinstance(other, (TaskOutput, TaskOutputs)):
-                raise TypeError(
+                msg = (
                     f'`{self.task}` is told to wait for a {type(other).__name__}, and a task waits for another '
                     f'task. Pass what a call placing one returned.'
                 )
+                raise TypeError(msg)
 
             builder.order(source=other.task, target=self.task)
 
@@ -285,19 +288,21 @@ class TaskOutputs:
         """
         if len(self.ports) != 1:
             named = f'{self.task}.{self._path(next(iter(self.ports)))}' if self.ports else f'{self.task}....'
-            raise ValueError(
+            msg = (
                 f'`{self.task}` declares {len(self.ports)} outputs {list(self.ports)}, so one of them has to be '
                 f'named, for example `{named}`.'
             )
+            raise ValueError(msg)
 
         (name,) = self.ports
         only = self._reference(name)
 
         if isinstance(only, TaskOutputs):
-            raise ValueError(
+            msg = (
                 f'`{self.task}` declares `{self._path(name)}`, which is a namespace, so a port inside it has to '
                 f'be named, for example `{self.task}.{only._path(next(iter(only.ports), "..."))}`.'
             )
+            raise ValueError(msg)
 
         return only
 
@@ -403,11 +408,12 @@ class GraphBuilder:
         :raises ValueError: if there is no graph around this one, so nothing could ever supply the value.
         """
         if self._parent is None:
-            raise ValueError(
+            msg = (
                 f'{referrer} `{origin}`, which is not part of this graph. A graph written inside another reaches '
                 f'nothing outside itself, so take `{origin}` as a parameter of this graph and pass it in where '
                 f'the graph is placed.'
             )
+            raise ValueError(msg)
 
         if value not in self._captures:
             taken = origin.replace('.', '__')
@@ -535,10 +541,11 @@ class GraphBuilder:
         mapped = sorted(key for key, argument in arguments.items() if isinstance(argument, Each))
 
         if mapped:
-            raise ValueError(
+            msg = (
                 f'`{identifier}` is a {kind} and {mapped} marks it to run once per item. Running a {kind} once '
                 f'per item is not supported yet; place a task that fans out inside it.'
             )
+            raise ValueError(msg)
 
     def order(self, source: str, target: str) -> None:
         """Record that one task runs after another, though it takes nothing from it.
@@ -547,10 +554,11 @@ class GraphBuilder:
         """
         for name in (source, target):
             if name not in self._placed:
-                raise ValueError(
+                msg = (
                     f'`{target}` is told to wait for `{source}`, and `{name}` is not a task of this graph. A task '
                     f'waits for one placed beside it, so a task of the graph around this one cannot be named.'
                 )
+                raise ValueError(msg)
 
         edge = Dependency(source=source, target=target)
 
@@ -601,11 +609,12 @@ class GraphBuilder:
                 continue
 
             if _holds_reference(value):
-                raise ValueError(
+                msg = (
                     f'`{name}` takes `{port}` with the output of another task inside a '
                     f'{type(value).__name__}, which would be stored as a value and leave that task unwaited for. '
                     f'Pass the output itself, or take the collection from a task that produces one.'
                 )
+                raise ValueError(msg)
 
             inputs[key] = value
 
@@ -619,11 +628,12 @@ class GraphBuilder:
     @staticmethod
     def _refuse_foreign(name: str, key: str, origin: str) -> t.NoReturn:
         """Raise for an argument standing for something that belongs to a graph around this one."""
-        raise ValueError(
+        msg = (
             f'`{name}` takes `{key}` from `{origin}`, which is not part of this graph. A graph written inside '
             f'another reaches nothing outside itself, so take `{origin}` as a parameter of this graph and pass '
             f'it in where the graph is placed.'
         )
+        raise ValueError(msg)
 
     def _task(self, name: str, handle: TaskHandle, inputs: dict[str, t.Any], item_ports: list[str]) -> ProcessTask:
         """Return the task for a call, which fans out when one of its inputs was marked with :func:`each`."""
@@ -641,10 +651,11 @@ class GraphBuilder:
         :raises ValueError: if more than one was marked, since what the items would be paired up as is not said.
         """
         if len(item_ports) > 1:
-            raise ValueError(
+            msg = (
                 f'`{name}` runs once per item of {sorted(item_ports)}, and a fan-out runs over one of its inputs. '
                 f'Combine them into one input, or place one per input.'
             )
+            raise ValueError(msg)
 
         return item_ports[0]
 
@@ -697,7 +708,8 @@ class GraphBuilder:
         source = self._as_source(value, f'`{name}`')
 
         if source is None:
-            raise ValueError(f'graph output `{name}` is not the output of a task, nor an input of the graph.')
+            msg = f'graph output `{name}` is not the output of a task, nor an input of the graph.'
+            raise ValueError(msg)
 
         return source
 
@@ -734,10 +746,11 @@ class GraphHandle:
         builder = ACTIVE_BUILDER.get()
 
         if builder is None:
-            raise TypeError(
+            msg = (
                 f'`{self.identifier}` declares a graph, so it is launched rather than called. Pass it to `run` or '
                 f'`submit`, as any other process, or use `.build(...)` for the declaration on its own.'
             )
+            raise TypeError(msg)
 
         return builder.add_graph(self, _arguments(self._function, *args, **kwargs))
 
@@ -964,10 +977,11 @@ class Region:
         outer = ACTIVE_BUILDER.get()
 
         if outer is None:
-            raise TypeError(
+            msg = (
                 f'`{self.WORD}` writes part of a graph, so it is used in the body of a `@graph` function. To run '
                 f'a graph on its own, pass it to `run` or `submit`.'
             )
+            raise TypeError(msg)
 
         self._outer = outer
         self._builder = GraphBuilder(parameters=tuple(self._state), parent=outer)
@@ -999,15 +1013,17 @@ class Region:
             if name in state:
                 return GraphInput(name=name)
 
-            raise AttributeError(
+            msg = (
                 f'`{self.WORD}` carries {sorted(state) or "nothing"} while its body is being written, not '
                 f'`{name}`. The outputs it produces are there once the block is closed.'
             )
+            raise AttributeError(msg)
 
         outputs = self.__dict__.get('_outputs')
 
         if outputs is None:
-            raise AttributeError(f'`{self.WORD}` produces `{name}` once its block is closed, not before.')
+            msg = f'`{self.WORD}` produces `{name}` once its block is closed, not before.'
+            raise AttributeError(msg)
 
         return getattr(outputs, name)
 
@@ -1169,10 +1185,11 @@ class ProcessHandle:
         builder = ACTIVE_BUILDER.get()
 
         if builder is None:
-            raise TypeError(
+            msg = (
                 f'`{self.task_spec.identifier}` is a process, so on its own it is launched rather than called. '
                 f'Pass it to `run` or `submit`, or call it while writing a graph to place it in one.'
             )
+            raise TypeError(msg)
 
         return builder.add_task(self, inputs)
 
@@ -1365,23 +1382,26 @@ def task(
 
     if isinstance(function, type):
         if not issubclass(function, Process):
-            raise TypeError(
+            msg = (
                 f'`{function.__name__}` is a class rather than a function, and only a process class can be a '
                 f'task on its own. Decorate a function, or pass a `CalcJob` or `WorkChain`.'
             )
+            raise TypeError(msg)
 
         if outputs is not None or inputs is not None:
-            raise TypeError(
+            msg = (
                 f'`{function.__name__}` is a process and declares its own ports, so `inputs` and `outputs` do '
                 f'not apply to it.'
             )
+            raise TypeError(msg)
 
         if handlers:
-            raise TypeError(
+            msg = (
                 f'`{function.__name__}` is a process, and a task is reached by the name it is declared under, '
                 f'which a process already has and a handled one would need a second of. Write a '
                 f'`BaseRestartWorkChain` around it and place that as the task.'
             )
+            raise TypeError(msg)
 
         return ProcessHandle(function, TaskSpec.from_process(function, identifier=identifier))
 

@@ -74,7 +74,8 @@ def place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
         target = target.setdefault(namespace, {})
 
         if not isinstance(target, dict):
-            raise ValueError(f'`{path}` puts an input inside `{namespace}`, which is a value rather than a namespace.')
+            msg = f'`{path}` puts an input inside `{namespace}`, which is a value rather than a namespace.'
+            raise ValueError(msg)
 
     target[name] = value
 

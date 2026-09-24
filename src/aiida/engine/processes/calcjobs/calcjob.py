@@ -1113,15 +1113,12 @@ class CalcJob(Process):
         assert computer is not None
         codes = [value for value in _nodes_of(inputs) if isinstance(value, Code)]
 
-        for code_node in codes:
-            if not code_node.can_run_on_computer(computer):
-                msg = (
-                    f'The selected code {code_node.pk} for calculation {label} '
-                    f'cannot run on computer {computer.label}'
-                )
+        for code in codes:
+            if not code.can_run_on_computer(computer):
+                msg = f'The selected code {code.pk} for calculation {label} cannot run on computer {computer.label}'
                 raise InputValidationError(msg)
 
-            code_node.validate_working_directory(folder)
+            code.validate_working_directory(folder)
 
         calc_info = preparing.prepare_for_submission(folder)
         calc_info.uuid = uuid

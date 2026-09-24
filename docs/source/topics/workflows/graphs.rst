@@ -84,6 +84,24 @@ Its body is traced once, so calling a task inside it records the call rather tha
 The parameters of the function are the inputs of the graph, and what it returns are its outputs.
 Because the body is ordinary Python, a graph is built programmatically wherever that is useful: a ``for`` loop over a list of structures places one task per structure.
 
+What one task produces is what orders it against another, so a task whose outputs nothing takes runs beside whatever was meant to follow it.
+Writing such a graph warns where it is written, naming the task:
+
+.. code-block:: python
+
+    @graph
+    def forgot(x, y):
+        add(x=x, y=y)
+
+        return {'product': multiply(x=3, y=4).product}
+
+    # UserWarning: task `add` produces outputs that nothing in this graph takes, so it runs beside the
+    # tasks that were meant to follow it. Take one of its outputs, return it from the graph, or order
+    # what should wait for it with `.after(add)`.
+
+:meth:`~aiida.engine.processes.graphs.spec.GraphSpec.unread` is the same question asked of a declaration, including one read back from a stored run.
+A task that produces nothing is left out of both, since it is run for what it does.
+
 .. _topics:workflows:graphs:each:
 
 Running a task once per item

@@ -102,17 +102,21 @@ def _migrate_legacy_codes(conn):
             'invalidated; run `verdi node rehash` to recompute them.'
         )
 
-    missing = conn.execute(
-        text(
-            f"SELECT count(*) FROM db_dbnode WHERE node_type = '{LEGACY_NODE_TYPE}' AND "
-            "COALESCE(CASE WHEN COALESCE((attributes ->> 'is_local')::boolean, false) "
-            "THEN NULLIF(attributes ->> 'local_executable', '') "
-            "ELSE NULLIF(attributes ->> 'remote_exec_path', '') END, "
-            "attributes ->> 'filepath_executable', '') = ''"
-        )
-    ).scalar()
+    missing_filter = (
+        f"node_type = '{LEGACY_NODE_TYPE}' AND "
+        "COALESCE(CASE WHEN COALESCE((attributes ->> 'is_local')::boolean, false) "
+        "THEN NULLIF(attributes ->> 'local_executable', '') "
+        "ELSE NULLIF(attributes ->> 'remote_exec_path', '') END, "
+        "attributes ->> 'filepath_executable', '') = ''"
+    )
+    missing = conn.execute(text(f'SELECT count(*) FROM db_dbnode WHERE {missing_filter}')).scalar()
     if missing:
-        msg = f'Cannot migrate {missing} legacy Code node(s) without an executable path.'
+        uuids = conn.execute(text(f'SELECT uuid FROM db_dbnode WHERE {missing_filter} ORDER BY id LIMIT 10')).scalars()
+        identifiers = ', '.join(str(uuid) for uuid in uuids)
+        msg = (
+            f'Cannot migrate {missing} legacy Code node(s) without a stored executable path. '
+            f'Affected UUIDs (first 10): {identifiers}. Recover their executable names before retrying the migration.'
+        )
         raise ValueError(msg)
 
     for statement in UPGRADE_STATEMENTS:

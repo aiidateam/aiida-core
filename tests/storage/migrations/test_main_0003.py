@@ -20,12 +20,14 @@ def test_missing_legacy_executable_is_rejected():
     """Do not silently turn legacy codes without a recoverable executable into broken modern codes."""
     engine = create_engine('sqlite:///:memory:')
     with engine.begin() as conn:
-        conn.execute(text('CREATE TABLE db_dbnode (node_type TEXT, attributes TEXT)'))
         conn.execute(
-            text('INSERT INTO db_dbnode VALUES (:node_type, :attributes)'),
-            {'node_type': 'data.core.code.Code.', 'attributes': '{"is_local": true}'},
+            text('CREATE TABLE db_dbnode (id INTEGER PRIMARY KEY, uuid TEXT, node_type TEXT, attributes TEXT)')
         )
-        with pytest.raises(ValueError, match='without an executable path'):
+        conn.execute(
+            text('INSERT INTO db_dbnode (uuid, node_type, attributes) VALUES (:uuid, :node_type, :attributes)'),
+            {'uuid': 'missing-code-uuid', 'node_type': 'data.core.code.Code.', 'attributes': '{"is_local": true}'},
+        )
+        with pytest.raises(ValueError, match=r'missing-code-uuid.*Recover their executable names'):
             check_sqlite_executables(conn)
     engine.dispose()
 

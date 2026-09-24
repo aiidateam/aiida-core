@@ -16,23 +16,29 @@ PORTABLE_NODE_TYPE = 'data.core.code.portable.PortableCode.'
 # The node type is rewritten and one attribute key is renamed, so the stored hash no longer describes the node and is
 # dropped. ``json_extract`` returns 1/0 for a JSON boolean, and ``json_remove`` ignores keys that are not present.
 # Check both stored executable keys: some legacy codes already carry ``filepath_executable``.
-SQLITE_MISSING_EXECUTABLE = f"""
-    SELECT count(*) FROM db_dbnode
-    WHERE node_type = '{LEGACY_NODE_TYPE}'
+SQLITE_MISSING_EXECUTABLE_FILTER = f"""
+    node_type = '{LEGACY_NODE_TYPE}'
       AND COALESCE(
           CASE WHEN COALESCE(json_extract(attributes, '$.is_local'), 0) = 1
                THEN NULLIF(json_extract(attributes, '$.local_executable'), '')
                ELSE NULLIF(json_extract(attributes, '$.remote_exec_path'), '') END,
           json_extract(attributes, '$.filepath_executable'), ''
-      ) = '';
+      ) = ''
 """
 
 
 def check_sqlite_executables(conn) -> None:
     """Reject legacy codes whose executable cannot be recovered from stored attributes."""
-    missing = conn.execute(text(SQLITE_MISSING_EXECUTABLE)).scalar()
+    missing = conn.execute(text(f'SELECT count(*) FROM db_dbnode WHERE {SQLITE_MISSING_EXECUTABLE_FILTER}')).scalar()
     if missing:
-        msg = f'Cannot migrate {missing} legacy Code node(s) without an executable path.'
+        uuids = conn.execute(
+            text(f'SELECT uuid FROM db_dbnode WHERE {SQLITE_MISSING_EXECUTABLE_FILTER} ORDER BY id LIMIT 10')
+        ).scalars()
+        identifiers = ', '.join(str(uuid) for uuid in uuids)
+        msg = (
+            f'Cannot migrate {missing} legacy Code node(s) without a stored executable path. '
+            f'Affected UUIDs (first 10): {identifiers}. Recover their executable names before retrying the migration.'
+        )
         raise ValueError(msg)
 
 

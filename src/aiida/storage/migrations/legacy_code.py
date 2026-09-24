@@ -9,6 +9,8 @@
 
 from sqlalchemy import text
 
+from aiida.storage.log import MIGRATE_LOGGER
+
 LEGACY_NODE_TYPE = 'data.core.code.Code.'
 INSTALLED_NODE_TYPE = 'data.core.code.installed.InstalledCode.'
 PORTABLE_NODE_TYPE = 'data.core.code.portable.PortableCode.'
@@ -40,6 +42,28 @@ def check_sqlite_executables(conn) -> None:
             f'Affected UUIDs (first 10): {identifiers}. Recover their executable names before retrying the migration.'
         )
         raise ValueError(msg)
+
+
+SQLITE_EXECUTABLE_FALLBACK_FILTER = f"""
+    node_type = '{LEGACY_NODE_TYPE}'
+      AND COALESCE(
+          CASE WHEN COALESCE(json_extract(attributes, '$.is_local'), 0) = 1
+               THEN json_extract(attributes, '$.local_executable')
+               ELSE json_extract(attributes, '$.remote_exec_path') END, ''
+      ) = ''
+      AND COALESCE(json_extract(attributes, '$.filepath_executable'), '') <> ''
+"""
+
+
+def warn_sqlite_executable_fallback(conn) -> None:
+    """Report legacy codes whose executable must be read from ``filepath_executable`` instead of the legacy key."""
+    count = conn.execute(text(f'SELECT count(*) FROM db_dbnode WHERE {SQLITE_EXECUTABLE_FALLBACK_FILTER}')).scalar()
+    if count:
+        MIGRATE_LOGGER.warning(
+            'Migrating %s legacy Code node(s) with an empty legacy executable key using their '
+            'stored filepath_executable instead.',
+            count,
+        )
 
 
 # Rename the visibility extra on all built-in Code types, not just migrated legacy codes. Preserve JSON booleans

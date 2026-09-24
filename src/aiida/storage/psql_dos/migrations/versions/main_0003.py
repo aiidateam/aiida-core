@@ -119,6 +119,20 @@ def _migrate_legacy_codes(conn):
         )
         raise ValueError(msg)
 
+    fallback_filter = (
+        f"node_type = '{LEGACY_NODE_TYPE}' AND "
+        "COALESCE(CASE WHEN COALESCE((attributes ->> 'is_local')::boolean, false) "
+        "THEN attributes ->> 'local_executable' ELSE attributes ->> 'remote_exec_path' END, '') = '' "
+        "AND COALESCE(attributes ->> 'filepath_executable', '') <> ''"
+    )
+    fallback_count = conn.execute(text(f'SELECT count(*) FROM db_dbnode WHERE {fallback_filter}')).scalar()
+    if fallback_count:
+        MIGRATE_LOGGER.warning(
+            'Migrating %s legacy Code node(s) with an empty legacy executable key using their '
+            'stored filepath_executable instead.',
+            fallback_count,
+        )
+
     for statement in UPGRADE_STATEMENTS:
         conn.execute(text(statement))
 

@@ -34,6 +34,7 @@ from aiida.storage.migrations.legacy_code import (
     SQLITE_HIDDEN_UPGRADE_STATEMENT,
     SQLITE_UPGRADE_STATEMENTS,
     check_sqlite_executables,
+    warn_sqlite_executable_fallback,
 )
 from aiida.storage.migrations.legacy_ssh import migrate_ssh_transports
 
@@ -71,6 +72,7 @@ def _migrate_legacy_codes(conn):
         )
 
     check_sqlite_executables(conn)
+    warn_sqlite_executable_fallback(conn)
     for statement in SQLITE_UPGRADE_STATEMENTS:
         conn.execute(text(statement))
 

@@ -40,6 +40,7 @@ from aiida.storage.migrations.legacy_code import (
     SQLITE_HIDDEN_UPGRADE_STATEMENT,
     SQLITE_UPGRADE_STATEMENTS,
     check_sqlite_executables,
+    warn_sqlite_executable_fallback,
 )
 
 revision = 'main_0003'
@@ -54,6 +55,7 @@ def upgrade():
     conn.execute(text("UPDATE db_dbcomputer SET transport_type = 'core.ssh' WHERE transport_type = 'core.ssh_async'"))
 
     check_sqlite_executables(conn)
+    warn_sqlite_executable_fallback(conn)
     for statement in SQLITE_UPGRADE_STATEMENTS:
         conn.execute(text(statement))
     conn.execute(text(SQLITE_HIDDEN_UPGRADE_STATEMENT))

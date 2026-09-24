@@ -32,7 +32,7 @@ def test_missing_legacy_executable_is_rejected():
     engine.dispose()
 
 
-def test_migrate_legacy_code(migration_profile):
+def test_migrate_legacy_code(migration_profile, caplog):
     """Test that legacy ``Code`` nodes are rewritten to modern code plugins."""
     migrator_class = migration_profile.storage_cls.migrator
 
@@ -111,6 +111,7 @@ def test_migrate_legacy_code(migration_profile):
 
         migrator.migrate_up('main@main_0003')
 
+        assert 'Migrating 1 legacy Code node(s) with an empty legacy executable key' in caplog.text
         assert migrator.get_schema_version_profile() == 'main_0003'
 
         node_model = migrator.get_current_table('db_dbnode')

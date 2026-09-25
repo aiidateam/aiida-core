@@ -69,7 +69,7 @@ repos:
     name: mypy
     entry: mypy
     args: [--config-file=pyproject.toml, --pretty]
-    language: python
+    language: system
     types: [python]
     require_serial: true
     pass_filenames: true

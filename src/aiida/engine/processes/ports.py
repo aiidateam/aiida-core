@@ -17,9 +17,9 @@ from collections.abc import Callable, Mapping, Sequence
 from types import UnionType
 
 from aiida.common.links import validate_link_label
-from aiida.engine.processes.containers import build, fields_of, is_a_plain_class, marked_whole
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
+from aiida.engine.processes.structured import build, fields_of, is_a_plain_class, marked_whole
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, to_aiida_type
 from aiida.orm.nodes.data.base import BaseType
 from aiida.orm.nodes.data.jsonable import JsonableData
@@ -355,13 +355,13 @@ def _plain(value: t.Any) -> t.Any:
 def as_written(annotation: t.Any, value: t.Any) -> t.Any:
     """Return what was stored, as the thing that asked for it was written to take it.
 
-    A container is handed back as one of those, built from the namespace its fields were stored in, so this goes
-    as deep as the container does. Everything else is the plain value a node holds, or the node itself where the
+    A structured type is handed back as one of those, built from the namespace its fields were stored in, so this goes
+    as deep as the structured type does. Everything else is the plain value a node holds, or the node itself where the
     annotation names one.
 
     :param annotation: what the parameter or field declared, or ``None`` where nothing was declared.
     :param value: what is stored for it, which is a node or a mapping of them.
-    :raises Exception: whatever the container raises for values it refuses, which is what makes this the check a
+    :raises Exception: whatever the structured type raises for values it refuses, which is what makes this the check a
         namespace runs at submit as well as the way a value reaches a function.
     """
     if marked_whole(annotation):

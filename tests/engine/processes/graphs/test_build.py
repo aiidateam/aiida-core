@@ -616,7 +616,7 @@ def test_a_task_function_can_reduce_a_fan_out():
 
 
 def test_an_output_inside_a_container_is_refused():
-    """An output buried in a container would be stored as a value, leaving the task it comes from unwaited for."""
+    """An output buried in a structured type would be stored as a value, leaving the task it comes from unwaited for."""
 
     @graph
     def buried(x, y):

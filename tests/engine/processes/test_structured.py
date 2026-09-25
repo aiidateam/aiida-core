@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for saying what a namespace of ports holds with a structured container."""
+"""Tests for saying what a namespace of ports holds with a structured type."""
 
 import typing as t
 from dataclasses import dataclass, field
@@ -16,7 +16,7 @@ import pytest
 from pydantic import BaseModel, ConfigDict, field_serializer
 
 from aiida.engine import Whole, WorkChain, graph, run_get_node, task
-from aiida.engine.processes.containers import as_dict, build, fields_of, is_a_container
+from aiida.engine.processes.structured import as_dict, build, fields_of, is_structured
 from aiida.orm import Float, Int, JsonableData, Str, load_node
 
 
@@ -66,13 +66,13 @@ def test_which_fields_have_to_be_given(container):
 @pytest.mark.parametrize('value', (3, 'three', [3], {'a': 3}, None, AsModel))
 def test_what_is_not_a_container(value):
     """Plenty of things hold values without saying which they are, and a class is not one of its instances."""
-    assert not is_a_container(type(value)) or value is AsModel
+    assert not is_structured(type(value)) or value is AsModel
     assert as_dict(value) is None
 
 
 @KINDS
 def test_a_container_is_read_and_written_back(container):
-    """What a container holds is what it is built back from, so the trip through the ports is a round one."""
+    """What a structured type holds is what it is built back from, so the trip through the ports is a round one."""
     values = {'structure': 'si', 'steps': 3}
     built = build(container, values)
 
@@ -82,7 +82,7 @@ def test_a_container_is_read_and_written_back(container):
 
 @KINDS
 def test_a_container_names_a_namespace_of_ports(container):
-    """The fields of a container are the ports of the namespace it names, wherever it is declared."""
+    """The fields of a structured type are the ports of the namespace it names, wherever it is declared."""
 
     class Runner(WorkChain):
         @classmethod
@@ -107,7 +107,7 @@ def test_something_that_is_not_a_container_is_refused():
             super().define(spec)
             spec.input_namespace_from('relax', int)
 
-    with pytest.raises(TypeError, match='`int` is not a structured container'):
+    with pytest.raises(TypeError, match='`int` is not a structured type'):
         Runner.spec()
 
 
@@ -164,7 +164,7 @@ RETURNS = {
 
 @KINDS
 def test_a_task_takes_a_container_as_a_namespace(container):
-    """A parameter annotated with a container takes one, so the task declares the namespace it names."""
+    """A parameter annotated with a structured type takes one, so the task declares the namespace it names."""
     relax = TAKES[container]
 
     assert sorted(relax.process_class.spec().inputs['given']) == ['steps', 'structure']
@@ -178,7 +178,7 @@ def test_a_task_takes_a_container_as_a_namespace(container):
 
 @KINDS
 def test_a_task_is_handed_the_container_it_named(container):
-    """The namespace holds what the container said it would, so the function is given one of those back."""
+    """The namespace holds what the structured type said it would, so the function is given one of those back."""
     results, _ = run_get_node(TAKES[container], given={'structure': 'si', 'steps': 3})
 
     assert results['kind'] == (dict.__name__ if container is AsTypedDict else container.__name__)
@@ -186,7 +186,7 @@ def test_a_task_is_handed_the_container_it_named(container):
 
 @KINDS
 def test_a_returned_container_names_the_outputs(container):
-    """A container says which output each of its fields is, on the way out as much as on the way in."""
+    """A structured type says which output each of its fields is, on the way out as much as on the way in."""
     relax = RETURNS[container]
 
     assert sorted(relax.process_class.spec().outputs) == ['steps', 'structure']
@@ -208,7 +208,7 @@ def sees(given: AsModel) -> str:
 
 
 def test_a_field_takes_what_another_task_produced():
-    """A container is a way of saying what a namespace holds, so a graph wires into one field of it."""
+    """A structured type is a way of saying what a namespace holds, so a graph wires into one field of it."""
 
     @graph
     def prepare_and_relax(label):
@@ -254,7 +254,7 @@ described = task(untyped, inputs=AsModel, outputs=AsDataclass)
 
 
 def test_a_task_is_described_where_it_is_placed():
-    """A function that carries no annotations is described by the container the task is declared with."""
+    """A function that carries no annotations is described by the structured type the task is declared with."""
     spec = described.process_class.spec()
 
     assert {name: port.required for name, port in spec.inputs.items() if name != 'metadata'} == {
@@ -289,7 +289,7 @@ def test_describing_a_task_with_what_it_cannot_take_is_refused():
 
 def test_describing_a_task_with_something_that_is_not_a_container_is_refused():
     """Nothing can be read off a class that does not say what it holds."""
-    with pytest.raises(TypeError, match='`int` is not a structured container'):
+    with pytest.raises(TypeError, match='`int` is not a structured type'):
 
         @task(inputs=int)
         def whatever(x):
@@ -324,7 +324,7 @@ def choose_mesh(structure: str) -> int:
 
 @pytest.mark.parametrize('container', (Nested, NestedDataclass), ids=('model', 'dataclass'))
 def test_a_field_that_is_a_container_names_a_namespace_under_this_one(container):
-    """A container nests, and so does a namespace, so the one maps onto the other all the way down."""
+    """A structured type nests, and so does a namespace, so the one maps onto the other all the way down."""
 
     class Runner(WorkChain):
         @classmethod
@@ -340,7 +340,7 @@ def test_a_field_that_is_a_container_names_a_namespace_under_this_one(container)
 
 
 def test_a_nested_container_is_handed_back_whole():
-    """What the function named is what it is given, however deep the container goes."""
+    """What the function named is what it is given, however deep the structured type goes."""
     results, node = run_get_node(sees_nested, given=Nested(structure='si'))
 
     assert node.is_finished_ok, node.exit_message
@@ -371,7 +371,7 @@ def test_a_task_fills_one_field_of_a_nested_container():
 
 
 class Spacing(BaseModel):
-    """A container declaring a node type beside a plain one."""
+    """A structured type declaring a node type beside a plain one."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -385,7 +385,7 @@ def sees_spacing(given: Spacing) -> str:
 
 
 def test_a_field_declaring_a_node_takes_that_node():
-    """What the container says a field holds is what the port takes, node types among them."""
+    """What the structured type says a field holds is what the port takes, node types among them."""
     ports = sees_spacing.process_class.spec().inputs['given']
 
     assert ports['spacing'].valid_type == (Float,)
@@ -394,7 +394,7 @@ def test_a_field_declaring_a_node_takes_that_node():
 
 @pytest.mark.parametrize('as_nodes', (False, True), ids=('plain-values', 'nodes'))
 def test_a_value_is_converted_to_what_the_field_declares(as_nodes):
-    """A port turns a plain value into the node it takes, which a field of a container inherits."""
+    """A port turns a plain value into the node it takes, which a field of a structured type inherits."""
     given = {'spacing': Float(0.2), 'points': Int(8)} if as_nodes else {'spacing': 0.2, 'points': 8}
     results, node = run_get_node(sees_spacing, given=given)
 
@@ -441,7 +441,7 @@ def test_a_field_marked_whole_is_read_as_one_value(container):
 
 
 def test_a_field_marked_whole_is_one_port_holding_the_object():
-    """A container that nothing wires into is one node, rather than the namespace its fields would name."""
+    """A structured type that nothing wires into is one node, rather than the namespace its fields would name."""
     ports = keeps_whole.process_class.spec().inputs['given']
 
     assert JsonableData in ports['config'].valid_type
@@ -476,10 +476,10 @@ def test_a_parameter_marked_whole_is_one_port_holding_the_object():
 
 
 def test_a_port_holding_a_container_takes_its_fields_as_a_mapping():
-    """A namespace takes the fields written out, so a port holding the whole container takes them too."""
+    """A namespace takes the fields written out, so a port holding the whole structured type takes them too."""
     results, node = run_get_node(takes_a_whole_parameter, given={'tolerance': 0.25})
 
-    assert results['seen'] == 'Conf/0.25', 'the mapping was read as the container it stands for'
+    assert results['seen'] == 'Conf/0.25', 'the mapping was read as the structured type it stands for'
     assert isinstance(node.inputs.given, JsonableData)
 
 
@@ -493,7 +493,7 @@ def test_a_model_is_stored_whole_and_read_back():
 
 
 class HoldsANode(BaseModel):
-    """A container holding a node, which is not something JSON has a way to write."""
+    """A structured type holding a node, which is not something JSON has a way to write."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -511,7 +511,7 @@ def keeps_a_node_whole(given: KeptWhole) -> str:
 
 
 def test_a_whole_field_that_cannot_be_written_as_json_says_what_to_do():
-    """One node holding a container holds it as JSON, which a node inside it has no way to be written as."""
+    """One node holding a structured type holds it as JSON, which a node inside it has no way to be written as."""
     given = KeptWhole(label='si', config=HoldsANode(spacing=Float(0.2)))
 
     with pytest.raises(ValueError, match='drop the mark so that each field is stored as the node it is'):

@@ -36,6 +36,9 @@ A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter 
 Such a class belongs to a module that resolves to something different in every interpreter, so the worker used to fail with `ImportError: object 'MyWorkChain' from identifier '__main__:MyWorkChain' could not be loaded`.
 The checkpoint now carries the class itself whenever the recorded name would not resolve for the worker, which also covers a class importable here but absent from the `sys.path` the daemon froze at startup.
 
+Submitting such a class is refused while the daemon runs a different environment than the interpreter submitting, since the modules it needs cannot be worked out from import paths leading to another installation; `verdi daemon restart` from the environment you submit from is the fix.
+A class the daemon can import by name is unaffected, as is running the process locally with `run`, which needs nothing of the daemon's environment.
+
 `ProcessNode.class_source` records the source of a class that has no name to resolve later, since the checkpoint carrying it is deleted once the node seals.
 It is stored under `ProcessNode.KEY_OBJECT_CLASS_SOURCE` in the node's repository, which is `.aiida/class_source.py`, beside the `calcinfo.json` and `job_tmpl.json` a calculation job already keeps there, so it stays out of the input files `verdi calcjob inputls` lists. `verdi node show` carries the command that prints it, for a node that has one.
 

@@ -625,9 +625,10 @@ class CheckpointSerializable:
             msg = (
                 f'the process class of this checkpoint could not be recovered. The class it carries failed '
                 f'to load ({carried_failure}), and the name recorded beside it, `{class_name}`, does not '
-                f'resolve here either ({exception}). A daemon started from a different environment than the '
-                f'one that submitted carries neither the modules the class needs nor a name that reaches it; '
-                f'run `verdi daemon restart` from the environment you submit from.'
+                f'resolve here either ({exception}). Either it was submitted while no daemon was running, so the '
+                f'modules it needs could not be worked out, or this worker runs a different Python or '
+                f'`cloudpickle` than the interpreter that submitted. Start the daemon from the environment you '
+                f'submit from, then submit again.'
             )
             raise ImportError(msg) from carried_failure
 

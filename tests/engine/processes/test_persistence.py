@@ -62,7 +62,10 @@ def test_load_falls_back_to_the_name_when_the_carried_class_will_not_load(
 def test_load_reports_the_carried_failure_when_the_name_is_gone_too():
     """A notebook class whose bytes will not load leaves a name that was never going to resolve, so the loader's own
     error blames ``__main__``. The bytes were the route that should have worked, so their failure is the cause worth
-    reporting, along with the daemon restart that fixes it.
+    reporting, along with the two situations that produce it.
+
+    Submitting against a daemon from another installation is not among them: that is refused at submit, so naming it
+    here would send a reader after the one cause this cannot be.
     """
     from aiida.engine.processes.persistence import META, META__CLASS_BYTES, META__CLASS_NAME
 
@@ -76,5 +79,6 @@ def test_load_reports_the_carried_failure_when_the_name_is_gone_too():
     assert 'could not be recovered' in message
     assert 'invalid load key' in message, 'the unpickling failure is the cause and has to be in the message'
     assert '__main__:NotebookClass' in message
-    assert 'verdi daemon restart' in message
+    assert 'while no daemon was running' in message, 'one of the two situations that still reach this'
+    assert 'cloudpickle' in message, 'the other one'
     assert info.value.__cause__ is not None, 'the unpickling failure is the chained cause'

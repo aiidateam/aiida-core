@@ -1,33 +1,18 @@
-name: pre-commit
+name: ci-checks
 # NOTE: This job is not duplicating pre-commit.ci job,
 # since that once skips running mypy type-checking
 # due to technical limitations of pre-commit.ci runners.
 
 on:
   push:
-    branches-ignore: [gh-pages]
+    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches-ignore: [gh-pages]
-
-env:
-  FORCE_COLOR: 1
+  workflow_dispatch:
 
 jobs:
 
-  pre-commit:
-
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-
-    steps:
-    - uses: actions/checkout@v7
-
-    - name: Install python dependencies
-      uses: ./.github/actions/install-aiida-core
-      with:
-        python-version: '3.11'
-        from-lock: 'true'
-        extras: pre-commit
-
-    - name: Run pre-commit
-      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+  checks:
+    if: github.event_name != 'pull_request' || !contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')
+    uses: ./.github/workflows/pre-commit-reusable.yml

@@ -1,0 +1,26 @@
+name: pre-commit checks
+
+on:
+  workflow_call:
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+
+  pre-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install python dependencies
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.11'
+        from-lock: 'true'
+        extras: pre-commit
+
+    - name: Run pre-commit
+      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

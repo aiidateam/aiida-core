@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for what a container says about the namespace its fields name."""
+"""Tests for what a structured type says about the namespace its fields name."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def ph(given: PhInputs) -> float:
 
 
 def test_the_container_takes_what_it_says_it_does():
-    """The namespace is the fields of the container, so what the container accepts is what runs."""
+    """The namespace is the fields of the structured type, so what the structured type accepts is what runs."""
     results, node = run_get_node(ph, given={'structure': 'si', 'ecutwfc': 120.0})
 
     assert node.is_finished_ok, node.exit_message
@@ -50,7 +50,7 @@ def test_the_container_takes_what_it_says_it_does():
     ids=('constraint', 'validator'),
 )
 def test_what_the_container_refuses_is_refused_at_submit(given, says):
-    """A `Field` constraint and a validator of the container's own both answer before anything is stored."""
+    """A `Field` constraint and a validator of the structured type's own both answer before anything is stored."""
     with pytest.raises(ValueError, match=says):
         run_get_node(ph, given=given)
 

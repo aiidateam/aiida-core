@@ -6,14 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Reading the fields of a structured container, so that one can say what a namespace of ports holds.
+"""Reading the fields of a structured type, so that one can say what a namespace of ports holds.
 
 A ``TypedDict``, a dataclass, a ``NamedTuple`` and a pydantic model all say the same thing in different words:
-these names, of these types, some of them with a default. A namespace of ports says it too, so a container used
+these names, of these types, some of them with a default. A namespace of ports says it too, so a structured type used
 as an annotation names one and the ports under it are its fields.
 
-This is the only place that knows which kinds of container there are, and it knows nothing about ports in return:
-it reads a container into :class:`Field`, and whoever wants ports makes them from those. Adding a kind is one
+This is the only place that knows which kinds of structured type there are, and it knows nothing about ports in return:
+it reads a structured type into :class:`Field`, and whoever wants ports makes them from those. Adding a kind is one
 entry in :data:`READERS`.
 """
 
@@ -22,7 +22,7 @@ from __future__ import annotations
 import dataclasses
 import typing as t
 
-__all__ = ('Field', 'Whole', 'as_dict', 'build', 'fields_of', 'is_a_container', 'marked_whole', 'without_marks')
+__all__ = ('Field', 'Whole', 'as_dict', 'build', 'fields_of', 'is_structured', 'marked_whole', 'without_marks')
 
 UNSPECIFIED = object()
 """What a field has instead of a default when it has none, since ``None`` is a default like any other."""
@@ -31,7 +31,7 @@ UNSPECIFIED = object()
 class Whole:
     """Marks a field, or a parameter, as one value rather than as the namespace its fields would name.
 
-    A container is usually a wiring surface: one port per field, so a graph fills one of them with what another
+    A structured type is usually a wiring surface: one port per field, so a graph fills one of them with what another
     task produced. Where it is opaque data instead, a configuration nobody wires into, this says so and the whole
     of it is one node:
 
@@ -39,14 +39,14 @@ class Whole:
     >>>     structure: str
     >>>     config: Annotated[SomeConfig, Whole]
 
-    It is written as metadata of the type rather than as a keyword, so that it reaches a field of a container as
-    readily as a parameter, and survives in a container written for a function somebody else wrote.
+    It is written as metadata of the type rather than as a keyword, so that it reaches a field of a structured type as
+    readily as a parameter, and survives in a structured type written for a function somebody else wrote.
     """
 
 
 @dataclasses.dataclass(frozen=True)
 class Field:
-    """One field of a structured container, in the words a port is declared with."""
+    """One field of a structured type, in the words a port is declared with."""
 
     name: str
     annotation: t.Any
@@ -60,8 +60,8 @@ class Field:
         return self.default is UNSPECIFIED
 
 
-def is_a_container(annotation: t.Any) -> bool:
-    """Return whether the annotation is a structured container, whose fields name the ports of a namespace."""
+def is_structured(annotation: t.Any) -> bool:
+    """Return whether the annotation is a structured type, whose fields name the ports of a namespace."""
     return fields_of(annotation) is not None
 
 
@@ -75,7 +75,7 @@ def is_a_plain_class(annotation: t.Any) -> bool:
 
 
 def fields_of(annotation: t.Any) -> tuple[Field, ...] | None:
-    """Return the fields of a structured container, or ``None`` where the annotation is not one.
+    """Return the fields of a structured type, or ``None`` where the annotation is not one.
 
     :param annotation: what a parameter or a return value is annotated with.
     """
@@ -90,12 +90,12 @@ def fields_of(annotation: t.Any) -> tuple[Field, ...] | None:
 
 
 def as_dict(value: t.Any) -> dict[str, t.Any] | None:
-    """Return what an instance of a structured container holds, by field, or ``None`` where it is not one.
+    """Return what an instance of a structured type holds, by field, or ``None`` where it is not one.
 
-    This is what flattens a container into the namespace its fields are taken under, so that each of them is
+    This is what flattens a structured type into the namespace its fields are taken under, so that each of them is
     stored, validated and wired as the port it is.
 
-    :param value: an instance of a structured container, or anything else.
+    :param value: an instance of a structured type, or anything else.
     """
     if isinstance(value, type):
         return None
@@ -119,19 +119,19 @@ def as_dict(value: t.Any) -> dict[str, t.Any] | None:
 
 
 def _held(value: t.Any) -> t.Any:
-    """Return a value as the namespace holds it, which for a container of its own is a namespace again."""
+    """Return a value as the namespace holds it, which for a structured type of its own is a namespace again."""
     nested = as_dict(value)
 
     return value if nested is None else nested
 
 
 def build(container: type, values: t.Mapping[str, t.Any]) -> t.Any:
-    """Return an instance of the container holding these values.
+    """Return an instance of the structured type holding these values.
 
-    This is the way back: a namespace holds what a container said it would, so the function that named the
-    container is handed one rather than the mapping the ports were filled in as.
+    This is the way back: a namespace holds what a structured type said it would, so the function that named the
+    structured type is handed one rather than the mapping the ports were filled in as.
 
-    :param container: the structured container to build.
+    :param structured type: the structured type to build.
     :param values: what each of its fields holds, as :func:`as_dict` rendered them.
     """
     fields = {field.name: field for field in fields_of(container) or ()}
@@ -140,7 +140,7 @@ def build(container: type, values: t.Mapping[str, t.Any]) -> t.Any:
         if name in fields
         and not fields[name].whole
         and isinstance(value, t.Mapping)
-        and is_a_container(fields[name].annotation)
+        and is_structured(fields[name].annotation)
         else value
         for name, value in values.items()
     }
@@ -185,7 +185,7 @@ def _of_typed_dict(annotation: t.Any) -> tuple[Field, ...]:
     """Return the fields of a ``TypedDict``, which are optional where it says they are.
 
     It records no default, only whether a key has to be there, so an optional field defaults to ``None`` rather
-    than to a value the container does not have.
+    than to a value the structured type does not have.
     """
     optional = set(getattr(annotation, '__optional_keys__', ()))
 
@@ -253,7 +253,7 @@ READERS: tuple[tuple[t.Callable[[type], bool], t.Callable[[t.Any], tuple[Field, 
     (_is_a_named_tuple, _of_named_tuple),
     (dataclasses.is_dataclass, _of_dataclass),
 )
-"""Every kind of container that can name a namespace, and how to read its fields.
+"""Every kind of structured type that can name a namespace, and how to read its fields.
 
 Ordered, since a kind may recognise another: a ``NamedTuple`` is a tuple, and a pydantic model is not a
 dataclass but is close enough to one that the dataclass reader would have to be asked last anyway.

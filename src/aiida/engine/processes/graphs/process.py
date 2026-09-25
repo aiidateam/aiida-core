@@ -19,7 +19,6 @@ from inspect import get_annotations
 
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
-from aiida.engine.processes.containers import as_dict
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
@@ -29,6 +28,7 @@ from aiida.engine.processes.ports import as_written
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
+from aiida.engine.processes.structured import as_dict
 from aiida.orm import Data, Dict, GraphNode, ProcessNode
 from aiida.orm.nodes.data.base import to_aiida_type
 
@@ -77,7 +77,7 @@ class TaskProcess(FunctionProcess):
     def _out_result(self, result: t.Any) -> None:
         declared = list(self.spec().outputs.keys())
 
-        # A returned container says which output each of its fields is, exactly as it does where it is an input.
+        # A returned structured type says which output each of its fields is, exactly as it does where it is an input.
         if (fields := as_dict(result)) is not None:
             result = fields
 

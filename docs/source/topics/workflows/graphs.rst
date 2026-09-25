@@ -23,14 +23,14 @@ It takes and returns plain Python values, and the engine stores them as nodes on
     :code: python
 
 ``outputs`` names the ports the returned values are attached to, and a returned tuple is mapped onto them in order.
-Without it, the task produces one output called ``result``, unless the return annotation is a structured container, in which case each of its fields is a port.
+Without it, the task produces one output called ``result``, unless the return annotation is a structured type, in which case each of its fields is a port.
 
 A node holding one plain value arrives as that value, so the function is written the way it would be written without a graph around it.
 Anything else arrives as the node it is, since a :class:`~aiida.orm.nodes.data.structure.StructureData` or a :class:`~aiida.orm.nodes.data.folder.FolderData` is not a value there is a plain Python spelling of.
 
 A task can be launched on its own, with :func:`~aiida.engine.launch.run` or :func:`~aiida.engine.launch.submit`, exactly as a calculation function can.
 
-.. _topics:workflows:graphs:tasks:containers:
+.. _topics:workflows:graphs:tasks:structured:
 
 Saying what a task takes and produces
 -------------------------------------
@@ -40,12 +40,12 @@ these names, of these types, some of them with a default.
 That is what a namespace of ports says too, so a parameter annotated with one names a namespace whose ports are
 its fields, and a returned one says which output each of its fields is:
 
-.. include:: include/snippets/graphs/containers.py
+.. include:: include/snippets/graphs/structured.py
     :code: python
 
 The fields are ordinary ports, so a graph wires into one of them, ``relax(given={'structure': prepared.structure})``,
-and the function is handed back an instance of the container it asked for.
-Validation belongs to the ports, wherever the value came from, so the container is a way of saying what a namespace
+and the function is handed back an instance of the structured type it asked for.
+Validation belongs to the ports, wherever the value came from, so the structured type is a way of saying what a namespace
 holds rather than a second place where types live.
 A pydantic model is the richest way to say it, since it can also say how a field is rendered for storage, which is
 how a value AiiDA has no way to store is stored and read back as the type the model declares.

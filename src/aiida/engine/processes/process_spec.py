@@ -13,7 +13,6 @@ from __future__ import annotations
 import typing as t
 from collections.abc import Mapping
 
-from aiida.engine.processes.containers import UNSPECIFIED, Field, build, fields_of, is_a_container
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
 from aiida.engine.processes.ports import (
@@ -23,15 +22,16 @@ from aiida.engine.processes.ports import (
     as_written,
     infer_valid_type_from_type_annotation,
 )
+from aiida.engine.processes.structured import UNSPECIFIED, Field, build, fields_of, is_structured
 from aiida.orm import Data, Dict, JsonableData, to_aiida_type
 
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
 
 
 def _against(container: type) -> t.Callable[[t.Any, t.Any], str | None]:
-    """Return what checks a namespace against the container that named it.
+    """Return what checks a namespace against the structured type that named it.
 
-    The ports check that each value is of the type the field declared. Whatever else the container says, a
+    The ports check that each value is of the type the field declared. Whatever else the structured type says, a
     pydantic `Field` constraint or a validator of its own, it says while being built, so building one here is
     what refuses a run where it is submitted rather than where the task starts.
     """
@@ -48,7 +48,7 @@ def _against(container: type) -> t.Callable[[t.Any, t.Any], str | None]:
 
 
 def _as_a_port(field: Field) -> dict[str, t.Any]:
-    """Return how one field of a container is declared as a port.
+    """Return how one field of a structured type is declared as a port.
 
     A field kept whole is one node holding the object, which is what :class:`~aiida.orm.JsonableData` is for,
     unless what it holds is a node already.
@@ -69,9 +69,9 @@ def _as_one_node(field: Field) -> t.Callable[[t.Any], JsonableData]:
     """Return what stores a field kept whole, which is one node holding the whole of it."""
 
     def store(value: t.Any) -> JsonableData:
-        # A namespace takes the fields written as a mapping, so a port holding the whole container takes one
-        # too, and the container is what says whether those fields are acceptable.
-        if isinstance(value, Mapping) and is_a_container(field.annotation):
+        # A namespace takes the fields written as a mapping, so a port holding the whole structured type takes one
+        # too, and the structured type is what says whether those fields are acceptable.
+        if isinstance(value, Mapping) and is_structured(field.annotation):
             value = build(field.annotation, dict(value))
 
         try:
@@ -116,15 +116,15 @@ class ProcessSpec(spec.ProcessSpec):
         self._exit_codes = ExitCodesNamespace()
 
     def input_whole(self, name: str, container: type, default: t.Any = UNSPECIFIED, **kwargs: t.Any) -> None:
-        """Declare one port holding the whole of a structured container.
+        """Declare one port holding the whole of a structured type.
 
-        This is what :class:`~aiida.engine.processes.containers.Whole` asks for: the container is stored as one
+        This is what :class:`~aiida.engine.processes.structured.Whole` asks for: the structured type is stored as one
         node holding it as JSON, so nothing wires into a field of it and the provenance carries one value:
 
         >>> spec.input_whole('config', SomeConfig)
 
         :param name: the port to declare.
-        :param container: the structured container the port holds.
+        :param structured type: the structured type the port holds.
         :param default: what the port holds when nothing is given, or ``UNSPECIFIED`` to make it required.
         :param kwargs: passed on to the port, ``help`` among them.
         """
@@ -132,7 +132,7 @@ class ProcessSpec(spec.ProcessSpec):
         self.input(name, **{**_as_a_port(field), **kwargs})
 
     def input_namespace_from(self, name: str, container: type, **kwargs: t.Any) -> None:
-        """Declare a namespace holding one port per field of a structured container.
+        """Declare a namespace holding one port per field of a structured type.
 
         A ``TypedDict``, a dataclass, a ``NamedTuple`` and a pydantic model each say which names a value has, of
         which types, and which of them have a default. That is what a namespace of ports says, so this is how one
@@ -144,19 +144,19 @@ class ProcessSpec(spec.ProcessSpec):
         >>>
         >>> spec.input_namespace_from('relax', Relax)
 
-        Validation then belongs to the ports, wherever the values come from, so a container is a way of saying
+        Validation then belongs to the ports, wherever the values come from, so a structured type is a way of saying
         what a namespace holds rather than a second place where types live.
 
         :param name: the namespace to declare the fields under.
-        :param container: the structured container whose fields to declare.
+        :param structured type: the structured type whose fields to declare.
         :param kwargs: passed on to the namespace itself, ``required`` and ``help`` among them.
-        :raises TypeError: if the container is not one this knows how to read.
+        :raises TypeError: if the structured type is not one this knows how to read.
         """
         fields = fields_of(container)
 
         if fields is None:
             msg = (
-                f'`{getattr(container, "__name__", container)}` is not a structured container, so there is nothing '
+                f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
                 f'to declare `{name}` from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
             )
             raise TypeError(msg)

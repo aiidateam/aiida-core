@@ -21,16 +21,16 @@ from inspect import get_annotations
 import docstring_parser
 
 from aiida.common.lang import override
-from aiida.engine.processes.containers import (
-    as_dict,
-    fields_of,
-    is_a_container,
-    marked_whole,
-    without_marks,
-)
 from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec, _as_a_port
+from aiida.engine.processes.structured import (
+    as_dict,
+    fields_of,
+    is_structured,
+    marked_whole,
+    without_marks,
+)
 from aiida.manage import get_manager
 from aiida.orm import (
     CalcFunctionNode,
@@ -147,9 +147,9 @@ def process_function(
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
     :param base_class: the ``FunctionProcess`` subclass to build, which defaults to ``FunctionProcess`` itself
-    :param outputs: names of the output ports to declare, or a structured container whose fields name them,
+    :param outputs: names of the output ports to declare, or a structured type whose fields name them,
         instead of a dynamic output namespace
-    :param inputs: a structured container whose fields name the input ports, for a function whose signature does
+    :param inputs: a structured type whose fields name the input ports, for a function whose signature does
         not say what it takes
     """
 
@@ -251,7 +251,7 @@ def process_function(
         def get_launch_inputs(**inputs: t.Any) -> dict[str, t.Any]:
             """Return the inputs to launch the process with.
 
-            A structured container given where a namespace is declared is flattened into it, so that each of its
+            A structured type given where a namespace is declared is flattened into it, so that each of its
             fields is stored and validated as the port it is.
             """
             return {name: _flattened(takes.get(name), value) for name, value in inputs.items()}
@@ -294,12 +294,12 @@ def _takes_many(annotation: t.Any) -> bool:
 
 
 def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
-    """Return a value as the port taking it holds it, which for a container is the namespace of its fields.
+    """Return a value as the port taking it holds it, which for a structured type is the namespace of its fields.
 
     What says to flatten is the annotation rather than the shape of the value, since plenty of things are a
     dataclass without being what a parameter was written to take.
     """
-    if not is_a_container(annotation):
+    if not is_structured(annotation):
         return value
 
     held = as_dict(value)
@@ -308,16 +308,16 @@ def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
 
 
 def _declare_input_types(container: type | None, spec: t.Any, signature: inspect.Signature) -> set[str]:
-    """Declare one input port per field of a container, for a function whose signature does not say what it takes.
+    """Declare one input port per field of a structured type, for a function whose signature does not say what it takes.
 
     This is the way in for a function that came from somewhere else, where the parameters carry no annotation to
     read. The fields are the ports, and the function is handed each of them by the name it declared.
 
-    :param container: the structured container naming the ports, or ``None`` where the signature says it all.
+    :param structured type: the structured type naming the ports, or ``None`` where the signature says it all.
     :param spec: the spec to declare them on.
     :param signature: the signature of the wrapped function, which has to be able to take them.
     :returns: the names that were declared, which the signature is not asked about again.
-    :raises TypeError: if the container is not one that can be read, or names something the function cannot take.
+    :raises TypeError: if the structured type is not one that can be read, or names something the function cannot take.
     """
     if container is None:
         return set()
@@ -326,7 +326,7 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
 
     if fields is None:
         msg = (
-            f'`{getattr(container, "__name__", container)}` is not a structured container, so there is nothing to '
+            f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing to '
             f'declare the inputs from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
         )
         raise TypeError(msg)
@@ -358,11 +358,11 @@ def _declare_output_types(
 ) -> dict[str, tuple[t.Any, ...]] | None:
     """Return the output ports to declare for a function process, or ``None`` to keep the namespace dynamic.
 
-    Explicit ``outputs`` take precedence over the return annotation. A structured container declares one port per
+    Explicit ``outputs`` take precedence over the return annotation. A structured type declares one port per
     field, any other annotation declares a single ``result`` port, and no annotation leaves the namespace dynamic,
     since then the outputs are not known before the function has run.
 
-    :param outputs: names of the output ports to declare, or a structured container whose fields name them.
+    :param outputs: names of the output ports to declare, or a structured type whose fields name them.
     :param return_annotation: the return annotation of the wrapped function, if it has one.
     :returns: a mapping of port name onto its valid types, or ``None`` if the namespace should stay dynamic.
     :raises TypeError: if ``outputs`` is not a sequence of port names.
@@ -554,7 +554,7 @@ class FunctionProcess(Process):
                     )
                     continue
 
-                if is_a_container(annotation):
+                if is_structured(annotation):
                     spec.input_namespace_from(
                         parameter.name,
                         annotation,

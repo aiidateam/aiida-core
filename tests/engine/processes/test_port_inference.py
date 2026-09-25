@@ -15,8 +15,8 @@ from enum import Enum
 import pytest
 
 from aiida.engine import Many
-from aiida.engine.processes.containers import fields_of, is_a_plain_class
 from aiida.engine.processes.ports import as_written, infer_valid_type_from_type_annotation
+from aiida.engine.processes.structured import fields_of, is_a_plain_class
 from aiida.orm import Data, Int, Str
 
 

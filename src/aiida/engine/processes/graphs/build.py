@@ -19,7 +19,6 @@ from collections import Counter
 from dataclasses import dataclass, field, replace
 from inspect import get_annotations
 
-from aiida.engine.processes.containers import as_dict, is_a_container
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
@@ -43,6 +42,7 @@ from aiida.engine.processes.graphs.spec import (
     TaskSpec,
 )
 from aiida.engine.processes.process import Process
+from aiida.engine.processes.structured import as_dict, is_structured
 from aiida.orm import CalcFunctionNode, WorkFunctionNode
 
 __all__ = (
@@ -315,12 +315,12 @@ class MappedOutputs(TaskOutputs):
 
 
 def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
-    """Return a value as the port taking it holds it, which for a container is the namespace of its fields.
+    """Return a value as the port taking it holds it, which for a structured type is the namespace of its fields.
 
     What says to flatten is the annotation rather than the shape of the value, since plenty of things are a
     dataclass without being what a parameter was written to take, references among them.
     """
-    if not is_a_container(annotation):
+    if not is_structured(annotation):
         return value
 
     held = as_dict(value)
@@ -350,7 +350,7 @@ def _as_reference(value: t.Any) -> TaskOutput | None:
 def _holds_reference(value: t.Any) -> bool:
     """Return whether the output of a task is buried inside a container.
 
-    Only an argument that *is* an output records a dependency, so one inside a container would be stored as a
+    Only an argument that *is* an output records a dependency, so one inside a structured type would be stored as a
     plain value and the task it comes from would never be waited for.
     """
     if isinstance(value, (TaskOutput, TaskOutputs, GraphInput)):
@@ -1362,7 +1362,7 @@ def task(
     >>>
     >>> converging = task(converge, handlers=[push_further])
 
-    A structured container says what a task takes and produces, and where the function is annotated with one, it
+    A structured type says what a task takes and produces, and where the function is annotated with one, it
     says so itself. A `TypedDict`, a dataclass, a `NamedTuple` and a pydantic model all do:
 
     >>> class PhInputs(BaseModel):
@@ -1373,8 +1373,8 @@ def task(
     >>> def ph(given: PhInputs) -> float:
     >>>     return compute(given.structure, given.spin)
 
-    The fields of the container are the ports of the namespace it names, so a graph wires into one of them,
-    `ph(given={'structure': relaxed.structure})`, and the function is handed the container it asked for. A
+    The fields of the structured type are the ports of the namespace it names, so a graph wires into one of them,
+    `ph(given={'structure': relaxed.structure})`, and the function is handed the structured type it asked for. A
     function that carries no annotations, because it came from somewhere else, is described where it is placed:
 
     >>> ph = task(their_ph, inputs=PhInputs, outputs=PhOutputs)
@@ -1382,8 +1382,8 @@ def task(
     which names the ports at the top level, one per field, since the function takes them one by one.
 
     :param function: The function to decorate, or the process class to declare a task.
-    :param inputs: A structured container naming the input ports, for a function whose signature does not.
-    :param outputs: Names of the output ports to declare, or a structured container whose fields name them.
+    :param inputs: A structured type naming the input ports, for a function whose signature does not.
+    :param outputs: Names of the output ports to declare, or a structured type whose fields name them.
     :param identifier: Name of the task, which defaults to the name of the function or class.
     :param handlers: Ways to recover from a run that failed, as declared by :func:`~aiida.engine.handler`.
     :return: The decorated function, carrying its ``task_spec``, or a handle placing the process in a graph.
@@ -1485,7 +1485,7 @@ def monitor(
     The return annotation of a monitor says how it answers, so it declares no ports; only ``outputs`` does.
 
     :param function: The function to decorate, which returns whether the condition is met.
-    :param outputs: Names of the output ports to declare, or a structured container whose fields name them.
+    :param outputs: Names of the output ports to declare, or a structured type whose fields name them.
     :param identifier: Name of the task, which defaults to the name of the function.
     :return: The decorated function, carrying its ``task_spec``, as :func:`task` returns one.
     """

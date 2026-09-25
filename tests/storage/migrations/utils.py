@@ -44,7 +44,12 @@ def reflect_schema(bind: Connection | Engine) -> dict:
             inspector.get_foreign_keys(table_name),
             key=lambda constraint: (constraint['name'] or '', constraint['constrained_columns']),
         )
-        indexes[table_name] = sorted(inspector.get_indexes(table_name), key=lambda index: index['name'])
+        # PostgreSQL indexes carry a legacy `include_columns` key in SQLAlchemy 2.0 that 2.1 drops; the same columns
+        # remain under `dialect_options['postgresql_include']`.
+        indexes[table_name] = [
+            {key: value for key, value in index.items() if key != 'include_columns'}
+            for index in sorted(inspector.get_indexes(table_name), key=lambda index: index['name'] or '')
+        ]
 
     return {
         'columns': columns,

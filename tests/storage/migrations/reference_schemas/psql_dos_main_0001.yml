@@ -629,14 +629,12 @@ indexes:
     - aiidauser_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbauthinfo_db_dbauthinfo_aiidauser_id
     unique: false
   - column_names:
     - dbcomputer_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbauthinfo_db_dbauthinfo_dbcomputer_id
     unique: false
   - column_names:
@@ -645,7 +643,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbauthinfo_aiidauser_id_dbcomputer_id
-    include_columns: []
     name: uq_db_dbauthinfo_aiidauser_id_dbcomputer_id
     unique: true
   db_dbcomment:
@@ -653,14 +650,12 @@ indexes:
     - dbnode_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbcomment_db_dbcomment_dbnode_id
     unique: false
   - column_names:
     - user_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbcomment_db_dbcomment_user_id
     unique: false
   - column_names:
@@ -668,7 +663,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbcomment_uuid
-    include_columns: []
     name: uq_db_dbcomment_uuid
     unique: true
   db_dbcomputer:
@@ -678,7 +672,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         label: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbcomputer_label
     unique: false
   - column_names:
@@ -686,7 +679,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbcomputer_label
-    include_columns: []
     name: uq_db_dbcomputer_label
     unique: true
   - column_names:
@@ -694,7 +686,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbcomputer_uuid
-    include_columns: []
     name: uq_db_dbcomputer_uuid
     unique: true
   db_dbgroup:
@@ -702,21 +693,18 @@ indexes:
     - label
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbgroup_db_dbgroup_label
     unique: false
   - column_names:
     - type_string
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbgroup_db_dbgroup_type_string
     unique: false
   - column_names:
     - user_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbgroup_db_dbgroup_user_id
     unique: false
   - column_names:
@@ -725,7 +713,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         label: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbgroup_label
     unique: false
   - column_names:
@@ -734,7 +721,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         type_string: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbgroup_type_string
     unique: false
   - column_names:
@@ -743,7 +729,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbgroup_label_type_string
-    include_columns: []
     name: uq_db_dbgroup_label_type_string
     unique: true
   - column_names:
@@ -751,7 +736,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbgroup_uuid
-    include_columns: []
     name: uq_db_dbgroup_uuid
     unique: true
   db_dbgroup_dbnodes:
@@ -759,14 +743,12 @@ indexes:
     - dbgroup_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbgroup_id
     unique: false
   - column_names:
     - dbnode_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbnode_id
     unique: false
   - column_names:
@@ -775,7 +757,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
-    include_columns: []
     name: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
     unique: true
   db_dblink:
@@ -783,28 +764,24 @@ indexes:
     - input_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dblink_db_dblink_input_id
     unique: false
   - column_names:
     - label
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dblink_db_dblink_label
     unique: false
   - column_names:
     - output_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dblink_db_dblink_output_id
     unique: false
   - column_names:
     - type
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dblink_db_dblink_type
     unique: false
   - column_names:
@@ -813,7 +790,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         label: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dblink_label
     unique: false
   - column_names:
@@ -822,7 +798,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         type: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dblink_type
     unique: false
   db_dblog:
@@ -830,21 +805,18 @@ indexes:
     - dbnode_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dblog_db_dblog_dbnode_id
     unique: false
   - column_names:
     - levelname
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dblog_db_dblog_levelname
     unique: false
   - column_names:
     - loggername
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dblog_db_dblog_loggername
     unique: false
   - column_names:
@@ -853,7 +825,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         levelname: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dblog_levelname
     unique: false
   - column_names:
@@ -862,7 +833,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         loggername: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dblog_loggername
     unique: false
   - column_names:
@@ -870,7 +840,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dblog_uuid
-    include_columns: []
     name: uq_db_dblog_uuid
     unique: true
   db_dbnode:
@@ -878,49 +847,42 @@ indexes:
     - ctime
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbnode_db_dbnode_ctime
     unique: false
   - column_names:
     - dbcomputer_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbnode_db_dbnode_dbcomputer_id
     unique: false
   - column_names:
     - label
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbnode_db_dbnode_label
     unique: false
   - column_names:
     - mtime
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbnode_db_dbnode_mtime
     unique: false
   - column_names:
     - node_type
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbnode_db_dbnode_node_type
     unique: false
   - column_names:
     - process_type
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbnode_db_dbnode_process_type
     unique: false
   - column_names:
     - user_id
     dialect_options:
       postgresql_include: []
-    include_columns: []
     name: ix_db_dbnode_db_dbnode_user_id
     unique: false
   - column_names:
@@ -929,7 +891,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         label: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbnode_label
     unique: false
   - column_names:
@@ -938,7 +899,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         node_type: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbnode_node_type
     unique: false
   - column_names:
@@ -947,7 +907,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         process_type: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbnode_process_type
     unique: false
   - column_names:
@@ -955,7 +914,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbnode_uuid
-    include_columns: []
     name: uq_db_dbnode_uuid
     unique: true
   db_dbsetting:
@@ -965,7 +923,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         key: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbsetting_key
     unique: false
   - column_names:
@@ -973,7 +930,6 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbsetting_key
-    include_columns: []
     name: uq_db_dbsetting_key
     unique: true
   db_dbuser:
@@ -983,7 +939,6 @@ indexes:
       postgresql_include: []
       postgresql_ops:
         email: varchar_pattern_ops
-    include_columns: []
     name: ix_pat_db_dbuser_email
     unique: false
   - column_names:
@@ -991,6 +946,5 @@ indexes:
     dialect_options:
       postgresql_include: []
     duplicates_constraint: uq_db_dbuser_email
-    include_columns: []
     name: uq_db_dbuser_email
     unique: true

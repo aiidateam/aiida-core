@@ -4,8 +4,9 @@ name: pre-commit
 # due to technical limitations of pre-commit.ci runners.
 
 on:
+  workflow_dispatch:
   push:
-    branches-ignore: [gh-pages]
+    branches: [main]
   pull_request:
     branches-ignore: [gh-pages]
 

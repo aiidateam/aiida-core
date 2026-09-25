@@ -1180,7 +1180,7 @@ class TestQueryBuilderJoins:
         computer = orm.Computer(
             label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
         ).store()
-        authinfo = computer.configure(user)
+        authinfo = computer._configure_user(user)
         qb = orm.QueryBuilder()
         qb.append(orm.AuthInfo, tag='auth', filters={'id': {'==': authinfo.pk}})
         qb.append(orm.User, with_authinfo='auth')
@@ -1193,7 +1193,7 @@ class TestQueryBuilderJoins:
         computer = orm.Computer(
             label=str(uuid.uuid4()), hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
         ).store()
-        authinfo = computer.configure(user)
+        authinfo = computer._configure_user(user)
 
         # Search for the user of the authinfo
         qb = orm.QueryBuilder()
@@ -1741,7 +1741,7 @@ class TestDoubleStar:
 
     def test_authinfo(self, aiida_localhost):
         user = orm.User(email=str(uuid.uuid4())).store()
-        authinfo = aiida_localhost.configure(user)
+        authinfo = aiida_localhost._configure_user(user)
         result = (
             orm.QueryBuilder()
             .append(orm.AuthInfo, tag='auth', filters={'id': {'==': authinfo.pk}}, project=['**'])

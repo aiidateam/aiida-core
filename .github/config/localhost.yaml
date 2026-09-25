@@ -10,3 +10,6 @@ mpirun_command: ' '
 mpiprocs_per_machine: 1
 prepend_text: ' '
 append_text: ' '
+auth_params:
+  safe_interval: 0
+  use_login_shell: true

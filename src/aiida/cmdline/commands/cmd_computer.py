@@ -231,7 +231,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
             'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
-            f'\n    verdi computer configure {computer.transport_type} {computer.label} -n --no-use-login-shell\n\n'
+            '\n    Update the `use_login_shell` authentication parameter to False.\n\n'
             'For details, please refer to the documentation: '
             'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/transport.html#login-shells\n'
         )
@@ -270,7 +270,7 @@ def set_computer_builder(ctx, param, value):
     return value
 
 
-@verdi_computer.command('setup')
+@verdi_computer.command('setup', context_settings={'ignore_unknown_options': True, 'allow_extra_args': True})
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
 @options_computer.DESCRIPTION()
@@ -284,13 +284,27 @@ def set_computer_builder(ctx, param, value):
 @options_computer.USE_DOUBLE_QUOTES()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
+@click.option('--auth-params', type=click.UNPROCESSED, hidden=True)
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):
-    """Create a new computer."""
+    """Create a new computer.
+
+    Transport-specific authentication options can be passed alongside the setup options.
+    In a YAML configuration file, put them under ``auth_params``.
+    """
     from aiida.orm.utils.builders.computer import ComputerBuilder
+
+    # Parse transport-specific options after the computer exists, so their defaults can
+    # depend on its hostname and on the user's existing configuration.
+    auth_params = kwargs.pop('auth_params') or {}
+    if not isinstance(auth_params, dict):
+        raise click.BadParameter('Expected a mapping of transport options.', param_hint='auth_params')
+    configure_args = [*ctx.args, kwargs['label']]
+    if non_interactive:
+        configure_args.append('--non-interactive')
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical(
@@ -315,10 +329,20 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+    _configure_new_computer(ctx, computer, configure_args, auth_params)
 
-    profile = ctx.obj['profile']
-    echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+
+def _configure_new_computer(ctx, computer, args, auth_params):
+    """Apply the transport configuration to a newly stored computer."""
+    from aiida import orm
+    from aiida.transports.cli import create_configure_cmd
+
+    try:
+        command = create_configure_cmd(computer.transport_type)
+        command.main(args=args, standalone_mode=False, obj=ctx.obj, default_map=auth_params)
+    except BaseException:
+        orm.Computer.collection.delete(computer.pk)
+        raise
 
 
 @verdi_computer.command('duplicate')
@@ -370,10 +394,10 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
     if not computer.is_configured:
-        echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-
-        profile = ctx.obj['profile']
-        echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+        args = [computer.label]
+        if non_interactive:
+            args.append('--non-interactive')
+        _configure_new_computer(ctx, computer, args, {})
 
 
 @verdi_computer.command('enable')

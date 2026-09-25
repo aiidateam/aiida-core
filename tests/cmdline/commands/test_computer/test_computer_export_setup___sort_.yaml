@@ -1,4 +1,5 @@
 append_text: ''
+auth: core.ssh
 default_memory_per_machine: 100000
 description: Test Computer
 hostname: localhost
@@ -8,6 +9,5 @@ mpirun_command: mpirun
 prepend_text: ''
 scheduler: core.direct
 shebang: '#!xonsh'
-transport: core.ssh
 use_double_quotes: false
 work_dir: /tmp/aiida

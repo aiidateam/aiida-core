@@ -1,7 +1,7 @@
 label: localhost
 description: localhost
 hostname: localhost
-transport: core.local
+auth: core.local
 scheduler: core.direct
 shebang: '#!/usr/bin/env bash'
 work_dir: PLACEHOLDER_WORK_DIR

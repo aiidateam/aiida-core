@@ -66,7 +66,7 @@ def generate_setup_options_dict(replace_args=None, non_interactive=True):
     valid_noninteractive_options['label'] = 'noninteractive_computer'
     valid_noninteractive_options['hostname'] = 'localhost'
     valid_noninteractive_options['description'] = 'my description'
-    valid_noninteractive_options['transport'] = 'core.local'
+    valid_noninteractive_options['auth'] = 'core.local'
     valid_noninteractive_options['scheduler'] = 'core.direct'
     valid_noninteractive_options['shebang'] = '#!/bin/bash'
     valid_noninteractive_options['work-dir'] = '/scratch/{username}/aiida_run'
@@ -125,7 +125,9 @@ def generate_setup_options_interactive(ordereddict):
 
 def test_help(run_cli_command):
     """Test the help of verdi computer setup."""
-    run_cli_command(computer_setup, ['--help'])
+    result = run_cli_command(computer_setup, ['--help'])
+    assert '--auth' in result.output
+    assert '--transport' not in result.output
 
 
 def test_reachable():
@@ -169,7 +171,7 @@ def test_mixed(run_cli_command):
 
     assert new_computer.description == options_dict_full['description']
     assert new_computer.hostname == options_dict_full['hostname']
-    assert new_computer.transport_type == options_dict_full['transport']
+    assert new_computer.transport_type == options_dict_full['auth']
     assert new_computer.scheduler_type == options_dict_full['scheduler']
     assert new_computer.get_mpirun_command() == options_dict_full['mpirun-command'].split()
     assert new_computer.get_shebang() == options_dict_full['shebang']
@@ -197,7 +199,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
 
     assert new_computer.description == options_dict['description']
     assert new_computer.hostname == options_dict['hostname']
-    assert new_computer.transport_type == options_dict['transport']
+    assert new_computer.transport_type == options_dict['auth']
     assert new_computer.scheduler_type == options_dict['scheduler']
     assert new_computer.get_mpirun_command() == options_dict['mpirun-command'].split()
     assert new_computer.get_shebang() == options_dict['shebang']
@@ -215,7 +217,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
 
 def test_setup_configures_transport(run_cli_command):
     """Transport options passed to setup configure the newly stored computer."""
-    options = generate_setup_options(generate_setup_options_dict({'label': 'configured_ssh', 'transport': 'core.ssh'}))
+    options = generate_setup_options(generate_setup_options_dict({'label': 'configured_ssh', 'auth': 'core.ssh'}))
     result = run_cli_command(computer_setup, [*options, '--host', 'login.example.org', '--safe-interval', '3'])
 
     computer = orm.Computer.collection.get(label='configured_ssh')
@@ -316,7 +318,7 @@ def test_noninteractive_optional_default_memory_invalid(run_cli_command):
 def test_noninteractive_wrong_transport_fail(run_cli_command):
     """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
-    options_dict['transport'] = 'unknown_transport'
+    options_dict['auth'] = 'unknown_transport'
     options = generate_setup_options(options_dict)
     result = run_cli_command(computer_setup, options, raises=True)
     assert "entry point 'unknown_transport' is not valid" in result.output
@@ -358,7 +360,7 @@ def test_noninteractive_from_config(run_cli_command):
             f"""---
 label: {label}
 hostname: myhost
-transport: core.local
+auth: core.local
 scheduler: core.direct
 """
         )
@@ -557,10 +559,10 @@ class TestVerdiComputerConfigure:
         file_regression.check(content, extension='.yaml')
 
         # verifying correctness by comparing internal and loaded yaml object
-        configure_setup_data = yaml.safe_load(exported_setup_filename.read_text())
-        assert configure_setup_data == self.comp_builder.get_computer_spec(comp), (
-            'Internal computer configuration does not agree with exported one.'
-        )
+        exported_setup = yaml.safe_load(exported_setup_filename.read_text())
+        internal_spec = self.comp_builder.get_computer_spec(comp)
+        assert exported_setup.pop('auth') == internal_spec.pop('transport')
+        assert exported_setup == internal_spec, 'Internal computer configuration does not agree with exported one.'
 
     def test_computer_export_setup_overwrite(self, tmp_path):
         """Test if overwriting behavior of `verdi computer export setup` command works as expected"""
@@ -966,7 +968,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
 
     assert new_computer.description == options_dict['description']
     assert new_computer.hostname == options_dict['hostname']
-    assert new_computer.transport_type == options_dict['transport']
+    assert new_computer.transport_type == options_dict['auth']
     assert new_computer.scheduler_type == options_dict['scheduler']
     assert new_computer.get_mpirun_command() == options_dict['mpirun-command'].split()
     assert new_computer.get_shebang() == options_dict['shebang']
@@ -1034,17 +1036,12 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 # It is important that 'ssh localhost' is functional in your test environment.
 # It should connect without asking for a password.
 @pytest.mark.parametrize('transport_type, config', [('core.ssh', ['--host', 'localhost', '-n'])])
-def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
-    """Test setup of computer with ``core.ssh`` entry points.
-
-    pass any config option the setup needs in the parameter section``.
-    """
-    computer = aiida_computer(transport_type=transport_type).store()
-    assert not computer.is_configured
-
-    options = [transport_type, computer.uuid] + config
-    run_cli_command(computer_configure, options, use_subprocess=False)
-    assert computer.is_configured
+def test_computer_setup_with_various_transport(run_cli_command, transport_type, config):
+    """Test setting up a computer with transport-specific options."""
+    options_dict = generate_setup_options_dict({'label': 'transport_options', 'auth': transport_type})
+    options = generate_setup_options(options_dict)
+    run_cli_command(computer_setup, [*options, *config], use_subprocess=False)
+    assert orm.Computer.collection.get(label='transport_options').is_configured
 
 
 def test_computer_goto(run_cli_command, aiida_localhost):

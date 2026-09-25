@@ -470,6 +470,37 @@ class TestVerdiProcess:
             result = run_cli_command(cmd_process.process_list, ['-r', '-X', flag, 'exit_message'])
             assert Process.exit_codes.ERROR_UNSPECIFIED.message in result.output
 
+    @pytest.mark.parametrize('state', [ProcessState.CREATED, ProcessState.RUNNING, ProcessState.WAITING])
+    def test_paused_process_display(self, run_cli_command, state):
+        """Pausing changes the display, not the underlying process state."""
+        from aiida.cmdline.utils.ascii_vis import format_call_graph
+
+        node = WorkChainNode()
+        node.set_process_state(state)
+        node.store()
+        node.pause()
+
+        assert node.process_state == state
+        result = run_cli_command(cmd_process.process_list, ['-r', '--paused'])
+        assert f'⏸ {state.value.capitalize()}' in result.output
+        result = run_cli_command(cmd_process.process_list, ['-r', '-S', state.value, '--paused', '-P', 'process_state'])
+        assert state.value.capitalize() in result.output
+        result = run_cli_command(cmd_process.process_show, [str(node.pk)])
+        assert f'{state.value.capitalize()} (Paused)' in result.output
+        result = run_cli_command(cmd_process.process_status, [str(node.pk)])
+        assert f'{state.value.capitalize()} (Paused)' in result.output
+        assert f'{state.value.capitalize()} (Paused)' in format_call_graph(node)
+
+        node.unpause()
+        assert node.process_state == state
+        result = run_cli_command(cmd_process.process_list, ['-r', '-S', state.value])
+        symbol = '⏹' if state == ProcessState.CREATED else '⏵'
+        assert f'{symbol} {state.value.capitalize()}' in result.output
+        result = run_cli_command(cmd_process.process_show, [str(node.pk)])
+        assert f'{state.value.capitalize()} (Paused)' not in result.output
+        result = run_cli_command(cmd_process.process_status, [str(node.pk)])
+        assert f'{state.value.capitalize()} (Paused)' not in result.output
+
     def test_process_show(self, run_cli_command):
         """Test verdi process show"""
         workchain_one = WorkChainNode()

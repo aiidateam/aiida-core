@@ -29,21 +29,20 @@ def format_state(process_state: str, paused: bool | None = None, exit_status: in
     """Return a string formatted representation of a process' state which consists of its process state and exit status.
 
     :param process_state: The process state.
-    :param pause: Whether the process is paused.
+    :param paused: Whether the process is paused.
     :param exit_status: The process' exit status.
     :return: String representation of the process' state.
     """
-    if process_state in ['excepted']:
+    if paused and process_state in ('created', 'running', 'waiting'):
+        symbol = '\u23f8'
+    elif process_state in ['excepted']:
         symbol = '\u2a2f'
     elif process_state in ['killed']:
         symbol = '\u2620'
     elif process_state in ['created', 'finished']:
         symbol = '\u23f9'
     elif process_state in ['running', 'waiting']:
-        if paused is True:
-            symbol = '\u23f8'
-        else:
-            symbol = '\u23f5'
+        symbol = '\u23f5'
     else:
         # Unknown process state, use invisible separator
         symbol = '\u00b7'  # middle dot
@@ -54,7 +53,15 @@ def format_state(process_state: str, paused: bool | None = None, exit_status: in
     return f'{symbol} {format_process_state(process_state)}'
 
 
-def format_process_state(process_state: str) -> str:
+def format_process_status(process_state: str | None, paused: bool | None = None) -> str:
+    """Format the process state and its independent pause status for display."""
+    state = format_process_state(process_state)
+    if paused and process_state in ('created', 'running', 'waiting'):
+        return f'{state} (Paused)'
+    return state
+
+
+def format_process_state(process_state: str | None) -> str:
     """Return a string formatted representation of the given process state.
 
     :param process_state: The process state.

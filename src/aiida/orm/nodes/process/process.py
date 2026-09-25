@@ -154,6 +154,17 @@ class ProcessNode(Sealable, Node):
     _CLS_NODE_CACHING = ProcessNodeCaching
 
     CHECKPOINT_KEY = 'checkpoints'
+    CLASS_BYTES_PREFIX: str = 'sha256:'
+    """Marks a bundle entry as the digest of process class bytes kept in the profile's storage."""
+    KEY_OBJECT_INTERNAL_DIRNAME: str = '.aiida'
+    """Repository directory holding what the engine recorded, as opposed to the files the process was given.
+
+    ``CalcJob.presubmit`` already writes ``calcinfo.json`` and ``job_tmpl.json`` here, so the top level stays the
+    files a plugin produced. It writes them into the sandbox, so the directory is uploaded to the computer along
+    with the rest of it.
+    """
+    KEY_OBJECT_CLASS_SOURCE: str = f'{KEY_OBJECT_INTERNAL_DIRNAME}/class_source.py'
+    """Repository file holding the source of the process class, for one that cannot be imported back."""
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
     EXIT_STATUS_KEY = 'exit_status'
@@ -276,6 +287,17 @@ class ProcessNode(Sealable, Node):
         return builder
 
     @property
+    def class_source(self) -> str | None:
+        """Return the source of the process class, recorded when the class cannot be imported back.
+
+        :return: The source text, or ``None`` for a process whose class its ``process_type`` can import.
+        """
+        try:
+            return self.base.repository.get_object_content(path=self.KEY_OBJECT_CLASS_SOURCE, mode='r')
+        except FileNotFoundError:
+            return None
+
+    @property
     def process_class(self) -> type[Process]:
         """Return the process class that was used to create this node.
 
@@ -313,6 +335,19 @@ class ProcessNode(Sealable, Node):
                     pass
             else:
                 msg = f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+
+                # ``__main__`` is the entry point of whichever interpreter is running, so a class recorded under it
+                # resolves only where that interpreter holds it. Naming that beats the import error, which reports
+                # a module that does exist.
+                if self.process_type.startswith('__main__.'):
+                    msg = (
+                        f'the process class of Node<{self.pk}> was defined in `__main__` of the interpreter that ran '
+                        f'it, and `__main__` here does not hold it, so it cannot be loaded.'
+                    )
+
+                    if self.base.repository.has_object(path=self.KEY_OBJECT_CLASS_SOURCE):
+                        msg += ' Its source is kept on the node: see the `class_source` property.'
+
                 raise ValueError(msg) from exception
 
         return process_class
@@ -549,21 +584,30 @@ class ProcessNode(Sealable, Node):
 
     @property
     def checkpoint(self) -> str | None:
-        """Return the checkpoint payload for the process
+        """Return the checkpoint bundle for the process.
 
-        :returns: checkpoint payload if it exists, None otherwise
+        A bundle that carries the process class holds its digest in place of the bytes, which live in the profile's
+        process class byte file directory. Use
+        :meth:`aiida.engine.persistence.AiidaCheckpointPersister.load_checkpoint` to get a bundle with those bytes
+        back in it.
+
+        :returns: the checkpoint bundle, or None if the process has none
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
     def set_checkpoint(self, checkpoint: str) -> None:
-        """Set the checkpoint payload for the process
+        """Set the checkpoint bundle for the process.
 
-        :param state: string representation of the stepper state info
+        :param checkpoint: the serialized bundle, whose carried class is a digest rather than the bytes themselves
         """
         return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
 
     def delete_checkpoint(self) -> None:
-        """Delete the checkpoint payload for the process"""
+        """Delete the checkpoint bundle from this node's attributes.
+
+        Class bytes the bundle refers to are files under the profile storage and stay behind;
+        :meth:`~aiida.engine.persistence.AiidaCheckpointPersister.delete_checkpoint` removes both.
+        """
         try:
             self.base.attributes.delete(self.CHECKPOINT_KEY)
         except AttributeError:

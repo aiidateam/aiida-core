@@ -905,6 +905,8 @@ class CalcJob(Process):
             return None
 
         parser = parser_class(self.node)
+        # The running process holds its own class, where the node carries only the name it was recorded under.
+        parser._bind_process_class(process_class=type(self))
         parse_kwargs = parser.get_outputs_for_parsing()
 
         if retrieved_temporary_folder:
@@ -1165,7 +1167,7 @@ class CalcJob(Process):
             msg = f' {obj!r} is not JSON serializable'
             raise TypeError(msg)
 
-        subfolder = folder.get_subfolder('.aiida', create=True)
+        subfolder = folder.get_subfolder(orm.CalcJobNode.KEY_OBJECT_INTERNAL_DIRNAME, create=True)
         subfolder.create_file_from_filelike(
             io.StringIO(json.dumps(job_tmpl, default=encoder)), 'job_tmpl.json', 'w', encoding='utf8'
         )

@@ -256,6 +256,9 @@ class PsqlDosBackend(StorageBackend):
         container = Container(get_filepath_container(self.profile))
         return DiskObjectStoreRepositoryBackend(container=container)
 
+    def get_checkpoint_classes_dirpath(self) -> pathlib.Path:
+        return get_filepath_container(profile=self.profile).parent / self._CHECKPOINT_CLASSES_DIRNAME
+
     @property
     def authinfos(self) -> authinfos.SqlaAuthInfoCollection:
         return self._authinfos
@@ -645,6 +648,24 @@ class PsqlDosBackend(StorageBackend):
         backup_utils.backup_container(
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
+
+        # step 5: back up what the checkpoints refer to
+        self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+
+    def _backup_checkpoint_classes(
+        self,
+        manager: backup_utils.BackupManager,
+        path: pathlib.Path,
+        prev_backup: pathlib.Path | None = None,
+    ) -> None:
+        """Back up the checkpoint class files, without which a process that had not sealed cannot be revived."""
+        checkpoints: pathlib.Path = self.get_checkpoint_classes_dirpath()
+
+        if not checkpoints.exists():
+            return
+
+        STORAGE_LOGGER.report('Backing up checkpoint class files')
+        manager.call_rsync(src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True)
 
     def _backup(
         self,

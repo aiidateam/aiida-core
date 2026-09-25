@@ -9,7 +9,9 @@
 """Unit tests for the `DaemonClient` class."""
 
 import json
+import os
 import pathlib
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -22,6 +24,7 @@ from aiida.engine.daemon.client import (
     _get_dist_commit_hash,
     _get_dist_editable_path,
     get_daemon_client,
+    get_daemon_import_paths,
 )
 
 pytestmark = pytest.mark.requires_broker
@@ -148,6 +151,81 @@ class TestDaemonEnvInfo:
         monkeypatch.setattr(stopped_daemon_client._config, 'filepaths', lambda profile: modified_filepaths)
 
         assert stopped_daemon_client._get_daemon_env_info() is None
+
+    @pytest.fixture(autouse=True)
+    def _leave_no_env_info_file(self, stopped_daemon_client: DaemonClient):
+        """Remove any env info file these tests wrote, and forget what was read from it.
+
+        The read is cached on the file's modification time and the fixtures never delete the file, so a fabricated
+        one otherwise reaches every later test in this worker that reads it for real, where paths leading nowhere
+        mean a process class travels blind.
+        """
+        from aiida.engine.daemon.client import _read_daemon_import_paths
+
+        # Resolved before the test runs, since several of these make the property itself raise.
+        path = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
+
+        yield
+
+        path.unlink(missing_ok=True)
+        _read_daemon_import_paths.cache_clear()
+
+    @staticmethod
+    def test_write_env_info_file_records_the_import_paths(
+        stopped_daemon_client: DaemonClient, monkeypatch: pytest.MonkeyPatch
+    ):
+        """A relative entry is left out. It resolves against the working directory of the interpreter that reads
+        it, and the workers run in another one, so recording it would describe this process as though it were them.
+        """
+        monkeypatch.setattr(sys, 'path', ['', 'a/relative/dir', '/an/absolute/dir'])
+        stopped_daemon_client._write_env_info_file(import_paths=stopped_daemon_client._importable_paths())
+
+        assert stopped_daemon_client._get_daemon_env_info()['sys_path'] == ['/an/absolute/dir']
+
+    @staticmethod
+    def test_get_daemon_env_info_without_import_paths(stopped_daemon_client: DaemonClient):
+        env_info_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
+        env_info_file.parent.mkdir(parents=True, exist_ok=True)
+        env_info_file.write_text(json.dumps({'packages': {}, 'python_binary': sys.executable}), encoding='utf8')
+
+        env_info = stopped_daemon_client._get_daemon_env_info()
+
+        assert env_info is not None
+        assert 'sys_path' not in env_info
+
+    @staticmethod
+    def test_get_daemon_import_paths_without_a_file(stopped_daemon_client: DaemonClient):
+        pathlib.Path(stopped_daemon_client._daemon_env_info_file).unlink(missing_ok=True)
+
+        assert get_daemon_import_paths(stopped_daemon_client.profile.name) is None
+
+    @staticmethod
+    def test_get_daemon_import_paths_from_a_stopped_daemon(stopped_daemon_client: DaemonClient):
+        """Test that a file a stopped daemon left behind is not read, since the next one may run another install."""
+        stopped_daemon_client._write_env_info_file(import_paths=['/what/the/stopped/daemon/had'])
+
+        assert not stopped_daemon_client.is_daemon_running, 'premise: this fixture leaves no daemon running'
+        assert get_daemon_import_paths(stopped_daemon_client.profile.name) is None
+
+    @staticmethod
+    def test_get_daemon_import_paths_rereads_after_a_restart(
+        stopped_daemon_client: DaemonClient, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Test that the cached paths follow the file, so a daemon started elsewhere is not read from a stale entry."""
+        # The subject is the cache key, which the file alone reaches only while the paths count as a daemon's.
+        monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda _: True))
+
+        stopped_daemon_client._write_env_info_file(import_paths=['/what/the/daemon/had'])
+        assert get_daemon_import_paths(stopped_daemon_client.profile.name) == ('/what/the/daemon/had',)
+
+        env_info_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
+        env_info_file.write_text(
+            json.dumps({'packages': {}, 'python_binary': sys.executable, 'sys_path': ['/somewhere/else']}),
+            encoding='utf8',
+        )
+        os.utime(env_info_file, (0, 0))
+
+        assert get_daemon_import_paths(stopped_daemon_client.profile.name) == ('/somewhere/else',)
 
     @staticmethod
     def test_get_daemon_env_info_corrupt_file(stopped_daemon_client):
@@ -376,6 +454,33 @@ class TestDaemonEnvInfo:
         written = json.loads(version_file.read_text(encoding='utf8'))
         assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
         assert 'python_binary' in written
+
+    @staticmethod
+    def test_restart_daemon_keeps_the_workers_own_paths(stopped_daemon_client: DaemonClient):
+        """Circus re-execs the workers with the environment its watcher already holds, so their ``sys.path`` is the
+        one frozen when the daemon started. A caller with a different one would otherwise record paths the workers
+        do not have, and a name resolved against those is a name the worker cannot import.
+        """
+        env_info_file = pathlib.Path(stopped_daemon_client._daemon_env_info_file)
+        env_info_file.parent.mkdir(parents=True, exist_ok=True)
+        recorded = {
+            'packages': {'aiida-core': {'version': '2.6.0'}},
+            'python_binary': sys.executable,
+            'sys_path': ['/what/the/workers/have'],
+        }
+        env_info_file.write_text(json.dumps(recorded), encoding='utf8')
+
+        with (
+            patch.object(DaemonClient, 'call_client', return_value={'status': 'ok'}),
+            patch.object(
+                DaemonClient, '_get_package_version_snapshot', return_value={'aiida-core': {'version': '2.6.0'}}
+            ),
+            patch.object(sys, 'path', ['/what/the/caller/has']),
+        ):
+            stopped_daemon_client.restart_daemon()
+
+        written = json.loads(env_info_file.read_text(encoding='utf8'))
+        assert written['sys_path'] == ['/what/the/workers/have']
 
     @staticmethod
     def test_restart_daemon_missing_version_file_configuration(stopped_daemon_client, monkeypatch):

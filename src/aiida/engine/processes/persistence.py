@@ -34,13 +34,17 @@ from types import MethodType
 
 import yaml
 
-from aiida.common import loaders
+from aiida.common import callables, loaders
 from aiida.common.lang import call_with_super_check, super_check, type_check
+from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.processes import events
+from aiida.engine.processes._class_identity import ClassIdentity, identity_policy
 from aiida.engine.processes.exceptions import PersistenceError
 from aiida.engine.processes.generic import futures
 
 __all__: tuple[str, ...] = ()
+
+LOGGER = AIIDA_LOGGER.getChild('persistence')
 
 PersistedCheckpoint = collections.namedtuple('PersistedCheckpoint', ['pid', 'tag'])
 SAVED_STATE_TYPE = MutableMapping[str, t.Any]
@@ -486,6 +490,7 @@ class CheckpointContext:
 
 META: str = '!!meta'
 META__CLASS_NAME: str = 'class_name'
+META__CLASS_BYTES: str = 'class_bytes'
 META__OBJECT_LOADER: str = 'object_loader'
 META__USER: str = 'user'
 META__TYPES: str = 'types'
@@ -511,6 +516,14 @@ class CheckpointMetadataView:
     def set_class_name(self, name: str) -> None:
         """Set the persisted class name."""
         self.metadata[META__CLASS_NAME] = name
+
+    def get_class_bytes(self) -> bytes | None:
+        """Return the serialized class, which is present only when its name does not reach the worker."""
+        return self._state.get(META, {}).get(META__CLASS_BYTES)
+
+    def set_class_bytes(self, class_bytes: bytes) -> None:
+        """Set the serialized class."""
+        self.metadata[META__CLASS_BYTES] = class_bytes
 
     def get_member_type(self, name: str) -> t.Any:
         """Return the persisted type of a member, if defined."""
@@ -558,13 +571,66 @@ class CheckpointSerializable:
         """
         load_context = _ensure_object_loader(load_context, saved_state)
         assert load_context.loader is not None  # required for type checking
+        load_cls: type[CheckpointSerializable] = CheckpointSerializable._class_recorded_in(
+            saved_state=saved_state, loader=load_context.loader
+        )
+
+        return load_cls.recreate_from(saved_state=saved_state, load_context=load_context)
+
+    @staticmethod
+    def _class_recorded_in(
+        *, saved_state: SAVED_STATE_TYPE, loader: loaders.ObjectLoader
+    ) -> type['CheckpointSerializable']:
+        """Return the class a checkpoint records, from the bytes it carries or from the name recorded beside them.
+
+        :param saved_state: the saved state to read the class out of.
+        :param loader: the loader to resolve a recorded name with.
+        :returns: the class the checkpoint was written for.
+        :raises ValueError: if the saved state records no name at all.
+        :raises ImportError: if neither the carried bytes nor the name reaches a class.
+        """
+        class_bytes: bytes | None = CheckpointSerializable._get_class_bytes(saved_state=saved_state)
+        carried_failure: Exception | None = None
+
+        if class_bytes is not None:
+            try:
+                return t.cast(type['CheckpointSerializable'], callables.loads(payload=class_bytes))
+            except Exception as exception:
+                carried_failure = exception
+                # Deserializing arbitrary bytes raises arbitrary exceptions, and the name recorded beside the
+                # bytes recover the same class wherever it resolves. Bytes written by a submitter whose
+                # daemon could not import the class reaches a worker that can, and fails there on nothing more
+                # than a difference in interpreter or `cloudpickle` version.
+                LOGGER.warning(
+                    'the class carried in this checkpoint could not be loaded, so its recorded name is being '
+                    'followed instead: %s',
+                    exception,
+                )
+
         try:
-            class_name = CheckpointSerializable._get_class_name(saved_state)
-            load_cls = load_context.loader.load_object(class_name)
+            class_name: str = CheckpointSerializable._get_class_name(saved_state=saved_state)
         except KeyError:
-            raise ValueError('Class name not found in saved state')
-        else:
-            return load_cls.recreate_from(saved_state, load_context)
+            msg: str = 'Class name not found in saved state'
+            raise ValueError(msg)
+
+        try:
+            return t.cast(type['CheckpointSerializable'], loader.load_object(class_name))
+        except (ImportError, ValueError) as exception:
+            if carried_failure is None:
+                raise
+
+            # Both routes to the class are gone, and the loader's own error blames the name, which was never
+            # going to work for a class defined in a notebook. The bytes were the route that should have worked,
+            # so its failure is the one worth reporting.
+            msg = (
+                f'the process class of this checkpoint could not be recovered. The class it carries failed '
+                f'to load ({carried_failure}), and the name recorded beside it, `{class_name}`, does not '
+                f'resolve here either ({exception}). Either it was submitted while no daemon was running, so the '
+                f'modules it needs could not be worked out, or this worker runs a different Python or '
+                f'`cloudpickle` than the interpreter that submitted. Start the daemon from the environment you '
+                f'submit from, then submit again.'
+            )
+            raise ImportError(msg) from carried_failure
 
     @classmethod
     def auto_persist(cls, *members: str) -> None:
@@ -623,7 +689,12 @@ class CheckpointSerializable:
         else:
             loader = default_loader
 
-        CheckpointSerializable._set_class_name(out_state, loader.identify_object(self.__class__))
+        identity: ClassIdentity = identity_policy.recorded_for(value=self.__class__, loader=loader)
+        CheckpointSerializable._set_class_name(out_state=out_state, name=identity.name)
+
+        if identity.class_bytes is not None:
+            CheckpointSerializable._set_class_bytes(out_state=out_state, class_bytes=identity.class_bytes)
+
         call_with_super_check(self.save_instance_state, out_state, save_context)
         return out_state
 
@@ -674,6 +745,14 @@ class CheckpointSerializable:
     @staticmethod
     def _get_class_name(saved_state: SAVED_STATE_TYPE) -> str:
         return CheckpointMetadataView(saved_state).get_class_name()
+
+    @staticmethod
+    def _set_class_bytes(out_state: SAVED_STATE_TYPE, class_bytes: bytes) -> None:
+        CheckpointMetadataView(out_state).set_class_bytes(class_bytes=class_bytes)
+
+    @staticmethod
+    def _get_class_bytes(saved_state: SAVED_STATE_TYPE) -> bytes | None:
+        return CheckpointMetadataView(saved_state).get_class_bytes()
 
     @staticmethod
     def _set_meta_type(out_state: SAVED_STATE_TYPE, name: str, type_spec: t.Any) -> None:

@@ -191,6 +191,10 @@ class SqliteTempBackend(StorageBackend):
             self._session.commit()
         return self._session
 
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        # Beside the node files, since an in-memory profile configures no ``filepath`` and the sandbox picks its own.
+        return Path(self.get_repository().sandbox.abspath) / self._CHECKPOINT_CLASSES_DIRNAME
+
     def get_repository(self) -> SandboxShaRepositoryBackend:
         if self._closed or not self._repo:
             raise ClosedStorage(str(self))

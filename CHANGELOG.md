@@ -30,6 +30,21 @@ Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in rep
 
 ### New features
 
+#### Processes defined in a notebook cell
+
+A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter notebook, or in any script run as `__main__`, can now be submitted to the daemon.
+Such a class belongs to a module that resolves to something different in every interpreter, so the worker used to fail with `ImportError: object 'MyWorkChain' from identifier '__main__:MyWorkChain' could not be loaded`.
+The checkpoint now carries the class itself whenever the recorded name would not resolve for the worker, which also covers a class importable here but absent from the `sys.path` the daemon froze at startup.
+
+Submitting such a class is refused while the daemon runs a different environment than the interpreter submitting, since the modules it needs cannot be worked out from import paths leading to another installation; `verdi daemon restart` from the environment you submit from is the fix.
+A class the daemon can import by name is unaffected, as is running the process locally with `run`, which needs nothing of the daemon's environment.
+
+`ProcessNode.class_source` records the source of a class that has no name to resolve later, since the checkpoint carrying it is deleted once the node seals.
+It is stored under `ProcessNode.KEY_OBJECT_CLASS_SOURCE` in the node's repository, which is `.aiida/class_source.py`, beside the `calcinfo.json` and `job_tmpl.json` a calculation job already keeps there, so it stays out of the input files `verdi calcjob inputls` lists. `verdi node show` carries the command that prints it, for a node that has one.
+
+`Parser.process_class` returns the class whose outputs are being parsed, which the running `CalcJob` supplies while it runs.
+A parser built from a stored node falls back to `ProcessNode.process_class`, so exit codes and the output specification of a `CalcJob` defined in a notebook resolve during parsing.
+
 #### `ShellJob`: run any command without writing a plugin
 
 The `aiida-shell` package has been integrated into `aiida-core`.
@@ -49,6 +64,17 @@ Because the entry point names are the same, `aiida-shell` must be uninstalled be
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
 ### Behavior changes
+
+#### Carried bytes are files in the profile's storage
+
+A checkpoint stays where it always was, in the `checkpoints` attribute of its node, inside the transaction that records the rest of the row.
+What a name cannot recover, which today means the process class of a notebook cell, no longer travels inside it: those bytes are written to a `checkpoint_classes` directory beside the `container` directory of the profile's storage, and the checkpoint refers to them by digest.
+The `attributes` column is where the provenance graph keeps what it holds about a node, read by the `QueryBuilder` and rewritten whole on every state transition, so a blob does not belong in it.
+
+The file is named `<node uuid>-<digest>.pkl`, so every write lands on a path of its own and the bytes a checkpoint refers to are never the ones being overwritten; the superseded file goes once the checkpoint refers to the new one, and all of them go when the process seals.
+
+Nothing about the attribute changes, so there is no migration: a checkpoint written before this is a bundle, and so is one written after.
+A storage plugin has to implement `StorageBackend.get_checkpoint_classes_dirpath` for a process whose class travels in its checkpoint to be persisted on it.
 
 ### Fixes
 

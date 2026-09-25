@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import logging
 import signal
 import threading
@@ -22,8 +23,10 @@ from collections.abc import Callable
 from aiida.brokers import communicator as broker_communicator
 from aiida.brokers.filters import BroadcastFilter
 from aiida.common import exceptions
+from aiida.common.loaders import get_object_loader
 from aiida.engine import transports, utils
 from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
+from aiida.engine.processes._class_identity import identity_policy
 from aiida.engine.processes.calcjobs import manager
 from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
 from aiida.engine.processes.events import get_or_create_event_loop
@@ -50,6 +53,31 @@ class ResultAndPk(t.NamedTuple):
 TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
 # run can also be process function, but it is not clear what type this should be
 TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
+
+
+def _class_to_instantiate(*, process: object) -> type[Process] | None:
+    """Return the class :func:`~aiida.engine.utils.instantiate_process` would build from ``process``.
+
+    Mirrors the three shapes that function accepts, so that a caller needing only the class can have it without
+    building the process, which stores a node.
+
+    ``object`` rather than ``TYPE_SUBMIT_PROCESS``, because classifying is the whole job: a caller that ignored the
+    annotation reaches here too, and the answer for it is ``None``.
+
+    :param process: What was handed to :meth:`Runner.submit`.
+    :returns: The class, or ``None`` for a shape that function rejects, whose ``ValueError`` stays the error a
+        caller sees.
+    """
+    if isinstance(process, ProcessBuilder):
+        return process.process_class
+
+    if isinstance(process, Process):
+        return type(process)
+
+    if inspect.isclass(process) and issubclass(process, Process):
+        return process
+
+    return None
 
 
 class Runner:
@@ -184,6 +212,16 @@ class Runner:
         """
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
+
+        if self._broker_submit:
+            # Only a process handed to a worker depends on the daemon's environment: running one here needs nothing
+            # of it, and the worker's own checkpoints are written by an interpreter that already loaded the class.
+            # Checked before instantiating, since that stores the node and writes its first checkpoint, which a
+            # refusal would leave behind.
+            submitted: type[Process] | None = _class_to_instantiate(process=process)
+
+            if submitted is not None:
+                identity_policy.refuse_if_the_worker_cannot_load(value=submitted, loader=get_object_loader())
 
         inputs = utils.prepare_inputs(inputs, **kwargs)
         process_inited = self.instantiate_process(process, **inputs)

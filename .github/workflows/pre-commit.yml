@@ -5,11 +5,14 @@ name: pre-commit
 
 on:
   push:
-    branches-ignore: [gh-pages]
+    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches-ignore: [gh-pages]
+  workflow_dispatch:
 
 jobs:
 
   static-checks:
+    if: github.event_name != 'pull_request' || !contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')
     uses: ./.github/workflows/pre-commit-reusable.yml

@@ -2,13 +2,14 @@ name: release
 
 # Automate publishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
 # the workflow will publish to PyPI. When the 'test-release' label is active on
-# a PR, the workflow will publish to TestPyPI on each update. In both cases it
-# checks that the lock file is upgraded. Release tags must also match the
-# aiida-core version.
+# a PR, the workflow will publish to TestPyPI on each update. Publishing
+# requires CI, pre-commit and an upgraded lock file. Release tags must also
+# match the aiida-core version.
 
 on:
   # pull request event we use for test releases
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches-ignore: [gh-pages]
     paths-ignore: [docs/**]
   # tag push event we use for the official release
@@ -37,6 +38,15 @@ jobs:
 
     - name: Check tag
       run: python .github/workflows/check_release_tag.py $GITHUB_REF
+
+  ci-code:
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
+    uses: ./.github/workflows/ci-code-reusable.yml
+    secrets: inherit
+
+  pre-commit:
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
+    uses: ./.github/workflows/pre-commit-reusable.yml
 
   check-lock:
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
@@ -68,7 +78,7 @@ jobs:
 
     name: Publish to PyPI
 
-    needs: [check-release-tag, check-lock]
+    needs: [check-release-tag, check-lock, ci-code, pre-commit]
 
     runs-on: ubuntu-24.04
 
@@ -96,7 +106,7 @@ jobs:
 
     name: Publish to test PyPI
 
-    needs: [check-lock]
+    needs: [check-lock, ci-code, pre-commit]
 
     runs-on: ubuntu-24.04
 

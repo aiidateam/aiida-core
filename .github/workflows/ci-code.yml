@@ -2,10 +2,12 @@ name: ci-code
 
 on:
   push:
-    branches-ignore: [gh-pages]
+    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches-ignore: [gh-pages]
     paths-ignore: [docs/**]
+  workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -16,5 +18,6 @@ concurrency:
 jobs:
 
   tests:
+    if: github.event_name != 'pull_request' || !contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')
     uses: ./.github/workflows/ci-code-reusable.yml
     secrets: inherit

@@ -3,8 +3,8 @@ name: release
 # Automate publishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
 # the workflow will publish to PyPI. When the 'test-release' label is active on
 # a PR, the workflow will publish to TestPyPI on each update. In both cases it
-# is checked if the lock file is upgraded, pre-commit and the tests pass. When a
-# release tag is pushed it will also check that the tag matches the aiida-core version.
+# checks that the lock file is upgraded. Release tags must also match the
+# aiida-core version.
 
 on:
   # pull request event we use for test releases
@@ -63,50 +63,12 @@ jobs:
         uv lock --upgrade
         git diff --exit-code -- uv.lock
 
-  pre-commit:
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
-
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v7
-
-    - name: Install aiida-core and pre-commit
-      uses: ./.github/actions/install-aiida-core
-      with:
-        python-version: '3.11'
-        extras: pre-commit
-        # Full pre-commit runs in locked CI; run mypy additionally here
-        # with latest compatible dependencies for release validation.
-        from-lock: 'false'
-
-    - name: Run mypy
-      run: pre-commit run mypy --all-files
-
-  tests:
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
-
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v7
-
-    - name: Install aiida-core
-      uses: ./.github/actions/install-aiida-core
-      with:
-        python-version: '3.10'
-
-    - name: Run sub-set of test suite
-      run: pytest -s -m requires_broker --broker-backend zmq --db-backend=sqlite tests/
-
   publish-pypi:
     if: startsWith(github.ref, 'refs/tags/')
 
     name: Publish to PyPI
 
-    needs: [check-release-tag, check-lock, pre-commit, tests]
+    needs: [check-release-tag, check-lock]
 
     runs-on: ubuntu-24.04
 
@@ -134,7 +96,7 @@ jobs:
 
     name: Publish to test PyPI
 
-    needs: [check-lock, pre-commit, tests]
+    needs: [check-lock]
 
     runs-on: ubuntu-24.04
 

@@ -138,6 +138,13 @@ def get_node_summary(node: orm.Node) -> str:
             else:
                 table.append(['state', process_state_string])
 
+        # The source is a repository file, and nothing else in this summary mentions those, so without this a
+        # reader has no way to learn it was kept. The listing comes off the node's row, where reading the file
+        # itself would be a container lookup for every node shown.
+        if node.base.repository.has_object(path=ProcessNode.KEY_OBJECT_CLASS_SOURCE):
+            command: str = f'verdi node repo cat {node.pk} {ProcessNode.KEY_OBJECT_CLASS_SOURCE}'
+            table.append(['class source', f'show with `{command}`'])
+
     else:
         table.append(['type', node.__class__.__name__])
 

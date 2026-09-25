@@ -8,10 +8,13 @@
 ###########################################################################
 """Tests for the :mod:`aiida.common._callables` module."""
 
+import dataclasses
+import inspect
 import os
 import subprocess
 import sys
 import textwrap
+import typing as t
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -75,3 +78,165 @@ def test_dumps_invalid():
 def test_loads_invalid():
     with pytest.raises(ValueError, match=r'the serialized callable could not be deserialized: .*'):
         callables.loads(b'not-a-payload')
+
+
+class SourceInAFilelessModule:
+    """A class whose source `inspect.getsource` cannot reach through its module."""
+
+    def method(self):
+        return 'the cell this came from'
+
+
+def test_source_of_a_class_whose_module_has_no_file(monkeypatch: pytest.MonkeyPatch):
+    """``inspect.getsource`` reaches a class through the file of the module that defines it, and a class defined in a
+    notebook cell has no such file: the kernel's ``__main__`` is not one.
+    """
+    fileless = ModuleType('fileless')
+    monkeypatch.setitem(sys.modules, 'fileless', fileless)
+    monkeypatch.setattr(SourceInAFilelessModule, '__module__', 'fileless')
+
+    # A module with no ``__file__`` makes ``inspect`` give up, as ``OSError`` in a kernel and ``TypeError`` here.
+    with pytest.raises((OSError, TypeError)):
+        inspect.getsource(SourceInAFilelessModule)
+
+    source = callables.source_of(SourceInAFilelessModule)
+
+    assert source is not None
+    assert source.splitlines()[0] == 'class SourceInAFilelessModule:'
+    assert 'the cell this came from' in source
+
+
+def test_source_of_skips_a_member_from_another_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A class reached through its methods is searched member by member, and a method compiled elsewhere leads to a
+    file the class statement is not in. The search has to carry on to the next member.
+
+    The foreign member has to be the one met first, which means replacing a name the class body already declares:
+    ``setattr`` of a new name appends to the class dictionary, landing behind every real method, where the search
+    answers before ever reaching it.
+    """
+    decoy = tmp_path / 'decoy.py'
+    decoy.write_text('def unrelated():\n    return 1\n')
+    elsewhere: dict[str, t.Any] = {}
+    exec(compile(decoy.read_text(), str(decoy), 'exec'), elsewhere)
+
+    cell = tmp_path / 'cell.py'
+    cell.write_text('class SourceBorrowing:\n    borrowed = None\n\n    def method(self):\n        return 1\n')
+    namespace: dict[str, t.Any] = {}
+    exec(compile(cell.read_text(), str(cell), 'exec'), namespace)
+    wanted: type = namespace['SourceBorrowing']
+
+    fileless = ModuleType('fileless_skip')
+    monkeypatch.setitem(sys.modules, 'fileless_skip', fileless)
+    monkeypatch.setattr(wanted, '__module__', 'fileless_skip')
+    monkeypatch.setattr(wanted, 'borrowed', elsewhere['unrelated'])
+
+    with_code = [name for name, member in vars(wanted).items() if getattr(member, '__code__', None) is not None]
+
+    assert with_code[0] == 'borrowed', 'the member leading elsewhere has to be the one the search meets first'
+
+    source = callables.source_of(wanted)
+
+    assert source is not None
+    assert source.splitlines()[0] == 'class SourceBorrowing:'
+
+
+def test_source_of_a_class_no_member_leads_back_to(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Every member leading somewhere the class statement is not leaves nothing to return."""
+    decoy = tmp_path / 'only_decoy.py'
+    decoy.write_text('def unrelated():\n    return 1\n')
+    namespace: dict[str, t.Any] = {}
+    exec(compile(decoy.read_text(), str(decoy), 'exec'), namespace)
+
+    fileless = ModuleType('fileless_none')
+    monkeypatch.setitem(sys.modules, 'fileless_none', fileless)
+
+    class NoSourceAnywhere:
+        """Its only member with code was compiled from a file that holds no class statement."""
+
+    monkeypatch.setattr(NoSourceAnywhere, '__module__', 'fileless_none')
+    monkeypatch.setattr(NoSourceAnywhere, 'from_elsewhere', namespace['unrelated'], raising=False)
+
+    assert callables.source_of(NoSourceAnywhere) is None
+
+
+def test_source_of_a_class_whose_name_prefixes_a_sibling(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A notebook cell defining ``MyCalcJob`` and ``MyCalcJobParser`` is the ordinary case, and a prefix match on
+    ``class MyCalcJob`` reaches the parser first whenever it is written first.
+    """
+    cell = tmp_path / 'both.py'
+    cell.write_text(
+        textwrap.dedent("""
+            class SourcePrefixExtended:
+                def method(self):
+                    return 'the extended body'
+
+
+            class SourcePrefix:
+                def method(self):
+                    return 'the body wanted'
+            """)
+    )
+    namespace: dict[str, t.Any] = {}
+    exec(compile(cell.read_text(), str(cell), 'exec'), namespace)
+
+    fileless = ModuleType('fileless_prefix')
+    monkeypatch.setitem(sys.modules, 'fileless_prefix', fileless)
+    wanted: type = namespace['SourcePrefix']
+    monkeypatch.setattr(wanted, '__module__', 'fileless_prefix')
+
+    source: str | None = callables.source_of(wanted)
+
+    assert source is not None
+    assert source.splitlines()[0] == 'class SourcePrefix:'
+    assert 'the body wanted' in source
+    assert 'the extended body' not in source
+
+
+@pytest.mark.parametrize('file_backed', [pytest.param(False, id='cell'), pytest.param(True, id='module')])
+def test_source_of_selects_the_executed_duplicate_class(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file_backed: bool
+):
+    """The inspected method identifies its owning definition among duplicate class names."""
+    cell: Path = tmp_path / 'duplicates.py'
+    cell.write_text(
+        'class Probe:\n    def method(self):\n        return "old"\n\n'
+        'class Probe:\n    def method(self):\n        return "new"\n'
+    )
+    module: ModuleType = ModuleType('duplicate_definitions')
+    if file_backed:
+        module.__file__ = str(cell)
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    exec(compile(cell.read_text(), str(cell), 'exec'), module.__dict__)
+    assert module.Probe().method() == 'new'
+    source: str | None = callables.source_of(value=module.Probe)
+    assert source is not None
+    assert '"new"' in source
+    assert '"old"' not in source
+
+
+def test_source_of_incomplete_source_is_unavailable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A source file changed after compilation cannot interrupt process setup."""
+    cell: Path = tmp_path / 'incomplete.py'
+    cell.write_text('class Probe:\n    def method(self):\n        return 1\n')
+    module: ModuleType = ModuleType('fileless_incomplete')
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    exec(compile(cell.read_text(), str(cell), 'exec'), module.__dict__)
+    cell.write_text('class Probe:\n    def method(self):\n        return (\n')
+    assert callables.source_of(value=module.Probe) is None
+
+
+def test_source_of_something_with_no_source():
+    assert callables.source_of(len) is None
+
+
+def test_source_of_something_unhashable():
+    """A class that defines ``__eq__`` has no hash, which ``@dataclass`` does by default."""
+
+    @dataclasses.dataclass
+    class Unhashable:
+        threshold: int = 10
+
+        def __call__(self):
+            return self.threshold
+
+    assert callables.source_of(Unhashable()) is None

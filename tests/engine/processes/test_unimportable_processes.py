@@ -15,6 +15,8 @@ worker runs it anyway.
 The unit tests elsewhere pin each decision on its own. These pin that the decisions add up to a process that runs.
 """
 
+import textwrap
+import time
 import typing as t
 from collections.abc import Callable
 
@@ -92,7 +94,7 @@ def test_process_function_defined_in_main(
     monkeypatch.setattr(function, '__module__', '__main__')
     monkeypatch.setattr(function.process_class, '__module__', '__main__')
 
-    assert isinstance(class_metadata(function.process_class).get(META__CLASS_BYTES), bytes), (
+    assert isinstance(class_metadata(cls=function.process_class).get(META__CLASS_BYTES), bytes), (
         'the daemon can resolve this function, so this test would prove nothing'
     )
 
@@ -109,7 +111,7 @@ def test_an_installed_plugin_still_travels_by_name(
     """Test that a registered plugin carries no process class bytes, which keeps an ordinary checkpoint small."""
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
-    assert class_metadata(ArithmeticAddCalculation).get(META__CLASS_BYTES) is None
+    assert class_metadata(cls=ArithmeticAddCalculation).get(META__CLASS_BYTES) is None
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
@@ -154,3 +156,19 @@ def test_calcjob_defined_in_main(
 
     assert node.is_finished_ok, node.exception
     assert node.outputs.sum.value == 42
+
+    # The record of what ran outlives the checkpoint that carried it. The source is read from the file the
+    # class's own methods were compiled from, since `__main__` has none to offer.
+    #
+    # Sealing is what deletes the checkpoint, and it lands just after the state that `submit_and_await` waits for.
+    for _ in range(100):
+        node = orm.load_node(node.pk)
+        if node.is_sealed:
+            break
+        time.sleep(0.1)
+
+    assert node.is_sealed
+    assert node.checkpoint is None
+    source = textwrap.dedent(node.class_source)
+    assert source.startswith('class MainCalcJob(ArithmeticAddCalculation):')
+    assert 'super().define(spec)' in source

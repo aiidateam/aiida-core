@@ -26,6 +26,7 @@ from aio_pika.exceptions import ConnectionClosed
 
 from aiida import orm
 from aiida.brokers.exceptions import UnroutableError
+from aiida.common import _callables as callables
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
 from aiida.common.lang import classproperty, override
@@ -784,6 +785,7 @@ class Process(ProcessBase):
 
         self._setup_metadata(copy.copy(dict(self.inputs.metadata)))
         self._setup_version_info()
+        self._setup_class_record()
         self._setup_inputs()
 
     def _setup_version_info(self) -> dict[str, t.Any]:
@@ -791,6 +793,34 @@ class Process(ProcessBase):
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
         self.node.base.attributes.set_many(version_info)
         return version_info
+
+    @classmethod
+    def _source_to_record(cls) -> t.Any:
+        """Return the object whose source records what ran, for a process that cannot be imported back."""
+        return cls
+
+    def _setup_class_record(self) -> None:
+        """Record the class itself on the node when it cannot be imported back.
+
+        ``process_type`` records a class that no entry point registers under the module it was defined in, which for a
+        notebook cell or a script is ``__main__``. That name resolves to a different module in every other
+        interpreter, so it neither loads the class later nor distinguishes two classes that share a name. The source
+        is kept instead, so that what ran stays readable once the checkpoint carrying it is gone.
+        """
+        # Any other module may or may not be installed where the node is read, which is the situation of every
+        # plugin that was uninstalled, so it is left alone.
+        if self.__class__.__module__ != '__main__':
+            return
+
+        source: str | None = callables.source_of(value=self.__class__._source_to_record())
+
+        # Nothing here is worth failing a run for.
+        if source is None:
+            return
+
+        self.node.base.repository.put_object_from_bytes(
+            content=source.encode(encoding='utf-8'), path=orm.ProcessNode.KEY_OBJECT_CLASS_SOURCE
+        )
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""

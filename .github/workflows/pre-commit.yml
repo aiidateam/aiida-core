@@ -1,4 +1,4 @@
-name: pre-commit
+name: ci-checks
 # NOTE: This job is not duplicating pre-commit.ci job,
 # since that once skips running mypy type-checking
 # due to technical limitations of pre-commit.ci runners.
@@ -13,6 +13,6 @@ on:
 
 jobs:
 
-  static-checks:
+  checks:
     if: github.event_name != 'pull_request' || !contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')
     uses: ./.github/workflows/pre-commit-reusable.yml

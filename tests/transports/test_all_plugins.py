@@ -1225,7 +1225,10 @@ for i in range({line_repetitions}):
         #        line_repetitions, file_line, file_line))
         # However this is pretty slow (and using 'cat' of a file containing only one line is even slower)
 
-        retcode, stdout, stderr = transport.exec_command_wait(f'python3 {script_fname}', workdir=directory_path)
+        # Do not instrument the generated script: coverage's subprocess patch otherwise traces its large write loop.
+        retcode, stdout, stderr = transport.exec_command_wait(
+            f'env -u COVERAGE_PROCESS_CONFIG -u COVERAGE_PROCESS_START python3 {script_fname}', workdir=directory_path
+        )
 
         assert stderr == fcontent
         assert stdout == fcontent

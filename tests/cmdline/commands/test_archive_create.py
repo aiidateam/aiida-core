@@ -189,10 +189,7 @@ def test_version_legacy(run_cli_command, version):
 
 @pytest.mark.parametrize(
     'archive_fixture, version',
-    [
-        ('archive_main_0001', 'main_0001'),
-        ('archive_main_0002', 'main_0002'),
-    ],
+    [('archive_main_0001', 'main_0001')],
 )
 def test_version_main(run_cli_command, archive_fixture, version, request):
     """Test `verdi archive version` for explicitly requested ``main`` revisions."""

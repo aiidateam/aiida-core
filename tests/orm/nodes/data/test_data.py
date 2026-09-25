@@ -111,12 +111,8 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             )
             return instance
 
-        if data_class is orm.AbstractCode:
-            instance = data_class(label='test_abstract_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
-            return instance
-
         if data_class is orm.Code:
-            instance = data_class(label='test_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
+            instance = data_class(label='test_abstract_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
             return instance
 
         if data_class is orm.InstalledCode:
@@ -168,7 +164,7 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
     params=[
         entry_point
         for entry_point in plugins.get_entry_points('aiida.data')
-        if entry_point.name.startswith('core.') and entry_point.name not in ('core.code', 'core.code.abstract')
+        if entry_point.name.startswith('core.') and entry_point.name != 'core.code'
     ],
 )
 def data_plugin(request):

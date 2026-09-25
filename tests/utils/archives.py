@@ -177,25 +177,10 @@ def generate_archive_at_version(version: str, dest_dir) -> str:
     return str(dest)
 
 
-def generate_archive_main_0002(dest_dir) -> str:
-    """Build the reference dataset and export it as a true ``main_0002`` archive.
-
-    The ``main_0002`` migration is an empty v3 marker, so the reference
-    data is unchanged from ``main_0001``. Once a revision changes the
-    schema, give it its own builder instead of delegating here.
-
-    :param dest_dir: directory to write ``export_main_0002_simple.aiida`` into
-    :return: absolute filepath of the generated archive at ``main_0002``
-
-    Requires a loaded profile (e.g. via ``aiida_profile_tmp``).
-    """
-    return generate_archive_at_version('main_0002', dest_dir)
-
-
 def generate_archive_main_0003(dest_dir) -> str:
     """Natively build the ``main_0003`` reference dataset and export it.
 
-    The ``main_0003`` migration is an empty placeholder, so the reference
+    The ``main_0003`` migration only rewrites legacy ``Code`` nodes, so the reference
     data is unchanged from ``main_0001``. Once a revision changes the
     schema, give it its own builder instead of delegating here.
 
@@ -226,7 +211,6 @@ def generate_archive_head(dest_dir) -> str:
     head = get_schema_version_head()
     builders = {
         'main_0001': generate_archive_main_0001,
-        'main_0002': generate_archive_main_0002,
         'main_0003': generate_archive_main_0003,
     }
     try:

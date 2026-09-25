@@ -201,6 +201,12 @@ JsonableData
 Any class that implements an ``as_dict`` method, returning a dictionary that is a JSON serializable representation of the object, can be wrapped and stored by this data plugin.
 To deserialize it should also implement a ``from_dict`` method, which takes the dictionary as input and returns the object.
 
+.. note::
+
+    :py:class:`~aiida.orm.JsonableData` follows the `MSONable serialization convention <https://pythonhosted.org/monty/monty.html#monty.json.MSONable>`_ used by monty and pymatgen.
+    Dictionary keys prefixed with ``@`` (such as ``@module``, ``@class``, and ``@version``) are reserved for internal class identification and reconstruction.
+    User-defined attributes in ``as_dict()`` must not use ``@``-prefixed keys.
+
 .. code-block:: ipython
 
     In [1]: from aiida.orm import JsonableData

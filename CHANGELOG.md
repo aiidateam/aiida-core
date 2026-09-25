@@ -48,6 +48,92 @@ The `core.shell` calculation job and parser entry points keep the names they had
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### Submit a process function from a running process
+
+A running process can submit a process function as a child and await it:
+
+```python
+class AdditionWorkChain(WorkChain):
+
+    def submit_addition(self):
+        child = self.submit(add, x=Int(1), y=Int(2), metadata={'call_link_label': 'addition'})
+        return ToContext(addition=child)
+```
+
+`Runner.submit` and `Runner.schedule` previously rejected a process function, while the top-level `aiida.engine.submit` accepted one, so the two entry points disagreed.
+The submitted function is recorded as a called child under its link label, and a daemon worker runs it as long as the function is importable.
+
+#### Write a workflow as a graph of tasks
+
+A graph is a third way of writing a workflow, beside work functions and work chains.
+Where a work chain is a class whose outline says what to do step by step, a graph records which tasks to run and which output of one feeds which input of another, and the engine works out what can run when:
+
+```python
+from aiida.engine import graph, run, task
+
+
+@task(outputs=['total'])
+def add(x: int, y: int) -> int:
+    return x + y
+
+
+@task(outputs=['doubled'])
+def double(value: int) -> int:
+    return value * 2
+
+
+@graph
+def add_and_double(x, y):
+    return {'doubled': double(value=add(x=x, y=y).total).doubled}
+
+
+results = run(add_and_double, x=2, y=3)
+```
+
+A task is an ordinary Python function, and the engine stores what goes in and comes out as nodes, so the function is written the way it would be written without a graph around it.
+A `CalcJob` or a `WorkChain` is placed in a graph the same way, with `task(SomeCalcJob)`.
+Every task is a process of its own: it gets its own node, is recorded as a called child under the name the graph gave it, and is paused, played and killed the way any other process is.
+
+The declaration is a value: `GraphSpec` records it, `GraphProcess` runs it, and a graph run stores a `GraphNode`.
+So a workflow can be read and checked before anything starts, and the same declaration describes every run of it.
+
+Fan-out, branching, loops and nested graphs are written the same way, with `each`, `branch`, `loop` and `subgraph`.
+A task says how to recover from a failure with `handlers=`, waits on something outside the graph with `monitor`, and a finished graph runs again from one of its tasks with `rerun_from`.
+A monitor that returns `Stop` ends the waiting and skips what waited on it, and one that declares `outputs` hands on what it found by returning `Met`.
+Writing a graph warns about a task whose outputs nothing takes, which is what a forgotten `after` looks like once the graph runs.
+
+A parameter annotated with a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model names a namespace of ports, one per field, and a returned one says which output each field is:
+
+```python
+class RelaxInputs(BaseModel):
+    structure: str
+    steps: int = 10
+
+
+@task
+def relax(given: RelaxInputs) -> RelaxOutputs:
+    ...
+```
+
+A graph wires into a single field, `relax(given={'structure': prepared.structure})`, and the function is handed an instance of the container it asked for.
+`Annotated[RelaxInputs, Whole]` keeps a container out of the port system, storing it as one node.
+
+See {ref}`topics:workflows:graphs` for the whole of it.
+
+#### `ProcessNode.record`: what a process did outside the database
+
+A step that has to be safe to run again writes down what it did before it did it, and reads that back before doing it a second time: the identifier a scheduler gave a job, the handle an external service answered with.
+
+```python
+node = task_node()
+
+if node.record.get('job_id') is None:
+    node.set_record(job_id=scheduler.submit_job(workdir, script))
+```
+
+The engine resumes a process against the same node, so what is written survives a worker that dies, while running the process afresh gives a new node and so an empty record.
+It is updatable until the node is sealed and takes no part in the hash, so noting something neither changes what the process caches against nor outlives it.
+
 ### Behavior changes
 
 ### Fixes

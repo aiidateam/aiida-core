@@ -25,7 +25,7 @@ def test_clean_mapping_remote_paths_skips_unconfigured_computer(tmp_path, monkey
     unconfigured = orm.Computer(
         label='unconfigured-computer',
         hostname='localhost',
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.direct',
         workdir=str(tmp_path / 'unconfigured'),
     ).store()
@@ -33,7 +33,7 @@ def test_clean_mapping_remote_paths_skips_unconfigured_computer(tmp_path, monkey
     configured = orm.Computer(
         label='configured-computer',
         hostname='localhost',
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.direct',
         workdir=str(tmp_path / 'configured'),
     ).store()

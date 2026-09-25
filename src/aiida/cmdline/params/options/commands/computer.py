@@ -89,7 +89,7 @@ DESCRIPTION = options.DESCRIPTION.clone(
 )
 
 
-TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption)
+AUTHENTICATION = options.AUTHENTICATION.clone(prompt='Authentication plugin', cls=InteractiveOption)
 
 SCHEDULER = options.SCHEDULER.clone(prompt='Scheduler plugin', cls=InteractiveOption)
 

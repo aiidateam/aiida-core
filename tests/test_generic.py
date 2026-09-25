@@ -89,7 +89,7 @@ def test_code_remote(aiida_localhost):
     othercomputer = orm.Computer(
         label='another_localhost',
         hostname='localhost',
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.pbspro',
         workdir='/tmp/aiida',
     ).store()

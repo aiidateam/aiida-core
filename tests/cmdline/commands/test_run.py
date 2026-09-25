@@ -176,7 +176,7 @@ class TestAutoGroups:
                 label='localhost-example-{}'.format(sys.argv[1]),
                 hostname='localhost',
                 description='my computer',
-                transport_type='core.local',
+                auth_type='core.local',
                 scheduler_type='core.direct',
                 workdir='/tmp'
             ).store()

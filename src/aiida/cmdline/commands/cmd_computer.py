@@ -274,7 +274,7 @@ def set_computer_builder(ctx, param, value):
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
 @options_computer.DESCRIPTION()
-@options_computer.TRANSPORT()
+@options_computer.AUTHENTICATION()
 @options_computer.SCHEDULER()
 @options_computer.SHEBANG()
 @options_computer.WORKDIR()
@@ -313,7 +313,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
             'computer starting from the settings of {c}.'.format(c=kwargs['label'])
         )
 
-    kwargs['transport'] = kwargs['transport'].name
+    kwargs['transport'] = kwargs.pop('auth').name
     kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ComputerBuilder(**kwargs)
@@ -350,7 +350,7 @@ def _configure_new_computer(ctx, computer, args, auth_params):
 @options_computer.LABEL(contextual_default=partial(get_parameter_default, 'label'))
 @options_computer.HOSTNAME(contextual_default=partial(get_parameter_default, 'hostname'))
 @options_computer.DESCRIPTION(contextual_default=partial(get_parameter_default, 'description'))
-@options_computer.TRANSPORT(contextual_default=partial(get_parameter_default, 'transport'))
+@options_computer.AUTHENTICATION(contextual_default=partial(get_parameter_default, 'transport'))
 @options_computer.SCHEDULER(contextual_default=partial(get_parameter_default, 'scheduler'))
 @options_computer.SHEBANG(contextual_default=partial(get_parameter_default, 'shebang'))
 @options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
@@ -371,7 +371,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     if kwargs['label'] in get_computer_names():
         echo.echo_critical(f'A computer called {kwargs["label"]} already exists')
 
-    kwargs['transport'] = kwargs['transport'].name
+    kwargs['transport'] = kwargs.pop('auth').name
     kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ctx.computer_builder
@@ -725,7 +725,7 @@ def computer_export_setup(computer, output_file, overwrite, sort):
         'label': computer.label,
         'hostname': computer.hostname,
         'description': computer.description,
-        'transport': computer.transport_type,
+        'auth': computer.transport_type,
         'scheduler': computer.scheduler_type,
         'shebang': computer.get_shebang(),
         'work_dir': computer.get_workdir(),

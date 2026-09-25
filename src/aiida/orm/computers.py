@@ -18,7 +18,7 @@ from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
 from aiida.manage import get_manager
 from aiida.orm import entities, users
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 if t.TYPE_CHECKING:
@@ -116,25 +116,44 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         label: str | None = None,
         hostname: str = '',
         description: str = '',
-        transport_type: str = '',
+        auth_type: str = '',
         scheduler_type: str = '',
         workdir: str | None = None,
         metadata: dict[str, t.Any] | None = None,
         backend: StorageBackend | None = None,
+        *,
+        auth_params: t.Mapping[str, t.Any] | None = None,
     ) -> None:
-        """Construct a new computer."""
+        """Construct a computer, optionally configuring it on first store for the profile's default user.
+
+        :param auth_type: transport entry point used for authentication
+        :param auth_params: transport-specific authentication parameters; specifying
+            an empty mapping still requests configuration on first store
+        """
+        if auth_params is not None and not auth_type:
+            msg = '`auth_params` requires `auth_type`.'
+            raise ValueError(msg)
+        self._pending_auth_params = dict(auth_params) if auth_params is not None else None
         backend = backend or get_manager().get_profile_storage()
         model = backend.computers.create(
             label=label,
             hostname=hostname,
             description=description,
-            transport_type=transport_type,
+            transport_type=auth_type,
             scheduler_type=scheduler_type,
             metadata=metadata,
         )
         super().__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)
+
+    @classmethod
+    def model_to_orm_field_values(cls, model: OrmModel) -> dict[str, t.Any]:
+        """Map the stored transport field to the constructor's authentication parameter."""
+        fields = super().model_to_orm_field_values(model)
+        if 'transport_type' in fields:
+            fields['auth_type'] = fields.pop('transport_type')
+        return fields
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
@@ -305,7 +324,32 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         are to be changed (e.g. a new mpirun command, etc.)
         """
         self.validate()
-        return super().store()
+        # Loaded computers bypass __init__ and have no pending authentication.
+        auth_params = getattr(self, '_pending_auth_params', None)
+        if auth_params is None:
+            return super().store()
+
+        profile = self.backend.profile
+        if profile.default_user_email is None:
+            msg = f'Profile `{profile.name}` has no default user.'
+            raise exceptions.ConfigurationError(msg)
+        user = users.User.get_collection(self.backend).get(email=profile.default_user_email)
+        invalid = set(auth_params) - set(self.get_transport_class().get_valid_auth_params())
+        if invalid:
+            msg = f'Invalid authentication parameter(s): {sorted(invalid)}'
+            raise ValueError(msg)
+
+        was_stored = self.is_stored
+        super().store()
+        try:
+            self._configure_user(user, **auth_params)
+        except BaseException:
+            if not was_stored:
+                assert self.pk is not None
+                self.get_collection(self.backend).delete(self.pk)
+            raise
+        self._pending_auth_params = None
+        return self
 
     @property
     def label(self) -> str:

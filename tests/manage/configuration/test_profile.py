@@ -323,7 +323,7 @@ class TestProfileDump:
 
         # Create a computer and code for testing
         computer = orm.Computer(
-            label='test_computer', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+            label='test_computer', hostname='localhost', auth_type='core.local', scheduler_type='core.direct'
         ).store()
         code = orm.InstalledCode(label='test_code', computer=computer, filepath_executable='/bin/bash').store()
 

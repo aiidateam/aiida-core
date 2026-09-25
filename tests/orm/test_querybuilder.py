@@ -1178,7 +1178,7 @@ class TestQueryBuilderJoins:
         """Test querying for user with particular authinfo"""
         user = orm.User(email='email@new.com').store()
         computer = orm.Computer(
-            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+            label='new', hostname='localhost', auth_type='core.local', scheduler_type='core.direct'
         ).store()
         authinfo = computer._configure_user(user)
         qb = orm.QueryBuilder()
@@ -1191,7 +1191,7 @@ class TestQueryBuilderJoins:
         """Test querying for AuthInfo with specific computer/user."""
         user = orm.User(email=str(uuid.uuid4())).store()
         computer = orm.Computer(
-            label=str(uuid.uuid4()), hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+            label=str(uuid.uuid4()), hostname='localhost', auth_type='core.local', scheduler_type='core.direct'
         ).store()
         authinfo = computer._configure_user(user)
 

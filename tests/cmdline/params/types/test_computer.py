@@ -34,7 +34,7 @@ def setup_computers():
     """
     kwargs = {
         'hostname': 'localhost',
-        'transport_type': 'core.local',
+        'auth_type': 'core.local',
         'scheduler_type': 'core.direct',
         'workdir': '/tmp/aiida',
     }
@@ -51,7 +51,7 @@ def test_shell_complete(setup_computers, parameter_type):
     """Test the `shell_complete` method that provides auto-complete functionality."""
     kwargs = {
         'hostname': 'localhost',
-        'transport_type': 'core.local',
+        'auth_type': 'core.local',
         'scheduler_type': 'core.direct',
         'workdir': '/tmp/aiida',
     }

@@ -285,7 +285,7 @@ def verdi_presto(
         label='localhost',
         hostname='localhost',
         description='Localhost automatically created by `verdi presto`',
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.direct',
         workdir=str(filepath_scratch),
     ).store()

@@ -43,7 +43,7 @@ def aiida_localhost_factory(tmp_path):
                 description='localhost computer set up by test manager',
                 hostname=label,
                 workdir=str(tmp_path),
-                transport_type='core.local',
+                auth_type='core.local',
                 scheduler_type='core.direct',
             )
             computer.store()

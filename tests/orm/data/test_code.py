@@ -20,7 +20,7 @@ from aiida.orm import Code, Computer
 def test_validate_remote_exec_path():
     """Test ``Code.validate_remote_exec_path``."""
     computer = Computer(
-        label=uuid.uuid4().hex, transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+        label=uuid.uuid4().hex, auth_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
     code = Code(remote_computer_exec=(computer, '/bin/invalid'))
 
@@ -40,7 +40,7 @@ def test_validate_remote_exec_path():
 def test_get_execname():
     """Test ``Code.get_execname``."""
     computer = Computer(
-        label=uuid.uuid4().hex, transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+        label=uuid.uuid4().hex, auth_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
     code = Code(remote_computer_exec=(computer, '/bin/invalid'))
 

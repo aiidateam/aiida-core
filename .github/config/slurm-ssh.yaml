@@ -9,3 +9,6 @@ mpirun_command: mpirun -np {tot_num_mpiprocs}
 mpiprocs_per_machine: 1
 prepend_text: ''
 append_text: ''
+auth_params:
+  safe_interval: 0
+  host: slurm-ssh

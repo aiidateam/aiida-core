@@ -39,7 +39,7 @@ def configure_computer_main(computer, user, **kwargs):
     if not user.is_default:
         echo.echo_report('Configuring different user, defaults may not be appropriate.')
 
-    computer.configure(user=user, **kwargs)
+    computer._configure_user(user, **kwargs)
     echo.echo_success(f'{computer.label} successfully configured for {user.email}')
 
 

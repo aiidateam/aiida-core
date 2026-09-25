@@ -13,6 +13,7 @@ import pathlib
 import tempfile
 import textwrap
 from collections import OrderedDict
+from unittest.mock import Mock
 
 import click
 import pytest
@@ -157,7 +158,7 @@ def test_mixed(run_cli_command):
 
     options_dict['use-login-shell'] = 'y'
     # In any case, these would be managed by the visual editor
-    user_input = '\n'.join(generate_setup_options_interactive(options_dict))
+    user_input = '\n'.join(generate_setup_options_interactive(options_dict)) + '\n\n\n'
     options = generate_setup_options(non_interactive_options_dict)
 
     result = run_cli_command(computer_setup, options, user_input=user_input)
@@ -205,10 +206,56 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
     assert new_computer.get_default_memory_per_machine() == int(options_dict['default-memory-per-machine'])
     assert new_computer.get_prepend_text() == options_dict['prepend-text']
     assert new_computer.get_append_text() == options_dict['append-text']
+    assert new_computer.is_configured
 
     # Test that I cannot generate twice a computer with the same label
     result = run_cli_command(computer_setup, options, raises=True)
     assert 'already exists' in result.output
+
+
+def test_setup_configures_transport(run_cli_command):
+    """Transport options passed to setup configure the newly stored computer."""
+    options = generate_setup_options(generate_setup_options_dict({'label': 'configured_ssh', 'transport': 'core.ssh'}))
+    result = run_cli_command(computer_setup, [*options, '--host', 'login.example.org', '--safe-interval', '3'])
+
+    computer = orm.Computer.collection.get(label='configured_ssh')
+    assert computer.is_configured, result.output
+    assert computer.get_configuration()['host'] == 'login.example.org'
+    assert computer.get_configuration()['safe_interval'] == 3
+
+
+def test_setup_invalid_auth_option_removes_computer(run_cli_command):
+    """A failed transport option must not leave a computer that blocks a retry."""
+    label = 'invalid_auth_computer'
+    options = generate_setup_options(generate_setup_options_dict({'label': label}))
+
+    result = run_cli_command(computer_setup, [*options, '--invalid-auth-option'], raises=True)
+
+    assert 'No such option: --invalid-auth-option' in result.output
+    assert result.exit_code != 0
+    assert (label,) not in orm.Computer.collection.list_labels()
+
+
+@pytest.mark.parametrize('command', (computer_setup, computer_duplicate))
+def test_cancelled_configuration_removes_computer(run_cli_command, aiida_localhost, monkeypatch, command):
+    """Cancellation while configuring either command must remove the new computer."""
+    from aiida import transports
+
+    label = f'cancelled_{command.name}'
+
+    monkeypatch.setattr(
+        transports.cli, 'create_configure_cmd', lambda transport_type: Mock(main=Mock(side_effect=click.Abort()))
+    )
+
+    if command is computer_setup:
+        args = generate_setup_options(generate_setup_options_dict({'label': label}))
+    else:
+        args = ['--non-interactive', f'--label={label}', str(aiida_localhost.pk)]
+
+    result = run_cli_command(command, args, raises=True)
+
+    assert result.exit_code != 0
+    assert (label,) not in orm.Computer.collection.list_labels()
 
 
 def test_noninteractive_optional_default_mpiprocs(run_cli_command):
@@ -320,7 +367,8 @@ scheduler: core.direct
         options = ['--non-interactive', '--config', os.path.realpath(handle.name)]
         run_cli_command(computer_setup, options)
 
-    assert isinstance(orm.Computer.collection.get(label=label), orm.Computer)
+    computer = orm.Computer.collection.get(label=label)
+    assert computer.is_configured
 
 
 class TestVerdiComputerConfigure:
@@ -857,7 +905,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     """Test 'verdi computer duplicate' in interactive mode."""
     label = 'computer_duplicate_interactive'
     computer = aiida_localhost
-    user_input = f'{label}\n\n\n\n\n\n\n\n\n\n'
+    user_input = f'{label}\n' + '\n' * 14
     result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input)
     assert result.exception is None, result.output
 
@@ -908,7 +956,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
     options_dict.pop('prepend-text')
     options_dict.pop('append-text')
     options_dict['use-login-shell'] = 'y'
-    user_input = '\n'.join(generate_setup_options_interactive(options_dict))
+    user_input = '\n'.join(generate_setup_options_interactive(options_dict)) + '\n\n\n'
 
     result = run_cli_command(computer_setup, user_input=user_input)
     assert result.exception is None, f'There was an unexpected exception. Output: {result.output}'
@@ -927,6 +975,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == ''
     assert new_computer.get_append_text() == ''
+    assert new_computer.is_configured
 
 
 def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):

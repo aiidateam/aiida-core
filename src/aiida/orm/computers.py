@@ -587,7 +587,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         except exceptions.NotExistent as exc:
             msg = (
                 f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.get_short_name()}` '
-                f'(ID={user.pk}) - use `verdi computer configure` first'
+                f'(ID={user.pk}) - use `verdi computer setup` to create a configured computer'
             )
             raise exceptions.NotExistent(msg) from exc
 
@@ -671,18 +671,16 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             msg = f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
             raise exceptions.ConfigurationError(msg)
 
-    def configure(self, user: User | None = None, **kwargs: t.Any) -> AuthInfo:
-        """Configure a computer for a user with valid auth params passed via kwargs
+    def _configure_user(self, user: User, **kwargs: t.Any) -> AuthInfo:
+        """Configure a computer for a specific user with valid authentication parameters.
 
         :param user: the user to configure the computer for
-        :kwargs: the configuration keywords with corresponding values
+        :param kwargs: the authentication parameters
         :return: the authinfo object for the configured user
         """
         from aiida.orm import authinfos
 
         transport_cls = self.get_transport_class()
-        user = user or users.User.get_collection(self.backend).get_default()
-        assert user is not None
         valid_keys = set(transport_cls.get_valid_auth_params())
 
         if not set(kwargs.keys()).issubset(valid_keys):
@@ -703,6 +701,21 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             authinfo.store()
 
         return authinfo
+
+    def configure(self, **kwargs: t.Any) -> AuthInfo:
+        """Configure this computer for the default user of its backend's profile.
+
+        :param kwargs: authentication parameters for the transport
+        :return: the authinfo for the configured user
+        :raises exceptions.ConfigurationError: if the profile has no default user
+        """
+        profile = self.backend.profile
+        if profile.default_user_email is None:
+            msg = f'Profile `{profile.name}` has no default user.'
+            raise exceptions.ConfigurationError(msg)
+
+        user = users.User.get_collection(self.backend).get(email=profile.default_user_email)
+        return self._configure_user(user, **kwargs)
 
     def get_configuration(self, user: User | None = None) -> dict[str, t.Any]:
         """Get the configuration of computer for the given user as a dictionary

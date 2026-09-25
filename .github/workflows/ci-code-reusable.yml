@@ -8,7 +8,7 @@ env:
 
 jobs:
 
-  tests:
+  test:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
 
@@ -84,7 +84,7 @@ jobs:
           .coverage
         retention-days: 30
 
-  tests-minimum-requirements:
+  test-minimum-requirements:
     name: test minimum reqs (${{ matrix.python-version }}, ${{ matrix.database-backend }})
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -117,7 +117,7 @@ jobs:
       run: pytest --disable-warnings -n auto --db-backend ${{ matrix.database-backend }} --broker-backend zmq -m 'not nightly' tests/
 
 
-  tests-presto:
+  test-presto:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
 

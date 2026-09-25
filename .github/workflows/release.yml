@@ -3,8 +3,8 @@ name: release
 # Automate publishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
 # the workflow will publish to PyPI. When the 'test-release' label is active on
 # a PR, the workflow will publish to TestPyPI on each update. In both cases it
-# is checked if pre-commit and the tests pass. When a release tag is pushed it
-# will in addition check if the tag and aiida-core version and tag match.
+# is checked if the lock file is upgraded, pre-commit and the tests pass. When a
+# release tag is pushed it will also check that the tag matches the aiida-core version.
 
 on:
   # pull request event we use for test releases
@@ -37,6 +37,31 @@ jobs:
 
     - name: Check tag
       run: python .github/workflows/check_release_tag.py $GITHUB_REF
+
+  check-lock:
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
+
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Read uv version from pre-commit configuration
+      id: uv-version
+      run: |
+        version=$(awk '$2 == "repo:" && $3 == "https://github.com/astral-sh/uv-pre-commit" {getline; print $2}' .pre-commit-config.yaml)
+        test -n "$version"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.0.1
+      with:
+        version: ${{ steps.uv-version.outputs.version }}
+
+    - name: Check uv.lock has the latest compatible dependencies
+      run: |
+        uv lock --upgrade
+        git diff --exit-code -- uv.lock
 
   pre-commit:
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
@@ -81,7 +106,7 @@ jobs:
 
     name: Publish to PyPI
 
-    needs: [check-release-tag, pre-commit, tests]
+    needs: [check-release-tag, check-lock, pre-commit, tests]
 
     runs-on: ubuntu-24.04
 
@@ -109,7 +134,7 @@ jobs:
 
     name: Publish to test PyPI
 
-    needs: [pre-commit, tests]
+    needs: [check-lock, pre-commit, tests]
 
     runs-on: ubuntu-24.04
 

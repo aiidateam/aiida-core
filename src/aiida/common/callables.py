@@ -10,8 +10,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import importlib
+import re
 import sys
 import typing as t
 from types import ModuleType
@@ -19,6 +21,7 @@ from types import ModuleType
 if t.TYPE_CHECKING:
     from collections.abc import Callable, Collection, Sequence
     from importlib.machinery import ModuleSpec
+    from types import CodeType
 
 
 def resolves_here(value: t.Any) -> bool:
@@ -116,6 +119,46 @@ def module_resolves_in(module_name: str, search_paths: Sequence[str]) -> bool:
     # Every directory this namespace package is made of has to be among the ones the worker would find. More there
     # than here is fine: it can import everything reachable from these.
     return set(found.submodule_search_locations or ()) >= set(portions)
+
+
+def source_of(value: t.Any) -> str | None:
+    """Return the source text of ``value``, or ``None`` where it cannot be read.
+
+    :func:`inspect.getsource` reaches a class through the file of the module that defines it, and a class defined in
+    a notebook cell has no such file: the kernel's ``__main__`` is not one. Its own methods do carry the cell they
+    were compiled from, and a class statement sits in the same cell as its methods, so that is where to look when
+    the ordinary route fails.
+
+    :param value: The object whose source to read.
+    :returns: The source text, or ``None`` if it is not available.
+    """
+    import inspect
+    import linecache
+
+    with contextlib.suppress(OSError, TypeError):
+        return inspect.getsource(value)
+
+    if not inspect.isclass(value):
+        return None
+
+    for member in vars(value).values():
+        function: t.Any = getattr(member, '__func__', member)
+        code: CodeType | None = getattr(function, '__code__', None)
+
+        if code is None:
+            continue
+
+        lines: list[str] = linecache.getlines(filename=code.co_filename)
+        # A bare prefix match would take `class MyCalcJobParser` when asked for `MyCalcJob`, and a cell that defines
+        # both records the wrong one.
+        statement: re.Pattern[str] = re.compile(rf'class\s+{re.escape(value.__name__)}\b')
+
+        for index, line in enumerate(lines):
+            if statement.match(line.lstrip()):
+                with contextlib.suppress(OSError, TypeError):
+                    return ''.join(inspect.getblock(lines[index:]))
+
+    return None
 
 
 def modules_unimportable_by(can_import: Callable[[str], bool]) -> dict[str, ModuleType]:

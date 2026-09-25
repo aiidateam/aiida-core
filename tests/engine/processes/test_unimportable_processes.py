@@ -15,6 +15,7 @@ worker runs it anyway.
 The unit tests elsewhere pin each decision on its own. These pin that the decisions add up to a process that runs.
 """
 
+import textwrap
 import time
 from collections.abc import Callable
 from types import ModuleType
@@ -197,3 +198,6 @@ def test_calcjob_defined_in_main(
 
     assert node.is_sealed
     assert node.checkpoint is None
+    source = textwrap.dedent(node.class_source)
+    assert source.startswith('class MainCalcJob(ArithmeticAddCalculation):')
+    assert 'super().define(spec)' in source

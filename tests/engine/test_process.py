@@ -8,7 +8,9 @@
 ###########################################################################
 """Module to test AiiDA processes."""
 
+import sys
 import threading
+import types
 
 import pytest
 
@@ -667,3 +669,69 @@ def test_portal_available_in_on_terminated():
 
     assert PortalProbeWorkChain.portal_in_step is True
     assert PortalProbeWorkChain.portal_in_on_terminated is True
+
+
+class NotebookLikeWorkChain(WorkChain):
+    """Stands in for a class defined in a notebook cell, whose module is the interpreter's entry point."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.outline(cls.do_nothing)
+
+    def do_nothing(self):
+        pass
+
+
+@pytest.fixture
+def main_holds_the_class(monkeypatch: pytest.MonkeyPatch):
+    """Make the stand-in class look the way a notebook definition does, from the submitting interpreter.
+
+    A notebook cell executes in the user namespace, which *is* ``sys.modules['__main__']``, so the class both reports
+    that module and is findable in it. Setting only the attribute would leave its source unreachable, which is a
+    different situation from the one under test.
+    """
+    monkeypatch.setitem(sys.modules, '__main__', sys.modules[__name__])
+    monkeypatch.setattr(NotebookLikeWorkChain, '__module__', '__main__')
+
+
+def test_class_record_kept_for_a_class_no_name_identifies(main_holds_the_class):
+    """``process_type`` records the module the class was defined in, and ``__main__`` is a different module in every
+    interpreter, so nothing else on the node records what ran.
+    """
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.process_type == '__main__.NotebookLikeWorkChain'
+    assert node.class_source.startswith('class NotebookLikeWorkChain(WorkChain):')
+
+
+def test_class_record_omitted_for_an_importable_class():
+    """Test that a class its ``process_type`` can load carries nothing extra, since the node would only grow."""
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.base.repository.list_object_names() == []
+    assert node.class_source is None
+
+
+def test_process_class_resolves_where_main_holds_it(main_holds_the_class):
+    """The kernel that defined a notebook class is the interpreter reading the node most often, and there the name
+    does reach it. That is what keeps caching, ``get_builder_restart`` and ``Parser.parse_from_node`` working in the
+    notebook.
+    """
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.process_type == '__main__.NotebookLikeWorkChain'
+    assert node.process_class is NotebookLikeWorkChain
+
+
+def test_process_class_reports_why_it_cannot_load(main_holds_the_class, monkeypatch: pytest.MonkeyPatch):
+    """Test that a class that cannot be imported back raises about ``__main__``, rather than about a module that
+    does exist.
+    """
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    # Another interpreter, whose ``__main__`` is its own entry point and holds no such class.
+    monkeypatch.setitem(sys.modules, '__main__', types.ModuleType('__main__'))
+
+    with pytest.raises(ValueError, match=r'.*was defined in `__main__`.*cannot be loaded.*class_source.*'):
+        _ = node.process_class

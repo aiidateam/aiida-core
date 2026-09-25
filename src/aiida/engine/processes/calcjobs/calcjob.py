@@ -1167,7 +1167,7 @@ class CalcJob(Process):
             msg = f' {obj!r} is not JSON serializable'
             raise TypeError(msg)
 
-        subfolder = folder.get_subfolder('.aiida', create=True)
+        subfolder = folder.get_subfolder(orm.CalcJobNode.KEY_OBJECT_INTERNAL_DIRNAME, create=True)
         subfolder.create_file_from_filelike(
             io.StringIO(json.dumps(job_tmpl, default=encoder)), 'job_tmpl.json', 'w', encoding='utf8'
         )

@@ -90,6 +90,7 @@ class LocalTransport(BlockingTransport):
         If possible, use getcwd() instead!
         """
         if self._is_open:
+            assert self._internal_dir is not None
             return os.path.realpath(self._internal_dir)
 
         raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
@@ -816,7 +817,9 @@ class LocalTransport(BlockingTransport):
                 # Also, if I get a StringIO, I just read it all in memory and put it into a BytesIO.
                 # Clearly not memory effective - in this case do not use a StringIO, but pass directly a BytesIO
                 # that will be read line by line, if you have a huge stdin and care about memory usage.
-                if isinstance(stdin, str):
+                if isinstance(stdin, io.BufferedIOBase):
+                    filelike_stdin = stdin
+                elif isinstance(stdin, str):
                     filelike_stdin = io.BytesIO(stdin.encode('utf-8'))
                 elif isinstance(stdin, bytes):
                     filelike_stdin = io.BytesIO(stdin)
@@ -832,8 +835,6 @@ class LocalTransport(BlockingTransport):
                             yield line.encode(encoding)
 
                     filelike_stdin = line_encoder(stdin)
-                elif isinstance(stdin, io.BufferedIOBase):
-                    filelike_stdin = stdin
                 else:
                     raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
 

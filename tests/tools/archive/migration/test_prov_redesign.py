@@ -132,47 +132,6 @@ def test_node_process_type(aiida_profile, tmp_path):
     assert node.process_type == node_process_type
 
 
-@pytest.mark.usefixtures('suppress_internal_deprecations')
-def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
-    """Code type string changed
-    Change: “code.Bool.” → “data.code.Code.”
-    """
-    # Create Code instance
-    code = orm.Code((aiida_localhost, '/bin/true')).store()
-
-    # Save uuid and type
-    code_uuid = str(code.uuid)
-    code_type = code.node_type
-
-    # Assert correct type exists prior to export
-    assert code_type == 'data.core.code.Code.'
-
-    # Export node
-    filename = tmp_path / 'export.aiida'
-    create_archive([code], filename=filename)
-
-    # Clean the database and reimport
-    aiida_profile.reset_storage()
-    import_archive(filename)
-
-    # Retrieve Code node and make sure exactly 1 is retrieved
-    builder = orm.QueryBuilder()
-    builder.append(orm.Code, project=['uuid'])
-    imported_code = builder.all()
-
-    assert builder.count() == 1
-
-    # Check uuid is the same after import
-    imported_code_uuid = str(imported_code[0][0])
-
-    assert imported_code_uuid == code_uuid
-
-    # Check whether types are correctly imported
-    imported_code_type = orm.load_node(imported_code_uuid).node_type
-
-    assert imported_code_type == code_type
-
-
 def test_group_name_and_type_change(tmp_path, aiida_profile):
     """Group's name and type columns have changed
     Change for columns:

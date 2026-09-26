@@ -30,20 +30,20 @@ from aiida.plugins import CalculationFactory
 if t.TYPE_CHECKING:
     from aiida.engine import ProcessBuilder
 
-__all__ = ('AbstractCode',)
+__all__ = ('Code',)
 
 
-class AbstractCode(Data, metaclass=abc.ABCMeta):
-    """Abstract data plugin representing an executable code."""
+class Code(Data, metaclass=abc.ABCMeta):
+    """Abstract base class providing the shared behaviour of executable code plugins."""
 
-    # Should become ``default_calc_job_plugin`` once ``Code`` is dropped in ``aiida-core==3.0``
+    # These stored keys retain their legacy names until a separate attribute migration can rename them.
     _KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'input_plugin'
     _KEY_ATTRIBUTE_APPEND_TEXT: str = 'append_text'
     _KEY_ATTRIBUTE_PREPEND_TEXT: str = 'prepend_text'
     _KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
     _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
-    _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
+    _KEY_EXTRA_IS_HIDDEN: str = 'is_hidden'
 
     class BaseNodeModel(Data.BaseNodeModel):
         label: str = OrmMetadataField(
@@ -270,7 +270,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
         calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
         for the calculation to create the input files for the working directory. This method can be overridden by
-        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
+        implementations of the ``Code`` class that need to validate the contents of that folder.
 
         :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
             working directory for the corresponding calculation job instance.
@@ -471,8 +471,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             exclude_none=True,
         )
 
-        # NOTE: remove this in v3 when the deprecated `input_plugin` is removed
-        # Until then, we serialize by the alias (`input_plugin`), so we must rewire
+        # The field is serialized under its stored alias (`input_plugin`), so rewire it to the property name. Drop this
+        # once the stored key itself is renamed, see ``_KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN``.
         default_calc_job_plugin = code_data.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
         if default_calc_job_plugin is not None:
             code_data['default_calc_job_plugin'] = default_calc_job_plugin

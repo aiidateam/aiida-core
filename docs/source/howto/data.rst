@@ -26,7 +26,10 @@ Executing ``verdi plugin list aiida.data`` should display something like::
     Registered entry points for aiida.data:
     * core.array
     * core.bool
-    * core.code
+    * core.code.containerized
+    * core.code.installed
+    * core.code.installed.shell
+    * core.code.portable
     * core.dict
     * core.float
     * core.folder
@@ -613,9 +616,9 @@ From the command line interface:
     Group description  <no description>
     -----------------  ----------------
     # Nodes:
-    PK    Type    Created
-    ----  ------  ---------------
-     1    Code    26D:21h:45m ago
+    PK    Type            Created
+    ----  --------------  ---------------
+     1    InstalledCode   26D:21h:45m ago
 
 Remove nodes from a group
 ^^^^^^^^^^^^^^^^^^^^^^^^^

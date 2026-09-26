@@ -11,7 +11,7 @@
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import ToContext, WorkChain, calcfunction
-from aiida.orm import AbstractCode, Int
+from aiida.orm import Code, Int
 
 
 @calcfunction
@@ -29,7 +29,7 @@ class MultiplyAddWorkChain(WorkChain):
         spec.input('x', valid_type=Int)
         spec.input('y', valid_type=Int)
         spec.input('z', valid_type=Int)
-        spec.input('code', valid_type=AbstractCode)
+        spec.input('code', valid_type=Code)
         spec.outline(
             cls.multiply,
             cls.add,

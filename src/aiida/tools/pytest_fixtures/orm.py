@@ -245,7 +245,7 @@ def aiida_localhost(aiida_computer_local) -> Computer:
 
 @pytest.fixture
 def aiida_code():
-    """Return a factory to create a new or load an existing :class:`aiida.orm.nodes.data.code.abstract.AbstractCode`.
+    """Return a factory to create a new or load an existing :class:`aiida.orm.Code`.
 
     Usage::
 

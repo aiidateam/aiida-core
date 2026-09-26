@@ -97,7 +97,7 @@ def load_entity(
 
 
 def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'Code':
-    """Load a Code instance by one of its identifiers: pk, uuid or label
+    """Load a code instance by one of its identifiers: pk, uuid or label
 
     If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
     automatically infer the type.

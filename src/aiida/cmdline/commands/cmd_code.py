@@ -407,7 +407,7 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
                 projections[entity].append(projection)
 
     if not all_entries:
-        filters['code'][f'extras.{orm.Code.HIDDEN_KEY}'] = {'!==': True}
+        filters['code'][f'extras.{orm.Code._KEY_EXTRA_IS_HIDDEN}'] = {'!==': True}
 
     if not all_users:
         if default_user := orm.User.collection.get_default():

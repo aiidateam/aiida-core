@@ -14,12 +14,12 @@ import tempfile
 import textwrap
 from collections import OrderedDict
 
+import click
 import pytest
 import yaml
 
 from aiida import orm
 from aiida.cmdline.commands.cmd_computer import (
-    computer_configure,
     computer_delete,
     computer_duplicate,
     computer_export_config,
@@ -30,9 +30,20 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_setup,
     computer_show,
     computer_test,
+    verdi_computer,
 )
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.transports.cli import create_configure_cmd
+
+
+@click.group()
+def computer_configure():
+    """Exercise internal transport options without registering a public command."""
+
+
+for transport_type in ('core.local', 'core.ssh'):
+    computer_configure.add_command(create_configure_cmd(transport_type))
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -335,20 +346,9 @@ class TestVerdiComputerConfigure:
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
 
-    def test_top_help(self):
-        """Test help option of verdi computer configure."""
-        result = self.cli_runner(computer_configure, ['--help'])
-        assert 'core.ssh' in result.output
-        assert 'core.local' in result.output
-
-    def test_reachable(self):
-        """Test reachability of top level and sub commands."""
-        import subprocess as sp
-
-        sp.check_output(['verdi', 'computer', 'configure', '--help'])
-        sp.check_output(['verdi', 'computer', 'configure', 'core.local', '--help'])
-        sp.check_output(['verdi', 'computer', 'configure', 'core.ssh', '--help'])
-        sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
+    def test_configure_not_registered(self):
+        """Transport configuration is not registered as a public command."""
+        assert 'configure' not in verdi_computer.commands
 
     def test_local_ni_empty(self):
         """Test verdi computer configure core.local <comp>
@@ -487,34 +487,6 @@ class TestVerdiComputerConfigure:
         auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
         assert comp.is_configured, result.output
         assert auth_info.get_auth_params()['host'] == host
-
-    def test_show(self):
-        """Test verdi computer configure show <comp>."""
-        self.comp_builder.label = 'test_show'
-        self.comp_builder.transport = 'core.ssh'
-        comp = self.comp_builder.new()
-        comp.store()
-
-        result = self.cli_runner(computer_configure, ['show', comp.label])
-
-        result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
-        assert '* host' in result.output
-
-        result = self.cli_runner(
-            computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], suppress_warnings=True
-        )
-        assert '--host=' in result.output
-
-        config_cmd = ['core.ssh', comp.label, '--non-interactive']
-        config_cmd.extend(result.output.replace("'", '').split(' '))
-        result_config = self.cli_runner(computer_configure, config_cmd, suppress_warnings=True)
-        assert comp.is_configured, result_config.output
-
-        result_cur = self.cli_runner(
-            computer_configure, ['show', comp.label, '--as-option-string'], suppress_warnings=True
-        )
-        assert '--host=' in result.output
-        assert result_cur.output == result.output
 
     @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
     def test_computer_export_setup(self, tmp_path, file_regression, sort_option):

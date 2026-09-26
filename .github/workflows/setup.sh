@@ -42,7 +42,6 @@ verdi setup --non-interactive --config "${CONFIG}/profile.yaml"
 
 # set up localhost computer
 verdi computer setup --non-interactive --config "${CONFIG}/localhost.yaml"
-verdi computer configure core.local localhost --config "${CONFIG}/localhost-config.yaml"
 verdi computer test localhost
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/doubler.yaml"
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/add.yaml"
@@ -50,7 +49,6 @@ verdi code create core.code.containerized --non-interactive --config "${CONFIG}/
 
 # set up slurm-ssh computer
 verdi computer setup --non-interactive --config "${CONFIG}/slurm-ssh.yaml"
-verdi computer configure core.ssh slurm-ssh --non-interactive --config "${CONFIG}/slurm-ssh-config.yaml" -n  # needs slurm container
 verdi computer test slurm-ssh --print-traceback
 
 verdi profile setdefault test_aiida

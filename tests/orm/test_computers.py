@@ -128,6 +128,43 @@ class TestComputerConfigure:
         comp.configure(host='radames', backend='asyncssh')
         assert comp.is_user_configured(self.user)
 
+    def test_configure_default_user(self):
+        """The public method configures the profile's default user and transport parameters."""
+        self.comp_builder.label = str(uuid.uuid4())
+        self.comp_builder.transport = 'core.ssh'
+        computer = self.comp_builder.new().store()
+
+        authinfo = computer.configure(host='radames', backend='asyncssh')
+
+        assert authinfo == computer.get_authinfo(self.user)
+        assert authinfo.get_auth_params()['host'] == 'radames'
+        assert authinfo.get_auth_params()['backend'] == 'asyncssh'
+
+    def test_configure_user(self):
+        """The internal method can configure a user other than the profile default."""
+        self.comp_builder.label = str(uuid.uuid4())
+        self.comp_builder.transport = 'core.ssh'
+        computer = self.comp_builder.new().store()
+        user = User(email='another@example.org').store()
+
+        authinfo = computer._configure_user(user, host='other.example.org')
+
+        assert authinfo == computer.get_authinfo(user)
+        assert not computer.is_user_configured(self.user)
+        assert authinfo.get_auth_params()['host'] == 'other.example.org'
+
+    def test_configure_no_default_user(self, monkeypatch):
+        """An unset default user should fail before creating an authinfo."""
+        self.comp_builder.label = str(uuid.uuid4())
+        self.comp_builder.transport = 'core.local'
+        computer = self.comp_builder.new().store()
+        monkeypatch.setattr(computer.backend.profile, 'default_user_email', None)
+
+        with pytest.raises(exceptions.ConfigurationError, match='has no default user'):
+            computer.configure()
+
+        assert not computer.is_configured
+
     def test_configure_ssh_invalid(self):
         """Try to configure computer with invalid auth params and check it fails."""
         self.comp_builder.label = str(uuid.uuid4())
@@ -139,7 +176,7 @@ class TestComputerConfigure:
             comp.configure(host='radames', invalid_auth_param='TEST')
 
     def test_non_configure_error(self):
-        """Configure a computer for local transport and check it is configured."""
+        """An unconfigured computer reports its details and setup guidance."""
         self.comp_builder.label = str(uuid.uuid4())
         self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
@@ -152,4 +189,4 @@ class TestComputerConfigure:
         assert comp.label in str(exc)
         assert self.user.get_short_name() in str(exc)
         assert str(self.user.pk) in str(exc)
-        assert 'verdi computer configure' in str(exc)
+        assert 'verdi computer setup' in str(exc)

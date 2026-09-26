@@ -64,9 +64,9 @@ If you are configuring a remote computer, start by :ref:`configuring password-le
 Computer setup
 --------------
 
-The configuration of computers happens in two steps: setting up the public metadata associated with the |Computer| in AiiDA provenance graphs, and configuring private connection details.
+Setting up a computer records its public metadata in AiiDA provenance graphs and configures private connection details for the default user.
 
-Start by creating a new computer instance in the database:
+Start the interactive setup with:
 
 .. code-block:: console
 
@@ -90,7 +90,7 @@ Use these additional lines to perform any further set up of the environment on t
     Don't specify settings here that are specific to a code or calculation: you can set further pre-execution commands at the ``Code`` and even ``CalcJob`` level.
 
 When you are done editing, save and quit.
-The computer has now been created in the database but you still need to *configure* access to it using your credentials.
+The command then prompts for transport-specific connection details and configures access using your credentials.
 
 .. tip::
 
@@ -108,7 +108,7 @@ The computer has now been created in the database but you still need to *configu
         ---
         label: "localhost"
         hostname: "localhost"
-        transport: "core.local"
+        auth: "core.local"
         scheduler: "core.direct"
         work_dir: "/home/max/.aiida_run"
         mpirun_command: "mpirun -np {tot_num_mpiprocs}"
@@ -116,8 +116,10 @@ The computer has now been created in the database but you still need to *configu
         prepend_text: |
             module load mymodule
             export NEWVAR=1
+        auth_params:
+            safe_interval: 5
 
-    The list of the keys for the ``yaml`` file is given by the options of the ``computer setup`` command:
+    Put transport-specific settings under ``auth_params``. The list of the other keys for the ``yaml`` file is given by the options of the ``computer setup`` command:
 
     .. code-block:: console
 
@@ -130,15 +132,15 @@ The computer has now been created in the database but you still need to *configu
 Computer connection configuration
 ---------------------------------
 
-The second step configures private connection details using:
+Pass transport-specific connection details when setting up the computer, for example:
 
 .. code-block:: console
 
-    $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
+    $ verdi computer setup --auth core.ssh --host login.example.org
 
-Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of the chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
+You can also put transport-specific settings under ``auth_params`` in the setup YAML file.
 
-After the setup and configuration have been completed, let's check that everything is working properly:
+After setup, check that everything is working properly:
 
 .. code-block:: console
 
@@ -170,11 +172,16 @@ Some compute resources, particularly large supercomputing centers, may not toler
 *   Increase the connection cooldown time.
 
     This is the minimum time (in seconds) to wait between opening a new connection.
-    Modify it for an existing computer using:
+    Set it during computer setup with ``--safe-interval <SECONDS>``. For an existing computer, update its authentication parameters in ``verdi shell``:
 
-    .. code-block:: bash
+    .. code-block:: python
 
-        verdi computer configure core.ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+        from aiida.orm import User, load_computer
+
+        authinfo = load_computer('COMPUTER_NAME').get_authinfo(User.collection.get_default())
+        params = authinfo.get_auth_params()
+        params['safe_interval'] = 5
+        authinfo.set_auth_params(params)
 
 .. important::
 

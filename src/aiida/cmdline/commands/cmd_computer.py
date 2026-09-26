@@ -17,15 +17,13 @@ from math import isclose
 
 import click
 
-from aiida.cmdline import VerdiCommandGroup
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import EntryPointError, ValidationError
-from aiida.plugins.entry_point import get_entry_point_names
+from aiida.common.exceptions import ValidationError
 
 
 @verdi.group('computer')
@@ -233,7 +231,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
             'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
-            f'\n    verdi computer configure {computer.transport_type} {computer.label} -n --no-use-login-shell\n\n'
+            '\n    Update the `use_login_shell` authentication parameter to False.\n\n'
             'For details, please refer to the documentation: '
             'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/transport.html#login-shells\n'
         )
@@ -272,11 +270,11 @@ def set_computer_builder(ctx, param, value):
     return value
 
 
-@verdi_computer.command('setup')
+@verdi_computer.command('setup', context_settings={'ignore_unknown_options': True, 'allow_extra_args': True})
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
 @options_computer.DESCRIPTION()
-@options_computer.TRANSPORT()
+@options_computer.AUTHENTICATION()
 @options_computer.SCHEDULER()
 @options_computer.SHEBANG()
 @options_computer.WORKDIR()
@@ -286,13 +284,27 @@ def set_computer_builder(ctx, param, value):
 @options_computer.USE_DOUBLE_QUOTES()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
+@click.option('--auth-params', type=click.UNPROCESSED, hidden=True)
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):
-    """Create a new computer."""
+    """Create a new computer.
+
+    Transport-specific authentication options can be passed alongside the setup options.
+    In a YAML configuration file, put them under ``auth_params``.
+    """
     from aiida.orm.utils.builders.computer import ComputerBuilder
+
+    # Parse transport-specific options after the computer exists, so their defaults can
+    # depend on its hostname and on the user's existing configuration.
+    auth_params = kwargs.pop('auth_params') or {}
+    if not isinstance(auth_params, dict):
+        raise click.BadParameter('Expected a mapping of transport options.', param_hint='auth_params')
+    configure_args = [*ctx.args, kwargs['label']]
+    if non_interactive:
+        configure_args.append('--non-interactive')
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical(
@@ -301,7 +313,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
             'computer starting from the settings of {c}.'.format(c=kwargs['label'])
         )
 
-    kwargs['transport'] = kwargs['transport'].name
+    kwargs['transport'] = kwargs.pop('auth').name
     kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ComputerBuilder(**kwargs)
@@ -317,10 +329,20 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+    _configure_new_computer(ctx, computer, configure_args, auth_params)
 
-    profile = ctx.obj['profile']
-    echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+
+def _configure_new_computer(ctx, computer, args, auth_params):
+    """Apply the transport configuration to a newly stored computer."""
+    from aiida import orm
+    from aiida.transports.cli import create_configure_cmd
+
+    try:
+        command = create_configure_cmd(computer.transport_type)
+        command.main(args=args, standalone_mode=False, obj=ctx.obj, default_map=auth_params)
+    except BaseException:
+        orm.Computer.collection.delete(computer.pk)
+        raise
 
 
 @verdi_computer.command('duplicate')
@@ -328,7 +350,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.LABEL(contextual_default=partial(get_parameter_default, 'label'))
 @options_computer.HOSTNAME(contextual_default=partial(get_parameter_default, 'hostname'))
 @options_computer.DESCRIPTION(contextual_default=partial(get_parameter_default, 'description'))
-@options_computer.TRANSPORT(contextual_default=partial(get_parameter_default, 'transport'))
+@options_computer.AUTHENTICATION(contextual_default=partial(get_parameter_default, 'transport'))
 @options_computer.SCHEDULER(contextual_default=partial(get_parameter_default, 'scheduler'))
 @options_computer.SHEBANG(contextual_default=partial(get_parameter_default, 'shebang'))
 @options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
@@ -349,7 +371,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     if kwargs['label'] in get_computer_names():
         echo.echo_critical(f'A computer called {kwargs["label"]} already exists')
 
-    kwargs['transport'] = kwargs['transport'].name
+    kwargs['transport'] = kwargs.pop('auth').name
     kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ctx.computer_builder
@@ -372,10 +394,10 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
     if not computer.is_configured:
-        echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-
-        profile = ctx.obj['profile']
-        echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+        args = [computer.label]
+        if non_interactive:
+            args.append('--non-interactive')
+        _configure_new_computer(ctx, computer, args, {})
 
 
 @verdi_computer.command('enable')
@@ -684,85 +706,6 @@ def computer_delete(computer, dry_run):
     echo.echo_success(f'Computer `{label}` {"and all its associated nodes " if associated_nodes_pk else ""}deleted.')
 
 
-class LazyConfigureGroup(VerdiCommandGroup):
-    """A click group that will lazily load the subcommands for each transport plugin."""
-
-    def list_commands(self, ctx):
-        subcommands = super().list_commands(ctx)
-        subcommands.extend(get_entry_point_names('aiida.transports'))
-        return subcommands
-
-    def get_command(self, ctx, name):
-        from aiida.transports import cli as transport_cli
-
-        try:
-            command = transport_cli.create_configure_cmd(name)
-        except EntryPointError:
-            command = super().get_command(ctx, name)
-        return command
-
-
-@verdi_computer.group('configure', cls=LazyConfigureGroup)
-def computer_configure():
-    """Configure the transport for a computer and user."""
-
-
-@computer_configure.command('show')
-@click.option(
-    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.'
-)
-@click.option('--as-option-string', is_flag=True)
-@options.USER(
-    help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
-)
-@arguments.COMPUTER()
-def computer_config_show(computer, user, defaults, as_option_string):
-    """Show the current configuration for a computer."""
-    from aiida.common.escaping import escape_for_bash
-    from aiida.transports import cli as transport_cli
-
-    transport_cls = computer.get_transport_class()
-    option_list = [
-        param
-        for param in transport_cli.create_configure_cmd(computer.transport_type).params
-        if isinstance(param, click.core.Option)
-    ]
-    option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
-
-    if defaults:
-        config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
-    else:
-        config = computer.get_configuration(user)
-
-    option_items = []
-    if as_option_string:
-        for option in option_list:
-            t_opt = transport_cls.auth_options[option.name]
-            if config.get(option.name) or config.get(option.name) is False:
-                if t_opt.get('switch'):
-                    option_value = (
-                        option.opts[-1] if config.get(option.name) else f'--no-{option.name.replace("_", "-")}'  # type: ignore[union-attr]
-                    )
-                elif t_opt.get('is_flag'):
-                    is_default = config.get(option.name) == transport_cli.transport_option_default(
-                        option.name, computer
-                    )
-                    option_value = option.opts[-1] if is_default else ''
-                else:
-                    option_value = f'{option.opts[-1]}={option.type(config[option.name])}'
-                option_items.append(option_value)
-        opt_string = ' '.join(option_items)
-        echo.echo(escape_for_bash(opt_string))
-    else:
-        table = []
-        for name in transport_cls.get_valid_auth_params():
-            if name in config:
-                table.append((f'* {name}', config[name]))
-            else:
-                table.append((f'* {name}', '-'))
-        echo_tabulate(table, tablefmt='plain')
-
-
 @verdi_computer.group('export')
 def computer_export():
     """Export the setup or configuration of a computer."""
@@ -782,7 +725,7 @@ def computer_export_setup(computer, output_file, overwrite, sort):
         'label': computer.label,
         'hostname': computer.hostname,
         'description': computer.description,
-        'transport': computer.transport_type,
+        'auth': computer.transport_type,
         'scheduler': computer.scheduler_type,
         'shebang': computer.get_shebang(),
         'work_dir': computer.get_workdir(),

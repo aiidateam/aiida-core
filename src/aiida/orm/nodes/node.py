@@ -289,6 +289,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _ConstructorModel: t.ClassVar[type[BaseNodeModel] | None] = None
     _CliModel: t.ClassVar[type[OrmModel] | None] = None
 
+    # Creation models exposed as classproperties, which raise ``UnsupportedModelError`` when the class defines
+    # none. ``__getattr__`` matches on these names to keep that error intact on instance access.
+    _creation_model_attributes: t.ClassVar[tuple[str, ...]] = ('ConstructorModel', 'CliModel')
+
     if t.TYPE_CHECKING:
         # Not all nodes support constructor-based and/or CLI-based creation (yet!).
         # As such, we don't want to define these models on the base class, as they
@@ -316,24 +320,24 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         def ConstructorModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
             """Return the constructor-based creation model class for this entity.
 
-            :raises UnsupportedSchemaError: if this node type does not support creation via a constructor model.
+            :raises UnsupportedModelError: if this node type does not support creation via a constructor model.
             :return: The constructor-based creation model class.
             """
             if cls._ConstructorModel is None:
                 msg = f"'{cls.class_node_type}' does not support constructor-based creation."
-                raise exceptions.UnsupportedSchemaError(msg)
+                raise exceptions.UnsupportedModelError(msg)
             return cls._ConstructorModel
 
         @classproperty
         def CliModel(cls) -> type[OrmModel]:  # noqa: N802, N805
             """Return the CLI model class for this entity.
 
+            :raises UnsupportedModelError: if this node type does not support creation via a CLI model.
             :return: The CLI model class.
-            :raises UnsupportedSchemaError: if this node type does not support creation via a CLI model.
             """
             if cls._CliModel is None:
                 msg = f"'{cls.class_node_type}' does not support CLI-based creation."
-                raise exceptions.UnsupportedSchemaError(msg)
+                raise exceptions.UnsupportedModelError(msg)
             return cls._CliModel
 
     def __init__(
@@ -668,7 +672,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     @classproperty
     def supports_constructor_model(cls) -> bool:  # noqa: N805
-        """Return whether this node class supports constructor-based creation."""
+        """Return whether this node class supports constructor-based creation.
+
+        ``_patch_constructor_model`` consults this before it synthesizes ``ConstructorModel``, so the check is
+        keyed on the arguments model the subclass declares.
+        """
         return hasattr(cls, 'ConstructorArgsModel')
 
     @classproperty
@@ -1074,6 +1082,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         It allows for the handling of deprecated mixin methods.
         """
+        if name in self._creation_model_attributes:
+            # The classproperty raised ``UnsupportedModelError``, which is an ``AttributeError`` and so landed
+            # here. The class-level lookup raises it again with its explanation; the fallback at the end drops it.
+            return getattr(type(self), name)
+
         if name in self._deprecated_extra_methods:
             new_name = self._deprecated_extra_methods[name]
             kls = self.__class__.__name__

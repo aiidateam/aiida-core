@@ -153,27 +153,31 @@ def test_get_info(monkeypatch):
     assert nodes_info['last_created'] == str(last_created)
 
 
-def test_unload_profile():
+def test_unload_profile(aiida_profile):
     """Test that unloading the profile closes all sqla sessions.
 
     This is a regression test for #5506.
     """
-    from sqlalchemy.orm.session import _sessions
+    from sqlalchemy import text
+
+    from aiida.common.exceptions import ClosedStorage
+    from aiida.manage.configuration import profile_context
 
     manager = get_manager()
-    profile_name = manager.get_profile().name
+    storage = manager.get_profile_storage()
 
-    # Ensure at least one session exists by accessing the storage
-    manager.get_profile_storage().get_session()
+    # Round-trip a transaction to prove the backend works before the unload. The context manager
+    # settles the transaction even if the test fails partway and never reaches the unload.
+    with storage.transaction() as session:
+        session.execute(text('SELECT 1'))
+        assert session.in_transaction()
 
-    current_sessions = len(_sessions)
-    assert current_sessions != 0, f'Expected at least one session, got: {_sessions}'
-
-    try:
+    # ``profile_context`` reloads the profile on exit, restoring global state for subsequent tests.
+    with profile_context(aiida_profile, allow_switch=True):
         manager.unload_profile()
-        assert len(_sessions) == current_sessions - 1, f'Expected {current_sessions - 1} sessions, got: {_sessions}'
-    finally:
-        manager.load_profile(profile_name)
+        assert storage.is_closed
+        with pytest.raises(ClosedStorage):
+            storage.get_session()
 
 
 def test_backup(tmp_path):

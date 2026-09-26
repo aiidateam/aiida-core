@@ -44,7 +44,7 @@ profile = load_profile(
 computer = orm.Computer(
     label='example-computer',
     hostname='localhost',
-    transport_type='core.local',
+    auth_type='core.local',
     scheduler_type='core.direct',
 ).store()
 code = orm.InstalledCode(computer=computer, filepath_executable='/bin/true', label='example-code').store()

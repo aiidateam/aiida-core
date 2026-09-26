@@ -57,7 +57,7 @@ def main(code, number, daemon):
         computer = orm.Computer(
             label=label,
             hostname='localhost',
-            transport_type='core.local',
+            auth_type='core.local',
             scheduler_type='core.direct',
             workdir=tempfile.gettempdir(),
         ).store()

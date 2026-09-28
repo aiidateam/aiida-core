@@ -1344,7 +1344,7 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
     # The abstract `Code` type string is not a prefix of its concrete plugins; widen queries to their common prefix.
     if value == 'data.code.abstract.Code.':
-        value = 'data.core.code.'
+        value = 'data.core.code.Code.'
 
     if not subclassing:
         filters = {'==': value}

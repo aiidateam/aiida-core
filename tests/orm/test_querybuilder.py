@@ -879,6 +879,7 @@ class TestQueryBuilderCornerCases:
             filepath_executable='fake_exec',
             filepath_files=tmp_path,
         )
+        data = orm.Data().store()
 
         qb = orm.QueryBuilder
 
@@ -895,6 +896,7 @@ class TestQueryBuilderCornerCases:
         code_results = qb().append(orm.Code).all(flat=True)
         assert installed_code in code_results
         assert portable_code in code_results
+        assert data not in code_results
         assert len(code_results) == 2
 
         qb_filtered = qb().append(orm.Code, filters={'label': 'installed-code'})

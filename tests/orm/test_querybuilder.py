@@ -907,6 +907,240 @@ class TestQueryBuilderCornerCases:
         assert len(subclassing_off_results) == 0
 
 
+class TestNodeInheritanceQueries:
+    """Class targets resolve through inheritance, raw string targets through namespaces."""
+
+    @pytest.fixture
+    def fake_entry_points(self, monkeypatch):
+        """Register fake ``aiida.data`` entry points without installing any package."""
+        from importlib_metadata import EntryPoint, EntryPoints
+
+        from aiida.plugins import entry_point as entry_point_module
+
+        fakes: dict[str, type] = {}
+        failures: dict[str, Exception] = {}
+        real_get_entry_points = entry_point_module.get_entry_points
+        real_load_entry_point = entry_point_module.load_entry_point
+
+        def fake_get_entry_points(group: str):
+            points = real_get_entry_points(group)
+            if group == 'aiida.data':
+                extras = [
+                    EntryPoint(name=name, value=f'fake.plugin:{name}', group=group) for name in (*fakes, *failures)
+                ]
+                return EntryPoints([*points, *extras])
+            return points
+
+        def fake_load_entry_point(group: str, name: str):
+            if group == 'aiida.data' and name in failures:
+                raise failures[name]
+            if group == 'aiida.data' and name in fakes:
+                return fakes[name]
+            return real_load_entry_point(group, name)
+
+        monkeypatch.setattr(entry_point_module, 'get_entry_points', fake_get_entry_points)
+        monkeypatch.setattr(entry_point_module, 'load_entry_point', fake_load_entry_point)
+        return fakes, failures
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_code_selects_all_concrete_implementations(self, aiida_localhost, aiida_code, tmp_path):
+        """Querying the abstract ``Code`` base selects every registered concrete code plugin."""
+        installed_code = aiida_code(
+            'core.code.installed',
+            label='installed-code',
+            computer=aiida_localhost,
+            filepath_executable='/bin/bash',
+        )
+        (tmp_path / 'fake_exec').touch()
+        portable_code = aiida_code(
+            'core.code.portable', label='portable-code', filepath_executable='fake_exec', filepath_files=tmp_path
+        )
+
+        builder = orm.QueryBuilder().append(orm.Code)
+        assert builder.count() == 2
+        assert set(builder.all(flat=True)) == {installed_code, portable_code}
+
+        node_filter = builder.as_dict()['filters']['Code_1']['node_type']
+        assert set(node_filter) == {'in'}
+        assert node_filter['in'] == sorted(node_filter['in'])
+        for type_string in (
+            orm.InstalledCode.class_node_type,
+            orm.PortableCode.class_node_type,
+            orm.ContainerizedCode.class_node_type,
+            orm.ShellCode.class_node_type,
+        ):
+            assert type_string in node_filter['in']
+        assert orm.Code.class_node_type not in node_filter['in']
+        assert orm.Data.class_node_type not in node_filter['in']
+
+    def test_installed_code_includes_registered_subclasses(self, aiida_profile):
+        """``InstalledCode`` selects its registered subclasses even though they live in other namespaces."""
+        builder = orm.QueryBuilder().append(orm.InstalledCode)
+        node_filter = builder.as_dict()['filters']['InstalledCode_1']['node_type']
+        assert set(node_filter) == {'in'}
+        assert orm.InstalledCode.class_node_type in node_filter['in']
+        assert orm.ContainerizedCode.class_node_type in node_filter['in']
+        assert orm.ShellCode.class_node_type in node_filter['in']
+        assert orm.PortableCode.class_node_type not in node_filter['in']
+
+    def test_non_entry_point_base_selects_plugin_subclasses(self, aiida_profile, fake_entry_points):
+        """A test-only base without an entry point selects plugins through inheritance, whatever namespace."""
+        fakes, _ = fake_entry_points
+
+        class LocalBase(orm.Code):
+            """Intermediate base that is a query target but never a stored type."""
+
+        # The module determines the stored type so it is set at creation: the plugin lives outside any
+        # ``core.code`` namespace yet is selected through inheritance
+        LocalImplementation = type(  # noqa: N806
+            'LocalImplementation', (LocalBase,), {'__module__': 'third.party.plugin'}
+        )
+        assert LocalImplementation.class_node_type == 'third.party.plugin.LocalImplementation.'
+        fakes['third.party'] = LocalImplementation
+
+        builder = orm.QueryBuilder().append(LocalBase)
+        node_filter = builder.as_dict()['filters']['LocalBase_1']['node_type']
+        assert node_filter == {'==': LocalImplementation.class_node_type}
+
+        base_builder = orm.QueryBuilder().append(orm.Code)
+        code_filter = base_builder.as_dict()['filters']['Code_1']['node_type']
+        assert LocalImplementation.class_node_type in code_filter['in']
+
+    def test_broken_entry_point_excluded_with_warning(self, aiida_profile, fake_entry_points):
+        """Unloadable plugins are excluded from class queries with a diagnostic, not silently."""
+        from aiida.common.exceptions import LoadingEntryPointError
+        from aiida.common.warnings import AiidaEntryPointWarning
+
+        _, failures = fake_entry_points
+        failures['broken'] = LoadingEntryPointError('cannot import')
+
+        with pytest.warns(AiidaEntryPointWarning, match='aiida.data:broken'):
+            builder = orm.QueryBuilder().append(orm.Code)
+        node_filter = builder.as_dict()['filters']['Code_1']['node_type']
+        assert orm.InstalledCode.class_node_type in node_filter['in']
+
+    def test_unexpected_plugin_error_not_suppressed(self, aiida_profile, fake_entry_points):
+        """Implementation errors from plugins propagate instead of being mistaken for missing plugins."""
+        _, failures = fake_entry_points
+        failures['broken'] = RuntimeError('plugin bug')
+
+        with pytest.raises(RuntimeError, match='plugin bug'):
+            orm.QueryBuilder().append(orm.Code)
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_raw_string_keeps_namespace_semantics(self, aiida_localhost, aiida_code, tmp_path):
+        """Raw stored-type strings filter by namespace prefix and never widen to inheritance."""
+        installed_code = aiida_code(
+            'core.code.installed',
+            label='installed-code',
+            computer=aiida_localhost,
+            filepath_executable='/bin/bash',
+        )
+        (tmp_path / 'fake_exec').touch()
+        aiida_code(
+            'core.code.portable', label='portable-code', filepath_executable='fake_exec', filepath_files=tmp_path
+        )
+
+        builder = orm.QueryBuilder().append(entity_type='data.core.code.installed.InstalledCode.', subclassing=False)
+        assert builder.count() == 1
+        assert builder.all(flat=True) == [installed_code]
+        assert builder.as_dict()['filters']['InstalledCode_1']['node_type'] == {
+            '==': 'data.core.code.installed.InstalledCode.'
+        }
+
+        # With subclassing, a string target widens to the parent namespace, unlike a class target
+        builder = orm.QueryBuilder().append(entity_type='data.core.code.installed.', subclassing=True)
+        assert builder.count() == 2
+        assert builder.as_dict()['filters']['installed_1']['node_type'] == {'like': 'data.core.code.%'}
+
+        # The removed ``Code`` plugin identity does not widen to its former namespace neighbours
+        builder = orm.QueryBuilder().append(entity_type='data.code.Code.', subclassing=True)
+        assert builder.count() == 0
+
+        # The equivalent class query selects both stored codes through inheritance
+        assert orm.QueryBuilder().append(orm.Code).count() == 2
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_class_query_round_trip(self, aiida_localhost, aiida_code, tmp_path):
+        """A class query round-trips with the exact resolved selection, without re-resolving entry points."""
+        aiida_code(
+            'core.code.installed',
+            label='installed-code',
+            computer=aiida_localhost,
+            filepath_executable='/bin/bash',
+        )
+        (tmp_path / 'fake_exec').touch()
+        aiida_code(
+            'core.code.portable', label='portable-code', filepath_executable='fake_exec', filepath_files=tmp_path
+        )
+
+        builder = orm.QueryBuilder().append(orm.Code)
+        rebuilt = orm.QueryBuilder.from_dict(builder.as_dict())
+        assert rebuilt.as_dict() == builder.as_dict()
+        assert rebuilt.count() == 2
+
+        # Empty selections remain empty after a round-trip
+        empty = orm.QueryBuilder().append(orm.Code, subclassing=False)
+        assert empty.count() == 0
+        assert orm.QueryBuilder.from_dict(empty.as_dict()).count() == 0
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_legacy_serialized_query_readable(self, aiida_localhost, aiida_code, tmp_path):
+        """Queries serialized before inheritance-based resolution keep their namespace semantics."""
+        aiida_code(
+            'core.code.installed',
+            label='installed-code',
+            computer=aiida_localhost,
+            filepath_executable='/bin/bash',
+        )
+        (tmp_path / 'fake_exec').touch()
+        aiida_code(
+            'core.code.portable', label='portable-code', filepath_executable='fake_exec', filepath_files=tmp_path
+        )
+
+        legacy = {
+            'path': [
+                {
+                    'entity_type': 'data.code.Code.',
+                    'orm_base': 'node',
+                    'tag': 'code',
+                    'joining_keyword': None,
+                    'joining_value': None,
+                    'edge_tag': None,
+                    'outerjoin': False,
+                }
+            ],
+            'filters': {'code': {'node_type': {'like': 'data.core.code.%'}}},
+            'project': {'code': []},
+            'project_map': {},
+            'order_by': [],
+            'limit': None,
+            'offset': None,
+            'distinct': False,
+        }
+        assert orm.QueryBuilder.from_dict(legacy).count() == 2
+
+    def test_process_class_keeps_process_type_filter(self, aiida_profile):
+        """Process class targets combine the inherited node selection with the process-type filter."""
+        from aiida.plugins import CalculationFactory
+
+        arithmetic_add = CalculationFactory('core.arithmetic.add')
+        builder = orm.QueryBuilder().append(arithmetic_add)
+        filters = builder.as_dict()['filters']['CalcJobNode_1']
+        assert 'node_type' in filters
+        assert 'process_type' in filters
+        assert orm.CalcJobNode.class_node_type in str(filters['node_type'])
+
+    def test_classifier_tracks_class_targets(self):
+        """Class targets carry their node class while string targets keep namespace semantics."""
+        _, classifiers = _get_ormclass(orm.Code, None)
+        assert classifiers[0].node_class is orm.Code
+        _, classifiers = _get_ormclass(orm.Data, None)
+        assert classifiers[0].node_class is orm.Data
+        _, classifiers = _get_ormclass(None, 'data.Data.')
+        assert classifiers[0].node_class is None
+
+
 class TestAttributes:
     @pytest.mark.requires_psql
     @pytest.mark.usefixtures('aiida_profile_clean')

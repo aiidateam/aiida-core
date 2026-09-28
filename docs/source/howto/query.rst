@@ -55,6 +55,27 @@ However, they have to be of the same ORM-type (e.g. all have to be subclasses of
     The :class:`~aiida.orm.querybuilder.QueryBuilder` allows you to pass either the :class:`~aiida.orm.nodes.node.Node` class (e.g. :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`) or the :class:`~aiida.engine.processes.process.Process` class (e.g. :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`), which will automatically select the right entity for the query.
     Using either :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` or :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` will produce the same query results.
 
+.. _how-to:query:subclassing:
+
+Querying by class or by type string
+===================================
+
+By default, appending a node class also matches its subclasses (``subclassing=True``).
+Membership is determined by Python inheritance over the registered node plugins, so the base class itself does not need to be a plugin.
+For example, querying for the abstract :class:`~aiida.orm.nodes.data.code.code.Code` base selects all concrete code implementations, including third-party plugins registered under unrelated entry-point namespaces:
+
+.. code-block:: python
+
+    qb = QueryBuilder()
+    qb.append(Code)  # selects InstalledCode, PortableCode, ContainerizedCode, ShellCode, ...
+
+Passing ``subclassing=False`` instead matches only the exact class (which, for an abstract base, matches nothing).
+
+If you pass a raw stored-type string via ``entity_type`` instead of a class, the query filters by type namespace prefix and cannot know the inheritance graph.
+A class target and its type string can therefore select different nodes.
+Class queries also require the corresponding plugins to be importable: implementations whose entry point cannot be loaded are skipped with a warning.
+To match stored types without loading their plugins, query with an explicit ``entity_type`` string.
+
 .. _how-to:query:results:
 
 Retrieving results

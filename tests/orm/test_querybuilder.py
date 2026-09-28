@@ -865,7 +865,7 @@ class TestQueryBuilderCornerCases:
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_code_filtering(self, aiida_localhost, aiida_code, tmp_path):
-        """Querying for the abstract Code base returns all concrete code plugins."""
+        """Querying for the Code base returns all concrete code plugins."""
         installed_code = aiida_code(
             'core.code.installed',
             label='installed-code',

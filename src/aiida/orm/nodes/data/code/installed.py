@@ -24,7 +24,7 @@ from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity
-from aiida.orm.nodes.data.code.abstract import Code
+from aiida.orm.nodes.data.code import Code
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.orm.utils.loaders import load_computer
 

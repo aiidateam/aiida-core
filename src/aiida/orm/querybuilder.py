@@ -1343,7 +1343,7 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     value = classifiers.ormclass_type_string
 
     # The abstract `Code` type string is not a prefix of its concrete plugins; widen queries to their common prefix.
-    if value == 'data.code.abstract.Code.':
+    if value == 'data.code.Code.':
         value = 'data.core.code.'
 
     if not subclassing:

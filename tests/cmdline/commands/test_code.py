@@ -684,7 +684,7 @@ def test_validate_label_uniqueness(monkeypatch, aiida_localhost):
 def test_code_test(run_cli_command):
     """Test the ``verdi code test`` command."""
     computer = Computer(
-        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+        label='test-code-computer', auth_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
     code = InstalledCode(computer=computer, filepath_executable='/bin/invalid').store()
 

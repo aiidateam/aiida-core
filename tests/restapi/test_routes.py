@@ -115,25 +115,25 @@ class TestRestApi:
             {
                 'label': 'test1',
                 'hostname': 'test1.epfl.ch',
-                'transport_type': 'core.ssh',
+                'auth_type': 'core.ssh',
                 'scheduler_type': 'core.pbspro',
             },
             {
                 'label': 'test2',
                 'hostname': 'test2.epfl.ch',
-                'transport_type': 'core.ssh',
+                'auth_type': 'core.ssh',
                 'scheduler_type': 'core.torque',
             },
             {
                 'label': 'test3',
                 'hostname': 'test3.epfl.ch',
-                'transport_type': 'core.local',
+                'auth_type': 'core.local',
                 'scheduler_type': 'core.slurm',
             },
             {
                 'label': 'test4',
                 'hostname': 'test4.epfl.ch',
-                'transport_type': 'core.ssh',
+                'auth_type': 'core.ssh',
                 'scheduler_type': 'core.slurm',
             },
         ]

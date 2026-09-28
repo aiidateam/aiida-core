@@ -130,7 +130,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             'kwargs': {
                 'label': 'test_localhost',
                 'hostname': 'test_localhost',
-                'transport_type': 'core.local',
+                'auth_type': 'core.local',
                 'scheduler_type': 'core.direct',
             },
         }

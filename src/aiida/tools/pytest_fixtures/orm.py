@@ -101,7 +101,7 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
                 label=label,
                 hostname=hostname,
                 workdir=str(tmp_path),
-                transport_type=transport_type,
+                auth_type=transport_type,
                 scheduler_type=scheduler_type,
             )
 

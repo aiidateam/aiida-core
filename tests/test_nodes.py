@@ -1344,7 +1344,7 @@ class TestSubNodesAndLinks:
             d2 = SinglefileData(file=handle).store()
 
         unsavedcomputer = orm.Computer(
-            label='localhost2', hostname='localhost', scheduler_type='core.direct', transport_type='core.local'
+            label='localhost2', hostname='localhost', scheduler_type='core.direct', auth_type='core.local'
         )
 
         with pytest.raises(ValueError):

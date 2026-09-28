@@ -267,7 +267,7 @@ def prepare_localhost():
             label='localhost',
             hostname='localhost',
             description='Localhost automatically created by `verdi devel launch-add`',
-            transport_type='core.local',
+            auth_type='core.local',
             scheduler_type='core.direct',
             workdir=tempfile.gettempdir(),
         ).store()

@@ -148,7 +148,7 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path):
         description='extra localhost computer set up by test',
         hostname='localhost-fake',
         workdir=str(tmp_path),
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.direct',
     )
     fake_localhost.store()

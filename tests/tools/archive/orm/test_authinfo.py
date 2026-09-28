@@ -57,7 +57,7 @@ def test_import_authinfo(aiida_profile, tmp_path, aiida_localhost):
         description='localhost computer set up by test manager',
         hostname='localhost-other',
         workdir=str(tmp_path),
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.direct',
     )
     computer.store()

@@ -339,7 +339,7 @@ def test_filter_size(tmp_path, aiida_profile_clean):
     for i in range(nb_nodes):
         node = orm.CalcJobNode()
         node.computer = orm.Computer(
-            label=f'{i}', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+            label=f'{i}', hostname='localhost', auth_type='core.local', scheduler_type='core.direct'
         ).store()
         node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         node.label = f'{i}'

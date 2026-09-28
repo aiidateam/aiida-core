@@ -1047,7 +1047,7 @@ def _get_mock_computer():
     _, computer = Computer.collection.get_or_create(
         label='mock_computer',
         hostname='localhost',
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.direct',
     )
     if computer.is_stored is False:

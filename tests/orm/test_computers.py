@@ -27,7 +27,7 @@ class TestComputer:
         new_comp = Computer(
             label='bbb',
             hostname='localhost',
-            transport_type='core.local',
+            auth_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida',
         ).store()
@@ -48,7 +48,7 @@ class TestComputer:
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
         new_comp = Computer(
-            label='aaa', hostname='aaa', transport_type='core.local', scheduler_type='core.pbspro', workdir='/tmp/aiida'
+            label='aaa', hostname='aaa', auth_type='core.local', scheduler_type='core.pbspro', workdir='/tmp/aiida'
         ).store()
 
         comp_pk = new_comp.pk
@@ -99,6 +99,92 @@ class TestComputerConfigure:
         self.comp_builder.shebang = '#!xonsh'
         self.user = User.collection.get_default()
 
+    def test_setup_local(self):
+        """The constructor can request configuration for the default user on store."""
+        computer = Computer(
+            label=str(uuid.uuid4()),
+            hostname='localhost',
+            auth_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida',
+            auth_params={},
+        ).store()
+
+        assert computer.is_user_configured(self.user)
+        assert computer.transport_type == 'core.local'
+        computer.store()
+        assert Computer.collection.get(label=computer.label).store().is_user_configured(self.user)
+
+    def test_setup_ssh(self):
+        """Transport-specific authentication parameters are applied during first store."""
+        computer = Computer(
+            label=str(uuid.uuid4()),
+            hostname='localhost',
+            auth_type='core.ssh',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida',
+            auth_params={'host': 'login.example.org', 'backend': 'asyncssh'},
+        ).store()
+
+        assert computer.get_authinfo(self.user).get_auth_params()['host'] == 'login.example.org'
+
+    def test_setup_auth_requires_transport(self):
+        """Authentication parameters require a transport entry point."""
+        with pytest.raises(ValueError, match='requires `auth_type`'):
+            Computer(auth_params={})
+
+    def test_setup_invalid_auth_params(self):
+        """Invalid authentication parameters must not leave a computer behind."""
+        label = str(uuid.uuid4())
+        with pytest.raises(ValueError, match='Invalid authentication parameter'):
+            Computer(
+                label=label,
+                hostname='localhost',
+                auth_type='core.ssh',
+                scheduler_type='core.direct',
+                workdir='/tmp/aiida',
+                auth_params={'invalid_option': True},
+            ).store()
+        with pytest.raises(exceptions.NotExistent):
+            Computer.collection.get(label=label)
+
+    def test_setup_configuration_failure(self, monkeypatch):
+        """A failure after storing must not leave an unconfigured computer behind."""
+        label = str(uuid.uuid4())
+
+        def fail_configuration(*args, **kwargs):
+            raise RuntimeError('Configuration failed')
+
+        monkeypatch.setattr(Computer, '_configure_user', fail_configuration)
+        with pytest.raises(RuntimeError, match='Configuration failed'):
+            Computer(
+                label=label,
+                hostname='localhost',
+                auth_type='core.local',
+                scheduler_type='core.direct',
+                workdir='/tmp/aiida',
+                auth_params={},
+            ).store()
+        with pytest.raises(exceptions.NotExistent):
+            Computer.collection.get(label=label)
+
+    def test_setup_no_default_user(self, monkeypatch):
+        """Do not store a computer if the backend has no default user."""
+        label = str(uuid.uuid4())
+        monkeypatch.setattr(self.user.backend.profile, 'default_user_email', None)
+
+        with pytest.raises(exceptions.ConfigurationError, match='has no default user'):
+            Computer(
+                label=label,
+                hostname='localhost',
+                auth_type='core.local',
+                scheduler_type='core.direct',
+                workdir='/tmp/aiida',
+                auth_params={},
+            ).store()
+        with pytest.raises(exceptions.NotExistent):
+            Computer.collection.get(label=label)
+
     def test_is_configured(self):
         """Test the :meth:`aiida.orm.computers.Computer.is_configured`."""
         self.comp_builder.label = str(uuid.uuid4())
@@ -128,6 +214,43 @@ class TestComputerConfigure:
         comp.configure(host='radames', backend='asyncssh')
         assert comp.is_user_configured(self.user)
 
+    def test_configure_default_user(self):
+        """The public method configures the profile's default user and transport parameters."""
+        self.comp_builder.label = str(uuid.uuid4())
+        self.comp_builder.transport = 'core.ssh'
+        computer = self.comp_builder.new().store()
+
+        authinfo = computer.configure(host='radames', backend='asyncssh')
+
+        assert authinfo == computer.get_authinfo(self.user)
+        assert authinfo.get_auth_params()['host'] == 'radames'
+        assert authinfo.get_auth_params()['backend'] == 'asyncssh'
+
+    def test_configure_user(self):
+        """The internal method can configure a user other than the profile default."""
+        self.comp_builder.label = str(uuid.uuid4())
+        self.comp_builder.transport = 'core.ssh'
+        computer = self.comp_builder.new().store()
+        user = User(email='another@example.org').store()
+
+        authinfo = computer._configure_user(user, host='other.example.org')
+
+        assert authinfo == computer.get_authinfo(user)
+        assert not computer.is_user_configured(self.user)
+        assert authinfo.get_auth_params()['host'] == 'other.example.org'
+
+    def test_configure_no_default_user(self, monkeypatch):
+        """An unset default user should fail before creating an authinfo."""
+        self.comp_builder.label = str(uuid.uuid4())
+        self.comp_builder.transport = 'core.local'
+        computer = self.comp_builder.new().store()
+        monkeypatch.setattr(computer.backend.profile, 'default_user_email', None)
+
+        with pytest.raises(exceptions.ConfigurationError, match='has no default user'):
+            computer.configure()
+
+        assert not computer.is_configured
+
     def test_configure_ssh_invalid(self):
         """Try to configure computer with invalid auth params and check it fails."""
         self.comp_builder.label = str(uuid.uuid4())
@@ -139,7 +262,7 @@ class TestComputerConfigure:
             comp.configure(host='radames', invalid_auth_param='TEST')
 
     def test_non_configure_error(self):
-        """Configure a computer for local transport and check it is configured."""
+        """An unconfigured computer reports its details and setup guidance."""
         self.comp_builder.label = str(uuid.uuid4())
         self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
@@ -152,4 +275,4 @@ class TestComputerConfigure:
         assert comp.label in str(exc)
         assert self.user.get_short_name() in str(exc)
         assert str(self.user.pk) in str(exc)
-        assert 'verdi computer configure' in str(exc)
+        assert 'verdi computer setup' in str(exc)

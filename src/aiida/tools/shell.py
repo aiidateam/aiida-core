@@ -246,7 +246,7 @@ def prepare_computer(computer: Computer | None = None) -> Computer:
                 label='localhost',
                 hostname='localhost',
                 description='Localhost automatically created by `aiida.tools.launch_shell_job`',
-                transport_type='core.local',
+                auth_type='core.local',
                 scheduler_type='core.direct',
                 workdir=str(pathlib.Path(tempfile.gettempdir()) / 'aiida_shell_scratch'),
             ).store()
@@ -267,6 +267,6 @@ def prepare_computer(computer: Computer | None = None) -> Computer:
     default_user = computer.backend.default_user
 
     if default_user and not computer.is_user_configured(default_user):
-        computer.configure(default_user)
+        computer.configure()
 
     return computer

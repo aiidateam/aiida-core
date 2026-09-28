@@ -35,6 +35,7 @@ __all__ = (
     'ALSO_UNGROUPED',
     'APPEND_TEXT',
     'ARCHIVE_FORMAT',
+    'AUTHENTICATION',
     'BROKER_HOST',
     'BROKER_PASSWORD',
     'BROKER_PORT',
@@ -121,7 +122,6 @@ __all__ = (
     'SYMLINK_CALCS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
-    'TRANSPORT',
     'TRAVERSAL_RULE_HELP_STRING',
     'TYPE_STRING',
     'USER',
@@ -666,12 +666,12 @@ RAW = OverridableOption(
 
 HOSTNAME = OverridableOption('-H', '--hostname', type=types.HostnameType(), help='Hostname.')
 
-TRANSPORT = OverridableOption(
-    '-T',
-    '--transport',
+AUTHENTICATION = OverridableOption(
+    '-A',
+    '--auth',
     type=types.PluginParamType(group='transports'),
     required=True,
-    help='A transport plugin (as listed in `verdi plugin list aiida.transports`).',
+    help='The authentication plugin (as listed in `verdi plugin list aiida.transports`).',
 )
 
 SCHEDULER = OverridableOption(

@@ -272,7 +272,7 @@ def _build_main_0001_dataset():
     computer = orm.Computer(
         label='simple-computer',
         hostname='localhost',
-        transport_type='core.local',
+        auth_type='core.local',
         scheduler_type='core.direct',
     ).store()
 

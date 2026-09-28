@@ -12,15 +12,16 @@ import pathlib
 
 import pytest
 
-from aiida.orm.nodes.data.code.abstract import Code
+from aiida.orm.nodes.data.code import Code
 from aiida.orm.nodes.data.code.containerized import ContainerizedCode
 from aiida.orm.nodes.data.code.installed import InstalledCode
 from aiida.orm.nodes.data.code.portable import PortableCode
 from aiida.orm.nodes.data.code.shell import ShellCode
+from aiida.plugins import DataFactory
 
 
 class MockCode(Code):
-    """Implementation of :class:`aiida.orm.nodes.data.code.abstract.Code`."""
+    """Implementation of :class:`aiida.orm.nodes.data.code.Code`."""
 
     def can_run_on_computer(self, computer) -> bool:
         """Return whether the code can run on a given computer."""
@@ -45,8 +46,22 @@ def test_code_base_class():
         Code()  # type: ignore[abstract]
 
 
+@pytest.mark.parametrize(
+    ('entry_point', 'code_class'),
+    [
+        ('core.code.installed', InstalledCode),
+        ('core.code.portable', PortableCode),
+        ('core.code.containerized', ContainerizedCode),
+        ('core.code.installed.shell', ShellCode),
+    ],
+)
+def test_code_entry_points(entry_point, code_class):
+    """The concrete code plugins remain loadable through their registered entry points."""
+    assert DataFactory(entry_point) is code_class
+
+
 def test_set_label():
-    """Test the :meth:`aiida.orm.nodes.data.code.abstract.Code.label` property setter."""
+    """Test the :meth:`aiida.orm.nodes.data.code.Code.label` property setter."""
     label = 'some-label'
     code = MockCode(label=label)
     assert code.label == label
@@ -59,7 +74,7 @@ def test_set_label():
 
 
 def test_with_mpi():
-    """Test the :meth:`aiida.orm.nodes.data.code.abstract.Code.with_mpi` property setter."""
+    """Test the :meth:`aiida.orm.nodes.data.code.Code.with_mpi` property setter."""
     code = MockCode()
     assert code.with_mpi is None
 

@@ -29,7 +29,7 @@ from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.common.typing import FilePath
 from aiida.orm import Computer
-from aiida.orm.nodes.data.code.abstract import Code
+from aiida.orm.nodes.data.code import Code
 from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('PortableCode',)

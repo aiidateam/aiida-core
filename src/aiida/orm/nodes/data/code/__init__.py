@@ -4,7 +4,7 @@
 
 # fmt: off
 
-from aiida.orm.nodes.data.code.abstract import *
+from aiida.orm.nodes.data.code.code import *
 from aiida.orm.nodes.data.code.containerized import *
 from aiida.orm.nodes.data.code.installed import *
 from aiida.orm.nodes.data.code.portable import *

@@ -8,6 +8,7 @@ import typing as t
 
 from pydantic import ConfigDict, WithJsonSchema
 
+from aiida.orm.nodes.data.base import from_aiida_type
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
@@ -243,3 +244,8 @@ class JsonableData(Data):
         if schema and issubclass(schema, self.WritableFields):
             fields['attributes'] |= self.obj.as_dict()
         return fields
+
+
+@from_aiida_type.register(JsonableData)
+def _jsonable_from_aiida_type(node):
+    return node.obj

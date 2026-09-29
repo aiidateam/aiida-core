@@ -1127,6 +1127,19 @@ def test_a_task_is_handed_the_plain_values():
     assert results['kind'] == 'int and str'
 
 
+def test_a_task_is_handed_a_plain_list_and_a_plain_dict():
+    """A list and a dictionary arrive as themselves, as the numbers and strings beside them do."""
+
+    @task(outputs=['seen'])
+    def reads(values: list, named: dict) -> str:
+        return f'{type(values).__name__}{values} and {type(named).__name__}{named}'
+
+    results, node = run_get_node(reads, values=[1, 2], named={'a': 3})
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['seen'] == "list[1, 2] and dict{'a': 3}"
+
+
 class Settings(t.TypedDict):
     """A structured type a graph input is declared with."""
 

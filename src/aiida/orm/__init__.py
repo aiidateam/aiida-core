@@ -111,6 +111,7 @@ __all__ = (
     'XyData',
     'cif_from_ase',
     'find_bandgap',
+    'from_aiida_type',
     'get_loader',
     'get_query_type_from_type_string',
     'get_type_string_from_class',

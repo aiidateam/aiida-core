@@ -340,6 +340,19 @@ def _arguments(function: t.Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) 
     return dict(bound.arguments)
 
 
+def _spread(value: t.Any, port: t.Any) -> t.Any:
+    """Return the outputs of a task by name where a namespace takes them, and the value itself otherwise.
+
+    A task returning a structured type declares one output port per field rather than one namespace holding them,
+    so a namespace the next task takes is filled from those outputs one field at a time. What says so is the port
+    rather than the annotation, since a task described with ``inputs`` carries no annotation to read.
+    """
+    if not isinstance(value, TaskOutputs) or value.prefix or not isinstance(port, PortNamespace):
+        return value
+
+    return {name: getattr(value, name) for name in port if name in value.ports}
+
+
 def _as_reference(value: t.Any) -> TaskOutput | None:
     """Return the output reference the value stands for, or ``None`` if it is a plain value."""
     if isinstance(value, TaskOutput):
@@ -1255,7 +1268,11 @@ class TaskHandle:
         beside = {name: kwargs.pop(name) for name in list(kwargs) if self._is_a_port_alone(name)}
         bound = _arguments(self._function, *args, **kwargs)
         annotations = get_annotations(self._function, eval_str=True)
-        return {**{name: _flattened(annotations.get(name), value) for name, value in bound.items()}, **beside}
+        ports = self.process_class.spec().inputs
+
+        given = {**{name: _flattened(annotations.get(name), value) for name, value in bound.items()}, **beside}
+
+        return {name: _spread(value, ports[name] if name in ports else None) for name, value in given.items()}
 
     def _is_a_port_alone(self, name: str) -> bool:
         """Return whether the name is an input of the process running this task and not a parameter of it."""

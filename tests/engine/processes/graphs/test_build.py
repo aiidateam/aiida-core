@@ -1254,6 +1254,27 @@ def test_what_is_unread_is_asked_of_the_declaration():
     assert built.unread == ('adds',)
 
 
+def test_a_task_producing_a_structured_type_fills_the_namespace_another_takes():
+    """One task declares an output per field, the next a namespace, and the two are wired without naming either."""
+
+    @task
+    def starts(label: str) -> Run:
+        return Run(label=label, settings=Settings(steps=3))
+
+    @task(outputs=['described'])
+    def describes(given: Run) -> str:
+        return f'{given["label"]} in {given["settings"]["steps"]}'
+
+    @graph
+    def start_and_describe(label):
+        return {'described': describes(given=starts(label=label)).described}
+
+    results, node = run_get_node(start_and_describe, label='relax')
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['described'] == 'relax in 3'
+
+
 def test_a_nested_structured_type_is_a_namespace_among_the_outputs_too():
     """What a task produces is declared as deeply as what one takes, so the two ends line up."""
 

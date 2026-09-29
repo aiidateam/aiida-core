@@ -320,6 +320,11 @@ def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
     What says to flatten is the annotation rather than the shape of the value, since plenty of things are a
     dataclass without being what a parameter was written to take, references among them.
     """
+    if _holds_reference(value):
+        # A reference is a dataclass of its own, so flattening one would store its fields as the value of the
+        # port and leave the task or the graph input it stands for unwired.
+        return value
+
     if not is_structured(annotation):
         return value
 
@@ -1250,7 +1255,6 @@ class TaskHandle:
         beside = {name: kwargs.pop(name) for name in list(kwargs) if self._is_a_port_alone(name)}
         bound = _arguments(self._function, *args, **kwargs)
         annotations = get_annotations(self._function, eval_str=True)
-
         return {**{name: _flattened(annotations.get(name), value) for name, value in bound.items()}, **beside}
 
     def _is_a_port_alone(self, name: str) -> bool:

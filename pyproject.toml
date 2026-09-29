@@ -192,8 +192,8 @@ requires-python = '>=3.10'
 [project.entry-points.'aiida.tools.calculations']
 
 [project.entry-points.'aiida.tools.data.orbitals']
-'core.orbital' = 'aiida.tools.data.orbital.orbital:Orbital'
-'core.realhydrogen' = 'aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital'
+'core.orbital' = 'aiida.common.datastructures.orbital:Orbital'
+'core.realhydrogen' = 'aiida.common.datastructures.orbital:RealhydrogenOrbital'
 
 [project.entry-points.'aiida.tools.dbexporters']
 

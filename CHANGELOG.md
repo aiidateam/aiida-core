@@ -79,6 +79,9 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 Serialized process classes are stored as `<node uuid>-<digest>.pkl` in the profile's `checkpoint_classes` directory, with digest references in node checkpoints.
 Backups must include this directory; storage plugins provide its location through `StorageBackend.get_checkpoint_classes_dirpath`.
 
+Live storage maintenance collects class files of sealed nodes.
+`verdi storage maintain --full` also collects files whose nodes were deleted.
+
 ### Fixes
 
 ### Deprecations

@@ -391,6 +391,74 @@ class StorageBackend(abc.ABC):
             if node_uuid is None or owner == node_uuid:
                 yield path, owner
 
+    def delete_orphaned_checkpoint_class_files(self, *, live: bool = True, dry_run: bool = False) -> list[Path]:
+        """Delete class byte files no process can still need.
+
+        A file is kept while its node exists and has not sealed, because only a process that has not terminated
+        writes these, and a writer between its own file write and its attribute write would otherwise lose its file.
+        Files of sealed nodes remain after deferred or failed cleanup. During live maintenance, an absent owner may
+        be an uncommitted new node in another connection. Collect those files only during offline maintenance.
+
+        Deliberately not a comparison against the digest each checkpoint refers to. That would collect one more file,
+        the superseded one a crash left between the write and the attribute update, and it would also delete the file
+        a live writer had just written, which is indistinguishable from it.
+
+        :param live: Preserve files whose owners are absent. Set to `False` only with exclusive profile access and
+            no concurrent transactions, including other connections in this process.
+        :param dry_run: Return what would be deleted without deleting it.
+        :returns: The paths dropped, or under ``dry_run`` the ones that would be. Active transactions and backup
+            snapshots defer deletion. Files that cannot be deleted are logged for a later maintenance attempt.
+        """
+        from aiida.orm import ProcessNode, QueryBuilder
+        from aiida.storage.log import STORAGE_LOGGER
+
+        owned: dict[Path, str] = dict(self._iter_checkpoint_class_files())
+
+        if not owned or (self.in_transaction and not dry_run):
+            return []
+
+        uuids: list[str] = sorted(set(owned.values()))
+        existing: set[str] = {
+            uuid
+            for (uuid,) in QueryBuilder(backend=self)
+            .append(ProcessNode, filters={'uuid': {'in': uuids}}, project='uuid')
+            .all()
+        }
+        sealed: set[str] = {
+            uuid
+            for (uuid,) in QueryBuilder(backend=self)
+            .append(
+                ProcessNode,
+                filters={'uuid': {'in': uuids}, f'attributes.{ProcessNode.SEALED_KEY}': True},
+                project='uuid',
+            )
+            .all()
+        }
+        orphaned: list[Path] = [
+            path for path, uuid in owned.items() if uuid in sealed or (not live and uuid not in existing)
+        ]
+
+        if dry_run:
+            return orphaned
+
+        dropped: list[Path] = []
+
+        try:
+            with self.checkpoint_class_files_lock():
+                for path in orphaned:
+                    try:
+                        path.unlink(missing_ok=True)
+                    except OSError as exception:
+                        STORAGE_LOGGER.warning(
+                            'could not delete the orphaned process class file `%s`: %s', path, exception
+                        )
+                    else:
+                        dropped.append(path)
+        except BlockingIOError:
+            return []
+
+        return dropped
+
     @abc.abstractmethod
     def set_global_variable(
         self, key: str, value: str | int | float | None, description: str | None = None, overwrite: bool = True

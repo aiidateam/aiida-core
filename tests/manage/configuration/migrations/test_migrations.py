@@ -112,7 +112,7 @@ def test_migrate_full(load_config_sample, monkeypatch):
     """Test the full config migration."""
     config_initial = load_config_sample('input/0.json')
     # this should be always the most recent version
-    config_target = load_config_sample('reference/11.json')
+    config_target = load_config_sample('reference/12.json')
 
     # This change is necessary for the migration to version 2.
     monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(hex='0' * 32))
@@ -132,8 +132,8 @@ def test_migrate_full_downgrade(load_config_sample, monkeypatch):
     """
     monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(hex='0' * 32))
 
-    upgraded = upgrade_config(load_config_sample('input/0.json'), 11, migrations=(m for m in MIGRATIONS))
-    assert upgraded['CONFIG_VERSION']['CURRENT'] == 11
+    upgraded = upgrade_config(load_config_sample('input/0.json'), 12, migrations=(m for m in MIGRATIONS))
+    assert upgraded['CONFIG_VERSION']['CURRENT'] == 12
 
     downgraded = downgrade_config(upgraded, 0, migrations=(m for m in MIGRATIONS))
     assert downgraded['CONFIG_VERSION']['CURRENT'] == 0

@@ -165,7 +165,7 @@ The following example shows how a ``FolderData`` can be created to contain multi
         dirpath = pathlib.Path(tmpdir)
         (dirpath / 'file_a.txt').write_text('content a')
         (dirpath / 'file_b.txt').write_text('content b')
-        folder_data = FolderData(tree=dirpath.absolute())
+        folder_data = FolderData.from_tree(dirpath.absolute())
 
     results, node = launch_shell_job(
         'ls',
@@ -205,7 +205,7 @@ Take for example the ``zip`` command that can create a zip archive from one or m
         dirpath = pathlib.Path(tmpdir)
         (dirpath / 'file_a.txt').write_text('content a')
         (dirpath / 'file_b.txt').write_text('content b')
-        folder_data = FolderData(tree=dirpath.absolute())
+        folder_data = FolderData.from_tree(dirpath.absolute())
 
     results, node = launch_shell_job(
         'zip',
@@ -305,9 +305,9 @@ Typical useful examples, are the base types that ship with AiiDA, such as the ``
         'echo',
         arguments='{float} {int} {string}',
         nodes={
-            'float': Float(1.0),
-            'int': Int(2),
-            'string': Str('string'),
+            'float': Float(value=1.0),
+            'int': Int(value=2),
+            'string': Str(value='string'),
         },
     )
     print(results['stdout'].get_content())
@@ -440,7 +440,7 @@ The following example uncompresses the tarball and captures the uncompressed fil
         'tar',
         arguments='-zxvf {archive}',
         nodes={
-            'archive': SinglefileData('/some/path/archive.tar.gz'),
+            'archive': SinglefileData.from_path('/some/path/archive.tar.gz'),
         },
         outputs=['sub_folder']
     )
@@ -604,7 +604,7 @@ The following example shows how a custom parser can be implemented:
 
     def custom_parser(dirpath):
         from aiida.orm import Str
-        return {'string': Str((dirpath / 'stdout').read_text().strip())}
+        return {'string': Str(value=(dirpath / 'stdout').read_text().strip())}
 
     results, node = launch_shell_job(
         'echo',
@@ -669,9 +669,9 @@ Below is an example of how the ``parser`` argument can be put to use:
 
         if inputs.arguments[0] == 'return-bool':
             parser.logger.warning('Arguments set to `return-bool`, returning a bool')
-            return {'output': Bool(True)}
+            return {'output': Bool(value=True)}
         else:
-            return {'output': Str((dirpath / 'stdout').read_text().strip())}
+            return {'output': Str(value=(dirpath / 'stdout').read_text().strip())}
 
     results, node = launch_shell_job(
         'echo',

@@ -17,14 +17,14 @@ def test_basic(tmp_path):
 
     # add simple node
     dict_data = {'key1': 'value1'}
-    node = orm.Dict(dict_data, backend=backend1).store()
+    node = orm.Dict(**dict_data, backend=backend1).store()
     # add a comment to the node
     node.base.comments.add('test comment', backend1.default_user)
     # add node with repository data
     path = Path(tmp_path / 'test.txt')
     text_data = 'test'
     path.write_text(text_data, encoding='utf-8')
-    orm.SinglefileData(str(path), backend=backend1).store()
+    orm.SinglefileData.from_path(str(path), backend=backend1).store()
 
     # export to archive
     create_archive(None, backend=backend1, filename=filename)

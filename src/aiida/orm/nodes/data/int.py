@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import numbers
 
+import pydantic as pdt
+
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.numeric import NumericType
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('Int',)
 
@@ -24,13 +26,16 @@ class Int(NumericType):
 
     _type = int
 
-    class AttributesModel(NumericType.AttributesModel):
-        value: int = OrmMetadataField(
-            title='Integer value',
-            description='The value of the integer',
-        )
+    @attribute(model_field_info=pdt.fields.FieldInfo(title='Integer value'))
+    def value(self) -> int:
+        """The integer value stored in this node."""
+        return self.base.attributes.get('value', 0)
+
+    @value.setter
+    def value(self, value: int) -> None:
+        self.base.attributes.set('value', int(value))
 
 
 @to_aiida_type.register(numbers.Integral)
 def _(value):
-    return Int(value)
+    return Int(value=int(value))

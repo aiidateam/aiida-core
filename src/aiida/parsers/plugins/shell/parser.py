@@ -78,7 +78,7 @@ class ShellParser(Parser):
         """
         try:
             with (dirpath / ShellJob.FILENAME_STDERR).open(mode='rb') as handle:
-                node_stderr = SinglefileData(handle, filename=ShellJob.FILENAME_STDERR)
+                node_stderr = SinglefileData.from_filelike(handle, filename=ShellJob.FILENAME_STDERR)
         except FileNotFoundError:
             stderr = ''
         else:
@@ -89,7 +89,7 @@ class ShellParser(Parser):
 
         try:
             with (dirpath / filename_stdout).open(mode='rb') as handle:
-                node_stdout = SinglefileData(handle, filename=filename_stdout)
+                node_stdout = SinglefileData.from_filelike(handle, filename=filename_stdout)
         except FileNotFoundError:
             return self.exit_code('ERROR_OUTPUT_STDOUT_MISSING')
 
@@ -128,9 +128,11 @@ class ShellParser(Parser):
                     continue
 
                 if filepath.is_file():
-                    self.out(self.format_link_label(filepath.name), SinglefileData(filepath, filename=filepath.name))
+                    singlefile = SinglefileData.from_path(filepath, filename=filepath.name)
+                    self.out(self.format_link_label(filepath.name), singlefile)
                 else:
-                    self.out(self.format_link_label(filepath.name), FolderData(tree=filepath))
+                    folder = FolderData.from_tree(filepath)
+                    self.out(self.format_link_label(filepath.name), folder)
 
         return missing_filepaths
 

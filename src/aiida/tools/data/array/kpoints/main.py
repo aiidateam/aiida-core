@@ -187,7 +187,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': Dict(parameters)}
+    return {'parameters': Dict(**parameters)}
 
 
 def _legacy_get_explicit_kpoints_path(structure, **kwargs):
@@ -218,7 +218,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     kpoints = KpointsData()
     kpoints.set_cell(structure.cell)
     kpoints.set_kpoints(explicit_kpoints)
-    kpoints.labels = labels
+    kpoints.set_labels(labels)
 
     parameters = {
         'bravais_info': bravais_info,
@@ -226,7 +226,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': Dict(parameters), 'explicit_kpoints': kpoints}
+    return {'parameters': Dict(**parameters), 'explicit_kpoints': kpoints}
 
 
 _GET_KPOINTS_PATH_METHODS = {

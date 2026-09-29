@@ -4,12 +4,12 @@ from aiida.orm import Int
 
 @calcfunction
 def add(x, y):
-    return Int(x + y)
+    return Int(value=x + y)
 
 
 @calcfunction
 def multiply(x, y):
-    return Int(x * y)
+    return Int(value=x * y)
 
 
 class AddAndMultiplyWorkChain(WorkChain):

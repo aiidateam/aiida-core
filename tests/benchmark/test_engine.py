@@ -49,7 +49,7 @@ class WorkchainLoopWcSerial(WorkchainLoop):
     """A WorkChain that submits another WorkChain n times in different steps."""
 
     def run_task(self):
-        future = self.submit(WorkchainLoop, iterations=Int(1))
+        future = self.submit(WorkchainLoop, iterations=Int(value=1))
         return self.to_context(**{f'wkchain{self.ctx.counter!s}': future})
 
 
@@ -62,7 +62,8 @@ class WorkchainLoopWcThreaded(WorkchainLoop):
 
     def run_task(self):
         context = {
-            f'wkchain{i!s}': self.submit(WorkchainLoop, iterations=Int(1)) for i in range(self.inputs.iterations.value)
+            f'wkchain{i!s}': self.submit(WorkchainLoop, iterations=Int(value=1))
+            for i in range(self.inputs.iterations.value)
         }
         return self.to_context(**context)
 
@@ -72,8 +73,8 @@ class WorkchainLoopCalcSerial(WorkchainLoop):
 
     def run_task(self):
         inputs = {
-            'x': Int(1),
-            'y': Int(2),
+            'x': Int(value=1),
+            'y': Int(value=2),
             'code': self.inputs.code,
         }
         future = self.submit(ArithmeticAddCalculation, **inputs)
@@ -91,8 +92,8 @@ class WorkchainLoopCalcThreaded(WorkchainLoop):
         futures = {}
         for i in range(self.inputs.iterations.value):
             inputs = {
-                'x': Int(1),
-                'y': Int(2),
+                'x': Int(value=1),
+                'y': Int(value=2),
                 'code': self.inputs.code,
             }
             futures[f'addition{i!s}'] = self.submit(ArithmeticAddCalculation, **inputs)
@@ -117,7 +118,7 @@ def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outg
     )
 
     def _run():
-        return run_get_node(workchain, iterations=Int(iterations), code=code)
+        return run_get_node(workchain, iterations=Int(value=iterations), code=code)
 
     result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
 
@@ -138,7 +139,7 @@ def test_workchain_daemon(benchmark, submit_and_await, aiida_localhost, workchai
     def _run():
         builder = workchain.get_builder()
         builder.code = code
-        builder.iterations = Int(iterations)
+        builder.iterations = Int(value=iterations)
         return submit_and_await(builder, timeout=30)
 
     result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)

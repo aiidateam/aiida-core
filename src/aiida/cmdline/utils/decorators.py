@@ -91,7 +91,7 @@ def with_dbenv() -> t.Callable:
         @with_dbenv()
         def create_node():
             from aiida.orm import Int  # note the local import
-            node = Int(1).store()
+            node = Int(value=1).store()
     """
 
     @decorator

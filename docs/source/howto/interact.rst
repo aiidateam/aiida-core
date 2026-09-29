@@ -190,9 +190,9 @@ Then, in a subsequent cell, you can run engine processes as usual:
        ...:
        ...: @calcfunction
        ...: def add(x, y):
-       ...:     return orm.Int(x.value + y.value)
+       ...:     return orm.Int(value=x.value + y.value)
        ...:
-       ...: result = add(orm.Int(3), orm.Int(4))
+       ...: result = add(orm.Int(value=3), orm.Int(value=4))
        ...: print(result)
 
 .. warning::

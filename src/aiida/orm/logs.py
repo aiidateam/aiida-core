@@ -13,12 +13,14 @@ from __future__ import annotations
 import logging
 import typing as t
 from datetime import datetime
-from uuid import UUID
+
+import pydantic as pdt
 
 from aiida.common import timezone
 from aiida.manage import get_manager
-from aiida.orm import entities
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.orm import entities, nodes
+from aiida.orm.decorators import column
+from aiida.orm.models.adapters import EntityPkAdapter, StrUuidAdapter
 
 if t.TYPE_CHECKING:
     from aiida.orm import Node
@@ -36,16 +38,12 @@ def OrderSpecifier(field, direction):  # noqa: N802
     return {field: direction}
 
 
-class LogCollection(entities.Collection['Log']):
+class LogCollection(entities.EntityCollection['Log']):
     """This class represents the collection of logs and can be used to create
     and retrieve logs.
     """
 
     collection_type: t.ClassVar[str] = 'logs'
-
-    @staticmethod
-    def _entity_base_cls() -> type[Log]:
-        return Log
 
     def create_entry_from_record(self, record: logging.LogRecord) -> Log | None:
         """Helper function to create a log entry from a record created as by the python logging library
@@ -127,47 +125,17 @@ class LogCollection(entities.Collection['Log']):
         """
         return self._backend.logs.delete_many(filters)
 
+    @staticmethod
+    def _entity_base_cls() -> type[Log]:
+        return Log
+
 
 class Log(entities.Entity['BackendLog', LogCollection]):
-    """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
-
-    _CLS_COLLECTION = LogCollection
+    """ORM representation of an AiiDA log entry attached to a node."""
 
     identity_field = 'uuid'
 
-    class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = OrmMetadataField(
-            description='The UUID of the node',
-            read_only=True,
-            examples=['123e4567-e89b-12d3-a456-426614174000'],
-        )
-        loggername: str = OrmMetadataField(
-            description='The name of the logger',
-            examples=['aiida.node'],
-        )
-        levelname: str = OrmMetadataField(
-            description='The name of the log level',
-            examples=['INFO', 'ERROR'],
-        )
-        message: str = OrmMetadataField(
-            description='The message of the log',
-            examples=['This is a log message.'],
-        )
-        time: datetime = OrmMetadataField(
-            description='The time at which the log was created',
-            examples=['2024-01-01T12:00:00+00:00'],
-        )
-        metadata: dict[str, t.Any] = OrmMetadataField(
-            default_factory=dict,
-            description='The metadata of the log',
-            examples=[{'key': 'value'}],
-        )
-        node: int = OrmMetadataField(
-            description='Associated node',
-            orm_class='core.node',
-            orm_to_model=lambda log: t.cast(Log, log).dbnode_id,
-            examples=[42],
-        )
+    _CLS_COLLECTION = LogCollection
 
     def __init__(
         self,
@@ -203,7 +171,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             raise exceptions.ValidationError('Either dbnode_id or node must be provided to create a Log entry')
 
         backend = backend or get_manager().get_profile_storage()
-        model = backend.logs.create(
+        self._backend_entity = backend.logs.create(
             time=time,
             loggername=loggername,
             levelname=levelname,
@@ -211,69 +179,75 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             message=message,
             metadata=metadata,
         )
-        super().__init__(model)
+
+        self.finalize()
+
         self.store()  # Logs are immutable and automatically stored
 
-    @property
+    @column(
+        readonly=True,
+        model_adapter=StrUuidAdapter(),
+    )
     def uuid(self) -> str:
-        """Return the UUID for this log.
-
-        This identifier is unique across all entities types and backend instances.
-
-        :return: the entity uuid
-        """
+        """The UUID for this log."""
         return self._backend_entity.uuid
 
-    @property
+    @column(readonly=True)
     def time(self) -> datetime:
-        """Get the time corresponding to the entry
-
-        :return: The entry timestamp
-        """
+        """The creation time of the log entry."""
         return self._backend_entity.time
 
-    @property
+    @column
     def loggername(self) -> str:
-        """The name of the logger that created this entry
-
-        :return: The entry loggername
-        """
+        """The name of the logger that created this entry."""
         return self._backend_entity.loggername
 
-    @property
-    def levelname(self) -> str:
-        """The name of the log level
+    @loggername.setter
+    def loggername(self, value: str) -> None:
+        self._backend_entity.loggername = value
 
-        :return: The entry log level name
-        """
+    @column
+    def levelname(self) -> str:
+        """The name of the log level."""
         return self._backend_entity.levelname
 
-    @property
-    def dbnode_id(self) -> int:
-        """Get the id of the object that created the log entry
+    @levelname.setter
+    def levelname(self, value: str) -> None:
+        self._backend_entity.levelname = value
 
-        :return: The id of the object that created the log entry
-        """
-        return self._backend_entity.dbnode_id
-
-    @property
+    @column(model_adapter=EntityPkAdapter(nodes.Node))
     def node(self) -> Node:
+        """The node associated to the log entry."""
         from aiida.orm.utils.loaders import load_node
 
         return load_node(self.dbnode_id)
 
-    @property
-    def message(self) -> str:
-        """Get the message corresponding to the entry
+    @node.setter
+    def node(self, value: Node | int) -> None:
+        if isinstance(value, int):
+            self._backend_entity.dbnode_id = value
+        else:
+            self._backend_entity.dbnode_id = value.pk
 
-        :return: The entry message
-        """
+    @column
+    def message(self) -> str:
+        """The message corresponding to the entry."""
         return self._backend_entity.message
 
-    @property
-    def metadata(self) -> dict[str, t.Any]:
-        """Get the metadata corresponding to the entry
+    @message.setter
+    def message(self, value: str) -> None:
+        self._backend_entity.message = value
 
-        :return: The entry metadata
-        """
+    @column(model_field_info=pdt.fields.FieldInfo(default_factory=dict))
+    def metadata(self) -> dict[str, t.Any]:
+        """The metadata corresponding to the entry."""
         return self._backend_entity.metadata
+
+    @metadata.setter
+    def metadata(self, value: dict[str, t.Any]) -> None:
+        self._backend_entity.metadata = value
+
+    @property
+    def dbnode_id(self) -> int:
+        """The id of the node that created the log entry"""
+        return self._backend_entity.dbnode_id

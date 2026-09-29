@@ -10,12 +10,13 @@
 
 from __future__ import annotations
 
+import pydantic as pdt
+
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.orm.entities import from_backend_entity
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.node import Node
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('Data',)
 
@@ -30,7 +31,19 @@ class Data(Node):
     Nodes are responsible for validating their content (see _validate method).
     """
 
-    _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version', 'extras', 'source_md5', 'description', 'license']
+    _attributes_model_config = pdt.ConfigDict(extra='allow')
+
+    _source_attributes = [
+        'db_name',
+        'db_uri',
+        'uri',
+        'id',
+        'version',
+        'extras',
+        'source_md5',
+        'description',
+        'license',
+    ]
 
     # Replace this with a dictionary in each subclass that, given a file
     # extension, returns the corresponding fileformat string.
@@ -44,18 +57,6 @@ class Data(Node):
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
-
-    class AttributesModel(Node.AttributesModel):
-        source: dict | None = OrmMetadataField(
-            None,
-            description='Source of the data',
-        )
-
-    def __init__(self, *args, source=None, **kwargs):
-        """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
-        super().__init__(*args, **kwargs)
-        if source is not None:
-            self.source = source
 
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
@@ -76,15 +77,17 @@ class Data(Node):
         import copy
 
         backend_clone = self.backend_entity.clone()
-        clone = from_backend_entity(self.__class__, backend_clone)
+        clone = self.__class__.from_backend_entity(backend_clone)
         clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
         clone.base.repository._clone(self.base.repository)
 
         return clone
 
-    @property
+    @attribute(cli_exclude=True)
     def source(self) -> dict | None:
-        """Gets the dictionary describing the source of Data object. Possible fields:
+        """The dictionary describing the source of the data.
+
+        Possible fields:
 
         * **db_name**: name of the source database.
         * **db_uri**: URI of the source database.
@@ -97,18 +100,12 @@ class Data(Node):
         * **license**: a string with a type of license.
 
         .. note:: some limitations for setting the data source exist, see ``_validate`` method.
-
-        :return: dictionary describing the source of Data object.
         """
         return self.base.attributes.get('source', None)
 
     @source.setter
-    def source(self, source):
-        """Sets the dictionary describing the source of Data object.
-
-        :raise KeyError: if dictionary contains unknown field.
-        :raise ValueError: if supplied source description is not a dictionary.
-        """
+    def source(self, source: dict | None) -> None:
+        source = source or {}
         if not isinstance(source, dict):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
@@ -118,65 +115,15 @@ class Data(Node):
 
         self.base.attributes.set('source', source)
 
-    def set_source(self, source):
-        """Sets the dictionary describing the source of Data object."""
-        self.source = source
-
     @property
     def creator(self):
-        """Return the creator of this node or None if it does not exist.
-
-        :return: the creating node or None
-        """
+        """Return the creator of this node or None if it does not exist."""
         inputs = self.base.links.get_incoming(link_type=LinkType.CREATE)
         link = inputs.first()
         if link:
             return link.node
 
         return None
-
-    @override
-    def _exportcontent(self, fileformat, main_file_name='', **kwargs):
-        """Converts a Data node to one (or multiple) files.
-
-        Note: Export plugins should return utf8-encoded **bytes**, which can be
-        directly dumped to file.
-
-        :param fileformat: the extension, uniquely specifying the file format.
-        :type fileformat: str
-        :param main_file_name: (empty by default) Can be used by plugin to
-            infer sensible names for additional files, if necessary.  E.g. if the
-            main file is '../myplot.gnu', the plugin may decide to store the dat
-            file under '../myplot_data.dat'.
-        :type main_file_name: str
-        :param kwargs: other parameters are passed down to the plugin
-        :returns: a tuple of length 2. The first element is the content of the
-            otuput file. The second is a dictionary (possibly empty) in the format
-            {filename: filecontent} for any additional file that should be produced.
-        :rtype: (bytes, dict)
-        """
-        exporters = self._get_exporters()
-
-        try:
-            func = exporters[fileformat]
-        except KeyError:
-            if exporters.keys():
-                raise ValueError(
-                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
-                        fileformat, self.__class__.__name__, ','.join(exporters.keys())
-                    )
-                )
-            else:
-                msg = (
-                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
-                    'No formats are implemented yet.'
-                )
-                raise ValueError(msg)
-
-        string, dictionary = func(main_file_name=main_file_name, **kwargs)
-        assert isinstance(string, bytes), 'export function `{}` did not return the content as a byte string.'
-
-        return string, dictionary
 
     @override
     def export(self, path, fileformat=None, overwrite=False, **kwargs):
@@ -235,18 +182,6 @@ class Data(Node):
 
         return retlist
 
-    def _get_exporters(self):
-        """Get all implemented export formats.
-        The convention is to find all _prepare_... methods.
-        Returns a dictionary of method_name: method_function
-        """
-        # NOTE: To add support for a new format, write a new function called as
-        # _prepare_"" with the name of the new format
-        exporter_prefix = '_prepare_'
-        valid_format_names = self.get_export_formats()
-        valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
-        return valid_formats
-
     @classmethod
     def get_export_formats(cls):
         """Get the list of valid export format strings
@@ -299,19 +234,6 @@ class Data(Node):
         with open(fname, encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
             self.importstring(fhandle.read(), fileformat)
 
-    def _get_importers(self):
-        """Get all implemented import formats.
-        The convention is to find all _parse_... methods.
-        Returns a list of strings.
-        """
-        # NOTE: To add support for a new format, write a new function called as
-        # _parse_"" with the name of the new format
-        importer_prefix = '_parse_'
-        method_names = dir(self)  # get list of class methods names
-        valid_format_names = [i[len(importer_prefix) :] for i in method_names if i.startswith(importer_prefix)]
-        valid_formats = {k: getattr(self, importer_prefix + k) for k in valid_format_names}
-        return valid_formats
-
     def convert(self, object_format=None, *args):
         """Convert the AiiDA StructureData into another python object
 
@@ -343,6 +265,74 @@ class Data(Node):
 
         return func(*args)
 
+    @override
+    def _exportcontent(self, fileformat, main_file_name='', **kwargs):
+        """Converts a Data node to one (or multiple) files.
+
+        Note: Export plugins should return utf8-encoded **bytes**, which can be
+        directly dumped to file.
+
+        :param fileformat: the extension, uniquely specifying the file format.
+        :type fileformat: str
+        :param main_file_name: (empty by default) Can be used by plugin to
+            infer sensible names for additional files, if necessary.  E.g. if the
+            main file is '../myplot.gnu', the plugin may decide to store the dat
+            file under '../myplot_data.dat'.
+        :type main_file_name: str
+        :param kwargs: other parameters are passed down to the plugin
+        :returns: a tuple of length 2. The first element is the content of the
+            otuput file. The second is a dictionary (possibly empty) in the format
+            {filename: filecontent} for any additional file that should be produced.
+        :rtype: (bytes, dict)
+        """
+        exporters = self._get_exporters()
+
+        try:
+            func = exporters[fileformat]
+        except KeyError:
+            if exporters.keys():
+                raise ValueError(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
+                        fileformat, self.__class__.__name__, ','.join(exporters.keys())
+                    )
+                )
+            else:
+                msg = (
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
+                )
+                raise ValueError(msg)
+
+        string, dictionary = func(main_file_name=main_file_name, **kwargs)
+        assert isinstance(string, bytes), 'export function `{}` did not return the content as a byte string.'
+
+        return string, dictionary
+
+    def _get_exporters(self):
+        """Get all implemented export formats.
+        The convention is to find all _prepare_... methods.
+        Returns a dictionary of method_name: method_function
+        """
+        # NOTE: To add support for a new format, write a new function called as
+        # _prepare_"" with the name of the new format
+        exporter_prefix = '_prepare_'
+        valid_format_names = self.get_export_formats()
+        valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
+        return valid_formats
+
+    def _get_importers(self):
+        """Get all implemented import formats.
+        The convention is to find all _parse_... methods.
+        Returns a list of strings.
+        """
+        # NOTE: To add support for a new format, write a new function called as
+        # _parse_"" with the name of the new format
+        importer_prefix = '_parse_'
+        method_names = dir(self)  # get list of class methods names
+        valid_format_names = [i[len(importer_prefix) :] for i in method_names if i.startswith(importer_prefix)]
+        valid_formats = {k: getattr(self, importer_prefix + k) for k in valid_format_names}
+        return valid_formats
+
     def _get_converters(self):
         """Get all implemented converter formats.
         The convention is to find all _get_object_... methods.
@@ -355,3 +345,9 @@ class Data(Node):
         valid_format_names = [i[len(exporter_prefix) :] for i in method_names if i.startswith(exporter_prefix)]
         valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats
+
+    # TODO the following methods are handled above via property operations - consider removing
+
+    def set_source(self, source):
+        """Sets the dictionary describing the source of Data object."""
+        self.source = source

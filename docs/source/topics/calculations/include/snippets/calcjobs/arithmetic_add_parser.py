@@ -16,7 +16,7 @@ class ArithmeticAddParser(Parser):
         if result is None:
             return self.exit_codes.ERROR_INVALID_OUTPUT
 
-        self.out('sum', Int(result))
+        self.out('sum', Int(value=result))
 
     @staticmethod
     def parse_stdout(filelike):

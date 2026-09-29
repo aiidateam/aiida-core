@@ -12,10 +12,23 @@ from __future__ import annotations
 
 import re
 import typing as t
+from collections.abc import Sequence
 
+import pydantic as pdt
+from typing_extensions import Self
+
+from aiida.common.typing import FilePath
 from aiida.common.utils import Capturing
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.singlefile import SinglefileData
-from aiida.orm.pydantic import OrmMetadataField
+
+if t.TYPE_CHECKING:
+    from ase import Atoms
+    from CifFile import CifFile
+
+    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.nodes.data.structure import StructureData
+
 
 __all__ = ('CifData', 'cif_from_ase', 'has_pycifrw', 'pycifrw_from_cif')
 
@@ -47,7 +60,11 @@ def has_pycifrw():
     return True
 
 
-def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
+def cif_from_ase(
+    ase: Atoms | list[Atoms] | tuple[Atoms, ...],
+    full_occupancies: bool = False,
+    add_fake_biso: bool = False,
+) -> list[dict[str, t.Any]]:
     """Construct a CIF datablock from the ASE structure. The code is taken
     from
     https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html#ase.io.cif.write_cif,
@@ -123,7 +140,11 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     return datablocks
 
 
-def pycifrw_from_cif(datablocks, loops=None, names=None):
+def pycifrw_from_cif(
+    datablocks: list[dict[str, t.Any]],
+    loops: dict[str, list[str]] | None = None,
+    names: list[str] | None = None,
+) -> CifFile:
     """Constructs PyCifRW's CifFile from an array of CIF datablocks.
 
     :param datablocks: an array of CIF datablocks
@@ -187,14 +208,15 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
     return cif
 
 
-def parse_formula(formula):
+def parse_formula(formula: str) -> dict[str, int | float]:
     """Parses the Hill formulae. Does not need spaces as separators.
     Works also for partial occupancies and for chemical groups enclosed in round/square/curly brackets.
     Elements are counted and a dictionary is returned.
     e.g.  'C[NH2]3NO3'  -->  {'C': 1, 'N': 4, 'H': 6, 'O': 3}
     """
 
-    def chemcount_str_to_number(string):
+    def chemcount_str_to_number(string: str | None) -> int | float:
+        """Convert a chemical count string to a number (int or float)."""
         if not string:
             quantity = 1
         else:
@@ -203,7 +225,7 @@ def parse_formula(formula):
                 quantity = int(quantity)
         return quantity
 
-    contents = {}
+    contents: dict[str, int | float] = {}
 
     # split blocks with parentheses
     for block in re.split(r'(\([^\)]*\)[^A-Z\(\[\{]*|\[[^\]]*\][^A-Z\(\[\{]*|\{[^\}]*\}[^A-Z\(\[\{]*)', formula):
@@ -231,7 +253,6 @@ def parse_formula(formula):
     return contents
 
 
-# Note:  Method 'query' is abstract in class 'Node' but is not overridden
 class CifData(SinglefileData):
     """Wrapper for Crystallographic Interchange File (CIF)
 
@@ -241,104 +262,72 @@ class CifData(SinglefileData):
         first, the values are updated from the physical CIF file.
     """
 
-    _SET_INCOMPATIBILITIES = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
     _SCAN_TYPES = ('standard', 'flex')
     _SCAN_TYPE_DEFAULT = 'standard'
     _PARSE_POLICIES = ('eager', 'lazy')
     _PARSE_POLICY_DEFAULT = 'eager'
 
-    _values = None
-    _ase = None
-
-    class AttributesModel(SinglefileData.AttributesModel):
-        formulae: list[str] | None = OrmMetadataField(
-            None,
-            description='List of formulae contained in the CIF file',
-        )
-        spacegroup_numbers: list[str] | None = OrmMetadataField(
-            None,
-            description='List of space group numbers of the structure',
-        )
-        md5: str | None = OrmMetadataField(
-            None,
-            description='MD5 checksum of the file contents',
-            read_only=True,
-        )
-        scan_type: t.Literal['standard', 'flex'] = OrmMetadataField(
-            description='Scan type for parsing with PyCIFRW',
-        )
-        parse_policy: t.Literal['eager', 'lazy'] = OrmMetadataField(
-            description='Parse policy for parsing with PyCIFRW',
-        )
-
-    def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
+    @classmethod
+    def from_path(
+        cls,
+        filepath: FilePath,
+        filename: FilePath | None = None,
+        scan_type: t.Literal['standard', 'flex'] = _SCAN_TYPE_DEFAULT,
+        parse_policy: t.Literal['eager', 'lazy'] = _PARSE_POLICY_DEFAULT,
+        **kwargs: t.Any,
+    ) -> Self:
         """Construct a new instance and set the contents to that of the file.
 
-        :param file: an absolute filepath or filelike object for CIF.
-            Hint: Pass io.BytesIO(b"my string") to construct the SinglefileData directly from a string.
+        :param filepath: an absolute filepath for the CIF.
         :param filename: specify filename to use (defaults to name of provided file).
-        :param ase: ASE Atoms object to construct the CifData instance from.
-        :param values: PyCifRW CifFile object to construct the CifData instance from.
         :param scan_type: scan type string for parsing with PyCIFRW ('standard' or 'flex'). See CifFile.ReadCif
         :param parse_policy: 'eager' (parse CIF file on set_file) or 'lazy' (defer parsing until needed)
         """
-        args = {
-            'ase': ase,
-            'file': file,
-            'values': values,
-        }
+        instance = cls(**kwargs)
+        instance.scan_type = scan_type
+        instance.parse_policy = parse_policy
+        instance.set_file(filepath, filename=filename)
 
-        for left, right in CifData._SET_INCOMPATIBILITIES:
-            if args[left] is not None and args[right] is not None:
-                msg = f'cannot pass {left} and {right} at the same time'
-                raise ValueError(msg)
+        if parse_policy == 'eager':
+            instance.parse()
 
-        super().__init__(file, filename=filename, **kwargs)
-        self.set_scan_type(scan_type or CifData._SCAN_TYPE_DEFAULT)
-        self.set_parse_policy(parse_policy or CifData._PARSE_POLICY_DEFAULT)
-
-        if ase is not None:
-            self.set_ase(ase)
-
-        if values is not None:
-            self.set_values(values)
-
-        if not self.is_stored and file is not None and self.base.attributes.get('parse_policy') == 'eager':
-            self.parse()
-
-    @staticmethod
-    def read_cif(fileobj, index=-1, **kwargs):
-        """A wrapper method that simulates the behavior of the old
-        function ase.io.cif.read_cif by using the new generic ase.io.read
-        function.
-
-        Somewhere from 3.12 to 3.17 the tag concept was bundled with each Atom object. When
-        reading a CIF file, this is incremented and signifies the atomic species, even though
-        the CIF file do not have specific tags embedded. On reading CIF files we thus force the
-        ASE tag to zero for all Atom elements.
-
-        """
-        from ase.io import read
-
-        # The read function returns a list as a cif file might contain multiple
-        # structures.
-        struct_list = read(fileobj, index=':', format='cif', **kwargs)
-
-        if index is None:
-            # If index is explicitely set to None, the list is returned as such.
-            for atoms_entry in struct_list:
-                atoms_entry.set_tags(0)
-            return struct_list
-        # Otherwise return the desired structure specified by index, if no index is specified,
-        # the last structure is assumed by default.
-        struct_list[index].set_tags(0)
-        return struct_list[index]
+        return instance
 
     @classmethod
-    def from_md5(cls, md5, backend=None):
+    def from_ase(
+        cls,
+        ase: Atoms | list[Atoms] | tuple[Atoms, ...],
+        scan_type: t.Literal['standard', 'flex'] = _SCAN_TYPE_DEFAULT,
+        parse_policy: t.Literal['eager', 'lazy'] = _PARSE_POLICY_DEFAULT,
+        **kwargs: t.Any,
+    ) -> Self:
+        """Construct a new instance from an ASE Atoms object."""
+        instance = cls(**kwargs)
+        instance.scan_type = scan_type
+        instance.parse_policy = parse_policy
+        instance.set_ase(ase)
+        return instance
+
+    @classmethod
+    def from_values(
+        cls,
+        values: CifFile,
+        scan_type: t.Literal['standard', 'flex'] = _SCAN_TYPE_DEFAULT,
+        parse_policy: t.Literal['eager', 'lazy'] = _PARSE_POLICY_DEFAULT,
+        **kwargs: t.Any,
+    ) -> Self:
+        """Construct a new instance from a PyCifRW CifFile object."""
+        instance = cls(**kwargs)
+        instance.scan_type = scan_type
+        instance.parse_policy = parse_policy
+        instance.set_values(values)
+        return instance
+
+    @classmethod
+    def from_md5(cls, md5: str, backend: StorageBackend | None = None) -> list[Self]:
         """Return a list of all CIF files that match a given MD5 hash.
 
-        .. note:: the hash has to be stored in a ``_md5`` attribute,
+        .. note:: the hash has to be stored in the ``md5`` attribute,
             otherwise the CIF file will not be found.
         """
         from aiida.orm.querybuilder import QueryBuilder
@@ -347,63 +336,55 @@ class CifData(SinglefileData):
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
 
-    @classmethod
-    def get_or_create(cls, filename, use_first=False, store_cif=True):
-        """Pass the same parameter of the init; if a file with the same md5
-        is found, that CifData is returned.
+    def initialize(self) -> None:
+        super().initialize()
+        self._values: CifFile | None = None
+        self._ase: Atoms | None = None
 
-        :param filename: an absolute filename on disk
-        :param use_first: if False (default), raise an exception if more than \
-                one CIF file is found.\
-                If it is True, instead, use the first available CIF file.
-        :param bool store_cif: If false, the CifData objects are not stored in
-                the database. default=True.
-        :return (cif, created): where cif is the CifData object, and create is either\
-            True if the object was created, or False if the object was retrieved\
-            from the DB.
-        """
-        import os
+    @attribute(readonly=True)
+    def formulae(self) -> list[str | None] | None:
+        """The formulae contained in the CIF file."""
+        return self.base.attributes.get('formulae', None)
 
-        from aiida.common.files import md5_file
+    @attribute(readonly=True)
+    def spacegroup_numbers(self) -> list[int | None] | None:
+        """The space group numbers of the structures."""
+        return self.base.attributes.get('spacegroup_numbers', None)
 
-        if not os.path.abspath(filename):
-            raise ValueError('filename must be an absolute path')
-        md5 = md5_file(filename)
+    @attribute(
+        readonly=True,
+        required_once_stored=True,
+    )
+    def md5(self) -> str | None:
+        """The MD5 checksum of the file contents."""
+        return self.base.attributes.get('md5', None)
 
-        cifs = cls.from_md5(md5)
-        if not cifs:
-            if store_cif:
-                instance = cls(file=filename).store()
-                return (instance, True)
-            instance = cls(file=filename)
-            return (instance, True)
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=_SCAN_TYPE_DEFAULT))
+    def scan_type(self) -> t.Literal['standard', 'flex']:
+        """The scan type for parsing with PyCifRW."""
+        return self.base.attributes.get('scan_type', self._SCAN_TYPE_DEFAULT)
 
-        if len(cifs) > 1:
-            if use_first:
-                return (cifs[0], False)
+    @scan_type.setter
+    def scan_type(self, value: t.Literal['standard', 'flex']) -> None:
+        if value not in self._SCAN_TYPES:
+            msg = f'Got unknown scan_type {value}'
+            raise ValueError(msg)
+        self.base.attributes.set('scan_type', value)
 
-            raise ValueError(
-                'More than one copy of a CIF file with the same MD5 has been found in the DB. pks={}'.format(
-                    ','.join([str(i.pk) for i in cifs])
-                )
-            )
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=_PARSE_POLICY_DEFAULT))
+    def parse_policy(self) -> t.Literal['eager', 'lazy']:
+        """The parse policy for parsing with PyCifRW."""
+        return self.base.attributes.get('parse_policy', self._PARSE_POLICY_DEFAULT)
 
-        return cifs[0], False
-
-    @property
-    def formulae(self):
-        return self.base.attributes.get('formulae')
-
-    @property
-    def spacegroup_numbers(self):
-        return self.base.attributes.get('spacegroup_numbers')
+    @parse_policy.setter
+    def parse_policy(self, value: t.Literal['eager', 'lazy']) -> None:
+        if value not in self._PARSE_POLICIES:
+            msg = f'Got unknown parse_policy {value}'
+            raise ValueError(msg)
+        self.base.attributes.set('parse_policy', value)
 
     @property
-    def md5(self):
-        return self.base.attributes.get('md5')
-
-    @property
-    def ase(self):
+    def ase(self) -> Atoms:
         """ASE object, representing the CIF.
 
         .. note:: requires ASE module.
@@ -412,46 +393,12 @@ class CifData(SinglefileData):
             self._ase = self.get_ase()
         return self._ase
 
-    @property
-    def scan_type(self) -> t.Literal['standard', 'flex']:
-        return self.base.attributes.get('scan_type')
-
-    @property
-    def parse_policy(self) -> t.Literal['eager', 'lazy']:
-        return self.base.attributes.get('parse_policy')
-
-    def get_ase(self, **kwargs):
-        """Returns ASE object, representing the CIF. This function differs
-        from the property ``ase`` by the possibility to pass the keyworded
-        arguments (kwargs) to ase.io.cif.read_cif().
-
-        .. note:: requires ASE module.
-        """
-        if not kwargs and self._ase:
-            return self.ase
-        with self.open() as handle:
-            return CifData.read_cif(handle, **kwargs)
-
-    def set_ase(self, aseatoms):
-        """Set the contents of the CifData starting from an ASE atoms object
-
-        :param aseatoms: the ASE atoms object
-        """
-        import tempfile
-
-        cif = cif_from_ase(aseatoms)
-        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            with Capturing():
-                tmpf.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
-            tmpf.flush()
-            self.set_file(tmpf.name)
-
     @ase.setter
-    def ase(self, aseatoms):
+    def ase(self, aseatoms: Atoms) -> None:
         self.set_ase(aseatoms)
 
     @property
-    def values(self):
+    def values(self) -> CifFile:
         """PyCifRW structure, representing the CIF datablocks.
 
         .. note:: requires PyCifRW module.
@@ -461,155 +408,18 @@ class CifData(SinglefileData):
             from CifFile import CifBlock
 
             with self.open() as handle:
-                c = CifFile.ReadCif(handle, scantype=self.base.attributes.get('scan_type', CifData._SCAN_TYPE_DEFAULT))
+                c = CifFile.ReadCif(handle, scantype=self.scan_type)
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
         return self._values
 
-    def set_values(self, values):
-        """Set internal representation to `values`.
-
-        Warning: This also writes a new CIF file.
-
-        :param values: PyCifRW CifFile object
-
-        .. note:: requires PyCifRW module.
-        """
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            with Capturing():
-                tmpf.write(values.WriteOut())
-            tmpf.flush()
-            tmpf.seek(0)
-            self.set_file(tmpf)
-
-        self._values = values
-
     @values.setter
-    def values(self, values):
+    def values(self, values: CifFile) -> None:
         self.set_values(values)
 
-    def parse(self, scan_type=None):
-        """Parses CIF file and sets attributes.
-
-        :param scan_type:  See set_scan_type
-        """
-        if scan_type is not None:
-            self.set_scan_type(scan_type)
-
-        # Note: this causes parsing, if not already parsed
-        self.base.attributes.set('formulae', self.get_formulae())
-        self.base.attributes.set('spacegroup_numbers', self.get_spacegroup_numbers())
-
-    def store(self, *args, **kwargs):
-        """Store the node."""
-        if not self.is_stored:
-            # We need to first run validation on the parent `SinglefileData` to ensure the `filename` is set,
-            # in case the file was added after the node was created (but clearly not yet stored)
-            super()._validate()
-            self.base.attributes.set('md5', self.generate_md5())
-
-        return super().store(*args, **kwargs)
-
-    def set_file(self, file, filename=None):
-        """Set the file.
-
-        If the source is set and the MD5 checksum of new file
-        is different from the source, the source has to be deleted.
-
-        :param file: filepath or filelike object of the CIF file to store.
-            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
-        :param filename: specify filename to use (defaults to name of provided file).
-        """
-        super().set_file(file, filename=filename)
-        md5sum = self.generate_md5()
-        if (
-            isinstance(self.source, dict)
-            and self.source.get('source_md5', None) is not None
-            and self.source['source_md5'] != md5sum
-        ):
-            self.source = {}
-        self.base.attributes.set('md5', md5sum)
-
-        self._values = None
-        self._ase = None
-        self.base.attributes.set('formulae', None)
-        self.base.attributes.set('spacegroup_numbers', None)
-
-    def set_scan_type(self, scan_type):
-        """Set the scan_type for PyCifRW.
-
-        The 'flex' scan_type of PyCifRW is faster for large CIF files but
-        does not yet support the CIF2 format as of 02/2018.
-        See the CifFile.ReadCif function
-
-        :param scan_type: Either 'standard' or 'flex' (see _scan_types)
-        """
-        if scan_type in CifData._SCAN_TYPES:
-            self.base.attributes.set('scan_type', scan_type)
-        else:
-            msg = f'Got unknown scan_type {scan_type}'
-            raise ValueError(msg)
-
-    def set_parse_policy(self, parse_policy):
-        """Set the parse policy.
-
-        :param parse_policy: Either 'eager' (parse CIF file on set_file)
-            or 'lazy' (defer parsing until needed)
-        """
-        if parse_policy in CifData._PARSE_POLICIES:
-            self.base.attributes.set('parse_policy', parse_policy)
-        else:
-            msg = f'Got unknown parse_policy {parse_policy}'
-            raise ValueError(msg)
-
-    def get_formulae(self, mode='sum', custom_tags=None):
-        """Return chemical formulae specified in CIF file.
-
-        Note: This does not compute the formula, it only reads it from the
-        appropriate tag. Use refine_inline to compute formulae.
-        """
-        # note: If formulae are not None, they could be returned
-        # directly (but the function is very cheap anyhow).
-        formula_tags = [f'_chemical_formula_{mode}']
-        if custom_tags:
-            if not isinstance(custom_tags, (list, tuple)):
-                custom_tags = [custom_tags]
-            formula_tags.extend(custom_tags)
-
-        formulae = []
-        for datablock in self.values.keys():
-            formula = None
-            for formula_tag in formula_tags:
-                if formula_tag in self.values[datablock].keys():
-                    formula = self.values[datablock][formula_tag]
-                    break
-            formulae.append(formula)
-
-        return formulae
-
-    def get_spacegroup_numbers(self):
-        """Get the spacegroup international number."""
-        # note: If spacegroup_numbers are not None, they could be returned
-        # directly (but the function is very cheap anyhow).
-        spg_tags = ['_space_group.it_number', '_space_group_it_number', '_symmetry_int_tables_number']
-        spacegroup_numbers = []
-        for datablock in self.values.keys():
-            spacegroup_number = None
-            correct_tags = [tag for tag in spg_tags if tag in self.values[datablock].keys()]
-            if correct_tags:
-                try:
-                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
-                except ValueError:
-                    pass
-            spacegroup_numbers.append(spacegroup_number)
-
-        return spacegroup_numbers
-
     @property
-    def has_partial_occupancies(self):
+    def has_partial_occupancies(self) -> bool:
         """Return if the cif data contains partial occupancies
 
         A partial occupancy is defined as site with an occupancy that differs from unity, within a precision of 1E-6
@@ -638,7 +448,7 @@ class CifData(SinglefileData):
         return partial_occupancies
 
     @property
-    def has_attached_hydrogens(self):
+    def has_attached_hydrogens(self) -> bool:
         """Check if there are hydrogens without coordinates, specified as attached
         to the atoms of the structure.
 
@@ -654,7 +464,7 @@ class CifData(SinglefileData):
         return False
 
     @property
-    def has_undefined_atomic_sites(self):
+    def has_undefined_atomic_sites(self) -> bool:
         """Return whether the cif data contains any undefined atomic sites.
 
         An undefined atomic site is defined as a site where at least one of the fractional coordinates specified in the
@@ -690,7 +500,7 @@ class CifData(SinglefileData):
         return not has_tags
 
     @property
-    def has_atomic_sites(self):
+    def has_atomic_sites(self) -> bool:
         """Returns whether there are any atomic sites defined in the cif data. That
         is to say, it will check all the values for the `_atom_site_fract_*` tags
         and if they are all equal to `?` that means there are no relevant atomic
@@ -712,7 +522,7 @@ class CifData(SinglefileData):
         return not all(coord == '?' for coord in coords)
 
     @property
-    def has_unknown_species(self):
+    def has_unknown_species(self) -> bool | None:
         """Returns whether the cif contains atomic species that are not recognized by AiiDA.
 
         The known species are taken from the elements dictionary in `aiida.common.constants`, with the exception of
@@ -737,7 +547,237 @@ class CifData(SinglefileData):
 
         return False
 
-    def generate_md5(self):
+    @classmethod
+    def get_or_create(
+        cls,
+        filename: str,
+        use_first: bool = False,
+        store_cif: bool = True,
+    ) -> tuple[Self, bool]:
+        """Pass the same parameter of the init; if a file with the same md5
+        is found, that CifData is returned.
+
+        :param filename: an absolute filename on disk
+        :param use_first: if False (default), raise an exception if more than \
+                one CIF file is found.\
+                If it is True, instead, use the first available CIF file.
+        :param bool store_cif: If false, the CifData objects are not stored in
+                the database. default=True.
+        :return (cif, created): where cif is the CifData object, and create is either\
+            True if the object was created, or False if the object was retrieved\
+            from the DB.
+        """
+        import os
+
+        from aiida.common.files import md5_file
+
+        if not os.path.isabs(filename):
+            raise ValueError('filename must be an absolute path')
+        md5 = md5_file(filename)
+
+        cifs = cls.from_md5(md5)
+        if not cifs:
+            instance = cls.from_path(filename)
+            if store_cif:
+                instance.store()
+            return instance, True
+
+        if len(cifs) > 1:
+            if use_first:
+                return cifs[0], False
+
+            raise ValueError(
+                'More than one copy of a CIF file with the same MD5 has been found in the DB. pks={}'.format(
+                    ','.join([str(i.pk) for i in cifs])
+                )
+            )
+
+        return cifs[0], False
+
+    @t.overload
+    @staticmethod
+    def read_cif(fileobj: str | t.IO[t.Any], index: None, **kwargs: t.Any) -> list[Atoms]: ...
+
+    @t.overload
+    @staticmethod
+    def read_cif(fileobj: str | t.IO[t.Any], index: int = -1, **kwargs: t.Any) -> Atoms: ...
+
+    @staticmethod
+    def read_cif(
+        fileobj: str | t.IO[t.Any],
+        index: int | None = -1,
+        **kwargs: t.Any,
+    ) -> Atoms | list[Atoms]:
+        """A wrapper method that simulates the behavior of the old
+        function ase.io.cif.read_cif by using the new generic ase.io.read
+        function.
+
+        Somewhere from 3.12 to 3.17 the tag concept was bundled with each Atom object. When
+        reading a CIF file, this is incremented and signifies the atomic species, even though
+        the CIF file do not have specific tags embedded. On reading CIF files we thus force the
+        ASE tag to zero for all Atom elements.
+
+        """
+        from ase.io import read
+
+        # The read function returns a list as a cif file might contain multiple
+        # structures.
+        struct_list = read(fileobj, index=':', format='cif', **kwargs)
+
+        if index is None:
+            # If index is explicitly set to None, the list is returned as such.
+            for atoms_entry in struct_list:
+                atoms_entry.set_tags(0)
+            return struct_list
+
+        # Otherwise return the desired structure specified by index, if no index is specified,
+        # the last structure is assumed by default.
+        struct_list[index].set_tags(0)
+        return struct_list[index]
+
+    def get_ase(self, **kwargs: t.Any) -> Atoms:
+        """Returns ASE object, representing the CIF. This function differs
+        from the property ``ase`` by the possibility to pass the keyworded
+        arguments (kwargs) to ase.io.cif.read_cif().
+
+        .. note:: requires ASE module.
+        """
+        if not kwargs and self._ase:
+            return self.ase
+        with self.open() as handle:
+            return CifData.read_cif(handle, **kwargs)
+
+    def set_ase(self, aseatoms: Atoms) -> None:
+        """Set the contents of the CifData starting from an ASE atoms object
+
+        :param aseatoms: the ASE atoms object
+        """
+        import tempfile
+
+        cif = cif_from_ase(aseatoms)
+        with tempfile.NamedTemporaryFile(mode='w+') as temp:
+            with Capturing():
+                temp.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
+            temp.flush()
+            self.set_file(temp.name)
+
+    def set_values(self, values: CifFile) -> None:
+        """Set internal representation to `values`.
+
+        Warning: This also writes a new CIF file.
+
+        :param values: PyCifRW CifFile object
+
+        .. note:: requires PyCifRW module.
+        """
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode='w+') as temp:
+            with Capturing():
+                temp.write(values.WriteOut())
+            temp.flush()
+            temp.seek(0)
+            self.set_file(temp)
+
+        self._values = values
+
+    def parse(self, scan_type: t.Literal['standard', 'flex'] | None = None) -> None:
+        """Parses CIF file and sets attributes.
+
+        :param scan_type:  See set_scan_type
+        """
+        if scan_type is not None:
+            self.set_scan_type(scan_type)
+
+        # Note: this causes parsing, if not already parsed
+        self.base.attributes.set('formulae', self.get_formulae())
+        self.base.attributes.set('spacegroup_numbers', self.get_spacegroup_numbers())
+
+    def store(self, *args: t.Any, **kwargs: t.Any) -> Self:
+        """Store the node."""
+        if not self.is_stored:
+            # We need to first run validation on the parent `SinglefileData` to ensure the `filename` is set,
+            # in case the file was added after the node was created (but clearly not yet stored)
+            super()._validate()
+            self.base.attributes.set('md5', self.generate_md5())
+
+        return super().store(*args, **kwargs)
+
+    def set_file(self, file: FilePath | t.BinaryIO, filename: FilePath | None = None) -> None:
+        """Set the file.
+
+        If the source is set and the MD5 checksum of new file
+        is different from the source, the source has to be deleted.
+
+        :param file: filepath or filelike object of the CIF file to store.
+            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
+        :param filename: specify filename to use (defaults to name of provided file).
+        """
+        super().set_file(file, filename=filename)
+        md5sum = self.generate_md5()
+
+        if (
+            isinstance(self.source, dict)
+            and self.source.get('source_md5', None) is not None
+            and self.source['source_md5'] != md5sum
+        ):
+            self.source = {}
+
+        self.base.attributes.set('md5', md5sum)
+
+        self._values = None
+        self._ase = None
+        self.base.attributes.set('formulae', None)
+        self.base.attributes.set('spacegroup_numbers', None)
+
+    def get_formulae(
+        self,
+        mode: str = 'sum',
+        custom_tags: str | Sequence[str] | None = None,
+    ) -> list[str | None]:
+        """Return chemical formulae specified in CIF file.
+
+        Note: This does not compute the formula, it only reads it from the
+        appropriate tag. Use refine_inline to compute formulae.
+        """
+        # note: If formulae are not None, they could be returned
+        # directly (but the function is very cheap anyhow).
+        formula_tags = [f'_chemical_formula_{mode}']
+        if custom_tags:
+            if isinstance(custom_tags, str):
+                custom_tags = [custom_tags]
+            formula_tags.extend(custom_tags)
+
+        formulae = []
+        for datablock in self.values.keys():
+            formula = None
+            for formula_tag in formula_tags:
+                if formula_tag in self.values[datablock].keys():
+                    formula = self.values[datablock][formula_tag]
+                    break
+            formulae.append(formula)
+
+        return formulae
+
+    def get_spacegroup_numbers(self) -> list[int | None]:
+        """Get the spacegroup international number."""
+        # note: If spacegroup_numbers are not None, they could be returned
+        # directly (but the function is very cheap anyhow).
+        spg_tags = ['_space_group.it_number', '_space_group_it_number', '_symmetry_int_tables_number']
+        spacegroup_numbers = []
+        for datablock in self.values.keys():
+            spacegroup_number = None
+            correct_tags = [tag for tag in spg_tags if tag in self.values[datablock].keys()]
+            if correct_tags:
+                try:
+                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
+                except ValueError:
+                    pass
+            spacegroup_numbers.append(spacegroup_number)
+
+        return spacegroup_numbers
+
+    def generate_md5(self) -> str:
         """Computes and returns MD5 hash of the CIF file."""
         from aiida.common.files import md5_from_filelike
 
@@ -745,7 +785,12 @@ class CifData(SinglefileData):
         with self.open(mode='rb') as handle:
             return md5_from_filelike(handle)
 
-    def get_structure(self, converter='pymatgen', store=False, **kwargs):
+    def get_structure(
+        self,
+        converter: str = 'pymatgen',
+        store: bool = False,
+        **kwargs: t.Any,
+    ) -> StructureData:
         """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
         :param converter: specify the converter. Default 'pymatgen'.
@@ -762,7 +807,7 @@ class CifData(SinglefileData):
         from aiida.orm import Dict
         from aiida.tools.data import cif as cif_tools
 
-        parameters = Dict(kwargs)
+        parameters = Dict(**kwargs)
 
         try:
             convert_function = getattr(cif_tools, f'_get_aiida_structure_{converter}_inline')
@@ -770,11 +815,15 @@ class CifData(SinglefileData):
             msg = f"No such converter '{converter}' available"
             raise ValueError(msg)
 
-        result = convert_function(cif=self, parameters=parameters, metadata={'store_provenance': store})
+        result = convert_function(
+            cif=self,
+            parameters=parameters,
+            metadata={'store_provenance': store},
+        )
 
         return result['structure']
 
-    def _prepare_cif(self, **kwargs):
+    def _prepare_cif(self, **kwargs: t.Any) -> tuple[bytes, dict[str, t.Any]]:
         """Return CIF string of CifData object.
 
         If parsed values are present, a CIF string is created and written to file. If no parsed values are present, the
@@ -783,31 +832,51 @@ class CifData(SinglefileData):
         with self.open(mode='rb') as handle:
             return handle.read(), {}
 
-    def _get_object_ase(self):
+    def _get_object_ase(self) -> Atoms:
         """Converts CifData to ase.Atoms
 
         :return: an ase.Atoms object
         """
         return self.ase
 
-    def _get_object_pycifrw(self):
+    def _get_object_pycifrw(self) -> CifFile:
         """Converts CifData to PyCIFRW.CifFile
 
         :return: a PyCIFRW.CifFile object
         """
         return self.values
 
-    def _validate(self):
+    def _validate(self) -> None:
         """Validates MD5 hash of CIF file."""
         from aiida.common.exceptions import ValidationError
 
         super()._validate()
 
-        try:
-            attr_md5 = self.base.attributes.get('md5')
-        except AttributeError:
+        if self.md5 is None:
             raise ValidationError("attribute 'md5' not set.")
+
         md5 = self.generate_md5()
-        if attr_md5 != md5:
-            msg = f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead."
+        if self.md5 != md5:
+            msg = f"Attribute 'md5' says '{self.md5}' but '{md5}' was parsed instead."
             raise ValidationError(msg)
+
+    # TODO the following methods are handled above via property operations - consider removing
+
+    def set_scan_type(self, scan_type: t.Literal['standard', 'flex']) -> None:
+        """Set the scan_type for PyCifRW.
+
+        The 'flex' scan_type of PyCifRW is faster for large CIF files but
+        does not yet support the CIF2 format as of 02/2018.
+        See the CifFile.ReadCif function
+
+        :param scan_type: Either 'standard' or 'flex' (see _scan_types)
+        """
+        self.scan_type = scan_type
+
+    def set_parse_policy(self, parse_policy: t.Literal['eager', 'lazy']) -> None:
+        """Set the parse policy.
+
+        :param parse_policy: Either 'eager' (parse CIF file on set_file)
+            or 'lazy' (defer parsing until needed)
+        """
+        self.parse_policy = parse_policy

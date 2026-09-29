@@ -19,8 +19,8 @@ except NotExistent:
 
 # Set up inputs
 builder = code.get_builder()
-builder.file1 = orm.SinglefileData(file=INPUT_DIR / 'file1.txt')
-builder.file2 = orm.SinglefileData(file=INPUT_DIR / 'file2.txt')
+builder.file1 = orm.SinglefileData.from_path(INPUT_DIR / 'file1.txt')
+builder.file2 = orm.SinglefileData.from_path(INPUT_DIR / 'file2.txt')
 builder.metadata.description = 'Test job submission with the aiida_diff_tutorial plugin'
 
 # Run the calculation & parse results

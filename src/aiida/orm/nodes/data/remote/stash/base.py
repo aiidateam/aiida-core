@@ -8,10 +8,13 @@
 ###########################################################################
 """Data plugin that models an archived folder on a remote computer."""
 
+from __future__ import annotations
+
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+from aiida.orm.decorators import attribute
+from aiida.orm.models.adapters import EnumStrAdapter
 from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('RemoteStashData',)
 
@@ -35,32 +38,12 @@ class RemoteStashData(Data):
 
     _storable = False
 
-    class AttributesModel(Data.AttributesModel):
-        stash_mode: StashMode = OrmMetadataField(
-            description='The mode with which the data was stashed',
-        )
-
-    def __init__(self, stash_mode: StashMode, **kwargs):
-        """Construct a new instance
-
-        :param stash_mode: the stashing mode with which the data was stashed on the remote.
-        """
-        super().__init__(**kwargs)
-        self.stash_mode = stash_mode
-
-    @property
+    @attribute(model_adapter=EnumStrAdapter(StashMode))
     def stash_mode(self) -> StashMode:
-        """Return the mode with which the data was stashed on the remote.
-
-        :return: the stash mode.
-        """
+        """The mode with which the data was stashed on the remote."""
         return StashMode(self.base.attributes.get('stash_mode'))
 
     @stash_mode.setter
-    def stash_mode(self, value: StashMode):
-        """Set the mode with which the data was stashed on the remote.
-
-        :param value: the stash mode.
-        """
+    def stash_mode(self, value: StashMode) -> None:
         type_check(value, StashMode)
         self.base.attributes.set('stash_mode', value.value)

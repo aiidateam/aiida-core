@@ -224,7 +224,7 @@ def test_query_filters():
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_query_subscriptable():
     """Test using subscriptable fields in a query."""
-    node = orm.Dict({'a': 1}).store()
+    node = orm.Dict(**{'a': 1}).store()
     node.base.extras.set('b', 2)
     result = (
         orm.QueryBuilder()
@@ -243,8 +243,8 @@ def test_query_subscriptable():
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_boolean_query():
     """Test using boolean fields in a query."""
-    orm.Bool(True, label='true').store()
-    orm.Bool(False, label='false').store()
+    orm.Bool(value=True, label='true').store()
+    orm.Bool(value=False, label='false').store()
 
     def query(filters):
         return (
@@ -315,7 +315,7 @@ def test_boolean_query_absent_attribute():
 
 def test_attribute_field_access():
     """Test both modes of attribute field access."""
-    node = orm.Int(42)
+    node = orm.Int(value=42)
     value_attr_field = node.fields.value
     assert node.fields.attributes.value is value_attr_field
     assert node.fields.attributes['value'] is value_attr_field

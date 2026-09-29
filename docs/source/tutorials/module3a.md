@@ -15,6 +15,7 @@ execution:
 
 (tutorial:module3)=
 (tutorial:module3a)=
+
 # Module 3a: Writing a simple workflow
 
 {bdg-secondary}`⏱️ ~60 min read` {bdg-primary}`Intermediate`
@@ -121,7 +122,7 @@ After this module, you will be able to:
 - Connect tasks by passing one task's output as another task's input, so the whole pipeline is tracked as a single named process you can query and restart
 - Inspect the workflow as a single process node and explore its individual child steps
 
-Running that workflow over *many* inputs in parallel is the subject of {ref}`Module 3b <tutorial:module3b>`.
+Running that workflow over _many_ inputs in parallel is the subject of {ref}`Module 3b <tutorial:module3b>`.
 
 ## Why workflows?
 
@@ -145,7 +146,7 @@ AiiDA offers two workflow systems.
 Before we write any code, it helps to have a mental picture of the four main objects WorkGraph is built from:
 
 - **WorkGraph**: the container. A directed graph of tasks that AiiDA runs as a single workflow process. Every WorkGraph run becomes one process node in the provenance graph.
-- **Task**: a unit of work inside the graph. Each task wraps an *executor*: a Python function, a `calcfunction`, a `CalcJob`, or even another WorkGraph.
+- **Task**: a unit of work inside the graph. Each task wraps an _executor_: a Python function, a `calcfunction`, a `CalcJob`, or even another WorkGraph.
 - **Socket**: a typed input or output port on a task. A task's arguments are its input sockets, and the values it produces are its output sockets.
 - **Link**: a directed connection between an output socket of one task and an input socket of another. Links are created automatically when you pass one task's output socket as an argument to another task.
 
@@ -156,7 +157,7 @@ It creates a task in the graph and returns its **output sockets**: placeholders 
 You are handling sockets, not AiiDA ORM nodes or plain Python objects.
 :::
 
-This is the single most important shift from ordinary Python. Normally, running your code executes it; running the code that builds a WorkGraph only *assembles* the graph. Its tasks run only when you explicitly run or submit the graph via `wg.run` or `wg.submit`, respectively.
+This is the single most important shift from ordinary Python. Normally, running your code executes it; running the code that builds a WorkGraph only _assembles_ the graph. Its tasks run only when you explicitly run or submit the graph via `wg.run` or `wg.submit`, respectively.
 
 ## Composing the pipeline as a workflow
 
@@ -227,8 +228,8 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
         msg = "gsrd stdout did not contain 'Variance of V field' / 'Mean of V field' diagnostics"
         raise ValueError(msg)
     return {
-        'variance_V': orm.Float(float(variance_match.group(1))),
-        'mean_V': orm.Float(float(mean_match.group(1))),
+        'variance_V': orm.Float(value=float(variance_match.group(1))),
+        'mean_V': orm.Float(value=float(mean_match.group(1))),
     }
 ```
 
@@ -346,7 +347,7 @@ There, with no workflow node to hold onto, that node was the handle you tagged, 
 A `@task.graph()`'s `return` instead declares the workflow's **output sockets**, so the workflow exposes the results themselves (`variance_V`, `mean_V`, `results_npz`); the single handle for the whole run is now the WorkGraph node, which you organize and query as one unit.
 :::
 
-`gray_scott_pipeline`, until now, is a reusable graph *blueprint*, not a concrete `WorkGraph` object yet. Passing it an actual set of inputs through its `.build()` method produces an actual `WorkGraph` object:
+`gray_scott_pipeline`, until now, is a reusable graph _blueprint_, not a concrete `WorkGraph` object yet. Passing it an actual set of inputs through its `.build()` method produces an actual `WorkGraph` object:
 
 ```{code-cell} ipython3
 wg = gray_scott_pipeline.build(
@@ -370,7 +371,7 @@ wg
 
 The `graph_inputs` and `graph_outputs` nodes are built-ins that stand in for the graph's own inputs and outputs, so connections into and out of the graph look like ordinary links between tasks; a third built-in, `graph_ctx`, is a shared key-value store tasks can read and write (via `wg.ctx`).
 
-Everything so far has only *built* the graph. To execute it, we call `.run()` (in-process), or `.submit()` that would instead hand it to the AiiDA daemon. You can also reuse `gray_scott_pipeline` as one step inside a bigger graph, which is exactly what {ref}`Module 3b <tutorial:module3b>` does.
+Everything so far has only _built_ the graph. To execute it, we call `.run()` (in-process), or `.submit()` that would instead hand it to the AiiDA daemon. You can also reuse `gray_scott_pipeline` as one step inside a bigger graph, which is exactly what {ref}`Module 3b <tutorial:module3b>` does.
 
 ```{code-cell} ipython3
 :tags: [hide-output]
@@ -449,7 +450,7 @@ mystnb:
 plot_provenance(wg.process)
 ```
 
-Compare this to Module 2's flat provenance: the three process nodes are the same (`prepare_input`, the `ShellJob`, `parse_output`), but they are now *children* of a `WorkGraph<gray_scott_pipeline>` orchestrator node (highlighted with a bold red border).
+Compare this to Module 2's flat provenance: the three process nodes are the same (`prepare_input`, the `ShellJob`, `parse_output`), but they are now _children_ of a `WorkGraph<gray_scott_pipeline>` orchestrator node (highlighted with a bold red border).
 The orchestrator is linked to each child step it called and back to the outputs it returned, so the **whole pipeline is one queryable, inspectable unit in the database**.
 
 ## Reusing the pipeline

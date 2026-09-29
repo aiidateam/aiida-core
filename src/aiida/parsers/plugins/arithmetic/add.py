@@ -29,7 +29,7 @@ class ArithmeticAddParser(Parser):
         except ValueError:
             return self.exit_codes.ERROR_INVALID_OUTPUT
 
-        self.out('sum', Int(result))
+        self.out('sum', Int(value=result))
 
         if result < 0:
             return self.exit_codes.ERROR_NEGATIVE_NUMBER
@@ -47,4 +47,4 @@ class SimpleArithmeticAddParser(Parser):
         with output_folder.base.repository.open(self.node.get_option('output_filename'), 'r') as handle:
             result = int(handle.read())
 
-        self.out('sum', Int(result))
+        self.out('sum', Int(value=result))

@@ -153,8 +153,8 @@ class TestBasic:
             def define(cls, spec):
                 super().define(spec)
                 spec.input('success', valid_type=orm.Bool)
-                spec.input('through_return', valid_type=orm.Bool, default=lambda: orm.Bool(False))
-                spec.input('through_exit_code', valid_type=orm.Bool, default=lambda: orm.Bool(False))
+                spec.input('through_return', valid_type=orm.Bool, default=lambda: orm.Bool(value=False))
+                spec.input('through_exit_code', valid_type=orm.Bool, default=lambda: orm.Bool(value=False))
                 spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
                 spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
                 spec.output(cls.OUTPUT_LABEL, required=False)
@@ -176,13 +176,13 @@ class TestBasic:
                     return ExitCode()
 
             def success(self):
-                self.out(self.OUTPUT_LABEL, orm.Int(self.OUTPUT_VALUE).store())
+                self.out(self.OUTPUT_LABEL, orm.Int(value=self.OUTPUT_VALUE).store())
 
         class DummyWorkChain(WorkChain):
             pass
 
         # Run a simple test WorkChain
-        _result = run(PotentialFailureWorkChain, success=orm.Bool(True))
+        _result = run(PotentialFailureWorkChain, success=orm.Bool(value=True))
 
         # Query for nodes associated with this type of WorkChain
         qb = orm.QueryBuilder()
@@ -417,7 +417,7 @@ class TestBasic:
         d.base.attributes.set('cat', 'miau')
         d.store()
 
-        p = orm.Dict(dict={'cat': 'miau'})
+        p = orm.Dict(**{'cat': 'miau'})
         p.store()
 
         # Now when asking for a node with attr.cat==miau, I want 3 esults:
@@ -1563,7 +1563,7 @@ class TestConsistency:
 
         # Ensure that batch size is smaller than the total rows yielded
         for [node] in orm.QueryBuilder().append(orm.Int).iterall(batch_size=2):
-            clone = orm.Int(node.value).store()
+            clone = orm.Int(value=node.value).store()
             pk_clones.append(clone.pk)
 
         for pk, pk_clone in zip(pks, sorted(pk_clones)):
@@ -1582,7 +1582,7 @@ class TestConsistency:
         pks_clone = []
 
         for index in range(count):
-            node = orm.Int(index).store()
+            node = orm.Int(value=index).store()
             pks.append(node.pk)
 
         # Ensure that batch size is smaller than the total rows yielded
@@ -2092,7 +2092,7 @@ class TestJsonFilters:
                 },
             },
         ).store()
-        orm.Dict({'text2': 'abcxXYZ'}).store()
+        orm.Dict(**{'text2': 'abcxXYZ'}).store()
 
         qbuilder = orm.QueryBuilder()
         qbuilder.append(orm.Dict, filters=filters)
@@ -2116,7 +2116,7 @@ class TestJsonFilters:
                 'text2': 'abc_XYZ',
             }
         ).store()
-        dict2 = orm.Dict({'text2': 'abcxXYZ'}).store()
+        dict2 = orm.Dict(**{'text2': 'abcxXYZ'}).store()
         dict1.label = 'abc_XYZ'
         dict2.label = 'abcxXYZ'
         qbuilder = orm.QueryBuilder()

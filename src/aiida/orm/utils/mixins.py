@@ -14,8 +14,7 @@ import inspect
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
-from aiida.common.warnings import warn_deprecation
-from aiida.orm.pydantic import OrmMetadataField, OrmModel
+from aiida.orm.decorators import attribute
 
 
 class FunctionCalculationMixin:
@@ -66,83 +65,42 @@ class FunctionCalculationMixin:
         except OSError:
             pass
 
-    @property
+    @attribute
     def function_name(self) -> str | None:
-        """Return the function name of the wrapped function.
+        """The function name of the wrapped function."""
+        return self.base.attributes.get(self.FUNCTION_NAME_KEY, None)
 
-        :returns: the function name or None
-        """
-        return self.base.attributes.get(self.FUNCTION_NAME_KEY, None)  # type: ignore[attr-defined]
+    @function_name.setter
+    def function_name(self, function_name: str) -> None:
+        self.base.attributes.set(self.FUNCTION_NAME_KEY, function_name)
 
-    def _set_function_name(self, function_name: str):
-        """Set the function name of the wrapped function.
-
-        :param function_name: the function name
-        """
-        self.base.attributes.set(self.FUNCTION_NAME_KEY, function_name)  # type: ignore[attr-defined]
-
-    @property
+    @attribute
     def function_namespace(self) -> str | None:
-        """Return the function namespace of the wrapped function.
+        """The function namespace of the wrapped function."""
+        return self.base.attributes.get(self.FUNCTION_NAMESPACE_KEY, None)
 
-        :returns: the function namespace or None
-        """
-        return self.base.attributes.get(self.FUNCTION_NAMESPACE_KEY, None)  # type: ignore[attr-defined]
+    @function_namespace.setter
+    def function_namespace(self, function_namespace: str) -> None:
+        self.base.attributes.set(self.FUNCTION_NAMESPACE_KEY, function_namespace)
 
-    def _set_function_namespace(self, function_namespace: str) -> None:
-        """Set the function namespace of the wrapped function.
-
-        :param function_namespace: the function namespace
-        """
-        self.base.attributes.set(self.FUNCTION_NAMESPACE_KEY, function_namespace)  # type: ignore[attr-defined]
-
-    @property
+    @attribute
     def function_starting_line_number(self) -> int | None:
-        """Return the starting line number of the wrapped function in its source file.
+        """The starting line number of the wrapped function in its source file."""
+        return self.base.attributes.get(self.FUNCTION_STARTING_LINE_KEY, None)
 
-        :returns: the starting line number or None
-        """
-        return self.base.attributes.get(self.FUNCTION_STARTING_LINE_KEY, None)  # type: ignore[attr-defined]
+    @function_starting_line_number.setter
+    def function_starting_line_number(self, function_starting_line_number: int) -> None:
+        self.base.attributes.set(self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number)
 
-    def _set_function_starting_line_number(self, function_starting_line_number: int) -> None:
-        """Set the starting line number of the wrapped function in its source file.
-
-        :param function_starting_line_number: the starting line number
-        """
-        self.base.attributes.set(  # type: ignore[attr-defined]
-            self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number
-        )
-
-    @property
+    @attribute
     def function_number_of_lines(self) -> int | None:
-        """Return the number of lines of the wrapped function in its source file.
+        """The number of lines of the wrapped function in its source file."""
+        return self.base.attributes.get(self.FUNCTION_NUMBER_OF_LINES_KEY, None)
 
-        :returns: the number of lines or None
-        """
-        return self.base.attributes.get(self.FUNCTION_NUMBER_OF_LINES_KEY, None)  # type: ignore[attr-defined]
-
-    def _set_function_number_of_lines(self, function_number_of_lines: int) -> None:
-        """Set the number of lines of the wrapped function in its source file.
-
-        :param function_number_of_lines: the number of lines
-        """
+    @function_number_of_lines.setter
+    def function_number_of_lines(self, function_number_of_lines: int) -> None:
         type_check(function_number_of_lines, int)
-        self.base.attributes.set(  # type: ignore[attr-defined]
-            self.FUNCTION_NUMBER_OF_LINES_KEY, function_number_of_lines
-        )
-
-    def get_function_source_code(self) -> str | None:
-        """Return the source code of the function stored in the repository.
-
-        If the source code file does not exist, this will return ``None`` instead. This can happen for example when the
-        function was defined in an interactive shell in which case ``store_source_info`` will have failed to retrieve
-        the source code using ``inspect.getsourcefile``.
-
-        :returns: The source code of the function or ``None`` if it could not be determined when storing the node.
-        """
-        warn_deprecation('This method will be removed, use `get_source_code_file` instead.', version=3)
-
-        return self.get_source_code_file()
+        self.base.attributes.set(self.FUNCTION_NUMBER_OF_LINES_KEY, function_number_of_lines)
 
     def get_source_code_file(self) -> str | None:
         """Return the source code of the file in which the process function was defined.
@@ -175,24 +133,50 @@ class FunctionCalculationMixin:
         # Start at ``start_line - 1`` to include the decorator
         return '\n'.join(content_list[start_line - 1 : end_line])
 
+    # TODO the following methods are handled above via property operations - consider removing
+
+    def _set_function_name(self, function_name: str):
+        """Set the function name of the wrapped function.
+
+        :param function_name: the function name
+        """
+        self.function_name = function_name
+
+    def _set_function_namespace(self, function_namespace: str) -> None:
+        """Set the function namespace of the wrapped function.
+
+        :param function_namespace: the function namespace
+        """
+        self.function_namespace = function_namespace
+
+    def _set_function_starting_line_number(self, function_starting_line_number: int) -> None:
+        """Set the starting line number of the wrapped function in its source file.
+
+        :param function_starting_line_number: the starting line number
+        """
+        self.function_starting_line_number = function_starting_line_number
+
+    def _set_function_number_of_lines(self, function_number_of_lines: int) -> None:
+        """Set the number of lines of the wrapped function in its source file.
+
+        :param function_number_of_lines: the number of lines
+        """
+        self.function_number_of_lines = function_number_of_lines
+
 
 class Sealable:
     """Mixin to mark a Node as `sealable`."""
 
     SEALED_KEY = 'sealed'
 
-    class AttributesModel(OrmModel):
-        sealed: bool = OrmMetadataField(
-            description='Whether the node is sealed',
-        )
-
-    @classproperty
-    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
-        return (cls.SEALED_KEY,)
-
-    @property
+    @attribute
     def sealed(self) -> bool:
-        return self.base.attributes.get(self.SEALED_KEY, False)  # type: ignore[attr-defined]
+        """Whether the node is sealed."""
+        return self.base.attributes.get(self.SEALED_KEY, False)
+
+    @sealed.setter
+    def sealed(self, value: bool) -> None:
+        self.base.attributes.set(self.SEALED_KEY, value)
 
     @property
     def is_sealed(self) -> bool:
@@ -202,9 +186,13 @@ class Sealable:
     def seal(self) -> Sealable:
         """Seal the node by setting the sealed attribute to True."""
         if not self.is_sealed:
-            self.base.attributes.set(self.SEALED_KEY, True)  # type: ignore[attr-defined]
+            self.sealed = True
 
         return self
+
+    @classproperty
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
+        return (cls.SEALED_KEY,)
 
     @override
     def _check_mutability_attributes(self, keys: list[str] | None = None) -> None:

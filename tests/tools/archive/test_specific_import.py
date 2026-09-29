@@ -146,7 +146,7 @@ def test_import_checkpoints(aiida_profile_clean, tmp_path):
     node.set_checkpoint(12)
     node.seal()
     node_uuid = node.uuid
-    assert node.checkpoint == 12
+    assert node.checkpoints == 12
 
     archive_path = tmp_path / 'archive.aiida'
     nodes = [node]
@@ -163,4 +163,4 @@ def test_import_checkpoints(aiida_profile_clean, tmp_path):
 
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
     node_new = orm.load_node(node_uuid)
-    assert node_new.checkpoint is None
+    assert node_new.checkpoints is None

@@ -50,7 +50,7 @@ def test_help(run_cli_command):
 def test_code_create_help(run_cli_command):
     """Test the help message of the ``verdi code create`` group.
 
-    The abstract `Code` base is not a registered data plugin and cannot be created through the CLI.
+    The abstract `Code` base is registered for querying but cannot be created through the CLI.
     """
     result = run_cli_command(cmd_code.code_create, ['--help'])
     assert 'core.code.containerized' in result.output

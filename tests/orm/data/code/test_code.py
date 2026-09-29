@@ -49,6 +49,7 @@ def test_code_base_class():
 @pytest.mark.parametrize(
     ('entry_point', 'code_class'),
     [
+        ('core.code', Code),
         ('core.code.installed', InstalledCode),
         ('core.code.portable', PortableCode),
         ('core.code.containerized', ContainerizedCode),
@@ -58,6 +59,11 @@ def test_code_base_class():
 def test_code_entry_points(entry_point, code_class):
     """The concrete code plugins remain loadable through their registered entry points."""
     assert DataFactory(entry_point) is code_class
+
+
+def test_code_query_type_string():
+    """The base code query type covers the registered concrete code plugins."""
+    assert Code._query_type_string == 'data.core.code.'
 
 
 def test_set_label():

@@ -69,6 +69,7 @@ __all__ = (
     'XyData',
     'cif_from_ase',
     'find_bandgap',
+    'from_aiida_type',
     'has_pycifrw',
     'pycifrw_from_cif',
     'to_aiida_type',

@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
+
 import pytest
 
 from aiida import orm
@@ -1123,6 +1125,30 @@ def test_a_task_is_handed_the_plain_values():
 
     assert node.is_finished_ok, node.exit_message
     assert results['kind'] == 'int and str'
+
+
+class Settings(t.TypedDict):
+    """A structured type a graph input is declared with."""
+
+    steps: int
+
+
+def test_a_graph_input_taken_where_a_structured_type_is_declared_stays_a_reference():
+    """A reference is a dataclass of its own, so flattening one would store its fields as the value of the port."""
+
+    @task(outputs=['steps'])
+    def reads(settings: Settings) -> int:
+        return settings['steps']
+
+    @graph
+    def pass_settings_on(settings: Settings):
+        return {'steps': reads(settings=settings).steps}
+
+    spec = pass_settings_on.build()
+    (placed,) = spec.tasks
+
+    assert spec.inputs['settings'] == (('reads', 'settings'),)
+    assert placed.inputs == {}
 
 
 @task(outputs=['total'])

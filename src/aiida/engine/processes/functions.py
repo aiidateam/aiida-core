@@ -353,10 +353,8 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
     return {field.name for field in fields}
 
 
-def _declare_output_types(
-    outputs: t.Sequence[str] | type | None, return_annotation: t.Any
-) -> dict[str, tuple[t.Any, ...]] | None:
-    """Return the output ports to declare for a function process, or ``None`` to keep the namespace dynamic.
+def _declare_output_ports(outputs: t.Sequence[str] | type | None, return_annotation: t.Any, spec: t.Any) -> bool:
+    """Declare the output ports of a function process, and return whether any were declared.
 
     Explicit ``outputs`` take precedence over the return annotation. A structured type declares one port per
     field, any other annotation declares a single ``result`` port, and no annotation leaves the namespace dynamic,
@@ -364,7 +362,8 @@ def _declare_output_types(
 
     :param outputs: names of the output ports to declare, or a structured type whose fields name them.
     :param return_annotation: the return annotation of the wrapped function, if it has one.
-    :returns: a mapping of port name onto its valid types, or ``None`` if the namespace should stay dynamic.
+    :param spec: the spec to declare them on.
+    :returns: ``False`` if the namespace should stay dynamic, ``True`` otherwise.
     :raises TypeError: if ``outputs`` is not a sequence of port names.
     """
     if outputs is not None:
@@ -373,18 +372,28 @@ def _declare_output_types(
             msg = f'`outputs` should be a sequence of port names, got the string `{outputs}`.'
             raise TypeError(msg)
 
-        if (fields := fields_of(outputs)) is not None:
-            return {field.name: infer_valid_type_from_type_annotation(field.annotation) or (Data,) for field in fields}
+        if fields_of(outputs) is not None:
+            spec.outputs_from(outputs)
+            return True
 
-        return dict.fromkeys(t.cast(t.Sequence[str], outputs), (Data,))
+        for name in t.cast(t.Sequence[str], outputs):
+            spec.output(name, valid_type=(Data,))
+
+        return True
 
     if return_annotation is None or return_annotation is type(None):
-        return None
+        return False
 
-    if (fields := fields_of(return_annotation)) is not None:
-        return {field.name: infer_valid_type_from_type_annotation(field.annotation) or (Data,) for field in fields}
+    if fields_of(return_annotation) is not None:
+        spec.outputs_from(return_annotation)
+        return True
 
-    return {Process.SINGLE_OUTPUT_LINKNAME: infer_valid_type_from_type_annotation(return_annotation) or (Data,)}
+    spec.output(
+        Process.SINGLE_OUTPUT_LINKNAME,
+        valid_type=infer_valid_type_from_type_annotation(return_annotation) or (Data,),
+    )
+
+    return True
 
 
 class FunctionProcess(Process):
@@ -582,16 +591,12 @@ class FunctionProcess(Process):
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
-            declared_outputs = _declare_output_types(outputs, annotations.get('return'))
-
-            if declared_outputs is None:
+            if _declare_output_ports(outputs, annotations.get('return'), spec):
+                spec.outputs.dynamic = False
+            else:
                 # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
                 # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
                 spec.outputs.valid_type = (Data, dict)
-            else:
-                for output_name, output_valid_type in declared_outputs.items():
-                    spec.output(output_name, valid_type=output_valid_type)
-                spec.outputs.dynamic = False
 
         generated = type(
             func.__qualname__,

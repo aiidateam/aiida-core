@@ -65,6 +65,20 @@ def _as_a_port(field: Field) -> dict[str, t.Any]:
     return {**options, 'valid_type': declared or (Data,)}
 
 
+def _as_an_output_port(field: Field) -> dict[str, t.Any]:
+    """Return how one field of a structured type is declared as an output port.
+
+    An output holds what a process produced, so unlike an input it carries no serializer and no default: the
+    value is a node by the time it is attached.
+    """
+    declared = infer_valid_type_from_type_annotation(field.annotation)
+
+    if field.whole and not declared:
+        return {'required': field.required, 'valid_type': (JsonableData,)}
+
+    return {'required': field.required, 'valid_type': declared or (Data,)}
+
+
 def _as_one_node(field: Field) -> t.Callable[[t.Any], JsonableData]:
     """Return what stores a field kept whole, which is one node holding the whole of it."""
 
@@ -175,6 +189,42 @@ class ProcessSpec(spec.ProcessSpec):
                 under,
                 **_as_a_port(field),
             )
+
+    def outputs_from(self, container: type, prefix: str = '') -> None:
+        """Declare one output port per field of a structured type.
+
+        The counterpart of :meth:`input_namespace_from`, and it goes as deep: a field that is itself a structured
+        type is the namespace its own fields name, so a task producing one and a task taking one declare the same
+        shape and a graph can wire the two onto each other.
+
+        >>> class Relaxed(BaseModel):
+        >>>     structure: StructureData
+        >>>     energy: float
+        >>>
+        >>> spec.outputs_from(Relaxed)
+
+        :param container: the structured type whose fields to declare.
+        :param prefix: the namespace to declare them under, empty for the top level.
+        :raises TypeError: if the structured type is not one this knows how to read.
+        """
+        fields = fields_of(container)
+
+        if fields is None:
+            msg = (
+                f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
+                f'to declare the outputs from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
+            )
+            raise TypeError(msg)
+
+        for field in fields:
+            name = f'{prefix}{field.name}'
+
+            if fields_of(field.annotation) is not None and not field.whole:
+                self.output_namespace(name, required=field.required)
+                self.outputs_from(field.annotation, prefix=f'{name}{self.namespace_separator}')
+                continue
+
+            self.output(name, **_as_an_output_port(field))
 
     @property
     def metadata_key(self) -> str:

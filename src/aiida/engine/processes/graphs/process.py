@@ -21,6 +21,7 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
+from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
@@ -93,12 +94,34 @@ class TaskProcess(FunctionProcess):
 
             result = dict(zip(declared, values, strict=True))
 
+        outputs = self.spec().outputs
+
         if isinstance(result, collections.abc.Mapping):
-            result = {key: value if isinstance(value, Data) else to_aiida_type(value) for key, value in result.items()}
+            result = {key: _stored(value, outputs[key] if key in outputs else None) for key, value in result.items()}
         elif not isinstance(result, Data):
             result = to_aiida_type(result)
 
         super()._out_result(result)
+
+
+def _stored(value: t.Any, port: t.Any) -> t.Any:
+    """Return what is attached to one output port, which for a namespace is its fields stored one by one.
+
+    A field of a structured type that is itself one names a namespace of output ports, exactly as it does among
+    the inputs, so what a task produced for it is stored as the ports under it hold it rather than as one node
+    holding the whole mapping.
+    """
+    if isinstance(value, Data):
+        return value
+
+    if isinstance(port, PortNamespace):
+        held = as_dict(value)
+        given = value if held is None else held
+
+        if isinstance(given, collections.abc.Mapping):
+            return {name: _stored(item, port[name] if name in port else None) for name, item in given.items()}
+
+    return to_aiida_type(value)
 
 
 class GraphProcess(Process):

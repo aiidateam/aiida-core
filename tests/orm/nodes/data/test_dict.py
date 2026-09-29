@@ -130,5 +130,5 @@ def test_equality(dictionary):
 
 def test_initialise_with_dict_kwarg(dictionary):
     """Test that the ``Dict`` node can be initialized with the ``dict`` keyword argument for backwards compatibility."""
-    node = Dict(dict=dictionary)
+    node = Dict(**dictionary)
     assert sorted(node.keys()) == sorted(dictionary.keys())

@@ -22,11 +22,11 @@ class TestRun:
     @staticmethod
     def test_run():
         """Test the `run` function."""
-        inputs = {'a': Int(2), 'b': Str('test')}
+        inputs = {'a': Int(value=2), 'b': Str(value='test')}
         run(DummyProcess, **inputs)
 
     def test_run_get_node(self):
         """Test the `run_get_node` function."""
-        inputs = {'a': Int(2), 'b': Str('test')}
+        inputs = {'a': Int(value=2), 'b': Str(value='test')}
         _result, node = run_get_node(DummyProcess, **inputs)
         assert isinstance(node, ProcessNode)

@@ -91,8 +91,8 @@ class Wf(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('value', default=lambda: Str('A'))
-        spec.input('n', default=lambda: Int(3))
+        spec.input('value', default=lambda: Str(value='A'))
+        spec.input('n', default=lambda: Int(value=3))
         spec.outputs.dynamic = True
         spec.outline(
             cls.step1,
@@ -200,8 +200,8 @@ class PotentialFailureWorkChain(WorkChain):
     def define(cls, spec):
         super().define(spec)
         spec.input('success', valid_type=Bool)
-        spec.input('through_return', valid_type=Bool, default=lambda: Bool(False))
-        spec.input('through_exit_code', valid_type=Bool, default=lambda: Bool(False))
+        spec.input('through_return', valid_type=Bool, default=lambda: Bool(value=False))
+        spec.input('through_exit_code', valid_type=Bool, default=lambda: Bool(value=False))
         spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
         spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
         spec.output(cls.OUTPUT_LABEL, required=False)
@@ -224,7 +224,7 @@ class PotentialFailureWorkChain(WorkChain):
         return ExitCode()
 
     def success(self):
-        self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
+        self.out(self.OUTPUT_LABEL, Int(value=self.OUTPUT_VALUE).store())
 
 
 @pytest.mark.requires_broker
@@ -235,7 +235,7 @@ class TestExitStatus:
     """
 
     def test_failing_workchain_through_integer(self):
-        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False))
+        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(value=False))
         assert node.exit_status == PotentialFailureWorkChain.EXIT_STATUS
         assert node.exit_message is None
         assert node.is_finished is True
@@ -244,7 +244,9 @@ class TestExitStatus:
         assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.base.links.get_outgoing().all_link_labels()
 
     def test_failing_workchain_through_exit_code(self):
-        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
+        _, node = launch.run.get_node(
+            PotentialFailureWorkChain, success=Bool(value=False), through_exit_code=Bool(value=True)
+        )
         assert node.exit_status == PotentialFailureWorkChain.EXIT_STATUS
         assert node.exit_message == PotentialFailureWorkChain.EXIT_MESSAGE
         assert node.is_finished is True
@@ -253,7 +255,7 @@ class TestExitStatus:
         assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.base.links.get_outgoing().all_link_labels()
 
     def test_successful_workchain_through_integer(self):
-        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True))
+        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(value=True))
         assert node.exit_status == 0
         assert node.is_finished is True
         assert node.is_finished_ok is True
@@ -265,7 +267,9 @@ class TestExitStatus:
         )
 
     def test_successful_workchain_through_exit_code(self):
-        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
+        _, node = launch.run.get_node(
+            PotentialFailureWorkChain, success=Bool(value=True), through_exit_code=Bool(value=True)
+        )
         assert node.exit_status == 0
         assert node.is_finished is True
         assert node.is_finished_ok is True
@@ -277,7 +281,9 @@ class TestExitStatus:
         )
 
     def test_return_out_of_outline(self):
-        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
+        _, node = launch.run.get_node(
+            PotentialFailureWorkChain, success=Bool(value=True), through_return=Bool(value=True)
+        )
         assert node.exit_status == PotentialFailureWorkChain.EXIT_STATUS
         assert node.is_finished is True
         assert node.is_finished_ok is False
@@ -355,10 +361,10 @@ class TestWorkchain:
             launch.submit(WorkChain)
 
     def test_run(self):
-        A = Str('A')
-        B = Str('B')
-        C = Str('C')
-        three = Int(3)
+        A = Str(value='A')
+        B = Str(value='B')
+        C = Str(value='C')
+        three = Int(value=3)
 
         # Try the if(..) part
         launch.run(Wf, value=A, n=three)
@@ -418,7 +424,7 @@ class TestWorkchain:
                 spec.outputs.dynamic = True
 
             def illegal(self):
-                self.out('not_allowed', orm.Int(2))
+                self.out('not_allowed', orm.Int(value=2))
 
         with pytest.raises(ValueError):
             _, node = launch.run_get_node(IllegalWorkChain)
@@ -444,12 +450,12 @@ class TestWorkchain:
                 assert 'a' in self.inputs
                 assert 'b' in self.inputs
 
-        x = Int(1)
+        x = Int(value=1)
         run_and_check_success(SimpleWorkChain, a=x, b=x)
 
     def test_context(self):
-        A = Str('a').store()
-        B = Str('b').store()
+        A = Str(value='a').store()
+        B = Str(value='b').store()
 
         class ReturnA(WorkChain):
             @classmethod
@@ -502,7 +508,7 @@ class TestWorkchain:
 
             def setup_context(self):
                 self.ctx['some_string'] = 'Verify that strings in the context do not cause infinite recursions'
-                self.ctx['node'] = Int(1)
+                self.ctx['node'] = Int(value=1)
 
             def read_context(self):
                 assert self.ctx['node'].is_stored, 'the node in the context was not stored during step transition'
@@ -565,10 +571,10 @@ class TestWorkchain:
             spec.outline(lambda x, y: None)
 
     def test_checkpointing(self):
-        A = Str('A')
-        B = Str('B')
-        C = Str('C')
-        three = Int(3)
+        A = Str(value='A')
+        B = Str(value='B')
+        C = Str(value='C')
+        three = Int(value=3)
 
         # Try the if(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
@@ -662,7 +668,7 @@ class TestWorkchain:
                 return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
-                assert self.ctx.subwc.outputs.value == Int(5)
+                assert self.ctx.subwc.outputs.value == Int(value=5)
 
         class SubWorkChain(WorkChain):
             @classmethod
@@ -672,12 +678,12 @@ class TestWorkchain:
                 spec.outputs.dynamic = True
 
             def do_run(self):
-                self.out('value', Int(5).store())
+                self.out('value', Int(value=5).store())
 
         run_and_check_success(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
-        node = Int(5).store()
+        node = Int(value=5).store()
 
         class MainWorkChain(WorkChain):
             @classmethod
@@ -802,7 +808,7 @@ class TestWorkchain:
         run_and_check_success(TestWorkChain)
 
     def test_to_context(self):
-        val = Int(5).store()
+        val = Int(value=5).store()
 
         class SimpleWc(WorkChain):
             @classmethod
@@ -831,7 +837,7 @@ class TestWorkchain:
         run_and_check_success(Workchain)
 
     def test_nested_to_context(self):
-        val = Int(5).store()
+        val = Int(value=5).store()
 
         class SimpleWc(WorkChain):
             @classmethod
@@ -860,8 +866,8 @@ class TestWorkchain:
         run_and_check_success(Workchain)
 
     def test_nested_to_context_with_append(self):
-        val1 = Int(5).store()
-        val2 = Int(6).store()
+        val1 = Int(value=5).store()
+        val2 = Int(value=6).store()
 
         class SimpleWc1(WorkChain):
             @classmethod
@@ -900,7 +906,7 @@ class TestWorkchain:
         run_and_check_success(Workchain)
 
     def test_nested_to_context_no_overlap(self):
-        val = Int(5).store()
+        val = Int(value=5).store()
 
         class SimpleWc(WorkChain):
             @classmethod
@@ -930,7 +936,7 @@ class TestWorkchain:
             launch.run(process)
 
     def test_nested_to_context_no_overlap_with_append(self):
-        val = Int(5).store()
+        val = Int(value=5).store()
 
         class SimpleWc(WorkChain):
             @classmethod
@@ -960,7 +966,7 @@ class TestWorkchain:
             launch.run(process)
 
     def test_nested_to_context_no_overlap_with_append2(self):
-        val = Int(5).store()
+        val = Int(value=5).store()
 
         class SimpleWc(WorkChain):
             @classmethod
@@ -1064,7 +1070,7 @@ class TestWorkchain:
 
     def test_member_calcfunction(self):
         """Test defining a calcfunction as a ``WorkChain`` member method."""
-        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(value=1), b=Int(value=2))
         assert node.is_finished_ok
         assert results['out_member'] == 3
         assert results['out_static'] == 3
@@ -1072,13 +1078,13 @@ class TestWorkchain:
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_member_calcfunction_caching(self):
         """Test defining a calcfunction as a ``WorkChain`` member method with caching enabled."""
-        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(value=1), b=Int(value=2))
         assert node.is_finished_ok
         assert results['out_member'] == 3
         assert results['out_static'] == 3
 
         with enable_caching():
-            results, cached_node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+            results, cached_node = launch.run.get_node(CalcFunctionWorkChain, a=Int(value=1), b=Int(value=2))
             assert cached_node.is_finished_ok
             assert results['out_member'] == 3
             assert results['out_static'] == 3
@@ -1096,8 +1102,8 @@ class TestWorkchain:
         daemon_client.start_daemon()
 
         builder = CalcFunctionWorkChain.get_builder()
-        builder.a = Int(1)
-        builder.b = Int(2)
+        builder.a = Int(value=1)
+        builder.b = Int(value=2)
 
         node = submit_and_await(builder)
         assert node.is_finished_ok
@@ -1192,7 +1198,7 @@ class TestWorkChainAbortChildren:
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('kill', default=lambda: Bool(False))
+            spec.input('kill', default=lambda: Bool(value=False))
             spec.outline(cls.begin, cls.check)
 
         def begin(self):
@@ -1207,7 +1213,7 @@ class TestWorkChainAbortChildren:
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('kill', default=lambda: Bool(False))
+            spec.input('kill', default=lambda: Bool(value=False))
             spec.outline(cls.submit_child, cls.check)
 
         def submit_child(self):
@@ -1233,7 +1239,7 @@ class TestWorkChainAbortChildren:
     def test_simple_kill_through_controller(self):
         """Kill the workchain and its children through a local controller."""
         runner = get_manager().get_runner()
-        process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+        process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(value=True)})
         controller = LocalProcessController(process, runner.loop)
 
         async def run_async():
@@ -1285,11 +1291,11 @@ class TestImmutableInputWorkchain:
             def step_one(self):
                 # Attempt to manipulate the inputs dictionary which since it is a AttributesFrozendict should raise
                 with pytest.raises(TypeError):
-                    self.inputs['a'] = Int(3)
+                    self.inputs['a'] = Int(value=3)
                 with pytest.raises(AttributeError):
                     self.inputs.pop('b')
                 with pytest.raises(TypeError):
-                    self.inputs['c'] = Int(4)
+                    self.inputs['c'] = Int(value=4)
 
             def step_two(self):
                 # Verify that original inputs are still there with same value and no inputs were added
@@ -1298,7 +1304,7 @@ class TestImmutableInputWorkchain:
                 assert 'c' not in self.inputs
                 assert self.inputs['a'].value == 1
 
-        run_and_check_success(FrozenDictWorkChain, a=Int(1), b=Int(2))
+        run_and_check_success(FrozenDictWorkChain, a=Int(value=1), b=Int(value=2))
 
     def test_immutable_input_groups(self):
         """Check that namespaced inputs also return AttributeFrozendicts and are hence immutable"""
@@ -1316,11 +1322,11 @@ class TestImmutableInputWorkchain:
             def step_one(self):
                 # Attempt to manipulate the namespaced inputs dictionary which should raise
                 with pytest.raises(TypeError):
-                    self.inputs.subspace['one'] = Int(3)
+                    self.inputs.subspace['one'] = Int(value=3)
                 with pytest.raises(AttributeError):
                     self.inputs.subspace.pop('two')
                 with pytest.raises(TypeError):
-                    self.inputs.subspace['four'] = Int(4)
+                    self.inputs.subspace['four'] = Int(value=4)
 
             def step_two(self):
                 # Verify that original inputs are still there with same value and no inputs were added
@@ -1329,7 +1335,7 @@ class TestImmutableInputWorkchain:
                 assert 'four' not in self.inputs.subspace
                 assert self.inputs.subspace['one'].value == 1
 
-        run_and_check_success(ImmutableGroups, subspace={'one': Int(1), 'two': Int(2)})
+        run_and_check_success(ImmutableGroups, subspace={'one': Int(value=1), 'two': Int(value=2)})
 
 
 class SerializeWorkChain(WorkChain):
@@ -1340,7 +1346,7 @@ class SerializeWorkChain(WorkChain):
         spec.input(
             'test',
             valid_type=Str,
-            serializer=lambda x: Str(ObjectLoader().identify_object(x)),
+            serializer=lambda x: Str(value=ObjectLoader().identify_object(x)),
         )
         spec.input('reference', valid_type=Str)
 
@@ -1365,14 +1371,14 @@ class TestSerializeWorkChain:
     @staticmethod
     def test_serialize():
         """Test a simple serialization of a class to its identifier."""
-        run_and_check_success(SerializeWorkChain, test=Int, reference=Str(ObjectLoader().identify_object(Int)))
+        run_and_check_success(SerializeWorkChain, test=Int, reference=Str(value=ObjectLoader().identify_object(Int)))
 
     @staticmethod
     def test_serialize_builder():
         """Test serailization when using a builder."""
         builder = SerializeWorkChain.get_builder()
         builder.test = Int
-        builder.reference = Str(ObjectLoader().identify_object(Int))
+        builder.reference = Str(value=ObjectLoader().identify_object(Int))
         launch.run(builder)
 
 
@@ -1476,14 +1482,14 @@ class TestWorkChainExpose:
     def test_expose(self):
         res = launch.run(
             ParentExposeWorkChain,
-            a=Int(1),
-            sub_1={'b': Float(2.3), 'c': Bool(True)},
-            sub_2={'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
+            a=Int(value=1),
+            sub_1={'b': Float(value=2.3), 'c': Bool(value=True)},
+            sub_2={'b': Float(value=1.2), 'sub_3': {'c': Bool(value=False)}},
         )
         assert res == {
-            'a': Float(2.2),
-            'sub_1': {'b': Float(2.3), 'c': Bool(True)},
-            'sub_2': {'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
+            'a': Float(value=2.2),
+            'sub_1': {'b': Float(value=2.3), 'c': Bool(value=True)},
+            'sub_2': {'b': Float(value=1.2), 'sub_3': {'c': Bool(value=False)}},
         }
 
     def test_nested_expose(self):
@@ -1491,18 +1497,18 @@ class TestWorkChainExpose:
             GrandParentExposeWorkChain,
             sub={
                 'sub': {
-                    'a': Int(1),
-                    'sub_1': {'b': Float(2.3), 'c': Bool(True)},
-                    'sub_2': {'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
+                    'a': Int(value=1),
+                    'sub_1': {'b': Float(value=2.3), 'c': Bool(value=True)},
+                    'sub_2': {'b': Float(value=1.2), 'sub_3': {'c': Bool(value=False)}},
                 }
             },
         )
         assert res == {
             'sub': {
                 'sub': {
-                    'a': Float(2.2),
-                    'sub_1': {'b': Float(2.3), 'c': Bool(True)},
-                    'sub_2': {'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
+                    'a': Float(value=2.2),
+                    'sub_1': {'b': Float(value=2.3), 'c': Bool(value=True)},
+                    'sub_2': {'b': Float(value=1.2), 'sub_3': {'c': Bool(value=False)}},
                 }
             }
         }
@@ -1521,7 +1527,7 @@ class TestWorkChainExpose:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.input('a', default=Int(5).store())
+                spec.input('a', default=Int(value=5).store())
                 spec.outline(cls.step1)
 
             def step1(self):
@@ -1623,7 +1629,7 @@ class TestDefaultUniqueness:
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('a', valid_type=Bool, default=lambda: Bool(True))
+            spec.input('a', valid_type=Bool, default=lambda: Bool(value=True))
             spec.outline(cls.execute)
 
         def execute(self):
@@ -1659,7 +1665,7 @@ class TestWorkChainEvents:
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('pause', valid_type=Bool, default=lambda: Bool(False))
+            spec.input('pause', valid_type=Bool, default=lambda: Bool(value=False))
             spec.outline(cls.run_step)
 
         def run_step(self):
@@ -1674,7 +1680,7 @@ class TestWorkChainEvents:
         def define(cls, spec):
             super().define(spec)
             spec.input('outcome', valid_type=Str)
-            spec.input('pause_child', valid_type=Bool, default=lambda: Bool(False))
+            spec.input('pause_child', valid_type=Bool, default=lambda: Bool(value=False))
             spec.outline(cls.step_one, cls.step_two)
 
         def step_one(self):
@@ -1711,7 +1717,7 @@ class TestWorkChainEvents:
 
     def test_workchain_events_on_finished(self):
         """Every step transitions through RUNNING and WAITING before ending in the parametrized terminal state."""
-        workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs={'outcome': Str('finished')})
+        workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs={'outcome': Str(value='finished')})
         listener = TestWorkChainEvents.ProcessListenerTester()
         workflow.add_process_listener(listener)
 
@@ -1721,7 +1727,7 @@ class TestWorkChainEvents:
 
     def test_workchain_events_on_excepted(self):
         """Every step transitions through RUNNING and WAITING before ending in the parametrized terminal state."""
-        workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs={'outcome': Str('excepted')})
+        workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs={'outcome': Str(value='excepted')})
         listener = TestWorkChainEvents.ProcessListenerTester()
         workflow.add_process_listener(listener)
 
@@ -1735,7 +1741,7 @@ class TestWorkChainEvents:
         # Requires only database
         runner = manager.create_runner(with_persistence=False, communicator=None)
         try:
-            inputs = {'outcome': Str('finished'), 'pause_child': Bool(True)}
+            inputs = {'outcome': Str(value='finished'), 'pause_child': Bool(value=True)}
             workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs=inputs, runner=runner)
             controller = LocalProcessController(workflow, runner.loop)
             listener = TestWorkChainEvents.ProcessListenerTester()

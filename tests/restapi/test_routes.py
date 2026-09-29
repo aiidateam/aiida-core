@@ -48,13 +48,13 @@ class TestRestApi:
         structure.base.comments.add('This is test comment.')
         structure.base.comments.add('Add another comment.')
 
-        cif = orm.CifData(ase=structure.get_ase())
+        cif = orm.CifData.from_ase(structure.get_ase())
         cif.store()
 
-        parameter1 = orm.Dict(dict={'a': 1, 'b': 2})
+        parameter1 = orm.Dict(**{'a': 1, 'b': 2})
         parameter1.store()
 
-        parameter2 = orm.Dict(dict={'c': 3, 'd': 4})
+        parameter2 = orm.Dict(**{'c': 3, 'd': 4})
         parameter2.store()
 
         kpoint = orm.KpointsData()

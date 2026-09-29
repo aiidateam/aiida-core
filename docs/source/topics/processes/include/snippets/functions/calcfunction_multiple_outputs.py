@@ -7,4 +7,4 @@ def sum_and_difference(alpha, beta):
     return {'sum': alpha + beta, 'difference': alpha - beta}
 
 
-result = sum_and_difference(Int(1), Int(2))
+result = sum_and_difference(Int(value=1), Int(value=2))

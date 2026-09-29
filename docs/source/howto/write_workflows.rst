@@ -242,7 +242,7 @@ When submitting or running the work chain using namespaced inputs (``multiply_ad
 
     add_code = load_code(label='add')
     inputs = {
-        'multiply_add': {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
+        'multiply_add': {'x': Int(value=1), 'y': Int(value=2), 'z': Int(value=3), 'code': add_code}
     }
 
     workchain_node = submit(MultiplyAddWorkChain, **inputs)

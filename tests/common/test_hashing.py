@@ -259,7 +259,7 @@ class TestCheckDBRoundTrip:
             test_data.append(9.5e13 + 1.0e12 * i)
 
         for val in test_data:
-            node = Dict(dict={'data': val})
+            node = Dict(**{'data': val})
             node.store()
             first_hash = node.base.extras.get('_aiida_hash')
             recomputed_hash = node.base.caching.get_hash()

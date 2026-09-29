@@ -16,7 +16,7 @@ ${outline}
         spec.output('result', valid_type=Int)
 
     def setup(self):
-        self.ctx.result = Int(0)
+        self.ctx.result = Int(value=0)
         self.ctx.operands = [int(i) for i in self.inputs.operands.value.split(' ')]
         self.ctx.workchains = []
         self.ctx.iterators = []
@@ -64,7 +64,7 @@ ${outline}
         inputs = {
             'code': self.inputs.code,
             'x': self.ctx.result,
-            'y': Int(operand),
+            'y': Int(value=operand),
             'metadata': {'options': get_default_options()},
         }
 
@@ -90,17 +90,17 @@ ${outline}
         operand = self.ctx.operands.pop(0)
         operand = abs(operand) * prod(self.ctx.iterators_sign)
         self.report('running add calcfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
-        self.ctx.result = add_modulo(self.ctx.result, Int(operand), self.inputs.modulo)
+        self.ctx.result = add_modulo(self.ctx.result, Int(value=operand), self.inputs.modulo)
 
     def subtract_calcfunction(self):
         operand = self.ctx.operands.pop(0)
         operand = abs(operand) * prod(self.ctx.iterators_sign)
         self.report('running subtract calcfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
-        self.ctx.result = subtract_modulo(self.ctx.result, Int(operand), self.inputs.modulo)
+        self.ctx.result = subtract_modulo(self.ctx.result, Int(value=operand), self.inputs.modulo)
 
     def raise_power(self):
         operand = self.ctx.operands.pop(0)
-        operands = Str(' '.join([str(o) for o in self.ctx.operands]))
+        operands = Str(value=' '.join([str(o) for o in self.ctx.operands]))
 
         inputs = {
             'modulo': self.inputs.modulo,
@@ -131,7 +131,7 @@ ${outline}
 
     def results(self):
         if not isinstance(self.ctx.result, Int):
-            self.ctx.result = Int(self.ctx.result)
+            self.ctx.result = Int(value=self.ctx.result)
 
         self.report('Workchain finished with result {}'.format(self.ctx.result.value))
         self.out('result', self.ctx.result)

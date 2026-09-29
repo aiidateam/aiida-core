@@ -70,7 +70,7 @@ def test_reload_singlefile_data(check_singlefile_content_with_store, check_singl
         basename = os.path.basename(filepath)
         handle.write(content_original)
         handle.flush()
-        node = SinglefileData(file=filepath)
+        node = SinglefileData.from_path(filepath)
 
     check_singlefile_content_with_store(
         node=node,
@@ -102,7 +102,7 @@ def test_construct_from_filelike(check_singlefile_content_with_store):
         handle.write(content_original.encode('utf-8'))
         handle.flush()
         handle.seek(0)
-        node = SinglefileData(file=handle)
+        node = SinglefileData.from_filelike(handle)
 
     check_singlefile_content_with_store(
         node=node,
@@ -116,7 +116,7 @@ def test_construct_from_string(check_singlefile_content_with_store):
     content_original = 'some testing text\nwith a newline'
 
     with io.BytesIO(content_original.encode('utf-8')) as handle:
-        node = SinglefileData(file=handle)
+        node = SinglefileData.from_filelike(handle)
 
     check_singlefile_content_with_store(
         node=node,
@@ -134,7 +134,7 @@ def test_construct_with_path(check_singlefile_content_with_store):
         filename = filepath.name
         handle.write(content_original)
         handle.flush()
-        node = SinglefileData(file=filepath)
+        node = SinglefileData.from_path(filepath)
 
     check_singlefile_content_with_store(
         node=node,
@@ -150,7 +150,7 @@ def test_construct_with_filename(check_singlefile_content_with_store, filename):
 
     # test creating from string
     with io.BytesIO(content_original.encode('utf-8')) as handle:
-        node = SinglefileData(file=handle, filename=filename)
+        node = SinglefileData.from_filelike(handle, filename=filename)
 
     check_singlefile_content_with_store(node=node, content_reference=content_original, filename=filename)
 
@@ -159,7 +159,7 @@ def test_construct_with_filename(check_singlefile_content_with_store, filename):
         handle.write(content_original.encode('utf-8'))
         handle.flush()
         handle.seek(0)
-        node = SinglefileData(file=handle, filename=filename)
+        node = SinglefileData.from_filelike(handle, filename=filename)
 
     check_singlefile_content_with_store(node=node, content_reference=content_original, filename=filename)
 
@@ -174,7 +174,7 @@ def test_binary_file(check_singlefile_content_with_store):
         handle.write(bytearray(content_binary))
         handle.flush()
         handle.seek(0)
-        node = SinglefileData(handle.name)
+        node = SinglefileData.from_path(handle.name)
 
     check_singlefile_content_with_store(
         node=node,

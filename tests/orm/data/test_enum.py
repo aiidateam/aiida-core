@@ -19,7 +19,7 @@ class DummyEnum(enum.Enum):
 def test_construct():
     """Test the ``EnumData`` constructor."""
     instance = DummyEnum.OPTION_A
-    node = EnumData(instance)
+    node = EnumData.from_member(instance)
 
     assert isinstance(node, EnumData)
     assert not node.is_stored
@@ -29,13 +29,13 @@ def test_construct():
 def test_construct_invalid_type(value):
     """Test the ``EnumData`` constructor raises if member is not an enum."""
     with pytest.raises(TypeError, match=r'Got object of type .*, expecting .*.'):
-        EnumData(value)
+        EnumData.from_member(value)
 
 
 def test_load_node():
     """Test loading a stored ``EnumData`` node."""
     member = DummyEnum.OPTION_A
-    node = EnumData(member)
+    node = EnumData.from_member(member)
     node.store()
 
     loaded = load_node(node.pk)
@@ -46,7 +46,7 @@ def test_load_node():
 def test_name():
     """Test the ``name`` property."""
     member = DummyEnum.OPTION_A
-    node = EnumData(member)
+    node = EnumData.from_member(member)
     assert node.name == member.name
 
     node.store()
@@ -59,7 +59,7 @@ def test_name():
 def test_value():
     """Test the ``value`` property."""
     member = DummyEnum.OPTION_A
-    node = EnumData(member)
+    node = EnumData.from_member(member)
     assert node.value == member.value
 
     node.store()
@@ -72,7 +72,7 @@ def test_value():
 def test_get_enum():
     """Test the ``get_enum`` method."""
     member = DummyEnum.OPTION_A
-    node = EnumData(member)
+    node = EnumData.from_member(member)
     assert node.get_enum() == DummyEnum
 
     node.store()
@@ -85,7 +85,7 @@ def test_get_enum():
 def test_get_member():
     """Test the ``get_member`` method."""
     member = DummyEnum.OPTION_A
-    node = EnumData(member)
+    node = EnumData.from_member(member)
     assert node.get_member() == member
 
     node.store()
@@ -98,7 +98,7 @@ def test_get_member():
 def test_get_member_module_not_importable():
     """Test the ``get_member`` property when the enum cannot be imported from the identifier."""
     member = DummyEnum.OPTION_A
-    node = EnumData(member)
+    node = EnumData.from_member(member)
     node.base.attributes.set(EnumData.KEY_IDENTIFIER, 'aiida.common.links:NonExistingEnum')
     node.store()
 
@@ -111,7 +111,7 @@ def test_get_member_module_not_importable():
 def test_get_member_invalid_value(monkeypatch):
     """Test the ``get_member`` method when stored value is no longer valid for the class loaded from the identifier."""
     member = links.LinkType.RETURN
-    node = EnumData(member).store()
+    node = EnumData.from_member(member).store()
 
     class ChangedLinkType(enum.Enum):
         """Change the definition of the :class:`aiida.common.links.LinkType`"""
@@ -129,8 +129,8 @@ def test_get_member_invalid_value(monkeypatch):
 
 def test_eq():
     """Test the ``__eq__`` implementation."""
-    node_a = EnumData(DummyEnum.OPTION_A)
-    node_b = EnumData(DummyEnum.OPTION_B)
+    node_a = EnumData.from_member(DummyEnum.OPTION_A)
+    node_b = EnumData.from_member(DummyEnum.OPTION_B)
 
     assert node_a == DummyEnum.OPTION_A
     assert node_a != DummyEnum.OPTION_B

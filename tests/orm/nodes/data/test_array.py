@@ -36,12 +36,12 @@ def test_constructor():
     assert node.get_arraynames() == []
 
     arrays = numpy.array([1, 2])
-    node = ArrayData(arrays)
+    node = ArrayData.from_arrays(arrays)
     assert node.get_arraynames() == [ArrayData.default_array_name]
     assert (node.get_array(ArrayData.default_array_name) == arrays).all()
 
     arrays = {'a': numpy.array([1, 2]), 'b': numpy.array([3, 4])}
-    node = ArrayData(arrays)
+    node = ArrayData.from_arrays(arrays)
     assert sorted(node.get_arraynames()) == ['a', 'b']
     assert (node.get_array('a') == arrays['a']).all()
     assert (node.get_array('b') == arrays['b']).all()
@@ -53,14 +53,14 @@ def test_get_array():
     with pytest.raises(ValueError, match='`name` not specified but the node contains no arrays'):
         node.get_array()
 
-    node = ArrayData({'a': numpy.array([]), 'b': numpy.array([])})
+    node = ArrayData.from_arrays({'a': numpy.array([]), 'b': numpy.array([])})
     with pytest.raises(ValueError, match='`name` not specified but the node contains multiple arrays'):
         node.get_array()
 
-    node = ArrayData({'a': numpy.array([1, 2])})
+    node = ArrayData.from_arrays({'a': numpy.array([1, 2])})
     assert (node.get_array() == numpy.array([1, 2])).all()
 
-    node = ArrayData(numpy.array([1, 2]))
+    node = ArrayData.from_arrays(numpy.array([1, 2]))
     assert (node.get_array() == numpy.array([1, 2])).all()
 
 

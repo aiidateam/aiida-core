@@ -39,7 +39,7 @@ def test_base_data_type_change(tmp_path, aiida_profile):
     export_nodes = []
 
     # Create list of base type nodes
-    nodes = [cls(val).store() for val, cls in zip(test_content, (orm.Str, orm.Int, orm.Float, orm.Bool))]
+    nodes = [cls(value=val).store() for val, cls in zip(test_content, (orm.Str, orm.Int, orm.Float, orm.Bool))]
     export_nodes.extend(nodes)
 
     # Collect uuids for created nodes
@@ -95,7 +95,7 @@ def test_node_process_type(aiida_profile, tmp_path):
     node_process_type = 'tests.utils.processes.AddProcess'
 
     # Run workflow
-    inputs = {'a': orm.Int(2), 'b': orm.Int(3)}
+    inputs = {'a': orm.Int(value=2), 'b': orm.Int(value=3)}
     _, node = run_get_node(AddProcess, **inputs)
 
     # Save node uuid

@@ -30,7 +30,7 @@ class TestSealable:
 
     def test_validate_incoming_sealed(self):
         """Verify that trying to add a link to a sealed node will raise."""
-        data = Int(1).store()
+        data = Int(value=1).store()
         node = CalculationNode().store()
         node.seal()
 
@@ -39,7 +39,7 @@ class TestSealable:
 
     def test_validate_outgoing_sealed(self):
         """Verify that trying to add a link from a sealed node will raise."""
-        data = Int(1).store()
+        data = Int(value=1).store()
         node = CalculationNode().store()
         node.seal()
 

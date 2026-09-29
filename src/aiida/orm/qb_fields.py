@@ -276,7 +276,7 @@ class QbDictField(QbField):
         """Return a filter for only values with these keys"""
         return QbFieldFilters(((self, 'has_key', value),))
 
-    def __getitem__(self, key: str) -> QbField:
+    def __getattr__(self, key: str) -> QbField:
         """Return a new `QbField` with a nested key."""
         return QbAnyField(
             key=f'{self.key}.{key}',
@@ -284,6 +284,10 @@ class QbDictField(QbField):
             dtype=t.Any,
             is_attribute=self._is_attribute,
         )
+
+    def __getitem__(self, key: str) -> QbField:
+        """Return a new `QbField` with a nested key."""
+        return self.__getattr__(key)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}({self.backend_key}[...]) -> {self._dtype}'
@@ -296,7 +300,10 @@ class QbAttributesField(QbDictField):
     are defined by the node's `AttributesModel`.
     """
 
-    _typed_children: dict[str, QbField]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._typed_children: dict[str, QbField] = {}
+        self._allow_extra = False
 
     def __getattr__(self, key: str) -> QbField:
         """Return a typed child field if known; otherwise raise AttributeError.
@@ -306,26 +313,29 @@ class QbAttributesField(QbDictField):
             orm.Data.fields.attributes.source
         """
         if key.startswith('_'):
-            # normal attribute lookup
             raise AttributeError(key)
 
-        children = getattr(self, '_typed_children', None) or {}
-        if key in children:
-            return children[key]
+        try:
+            return self._typed_children[key]
+        except KeyError:
+            if self._allow_extra:
+                return super().__getattr__(key)
 
         raise AttributeError(key)
 
     def __getitem__(self, key: str) -> QbField:
         """Return a typed child field if known; otherwise return a generic QbAnyField."""
-        children = getattr(self, '_typed_children', None) or {}
-        if key in children:
-            return children[key]
-        return super().__getitem__(key)
+        try:
+            return self._typed_children[key]
+        except KeyError:
+            if self._allow_extra:
+                return super().__getattr__(key)
+
+        raise KeyError(key)
 
     def __dir__(self) -> list[str]:
         """Expose typed children for autocompletion."""
-        children = getattr(self, '_typed_children', None) or {}
-        return sorted(set(super().__dir__()) | set(children.keys()))
+        return sorted(set(super().__dir__()) | set(self._typed_children.keys()))
 
 
 class QbAnyField(QbNumericField, QbArrayField, QbStrField, QbDictField):

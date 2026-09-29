@@ -43,7 +43,9 @@ def monitor_store_message(node, transport, **kwargs):
     return CalcJobMonitorResult(
         action=CalcJobMonitorAction.DISABLE_ALL,
         outputs={
-            'messages': {'datetime_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S'): Str(secrets.token_hex(15))}
+            'messages': {
+                'datetime_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S'): Str(value=secrets.token_hex(15))
+            }
         },
     )
 
@@ -168,7 +170,7 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
 
     Test that the ``minimum_poll_interval`` of the monitors is respected.
     """
-    monitors = CalcJobMonitors({'always_kill': Dict({'entry_point': 'core.always_kill', 'minimum_poll_interval': 1})})
+    monitors = CalcJobMonitors({'always_kill': Dict(**{'entry_point': 'core.always_kill', 'minimum_poll_interval': 1})})
     timestamp = datetime(2026, 1, 1)
     timestamps = iter(
         (
@@ -216,9 +218,9 @@ async def test_calc_job_monitors_process_poll_interval_integrated(entry_points, 
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
-    builder.x = Int(1)
-    builder.y = Int(1)
-    builder.monitors = {'always_kill': Dict({'entry_point': 'core.emit_warning', 'minimum_poll_interval': 10})}
+    builder.x = Int(value=1)
+    builder.y = Int(value=1)
+    builder.monitors = {'always_kill': Dict(**{'entry_point': 'core.emit_warning', 'minimum_poll_interval': 10})}
     builder.metadata = {'options': {'sleep': 300, 'resources': {'num_machines': 1}}}
 
     process = runner.instantiate_process(builder)
@@ -245,9 +247,9 @@ def test_calc_job_monitors_outputs(entry_points, aiida_code_installed):
 
     code = aiida_code_installed(default_calc_job_plugin='core.store_message', filepath_executable='/bin/bash')
     builder = code.get_builder()
-    builder.x = Int(1)
-    builder.y = Int(1)
-    builder.monitors = {'store_message': Dict({'entry_point': 'core.store_message', 'minimum_poll_interval': 1})}
+    builder.x = Int(value=1)
+    builder.y = Int(value=1)
+    builder.monitors = {'store_message': Dict(**{'entry_point': 'core.store_message', 'minimum_poll_interval': 1})}
     builder.metadata = {'options': {'sleep': 3, 'resources': {'num_machines': 1}}}
 
     _, node = run_get_node(builder)

@@ -383,12 +383,11 @@ class ProcessDumpExecutor:
         label_list = [f'{index:02d}', link_label]
 
         # NOTE: Could also use node.label here, similar to main ProcessNode output dumping directory
-        try:
+        if isinstance(node, orm.ProcessNode):
             process_label = node.process_label
             if process_label is not None and process_label != link_label:
                 label_list += [process_label]
-
-        except AttributeError:
+        else:
             process_type = node.process_type
             if process_type is not None and process_type != link_label:
                 label_list += [process_type]

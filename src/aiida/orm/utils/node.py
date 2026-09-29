@@ -8,7 +8,9 @@
 ###########################################################################
 """Utilities to operate on `Node` classes."""
 
+import functools
 import logging
+import typing as t
 import warnings
 from abc import ABCMeta
 
@@ -19,6 +21,7 @@ __all__ = (
     'get_query_type_from_type_string',
     'get_type_string_from_class',
     'load_node_class',
+    'reject_attributes',
 )
 
 #: Type string of the ``Code`` plugin, removed in ``aiida-core==3.0``. Nodes of this type are rewritten to
@@ -172,3 +175,21 @@ class AbstractNodeMeta(ABCMeta):
         newcls = super().__new__(mcs, name, bases, namespace, **kwargs)
         newcls._logger = logging.getLogger(f'{namespace["__module__"]}.{name}')
         return newcls
+
+
+_F = t.TypeVar('_F', bound=t.Callable[..., t.Any])
+
+
+def reject_attributes(func: _F) -> _F:
+    """Reject declared ORM attributes passed through ``kwargs``."""
+    from aiida.orm.nodes.data.data import Data
+
+    @functools.wraps(func)
+    def wrapper(cls: type[Data], *args: t.Any, **kwargs: t.Any):
+        if any(attr in cls._declared_attributes for attr in kwargs):
+            msg = f'Cannot provide {cls.__name__} attributes when constructing from external objects'
+            raise ValueError(msg)
+
+        return func(cls, *args, **kwargs)
+
+    return t.cast(_F, wrapper)

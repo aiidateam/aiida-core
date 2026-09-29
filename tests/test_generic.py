@@ -17,9 +17,9 @@ class TestBool:
     @staticmethod
     def test_bool_conversion():
         for val in [True, False]:
-            assert val == bool(orm.Bool(val))
+            assert val == bool(orm.Bool(value=val))
 
     @staticmethod
     def test_int_conversion():
         for val in [True, False]:
-            assert int(val) == int(orm.Bool(val))
+            assert int(val) == int(orm.Bool(value=val))

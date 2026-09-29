@@ -240,11 +240,11 @@ def validate_cached(cached_calcs):
 def launch_calcfunction(inputval):
     """Launch workfunction to the daemon"""
     inputs = {
-        'x': Int(inputval),
-        'y': Int(inputval),
+        'x': Int(value=inputval),
+        'y': Int(value=inputval),
     }
     res = inputval + inputval
-    expected_result = Int(res)
+    expected_result = Int(value=res)
     process = submit(add, **inputs)
     print(f'launched calcfunction {process.uuid}, pk={process.pk}')
     return process, expected_result
@@ -253,12 +253,12 @@ def launch_calcfunction(inputval):
 def launch_workfunction(inputval):
     """Launch workfunction to the daemon"""
     inputs = {
-        'x': Int(inputval),
-        'y': Int(inputval),
-        'z': Int(inputval),
+        'x': Int(value=inputval),
+        'y': Int(value=inputval),
+        'z': Int(value=inputval),
     }
     res = (inputval + inputval) * inputval
-    expected_result = Int(res)
+    expected_result = Int(value=res)
     process = submit(add_multiply, **inputs)
     print(f'launched workfunction {process.uuid}, pk={process.pk}')
     return process, expected_result
@@ -282,9 +282,9 @@ def run_calculation(code, counter, inputval):
 
 def create_calculation_process(code, inputval):
     """Create the process and inputs for a submitting / running a calculation."""
-    parameters = Dict({'value': inputval})
+    parameters = Dict(**{'value': inputval})
     template = Dict(
-        {
+        **{
             # The following line adds a significant sleep time.
             # I set it to 1 second to speed up tests
             # I keep it to a non-zero value because I want
@@ -322,8 +322,8 @@ def run_arithmetic_add():
     """Run the `ArithmeticAddCalculation`."""
     code = load_code(CODENAME_ADD)
     inputs = {
-        'x': Int(1),
-        'y': Int(2),
+        'x': Int(value=1),
+        'y': Int(value=2),
         'code': code,
     }
 
@@ -338,8 +338,8 @@ def run_base_restart_workchain():
     code = load_code(CODENAME_ADD)
     inputs = {
         'add': {
-            'x': Int(1),
-            'y': Int(2),
+            'x': Int(value=1),
+            'y': Int(value=2),
             'code': code,
         }
     }
@@ -353,7 +353,7 @@ def run_base_restart_workchain():
 
     # With one input negative, the sum will be negative which will fail the calculation, but the error handler should
     # fix it, so the second calculation should finish successfully
-    inputs['add']['y'] = Int(-4)
+    inputs['add']['y'] = Int(value=-4)
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert node.is_finished_ok, node.exit_status
     assert len(node.called) == 2
@@ -361,15 +361,15 @@ def run_base_restart_workchain():
     assert results['sum'].value == 5
 
     # The silly sanity check aborts the workchain if the sum is bigger than 10
-    inputs['add']['y'] = Int(10)
+    inputs['add']['y'] = Int(value=10)
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
     assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_TOO_BIG.status, node.exit_status
     assert len(node.called) == 1
 
     # Check that overriding default handler enabled status works
-    inputs['add']['y'] = Int(1)
-    inputs['handler_overrides'] = Dict({'disabled_handler': True})
+    inputs['add']['y'] = Int(value=1)
+    inputs['handler_overrides'] = Dict(**{'disabled_handler': True})
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
     assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status
@@ -380,9 +380,9 @@ def run_multiply_add_workchain():
     """Run the `MultiplyAddWorkChain`."""
     code = load_code(CODENAME_ADD)
     inputs = {
-        'x': Int(1),
-        'y': Int(2),
-        'z': Int(3),
+        'x': Int(value=1),
+        'y': Int(value=2),
+        'z': Int(value=3),
         'code': code,
     }
 
@@ -397,10 +397,10 @@ def run_multiply_add_workchain():
 def run_monitored_calculation():
     """Run a monitored calculation."""
     builder = load_code(CODENAME_ADD).get_builder()
-    builder.x = Int(1)
-    builder.y = Int(2)
+    builder.x = Int(value=1)
+    builder.y = Int(value=2)
     builder.metadata.options.sleep = 2  # Add a sleep to the calculation to ensure monitor has time to get called
-    builder.monitors = {'always_kill': Dict({'entry_point': 'core.always_kill'})}
+    builder.monitors = {'always_kill': Dict(**{'entry_point': 'core.always_kill'})}
 
     _, node = run.get_node(builder)
     assert node.is_terminated
@@ -484,19 +484,19 @@ def launch_all():
     # Submitting the Workchains
     print(f'Submitting {NUMBER_WORKCHAINS} workchains to the daemon')
     for index in range(NUMBER_WORKCHAINS):
-        inp = Int(index)
+        inp = Int(value=index)
         _, node = run.get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
 
     print("Submitting a workchain with 'submit'.")
     builder = NestedWorkChain.get_builder()
     input_val = 4
-    builder.inp = Int(input_val)
+    builder.inp = Int(value=input_val)
     pk = submit(builder).pk
     expected_results_workchains[pk] = input_val
 
     print('Submitting a workchain with a nested input namespace.')
-    value = Int(-12)
+    value = Int(value=-12)
     pk = submit(NestedInputNamespace, foo={'bar': {'baz': value}}).pk
 
     print('Submitting a workchain with a dynamic non-db input.')
@@ -506,12 +506,12 @@ def launch_all():
 
     print('Submitting a workchain with a dynamic db input.')
     value = 9
-    pk = submit(DynamicDbInput, namespace={'input': Int(value)}).pk
+    pk = submit(DynamicDbInput, namespace={'input': Int(value=value)}).pk
     expected_results_workchains[pk] = value
 
     print('Submitting a workchain with a mixed (db / non-db) dynamic input.')
     value_non_db = 3
-    value_db = Int(2)
+    value_db = Int(value=2)
     pk = submit(DynamicMixedInput, namespace={'inputs': {'input_non_db': value_non_db, 'input_db': value_db}}).pk
     expected_results_workchains[pk] = value_non_db + value_db
 
@@ -526,14 +526,14 @@ def launch_all():
     expected_results_workchains[pk] = list_value
 
     print('Submitting a WorkChain which contains a workfunction.')
-    value = Str('workfunction test string')
+    value = Str(value='workfunction test string')
     pk = submit(WorkFunctionRunnerWorkChain, input=value).pk
     expected_results_workchains[pk] = value
 
     print('Submitting a WorkChain which contains a calcfunction.')
-    value = Int(1)
+    value = Int(value=1)
     pk = submit(CalcFunctionRunnerWorkChain, input=value).pk
-    expected_results_workchains[pk] = Int(2)
+    expected_results_workchains[pk] = Int(value=2)
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

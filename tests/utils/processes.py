@@ -106,7 +106,7 @@ class IsValidCacheHook(Process):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('not_valid_cache', valid_type=Bool, default=lambda: Bool(False))
+        spec.input('not_valid_cache', valid_type=Bool, default=lambda: Bool(value=False))
 
     async def run(self):
         pass

@@ -1254,6 +1254,23 @@ def test_what_is_unread_is_asked_of_the_declaration():
     assert built.unread == ('adds',)
 
 
+def test_a_graph_input_declared_with_a_structured_type_is_a_namespace_of_ports():
+    """The input feeds a namespace at the other end, so it is stored as the ports under it hold it."""
+
+    @task(outputs=['steps'])
+    def reads(settings: Settings) -> int:
+        return settings['steps']
+
+    @graph
+    def pass_settings_on(settings: Settings):
+        return {'steps': reads(settings=settings).steps}
+
+    results, node = run_get_node(pass_settings_on, settings={'steps': 7})
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['steps'] == 7
+
+
 def test_a_task_producing_a_structured_type_fills_the_namespace_another_takes():
     """One task declares an output per field, the next a namespace, and the two are wired without naming either."""
 

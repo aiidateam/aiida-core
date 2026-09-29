@@ -12,13 +12,15 @@ from __future__ import annotations
 
 import abc
 import typing as t
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.builder import ProcessBuilder
-from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskWorkChain
+from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
+from aiida.engine.processes.structured import as_dict
 from aiida.orm import to_aiida_type
 
 __all__ = (
@@ -143,6 +145,26 @@ def _shape(is_port: bool, is_namespace: bool) -> t.Literal['value', 'namespace']
         return None
 
     return 'namespace' if is_namespace else 'value'
+
+
+def _into(namespace: PortNamespace) -> t.Callable[[t.Any], t.Any]:
+    """Return what stores a value given for a graph input that feeds a namespace of ports.
+
+    A graph input declared with a structured type names a namespace at the other end, so the fields are stored one
+    by one, as the ports under that namespace store what is written into them. Storing the whole of it with
+    ``to_aiida_type`` instead would make one node, which the namespace then refuses.
+    """
+
+    def store(value: t.Any) -> t.Any:
+        held = as_dict(value)
+        given = value if held is None else held
+
+        if not isinstance(given, Mapping):
+            return to_aiida_type(value)
+
+        return namespace.serialize(dict(given))
+
+    return store
 
 
 @dataclass(frozen=True)
@@ -739,6 +761,9 @@ class GraphSpec:
                 return None
 
             holder = holder[segment]
+
+        if isinstance(holder, PortNamespace):
+            return _into(holder)
 
         return getattr(holder, 'serializer', None)
 

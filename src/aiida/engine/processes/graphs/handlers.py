@@ -18,7 +18,7 @@ from types import FunctionType
 
 from aiida.common import AttributeDict
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.engine.processes.generic.ports import PortNamespace
+from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.workchains.outline import while_
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain

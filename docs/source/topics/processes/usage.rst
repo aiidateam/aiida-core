@@ -357,8 +357,14 @@ For example, when we want to run an instance of the :py:class:`~aiida.calculatio
 
 The function will submit the calculation to the daemon and immediately return control to the interpreter, returning the node that is used to represent the process in the provenance graph.
 
-.. warning::
-    For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
+Workers reconstruct submitted processes from their checkpoints.
+Importable process classes require their :ref:`entry point<how-to:plugin-codes:entry-points>` or :ref:`module path<how-to:faq:process-not-importable-daemon>` to be available in the worker environment.
+Serializable classes defined in notebook cells, scripts run as ``__main__``, or local function scopes can be recorded by value in their checkpoints.
+
+Imported helper modules and importable functions remain references that workers must be able to import.
+Install these helpers or include their directories in the ``PYTHONPATH`` used to start the workers.
+Captured local values are serialized with the class and must be picklable.
+Pass AiiDA nodes as process inputs, and create open connections, locks and generators inside the methods that use them.
 
 .. versionadded:: 2.5
     Waiting on a process

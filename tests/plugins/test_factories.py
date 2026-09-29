@@ -91,6 +91,12 @@ def mock_load_entry_point(monkeypatch):
     yield
 
 
+@pytest.mark.parametrize('load', [True, False])
+def test_broker_factory_legacy_rabbitmq(load):
+    """The legacy profile backend name resolves to the RabbitMQ entry point for both factory modes."""
+    assert factories.BrokerFactory('rabbitmq', load=load) == factories.BrokerFactory('core.rabbitmq', load=load)
+
+
 class TestFactories:
     """Tests for the :py:mod:`~aiida.plugins.factories` factory classes."""
 

@@ -354,13 +354,7 @@ class Manager:
         if self._broker is None and self._profile.process_control_backend is not None:
             from aiida.plugins import BrokerFactory
 
-            entry_point = self._profile.process_control_backend
-
-            # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
-            if entry_point == 'rabbitmq':
-                entry_point = 'core.rabbitmq'
-
-            broker_cls = BrokerFactory(entry_point)
+            broker_cls = BrokerFactory(self._profile.process_control_backend)
             self._broker = broker_cls(self._profile)
 
         return self._broker

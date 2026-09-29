@@ -1146,6 +1146,13 @@ class Settings(t.TypedDict):
     steps: int
 
 
+class Run(t.TypedDict):
+    """A structured type holding another, which is the shape one task produces and the next one takes."""
+
+    label: str
+    settings: Settings
+
+
 def test_a_graph_input_taken_where_a_structured_type_is_declared_stays_a_reference():
     """A reference is a dataclass of its own, so flattening one would store its fields as the value of the port."""
 
@@ -1245,3 +1252,14 @@ def test_what_is_unread_is_asked_of_the_declaration():
         built = forgot.build()
 
     assert built.unread == ('adds',)
+
+
+def test_a_nested_structured_type_is_a_namespace_among_the_outputs_too():
+    """What a task produces is declared as deeply as what one takes, so the two ends line up."""
+
+    @task
+    def starts(label: str) -> Run:
+        return Run(label=label, settings=Settings(steps=3))
+
+    assert list(starts.process_class.spec().outputs) == ['label', 'settings']
+    assert list(starts.process_class.spec().outputs['settings']) == ['steps']

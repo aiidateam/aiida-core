@@ -1301,3 +1301,21 @@ def test_a_nested_structured_type_is_a_namespace_among_the_outputs_too():
 
     assert list(starts.process_class.spec().outputs) == ['label', 'settings']
     assert list(starts.process_class.spec().outputs['settings']) == ['steps']
+
+
+def test_a_task_declared_from_a_function_defined_elsewhere_runs_in_a_graph():
+    """`task(fn)` records the name of the function it wrapped, which resolves to that function, not to the task."""
+    from aiida.common.escaping import escape_for_bash
+
+    escaping = task(escape_for_bash, outputs=['escaped'])
+
+    assert list(escaping.task_spec.outputs) == ['escaped']
+
+    @graph
+    def escape_it(string):
+        return {'escaped': escaping(str_to_escape=string).escaped}
+
+    results, node = run_get_node(escape_it, string='a b')
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['escaped'] == "'a b'"

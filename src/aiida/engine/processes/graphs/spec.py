@@ -167,6 +167,16 @@ def _into(namespace: PortNamespace) -> t.Callable[[t.Any], t.Any]:
     return store
 
 
+def _is_a_process(loaded: t.Any) -> bool:
+    """Return whether what a name resolved to is a process class or a decorated process function."""
+    if loaded is None:
+        return False
+
+    return bool(getattr(loaded, 'is_process_function', False)) or (
+        isinstance(loaded, type) and issubclass(loaded, Process)
+    )
+
+
 @dataclass(frozen=True)
 class ExecutorReference:
     """Importable reference to the process that realizes a task.
@@ -206,19 +216,26 @@ class ExecutorReference:
             cannot be imported and run by a process that did not define it.
         """
         identifier = f'{self.module}:{self.name}'
+        cause: ImportError | None = None
 
         try:
             loaded: t.Any = get_object_loader().load_object(identifier)
         except ImportError as exception:
+            loaded, cause = None, exception
+
+        # A function declared a task by a call rather than by a decorator leaves the plain function under this
+        # name, since ``functools.wraps`` copied it from the function that was wrapped. The name then resolves,
+        # to something that is not a process, so what was declared is looked up the same way an unimportable one is.
+        if not _is_a_process(loaded):
             loaded = DEFINED_TASKS.get(identifier)
 
-            if loaded is None:
-                msg = (
-                    f'task `{self.name}` is defined in `{self.module}`, which cannot be imported here. A task '
-                    f'runs where it was defined, so to run this one from a daemon worker, or from another '
-                    f'session, define it in a module that can be imported.'
-                )
-                raise ImportError(msg) from exception
+        if loaded is None:
+            msg = (
+                f'task `{self.name}` is defined in `{self.module}`, which cannot be imported here. A task '
+                f'runs where it was defined, so to run this one from a daemon worker, or from another '
+                f'session, define it in a module that can be imported.'
+            )
+            raise ImportError(msg) from cause
 
         # A process function's name resolves to the decorated function, which carries the generated process class.
         if getattr(loaded, 'is_process_function', False):

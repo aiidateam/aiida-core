@@ -39,7 +39,7 @@ jobs:
         python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v10.0.1
+      uses: astral-sh/setup-uv@v10.2.0
 
     - name: Install utils/ dependencies
       run: uv pip install --system -r utils/requirements.txt

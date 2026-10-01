@@ -131,10 +131,17 @@ They capture source when a module is imported; definitions must be at module sco
 order, resolving only tasks and graphs registered in the same module. Task
 bodies are not parsed. It accepts single-name assignments to registered calls,
 keyword arguments that are graph inputs, task outputs or scalar literals, and a
-final return of an input or a single output. It rejects recursion, calls to
-unregistered functions, loops, conditionals and all other unsupported forms
-with :class:`~aiida.engine.UnsupportedSyntax`, pointing at the offending
-source. This syntax is intentionally narrower than ``@graph``; use ``@graph``
+final return of an input or a single output. Restricted control flow is also
+supported: ``if``/``else`` must assign a new name in both arms, ``while`` must
+update an existing condition name with a task call (and can update other
+existing state names), and ``for item in collection`` must assign one task call
+per item to a new name. A ``for`` result is a collection of outputs, not a
+single value. Conditions and collections must be graph inputs or task outputs;
+comparisons and arithmetic belong in registered tasks. These forms lower to
+branch, loop and map tasks, respectively, rather than executing Python control
+flow at parse time. Other forms, including ``break``, ``continue`` and loop
+``else`` blocks, are rejected with :class:`~aiida.engine.UnsupportedSyntax`,
+pointing at the offending source. This syntax is intentionally narrower than ``@graph``; use ``@graph``
 for the full graph-building API. The result is a declaration, not a launched
 process. Independent calls are not forced to execute in source order.
 

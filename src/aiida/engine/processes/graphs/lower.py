@@ -33,6 +33,7 @@ from aiida.engine.processes.graphs.spec import (
     ProcessTask,
     SubgraphTask,
 )
+from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
 # would otherwise shadow the graph-builder decorator exported by ``aiida.engine``.
@@ -56,6 +57,7 @@ class _SourceLocation:
 _LOCATIONS: dict[str, _SourceLocation] = {}
 _TASKS: dict[str, t.Any] = {}
 _GRAPHS: set[str] = set()
+_GRAPH_HINTS: dict[str, dict[str, t.Any]] = {}
 
 
 def _key(function: Callable[..., t.Any]) -> str:
@@ -85,7 +87,9 @@ def task(function: Callable[..., t.Any]) -> t.Any:
 
 def graph(function: Callable[..., t.Any]) -> Callable[..., t.Any]:
     """Save a graph's source without executing its body."""
-    _GRAPHS.add(_register(function))
+    key = _register(function)
+    _GRAPHS.add(key)
+    _GRAPH_HINTS[key] = t.get_type_hints(function)
     return function
 
 
@@ -144,12 +148,18 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
     output = _lower_value(state, result, allow_call=True)
     if not isinstance(output, _Reference):
         _reject(state, result, 'return must name a task or graph input')
+    hints = _GRAPH_HINTS[state.key]
+    output_hint = infer_valid_type_from_type_annotation(hints.get('return'))
     return GraphSpec(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs={output.port: Endpoint(task=output.task, port=output.port)},
         identifier=state.key.partition(':')[2],
+        input_typehints={
+            name: hint for name in state.inputs if (hint := infer_valid_type_from_type_annotation(hints.get(name)))
+        },
+        output_typehints={output.port: output_hint} if output_hint else {},
     )
 
 

@@ -15,6 +15,7 @@ import typing as t
 import pytest
 
 from aiida.engine import (
+    graph,
     task,
 )
 from aiida.engine.processes.graphs.spec import (
@@ -31,6 +32,7 @@ from aiida.engine.processes.graphs.spec import (
     TaskKind,
     TaskSpec,
 )
+from aiida.orm import Int, Str
 
 pytestmark = pytest.mark.requires_broker
 
@@ -43,6 +45,75 @@ def add(x, y):
 @task(outputs=['product'])
 def multiply(x, y):
     return x * y
+
+
+@task
+def typed_number(value: int) -> int:
+    return value
+
+
+@task
+def typed_text(value: str) -> str:
+    return value
+
+
+def test_validate_typehints_on_dependencies():
+    graph = GraphSpec(
+        tasks=(
+            ProcessTask(name='number', spec=typed_number.task_spec),
+            ProcessTask(name='text', spec=typed_text.task_spec),
+        ),
+        dependencies=(Dependency('number', 'text', 'result', 'value'),),
+    )
+    with pytest.raises(ValueError, match=r'dependency `number\.result` to `text\.value`'):
+        graph.validate_typehints()
+
+
+def test_validate_typehints_on_graph_boundaries():
+    graph = GraphSpec(
+        tasks=(ProcessTask(name='number', spec=typed_number.task_spec),),
+        inputs={'value': (('number', 'value'),)},
+        outputs={'result': Endpoint(task='number', port='result')},
+        input_typehints={'value': (Str,)},
+        output_typehints={'result': (Int,)},
+    )
+    assert GraphSpec.from_dict(graph.to_dict()) == graph
+    with pytest.raises(ValueError, match='graph input `value`'):
+        graph.validate_typehints()
+
+    from dataclasses import replace
+
+    with pytest.raises(ValueError, match='graph output `result`'):
+        replace(graph, input_typehints={'value': (Int,)}, output_typehints={'result': (Str,)}).validate_typehints()
+
+
+def test_graph_build_records_annotations():
+    @graph
+    def typed(value: str) -> int:
+        return typed_number(value=value).result
+
+    declaration = typed.build()
+    assert declaration.input_typehints == {'value': (Str,)}
+    assert declaration.output_typehints == {'result': (Int,)}
+    with pytest.raises(ValueError, match='graph input `value`'):
+        declaration.validate_typehints()
+
+
+def test_validate_typehints_across_subgraph():
+    inner = GraphSpec(
+        tasks=(ProcessTask(name='number', spec=typed_number.task_spec),),
+        inputs={'value': (('number', 'value'),)},
+        outputs={'result': Endpoint(task='number', port='result')},
+    )
+    outer = GraphSpec(
+        tasks=(
+            ProcessTask(name='text', spec=typed_text.task_spec),
+            SubgraphTask(name='inner', body=inner),
+        ),
+        dependencies=(Dependency('text', 'inner', 'result', 'value'),),
+    )
+    with pytest.raises(ValueError, match=r'dependency `text\.result` to `inner\.value`'):
+        outer.validate_typehints()
 
 
 def linear_graph() -> GraphSpec:

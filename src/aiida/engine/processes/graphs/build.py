@@ -41,6 +41,7 @@ from aiida.engine.processes.graphs.spec import (
     SubgraphTask,
     TaskSpec,
 )
+from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.structured import as_dict, is_structured
 from aiida.orm import CalcFunctionNode, WorkFunctionNode
@@ -797,7 +798,16 @@ class GraphHandle:
         finally:
             ACTIVE_BUILDER.reset(token)
 
-        return builder.finish(returned, identifier=self.identifier)
+        result = builder.finish(returned, identifier=self.identifier)
+        annotations = get_annotations(self._function, eval_str=True)
+        input_hints = {
+            name: hint
+            for name in result.inputs
+            if (hint := infer_valid_type_from_type_annotation(annotations.get(name)))
+        }
+        output_hint = infer_valid_type_from_type_annotation(annotations.get('return'))
+        output_hints = dict.fromkeys(result.outputs, output_hint) if len(result.outputs) == 1 and output_hint else {}
+        return replace(result, input_typehints=input_hints, output_typehints=output_hints)
 
     @property
     def parameters(self) -> tuple[str, ...]:

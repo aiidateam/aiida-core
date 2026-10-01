@@ -21,7 +21,7 @@ from aiida.engine.processes.graphs.handlers import TaskWorkChain
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.structured import as_dict
-from aiida.orm import to_aiida_type
+from aiida.orm import Data, to_aiida_type
 
 __all__ = (
     'BodyTask',
@@ -704,8 +704,8 @@ class GraphSpec:
 
     Its own inputs are named rather than filled in, so the same declaration describes every run of the graph and
     the values arrive as inputs of the process that runs it. That is what lets one graph be placed inside
-    another, and what keeps a stored declaration from being a record of one particular run. Their types are not
-    recorded either, since an input has the type of the ports it feeds.
+    another, and what keeps a stored declaration from being a record of one particular run. Type hints on its
+    boundaries can be checked against the ports they feed and the outputs they return.
     """
 
     tasks: tuple[GraphTask, ...]
@@ -714,6 +714,8 @@ class GraphSpec:
     outputs: dict[str, Endpoint] = field(default_factory=dict)
     identifier: str | None = None
     version: str = SPEC_VERSION
+    input_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
+    output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -783,6 +785,115 @@ class GraphSpec:
             return _into(holder)
 
         return getattr(holder, 'serializer', None)
+
+    @staticmethod
+    def _port_types(ports: PortNamespace, path: str) -> tuple[type, ...]:
+        """Return the accepted types of a declared port, or empty for a dynamic or untyped port."""
+        holder: t.Any = ports
+        for segment in path.split('.'):
+            if not isinstance(holder, PortNamespace) or segment not in holder:
+                return ()
+            holder = holder[segment]
+        valid = getattr(holder, 'valid_type', None)
+        if valid is None:
+            return ()
+        return valid if isinstance(valid, tuple) else (valid,)
+
+    def _types_at(self, task: GraphTask, port: str, *, output: bool) -> tuple[type, ...]:
+        """Find types at a task boundary, following nested graph boundaries where necessary."""
+        if isinstance(task, ProcessTask):
+            return self._port_types(task.spec.outputs if output else task.spec.inputs, port)
+        if isinstance(task, BodyTask):
+            if isinstance(task, (BranchTask, LoopTask)) and port == task.condition_port and not output:
+                return ()
+            if output:
+                return task.body._output_types(port)
+            if isinstance(task, BranchTask):
+                hints = [branch._input_types(port) for branch in task.branches if port in branch.inputs]
+                return next((hint for hint in hints if hint), ())
+            return task.body._input_types(port)
+        return ()
+
+    def _input_types(self, name: str) -> tuple[type, ...]:
+        if name in self.input_typehints:
+            return self.input_typehints[name]
+        for task_name, port in self.inputs.get(name, ()):
+            if hint := self._types_at(self.task(task_name), port, output=False):
+                return hint
+        return ()
+
+    def _output_types(self, name: str) -> tuple[type, ...]:
+        if name in self.output_typehints:
+            return self.output_typehints[name]
+        source = self.outputs[name]
+        if source.task is None:
+            return self._input_types(source.port)
+        return self._types_at(self.task(source.task), source.port, output=True)
+
+    @staticmethod
+    def _check_types(source: tuple[type, ...], target: tuple[type, ...], context: str) -> None:
+        """Check that every possible source type is accepted by the target when both are known."""
+        if (
+            source
+            and target
+            and Data not in source
+            and not all(any(issubclass(kind, expected) for expected in target) for kind in source)
+        ):
+            msg = f'{context} has incompatible types: {source} cannot feed {target}.'
+            raise ValueError(msg)
+
+    def validate_typehints(self) -> None:
+        """Validate known types at graph inputs, dependencies and outputs, including nested graphs.
+
+        An untyped or dynamic port cannot be checked statically and is left to runtime validation.
+
+        :raises ValueError: if a known output type cannot be accepted by an input or graph boundary.
+        """
+        for task in self.tasks:
+            if isinstance(task, BodyTask):
+                task.body.validate_typehints()
+                if isinstance(task, BranchTask) and task.otherwise is not None:
+                    task.otherwise.validate_typehints()
+                    for name in task.body.outputs:
+                        self._check_types(
+                            task.otherwise._output_types(name),
+                            task.body._output_types(name),
+                            f'branches of `{task.name}` output `{name}`',
+                        )
+                        self._check_types(
+                            task.body._output_types(name),
+                            task.otherwise._output_types(name),
+                            f'branches of `{task.name}` output `{name}`',
+                        )
+
+        for name, targets in self.inputs.items():
+            types = self._input_types(name)
+            for task_name, port in targets:
+                expected = self._types_at(self.task(task_name), port, output=False)
+                self._check_types(types, expected, f'graph input `{name}` to `{task_name}.{port}`')
+                if name not in self.input_typehints:
+                    self._check_types(expected, types, f'graph input `{name}` to `{task_name}.{port}`')
+
+        for edge in self.dependencies:
+            if edge.carried_between is None or isinstance(self.task(edge.source), MappedTask):
+                continue
+            source_port, target_port = edge.carried_between
+            self._check_types(
+                self._types_at(self.task(edge.source), source_port, output=True),
+                self._types_at(self.task(edge.target), target_port, output=False),
+                f'dependency `{edge.source}.{source_port}` to `{edge.target}.{target_port}`',
+            )
+
+        for name in self.outputs:
+            if name not in self.output_typehints:
+                continue
+            source = self.outputs[name]
+            produced = (
+                self._input_types(source.port)
+                if source.task is None
+                else self._types_at(self.task(source.task), source.port, output=True)
+            )
+            self._check_types(produced, self.output_typehints[name], f'graph output `{name}`')
 
     def predecessors(self, name: str) -> set[str]:
         """Return the names of the tasks the given one waits for, whether it takes a value from them or not."""
@@ -1017,6 +1128,14 @@ class GraphSpec:
             'outputs': {name: source.to_dict() for name, source in self.outputs.items()},
             'identifier': self.identifier,
             'version': self.version,
+            'input_typehints': {
+                name: [get_object_loader().identify_object(kind) for kind in types]
+                for name, types in self.input_typehints.items()
+            },
+            'output_typehints': {
+                name: [get_object_loader().identify_object(kind) for kind in types]
+                for name, types in self.output_typehints.items()
+            },
         }
 
     @classmethod
@@ -1038,4 +1157,12 @@ class GraphSpec:
             outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
             identifier=data.get('identifier'),
             version=version,
+            input_typehints={
+                name: tuple(get_object_loader().load_object(kind) for kind in types)
+                for name, types in data.get('input_typehints', {}).items()
+            },
+            output_typehints={
+                name: tuple(get_object_loader().load_object(kind) for kind in types)
+                for name, types in data.get('output_typehints', {}).items()
+            },
         )

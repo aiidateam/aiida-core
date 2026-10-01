@@ -1116,6 +1116,53 @@ def test_waiting_for_something_that_is_not_a_task_is_refused():
         waits_for_a_number.build()
 
 
+def test_task_inputs_follow_their_annotations_across_graph_edges():
+    """Provenance carries ORM nodes, but each task receives the form its annotation requests."""
+
+    @task
+    def takes_node(value: orm.Int) -> int:
+        assert isinstance(value, orm.Int)
+        return value.value + 1
+
+    @task
+    def takes_plain(value: int) -> int:
+        assert type(value) is int
+        return value + 1
+
+    @graph
+    def mixed(value: int) -> int:
+        first = takes_node(value=value)
+        second = takes_plain(value=first.result)
+        return takes_node(value=second.result).result
+
+    declaration = mixed.build()
+    declaration.validate_typehints()
+    results, node = run_get_node(mixed, value=1)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['result'] == 4
+    assert isinstance(node.inputs.graph_inputs.value, orm.Int)
+    for name in ('takes_node', 'takes_plain', 'takes_node_2'):
+        assert isinstance(tasks(node)[name].inputs.value, orm.Int)
+
+
+def test_annotated_task_inputs_outside_a_graph():
+    """The same annotation-dependent conversion applies to standalone task calls."""
+
+    @task
+    def takes_node(value: orm.Int) -> int:
+        assert isinstance(value, orm.Int)
+        return value.value
+
+    @task
+    def takes_plain(value: int) -> int:
+        assert type(value) is int
+        return value
+
+    assert run_get_node(takes_node, value=1)[0] == 1
+    assert run_get_node(takes_plain, value=orm.Int(2))[0] == 2
+
+
 def test_a_task_is_handed_the_plain_values():
     """A task is written the way the function would be written without a graph around it."""
 

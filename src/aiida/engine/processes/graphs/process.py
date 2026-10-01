@@ -39,10 +39,10 @@ __all__ = ('GraphProcess', 'TaskProcess', 'launched_as', 'task_node')
 class TaskProcess(FunctionProcess):
     """A :class:`FunctionProcess` whose wrapped function takes and returns plain Python values.
 
-    A node holding one plain value is handed to the function as that value, and a value the function returns that
-    is not already a ``Data`` node is stored with ``to_aiida_type``, so a task is written the way the function
-    would be written without a graph around it. Everything else arrives as the node it is, since a structure or a
-    folder is not a value there is a plain Python spelling of.
+    A node holding one plain value is handed to the function as that value, unless its parameter is annotated
+    with a ``Data`` subclass, in which case the node itself is handed over. A value the function returns that is
+    not already a ``Data`` node is stored with ``to_aiida_type``, so graph edges always carry provenance nodes.
+    Other data nodes arrive as nodes when no plain Python representation is registered for them.
 
     When the task declares its output ports, a returned tuple is mapped onto them in order.
     """

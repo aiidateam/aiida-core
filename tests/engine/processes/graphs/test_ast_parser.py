@@ -11,6 +11,7 @@
 import pytest
 
 from aiida.engine import UnsupportedSyntax, lower_to_graph_spec, parse_graph
+from aiida.engine.processes.graphs.display import format_graph
 from aiida.engine.processes.graphs.lower import graph, task
 from aiida.engine.processes.graphs.spec import BranchTask, GraphSpec, LoopTask, MapGraphTask, ProcessTask, SubgraphTask
 
@@ -154,6 +155,26 @@ def test_control_flow_specs():
     assert mapped.inputs['values'] == ((each.name, 'value'),)
     for spec in (chosen, counted, mapped):
         assert GraphSpec.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
+def test_format_graph_shows_wiring_and_nested_control_flow():
+    chain_view = format_graph(parse_graph(chain))
+    assert 'graph chain(x, y):' in chain_view
+    assert 'sum_two_2 [process sum_two](x=sum_two.result, y=y)' in chain_view
+    assert 'return result=sum_two_2.result' in chain_view
+
+    branch_view = format_graph(parse_graph(choose))
+    assert 'branch_1 [branch on condition](condition=flag, x=x)' in branch_view
+    assert 'then:' in branch_view and 'otherwise:' in branch_view
+    assert 'y=1' in branch_view and 'y=2' in branch_view
+
+    loop_view = format_graph(parse_graph(count))
+    assert 'loop_1 [loop while keep_going]' in loop_view
+    assert 'return x=loop_1.x' in loop_view
+
+    map_view = format_graph(parse_graph(transform))
+    assert 'each_1 [map over value](value=values, y=y)' in map_view
+    assert 'return result=each_1.result' in map_view
 
 
 def test_wires_tasks_without_running_graph_body():

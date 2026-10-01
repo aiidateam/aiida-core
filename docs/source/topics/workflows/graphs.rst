@@ -102,6 +102,42 @@ Writing such a graph warns where it is written, naming the task:
 :meth:`~aiida.engine.processes.graphs.spec.GraphSpec.unread` is the same question asked of a declaration, including one read back from a stored run.
 A task that produces nothing is left out of both, since it is run for what it does.
 
+Building a restricted graph from source
+---------------------------------------
+
+For graphs with only single-output tasks and straightforward data dependencies,
+:func:`~aiida.engine.lower_to_graph_spec` builds a :class:`~aiida.engine.GraphSpec`
+from the source code without executing the graph function:
+
+.. code-block:: python
+
+    from aiida.engine import lower_to_graph_spec
+    from aiida.engine.processes.graphs.lower import graph, task
+
+    @task
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    @graph
+    def add_twice(x: int, y: int) -> int:
+        first = add(x=x, y=y)
+        return add(x=first, y=y)
+
+    declaration = lower_to_graph_spec(add_twice)
+
+The source decorators are imported from a separate module to distinguish
+``graph`` from the graph-builder decorator exported by ``aiida.engine``.
+They capture source when a module is imported; definitions must be at module scope. The parser reads a graph's assignments and calls in source
+order, resolving only tasks and graphs registered in the same module. Task
+bodies are not parsed. It accepts single-name assignments to registered calls,
+keyword arguments that are graph inputs, task outputs or scalar literals, and a
+final return of an input or a single output. It rejects recursion, calls to
+unregistered functions, loops, conditionals and all other unsupported forms
+with :class:`~aiida.engine.UnsupportedSyntax`, pointing at the offending
+source. This syntax is intentionally narrower than ``@graph``; use ``@graph``
+for the full graph-building API. The result is a declaration, not a launched
+process. Independent calls are not forced to execute in source order.
+
 .. _topics:workflows:graphs:each:
 
 Running a task once per item

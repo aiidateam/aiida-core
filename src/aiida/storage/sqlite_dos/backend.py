@@ -192,11 +192,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
 
 
 class SqliteDosStorage(PsqlDosBackend):
-    """A lightweight storage that is easy to install.
-
-    This backend implementation uses an SQLite database and a disk-objectstore container as the file repository. As
-    such, this storage plugin does not require any services, making it easy to install and use on most systems.
-    """
+    """Profile storage in SQLite and a `disk-objectstore` container."""
 
     migrator = SqliteDosMigrator
 
@@ -279,6 +275,9 @@ class SqliteDosStorage(PsqlDosBackend):
 
         return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        return self.filepath_root / self._CHECKPOINT_CLASSES_DIRNAME
+
     @classmethod
     def version_profile(cls, profile: Profile) -> str | None:
         with cls.migrator(profile) as migrator:
@@ -359,18 +358,20 @@ class SqliteDosStorage(PsqlDosBackend):
         path: Path,
         prev_backup: Path | None = None,
     ) -> None:
-        """Create a backup of the sqlite database and disk-objectstore to the provided path.
+        """Back up SQLite, repository objects and checkpoint classes to `path`.
 
-        :param manager: BackupManager from backup_utils containing utilities such as for calling the rsync.
-        :param path: Path to where the backup will be created.
-        :param prev_backup: Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
-            incremental and efficient.
+        Class-file deletion is blocked across database and class-file snapshots.
+
+        :param prev_backup: Previous backup used for incremental hard links.
         """
         LOGGER.report('Running storage maintenance')
         self.maintain(full=False, compress=False)
 
-        LOGGER.report('Backing up disk-objectstore container')
-        manager.call_rsync(self.filepath_container, path, link_dest=prev_backup, dest_trailing_slash=True)
+        with self.checkpoint_class_store.lock(exclusive=True):
+            LOGGER.report('Backing up disk-objectstore container')
+            manager.call_rsync(self.filepath_container, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        LOGGER.report('Backing up sqlite database')
-        manager.call_rsync(self.filepath_database, path, link_dest=prev_backup, dest_trailing_slash=True)
+            LOGGER.report('Backing up sqlite database')
+            manager.call_rsync(self.filepath_database, path, link_dest=prev_backup, dest_trailing_slash=True)
+
+            self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)

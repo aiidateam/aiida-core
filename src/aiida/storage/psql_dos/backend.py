@@ -102,11 +102,7 @@ def _finalize_backend(resources: _PsqlDosResources, backend_repr: str) -> None:
 
 
 class PsqlDosBackend(StorageBackend):
-    """An AiiDA storage backend that stores data in a PostgreSQL database and disk-objectstore repository.
-
-    Note, there were originally two such backends, `sqlalchemy` and `django`.
-    The `django` backend was removed, to consolidate access to this storage.
-    """
+    """Profile storage in PostgreSQL and a `disk-objectstore` container."""
 
     class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""
@@ -255,6 +251,9 @@ class PsqlDosBackend(StorageBackend):
 
         container = Container(get_filepath_container(self.profile))
         return DiskObjectStoreRepositoryBackend(container=container)
+
+    def get_checkpoint_classes_dirpath(self) -> pathlib.Path:
+        return get_filepath_container(profile=self.profile).parent / self._CHECKPOINT_CLASSES_DIRNAME
 
     @property
     def authinfos(self) -> authinfos.SqlaAuthInfoCollection:
@@ -575,17 +574,11 @@ class PsqlDosBackend(StorageBackend):
         path: pathlib.Path,
         prev_backup: pathlib.Path | None = None,
     ) -> None:
-        """Create a backup of the postgres database and disk-objectstore to the provided path.
+        """Back up PostgreSQL, repository objects and checkpoint classes to `path`.
 
-        :param manager:
-            BackupManager from backup_utils containing utilities such as for calling the rsync.
+        Class-file deletion is blocked across database and class-file snapshots.
 
-        :param path:
-            Path to where the backup will be created.
-
-        :param prev_backup:
-            Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
-            incremental and efficient.
+        :param prev_backup: Previous backup used for incremental hard links.
         """
         import os
         import shutil
@@ -607,44 +600,59 @@ class PsqlDosBackend(StorageBackend):
         STORAGE_LOGGER.report('Running basic maintenance...')
         self.maintain(full=False, compress=False)
 
-        # step 2: dump the PostgreSQL database into a temporary directory
-        STORAGE_LOGGER.report('Backing up PostgreSQL...')
-        pg_dump_exe = 'pg_dump'
-        with tempfile.TemporaryDirectory() as temp_dir_name:
-            psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
+        with self.checkpoint_class_store.lock(exclusive=True):
+            STORAGE_LOGGER.report('Backing up PostgreSQL...')
+            pg_dump_exe = 'pg_dump'
+            with tempfile.TemporaryDirectory() as temp_dir_name:
+                psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
 
-            env = os.environ.copy()
-            env['PGPASSWORD'] = cfg['database_password']
-            cmd = [
-                pg_dump_exe,
-                f'--host={cfg["database_hostname"]}',
-                f'--port={cfg["database_port"]}',
-                f'--dbname={cfg["database_name"]}',
-                f'--username={cfg["database_username"]}',
-                '--no-password',
-                '--format=p',
-                f'--file={psql_temp_loc!s}',
-            ]
-            try:
-                subprocess.run(cmd, check=True, env=env)
-            except subprocess.CalledProcessError as exc:
-                msg = f'pg_dump: {exc}'
-                raise backup_utils.BackupError(msg)
+                env = os.environ.copy()
+                env['PGPASSWORD'] = cfg['database_password']
+                cmd = [
+                    pg_dump_exe,
+                    f'--host={cfg["database_hostname"]}',
+                    f'--port={cfg["database_port"]}',
+                    f'--dbname={cfg["database_name"]}',
+                    f'--username={cfg["database_username"]}',
+                    '--no-password',
+                    '--format=p',
+                    f'--file={psql_temp_loc!s}',
+                ]
+                try:
+                    subprocess.run(cmd, check=True, env=env)
+                except subprocess.CalledProcessError as exc:
+                    msg = f'pg_dump: {exc}'
+                    raise backup_utils.BackupError(msg)
 
-            if psql_temp_loc.is_file():
-                STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
-            else:
-                msg = f"'{psql_temp_loc!s}' was not created."
-                raise backup_utils.BackupError(msg)
+                if psql_temp_loc.is_file():
+                    STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
+                else:
+                    msg = f"'{psql_temp_loc!s}' was not created."
+                    raise backup_utils.BackupError(msg)
 
-            # step 3: transfer the PostgreSQL database file
-            manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
+                manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        # step 4: back up the disk-objectstore
-        STORAGE_LOGGER.report('Backing up DOS container...')
-        backup_utils.backup_container(
-            manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
-        )
+            STORAGE_LOGGER.report('Backing up DOS container...')
+            backup_utils.backup_container(
+                manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
+            )
+
+            self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+
+    def _backup_checkpoint_classes(
+        self,
+        manager: backup_utils.BackupManager,
+        path: pathlib.Path,
+        prev_backup: pathlib.Path | None = None,
+    ) -> None:
+        """Back up class files required to restore checkpoints carrying serialized classes."""
+        checkpoints: pathlib.Path = self.get_checkpoint_classes_dirpath()
+
+        if not checkpoints.exists():
+            return
+
+        STORAGE_LOGGER.report('Backing up checkpoint class files')
+        manager.call_rsync(src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True)
 
     def _backup(
         self,

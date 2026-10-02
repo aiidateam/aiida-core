@@ -14,8 +14,10 @@ import abc
 import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
+from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
+from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore
 
 if t.TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
@@ -44,23 +46,16 @@ TransactionType = t.TypeVar('TransactionType')
 
 
 class StorageBackend(abc.ABC):
-    """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
+    """Profile storage for searchable provenance data and repository objects.
 
-    AiiDA splits data storage into two sources:
-
-    - Searchable data, which is stored in the database and can be queried using the QueryBuilder
-    - Non-searchable (binary) data, which is stored in the repository and can be loaded using the RepositoryBackend
-
-    The two sources are inter-linked by the ``Node.base.repository.metadata``.
-    Once stored, the leaf values of this dictionary must be valid pointers to object keys in the repository.
-
-    For a completely new storage, the ``initialise`` method should be called first. This will automatically initialise
-    the repository and the database with the current schema. The class methods,`version_profile` and `migrate` should be
-    able to be called for existing storage, at any supported schema version. But an instance of this class should be
-    created only for the latest schema version.
+    `Node.base.repository.metadata` maps files to object keys. Call `initialise` for new storage;
+    `version_profile` and `migrate` support existing versions, while instances require the current schema.
     """
 
     read_only = False
+
+    _CHECKPOINT_CLASSES_DIRNAME: str = 'checkpoint_classes'
+    """Directory name for digest-referenced checkpoint class files."""
 
     @classmethod
     @abc.abstractmethod
@@ -147,11 +142,18 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def _clear(self) -> None:
-        """Clear the storage, removing all data.
+        """Remove all storage data.
 
-        .. warning:: This is a destructive operation, and should only be used for testing purposes.
+        .. warning:: Destructive; use only for testing.
         """
+        import shutil
+
         from aiida.orm.autogroup import AutogroupManager
+
+        try:
+            shutil.rmtree(path=self.get_checkpoint_classes_dirpath(), ignore_errors=True)
+        except NotImplementedError:
+            pass
 
         self.reset_default_user()
         self._autogroup = AutogroupManager(self)
@@ -274,6 +276,23 @@ class StorageBackend(abc.ABC):
     @abc.abstractmethod
     def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""
+
+    @property
+    def checkpoint_class_store(self) -> CheckpointClassStore:
+        """Return the class-file store for this backend."""
+        return CheckpointClassStore(storage=self)
+
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        """Return the shared directory for checkpoint class files.
+
+        :raises NotImplementedError: If this backend does not support class-file persistence.
+        """
+        msg: str = (
+            f'`{self.__class__.__name__}` defines no directory for checkpoint class files, so a process whose '
+            'class travels in its checkpoint cannot be persisted on it: implement '
+            '`get_checkpoint_classes_dirpath`.'
+        )
+        raise NotImplementedError(msg)
 
     @abc.abstractmethod
     def set_global_variable(

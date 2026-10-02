@@ -561,21 +561,21 @@ class ProcessNode(Sealable, Node):
 
     @property
     def checkpoint(self) -> str | None:
-        """Return the checkpoint payload for the process
+        """Return the serialized checkpoint with class-file digest references, or `None`.
 
-        :returns: checkpoint payload if it exists, None otherwise
+        :meth:`aiida.engine.persistence.AiidaCheckpointPersister.load_checkpoint` restores carried class bytes.
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
     def set_checkpoint(self, checkpoint: str) -> None:
-        """Set the checkpoint payload for the process
-
-        :param state: string representation of the stepper state info
-        """
+        """Store the serialized checkpoint with digest references for carried classes."""
         return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
 
     def delete_checkpoint(self) -> None:
-        """Delete the checkpoint payload for the process"""
+        """Delete the checkpoint attribute, retaining class files.
+
+        :meth:`~aiida.engine.persistence.AiidaCheckpointPersister.delete_checkpoint` also attempts file cleanup.
+        """
         try:
             self.base.attributes.delete(self.CHECKPOINT_KEY)
         except AttributeError:

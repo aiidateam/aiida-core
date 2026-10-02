@@ -6,14 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
-
-Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.tools.pytest_fixtures`. They are
-loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
-"""
+"""Internal `aiida-core` fixtures, including fixtures from `aiida.tools.pytest_fixtures`."""
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import dataclasses
 import logging
@@ -21,6 +18,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import textwrap
 import types
 import typing as t
 import warnings
@@ -1459,3 +1457,29 @@ def setup_duplicate_group():
         return dupl_group
 
     return _setup_duplicate_group
+
+
+@pytest.fixture
+def importable_module(tmp_path):
+    """Yield a module factory backed by `tmp_path`, temporarily added to `sys.path`."""
+    written: list[str] = []
+
+    def factory(name: str, source: str, **alongside: str) -> types.ModuleType:
+        """Write the supplied modules and import the named module."""
+        for module_name, module_source in {name: source, **alongside}.items():
+            (tmp_path / f'{module_name}.py').write_text(textwrap.dedent(module_source))
+            written.append(module_name)
+
+        if str(tmp_path) not in sys.path:
+            sys.path.insert(0, str(tmp_path))
+
+        return import_module(name)
+
+    yield factory
+
+    with contextlib.suppress(ValueError):
+        sys.path.remove(str(tmp_path))
+
+    # A module written alongside is imported by the one under test, so it ends up here too.
+    for module_name in written:
+        sys.modules.pop(module_name, None)

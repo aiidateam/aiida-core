@@ -226,6 +226,25 @@ def get_worker_info_broken(_):
 @patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
 @patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
 @patch.object(DaemonClient, 'get_worker_info', get_worker_info)
+def test_daemon_status_legacy_rabbitmq_backend(run_cli_command):
+    """Status resolves the legacy broker name stored in unmigrated profiles."""
+    profile = get_profile()
+    original_backend = profile.process_control_backend
+    original_config = profile.process_control_config
+
+    try:
+        profile.set_process_controller('rabbitmq', original_config)
+        result = run_cli_command(cmd_daemon.status, use_subprocess=False)
+    finally:
+        profile.set_process_controller(original_backend, original_config)
+
+    assert f'Profile: {profile.name}' in result.output
+    assert 'Daemon is running as PID 111015' in result.output
+
+
+@patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
+@patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
+@patch.object(DaemonClient, 'get_worker_info', get_worker_info)
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
 def test_daemon_status_surfaces_zeromq_probe_error(run_cli_command, monkeypatch, tmp_path):
     """Test ``verdi daemon status`` surfaces ZeroMQ probe errors even when the broker is reachable."""

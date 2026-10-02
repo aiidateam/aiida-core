@@ -89,7 +89,7 @@ def BrokerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ..
 def BrokerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type[Broker] | Callable:
     """Return the `Broker` sub class registered under the given entry point.
 
-    :param entry_point_name: the entry point name.
+    :param entry_point_name: the entry point name (legacy ``rabbitmq`` is accepted as ``core.rabbitmq``).
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :return: sub class of :py:class:`~aiida.brokers.broker.Broker`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
@@ -97,6 +97,10 @@ def BrokerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | type
     from inspect import isclass
 
     from aiida.brokers import Broker
+
+    # Profiles created before broker entry points were introduced stored ``rabbitmq``.
+    if entry_point_name == 'rabbitmq':
+        entry_point_name = 'core.rabbitmq'
 
     entry_point_group = 'aiida.brokers'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)

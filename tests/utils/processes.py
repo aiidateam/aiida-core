@@ -8,7 +8,8 @@
 ###########################################################################
 """Utilities for testing components from the workflow engine"""
 
-from aiida.engine import Process
+from aiida import orm
+from aiida.engine import Process, WorkChain
 from aiida.engine.processes.states import Wait
 from aiida.orm import Bool, CalcJobNode, Data, WorkflowNode
 
@@ -114,3 +115,17 @@ class IsValidCacheHook(Process):
     @classmethod
     def is_valid_cache(cls, node):
         return super().is_valid_cache(node) and not node.inputs.not_valid_cache.value
+
+
+class NotebookWorkChain(WorkChain):
+    """Increment an integer in a dynamically serialized workflow."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('x', valid_type=orm.Int)
+        spec.outline(cls.compute)
+        spec.output('total', valid_type=orm.Int)
+
+    def compute(self):
+        self.out('total', orm.Int(self.inputs.x.value + 1).store())

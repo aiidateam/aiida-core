@@ -10,7 +10,9 @@
 
 import pytest
 
-from aiida.engine import UnsupportedSyntax, lower_to_graph_spec, parse_graph
+from aiida.engine import UnsupportedSyntax, graph_build, lower_to_graph_spec, parse_graph, task_build
+from aiida.engine.processes.graphs.build import graph as build_graph
+from aiida.engine.processes.graphs.build import task as build_task
 from aiida.engine.processes.graphs.display import format_graph
 from aiida.engine.processes.graphs.lower import graph, task
 from aiida.engine.processes.graphs.spec import (
@@ -191,6 +193,11 @@ def test_format_graph_shows_wiring_and_nested_control_flow():
     map_view = format_graph(parse_graph(transform))
     assert 'each_1 [map over value](value=values, y=y)' in map_view
     assert 'return result=each_1.result' in map_view
+
+
+def test_graph_decorators_are_exported_with_explicit_names():
+    assert graph_build is build_graph
+    assert task_build is build_task
 
 
 def test_source_task_rejects_unresolved_annotations_at_registration():

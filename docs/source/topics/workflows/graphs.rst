@@ -106,13 +106,12 @@ Building a restricted graph from source
 ---------------------------------------
 
 For graphs with only single-output tasks and straightforward data dependencies,
-:func:`~aiida.engine.lower_to_graph_spec` builds a :class:`~aiida.engine.GraphSpec`
+:func:`~aiida.engine.processes.graphs.lower.lower_to_graph_spec` builds a :class:`~aiida.engine.processes.graphs.spec.GraphSpec`
 from the source code without executing the graph function:
 
 .. code-block:: python
 
-    from aiida.engine import lower_to_graph_spec
-    from aiida.engine.processes.graphs.lower import graph, task
+    from aiida.engine.processes.graphs.lower import graph, lower_to_graph_spec, task
 
     @task
     def add(x: int, y: int) -> int:
@@ -125,8 +124,8 @@ from the source code without executing the graph function:
 
     declaration = lower_to_graph_spec(add_twice)
 
-The source decorators are imported from a separate module to distinguish
-``graph`` from the graph-builder decorator exported by ``aiida.engine``.
+The source decorators are imported from the lowerer to distinguish them from
+``graph_build`` and ``task_build``, which build graphs by executing their bodies.
 They capture source when a module is imported; definitions must be at module scope. The parser reads a graph's assignments and calls in source
 order, resolving only tasks and graphs registered in the same module. Task
 bodies are not parsed. It accepts single-name assignments to registered calls,
@@ -140,7 +139,7 @@ single value. Conditions and collections must be graph inputs or task outputs;
 comparisons and arithmetic belong in registered tasks. These forms lower to
 branch, loop and map tasks, respectively, rather than executing Python control
 flow at parse time. Other forms, including ``break``, ``continue`` and loop
-``else`` blocks, are rejected with :class:`~aiida.engine.UnsupportedSyntax`,
+``else`` blocks, are rejected with :class:`~aiida.engine.processes.graphs.lower.UnsupportedSyntax`,
 pointing at the offending source. This syntax is intentionally narrower than ``@graph``; use ``@graph``
 for the full graph-building API. The result is a declaration, not a launched
 process. Independent calls are not forced to execute in source order.

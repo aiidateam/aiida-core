@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.9.3 - 2026-10-02
+
+This patch improves graph traversal performance on large PostgreSQL databases, fixes `verdi daemon status` for profiles using the legacy `rabbitmq` broker name, and allows newer AsyncSSH 2.x releases.
+
+### Fixes
+
+- Use a single `IN` over batched values on PostgreSQL to avoid expensive sequential scans during graph traversal; respect SQLite expression-depth limits when batching ([#7248](https://github.com/aiidateam/aiida-core/pull/7248)) [[609e56171]](https://github.com/aiidateam/aiida-core/commit/609e56171285bf37f671583f230721c16cb797ef)
+- Resolve legacy `rabbitmq` broker names in `BrokerFactory`, including for `verdi daemon status` ([#7705](https://github.com/aiidateam/aiida-core/pull/7705)) [[43cb5c5ae]](https://github.com/aiidateam/aiida-core/commit/43cb5c5aeeb9e210f23ac678e8d16184e0dfaf94)
+
+### Dependencies
+
+- Allow newer `asyncssh` 2.x releases (`~=2.22`) ([#7712](https://github.com/aiidateam/aiida-core/pull/7712)) [[da4dc913a]](https://github.com/aiidateam/aiida-core/commit/da4dc913abf8274efbd0f248d94d3d1db19f4a61)
+
 ## v2.9.2 - 2026-09-03
 
 This patch fixes an error triggered when `clean_workdir` is enabled for a `BaseRestartWorkChain`.

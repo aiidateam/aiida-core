@@ -252,6 +252,14 @@ class NodeRepository:
         """
         return self._repository.get_object(path)
 
+    def has_object(self, path: FilePath) -> bool:
+        """Return whether a file or directory exists in the repository metadata.
+
+        :param path: Relative object path, including nested paths.
+        :raises TypeError: If the path is absolute or has an unsupported type.
+        """
+        return self._repository.has_object(path)
+
     @t.overload
     def get_object_content(self, path: str, mode: t.Literal['r']) -> str: ...
 

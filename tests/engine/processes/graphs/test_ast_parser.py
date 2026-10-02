@@ -18,8 +18,15 @@ from aiida.engine import (
 )
 from aiida.engine.processes.graphs.build_execution import graph as build_graph
 from aiida.engine.processes.graphs.build_execution import task as build_task
-from aiida.engine.processes.graphs.build_source import UnsupportedSyntax, build_from_source, graph, task
+from aiida.engine.processes.graphs.build_source import (
+    SourceGraphHandle,
+    UnsupportedSyntax,
+    build_from_source,
+    graph,
+    task,
+)
 from aiida.engine.processes.graphs.display import format_graph
+from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.spec import (
     BranchControl,
     GraphSpec,
@@ -235,6 +242,27 @@ def test_nested_graph():
     assert isinstance(spec.tasks[0], SubgraphTask)
     assert spec.tasks[0].body.identifier == 'chain'
     assert spec.dependencies[0].source == 'chain'
+
+
+def test_source_graph_handle_matches_execution_interface():
+    assert isinstance(chain, SourceGraphHandle)
+    assert chain.build() == build_from_source(chain)
+    assert chain.parameters == ('x', 'y')
+    assert chain.identifier == 'chain'
+    assert chain.process_class is GraphProcess
+    with pytest.raises(TypeError, match='launched rather than called'):
+        chain(x=1, y=2)
+
+
+def test_source_graph_nests_in_execution_graph():
+    @build_graph
+    def outer_exec(x: int, y: int) -> int:
+        inner = chain(x=x, y=y)
+        return sum_two(x=inner.result, y=x)
+
+    spec = outer_exec.build()
+    assert isinstance(spec.tasks[0], SubgraphTask)
+    assert spec.tasks[0].body == build_from_source(chain)
 
 
 @pytest.mark.parametrize(

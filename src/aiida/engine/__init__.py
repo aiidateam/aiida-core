@@ -69,6 +69,7 @@ __all__ = (
     'ProcessState',
     'Region',
     'Runner',
+    'SourceGraphHandle',
     'Stop',
     'Subgraph',
     'TaskHandle',

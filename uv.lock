@@ -221,7 +221,7 @@ requires-dist = [
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.21" },
-    { name = "asyncssh", specifier = "~=2.22.0" },
+    { name = "asyncssh", specifier = "~=2.22" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.20" },
     { name = "chardet", marker = "sys_platform == 'win32'", specifier = "~=5.2.0" },
     { name = "circus", specifier = "~=0.19.0" },
@@ -691,15 +691,15 @@ wheels = [
 
 [[package]]
 name = "asyncssh"
-version = "2.22.0"
+version = "2.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/d5/957886c316466349d55c4de6a688a10a98295c0b4429deb8db1a17f3eb19/asyncssh-2.22.0.tar.gz", hash = "sha256:c3ce72b01be4f97b40e62844dd384227e5ff5a401a3793007c42f86a5c8eb537", size = 540523, upload-time = "2025-12-21T23:38:30.5Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/7f/2d79247bacc562104f312d27efe541673aa177feac89de291bd61bca52be/asyncssh-2.24.0.tar.gz", hash = "sha256:4064c590e59ce2e8d82a2f66d35f3120d765828b4df5e3dbfb07b4a8c24686c9", size = 550148, upload-time = "2026-06-27T20:34:44.755Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/ae/0da2f2214fc183338af1afe5a103a2052fd03464e8eafbd827abff58a4d0/asyncssh-2.22.0-py3-none-any.whl", hash = "sha256:d16465ccdf1ed20eba1131b14415b155e047f6f5be0d19f39c2e0b61331ee0e7", size = 374938, upload-time = "2025-12-21T23:38:28.976Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/29/908ce0ca5e8cae76662e354a0f08df552d6d221844748b9e5ca06051cc44/asyncssh-2.24.0-py3-none-any.whl", hash = "sha256:9abd46300adcb6d4b73269b34c53cd0d17a138b9a22b5b38008ce7d5808734b7", size = 381237, upload-time = "2026-06-27T20:34:43.198Z" },
 ]
 
 [[package]]

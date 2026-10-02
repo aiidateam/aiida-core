@@ -13,6 +13,8 @@
 # fmt: off
 
 from aiida.engine.processes.graphs.build import *
+from aiida.engine.processes.graphs.build import graph as graph_build  # noqa: F401 - public re-export
+from aiida.engine.processes.graphs.build import task as task_build  # noqa: F401 - public re-export
 from aiida.engine.processes.graphs.handlers import *
 from aiida.engine.processes.graphs.lower import *
 from aiida.engine.processes.graphs.monitors import *

@@ -14,7 +14,7 @@ import hashlib
 import os
 import re
 import typing as t
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from uuid import uuid4
 
@@ -38,6 +38,18 @@ class ProcessClassBytes:
         return hashlib.sha256(self.content).hexdigest()
 
 
+def _discard_file(*, path: Path) -> bool:
+    """Delete `path`, returning whether it is gone, and warning instead of raising."""
+    from aiida.storage.log import STORAGE_LOGGER
+
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exception:
+        STORAGE_LOGGER.warning('could not delete the orphaned process class file `%s`: %s', path, exception)
+        return False
+    return True
+
+
 def _fsync_dir(path: Path) -> None:
     """Synchronize `path` so a newly created entry survives a crash."""
     descriptor: int = os.open(path, os.O_RDONLY)
@@ -53,7 +65,8 @@ class CheckpointClassStore:
 
     storage: 'StorageBackend'
 
-    def _path(self, *, node_uuid: str, digest: str) -> Path:
+    def _path_of(self, *, node_uuid: str, digest: str) -> Path:
+        """Return the finished class-file path for `node_uuid` and `digest`."""
         return self.storage.get_checkpoint_classes_dirpath() / f'{node_uuid}-{digest}.pkl'
 
     def read(self, *, node_uuid: str, digest: str) -> bytes:
@@ -61,7 +74,7 @@ class CheckpointClassStore:
         if re.fullmatch(r'[0-9a-f]{64}', digest) is None:
             msg: str = f'Invalid checkpoint class digest {digest!r} for node {node_uuid}.'
             raise ValueError(msg)
-        path: Path = self._path(node_uuid=node_uuid, digest=digest)
+        path: Path = self._path_of(node_uuid=node_uuid, digest=digest)
         content: bytes = path.read_bytes()
         if hashlib.sha256(content).hexdigest() != digest:
             msg = f'Checkpoint class digest mismatch for node {node_uuid} at {path.resolve()}.'
@@ -70,7 +83,7 @@ class CheckpointClassStore:
 
     def write(self, *, node_uuid: str, class_bytes: ProcessClassBytes) -> None:
         """Atomically publish `class_bytes` and synchronize the file and both directory levels."""
-        destination: Path = self._path(node_uuid=node_uuid, digest=class_bytes.digest)
+        destination: Path = self._path_of(node_uuid=node_uuid, digest=class_bytes.digest)
         destination.parent.mkdir(parents=True, exist_ok=True)
         _fsync_dir(destination.parent.parent)
         staged: Path = destination.parent / f'.{node_uuid}-{uuid4().hex}'
@@ -90,22 +103,22 @@ class CheckpointClassStore:
 
     def discard_one(self, *, node_uuid: str, digest: str) -> None:
         """Delete an obsolete class file after its checkpoint update has committed."""
-        storage: StorageBackend = self.storage
         # Rollback can restore the old reference. Retained files are collected after the node seals.
-        if storage.in_transaction:
-            return
-        self._path(node_uuid=node_uuid, digest=digest).unlink(missing_ok=True)
+        self.discard_files(paths=[self._path_of(node_uuid=node_uuid, digest=digest)])
 
     def discard_all(self, *, node_uuid: str) -> None:
         """Delete this node's finished and staged class files after checkpoint deletion commits."""
-        storage: StorageBackend = self.storage
-        if storage.in_transaction:
-            return
-        owned: list[tuple[Path, str]] = list(self.iter_files(node_uuid=node_uuid))
-        if not owned:
-            return
-        for path, _ in owned:
-            path.unlink(missing_ok=True)
+        self.discard_files(paths=[path for path, _ in self.iter_files(node_uuid=node_uuid)])
+
+    def discard_files(self, *, paths: Iterable[Path]) -> list[Path]:
+        """Delete `paths`, retaining files that cannot be removed.
+
+        :returns: Deleted paths; transactions defer deletion.
+        """
+        pending: list[Path] = list(paths)
+        if not pending or self.storage.in_transaction:
+            return []
+        return [path for path in pending if _discard_file(path=path)]
 
     def iter_files(self, *, node_uuid: str | None = None) -> Iterator[tuple[Path, str]]:
         """Yield finished and staged class-file paths with their owner UUIDs.

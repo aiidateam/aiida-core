@@ -534,6 +534,12 @@ class PsqlDosBackend(StorageBackend):
             if not dry_run:
                 repository.delete_objects(list(unreferenced_objects))
 
+            # Not part of the repository, so the sweep above cannot see them: a checkpoint is a node attribute and
+            # the class it carries is a file beside the container, which nothing references once its node is gone.
+            orphaned = self.delete_orphaned_checkpoint_class_files(only_sealed=not full, dry_run=dry_run)
+            action: str = 'Would delete' if dry_run else 'Deleting'
+            STORAGE_LOGGER.info(f'{action} {len(orphaned)} orphaned process class files ...')
+
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
@@ -610,6 +616,7 @@ class PsqlDosBackend(StorageBackend):
         STORAGE_LOGGER.report('Running basic maintenance...')
         self.maintain(full=False, compress=False)
 
+        # step 2: dump the PostgreSQL database into a temporary directory
         STORAGE_LOGGER.report('Backing up PostgreSQL...')
         pg_dump_exe = 'pg_dump'
         with tempfile.TemporaryDirectory() as temp_dir_name:
@@ -639,13 +646,16 @@ class PsqlDosBackend(StorageBackend):
                 msg = f"'{psql_temp_loc!s}' was not created."
                 raise backup_utils.BackupError(msg)
 
+            # step 3: transfer the PostgreSQL database file
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
 
+        # step 4: back up the disk-objectstore
         STORAGE_LOGGER.report('Backing up DOS container...')
         backup_utils.backup_container(
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
 
+        # step 5: back up the checkpoint class files
         self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
 
     def _backup_checkpoint_classes(

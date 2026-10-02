@@ -236,3 +236,18 @@ class TestAiidaCheckpointPersister:
 
         self.persister.delete_checkpoint(process.pid)
         assert process.node.checkpoint is None
+
+
+class RenamedParametersCheckpointSerializable(MetadataCheckpointSerializable):
+    """Recreation override with renamed parameters."""
+
+    @classmethod
+    def recreate_from(cls, state, context=None):
+        return super().recreate_from(state, context)
+
+
+def test_recreation_override_preserves_positional_dispatch():
+    """Subclass overrides retain their parameter-name independence."""
+    restored = CheckpointPayload.from_object(RenamedParametersCheckpointSerializable()).decode()
+    assert isinstance(restored, RenamedParametersCheckpointSerializable)
+    assert restored.value == 'value'

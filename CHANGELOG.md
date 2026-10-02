@@ -44,6 +44,13 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 ### New features
 
+#### Processes defined in a notebook cell
+
+A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter notebook, or in any script run as `__main__`, can now be submitted to the daemon.
+Such a class belongs to a module that resolves to something different in every interpreter, so the worker used to fail with `ImportError: object 'MyWorkChain' from identifier '__main__:MyWorkChain' could not be loaded`.
+Now, the checkpoint carries the class itself whenever no identifier reaches the class or the identifier points at `__main__`.
+What the class refers to travels as a reference, so the worker has to be able to import it: a helper module beside the notebook, on the kernel's `sys.path` only, has to be installed or put on the `PYTHONPATH` the daemon is started with.
+
 #### `ShellJob`: run any command without writing a plugin
 
 The `aiida-shell` package has been integrated into `aiida-core`.

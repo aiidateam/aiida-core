@@ -256,6 +256,9 @@ class PsqlDosBackend(StorageBackend):
         container = Container(get_filepath_container(self.profile))
         return DiskObjectStoreRepositoryBackend(container=container)
 
+    def get_checkpoint_classes_dirpath(self) -> pathlib.Path:
+        return get_filepath_container(profile=self.profile).parent / self._CHECKPOINT_CLASSES_DIRNAME
+
     @property
     def authinfos(self) -> authinfos.SqlaAuthInfoCollection:
         return self._authinfos
@@ -607,7 +610,6 @@ class PsqlDosBackend(StorageBackend):
         STORAGE_LOGGER.report('Running basic maintenance...')
         self.maintain(full=False, compress=False)
 
-        # step 2: dump the PostgreSQL database into a temporary directory
         STORAGE_LOGGER.report('Backing up PostgreSQL...')
         pg_dump_exe = 'pg_dump'
         with tempfile.TemporaryDirectory() as temp_dir_name:
@@ -637,14 +639,29 @@ class PsqlDosBackend(StorageBackend):
                 msg = f"'{psql_temp_loc!s}' was not created."
                 raise backup_utils.BackupError(msg)
 
-            # step 3: transfer the PostgreSQL database file
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        # step 4: back up the disk-objectstore
         STORAGE_LOGGER.report('Backing up DOS container...')
         backup_utils.backup_container(
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
+
+        self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)
+
+    def _backup_checkpoint_classes(
+        self,
+        manager: backup_utils.BackupManager,
+        path: pathlib.Path,
+        prev_backup: pathlib.Path | None = None,
+    ) -> None:
+        """Back up class files required to restore checkpoints carrying serialized classes."""
+        checkpoints: pathlib.Path = self.get_checkpoint_classes_dirpath()
+
+        if not checkpoints.exists():
+            return
+
+        STORAGE_LOGGER.report('Backing up checkpoint class files')
+        manager.call_rsync(src=checkpoints, dest=path, link_dest=prev_backup, dest_trailing_slash=True)
 
     def _backup(
         self,

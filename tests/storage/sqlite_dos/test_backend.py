@@ -40,6 +40,25 @@ def test_backup(aiida_config, aiida_profile_factory, tmp_path, manager):
         assert (dirpath_backup / FILENAME_CONTAINER).exists()
 
 
+def test_backup_includes_checkpoint_classes(aiida_config, aiida_profile_factory, tmp_path, manager):
+    """The class-file directory is copied with the rest of the backup."""
+    with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos'):
+        storage = manager.get_profile_storage()
+        directory = storage.get_checkpoint_classes_dirpath()
+        directory.mkdir(parents=True, exist_ok=True)
+        source = directory / 'class.pkl'
+        source.write_bytes(b'class bytes')
+        copied = []
+
+        class CopyManager:
+            def call_rsync(self, src, dest, **kwargs):
+                assert source.read_bytes() == b'class bytes'
+                copied.append(pathlib.Path(src))
+
+        storage._backup_storage(CopyManager(), tmp_path)
+        assert copied == [storage.filepath_container, storage.filepath_database, directory]
+
+
 def test_initialise_version_check(tmp_path, monkeypatch):
     """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.create_profile`
     only if calls on validate_sqlite_version."""

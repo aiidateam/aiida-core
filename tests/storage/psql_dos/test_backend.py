@@ -197,6 +197,20 @@ def test_backup(tmp_path):
         assert name in contents
 
 
+def test_backup_includes_checkpoint_classes(tmp_path):
+    """The class-file directory is copied with the rest of the backup."""
+    storage_backend = get_manager().get_profile_storage()
+    directory = storage_backend.get_checkpoint_classes_dirpath()
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / 'class.pkl').write_bytes(b'class bytes')
+
+    # note: this assumes that rsync and pg_dump are in PATH
+    storage_backend.backup(str(tmp_path))
+
+    last_backup = tmp_path / 'last-backup'
+    assert (last_backup / directory.name / 'class.pkl').read_bytes() == b'class bytes'
+
+
 def test_get_and_terminate_unreferenced_connections():
     """Test that ``get_unreferenced_connections`` detects external database connections.
 

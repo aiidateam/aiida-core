@@ -43,6 +43,7 @@ from aiida.engine.processes.persistence import (
 from aiida.engine.utils import instantiate_process
 from aiida.manage import get_manager
 from aiida.manage.configuration import Profile
+from aiida.orm.implementation import StorageBackend
 from tests.utils.processes import DummyProcess
 
 
@@ -295,7 +296,7 @@ def persister(aiida_profile: Profile) -> AiidaCheckpointPersister:
 
 
 @pytest.fixture
-def make_process(aiida_profile: Profile) -> t.Iterator[Callable[..., Process]]:
+def make_process(aiida_profile: Profile):
     """Yield a process factory with optional carried classes and context padding.
 
     Close created processes after the test to release RPC subscriptions.
@@ -703,6 +704,107 @@ def test_superseded_file_cleanup_ignores_a_context_checksum(
     assert checkpoint_classes() - before == {f'{live.node.uuid}-{current}.pkl'}
 
 
+def test_maintenance_preserves_an_uncommitted_owner(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """A separate collector cannot discard files whose new owner is still uncommitted."""
+    storage: StorageBackend = get_manager().get_profile_storage()
+    collector: StorageBackend = type(storage)(profile=storage.profile)
+    try:
+        with storage.transaction():
+            live: Process = make_process(carried=True)
+            persister.save_checkpoint(live)
+            digest: str = carried_digest(live.node)
+            assert not collector.in_transaction
+            owners: int = (
+                orm.QueryBuilder(backend=collector).append(orm.ProcessNode, filters={'uuid': live.node.uuid}).count()
+            )
+            assert owners == 0
+            dropped = collector.delete_orphaned_checkpoint_class_files()
+            assert f'{live.node.uuid}-{digest}.pkl' not in [path.name for path in dropped]
+        assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_classes()
+        assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
+    finally:
+        collector.close()
+
+
+def test_maintenance_defers_uncommitted_sealing(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """A seal that can roll back cannot make its checkpoint files collectible."""
+    live = make_process(carried=True)
+    persister.save_checkpoint(live)
+    digest = carried_digest(live.node)
+    storage = get_manager().get_profile_storage()
+    with pytest.raises(RuntimeError, match='rollback'):
+        with storage.transaction():
+            live.node.seal()
+            assert storage.delete_orphaned_checkpoint_class_files() == []
+            assert storage.delete_orphaned_checkpoint_class_files(dry_run=True) == []
+            msg = 'rollback'
+            raise RuntimeError(msg)
+    assert not orm.load_node(live.pid).is_sealed
+    assert f'{live.node.uuid}-{digest}.pkl' in checkpoint_classes()
+    assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
+
+
+def _populate_mixed_directory(
+    storage: StorageBackend,
+) -> tuple[list[pathlib.Path], tuple[pathlib.Path, pathlib.Path]]:
+    """Write foreign and orphaned class files, returning both groups."""
+    directory = storage.get_checkpoint_classes_dirpath()
+    directory.mkdir(parents=True, exist_ok=True)
+    owner = str(uuid4())
+    foreign = [directory / f'{owner}-notes.txt', directory / f'{owner}-{"a" * 32}']
+    for path in foreign:
+        path.write_bytes(b'foreign content')
+    finished = directory / f'{owner}-{"b" * 64}.pkl'
+    staged = directory / f'.{owner}-{"c" * 32}'
+    for path in (finished, staged):
+        path.write_bytes(b'orphaned class bytes')
+    return foreign, (finished, staged)
+
+
+@pytest.mark.usefixtures('stopped_daemon_client', 'aiida_profile')
+def test_live_collection_ignores_incomplete_formats():
+    """Live collection drops nothing with an incomplete filename format."""
+    storage = get_manager().get_profile_storage()
+    _, (finished, staged) = _populate_mixed_directory(storage)
+
+    dropped = storage.delete_orphaned_checkpoint_class_files()
+
+    assert finished not in dropped and staged not in dropped
+
+
+@pytest.mark.usefixtures('stopped_daemon_client', 'aiida_profile')
+def test_exclusive_collection_takes_complete_formats():
+    """Exclusive collection takes both complete filename formats."""
+    from aiida.manage.profile_access import ProfileAccessManager
+
+    storage = get_manager().get_profile_storage()
+    _, (finished, staged) = _populate_mixed_directory(storage)
+
+    with ProfileAccessManager(storage.profile).lock():
+        collected = set(storage.delete_orphaned_checkpoint_class_files(only_sealed=False))
+
+    assert {finished, staged} <= collected
+
+
+@pytest.mark.usefixtures('stopped_daemon_client', 'aiida_profile')
+def test_collection_preserves_foreign_files():
+    """Foreign files survive live and exclusive collection."""
+    from aiida.manage.profile_access import ProfileAccessManager
+
+    storage = get_manager().get_profile_storage()
+    foreign, _ = _populate_mixed_directory(storage)
+
+    storage.delete_orphaned_checkpoint_class_files()
+    with ProfileAccessManager(storage.profile).lock():
+        storage.delete_orphaned_checkpoint_class_files(only_sealed=False)
+
+    assert all(path.read_bytes() == b'foreign content' for path in foreign)
+
+
 def test_maintenance_keeps_a_live_class_byte_file(
     persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
 ):
@@ -713,6 +815,133 @@ def test_maintenance_keeps_a_live_class_byte_file(
     get_manager().get_profile_storage().maintain(full=False)
 
     assert persister.load_checkpoint(live.pid)['_pid'] == live.pid
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_maintenance_drops_the_file_of_a_deleted_node(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Live maintenance retains deleted owners' class files; full maintenance collects them."""
+    from aiida.tools import delete_nodes
+
+    live = make_process(carried=True)
+    before = checkpoint_classes()
+    persister.save_checkpoint(live)
+    assert checkpoint_classes() != before, 'premise: a file was written for this node'
+    filename = f'{live.node.uuid}-{carried_digest(live.node)}.pkl'
+
+    delete_nodes([live.node.pk], dry_run=False)
+    storage = get_manager().get_profile_storage()
+    storage.maintain(full=False)
+    assert filename in checkpoint_classes()
+    storage.maintain(full=True)
+    assert filename not in checkpoint_classes()
+
+
+def test_maintenance_drops_the_file_of_a_sealed_node(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Live maintenance collects class files retained by sealed nodes."""
+    live = make_process(carried=True)
+    persister.save_checkpoint(live)
+    filename = f'{live.node.uuid}-{carried_digest(live.node)}.pkl'
+    assert filename in checkpoint_classes(), 'premise: a file was written for this node'
+    live.node.seal()
+
+    get_manager().get_profile_storage().maintain(full=False)
+
+    assert filename not in checkpoint_classes()
+
+
+def test_maintenance_keeps_a_live_file_beside_an_orphaned_one(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Maintenance collects sealed owners' files while retaining unsealed owners' files."""
+    live = make_process(carried=True)
+    sealed = make_process(carried=True)
+    before = checkpoint_classes()
+
+    persister.save_checkpoint(live)
+    persister.save_checkpoint(sealed)
+    sealed.node.seal()
+
+    written = checkpoint_classes() - before
+    kept = {name for name in written if name.startswith(live.node.uuid)}
+    dropped = {name for name in written if name.startswith(sealed.node.uuid)}
+    assert kept and dropped, 'premise: each of the two nodes has a file of its own'
+
+    get_manager().get_profile_storage().maintain(full=False)
+
+    assert checkpoint_classes() - before == kept
+
+
+def test_collection_dry_run_reports_eligible_files(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """Dry-run collection returns eligible paths and preserves their files."""
+    live = make_process(carried=True)
+    persister.save_checkpoint(live)
+    live.node.seal()
+    before = checkpoint_classes()
+
+    storage = get_manager().get_profile_storage()
+    would_drop = storage.delete_orphaned_checkpoint_class_files(dry_run=True)
+
+    assert [path.name for path in would_drop] == sorted(name for name in before if name.startswith(live.node.uuid))
+    assert checkpoint_classes() == before
+
+
+def test_maintenance_survives_a_file_it_cannot_delete(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process], monkeypatch: pytest.MonkeyPatch
+):
+    """Collection retains files whose deletion raises `PermissionError` and returns no deleted paths."""
+    live = make_process(carried=True)
+    persister.save_checkpoint(live)
+    live.node.seal()
+    before = checkpoint_classes()
+    assert before, 'premise: there is a file to collect'
+
+    def refuse(self, missing_ok: bool = False) -> None:
+        msg = 'Operation not permitted'
+        raise PermissionError(msg)
+
+    monkeypatch.setattr(target=pathlib.Path, name='unlink', value=refuse)
+    storage = get_manager().get_profile_storage()
+
+    assert storage.delete_orphaned_checkpoint_class_files() == [], 'a file that stayed is not reported as dropped'
+
+    monkeypatch.undo()
+
+    assert checkpoint_classes() == before, 'and it is still there for the next run'
+
+
+def test_maintain_dry_run_preserves_collectible_files(
+    persister: AiidaCheckpointPersister, make_process: Callable[..., Process]
+):
+    """`maintain(dry_run=True)` preserves collectible class files."""
+    live = make_process(carried=True)
+    persister.save_checkpoint(live)
+    live.node.seal()
+    before = checkpoint_classes()
+    assert before, 'premise: there is a file to collect'
+
+    get_manager().get_profile_storage().maintain(full=False, dry_run=True)
+
+    assert checkpoint_classes() == before
+
+
+@pytest.mark.usefixtures('persister')
+def test_maintenance_leaves_a_file_it_cannot_attribute():
+    """Maintenance preserves files with unrecognized checkpoint-class filenames."""
+    storage = get_manager().get_profile_storage()
+    dirpath().mkdir(parents=True, exist_ok=True)
+    foreign = dirpath() / 'not-a-class-byte-file.txt'
+    foreign.write_text('left here by something else')
+
+    storage.maintain(full=False)
+
+    assert foreign.exists()
+    foreign.unlink()
 
 
 def test_a_deleted_node_leaves_a_class_byte_file_carrying_its_uuid(

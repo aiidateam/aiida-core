@@ -6,9 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Lower restricted graph source to GraphSpec without executing graph bodies.
+"""Build a GraphSpec from restricted graph source without executing graph bodies.
 
-The decorators capture definitions; lowering never executes graph bodies.
+The decorators capture definitions; source-based building never executes graph bodies.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
 # would otherwise shadow the graph-builder decorator exported by ``aiida.engine``.
-__all__ = ('UnsupportedSyntax', 'lower_to_graph_spec', 'parse_graph')
+__all__ = ('UnsupportedSyntax', 'build_from_source')
 
 
 class UnsupportedSyntax(ValueError):  # noqa: N818 - keep the prototype's exception name
@@ -117,13 +117,16 @@ class _LoweringState:
     used: Counter[str] = field(default_factory=Counter)
 
 
-def _lower_function(state: _LoweringState) -> GraphSpec:
-    source = SOURCES[state.key]
-    module = ast.parse(source)
+def _parse_function(key: str) -> ast.FunctionDef:
+    module = ast.parse(SOURCES[key])
     if len(module.body) != 1 or not isinstance(module.body[0], ast.FunctionDef):
-        msg = f'{state.key}: expected one function definition'
+        msg = f'{key}: expected one function definition'
         raise UnsupportedSyntax(msg)
-    function = module.body[0]
+    return module.body[0]
+
+
+def _lower_function(state: _LoweringState) -> GraphSpec:
+    function = _parse_function(state.key)
     if function.args.posonlyargs or function.args.kwonlyargs or function.args.vararg or function.args.kwarg:
         msg = f'{state.key}: only ordinary positional parameters are supported'
         raise UnsupportedSyntax(msg)
@@ -399,11 +402,6 @@ def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
     return _lower_function(_LoweringState(key, (*stack, key)))
 
 
-def lower_to_graph_spec(function: Callable[..., t.Any]) -> GraphSpec:
-    """Lower a registered graph and its registered callees to a GraphSpec."""
+def build_from_source(function: Callable[..., t.Any]) -> GraphSpec:
+    """Build a GraphSpec from a registered graph's source and its registered callees."""
     return _lower_registered_graph(_key(function), ())
-
-
-def parse_graph(function: Callable[..., t.Any]) -> GraphSpec:
-    """Build a GraphSpec from the source of a registered graph."""
-    return lower_to_graph_spec(function)

@@ -25,6 +25,7 @@ from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
+from aiida.common.folders import SandboxFolder
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration import Profile
@@ -49,6 +50,7 @@ class _TempBackendResources:
     def __init__(self) -> None:
         self.session: Session | None = None
         self.repo: SandboxShaRepositoryBackend | None = None
+        self.root: SandboxFolder | None = None
 
     def release(self) -> None:
         """Release the resources."""
@@ -58,10 +60,13 @@ class _TempBackendResources:
         if self.repo is not None:
             self.repo.erase()
             self.repo = None
+        if self.root is not None:
+            self.root.erase()
+            self.root = None
 
     @property
     def has_pending_release(self) -> bool:
-        return self.session is not None or self.repo is not None
+        return self.session is not None or self.repo is not None or self.root is not None
 
 
 def _finalize_backend(resources: _TempBackendResources, backend_repr: str) -> None:
@@ -133,7 +138,9 @@ class SqliteTempBackend(StorageBackend):
     def __init__(self, profile: Profile):
         super().__init__(profile)
         self._resources = _TempBackendResources()
-        self._resources.repo = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
+        filepath: str | None = profile.storage_config['filepath']
+        self._resources.root = SandboxFolder(filepath=Path(filepath) if filepath is not None else None)
+        self._resources.repo = SandboxShaRepositoryBackend(filepath=str(self._resources.root.abspath))
         self._finalizer = weakref.finalize(self, _finalize_backend, self._resources, repr(self))
         self._globals: dict[str, tuple[t.Any, str | None]] = {}
         self._closed = False
@@ -190,6 +197,11 @@ class SqliteTempBackend(StorageBackend):
             self._session.add(models.DbUser(email=self.profile.default_user_email or 'user@email.com'))  # type: ignore[operator]
             self._session.commit()
         return self._session
+
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        if self._closed or self._resources.root is None:
+            raise ClosedStorage(str(self))
+        return Path(self._resources.root.abspath) / self._CHECKPOINT_CLASSES_DIRNAME
 
     def get_repository(self) -> SandboxShaRepositoryBackend:
         if self._closed or not self._repo:

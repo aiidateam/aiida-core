@@ -71,6 +71,11 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 
 ### Behavior changes
 
+#### Checkpoint class files
+
+Serialized process classes are stored as `<node uuid>-<digest>.pkl` in the profile's `checkpoint_classes` directory, with digest references in node checkpoints.
+Backups must include this directory; storage plugins provide its location through `StorageBackend.get_checkpoint_classes_dirpath`.
+
 ### Fixes
 
 ### Deprecations

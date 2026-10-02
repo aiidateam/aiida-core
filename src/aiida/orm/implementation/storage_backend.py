@@ -14,8 +14,10 @@ import abc
 import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
+from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
+from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore
 
 if t.TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
@@ -61,6 +63,9 @@ class StorageBackend(abc.ABC):
     """
 
     read_only = False
+
+    _CHECKPOINT_CLASSES_DIRNAME: str = 'checkpoint_classes'
+    """Directory name for digest-referenced checkpoint class files."""
 
     @classmethod
     @abc.abstractmethod
@@ -151,7 +156,14 @@ class StorageBackend(abc.ABC):
 
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
         """
+        import shutil
+
         from aiida.orm.autogroup import AutogroupManager
+
+        try:
+            shutil.rmtree(path=self.get_checkpoint_classes_dirpath(), ignore_errors=True)
+        except NotImplementedError:
+            pass
 
         self.reset_default_user()
         self._autogroup = AutogroupManager(self)
@@ -274,6 +286,23 @@ class StorageBackend(abc.ABC):
     @abc.abstractmethod
     def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""
+
+    @property
+    def checkpoint_class_store(self) -> CheckpointClassStore:
+        """Return the class-file store for this backend."""
+        return CheckpointClassStore(storage=self)
+
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        """Return the shared directory for checkpoint class files.
+
+        :raises NotImplementedError: If this backend does not support class-file persistence.
+        """
+        msg: str = (
+            f'`{self.__class__.__name__}` defines no directory for checkpoint class files, so a process whose '
+            'class travels in its checkpoint cannot be persisted on it: implement '
+            '`get_checkpoint_classes_dirpath`.'
+        )
+        raise NotImplementedError(msg)
 
     @abc.abstractmethod
     def set_global_variable(

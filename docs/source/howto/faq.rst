@@ -67,6 +67,12 @@ That is to say, if the safe interval is set to 60 seconds, any single worker is 
 Why would a process that runs fine locally raise an exception when submitted to the daemon?
 ===========================================================================================
 This is almost always caused by an import issue.
+
+.. note::
+    A picklable class defined in a Jupyter notebook cell, or in a script run as ``__main__``, is carried in the checkpoint.
+    Modules referenced by the class must still be importable by the daemon workers, and the submitting interpreter and workers need compatible AiiDA and Python environments.
+    Captured objects that cannot be pickled prevent the checkpoint from carrying the class, :ref:`as described with the launchers<topics:processes:usage:launch>`.
+
 To determine exactly what might be going wrong, first :ref:`increase the logging verbosity <intro:increase-logging-verbosity>` by running:
 
 .. code-block:: console

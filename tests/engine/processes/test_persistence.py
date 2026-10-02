@@ -17,6 +17,7 @@ from collections.abc import Callable
 import pytest
 
 from aiida import orm
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common import _callables as callables
 from aiida.common import loaders
 from aiida.engine import calcfunction, workfunction
@@ -27,7 +28,7 @@ from aiida.engine.processes.persistence import (
     META__CLASS_NAME,
     CheckpointSerializable,
 )
-from aiida.orm import CalcFunctionNode, ProcessNode, WorkFunctionNode
+from aiida.orm import CalcFunctionNode, InstalledCode, ProcessNode, WorkFunctionNode
 from tests.utils.processes import NotebookWorkChain
 
 
@@ -241,3 +242,49 @@ def test_process_function_defined_in_main(
     assert isinstance(node, node_class), 'premise: the decorator under test is the one that ran'
     assert node.is_finished_ok, node.exception
     assert node.outputs.result.value == expected
+
+
+class MainCalcJob(ArithmeticAddCalculation):
+    """Notebook-style arithmetic calculation."""
+
+    @classmethod
+    def define(cls, spec):
+
+        super().define(spec)
+
+
+def submit_main_calcjob(
+    submit_and_await: Callable[..., ProcessNode], aiida_code_installed: Callable[..., InstalledCode]
+) -> ProcessNode:
+    """Submit a `__main__` arithmetic calculation and return its finished node."""
+
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add')
+
+    builder = MainCalcJob.get_builder()
+
+    builder.code = code
+
+    builder.x = orm.Int(2)
+
+    builder.y = orm.Int(40)
+
+    builder.metadata = {'options': {'resources': {'num_machines': 1}}}
+
+    return submit_and_await(builder, timeout=60)
+
+
+@pytest.mark.requires_broker
+def test_calcjob_defined_in_main(
+    submit_and_await: Callable[..., ProcessNode],
+    monkeypatch: pytest.MonkeyPatch,
+    aiida_code_installed: Callable[..., InstalledCode],
+):
+    """The parser uses the recovered runtime class to parse a notebook-defined calculation."""
+
+    make_unresolvable_in_worker(monkeypatch, MainCalcJob)
+
+    node = submit_main_calcjob(submit_and_await, aiida_code_installed)
+
+    assert node.is_finished_ok, node.exception
+
+    assert node.outputs.sum.value == 42

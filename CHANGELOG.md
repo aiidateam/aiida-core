@@ -44,6 +44,16 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 ### New features
 
+#### Processes defined in a notebook cell
+
+A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter notebook, or in any script run as `__main__`, can now be submitted to the daemon.
+Such a class belongs to a module that resolves to something different in every interpreter, so the worker used to fail with `ImportError: object 'MyWorkChain' from identifier '__main__:MyWorkChain' could not be loaded`.
+The checkpoint now carries the class itself whenever the recorded name would not resolve for the worker.
+What the class refers to travels as a reference, so the worker has to be able to import it: a helper module beside the notebook, on the kernel's `sys.path` only, has to be installed or put on the `PYTHONPATH` the daemon is started with.
+
+`ProcessNode.class_source` records the source of a class that has no name to resolve later, since the checkpoint carrying it is deleted once the node seals.
+It is stored under `ProcessNode.KEY_OBJECT_CLASS_SOURCE` in the node's repository, which is `.aiida/class_source.py`, beside the `calcinfo.json` and `job_tmpl.json` a calculation job already keeps there, so it stays out of the input files `verdi calcjob inputls` lists. `verdi node show` carries the command that prints it, for a node that has one.
+
 #### `ShellJob`: run any command without writing a plugin
 
 The `aiida-shell` package has been integrated into `aiida-core`.
@@ -63,6 +73,14 @@ Because the entry point names are the same, `aiida-shell` must be uninstalled be
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
 ### Behavior changes
+
+#### Checkpoint class files
+
+Serialized process classes are stored as `<node uuid>-<digest>.pkl` in the profile's `checkpoint_classes` directory, with digest references in node checkpoints.
+Backups must include this directory; storage plugins provide its location through `StorageBackend.get_checkpoint_classes_dirpath`.
+
+Live storage maintenance collects class files of sealed nodes.
+`verdi storage maintain --full` also collects files whose nodes were deleted.
 
 ### Fixes
 

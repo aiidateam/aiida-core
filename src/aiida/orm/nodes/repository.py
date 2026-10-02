@@ -23,21 +23,9 @@ __all__ = ('NodeRepository',)
 
 
 class NodeRepository:
-    """Interface to the file repository of a node instance.
+    """Node-owned file repository with stored-node immutability.
 
-    This is the compatibility layer between the `Node` class and the `Repository` class. The repository in principle has
-    no concept of immutability, so it is implemented here. Any mutating operations will raise a `ModificationNotAllowed`
-    exception if the node is stored. Otherwise the operation is just forwarded to the repository instance.
-
-    The repository instance keeps an internal mapping of the file hierarchy that it maintains, starting from an empty
-    hierarchy if the instance was constructed normally, or from a specific hierarchy if reconstructed through the
-    ``Repository.from_serialized`` classmethod. This is only the case for stored nodes, because unstored nodes do not
-    have any files yet when they are constructed. Once the node get's stored, the repository is asked to serialize its
-    metadata contents which is then stored in the ``repository_metadata`` field of the backend node. This layer
-    explicitly does not update the metadata of the node on a mutation action. The reason is that for stored nodes these
-    actions are anyway forbidden and for unstored nodes, the final metadata will be stored in one go, once the node is
-    stored, so there is no need to keep updating the node metadata intermediately. Note that this does mean that
-    ``repository_metadata`` does not give accurate information, as long as the node is not yet stored.
+    Unstored nodes update an in-memory hierarchy, persisted as `repository_metadata` when the node is stored.
     """
 
     def __init__(self, node: Node) -> None:
@@ -251,6 +239,14 @@ class NodeRepository:
         :raises FileNotFoundError: if no object exists for the given path.
         """
         return self._repository.get_object(path)
+
+    def has_object(self, path: FilePath) -> bool:
+        """Return whether a file or directory exists in the repository metadata.
+
+        :param path: Relative object path, including nested paths.
+        :raises TypeError: If the path is absolute or has an unsupported type.
+        """
+        return self._repository.has_object(path)
 
     @t.overload
     def get_object_content(self, path: str, mode: t.Literal['r']) -> str: ...

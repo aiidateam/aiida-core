@@ -141,19 +141,16 @@ class ProcessNodeLinks(NodeLinks):
 
 
 class ProcessNode(Sealable, Node):
-    """Base class for all nodes representing the execution of a process
-
-    This class and its subclasses serve as proxies in the database, for actual `Process` instances being run. The
-    `Process` instance in memory will leverage an instance of this class (the exact sub class depends on the sub class
-    of `Process`) to persist important information of its state to the database. This serves as a way for the user to
-    inspect the state of the `Process` during its execution as well as a permanent record of its execution in the
-    provenance graph, after the execution has terminated.
-    """
+    """Base node class recording process state and execution provenance."""
 
     _CLS_NODE_LINKS = ProcessNodeLinks
     _CLS_NODE_CACHING = ProcessNodeCaching
 
     CHECKPOINT_KEY = 'checkpoints'
+    KEY_OBJECT_INTERNAL_DIRNAME: str = '.aiida'
+    """Repository directory for engine-generated process records."""
+    KEY_OBJECT_CLASS_SOURCE: str = f'{KEY_OBJECT_INTERNAL_DIRNAME}/class_source.py'
+    """Repository path for recorded process-definition source."""
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
     EXIT_STATUS_KEY = 'exit_status'
@@ -162,8 +159,10 @@ class ProcessNode(Sealable, Node):
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
     METADATA_INPUTS_KEY: str = 'metadata_inputs'
-
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
+
+    _process_class_binding: type[Process] | None = None
+    """Runtime class bound to this Python node instance, absent from the persistent record."""
 
     def __str__(self) -> str:
         base = super().__str__()
@@ -276,14 +275,28 @@ class ProcessNode(Sealable, Node):
         return builder
 
     @property
-    def process_class(self) -> type[Process]:
-        """Return the process class that was used to create this node.
+    def class_source(self) -> str | None:
+        """Return the process definition's recorded source.
 
-        :return: `Process` class
-        :raises ValueError: if no process type is defined, it is an invalid process type string or cannot be resolved
-            to load the corresponding class
+        :return: The source text, or ``None`` when no source was recorded.
+        """
+        try:
+            return self.base.repository.get_object_content(path=self.KEY_OBJECT_CLASS_SOURCE, mode='r')
+        except FileNotFoundError:
+            return None
+
+    @property
+    def process_class(self) -> type[Process]:
+        """Return the bound runtime class or resolve `process_type`.
+
+        Bindings belong to Python node instances. Process functions resolve to the decorated function.
+
+        :raises ValueError: If no class is bound and `process_type` is missing, invalid or unresolvable.
         """
         from aiida.plugins.entry_point import load_entry_point_from_string
+
+        if self._process_class_binding is not None:
+            return self._process_class_binding
 
         if not self.process_type:
             msg = f'no process type for Node<{self.pk}>: cannot recreate process class'
@@ -313,9 +326,29 @@ class ProcessNode(Sealable, Node):
                     pass
             else:
                 msg = f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+
+                # ``__main__`` is the entry point of whichever interpreter is running, so a class recorded under it
+                # resolves only where that interpreter holds it. Naming that beats the import error, which reports
+                # a module that does exist.
+                if self.process_type.startswith('__main__.'):
+                    msg = (
+                        f'the process class of Node<{self.pk}> was defined in `__main__` of the interpreter that ran '
+                        f'it, and `__main__` here does not hold it, so it cannot be loaded.'
+                    )
+
+                    if self.base.repository.has_object(path=self.KEY_OBJECT_CLASS_SOURCE):
+                        msg += ' Its source is kept on the node: see the `class_source` property.'
+
                 raise ValueError(msg) from exception
 
         return process_class
+
+    def _bind_process_class(self, *, process_class: type[Process]) -> None:
+        """Bind the running process's class to this node instance.
+
+        :param process_class: The running process instance's class.
+        """
+        self._process_class_binding = process_class
 
     def set_process_type(self, process_type_string: str) -> None:
         """Set the process type string.
@@ -549,21 +582,21 @@ class ProcessNode(Sealable, Node):
 
     @property
     def checkpoint(self) -> str | None:
-        """Return the checkpoint payload for the process
+        """Return the serialized checkpoint with class-file digest references, or `None`.
 
-        :returns: checkpoint payload if it exists, None otherwise
+        :meth:`aiida.engine.persistence.AiidaCheckpointPersister.load_checkpoint` restores carried class bytes.
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
     def set_checkpoint(self, checkpoint: str) -> None:
-        """Set the checkpoint payload for the process
-
-        :param state: string representation of the stepper state info
-        """
+        """Store the serialized checkpoint with digest references for carried classes."""
         return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
 
     def delete_checkpoint(self) -> None:
-        """Delete the checkpoint payload for the process"""
+        """Delete the checkpoint attribute, retaining class files.
+
+        :meth:`~aiida.engine.persistence.AiidaCheckpointPersister.delete_checkpoint` also attempts file cleanup.
+        """
         try:
             self.base.attributes.delete(self.CHECKPOINT_KEY)
         except AttributeError:

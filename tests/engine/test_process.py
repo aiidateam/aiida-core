@@ -8,14 +8,25 @@
 ###########################################################################
 """Module to test AiiDA processes."""
 
+import sys
 import threading
+import types
 
 import pytest
 
 from aiida import orm
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
-from aiida.engine import ExitCode, ExitCodesNamespace, Process, WorkChain, run, run_get_node, run_get_pk
+from aiida.engine import (
+    ExitCode,
+    ExitCodesNamespace,
+    Process,
+    WorkChain,
+    calcfunction,
+    run,
+    run_get_node,
+    run_get_pk,
+)
 from aiida.engine.processes.generic import process as process_core
 from aiida.engine.processes.greenback import has_portal
 from aiida.engine.processes.persistence import CheckpointPayload
@@ -491,6 +502,21 @@ class TestProcess:
         assert node.process_label == custom_process_label
 
 
+def test_local_process_class_binding_is_instance_local():
+    """The original node retains its function-local class; a reloaded node cannot import that class."""
+
+    class LocallyDefinedProcess(test_processes.DummyProcess):
+        """Function-local class without an importable module-level name."""
+
+    _, local_process_node = run_get_node(LocallyDefinedProcess)
+
+    assert local_process_node.process_class is LocallyDefinedProcess
+
+    reloaded_node = orm.load_node(local_process_node.pk)
+    with pytest.raises(ValueError, match='could not load process class'):
+        _ = reloaded_node.process_class
+
+
 class TestValidateDynamicNamespaceProcess(Process):
     """Simple process with dynamic input namespace."""
 
@@ -667,3 +693,79 @@ def test_portal_available_in_on_terminated():
 
     assert PortalProbeWorkChain.portal_in_step is True
     assert PortalProbeWorkChain.portal_in_on_terminated is True
+
+
+@calcfunction
+def notebook_add(x):
+    """Calculation function for notebook-source tests."""
+    return x + 1
+
+
+class NotebookLikeWorkChain(WorkChain):
+    """WorkChain for notebook-source tests."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.outline(cls.do_nothing)
+
+    def do_nothing(self):
+        pass
+
+
+@pytest.fixture
+def main_holds_the_class(monkeypatch: pytest.MonkeyPatch):
+    """Expose the test module and workflow class through `__main__`."""
+    monkeypatch.setitem(sys.modules, '__main__', sys.modules[__name__])
+    monkeypatch.setattr(NotebookLikeWorkChain, '__module__', '__main__')
+
+
+@pytest.mark.usefixtures('main_holds_the_class')
+def test_class_record_kept_for_a_class_no_name_identifies():
+    """Record source for a WorkChain defined in `__main__`."""
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.process_type == '__main__.NotebookLikeWorkChain'
+    assert node.class_source.startswith('class NotebookLikeWorkChain(WorkChain):')
+
+
+def test_class_record_kept_for_a_process_function(monkeypatch: pytest.MonkeyPatch):
+    """Record the wrapped function's source for a calcfunction defined in `__main__`."""
+    monkeypatch.setitem(sys.modules, '__main__', sys.modules[__name__])
+    monkeypatch.setattr(notebook_add, '__module__', '__main__')
+    monkeypatch.setattr(notebook_add.process_class, '__module__', '__main__')
+
+    _, node = run_get_node(notebook_add, x=orm.Int(1))
+
+    assert node.class_source is not None, 'a process function records what ran, as a process class does'
+    assert 'def notebook_add(' in node.class_source
+
+
+def test_class_record_omitted_for_an_importable_class():
+    """Omit source recording for a class defined outside `__main__`."""
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.base.repository.list_object_names() == []
+    assert node.class_source is None
+
+
+@pytest.mark.usefixtures('main_holds_the_class')
+def test_process_class_resolves_where_main_holds_it():
+    """The process-attached node returns its bound runtime class."""
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    assert node.process_type == '__main__.NotebookLikeWorkChain'
+    assert node.process_class is NotebookLikeWorkChain
+
+
+@pytest.mark.usefixtures('main_holds_the_class')
+def test_process_class_reports_why_it_cannot_load(monkeypatch: pytest.MonkeyPatch):
+    """Fresh-node resolution reports an unavailable `__main__` class and its recorded source."""
+    _, node = run_get_node(NotebookLikeWorkChain)
+
+    # Another interpreter, whose ``__main__`` is its own entry point and holds no such class.
+    monkeypatch.setitem(sys.modules, '__main__', types.ModuleType('__main__'))
+
+    with pytest.raises(ValueError, match=r'.*was defined in `__main__`.*cannot be loaded.*class_source.*'):
+        # Loaded fresh, as a reader elsewhere does: the node the process held carries the class it bound.
+        _ = orm.load_node(node.pk).process_class

@@ -283,6 +283,15 @@ class FunctionProcess(Process):
     _var_positional: str | None = None
     _var_keyword: str | None = None
 
+    _binds_process_class: t.ClassVar[bool] = False
+    """Disable runtime class binding so `ProcessNode.process_class` resolves to the decorated function."""
+
+    @classmethod
+    @override
+    def _source_to_record(cls) -> type | t.Callable[..., t.Any]:
+        """Return the wrapped function for source recording."""
+        return cls._func
+
     @staticmethod
     def _func(*_args, **_kwargs) -> dict:
         """This is used internally to store the actual function that is being

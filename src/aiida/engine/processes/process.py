@@ -26,6 +26,7 @@ from aio_pika.exceptions import ConnectionClosed
 
 from aiida import orm
 from aiida.brokers.exceptions import UnroutableError
+from aiida.common import _callables as callables
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
 from aiida.common.lang import classproperty, override
@@ -64,6 +65,9 @@ class Process(ProcessBase):
     _cancelling_scheduler_job: asyncio.Task | None = None
     _node_class = orm.ProcessNode
     _spec_class = ProcessSpec
+
+    _binds_process_class: t.ClassVar[bool] = True
+    """Whether to bind the runtime class to the process's Python node instance."""
 
     SINGLE_OUTPUT_LINKNAME: str = 'result'
 
@@ -313,7 +317,7 @@ class Process(ProcessBase):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore[assignment]
+            self._bind_node(orm.load_node(saved_state[self.SaveKeys.CALC_ID.value]))  # type: ignore[arg-type]
             self._pid = self.node.pk
         else:
             self._pid = self._create_and_setup_db_record()
@@ -635,6 +639,13 @@ class Process(ProcessBase):
 
         return process_type
 
+    def _bind_node(self, node: orm.ProcessNode) -> None:
+        """Attach the node instance and bind the runtime class when enabled."""
+        self._node = node
+
+        if self._binds_process_class:
+            node._bind_process_class(process_class=type(self))
+
     def report(self, msg: str, *args, **kwargs) -> None:
         """Log a message to the logger, which should get saved to the database through the attached DbLogHandler.
 
@@ -654,7 +665,7 @@ class Process(ProcessBase):
         :return: the uuid or pk of the process
 
         """
-        self._node = self.get_or_create_db_record()
+        self._bind_node(self.get_or_create_db_record())
         self._setup_db_record()
         if self.metadata.store_provenance:
             try:
@@ -737,17 +748,7 @@ class Process(ProcessBase):
         return self.__class__.__name__
 
     def _setup_db_record(self) -> None:
-        """Create the database record for this process and the links with respect to its inputs
-
-        This function will set various attributes on the node that serve as a proxy for attributes of the Process.
-        This is essential as otherwise this information could only be introspected through the Process itself, which
-        is only available to the interpreter that has it in memory. To make this data introspectable from any
-        interpreter, for example for the command line interface, certain Process attributes are proxied through the
-        calculation node.
-
-        In addition, the parent calculation will be setup with a CALL link if applicable and all inputs will be
-        linked up as well.
-        """
+        """Initialize the process node's execution records and provenance links."""
         assert not self.node.is_sealed, 'process node cannot be sealed when setting up the database record'
 
         # Store important process attributes in the node proxy
@@ -769,6 +770,7 @@ class Process(ProcessBase):
 
         self._setup_metadata(copy.copy(dict(self.inputs.metadata)))
         self._setup_version_info()
+        self._setup_class_record()
         self._setup_inputs()
 
     def _setup_version_info(self) -> dict[str, t.Any]:
@@ -776,6 +778,31 @@ class Process(ProcessBase):
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
         self.node.base.attributes.set_many(version_info)
         return version_info
+
+    @classmethod
+    def _source_to_record(cls) -> type | t.Callable[..., t.Any]:
+        """Return the process definition for source recording."""
+        return cls
+
+    def _setup_class_record(self) -> None:
+        """Record available source for a process defined in `__main__`.
+
+        The repository retains the source after checkpoint deletion.
+        """
+        # Any other module may or may not be installed where the node is read, which is the situation of every
+        # plugin that was uninstalled, so it is left alone.
+        if self.__class__.__module__ != '__main__':
+            return
+
+        source: str | None = callables.source_of(value=self.__class__._source_to_record())
+
+        # Nothing here is worth failing a run for.
+        if source is None:
+            return
+
+        self.node.base.repository.put_object_from_bytes(
+            content=source.encode(encoding='utf-8'), path=orm.ProcessNode.KEY_OBJECT_CLASS_SOURCE
+        )
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""

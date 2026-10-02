@@ -180,6 +180,21 @@ def test_get_object():
     assert file_object.is_dir() is False
 
 
+def test_has_object():
+    """`NodeRepository.has_object` checks files, directories and nested paths."""
+    node = Data()
+    node.base.repository.put_object_from_bytes(b'content', 'top')
+    node.base.repository.put_object_from_bytes(b'content', 'relative/path')
+
+    assert node.base.repository.list_object_names() == ['relative', 'top']
+
+    assert node.base.repository.has_object('top') is True
+    assert node.base.repository.has_object('relative') is True
+    assert node.base.repository.has_object('relative/path') is True
+    assert node.base.repository.has_object('relative/absent') is False
+    assert node.base.repository.has_object('absent') is False
+
+
 def test_get_object_size():
     """Test the ``NodeRepository.get_object_size`` method."""
     node = Data()

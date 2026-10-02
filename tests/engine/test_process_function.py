@@ -6,15 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the process_function decorator.
-
-Note that here we use ``workfunction`` and ``calcfunction``, the concrete versions of the ``process_function`` decorator
-even though we are testing only the shared functionality that is captured in the ``process_function`` decorator,
-relating to the transformation of the wrapped function into a ``FunctionProcess``. The reason we do not use the
-``process_function`` decorator itself, is because it does not have a node class by default. We could create one on the
-fly, but then anytime inputs or outputs would be attached to it in the tests, the ``validate_link`` function would
-complain as the dummy node class is not recognized as a valid process node.
-"""
+"""Tests for shared process-function behavior through `calcfunction` and `workfunction`."""
 
 from __future__ import annotations
 
@@ -489,6 +481,13 @@ def test_function_return_nested():
     results, node = function_return_nested.run_get_node()
     assert results['nested']['output'] == DEFAULT_INT
     assert node.outputs.nested.output == DEFAULT_INT
+
+
+def test_node_process_class_is_the_function():
+    """`process_class` returns the decorated function."""
+    _, node = function_return_input.run_get_node(data=orm.Int(DEFAULT_INT))
+
+    assert node.process_class is function_return_input
 
 
 def test_simple_workflow():

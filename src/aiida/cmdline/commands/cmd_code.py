@@ -250,8 +250,12 @@ def show(code: Code):
         if name == 'source':
             continue
 
+        if attribute.model_field_info.title:
+            title = attribute.model_field_info.title
+        else:
+            title = name.replace('_', ' ').title()
+
         value = getattr(code, name)
-        title = attribute.spec.name.replace('_', ' ').title()
 
         table.append([title, value])
 
@@ -423,7 +427,7 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         filters['computer']['uuid'] = computer.uuid
 
     if default_calc_job_plugin is not None:
-        filters['code']['attributes.input_plugin'] = default_calc_job_plugin.name
+        filters['code']['attributes.default_calc_job_plugin'] = default_calc_job_plugin.name
 
     query = orm.QueryBuilder()
     query.append(orm.Code, tag='code', project=projections.get('code', None), filters=filters.get('code', None))

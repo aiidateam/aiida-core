@@ -19,6 +19,7 @@ from aiida.engine.processes.graphs.build_source import SourceGraphHandle  # noqa
 from aiida.engine.processes.graphs.build_source import graph as graph_source  # noqa: F401 - public re-export
 from aiida.engine.processes.graphs.build_source import task as task_source  # noqa: F401 - public re-export
 from aiida.engine.processes.graphs.handlers import *
+from aiida.engine.processes.graphs.interface import *
 from aiida.engine.processes.graphs.monitors import *
 from aiida.engine.processes.graphs.process import *
 from aiida.engine.processes.graphs.run import *

@@ -11,6 +11,8 @@
 import pytest
 
 from aiida.engine import (
+    ExecutionGraphHandle,
+    GraphHandle,
     graph_execution,
     graph_source,
     task_execution,
@@ -246,6 +248,8 @@ def test_nested_graph():
 
 def test_source_graph_handle_matches_execution_interface():
     assert isinstance(chain, SourceGraphHandle)
+    assert isinstance(chain, GraphHandle)
+    assert not isinstance(chain, ExecutionGraphHandle)
     assert chain.build() == build_from_source(chain)
     assert chain.parameters == ('x', 'y')
     assert chain.identifier == 'chain'
@@ -261,6 +265,8 @@ def test_source_graph_nests_in_execution_graph():
         return sum_two(x=inner.result, y=x)
 
     spec = outer_exec.build()
+    assert isinstance(outer_exec, GraphHandle)
+    assert isinstance(outer_exec, ExecutionGraphHandle)
     assert isinstance(spec.tasks[0], SubgraphTask)
     assert spec.tasks[0].body == build_from_source(chain)
 

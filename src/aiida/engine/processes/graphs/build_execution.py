@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import contextvars
 import functools
 import inspect
 import typing as t
@@ -22,8 +21,9 @@ from inspect import get_annotations
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
+from aiida.engine.processes.graphs.interface import ACTIVE_BUILDER, GraphHandle
 from aiida.engine.processes.graphs.monitors import MonitorProcess, WaitProcess
-from aiida.engine.processes.graphs.process import GraphProcess, TaskProcess
+from aiida.engine.processes.graphs.process import TaskProcess
 from aiida.engine.processes.graphs.run import holds
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
@@ -49,9 +49,9 @@ from aiida.orm import CalcFunctionNode, WorkFunctionNode
 __all__ = (
     'Branch',
     'Each',
+    'ExecutionGraphHandle',
     'Fanout',
     'GraphBuilder',
-    'GraphHandle',
     'GraphInput',
     'Loop',
     'MappedOutput',
@@ -73,15 +73,6 @@ __all__ = (
     'task',
     'wait_for',
 )
-
-ACTIVE_BUILDER: contextvars.ContextVar[t.Any | None] = contextvars.ContextVar(
-    'aiida_active_graph_builder', default=None
-)
-"""The graph being built, if any.
-
-While a graph is being built, calling a task records it in that graph instead of running it. This is what lets a
-graph be written as ordinary Python.
-"""
 
 P = t.ParamSpec('P')
 
@@ -764,25 +755,8 @@ class GraphBuilder:
         return None if reference is None else Endpoint(task=reference.task, port=reference.port)
 
 
-class GraphHandle:
-    """What the :func:`graph` decorator returns: a graph that can be built, run, or submitted."""
-
-    def __init__(self, function: t.Callable[..., t.Any], identifier: str | None = None) -> None:
-        self._function = function
-        self.identifier = identifier or function.__name__
-        functools.update_wrapper(self, function)
-
-    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        builder = ACTIVE_BUILDER.get()
-
-        if builder is None:
-            msg = (
-                f'`{self.identifier}` declares a graph, so it is launched rather than called. Pass it to `run` or '
-                f'`submit`, as any other process, or use `.build(...)` for the declaration on its own.'
-            )
-            raise TypeError(msg)
-
-        return builder.add_graph(self, _arguments(self._function, *args, **kwargs))
+class ExecutionGraphHandle(GraphHandle):
+    """A graph that builds by tracing its body, recording tasks instead of running them."""
 
     def build(self) -> GraphSpec:
         """Return the graph that the function declares.
@@ -808,27 +782,6 @@ class GraphHandle:
         output_hint = infer_valid_type_from_type_annotation(annotations.get('return'))
         output_hints = dict.fromkeys(result.outputs, output_hint) if len(result.outputs) == 1 and output_hint else {}
         return replace(result, input_typehints=input_hints, output_typehints=output_hints)
-
-    @property
-    def parameters(self) -> tuple[str, ...]:
-        """Return the names of the inputs the graph takes, which are the parameters of its function."""
-        kinds = (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
-        return tuple(
-            name for name, parameter in inspect.signature(self._function).parameters.items() if parameter.kind in kinds
-        )
-
-    @property
-    def process_class(self) -> type[GraphProcess]:
-        """Return the process that runs a graph."""
-        return GraphProcess
-
-    def get_launch_inputs(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-        """Return the inputs with which to launch the graph for these arguments.
-
-        The declaration says what to run and the arguments are what to run it on, so they travel side by side and
-        the same declaration serves every run.
-        """
-        return GraphProcess.launch_inputs(self.build(), _arguments(self._function, *args, **kwargs))
 
 
 def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
@@ -860,8 +813,8 @@ def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | N
     :return: A handle that can build, run, or submit the graph.
     """
 
-    def decorator(function: t.Callable[..., t.Any]) -> GraphHandle:
-        return GraphHandle(function, identifier=identifier)
+    def decorator(function: t.Callable[..., t.Any]) -> ExecutionGraphHandle:
+        return ExecutionGraphHandle(function, identifier=identifier)
 
     if function is not None:
         return decorator(function)

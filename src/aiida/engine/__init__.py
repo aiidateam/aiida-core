@@ -34,6 +34,7 @@ __all__ = (
     'CalcJobProcessSpec',
     'DaemonClient',
     'Each',
+    'ExecutionGraphHandle',
     'ExitCode',
     'ExitCodesNamespace',
     'Fanout',

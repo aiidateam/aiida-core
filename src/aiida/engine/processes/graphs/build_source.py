@@ -14,7 +14,6 @@ The decorators capture definitions; source-based building never executes graph b
 from __future__ import annotations
 
 import ast
-import functools
 import inspect
 import textwrap
 import typing as t
@@ -22,9 +21,8 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from aiida.engine.processes.graphs.build_execution import ACTIVE_BUILDER
 from aiida.engine.processes.graphs.build_execution import task as build_task
-from aiida.engine.processes.graphs.process import GraphProcess
+from aiida.engine.processes.graphs.interface import GraphHandle
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     BranchControl,
@@ -80,57 +78,12 @@ def _register(function: Callable[..., t.Any]) -> str:
     return key
 
 
-def _bind_arguments(function: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-    """Return the arguments of a call, by the name of the parameter each is bound to."""
-    bound = inspect.signature(function).bind(*args, **kwargs)
-    bound.apply_defaults()
-    return dict(bound.arguments)
-
-
-class SourceGraphHandle:
-    """What the source :func:`graph` decorator returns: a graph that can be built, run, or submitted."""
-
-    def __init__(self, function: Callable[..., t.Any], identifier: str | None = None) -> None:
-        self._function = function
-        self.identifier = identifier or function.__name__
-        functools.update_wrapper(self, function)
-
-    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        builder = ACTIVE_BUILDER.get()
-
-        if builder is None:
-            msg = (
-                f'`{self.identifier}` declares a graph, so it is launched rather than called. Pass it to `run` or '
-                f'`submit`, as any other process, or use `.build(...)` for the declaration on its own.'
-            )
-            raise TypeError(msg)
-
-        return builder.add_graph(self, _bind_arguments(self._function, *args, **kwargs))
+class SourceGraphHandle(GraphHandle):
+    """A graph that builds by lowering its registered source, without executing its body."""
 
     def build(self) -> GraphSpec:
         """Return the graph that the function declares, lowered from its registered source."""
         return build_from_source(self._function)
-
-    @property
-    def parameters(self) -> tuple[str, ...]:
-        """Return the names of the inputs the graph takes, which are the parameters of its function."""
-        kinds = (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
-        return tuple(
-            name for name, parameter in inspect.signature(self._function).parameters.items() if parameter.kind in kinds
-        )
-
-    @property
-    def process_class(self) -> type[GraphProcess]:
-        """Return the process that runs a graph."""
-        return GraphProcess
-
-    def get_launch_inputs(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-        """Return the inputs with which to launch the graph for these arguments.
-
-        The declaration says what to run and the arguments are what to run it on, so they travel side by side and
-        the same declaration serves every run.
-        """
-        return GraphProcess.launch_inputs(self.build(), _bind_arguments(self._function, *args, **kwargs))
 
 
 def task(function: Callable[..., t.Any]) -> t.Any:

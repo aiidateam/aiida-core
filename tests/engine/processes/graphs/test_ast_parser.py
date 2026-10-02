@@ -16,8 +16,8 @@ from aiida.engine import (
 )
 from aiida.engine.processes.graphs.build import graph as build_graph
 from aiida.engine.processes.graphs.build import task as build_task
+from aiida.engine.processes.graphs.build_source import UnsupportedSyntax, build_from_source, graph, task
 from aiida.engine.processes.graphs.display import format_graph
-from aiida.engine.processes.graphs.lower import UnsupportedSyntax, graph, lower_to_graph_spec, parse_graph, task
 from aiida.engine.processes.graphs.spec import (
     BranchControl,
     GraphSpec,
@@ -151,25 +151,25 @@ def test_control_flow_rejections():
         (unsupported_iteration, 'for requires a single item'),
     ):
         with pytest.raises(UnsupportedSyntax, match=reason):
-            parse_graph(function)
+            build_from_source(function)
 
 
 def test_control_flow_specs():
-    chosen = parse_graph(choose)
+    chosen = build_from_source(choose)
     branch = chosen.tasks[0]
     assert isinstance(branch, BranchControl)
     assert branch.otherwise is not None
     assert branch.body.outputs.keys() == branch.otherwise.outputs.keys()
     assert chosen.dependencies[0].source == branch.name
 
-    counted = parse_graph(count)
+    counted = build_from_source(count)
     loop = counted.tasks[0]
     assert isinstance(loop, LoopControl)
     assert loop.condition_port == 'keep_going'
     assert set(loop.body.outputs) == {'x', 'keep_going'}
     assert counted.outputs['x'].task == loop.name
 
-    mapped = parse_graph(transform)
+    mapped = build_from_source(transform)
     each = mapped.tasks[0]
     assert isinstance(each, MapGraphControl)
     assert each.item_port == 'value'
@@ -179,21 +179,21 @@ def test_control_flow_specs():
 
 
 def test_format_graph_shows_wiring_and_nested_control_flow():
-    chain_view = format_graph(parse_graph(chain))
+    chain_view = format_graph(build_from_source(chain))
     assert 'graph chain(x, y):' in chain_view
     assert 'sum_two_2 [process sum_two](x=sum_two.result, y=y)' in chain_view
     assert 'return result=sum_two_2.result' in chain_view
 
-    branch_view = format_graph(parse_graph(choose))
+    branch_view = format_graph(build_from_source(choose))
     assert 'branch_1 [branch on condition](condition=flag, x=x)' in branch_view
     assert 'then:' in branch_view and 'otherwise:' in branch_view
     assert 'y=1' in branch_view and 'y=2' in branch_view
 
-    loop_view = format_graph(parse_graph(count))
+    loop_view = format_graph(build_from_source(count))
     assert 'loop_1 [loop while keep_going]' in loop_view
     assert 'return x=loop_1.x' in loop_view
 
-    map_view = format_graph(parse_graph(transform))
+    map_view = format_graph(build_from_source(transform))
     assert 'each_1 [map over value](value=values, y=y)' in map_view
     assert 'return result=each_1.result' in map_view
 
@@ -214,9 +214,8 @@ def test_list_annotation_declares_one_output():
 
 
 def test_wires_tasks_without_running_graph_body():
-    spec = lower_to_graph_spec(chain)
+    spec = build_from_source(chain)
     assert isinstance(spec, GraphSpec)
-    assert spec == parse_graph(chain)
     assert [item.name for item in spec.tasks] == ['sum_two', 'sum_two_2']
     assert all(isinstance(item, ProcessTask) for item in spec.tasks)
     assert [(edge.source, edge.source_port, edge.target, edge.target_port) for edge in spec.dependencies] == [
@@ -228,7 +227,7 @@ def test_wires_tasks_without_running_graph_body():
 
 
 def test_nested_graph():
-    spec = parse_graph(outer)
+    spec = build_from_source(outer)
     assert isinstance(spec.tasks[0], SubgraphTask)
     assert spec.tasks[0].body.identifier == 'chain'
     assert spec.dependencies[0].source == 'chain'
@@ -246,11 +245,11 @@ def test_nested_graph():
 )
 def test_rejects_unsupported_graphs(function, message):
     with pytest.raises(UnsupportedSyntax, match=message):
-        parse_graph(function)
+        build_from_source(function)
 
 
 def test_error_points_to_original_source():
     with pytest.raises(UnsupportedSyntax) as error:
-        parse_graph(bad_assignment)
+        build_from_source(bad_assignment)
     assert f'{__file__}:' in str(error.value)
     assert '        a = 0\n            ^' in str(error.value)

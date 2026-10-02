@@ -94,7 +94,12 @@ class Code(Data, metaclass=abc.ABCMeta):
         type_check(value, str, allow_none=True)
         self.base.attributes.set(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, value)
 
-    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            default=False,
+            title='Escape using double quotes',
+        )
+    )
     def use_double_quotes(self) -> bool:
         """Whether the command line invocation of this code should be escaped with double quotes."""
         return self.base.attributes.get(self.KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
@@ -104,7 +109,11 @@ class Code(Data, metaclass=abc.ABCMeta):
         type_check(value, bool)
         self.base.attributes.set(self.KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, value)
 
-    @attribute
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            title='Run with MPI',
+        )
+    )
     def with_mpi(self) -> bool | None:
         """Whether the command should be run as an MPI program."""
         return self.base.attributes.get(self.KEY_ATTRIBUTE_WITH_MPI, None)
@@ -114,7 +123,12 @@ class Code(Data, metaclass=abc.ABCMeta):
         type_check(value, bool, allow_none=True)
         self.base.attributes.set(self.KEY_ATTRIBUTE_WITH_MPI, value)
 
-    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            default=False,
+            title='Wrap command line parameters',
+        )
+    )
     def wrap_cmdline_params(self) -> bool:
         """Whether all command line parameters should be wrapped with double quotes to form a single argument."""
         return self.base.attributes.get(self.KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
@@ -127,35 +141,7 @@ class Code(Data, metaclass=abc.ABCMeta):
     @attribute(
         model_field_info=pdt.fields.FieldInfo(
             default='',
-            title='Append scripts',
-        ),
-        cli_field_info=CliFieldInfo(
-            option_cls=functools.partial(
-                TemplateInteractiveOption,
-                extension='.bash',
-                header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
-                'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                footer='All lines that start with `#=`: will be ignored.',
-            ),
-        ),
-    )
-    def append_text(self) -> str:
-        """The text to add after the run line in the job script.
-
-        This can include ``bash`` commands or other shell instructions to run after the main command,
-        e.g., cleaning up temporary files, logging, etc.
-        """
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_APPEND_TEXT, '')
-
-    @append_text.setter
-    def append_text(self, value: str) -> None:
-        type_check(value, str)
-        self.base.attributes.set(self.KEY_ATTRIBUTE_APPEND_TEXT, value)
-
-    @attribute(
-        model_field_info=pdt.fields.FieldInfo(
-            default='',
-            title='Prepend scripts',
+            title='Prepend script',
         ),
         cli_field_info=CliFieldInfo(
             option_cls=functools.partial(
@@ -179,6 +165,34 @@ class Code(Data, metaclass=abc.ABCMeta):
     def prepend_text(self, value: str) -> None:
         type_check(value, str)
         self.base.attributes.set(self.KEY_ATTRIBUTE_PREPEND_TEXT, value)
+
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            default='',
+            title='Append script',
+        ),
+        cli_field_info=CliFieldInfo(
+            option_cls=functools.partial(
+                TemplateInteractiveOption,
+                extension='.bash',
+                header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                footer='All lines that start with `#=`: will be ignored.',
+            ),
+        ),
+    )
+    def append_text(self) -> str:
+        """The text to add after the run line in the job script.
+
+        This can include ``bash`` commands or other shell instructions to run after the main command,
+        e.g., cleaning up temporary files, logging, etc.
+        """
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_APPEND_TEXT, '')
+
+    @append_text.setter
+    def append_text(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_APPEND_TEXT, value)
 
     @property
     @abc.abstractmethod

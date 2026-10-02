@@ -183,3 +183,17 @@ class TestProcessNodeDump:
 
             assert result_path.exists()
             assert (result_path / 'aiida_node_metadata.yaml').exists()
+
+
+def test_process_class_returns_the_bound_class():
+    """The bound runtime class overrides a different recorded `process_type`."""
+    node = WorkflowNode(process_type='aiida.workflows:core.arithmetic.multiply_add')
+    bound = CalculationFactory('core.templatereplacer')
+
+    assert node.process_class is not bound, (
+        'the name resolves elsewhere, so the binding this test makes is what is observed'
+    )
+
+    node._bind_process_class(process_class=bound)
+
+    assert node.process_class is bound

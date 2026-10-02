@@ -65,6 +65,9 @@ class Process(ProcessBase):
     _node_class = orm.ProcessNode
     _spec_class = ProcessSpec
 
+    _binds_process_class: t.ClassVar[bool] = True
+    """Whether to bind the runtime class to the process's Python node instance."""
+
     SINGLE_OUTPUT_LINKNAME: str = 'result'
 
     class SaveKeys(enum.Enum):
@@ -313,7 +316,7 @@ class Process(ProcessBase):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore[assignment]
+            self._bind_node(orm.load_node(saved_state[self.SaveKeys.CALC_ID.value]))  # type: ignore[arg-type]
             self._pid = self.node.pk
         else:
             self._pid = self._create_and_setup_db_record()
@@ -635,6 +638,13 @@ class Process(ProcessBase):
 
         return process_type
 
+    def _bind_node(self, node: orm.ProcessNode) -> None:
+        """Attach the node instance and bind the runtime class when enabled."""
+        self._node = node
+
+        if self._binds_process_class:
+            node._bind_process_class(process_class=type(self))
+
     def report(self, msg: str, *args, **kwargs) -> None:
         """Log a message to the logger, which should get saved to the database through the attached DbLogHandler.
 
@@ -654,7 +664,7 @@ class Process(ProcessBase):
         :return: the uuid or pk of the process
 
         """
-        self._node = self.get_or_create_db_record()
+        self._bind_node(self.get_or_create_db_record())
         self._setup_db_record()
         if self.metadata.store_provenance:
             try:

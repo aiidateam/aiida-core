@@ -162,8 +162,10 @@ class ProcessNode(Sealable, Node):
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
     METADATA_INPUTS_KEY: str = 'metadata_inputs'
-
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
+
+    _process_class_binding: type[Process] | None = None
+    """Runtime class bound to this Python node instance, absent from the persistent record."""
 
     def __str__(self) -> str:
         base = super().__str__()
@@ -277,13 +279,16 @@ class ProcessNode(Sealable, Node):
 
     @property
     def process_class(self) -> type[Process]:
-        """Return the process class that was used to create this node.
+        """Return the bound runtime class or resolve `process_type`.
 
-        :return: `Process` class
-        :raises ValueError: if no process type is defined, it is an invalid process type string or cannot be resolved
-            to load the corresponding class
+        Bindings belong to Python node instances. Process functions resolve to the decorated function.
+
+        :raises ValueError: If no class is bound and `process_type` is missing, invalid or unresolvable.
         """
         from aiida.plugins.entry_point import load_entry_point_from_string
+
+        if self._process_class_binding is not None:
+            return self._process_class_binding
 
         if not self.process_type:
             msg = f'no process type for Node<{self.pk}>: cannot recreate process class'
@@ -316,6 +321,13 @@ class ProcessNode(Sealable, Node):
                 raise ValueError(msg) from exception
 
         return process_class
+
+    def _bind_process_class(self, *, process_class: type[Process]) -> None:
+        """Bind the running process's class to this node instance.
+
+        :param process_class: The running process instance's class.
+        """
+        self._process_class_binding = process_class
 
     def set_process_type(self, process_type_string: str) -> None:
         """Set the process type string.

@@ -491,6 +491,21 @@ class TestProcess:
         assert node.process_label == custom_process_label
 
 
+def test_local_process_class_binding_is_instance_local():
+    """The original node retains its function-local class; a reloaded node cannot import that class."""
+
+    class LocallyDefinedProcess(test_processes.DummyProcess):
+        """Function-local class without an importable module-level name."""
+
+    _, local_process_node = run_get_node(LocallyDefinedProcess)
+
+    assert local_process_node.process_class is LocallyDefinedProcess
+
+    reloaded_node = orm.load_node(local_process_node.pk)
+    with pytest.raises(ValueError, match='could not load process class'):
+        _ = reloaded_node.process_class
+
+
 class TestValidateDynamicNamespaceProcess(Process):
     """Simple process with dynamic input namespace."""
 

@@ -11,6 +11,8 @@
 import logging
 import pickle
 import sys
+import textwrap
+import time
 import typing as t
 from collections.abc import Callable
 
@@ -270,3 +272,19 @@ def test_calcjob_defined_in_main(
 
     assert node.is_finished_ok, node.exception
     assert node.outputs.sum.value == 42
+
+    # The record of what ran outlives the checkpoint that carried it. The source is read from the file the
+    # class's own methods were compiled from, since `__main__` has none to offer.
+    #
+    # Sealing is what deletes the checkpoint, and it lands just after the state that `submit_and_await` waits for.
+    for _ in range(100):
+        node = orm.load_node(node.pk)
+        if node.is_sealed:
+            break
+        time.sleep(0.1)
+
+    assert node.is_sealed
+    assert node.checkpoint is None
+    source = textwrap.dedent(node.class_source)
+    assert source.startswith('class MainCalcJob(ArithmeticAddCalculation):')
+    assert 'super().define(spec)' in source

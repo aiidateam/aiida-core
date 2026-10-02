@@ -141,19 +141,16 @@ class ProcessNodeLinks(NodeLinks):
 
 
 class ProcessNode(Sealable, Node):
-    """Base class for all nodes representing the execution of a process
-
-    This class and its subclasses serve as proxies in the database, for actual `Process` instances being run. The
-    `Process` instance in memory will leverage an instance of this class (the exact sub class depends on the sub class
-    of `Process`) to persist important information of its state to the database. This serves as a way for the user to
-    inspect the state of the `Process` during its execution as well as a permanent record of its execution in the
-    provenance graph, after the execution has terminated.
-    """
+    """Base node class recording process state and execution provenance."""
 
     _CLS_NODE_LINKS = ProcessNodeLinks
     _CLS_NODE_CACHING = ProcessNodeCaching
 
     CHECKPOINT_KEY = 'checkpoints'
+    KEY_OBJECT_INTERNAL_DIRNAME: str = '.aiida'
+    """Repository directory for engine-generated process records."""
+    KEY_OBJECT_CLASS_SOURCE: str = f'{KEY_OBJECT_INTERNAL_DIRNAME}/class_source.py'
+    """Repository path for recorded process-definition source."""
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
     EXIT_STATUS_KEY = 'exit_status'
@@ -278,6 +275,17 @@ class ProcessNode(Sealable, Node):
         return builder
 
     @property
+    def class_source(self) -> str | None:
+        """Return the process definition's recorded source.
+
+        :return: The source text, or ``None`` when no source was recorded.
+        """
+        try:
+            return self.base.repository.get_object_content(path=self.KEY_OBJECT_CLASS_SOURCE, mode='r')
+        except FileNotFoundError:
+            return None
+
+    @property
     def process_class(self) -> type[Process]:
         """Return the bound runtime class or resolve `process_type`.
 
@@ -318,6 +326,19 @@ class ProcessNode(Sealable, Node):
                     pass
             else:
                 msg = f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+
+                # ``__main__`` is the entry point of whichever interpreter is running, so a class recorded under it
+                # resolves only where that interpreter holds it. Naming that beats the import error, which reports
+                # a module that does exist.
+                if self.process_type.startswith('__main__.'):
+                    msg = (
+                        f'the process class of Node<{self.pk}> was defined in `__main__` of the interpreter that ran '
+                        f'it, and `__main__` here does not hold it, so it cannot be loaded.'
+                    )
+
+                    if self.base.repository.has_object(path=self.KEY_OBJECT_CLASS_SOURCE):
+                        msg += ' Its source is kept on the node: see the `class_source` property.'
+
                 raise ValueError(msg) from exception
 
         return process_class

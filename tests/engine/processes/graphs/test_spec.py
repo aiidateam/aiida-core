@@ -87,7 +87,7 @@ def test_validate_typehints_on_graph_boundaries():
         replace(graph, input_typehints={'value': (Int,)}, output_typehints={'result': (Str,)}).validate_typehints()
 
 
-def test_graph_build_records_annotations():
+def test_graph_execution_records_annotations():
     @graph
     def typed(value: str) -> int:
         return typed_number(value=value).result

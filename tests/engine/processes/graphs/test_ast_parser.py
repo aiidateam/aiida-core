@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.engine import (
-    graph_build,
+    graph_execution,
     graph_source,
     task_execution,
     task_source,
@@ -201,7 +201,7 @@ def test_format_graph_shows_wiring_and_nested_control_flow():
 
 
 def test_graph_decorators_are_exported_with_explicit_names():
-    assert graph_build is build_graph
+    assert graph_execution is build_graph
     assert graph_source is graph
     assert task_execution is build_task
     assert task_source is task

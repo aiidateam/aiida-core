@@ -125,7 +125,7 @@ from the source code without executing the graph function:
     declaration = build_from_source(add_twice)
 
 The source decorators are imported from the source-based builder to distinguish them from
-``graph_build`` and ``task_build``, which build graphs by executing their bodies.
+``graph_execution`` and ``task_execution``, which build graphs by executing their bodies.
 They capture source when a module is imported; definitions must be at module scope. The parser reads a graph's assignments and calls in source
 order, resolving only tasks and graphs registered in the same module. Task
 bodies are not parsed. It accepts single-name assignments to registered calls,

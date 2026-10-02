@@ -10,11 +10,14 @@
 
 import pytest
 
-from aiida.engine import UnsupportedSyntax, graph_build, lower_to_graph_spec, parse_graph, task_build
+from aiida.engine import (
+    graph_build,
+    task_build,
+)
 from aiida.engine.processes.graphs.build import graph as build_graph
 from aiida.engine.processes.graphs.build import task as build_task
 from aiida.engine.processes.graphs.display import format_graph
-from aiida.engine.processes.graphs.lower import graph, task
+from aiida.engine.processes.graphs.lower import UnsupportedSyntax, graph, lower_to_graph_spec, parse_graph, task
 from aiida.engine.processes.graphs.spec import (
     BranchControl,
     GraphSpec,

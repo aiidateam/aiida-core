@@ -11,16 +11,13 @@
 from __future__ import annotations
 
 from aiida.engine import (
-    Dependency,
-    Endpoint,
-    GraphRun,
-    GraphSpec,
     Orchestrated,
-    ProcessTask,
     launched_as,
     run_get_node,
     task,
 )
+from aiida.engine.processes.graphs.run import GraphRun
+from aiida.engine.processes.graphs.spec import Dependency, Endpoint, GraphSpec, ProcessTask
 
 
 @task(outputs=['total'])

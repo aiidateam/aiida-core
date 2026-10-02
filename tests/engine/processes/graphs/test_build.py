@@ -18,14 +18,8 @@ from aiida import orm
 from aiida.calculations.shell import ShellJob
 from aiida.common.links import LinkType
 from aiida.engine import (
-    BranchTask,
-    Endpoint,
-    LoopTask,
     Many,
-    MapGraphTask,
-    MapTask,
     OutputNames,
-    SubgraphTask,
     TaskOutput,
     TaskOutputs,
     WorkChain,
@@ -39,6 +33,14 @@ from aiida.engine import (
     submit,
     task,
     tasks,
+)
+from aiida.engine.processes.graphs.spec import (
+    BranchTask,
+    Endpoint,
+    LoopTask,
+    MapGraphTask,
+    MapTask,
+    SubgraphTask,
 )
 
 pytestmark = pytest.mark.requires_broker

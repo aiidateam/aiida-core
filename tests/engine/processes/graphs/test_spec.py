@@ -15,6 +15,10 @@ import typing as t
 import pytest
 
 from aiida.engine import (
+    task,
+)
+from aiida.engine.processes.graphs.spec import (
+    TASK_KINDS,
     BranchTask,
     Dependency,
     Endpoint,
@@ -24,10 +28,9 @@ from aiida.engine import (
     MapTask,
     ProcessTask,
     SubgraphTask,
+    TaskKind,
     TaskSpec,
-    task,
 )
-from aiida.engine.processes.graphs.spec import TASK_KINDS, TaskKind
 
 pytestmark = pytest.mark.requires_broker
 

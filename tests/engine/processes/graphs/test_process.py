@@ -18,19 +18,21 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.engine import (
-    Dependency,
-    Endpoint,
     GraphProcess,
-    GraphSpec,
-    MapTask,
-    ProcessTask,
-    SubgraphTask,
-    TaskSpec,
     ToContext,
     WorkChain,
     run_get_node,
     submit,
     task,
+)
+from aiida.engine.processes.graphs.spec import (
+    Dependency,
+    Endpoint,
+    GraphSpec,
+    MapTask,
+    ProcessTask,
+    SubgraphTask,
+    TaskSpec,
 )
 
 pytestmark = pytest.mark.requires_broker

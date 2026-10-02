@@ -14,7 +14,7 @@ import hashlib
 import os
 import re
 import typing as t
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -37,6 +37,17 @@ class ProcessClassBytes:
     @functools.cached_property
     def digest(self) -> str:
         return hashlib.sha256(self.content).hexdigest()
+
+
+def _discard_file(*, path: Path) -> bool:
+    from aiida.storage.log import STORAGE_LOGGER
+
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exception:
+        STORAGE_LOGGER.warning('could not delete the orphaned process class file `%s`: %s', path, exception)
+        return False
+    return True
 
 
 @dataclasses.dataclass(frozen=True)
@@ -114,6 +125,19 @@ class CheckpointClassStore:
                     path.unlink(missing_ok=True)
         except BlockingIOError:
             return
+
+    def discard_files(self, *, paths: Iterable[Path]) -> list[Path]:
+        """Delete `paths`, retaining files that cannot be removed.
+
+        :returns: Deleted paths; transactions and backup locks defer deletion.
+        """
+        if self.storage.in_transaction:
+            return []
+        try:
+            with self.lock():
+                return [path for path in paths if _discard_file(path=path)]
+        except BlockingIOError:
+            return []
 
     @contextmanager
     def lock(self, *, exclusive: bool = False) -> Iterator[None]:

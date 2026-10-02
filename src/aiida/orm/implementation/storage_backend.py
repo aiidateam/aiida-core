@@ -294,6 +294,50 @@ class StorageBackend(abc.ABC):
         )
         raise NotImplementedError(msg)
 
+    def delete_orphaned_checkpoint_class_files(self, *, live: bool = True, dry_run: bool = False) -> list[Path]:
+        """Delete class files owned by sealed nodes or, offline, deleted nodes.
+
+        Unsealed nodes retain all files to protect concurrent checkpoint writes. Live maintenance also retains
+        files whose owners may be uncommitted elsewhere.
+
+        :param live: Preserve absent owners. `False` requires exclusive profile access with no concurrent transactions.
+        :param dry_run: Report eligible files without deleting them.
+        :returns: Deleted paths, or eligible paths for `dry_run`. Transactions and backup locks defer deletion;
+            removal failures are logged and retained for a later attempt.
+        """
+        from aiida.orm import ProcessNode, QueryBuilder
+
+        owned: dict[Path, str] = dict(self.checkpoint_class_store.iter_files())
+
+        if not owned or (self.in_transaction and not dry_run):
+            return []
+
+        uuids: list[str] = sorted(set(owned.values()))
+        existing: set[str] = {
+            uuid
+            for (uuid,) in QueryBuilder(backend=self)
+            .append(ProcessNode, filters={'uuid': {'in': uuids}}, project='uuid')
+            .all()
+        }
+        sealed: set[str] = {
+            uuid
+            for (uuid,) in QueryBuilder(backend=self)
+            .append(
+                ProcessNode,
+                filters={'uuid': {'in': uuids}, f'attributes.{ProcessNode.SEALED_KEY}': True},
+                project='uuid',
+            )
+            .all()
+        }
+        orphaned: list[Path] = [
+            path for path, uuid in owned.items() if uuid in sealed or (not live and uuid not in existing)
+        ]
+
+        if dry_run:
+            return orphaned
+
+        return self.checkpoint_class_store.discard_files(paths=orphaned)
+
     @abc.abstractmethod
     def set_global_variable(
         self, key: str, value: str | int | float | None, description: str | None = None, overwrite: bool = True

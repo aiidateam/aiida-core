@@ -530,6 +530,11 @@ class PsqlDosBackend(StorageBackend):
             if not dry_run:
                 repository.delete_objects(list(unreferenced_objects))
 
+            # Not part of the repository, so the sweep above cannot see them: a checkpoint is a node attribute and
+            # the class it carries is a file beside the container, which nothing references once its node is gone.
+            orphaned = self.delete_orphaned_checkpoint_class_files(live=not full, dry_run=dry_run)
+            STORAGE_LOGGER.info(f'Deleting {len(orphaned)} orphaned process class files ...')
+
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 

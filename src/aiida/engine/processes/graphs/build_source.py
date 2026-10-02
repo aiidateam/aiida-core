@@ -14,6 +14,7 @@ The decorators capture definitions; source-based building never executes graph b
 from __future__ import annotations
 
 import ast
+import functools
 import inspect
 import textwrap
 import typing as t
@@ -21,7 +22,9 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from aiida.engine.processes.graphs.build_execution import ACTIVE_BUILDER
 from aiida.engine.processes.graphs.build_execution import task as build_task
+from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     BranchControl,
@@ -37,7 +40,7 @@ from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
 # would otherwise shadow the graph-builder decorator exported by ``aiida.engine``.
-__all__ = ('UnsupportedSyntax', 'build_from_source')
+__all__ = ('SourceGraphHandle', 'UnsupportedSyntax', 'build_from_source')
 
 
 class UnsupportedSyntax(ValueError):  # noqa: N818 - keep the prototype's exception name
@@ -77,6 +80,59 @@ def _register(function: Callable[..., t.Any]) -> str:
     return key
 
 
+def _bind_arguments(function: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+    """Return the arguments of a call, by the name of the parameter each is bound to."""
+    bound = inspect.signature(function).bind(*args, **kwargs)
+    bound.apply_defaults()
+    return dict(bound.arguments)
+
+
+class SourceGraphHandle:
+    """What the source :func:`graph` decorator returns: a graph that can be built, run, or submitted."""
+
+    def __init__(self, function: Callable[..., t.Any], identifier: str | None = None) -> None:
+        self._function = function
+        self.identifier = identifier or function.__name__
+        functools.update_wrapper(self, function)
+
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        builder = ACTIVE_BUILDER.get()
+
+        if builder is None:
+            msg = (
+                f'`{self.identifier}` declares a graph, so it is launched rather than called. Pass it to `run` or '
+                f'`submit`, as any other process, or use `.build(...)` for the declaration on its own.'
+            )
+            raise TypeError(msg)
+
+        return builder.add_graph(self, _bind_arguments(self._function, *args, **kwargs))
+
+    def build(self) -> GraphSpec:
+        """Return the graph that the function declares, lowered from its registered source."""
+        return build_from_source(self._function)
+
+    @property
+    def parameters(self) -> tuple[str, ...]:
+        """Return the names of the inputs the graph takes, which are the parameters of its function."""
+        kinds = (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        return tuple(
+            name for name, parameter in inspect.signature(self._function).parameters.items() if parameter.kind in kinds
+        )
+
+    @property
+    def process_class(self) -> type[GraphProcess]:
+        """Return the process that runs a graph."""
+        return GraphProcess
+
+    def get_launch_inputs(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+        """Return the inputs with which to launch the graph for these arguments.
+
+        The declaration says what to run and the arguments are what to run it on, so they travel side by side and
+        the same declaration serves every run.
+        """
+        return GraphProcess.launch_inputs(self.build(), _bind_arguments(self._function, *args, **kwargs))
+
+
 def task(function: Callable[..., t.Any]) -> t.Any:
     """Register a Python function as an AiiDA task and save its source."""
     try:
@@ -90,12 +146,45 @@ def task(function: Callable[..., t.Any]) -> t.Any:
     return decorated
 
 
-def graph(function: Callable[..., t.Any]) -> Callable[..., t.Any]:
-    """Save a graph's source without executing its body."""
-    key = _register(function)
-    _GRAPHS.add(key)
-    _GRAPH_HINTS[key] = t.get_type_hints(function)
-    return function
+def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
+    """Save a graph's source without executing its body.
+
+    The body is never executed: its source is captured at decoration time and lowered to a declaration by
+    :func:`build_from_source` (or the ``build`` method of the returned handle) when the graph runs.
+
+    Example usage:
+
+    >>> from aiida.engine.processes.graphs.build_source import build_from_source, graph, task
+    >>>
+    >>> @task
+    >>> def add(x: int, y: int) -> int:
+    >>>     return x + y
+    >>>
+    >>> @graph
+    >>> def add_twice(x: int, y: int) -> int:
+    >>>     first = add(x=x, y=y)
+    >>>     return add(x=first, y=y)
+    >>>
+    >>> declaration = build_from_source(add_twice)
+
+    A graph is launched like any other process, by passing it to ``run`` or ``submit``. Use ``build`` to get the
+    declaration on its own, without running anything.
+
+    :param function: The function to decorate.
+    :param identifier: Name of the graph, which defaults to the name of the function.
+    :return: A handle that can build, run, or submit the graph.
+    """
+
+    def decorator(function: Callable[..., t.Any]) -> SourceGraphHandle:
+        key = _register(function)
+        _GRAPHS.add(key)
+        _GRAPH_HINTS[key] = t.get_type_hints(function)
+        return SourceGraphHandle(function, identifier=identifier)
+
+    if function is not None:
+        return decorator(function)
+
+    return decorator
 
 
 @dataclass(frozen=True)
@@ -404,4 +493,6 @@ def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
 
 def build_from_source(function: Callable[..., t.Any]) -> GraphSpec:
     """Build a GraphSpec from a registered graph's source and its registered callees."""
+    if isinstance(function, SourceGraphHandle):
+        function = function._function
     return _lower_registered_graph(_key(function), ())

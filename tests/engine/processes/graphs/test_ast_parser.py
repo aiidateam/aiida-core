@@ -13,7 +13,14 @@ import pytest
 from aiida.engine import UnsupportedSyntax, lower_to_graph_spec, parse_graph
 from aiida.engine.processes.graphs.display import format_graph
 from aiida.engine.processes.graphs.lower import graph, task
-from aiida.engine.processes.graphs.spec import BranchTask, GraphSpec, LoopTask, MapGraphTask, ProcessTask, SubgraphTask
+from aiida.engine.processes.graphs.spec import (
+    BranchControl,
+    GraphSpec,
+    LoopControl,
+    MapGraphControl,
+    ProcessTask,
+    SubgraphTask,
+)
 
 
 @task
@@ -136,21 +143,21 @@ def test_control_flow_rejections():
 def test_control_flow_specs():
     chosen = parse_graph(choose)
     branch = chosen.tasks[0]
-    assert isinstance(branch, BranchTask)
+    assert isinstance(branch, BranchControl)
     assert branch.otherwise is not None
     assert branch.body.outputs.keys() == branch.otherwise.outputs.keys()
     assert chosen.dependencies[0].source == branch.name
 
     counted = parse_graph(count)
     loop = counted.tasks[0]
-    assert isinstance(loop, LoopTask)
+    assert isinstance(loop, LoopControl)
     assert loop.condition_port == 'keep_going'
     assert set(loop.body.outputs) == {'x', 'keep_going'}
     assert counted.outputs['x'].task == loop.name
 
     mapped = parse_graph(transform)
     each = mapped.tasks[0]
-    assert isinstance(each, MapGraphTask)
+    assert isinstance(each, MapGraphControl)
     assert each.item_port == 'value'
     assert mapped.inputs['values'] == ((each.name, 'value'),)
     for spec in (chosen, counted, mapped):

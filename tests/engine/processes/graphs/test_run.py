@@ -23,7 +23,7 @@ from aiida.engine import (
     tasks,
 )
 from aiida.engine.processes.graphs.run import GraphRun
-from aiida.engine.processes.graphs.spec import Dependency, Endpoint, GraphSpec, LoopTask, ProcessTask
+from aiida.engine.processes.graphs.spec import Dependency, Endpoint, GraphSpec, LoopControl, ProcessTask
 
 
 @task(outputs=['total'])
@@ -184,7 +184,7 @@ def going_round(max_iterations: int = 10) -> GraphSpec:
     """Return a graph whose one task is a loop over `stepping`."""
     return GraphSpec(
         tasks=(
-            LoopTask(
+            LoopControl(
                 name='loop',
                 body=stepping.build(),
                 condition_port='keep_going',

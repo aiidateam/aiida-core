@@ -20,12 +20,12 @@ from aiida.engine import (
 )
 from aiida.engine.processes.graphs.spec import (
     TASK_KINDS,
-    BranchTask,
+    BranchControl,
     Dependency,
     Endpoint,
     ExecutorReference,
     GraphSpec,
-    LoopTask,
+    LoopControl,
     MapTask,
     ProcessTask,
     SubgraphTask,
@@ -313,8 +313,10 @@ def looping_graph() -> GraphSpec:
 @pytest.mark.parametrize(
     'task_, kind',
     [
-        pytest.param(BranchTask(name='choice', body=shifting_graph()), 'branch', id='branch'),
-        pytest.param(LoopTask(name='keep_going', body=looping_graph(), condition_port='keep_going'), 'loop', id='loop'),
+        pytest.param(BranchControl(name='choice', body=shifting_graph()), 'branch', id='branch'),
+        pytest.param(
+            LoopControl(name='keep_going', body=looping_graph(), condition_port='keep_going'), 'loop', id='loop'
+        ),
     ],
 )
 def test_a_task_carrying_a_body_round_trips(task_, kind):
@@ -335,7 +337,7 @@ def test_a_branch_whose_sides_produce_different_outputs_is_refused():
     with pytest.raises(ValueError, match='which branch ran'):
         GraphSpec(
             tasks=(
-                BranchTask(
+                BranchControl(
                     name='choice',
                     body=shifting_graph(),
                     otherwise=GraphSpec(
@@ -350,7 +352,7 @@ def test_a_branch_whose_sides_produce_different_outputs_is_refused():
 def test_a_branch_sharing_a_name_between_its_condition_and_a_body_input_is_refused():
     """The condition and an input of the same name would arrive on one port, so the clash is refused."""
     with pytest.raises(ValueError, match='which a branch also takes'):
-        GraphSpec(tasks=(BranchTask(name='choice', body=shifting_graph(), condition_port='start'),))
+        GraphSpec(tasks=(BranchControl(name='choice', body=shifting_graph(), condition_port='start'),))
 
 
 def test_a_loop_whose_body_does_not_return_the_condition_is_refused():
@@ -359,12 +361,12 @@ def test_a_loop_whose_body_does_not_return_the_condition_is_refused():
     ``shifting_graph`` returns `total`, so a loop going round on anything else has nothing to read.
     """
     with pytest.raises(ValueError, match='has to return `start`'):
-        GraphSpec(tasks=(LoopTask(name='keep_going', body=shifting_graph(), condition_port='start'),))
+        GraphSpec(tasks=(LoopControl(name='keep_going', body=shifting_graph(), condition_port='start'),))
 
 
 def test_a_loop_body_need_not_take_the_condition():
     """Inside a run the answer is always yes, so a body has nothing to read and need not declare it."""
-    task_ = LoopTask(name='keep_going', body=shifting_graph(), condition_port='total')
+    task_ = LoopControl(name='keep_going', body=shifting_graph(), condition_port='total')
 
     assert GraphSpec(tasks=(task_,)).task('keep_going') is task_
     assert task_.accepts('total'), 'the loop takes a starting value even where its body does not'

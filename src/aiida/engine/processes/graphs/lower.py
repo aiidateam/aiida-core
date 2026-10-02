@@ -79,6 +79,11 @@ def _register(function: Callable[..., t.Any]) -> str:
 
 def task(function: Callable[..., t.Any]) -> t.Any:
     """Register a Python function as an AiiDA task and save its source."""
+    try:
+        inspect.get_annotations(function, eval_str=True)
+    except (NameError, AttributeError) as exception:
+        msg = f'Cannot resolve type hints for task `{function.__qualname__}`: {exception}'
+        raise TypeError(msg) from exception
     key = _register(function)
     decorated = build_task(function)
     _TASKS[key] = decorated

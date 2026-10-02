@@ -392,6 +392,18 @@ module = [
 ]
 warn_return_any = true
 
+# SQLAlchemy's mypy plugin is no longer available; suppress the resulting
+# errors in these legacy ORM modules until their typing can be migrated.
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = [
+  'aiida.storage.psql_dos.backend',
+  'aiida.storage.psql_dos.migrator',
+  'aiida.storage.sqlite_dos.backend',
+  'aiida.storage.sqlite_temp.backend',
+  'aiida.storage.sqlite_zip.migrations.v1_db_schema'
+]
+
 [[tool.mypy.overrides]]
 check_untyped_defs = false
 module = 'tests.*'

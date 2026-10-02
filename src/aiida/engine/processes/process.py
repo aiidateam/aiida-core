@@ -26,6 +26,7 @@ from aio_pika.exceptions import ConnectionClosed
 
 from aiida import orm
 from aiida.brokers.exceptions import UnroutableError
+from aiida.common import _callables as callables
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
 from aiida.common.lang import classproperty, override
@@ -64,6 +65,14 @@ class Process(ProcessBase):
     _cancelling_scheduler_job: asyncio.Task | None = None
     _node_class = orm.ProcessNode
     _spec_class = ProcessSpec
+
+    _binds_process_class: t.ClassVar[bool] = True
+    """Whether the running process binds its class on its node.
+
+    :meth:`build_process_type` records a name for the class, and binding it is what gets a reader of
+    :meth:`~aiida.orm.nodes.process.process.ProcessNode.process_class` the class itself where resolving that name
+    would reach nothing.
+    """
 
     SINGLE_OUTPUT_LINKNAME: str = 'result'
 
@@ -313,7 +322,7 @@ class Process(ProcessBase):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore[assignment]
+            self._bind_node(orm.load_node(saved_state[self.SaveKeys.CALC_ID.value]))  # type: ignore[arg-type]
             self._pid = self.node.pk
         else:
             self._pid = self._create_and_setup_db_record()
@@ -635,6 +644,13 @@ class Process(ProcessBase):
 
         return process_type
 
+    def _bind_node(self, node: orm.ProcessNode) -> None:
+        """Hold ``node`` as the record of this process, with the class of this process bound on it."""
+        self._node = node
+
+        if self._binds_process_class:
+            node._bind_process_class(process_class=type(self))
+
     def report(self, msg: str, *args, **kwargs) -> None:
         """Log a message to the logger, which should get saved to the database through the attached DbLogHandler.
 
@@ -654,7 +670,7 @@ class Process(ProcessBase):
         :return: the uuid or pk of the process
 
         """
-        self._node = self.get_or_create_db_record()
+        self._bind_node(self.get_or_create_db_record())
         self._setup_db_record()
         if self.metadata.store_provenance:
             try:
@@ -769,6 +785,7 @@ class Process(ProcessBase):
 
         self._setup_metadata(copy.copy(dict(self.inputs.metadata)))
         self._setup_version_info()
+        self._setup_class_record()
         self._setup_inputs()
 
     def _setup_version_info(self) -> dict[str, t.Any]:
@@ -776,6 +793,34 @@ class Process(ProcessBase):
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
         self.node.base.attributes.set_many(version_info)
         return version_info
+
+    @classmethod
+    def _source_to_record(cls) -> t.Any:
+        """Return the object whose source records what ran, for a process that cannot be imported back."""
+        return cls
+
+    def _setup_class_record(self) -> None:
+        """Record the class itself on the node when it cannot be imported back.
+
+        ``process_type`` records a class that no entry point registers under the module it was defined in, which for a
+        notebook cell or a script is ``__main__``. That name resolves to a different module in every other
+        interpreter, so it neither loads the class later nor distinguishes two classes that share a name. The source
+        is kept instead, so that what ran stays readable once the checkpoint carrying it is gone.
+        """
+        # Any other module may or may not be installed where the node is read, which is the situation of every
+        # plugin that was uninstalled, so it is left alone.
+        if self.__class__.__module__ != '__main__':
+            return
+
+        source: str | None = callables.source_of(value=self.__class__._source_to_record())
+
+        # Nothing here is worth failing a run for.
+        if source is None:
+            return
+
+        self.node.base.repository.put_object_from_bytes(
+            content=source.encode(encoding='utf-8'), path=orm.ProcessNode.KEY_OBJECT_CLASS_SOURCE
+        )
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""
@@ -1031,13 +1076,20 @@ class Process(ProcessBase):
             top_namespace = port_name.split(namespace_separator)[0]
             top_namespace_map[top_namespace].append(port_name)
 
+        # A dynamic output namespace declares no ports, so there are no names to match the emitted outputs against.
+        # Where such a namespace was exposed, everything the node emitted belongs to it.
+        takes_any_name = process_class.spec().outputs.dynamic
+
         for port_namespace in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
             # only the top-level key is stored in _exposed_outputs
+            exposed = self.spec()._exposed_outputs[port_namespace]
+            exposed_dynamically = takes_any_name and process_class in exposed
+
             for top_name in top_namespace_map:
                 if namespace is not None and namespace not in self.spec()._exposed_outputs:
                     msg = f'the namespace `{namespace}` is not an exposed namespace.'
                     raise KeyError(msg)
-                if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:
+                if top_name in exposed[process_class] or exposed_dynamically:
                     output_key_map[top_name] = port_namespace
 
         result = {}

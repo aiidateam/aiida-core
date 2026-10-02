@@ -98,7 +98,7 @@ class ProcessBuilderNamespace(MutableMapping):
     def __setattr__(self, attr: str, value: t.Any) -> None:
         """Assign the given value to the port with key `attr`.
 
-        .. note:: Any attributes without a leading underscore being set correspond to inputs and should hence be
+        .. note:: t.Any attributes without a leading underscore being set correspond to inputs and should hence be
             validated with respect to the corresponding input port from the process spec
 
         """
@@ -237,6 +237,13 @@ class ProcessBuilder(ProcessBuilderNamespace):
     def process_class(self) -> type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict:
+        """Return the inputs to launch :attr:`process_class` with, which are those set on this builder.
+
+        :param inputs: further inputs given at launch, which the ones set on the builder take precedence over.
+        """
+        return {**inputs, **self._inputs(prune=True)}
 
     def __str__(self) -> str:
         """Return a readable string showing the process class and its current inputs."""

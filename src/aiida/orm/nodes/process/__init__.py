@@ -20,6 +20,7 @@ __all__ = (
     'CalcFunctionNode',
     'CalcJobNode',
     'CalculationNode',
+    'GraphNode',
     'ProcessNode',
     'WorkChainNode',
     'WorkFunctionNode',

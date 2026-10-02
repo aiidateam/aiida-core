@@ -279,6 +279,9 @@ class SqliteDosStorage(PsqlDosBackend):
 
         return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        return self.filepath_root / self._CHECKPOINT_CLASSES_DIRNAME
+
     @classmethod
     def version_profile(cls, profile: Profile) -> str | None:
         with cls.migrator(profile) as migrator:
@@ -369,8 +372,11 @@ class SqliteDosStorage(PsqlDosBackend):
         LOGGER.report('Running storage maintenance')
         self.maintain(full=False, compress=False)
 
-        LOGGER.report('Backing up disk-objectstore container')
-        manager.call_rsync(self.filepath_container, path, link_dest=prev_backup, dest_trailing_slash=True)
+        with self.checkpoint_class_files_lock(exclusive=True):
+            LOGGER.report('Backing up disk-objectstore container')
+            manager.call_rsync(self.filepath_container, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        LOGGER.report('Backing up sqlite database')
-        manager.call_rsync(self.filepath_database, path, link_dest=prev_backup, dest_trailing_slash=True)
+            LOGGER.report('Backing up sqlite database')
+            manager.call_rsync(self.filepath_database, path, link_dest=prev_backup, dest_trailing_slash=True)
+
+            self._backup_checkpoint_classes(manager=manager, path=path, prev_backup=prev_backup)

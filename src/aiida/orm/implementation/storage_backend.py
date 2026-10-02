@@ -11,9 +11,13 @@
 from __future__ import annotations
 
 import abc
+import os
+import re
 import typing as t
-from collections.abc import Iterable
-from contextlib import AbstractContextManager
+from collections.abc import Iterable, Iterator
+from contextlib import AbstractContextManager, contextmanager
+from pathlib import Path
+from uuid import uuid4
 
 from aiida.common.log import AIIDA_LOGGER
 
@@ -42,6 +46,12 @@ LOGGER = AIIDA_LOGGER.getChild('orm.implementation.storage_backend')
 
 TransactionType = t.TypeVar('TransactionType')
 
+CHECKPOINT_CLASS_FILE_OWNER: t.Final[re.Pattern[str]] = re.compile(
+    r'(?P<staged>\.)?(?P<owner>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-'
+    r'(?(staged)[0-9a-f]{32}|[0-9a-f]{64}\.pkl)'
+)
+"""Owner UUID and complete finished/staged filename formats."""
+
 
 class StorageBackend(abc.ABC):
     """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
@@ -61,6 +71,13 @@ class StorageBackend(abc.ABC):
     """
 
     read_only = False
+
+    _CHECKPOINT_CLASSES_DIRNAME: str = 'checkpoint_classes'
+    """Name of the directory holding pickled process classes, which checkpoints refer to by digest.
+
+    It sits beside the profile's ``container`` directory, and each file lives as long as the checkpoint
+    that refers to it.
+    """
 
     @classmethod
     @abc.abstractmethod
@@ -151,7 +168,14 @@ class StorageBackend(abc.ABC):
 
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
         """
+        import shutil
+
         from aiida.orm.autogroup import AutogroupManager
+
+        try:
+            shutil.rmtree(path=self.get_checkpoint_classes_dirpath(), ignore_errors=True)
+        except NotImplementedError:
+            pass
 
         self.reset_default_user()
         self._autogroup = AutogroupManager(self)
@@ -274,6 +298,166 @@ class StorageBackend(abc.ABC):
     @abc.abstractmethod
     def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""
+
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        """Return the directory holding the bytes that the checkpoints of this profile refer to.
+
+        A checkpoint is a node attribute; what lives here is what a name cannot recover, the process class
+        included. Any worker can be handed any process, so this has to be storage they all reach, as node files are.
+
+        Every storage a process can be persisted on has to implement this, since a class that travels in a
+        checkpoint needs somewhere to go.
+
+        :raises NotImplementedError: if this storage keeps no such files: an archive, or a plugin written before
+            this method existed.
+        """
+        msg: str = (
+            f'`{self.__class__.__name__}` defines no directory for checkpoint class files, so a process whose '
+            'class travels in its checkpoint cannot be persisted on it: implement '
+            '`get_checkpoint_classes_dirpath`.'
+        )
+        raise NotImplementedError(msg)
+
+    @contextmanager
+    def checkpoint_class_files_lock(self, *, exclusive: bool = False) -> Iterator[None]:
+        """Coordinate class-file deletion with database and class-file backup snapshots.
+
+        Backups hold an exclusive lock while copying their database and class files. Deletion attempts a shared lock.
+        Contention defers deletion so checkpoint persistence can continue during an online backup.
+
+        :param exclusive: Wait for the exclusive backup lock.
+        :raises BlockingIOError: If the shared deletion lock is unavailable.
+        """
+        import fcntl
+
+        try:
+            directory: Path = self.get_checkpoint_classes_dirpath()
+        except NotImplementedError:
+            yield
+            return
+
+        directory.mkdir(parents=True, exist_ok=True)
+        parent_descriptor: int = os.open(directory.parent, os.O_RDONLY)
+        try:
+            os.fsync(parent_descriptor)
+        finally:
+            os.close(parent_descriptor)
+
+        # A writable regular file supports flock emulation on shared NFS filesystems.
+        lock_path: Path = directory.with_name(f'.{directory.name}.lock')
+        with lock_path.open('a+b') as handle:
+            operation: int = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH | fcntl.LOCK_NB
+            fcntl.flock(handle.fileno(), operation)
+            yield
+
+    def _get_checkpoint_class_filepath(self, *, node_uuid: str, digest: str) -> Path:
+        """Return the file the class bytes of ``node_uuid``'s checkpoint go to.
+
+        Changed bytes have a different digest. Equal bytes can atomically replace the same destination.
+        """
+        return self.get_checkpoint_classes_dirpath() / f'{node_uuid}-{digest}.pkl'
+
+    def _get_checkpoint_class_staging_filepath(self, *, node_uuid: str) -> Path:
+        """Return a path to write class bytes to before renaming them into place.
+
+        Hidden, so it is not mistaken for a finished file, and carrying the uuid, so a write killed before the
+        rename leaves something that can still be attributed to a node.
+        """
+        return self.get_checkpoint_classes_dirpath() / f'.{node_uuid}-{uuid4().hex}'
+
+    def _iter_checkpoint_class_files(self, *, node_uuid: str | None = None) -> Iterator[tuple[Path, str]]:
+        """Yield each checkpoint class file of this profile with the uuid of the node it belongs to.
+
+        Yields nothing for a storage that keeps no such files, and skips a name this does not match: the directory
+        is the profile's, so something else may have put a file there.
+
+        :param node_uuid: Yield only the files of this node, which is what a terminating process needs.
+        """
+        try:
+            dirpath: Path = self.get_checkpoint_classes_dirpath()
+        except NotImplementedError:
+            return
+
+        if not dirpath.exists():
+            return
+
+        for path in sorted(dirpath.iterdir()):
+            match: re.Match[str] | None = CHECKPOINT_CLASS_FILE_OWNER.fullmatch(path.name)
+
+            if match is None or path.is_symlink() or not path.is_file():
+                continue
+
+            owner: str = match.group('owner')
+            if node_uuid is None or owner == node_uuid:
+                yield path, owner
+
+    def delete_orphaned_checkpoint_class_files(self, *, live: bool = True, dry_run: bool = False) -> list[Path]:
+        """Delete class byte files no process can still need.
+
+        A file is kept while its node exists and has not sealed, because only a process that has not terminated
+        writes these, and a writer between its own file write and its attribute write would otherwise lose its file.
+        Files of sealed nodes remain after deferred or failed cleanup. During live maintenance, an absent owner may
+        be an uncommitted new node in another connection. Collect those files only during offline maintenance.
+
+        Deliberately not a comparison against the digest each checkpoint refers to. That would collect one more file,
+        the superseded one a crash left between the write and the attribute update, and it would also delete the file
+        a live writer had just written, which is indistinguishable from it.
+
+        :param live: Preserve files whose owners are absent. Set to `False` only with exclusive profile access and
+            no concurrent transactions, including other connections in this process.
+        :param dry_run: Return what would be deleted without deleting it.
+        :returns: The paths dropped, or under ``dry_run`` the ones that would be. Active transactions and backup
+            snapshots defer deletion. Files that cannot be deleted are logged for a later maintenance attempt.
+        """
+        from aiida.orm import ProcessNode, QueryBuilder
+        from aiida.storage.log import STORAGE_LOGGER
+
+        owned: dict[Path, str] = dict(self._iter_checkpoint_class_files())
+
+        if not owned or (self.in_transaction and not dry_run):
+            return []
+
+        uuids: list[str] = sorted(set(owned.values()))
+        existing: set[str] = {
+            uuid
+            for (uuid,) in QueryBuilder(backend=self)
+            .append(ProcessNode, filters={'uuid': {'in': uuids}}, project='uuid')
+            .all()
+        }
+        sealed: set[str] = {
+            uuid
+            for (uuid,) in QueryBuilder(backend=self)
+            .append(
+                ProcessNode,
+                filters={'uuid': {'in': uuids}, f'attributes.{ProcessNode.SEALED_KEY}': True},
+                project='uuid',
+            )
+            .all()
+        }
+        orphaned: list[Path] = [
+            path for path, uuid in owned.items() if uuid in sealed or (not live and uuid not in existing)
+        ]
+
+        if dry_run:
+            return orphaned
+
+        dropped: list[Path] = []
+
+        try:
+            with self.checkpoint_class_files_lock():
+                for path in orphaned:
+                    try:
+                        path.unlink(missing_ok=True)
+                    except OSError as exception:
+                        STORAGE_LOGGER.warning(
+                            'could not delete the orphaned process class file `%s`: %s', path, exception
+                        )
+                    else:
+                        dropped.append(path)
+        except BlockingIOError:
+            return []
+
+        return dropped
 
     @abc.abstractmethod
     def set_global_variable(

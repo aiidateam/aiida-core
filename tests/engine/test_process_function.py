@@ -24,7 +24,8 @@ import re
 import pytest
 
 from aiida import orm
-from aiida.engine import ExitCode, calcfunction, run, run_get_node, submit, workfunction
+from aiida.common.links import LinkType
+from aiida.engine import ExitCode, ToContext, WorkChain, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 
@@ -70,6 +71,11 @@ def function_args(data_a):
 @workfunction
 def function_args_with_default(data_a=lambda: orm.Int(DEFAULT_INT)):
     return data_a
+
+
+@calcfunction
+def function_add(int_a, int_b):
+    return int_a + int_b
 
 
 @calcfunction
@@ -454,6 +460,43 @@ def test_submit_launchers():
     assert isinstance(node, orm.WorkFunctionNode)
 
 
+def test_submit_from_process():
+    """A running process can submit a process function as a child, await it, and use its result.
+
+    A workflow could previously only run a function inline on its own worker, which is what keeps
+    the function steps of a workflow from being distributed. The submitted function is recorded as
+    a called child under its own link label, so the workflow can address the task it dispatched.
+    """
+
+    class ParentWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.outline(cls.submit_child, cls.collect)
+            spec.outputs.dynamic = True
+
+        def submit_child(self):
+            child = self.submit(
+                function_add,
+                int_a=orm.Int(1),
+                int_b=orm.Int(2),
+                metadata={'call_link_label': 'addition'},
+            )
+            return ToContext(child=child)
+
+        def collect(self):
+            self.out('result', self.ctx.child.outputs.result)
+
+    results, node = run_get_node(ParentWorkChain)
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['result'] == 3
+
+    called = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert [entry.link_label for entry in called] == ['addition']
+    assert isinstance(called[0].node, orm.CalcFunctionNode)
+
+
 def test_return_exit_code():
     """A process function that returns an ExitCode namedtuple should have its exit status and message set FINISHED"""
     exit_status = 418
@@ -489,6 +532,13 @@ def test_function_return_nested():
     results, node = function_return_nested.run_get_node()
     assert results['nested']['output'] == DEFAULT_INT
     assert node.outputs.nested.output == DEFAULT_INT
+
+
+def test_node_process_class_is_the_function():
+    """`process_class` resolves to the decorated function while class binding remains disabled."""
+    _, node = function_return_input.run_get_node(data=orm.Int(DEFAULT_INT))
+
+    assert node.process_class is function_return_input
 
 
 def test_simple_workflow():

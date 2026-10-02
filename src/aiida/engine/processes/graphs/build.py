@@ -28,14 +28,14 @@ from aiida.engine.processes.graphs.run import holds
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     DEFINED_TASKS,
-    BranchTask,
+    BranchControl,
     Dependency,
     Endpoint,
     ExecutorReference,
     GraphSpec,
     GraphTask,
-    LoopTask,
-    MapGraphTask,
+    LoopControl,
+    MapGraphControl,
     MapTask,
     ProcessTask,
     SubgraphTask,
@@ -486,7 +486,7 @@ class GraphBuilder:
 
         if item_ports:
             item_port = self._sole_item_port(name, item_ports)
-            self._tasks.append(MapGraphTask(name=name, inputs=inputs, body=body, item_port=item_port))
+            self._tasks.append(MapGraphControl(name=name, inputs=inputs, body=body, item_port=item_port))
             return MappedOutputs(task=name, ports=OutputNames.named(body.outputs))
 
         self._tasks.append(SubgraphTask(name=name, inputs=inputs, body=body))
@@ -520,7 +520,7 @@ class GraphBuilder:
         other = None if otherwise is None else otherwise.build()
         name = self._unique_name(f'branch_{then.identifier}')
 
-        self._tasks.append(BranchTask(name=name, inputs=self._wire(name, wired), body=body, otherwise=other))
+        self._tasks.append(BranchControl(name=name, inputs=self._wire(name, wired), body=body, otherwise=other))
 
         return TaskOutputs(task=name, ports=OutputNames.named(body.outputs))
 
@@ -544,7 +544,7 @@ class GraphBuilder:
         self._refuse_each(body.identifier, 'loop', arguments)
 
         name = self._unique_name(f'loop_{body.identifier}')
-        task = LoopTask(
+        task = LoopControl(
             name=name,
             inputs=self._wire(name, arguments),
             body=body.build(),
@@ -1114,10 +1114,10 @@ class Branch(Region):
 
         if self._taking_the_other_side:
             assert self._body is not None
-            task: GraphTask = BranchTask(name=name, body=self._body, otherwise=body)
+            task: GraphTask = BranchControl(name=name, body=self._body, otherwise=body)
         else:
             self._body = body
-            task = BranchTask(name=name, body=body)
+            task = BranchControl(name=name, body=body)
 
         self._place(task, {**builder.captures, CONDITION_PORT: self._condition}, self._body.outputs)
 
@@ -1134,7 +1134,7 @@ class Loop(Region):
 
     def _close(self, builder: GraphBuilder) -> None:
         body = builder.finish(self._returned, identifier=self._named())
-        task = LoopTask(
+        task = LoopControl(
             name=self._named(),
             body=body,
             condition_port=self._condition,
@@ -1162,7 +1162,7 @@ class Fanout(Region):
 
     def _close(self, builder: GraphBuilder) -> None:
         body = builder.finish(self._returned, identifier=self._named())
-        task = MapGraphTask(name=self._named(), body=body, item_port=self.ITEM)
+        task = MapGraphControl(name=self._named(), body=body, item_port=self.ITEM)
 
         self._place(task, {**self._state, **builder.captures}, body.outputs)
 

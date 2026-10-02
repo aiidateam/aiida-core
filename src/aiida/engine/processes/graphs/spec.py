@@ -25,14 +25,14 @@ from aiida.orm import Data, to_aiida_type
 
 __all__ = (
     'BodyTask',
-    'BranchTask',
+    'BranchControl',
     'Dependency',
     'Endpoint',
     'ExecutorReference',
     'GraphSpec',
     'GraphTask',
-    'LoopTask',
-    'MapGraphTask',
+    'LoopControl',
+    'MapGraphControl',
     'MapTask',
     'ProcessTask',
     'SubgraphTask',
@@ -559,7 +559,7 @@ class SubgraphTask(BodyTask):
 
 
 @dataclass(frozen=True, kw_only=True)
-class BranchTask(BodyTask):
+class BranchControl(BodyTask):
     """One of two graphs, run depending on a value that only exists once the graph is running.
 
     Both branches are declared, so the declaration still describes every run and only the choice is left to the
@@ -591,7 +591,7 @@ class BranchTask(BodyTask):
         return {**super().to_dict(), 'condition_port': self.condition_port, 'otherwise': otherwise}
 
     @classmethod
-    def _from_payload(cls, data: dict[str, t.Any]) -> BranchTask:
+    def _from_payload(cls, data: dict[str, t.Any]) -> BranchControl:
         otherwise = data.get('otherwise')
         return cls(
             name=data['name'],
@@ -603,7 +603,7 @@ class BranchTask(BodyTask):
 
 
 @dataclass(frozen=True, kw_only=True)
-class LoopTask(BodyTask):
+class LoopControl(BodyTask):
     """A graph run again and again, on what the run before it produced, while a condition holds.
 
     The state the loop carries is the body's outputs: each run starts from what the one before it returned, with
@@ -643,7 +643,7 @@ class LoopTask(BodyTask):
         }
 
     @classmethod
-    def _from_payload(cls, data: dict[str, t.Any]) -> LoopTask:
+    def _from_payload(cls, data: dict[str, t.Any]) -> LoopControl:
         return cls(
             name=data['name'],
             inputs=data.get('inputs', {}),
@@ -654,7 +654,7 @@ class LoopTask(BodyTask):
 
 
 @dataclass(frozen=True, kw_only=True)
-class MapGraphTask(BodyTask):
+class MapGraphControl(BodyTask):
     """A graph run once per item of a collection that only exists while the graph runs.
 
     What :class:`MapTask` is to :class:`ProcessTask`, this is to :class:`SubgraphTask`: the same fan-out over a
@@ -676,7 +676,7 @@ class MapGraphTask(BodyTask):
         return {**super().to_dict(), 'item_port': self.item_port}
 
     @classmethod
-    def _from_payload(cls, data: dict[str, t.Any]) -> MapGraphTask:
+    def _from_payload(cls, data: dict[str, t.Any]) -> MapGraphControl:
         return cls(
             name=data['name'],
             inputs=data.get('inputs', {}),
@@ -685,12 +685,12 @@ class MapGraphTask(BodyTask):
         )
 
 
-MappedTask = MapTask | MapGraphTask
+MappedTask = MapTask | MapGraphControl
 """A task that runs once per item, and so produces a result per item rather than one."""
 
 TASK_KINDS: dict[str, type[GraphTask]] = {
     task_class.KIND: task_class
-    for task_class in (ProcessTask, MapTask, SubgraphTask, BranchTask, LoopTask, MapGraphTask)
+    for task_class in (ProcessTask, MapTask, SubgraphTask, BranchControl, LoopControl, MapGraphControl)
 }
 """The task class for each kind, which is what a stored task is read back as and checked against."""
 
@@ -804,11 +804,11 @@ class GraphSpec:
         if isinstance(task, ProcessTask):
             return self._port_types(task.spec.outputs if output else task.spec.inputs, port)
         if isinstance(task, BodyTask):
-            if isinstance(task, (BranchTask, LoopTask)) and port == task.condition_port and not output:
+            if isinstance(task, (BranchControl, LoopControl)) and port == task.condition_port and not output:
                 return ()
             if output:
                 return task.body._output_types(port)
-            if isinstance(task, BranchTask):
+            if isinstance(task, BranchControl):
                 hints = [branch._input_types(port) for branch in task.branches if port in branch.inputs]
                 return next((hint for hint in hints if hint), ())
             return task.body._input_types(port)
@@ -852,7 +852,7 @@ class GraphSpec:
         for task in self.tasks:
             if isinstance(task, BodyTask):
                 task.body.validate_typehints()
-                if isinstance(task, BranchTask) and task.otherwise is not None:
+                if isinstance(task, BranchControl) and task.otherwise is not None:
                     task.otherwise.validate_typehints()
                     for name in task.body.outputs:
                         self._check_types(
@@ -977,11 +977,11 @@ class GraphSpec:
                 raise ValueError(msg)
 
         for task in self.tasks:
-            if isinstance(task, BranchTask):
+            if isinstance(task, BranchControl):
                 self._check_branches(task)
 
         for task in self.tasks:
-            if isinstance(task, LoopTask):
+            if isinstance(task, LoopControl):
                 self._check_loop(task)
 
         self._check_acyclic()
@@ -1042,7 +1042,7 @@ class GraphSpec:
             raise ValueError(msg)
 
     @staticmethod
-    def _check_loop(task: LoopTask) -> None:
+    def _check_loop(task: LoopControl) -> None:
         """Raise if a loop has no way to reach its end.
 
         The body has to return the value the loop goes round on, since that is what ends it. Whether it takes one
@@ -1063,7 +1063,7 @@ class GraphSpec:
             raise ValueError(msg)
 
     @staticmethod
-    def _check_branches(task: BranchTask) -> None:
+    def _check_branches(task: BranchControl) -> None:
         """Raise if the two sides of a branch would leave what it takes or produces up to the run.
 
         :raises ValueError: if the condition shares a name with an input of a branch, or the branches produce

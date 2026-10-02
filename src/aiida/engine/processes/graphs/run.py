@@ -17,12 +17,12 @@ from dataclasses import dataclass, field
 
 from aiida.common.links import LinkType
 from aiida.engine.processes.graphs.spec import (
-    BranchTask,
+    BranchControl,
     Dependency,
     GraphSpec,
     GraphTask,
-    LoopTask,
-    MapGraphTask,
+    LoopControl,
+    MapGraphControl,
     MappedTask,
     SubgraphTask,
 )
@@ -401,7 +401,7 @@ class GraphRun:
         going_round = [
             task.name
             for task in self.graph.tasks
-            if isinstance(task, LoopTask) and task.name in self.instances and self._loop_may_run_again(task)
+            if isinstance(task, LoopControl) and task.name in self.instances and self._loop_may_run_again(task)
         ]
 
         return going_round + self.graph.ready(self.settled, self.decided)
@@ -417,7 +417,7 @@ class GraphRun:
         step = Step()
 
         for task in self.graph.tasks:
-            if isinstance(task, LoopTask) and task.name in self.instances:
+            if isinstance(task, LoopControl) and task.name in self.instances:
                 self._continue_loop(task, step)
 
         while ready := self.graph.ready(self.settled, self.decided):
@@ -494,11 +494,11 @@ class GraphRun:
         task = self.graph.task(name)
         inputs = self._inputs_for(task)
 
-        if isinstance(task, BranchTask):
+        if isinstance(task, BranchControl):
             self._begin_branch(task, inputs, step)
             return
 
-        if isinstance(task, LoopTask):
+        if isinstance(task, LoopControl):
             self._begin_loop(task, inputs, step)
             return
 
@@ -509,7 +509,7 @@ class GraphRun:
         self.instances[name] = [name]
         step.begin(name, task, inputs, self._body_of(task))
 
-    def _begin_branch(self, task: BranchTask, inputs: dict[str, t.Any], step: Step) -> None:
+    def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Begin the branch the condition selects, and skip the task when it selects none."""
         condition = inputs.pop(task.condition_port, None)
         taken = task.body if holds(condition) else task.otherwise
@@ -522,7 +522,7 @@ class GraphRun:
         self.instances[task.name] = [task.name]
         step.begin(task.name, task, inputs, taken)
 
-    def _begin_loop(self, task: LoopTask, inputs: dict[str, t.Any], step: Step) -> None:
+    def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Run the body a first time, and skip the loop when its condition does not hold to begin with.
 
         A loop given no value to start on goes round once and asks the body from then on, since a loop written
@@ -536,7 +536,7 @@ class GraphRun:
         self.instances[task.name] = []
         self._begin_iteration(task, inputs, step)
 
-    def _continue_loop(self, task: LoopTask, step: Step) -> None:
+    def _continue_loop(self, task: LoopControl, step: Step) -> None:
         """Run the body once more, on what the run before it produced, while there is reason to."""
         if not self._loop_wants_another_run(task):
             return
@@ -551,7 +551,7 @@ class GraphRun:
         produced = returned(load_node(self.done[self.instances[task.name][-1]]))
         self._begin_iteration(task, {**self._inputs_for(task), **produced}, step)
 
-    def _loop_wants_another_run(self, task: LoopTask) -> bool:
+    def _loop_wants_another_run(self, task: LoopControl) -> bool:
         """Return whether the value a loop goes round on still holds, so that its body would run again."""
         runs = self.instances[task.name]
 
@@ -562,11 +562,11 @@ class GraphRun:
 
         return last.is_finished_ok and holds(returned(last).get(task.condition_port))
 
-    def _loop_may_run_again(self, task: LoopTask) -> bool:
+    def _loop_may_run_again(self, task: LoopControl) -> bool:
         """Return whether a loop has a run left to make, which it may though it has run before."""
         return self._loop_wants_another_run(task) and len(self.instances[task.name]) < task.max_iterations
 
-    def _begin_iteration(self, task: LoopTask, state: dict[str, t.Any], step: Step) -> None:
+    def _begin_iteration(self, task: LoopControl, state: dict[str, t.Any], step: Step) -> None:
         """Begin one run of the body, on the state the loop has reached."""
         instance = f'{task.name}_iteration_{len(self.instances[task.name])}'
         self.instances[task.name].append(instance)
@@ -624,7 +624,7 @@ class GraphRun:
     @staticmethod
     def _body_of(task: GraphTask) -> GraphSpec | None:
         """Return the graph a task runs, or ``None`` where it runs a process instead."""
-        return task.body if isinstance(task, (SubgraphTask, MapGraphTask)) else None
+        return task.body if isinstance(task, (SubgraphTask, MapGraphControl)) else None
 
     @staticmethod
     def _item_key(name: str, instance: str) -> str:

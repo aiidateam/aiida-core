@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from aiida.engine.processes.graphs.spec import (
     BodyTask,
-    BranchTask,
+    BranchControl,
     GraphSpec,
     GraphTask,
-    LoopTask,
-    MapGraphTask,
+    LoopControl,
+    MapGraphControl,
     MapTask,
     ProcessTask,
 )
@@ -34,11 +34,11 @@ def format_graph(graph: GraphSpec) -> str:
 
 
 def _task_label(task: GraphTask) -> str:
-    if isinstance(task, BranchTask):
+    if isinstance(task, BranchControl):
         return f'branch on {task.condition_port}'
-    if isinstance(task, LoopTask):
+    if isinstance(task, LoopControl):
         return f'loop while {task.condition_port}'
-    if isinstance(task, (MapTask, MapGraphTask)):
+    if isinstance(task, (MapTask, MapGraphControl)):
         return f'map over {task.item_port}'
     if isinstance(task, ProcessTask):
         return f'process {task.spec.identifier}'
@@ -68,7 +68,7 @@ def _format_graph(graph: GraphSpec, lines: list[str], *, depth: int) -> None:
             if edge.target == task.name and edge.carried_between is None:
                 lines.append(f'{indent}    after {edge.source}')
 
-        if isinstance(task, BranchTask):
+        if isinstance(task, BranchControl):
             lines.append(f'{indent}    then:')
             _format_graph(task.body, lines, depth=depth + 3)
             if task.otherwise is not None:

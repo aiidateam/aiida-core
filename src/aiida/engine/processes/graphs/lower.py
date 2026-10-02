@@ -24,12 +24,12 @@ from dataclasses import dataclass, field
 from aiida.engine.processes.graphs.build import task as build_task
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
-    BranchTask,
+    BranchControl,
     Dependency,
     Endpoint,
     GraphSpec,
-    LoopTask,
-    MapGraphTask,
+    LoopControl,
+    MapGraphControl,
     ProcessTask,
     SubgraphTask,
 )
@@ -103,7 +103,9 @@ class _Reference:
 class _LoweringState:
     key: str
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask | BranchTask | LoopTask | MapGraphTask] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl | MapGraphControl] = field(
+        default_factory=list
+    )
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -252,7 +254,7 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     _wire(state, instance, CONDITION_PORT, _lower_value(state, statement.test), given)
     for name in sorted(set(sides[0][1].inputs) | set(sides[1][1].inputs)):
         _wire(state, instance, name, state.names[name], given)
-    state.tasks.append(BranchTask(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
+    state.tasks.append(BranchControl(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
     state.names[sides[0][0]] = _Reference(instance, 'result')
 
 
@@ -281,7 +283,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     instance = f'loop_{len(state.tasks) + 1}'
     given: dict[str, t.Any] = {}
     _place(state, child, instance, given)
-    state.tasks.append(LoopTask(name=instance, inputs=given, body=body, condition_port=condition))
+    state.tasks.append(LoopControl(name=instance, inputs=given, body=body, condition_port=condition))
     for name in assigned:
         state.names[name] = _Reference(instance, name)
 
@@ -301,7 +303,7 @@ def _lower_map(state: _LoweringState, statement: ast.For) -> None:
     given: dict[str, t.Any] = {}
     _wire(state, instance, item, _lower_value(state, statement.iter), given)
     _place(state, child, instance, given)
-    state.tasks.append(MapGraphTask(name=instance, inputs=given, body=body, item_port=item))
+    state.tasks.append(MapGraphControl(name=instance, inputs=given, body=body, item_port=item))
     state.names[result] = _Reference(instance, 'result')
 
 

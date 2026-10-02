@@ -35,10 +35,10 @@ from aiida.engine import (
     tasks,
 )
 from aiida.engine.processes.graphs.spec import (
-    BranchTask,
+    BranchControl,
     Endpoint,
-    LoopTask,
-    MapGraphTask,
+    LoopControl,
+    MapGraphControl,
     MapTask,
     SubgraphTask,
 )
@@ -479,7 +479,7 @@ def test_a_graph_can_be_run_once_per_item():
     """Marking an input of a graph with `each` fans out the whole body, not just one task."""
     declaration = shift_and_double_all.build()
 
-    assert isinstance(declaration.task('shift_and_double'), MapGraphTask)
+    assert isinstance(declaration.task('shift_and_double'), MapGraphControl)
     assert declaration.task('shift_and_double').item_port == 'value'
     assert [node.name for node in declaration.task('shift_and_double').body.tasks] == ['add', 'add_2']
 
@@ -536,7 +536,7 @@ def test_a_fan_out_written_in_place_runs_the_whole_block_per_item():
 
     declaration = shift_and_double_in_place.build()
 
-    assert isinstance(declaration.task('each'), MapGraphTask)
+    assert isinstance(declaration.task('each'), MapGraphControl)
     assert [node.name for node in declaration.task('each').body.tasks] == ['add', 'add_2']
 
     results, node = run_get_node(shift_and_double_in_place, values=[1, 2, 3], by=10)
@@ -772,7 +772,7 @@ def test_a_branch_is_placed_as_one_task_carrying_both_sides():
     declaration = double_or_not.build()
     (branch,) = declaration.tasks
 
-    assert isinstance(branch, BranchTask)
+    assert isinstance(branch, BranchControl)
     assert branch.name == 'branch_doubled'
     assert [node.name for node in branch.body.tasks] == ['add']
     assert [node.name for node in branch.otherwise.tasks] == ['add']
@@ -819,7 +819,7 @@ def test_a_branch_written_in_place_places_the_same_task():
     declaration = double_or_not_in_place.build()
     (chosen,) = declaration.tasks
 
-    assert isinstance(chosen, BranchTask)
+    assert isinstance(chosen, BranchControl)
     assert chosen.name == 'branch'
     assert sorted(chosen.body.outputs) == ['total']
     assert chosen.otherwise is not None
@@ -924,7 +924,7 @@ def test_a_loop_is_placed_as_one_task_carrying_its_body():
     declaration = count_down.build()
     (task_,) = declaration.tasks
 
-    assert isinstance(task_, LoopTask)
+    assert isinstance(task_, LoopControl)
     assert task_.name == 'loop_one_step_down'
     assert task_.condition_port == 'keep_going'
     assert [node.name for node in task_.body.tasks] == ['step_down']

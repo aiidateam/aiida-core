@@ -12,10 +12,10 @@ import pytest
 
 from aiida.engine import (
     graph_build,
-    task_build,
+    task_execution,
 )
-from aiida.engine.processes.graphs.build import graph as build_graph
-from aiida.engine.processes.graphs.build import task as build_task
+from aiida.engine.processes.graphs.build_execution import graph as build_graph
+from aiida.engine.processes.graphs.build_execution import task as build_task
 from aiida.engine.processes.graphs.build_source import UnsupportedSyntax, build_from_source, graph, task
 from aiida.engine.processes.graphs.display import format_graph
 from aiida.engine.processes.graphs.spec import (
@@ -200,7 +200,7 @@ def test_format_graph_shows_wiring_and_nested_control_flow():
 
 def test_graph_decorators_are_exported_with_explicit_names():
     assert graph_build is build_graph
-    assert task_build is build_task
+    assert task_execution is build_task
 
 
 def test_source_task_rejects_unresolved_annotations_at_registration():

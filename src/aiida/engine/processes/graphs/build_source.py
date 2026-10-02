@@ -21,7 +21,7 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from aiida.engine.processes.graphs.build import task as build_task
+from aiida.engine.processes.graphs.build_execution import task as build_task
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     BranchControl,

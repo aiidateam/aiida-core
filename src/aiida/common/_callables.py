@@ -10,7 +10,63 @@
 
 from __future__ import annotations
 
+import ast
+import contextlib
+import tokenize
 import typing as t
+
+if t.TYPE_CHECKING:
+    from types import CodeType
+
+
+def source_of(value: t.Any) -> str | None:
+    """Return available source, preferring the definition a class's methods lead back to.
+
+    Method code identifies the executed definition among same-named duplicates, where generic
+    inspection can return an earlier one. Inspection remains the fallback for classes without
+    usable methods, and the normal path for anything else.
+
+    :param value: The object whose source to read.
+    :returns: Source text, or ``None`` when unavailable.
+    """
+    import inspect
+    import linecache
+
+    if not inspect.isclass(value):
+        with contextlib.suppress(OSError, TypeError, tokenize.TokenError, SyntaxError, IndexError):
+            return inspect.getsource(value)
+        return None
+
+    for member in vars(value).values():
+        function: t.Any = getattr(member, '__func__', member)
+        code: CodeType | None = getattr(function, '__code__', None)
+
+        if code is None:
+            continue
+
+        if getattr(function, '__qualname__', '').rsplit('.', 1)[0] != value.__qualname__:
+            continue
+        lines: list[str] = linecache.getlines(filename=code.co_filename)
+        try:
+            tree: ast.Module = ast.parse(''.join(lines))
+        except (SyntaxError, ValueError):
+            continue
+        candidates: list[ast.ClassDef] = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ClassDef)
+            and node.name == value.__name__
+            and node.end_lineno is not None
+            and node.lineno <= code.co_firstlineno <= node.end_lineno
+        ]
+        if candidates:
+            statement: ast.ClassDef = max(candidates, key=lambda node: node.lineno)
+            start: int = min([statement.lineno, *(decorator.lineno for decorator in statement.decorator_list)])
+            return ''.join(lines[start - 1 : statement.end_lineno])
+
+    with contextlib.suppress(OSError, TypeError, tokenize.TokenError, SyntaxError, IndexError):
+        return inspect.getsource(value)
+    return None
 
 
 def dumps(value: t.Any) -> bytes:

@@ -138,6 +138,11 @@ def get_node_summary(node: orm.Node) -> str:
             else:
                 table.append(['state', process_state_string])
 
+        # Advertise recorded source without reading it: content would query the container per listed node.
+        if node.base.repository.has_object(path=ProcessNode.KEY_OBJECT_CLASS_SOURCE):
+            command: str = f'verdi node repo cat {node.pk} {ProcessNode.KEY_OBJECT_CLASS_SOURCE}'
+            table.append(['class source', f'show with `{command}`'])
+
     else:
         table.append(['type', node.__class__.__name__])
 

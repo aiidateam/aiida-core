@@ -11,6 +11,8 @@
 import logging
 import pickle
 import sys
+import textwrap
+import time
 import typing as t
 from collections.abc import Callable
 
@@ -20,7 +22,7 @@ from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common import _callables as callables
 from aiida.common import loaders
-from aiida.engine import calcfunction, workfunction
+from aiida.engine import WorkChain, workfunction
 from aiida.engine.processes import persistence
 from aiida.engine.processes.persistence import (
     META,
@@ -29,12 +31,36 @@ from aiida.engine.processes.persistence import (
     CheckpointSerializable,
 )
 from aiida.orm import CalcFunctionNode, InstalledCode, ProcessNode, WorkFunctionNode
-from tests.utils.processes import NotebookWorkChain
+from tests.utils.processes import notebook_add
+
+
+class NotebookWorkChain(WorkChain):
+    """Increment an integer in a dynamically serialized workflow."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('x', valid_type=orm.Int)
+        spec.outline(cls.compute)
+        spec.output('total', valid_type=orm.Int)
+
+    def compute(self):
+        self.out('total', orm.Int(self.inputs.x.value + 1).store())
+
+
+class MainCalcJob(ArithmeticAddCalculation):
+    """Notebook-style arithmetic calculation."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
 
 
 def make_unresolvable_in_worker(monkeypatch: pytest.MonkeyPatch, cls: type) -> type:
     """Claim `__main__` origin for `cls`, making it unresolvable in a worker."""
+
     monkeypatch.setattr(target=cls, name='__module__', value='__main__')
+
     return cls
 
 
@@ -104,21 +130,28 @@ class NestedHolder:
 
 def class_metadata(value: type, loader: loaders.ObjectLoader | None = None) -> dict[str, t.Any]:
     state: dict[str, t.Any] = {}
+
     CheckpointSerializable._record_class(
         value=value, loader=loaders.get_object_loader() if loader is None else loader, out_state=state
     )
+
     return state[META]
 
 
 def test_importable_class_records_only_its_name(user_process_class: type[CheckpointSerializable]):
     """An importable class restores from its loader identifier alone, without bytes."""
+
     saved = user_process_class().save()
+
     assert saved[META] == {META__CLASS_NAME: 'userprocess:UserProcess'}
 
 
 def test_process_function_records_the_wrapped_function():
     """A process function records its wrapped function by name, without class bytes."""
-    assert class_metadata(value=notebook_add.process_class) == {META__CLASS_NAME: f'{__name__}:notebook_add'}
+
+    assert class_metadata(value=notebook_add.process_class) == {
+        META__CLASS_NAME: f'{notebook_add.__module__}:notebook_add'
+    }
 
 
 @pytest.mark.parametrize('nested', [False, True])
@@ -175,42 +208,30 @@ def test_custom_loader_identifier_is_authoritative(
     user_process_class: type[CheckpointSerializable], monkeypatch: pytest.MonkeyPatch
 ):
     """A caller-supplied loader identifier wins over the default naming."""
+
     loader: loaders.DefaultObjectLoader = loaders.DefaultObjectLoader()
 
     def identify_object(obj: t.Any) -> str:
         assert obj is user_process_class
+
         return 'opaque-identifier'
 
     monkeypatch.setattr(target=loader, name='identify_object', value=identify_object)
+
     assert class_metadata(value=user_process_class, loader=loader) == {META__CLASS_NAME: 'opaque-identifier'}
-
-
-@calcfunction
-def notebook_add(x):
-    """Increment an integer node."""
-    return x + 1
 
 
 @workfunction
 def notebook_pass_through(x):
     """Return the input node."""
+
     return x
 
 
 def test_installed_plugin_keeps_name_only_metadata():
     """An installed plugin records only its loader identifier, without class bytes."""
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     assert class_metadata(value=ArithmeticAddCalculation).get(META__CLASS_BYTES) is None
-
-
-@pytest.mark.requires_broker
-def test_workchain_defined_in_main(submit_and_await: Callable[..., ProcessNode], monkeypatch: pytest.MonkeyPatch):
-    """A `__main__` workchain finishes on the daemon from carried bytes alone."""
-    node = submit_and_await(make_unresolvable_in_worker(monkeypatch, NotebookWorkChain), x=orm.Int(41))
-
-    assert node.is_finished_ok, node.exception
-    assert node.outputs.total.value == 42
 
 
 @pytest.mark.parametrize(
@@ -229,28 +250,24 @@ def test_process_function_defined_in_main(
     monkeypatch: pytest.MonkeyPatch,
 ):
     """Both function decorators recover their generated process class on the worker."""
+
     from aiida.engine import submit
 
     monkeypatch.setattr(target=function, name='__module__', value='__main__')
+
     monkeypatch.setattr(target=function.process_class, name='__module__', value='__main__')
 
     class_bytes = class_metadata(value=function.process_class).get(META__CLASS_BYTES)
+
     assert isinstance(class_bytes, bytes), 'the daemon can resolve this function, so this test would prove nothing'
 
     node = submit_and_await(submit(function, x=orm.Int(41)))
 
     assert isinstance(node, node_class), 'premise: the decorator under test is the one that ran'
+
     assert node.is_finished_ok, node.exception
+
     assert node.outputs.result.value == expected
-
-
-class MainCalcJob(ArithmeticAddCalculation):
-    """Notebook-style arithmetic calculation."""
-
-    @classmethod
-    def define(cls, spec):
-
-        super().define(spec)
 
 
 def submit_main_calcjob(
@@ -273,6 +290,19 @@ def submit_main_calcjob(
     return submit_and_await(builder, timeout=60)
 
 
+def _await_sealing(node: ProcessNode) -> ProcessNode:
+    """Reload `node` until sealing deletes its checkpoint."""
+    # Sealing is what deletes the checkpoint, and it lands just after the state that `submit_and_await` waits for.
+    for _ in range(100):
+        node = orm.load_node(node.pk)
+        if node.is_sealed:
+            break
+        time.sleep(0.1)
+    assert node.is_sealed
+    assert node.checkpoint is None
+    return node
+
+
 @pytest.mark.requires_broker
 def test_calcjob_defined_in_main(
     submit_and_await: Callable[..., ProcessNode],
@@ -288,3 +318,42 @@ def test_calcjob_defined_in_main(
     assert node.is_finished_ok, node.exception
 
     assert node.outputs.sum.value == 42
+
+
+@pytest.mark.requires_broker
+def test_calcjob_class_source_outlives_the_checkpoint(
+    submit_and_await: Callable[..., ProcessNode],
+    monkeypatch: pytest.MonkeyPatch,
+    aiida_code_installed: Callable[..., InstalledCode],
+):
+    """A sealed calculation keeps its recorded source after the checkpoint is gone."""
+    make_unresolvable_in_worker(monkeypatch, MainCalcJob)
+    node = submit_main_calcjob(submit_and_await, aiida_code_installed)
+    assert node.is_finished_ok, node.exception
+    node = _await_sealing(node)
+    assert node.class_source is not None
+    source = textwrap.dedent(node.class_source)
+    assert source.startswith('class MainCalcJob(ArithmeticAddCalculation):')
+    assert 'super().define(spec)' in source
+
+
+@pytest.mark.requires_broker
+def test_workchain_defined_in_main(submit_and_await: Callable[..., ProcessNode], monkeypatch: pytest.MonkeyPatch):
+    """A `__main__` workchain finishes on the daemon from carried bytes alone."""
+    node = submit_and_await(make_unresolvable_in_worker(monkeypatch, NotebookWorkChain), x=orm.Int(41))
+    assert node.is_finished_ok, node.exception
+    assert node.outputs.total.value == 42
+
+
+@pytest.mark.requires_broker
+def test_workchain_class_source_outlives_the_checkpoint(
+    submit_and_await: Callable[..., ProcessNode], monkeypatch: pytest.MonkeyPatch
+):
+    """A sealed workchain keeps its recorded source after the checkpoint is gone."""
+    node = submit_and_await(make_unresolvable_in_worker(monkeypatch, NotebookWorkChain), x=orm.Int(41))
+    assert node.is_finished_ok, node.exception
+    node = _await_sealing(node)
+    assert node.class_source is not None
+    source = textwrap.dedent(node.class_source)
+    assert source.startswith('class NotebookWorkChain(WorkChain):')
+    assert 'def compute' in source

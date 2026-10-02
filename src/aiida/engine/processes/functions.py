@@ -288,7 +288,7 @@ class FunctionProcess(Process):
 
     @classmethod
     @override
-    def _source_to_record(cls) -> t.Any:
+    def _source_to_record(cls) -> type | t.Callable[..., t.Any]:
         """Return the wrapped function for source recording."""
         return cls._func
 

@@ -28,6 +28,15 @@ def sum_two(x: int, y: int) -> int:
     return x + y
 
 
+@task
+def make_list(x: int) -> list[int]:
+    return [x]
+
+
+def unresolved_annotation(x: 'missing_orm.Int') -> int:  # noqa: F821 - missing import is intentional
+    return x
+
+
 @graph
 def chain(x: int, y: int) -> int:
     first = sum_two(x=x, y=y)
@@ -182,6 +191,16 @@ def test_format_graph_shows_wiring_and_nested_control_flow():
     map_view = format_graph(parse_graph(transform))
     assert 'each_1 [map over value](value=values, y=y)' in map_view
     assert 'return result=each_1.result' in map_view
+
+
+def test_source_task_rejects_unresolved_annotations_at_registration():
+    with pytest.raises(TypeError, match=r'task `unresolved_annotation`.*missing_orm') as error:
+        task(unresolved_annotation)
+    assert isinstance(error.value.__cause__, NameError)
+
+
+def test_list_annotation_declares_one_output():
+    assert tuple(make_list.task_spec.outputs) == ('result',)
 
 
 def test_wires_tasks_without_running_graph_body():

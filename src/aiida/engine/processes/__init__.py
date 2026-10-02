@@ -100,7 +100,7 @@ __all__ = (
     'select',
     'subgraph',
     'task',
-    'task_build',
+    'task_execution',
     'task_node',
     'tasks',
     'wait_for',

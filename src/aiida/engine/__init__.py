@@ -94,7 +94,7 @@ __all__ = (
     'get_daemon_client',
     'get_object_loader',
     'graph',
-    'graph_build',
+    'graph_execution',
     'graph_source',
     'handler',
     'if_',

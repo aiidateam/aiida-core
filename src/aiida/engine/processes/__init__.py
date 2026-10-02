@@ -88,7 +88,7 @@ __all__ = (
     'construct_awaitable',
     'each',
     'graph',
-    'graph_build',
+    'graph_execution',
     'graph_source',
     'handler',
     'if_',

@@ -616,7 +616,7 @@ def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
                 },
             },
             'process_control': {
-                'backend': kwargs.pop('process_control_backend', 'rabbitmq'),
+                'backend': kwargs.pop('process_control_backend', 'core.rabbitmq'),
                 'config': {
                     'broker_protocol': kwargs.pop('broker_protocol', 'amqp'),
                     'broker_username': kwargs.pop('broker_username', 'guest'),

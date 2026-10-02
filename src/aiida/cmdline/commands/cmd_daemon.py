@@ -174,7 +174,11 @@ def status(ctx, all_profiles, timeout):
         if profile.process_control_backend is not None:
             from aiida.plugins import BrokerFactory
 
-            broker = BrokerFactory(profile.process_control_backend)(profile)
+            entry_point = profile.process_control_backend
+            # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
+            if entry_point == 'rabbitmq':
+                entry_point = 'core.rabbitmq'
+            broker = BrokerFactory(entry_point)(profile)
 
         from aiida.brokers.zeromq.broker import ZeromqBroker
 

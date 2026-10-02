@@ -162,6 +162,10 @@ class ProcessNode(Sealable, Node):
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
     METADATA_INPUTS_KEY: str = 'metadata_inputs'
+    KEY_OBJECT_INTERNAL_DIRNAME: str = '.aiida'
+    """Repository directory for engine-generated process records."""
+    KEY_OBJECT_CLASS_SOURCE: str = f'{KEY_OBJECT_INTERNAL_DIRNAME}/class_source.py'
+    """Repository path for recorded process-definition source."""
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     _process_class_binding: type[Process] | None = None
@@ -278,6 +282,17 @@ class ProcessNode(Sealable, Node):
         return builder
 
     @property
+    def class_source(self) -> str | None:
+        """Return the process definition's recorded source.
+
+        :return: The source text, or ``None`` when no source was recorded.
+        """
+        try:
+            return self.base.repository.get_object_content(path=self.KEY_OBJECT_CLASS_SOURCE, mode='r')
+        except OSError:
+            return None
+
+    @property
     def process_class(self) -> type[Process]:
         """Return the process class that was used to create this node.
 
@@ -323,6 +338,17 @@ class ProcessNode(Sealable, Node):
                     pass
             else:
                 msg = f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+
+                # `__main__` differs per interpreter, so name that instead of the misleading import error.
+                if self.process_type.startswith('__main__.'):
+                    msg = (
+                        f'the process class of Node<{self.pk}> was defined in `__main__` of the interpreter that ran '
+                        f'it, and `__main__` here does not hold it, so it cannot be loaded.'
+                    )
+
+                    if self.base.repository.has_object(path=self.KEY_OBJECT_CLASS_SOURCE):
+                        msg += ' Its source is kept on the node: see the `class_source` property.'
+
                 raise ValueError(msg) from exception
 
         return process_class

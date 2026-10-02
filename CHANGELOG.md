@@ -51,6 +51,9 @@ Such a class belongs to a module that resolves to something different in every i
 Now, the checkpoint carries the class itself whenever no identifier reaches the class or the identifier points at `__main__`.
 What the class refers to travels as a reference, so the worker has to be able to import it: a helper module beside the notebook, on the kernel's `sys.path` only, has to be installed or put on the `PYTHONPATH` the daemon is started with.
 
+In addition, `ProcessNode.class_source` records the source of a class that has no name to resolve later, since the checkpoint carrying it is deleted once the node seals.
+It is stored under `ProcessNode.KEY_OBJECT_CLASS_SOURCE` in the node's repository, which is `.aiida/class_source.py`. For a node that has recorded source, `verdi node show` points at the command that prints it.
+
 #### `ShellJob`: run any command without writing a plugin
 
 The `aiida-shell` package has been integrated into `aiida-core`.

@@ -32,6 +32,26 @@ def test_get_node_summary(aiida_code_installed):
     assert node.computer.label in summary
 
 
+def test_get_node_summary_points_at_a_recorded_class_source():
+    """The summary includes a repository command when class source is recorded."""
+    from aiida.orm import ProcessNode, WorkChainNode
+
+    plain = WorkChainNode()
+    _ = plain.store()
+
+    carried = WorkChainNode()
+    carried.base.repository.put_object_from_bytes(
+        content=b'class Defined(WorkChain):\n    pass\n', path=ProcessNode.KEY_OBJECT_CLASS_SOURCE
+    )
+    _ = carried.store()
+
+    assert 'class source' not in common.get_node_summary(plain)
+
+    summary = common.get_node_summary(carried)
+    assert 'class source' in summary
+    assert f'verdi node repo cat {carried.pk} {ProcessNode.KEY_OBJECT_CLASS_SOURCE}' in summary
+
+
 def test_get_node_info_multiple_call_links():
     """Test the ``get_node_info`` utility.
 

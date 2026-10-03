@@ -14,8 +14,23 @@ from decimal import Decimal
 
 import pytest
 from pydantic import BaseModel, ConfigDict, field_serializer
+from pydantic import Field as ModelField
+from typing_extensions import NotRequired, Required
 
-from aiida.engine import Whole, WorkChain, graph, run_get_node, task
+from aiida.engine import (
+    PortField,
+    ProcessSpec,
+    Whole,
+    WorkChain,
+    run_get_node,
+    task_source,
+)
+from aiida.engine import (
+    graph_execution as graph,
+)
+from aiida.engine import (
+    task_execution as task,
+)
 from aiida.engine.processes.structured import as_dict, build, fields_of, is_structured
 from aiida.orm import Float, Int, JsonableData, Str, load_node
 
@@ -44,6 +59,223 @@ class AsTuple(t.NamedTuple):
 KINDS = pytest.mark.parametrize(
     'container', (AsTypedDict, AsModel, AsDataclass, AsTuple), ids=lambda kind: kind.__name__
 )
+
+
+class Codes(t.TypedDict):
+    kcp: t.Annotated[Int, PortField(help='The required KCP code.')]
+    pw: NotRequired[t.Annotated[Int, PortField(help='The optional PW code.')]]
+    nullable: Int | None
+
+
+class CodeInputs(t.TypedDict):
+    codes: t.Annotated[Codes, PortField(help='Configured calculation codes.')]
+
+
+@task_source
+def source_port_metadata(value: t.Annotated[Int, PortField(help='Explicit parameter help.')]) -> int:
+    """Read a provenance node.
+
+    :param value: docstring help used only without explicit metadata.
+    """
+    return value.value
+
+
+@task_source
+def source_namespace_metadata(codes: t.Annotated[Codes, PortField(help='Calculation codes.')]) -> int:
+    return codes['kcp'].value
+
+
+@task_source
+def source_docstring_help(value: t.Annotated[int, PortField()]) -> int:
+    """Preserve docstring help when no help is specified in metadata.
+
+    :param value: fallback parameter help.
+    """
+    return value
+
+
+@task_source
+def source_whole_metadata(config: t.Annotated[AsDataclass, Whole, PortField(help='Opaque configuration.')]) -> int:
+    return config.steps
+
+
+def test_source_task_parameter_metadata_preserves_help_and_node_types():
+    port = source_port_metadata.process_class.spec().inputs['value']
+    assert port.help == 'Explicit parameter help.'
+    assert port.valid_type == (Int,)
+    result, node = run_get_node(source_port_metadata, value=Int(7))
+    assert node.is_finished_ok
+    assert result == 7
+
+
+def test_source_task_namespace_metadata_preserves_nested_help():
+    ports = source_namespace_metadata.process_class.spec().inputs['codes']
+    assert ports.help == 'Calculation codes.'
+    assert ports['kcp'].help == 'The required KCP code.'
+    assert ports['pw'].help == 'The optional PW code.'
+    assert not ports['pw'].required
+    result, node = run_get_node(source_namespace_metadata, codes={'kcp': Int(7), 'nullable': Int(3)})
+    assert node.is_finished_ok
+    assert result == 7
+
+
+def test_source_task_metadata_without_help_preserves_docstring_help():
+    port = source_docstring_help.process_class.spec().inputs['value']
+    assert port.help == 'fallback parameter help.'
+    assert port.valid_type == (Int,)
+
+
+def test_source_task_metadata_composes_with_whole():
+    port = source_whole_metadata.process_class.spec().inputs['config']
+    assert port.help == 'Opaque configuration.'
+    assert port.valid_type == (JsonableData,)
+    assert port.required
+
+
+class OptionalParent(t.TypedDict, total=False):
+    inherited_optional: int
+
+
+class RequiredChild(OptionalParent):
+    required: int
+    explicit_optional: NotRequired[int]
+
+
+class OptionalChild(RequiredChild, total=False):
+    optional: int
+    explicit_required: Required[int]
+
+
+class PostponedKeys(t.TypedDict, total=False):
+    required: 'Required[int]'
+    optional: 'NotRequired[int]'
+    annotated_required: "t.Annotated[Required[int], PortField(help='Required help.')]"
+
+
+class PostponedRequiredKeys(t.TypedDict):
+    required: 'int'
+    optional: "t.Annotated[NotRequired[int], PortField(help='Optional help.')]"
+
+
+@pytest.mark.parametrize(
+    'container, required',
+    [
+        (RequiredChild, {'required'}),
+        (OptionalChild, {'required', 'explicit_required'}),
+        (PostponedKeys, {'required', 'annotated_required'}),
+        (PostponedRequiredKeys, {'required'}),
+    ],
+)
+def test_typed_dict_requiredness_uses_resolved_markers_and_inherited_totality(container, required):
+    assert {item.name for item in fields_of(container) if item.required} == required
+    assert all(item.annotation is int for item in fields_of(container))
+
+
+@pytest.mark.parametrize('required', [True, False])
+@pytest.mark.parametrize('outer_metadata', [True, False])
+def test_metadata_composes_with_key_requiredness(required, outer_metadata):
+    marker = Required if required else NotRequired
+    annotated = t.Annotated[AsDataclass, Whole, PortField(help='Keep this configuration whole.')]
+    hint = (
+        t.Annotated[marker[AsDataclass], Whole, PortField(help='Keep this configuration whole.')]
+        if outer_metadata
+        else marker[annotated]
+    )
+
+    class Marked(t.TypedDict):
+        config: hint
+
+    (item,) = fields_of(Marked)
+
+    assert item.annotation is AsDataclass
+    assert item.required is required
+    assert item.whole
+    assert item.help == 'Keep this configuration whole.'
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('given', Marked)
+    port = spec.inputs['given']['config']
+    assert port.valid_type == ((JsonableData,) if required else (JsonableData, type(None)))
+    assert port.required is required
+    assert port.help == item.help
+
+
+def test_nested_code_fields_preserve_help_and_key_optionality():
+    spec = ProcessSpec()
+    spec.input_namespace_from('given', CodeInputs)
+    codes = spec.inputs['given']['codes']
+
+    assert codes.help == 'Configured calculation codes.'
+    assert codes['kcp'].required
+    assert codes['kcp'].help == 'The required KCP code.'
+    assert not codes['pw'].required
+    assert codes['pw'].help == 'The optional PW code.'
+    assert codes['nullable'].required, 'a nullable value still needs a key'
+    assert {item.name: item for item in fields_of(Codes)}['nullable'].annotation == Int | None
+
+
+@pytest.mark.parametrize('container', [CodeInputs, Codes])
+def test_explicit_task_input_types_preserve_help(container):
+    @task(inputs=container)
+    def described_codes(**kwargs):
+        return 1
+
+    ports = described_codes.process_class.spec().inputs
+    if container is CodeInputs:
+        assert ports['codes'].help == 'Configured calculation codes.'
+        ports = ports['codes']
+    assert ports['kcp'].help == 'The required KCP code.'
+    assert ports['pw'].help == 'The optional PW code.'
+    assert not ports['pw'].required
+
+
+def test_postponed_annotated_help_is_preserved():
+    item = {item.name: item for item in fields_of(PostponedKeys)}['annotated_required']
+    assert item.help == 'Required help.'
+    assert item.required
+
+
+@pytest.mark.parametrize('kind', ['dataclass', 'tuple', 'model'])
+def test_structured_readers_preserve_help_and_defaults(kind):
+    hint = t.Annotated[int, PortField(help='Number of iterations.')]
+    if kind == 'dataclass':
+
+        @dataclass
+        class Container:
+            steps: hint = 10
+    elif kind == 'tuple':
+
+        class Container(t.NamedTuple):
+            steps: hint = 10
+    else:
+
+        class Container(BaseModel):
+            steps: hint = 10
+
+    (item,) = fields_of(Container)
+    assert item.help == 'Number of iterations.'
+    assert item.annotation is int
+    assert item.default == 10
+    assert not item.required
+    spec = ProcessSpec()
+    spec.input_namespace_from('given', Container)
+    assert spec.inputs['given']['steps'].help == item.help
+
+
+def test_model_descriptions_are_help_unless_explicitly_overridden():
+    class Described(BaseModel):
+        steps: int = ModelField(default=10, description='Model description.')
+        override: t.Annotated[int, PortField(help='Explicit help.')] = ModelField(description='Other description.')
+        unrelated: t.Annotated[int, 'Not port help.']
+
+    items = {item.name: item for item in fields_of(Described)}
+    assert items['steps'].help == 'Model description.'
+    assert items['override'].help == 'Explicit help.'
+    assert items['unrelated'].help is None
+    spec = ProcessSpec()
+    spec.input_namespace_from('given', Described)
+    assert spec.inputs['given']['steps'].help == 'Model description.'
+    assert spec.inputs['given']['override'].help == 'Explicit help.'
 
 
 @KINDS

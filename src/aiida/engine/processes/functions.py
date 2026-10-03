@@ -25,6 +25,10 @@ from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec, _as_a_port
 from aiida.engine.processes.structured import (
+    UNSPECIFIED as FIELD_UNSPECIFIED,
+)
+from aiida.engine.processes.structured import (
+    _port_help,
     as_dict,
     fields_of,
     is_structured,
@@ -345,7 +349,7 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
 
     for field in fields:
         if fields_of(field.annotation) is not None and not field.whole:
-            spec.input_namespace_from(field.name, field.annotation, required=field.required)
+            spec.input_namespace_from(field.name, field.annotation, required=field.required, help=field.help)
             continue
 
         spec.input(field.name, **_as_a_port(field))
@@ -507,7 +511,9 @@ class FunctionProcess(Process):
 
                 annotation = annotations.get(parameter.name)
                 valid_type = infer_valid_type_from_type_annotation(annotation) or (Data,)
-                help_string = param_help_string.get(parameter.name, None)
+                help_string = _port_help(annotation)
+                if help_string is None:
+                    help_string = param_help_string.get(parameter.name, None)
 
                 default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
 
@@ -550,15 +556,15 @@ class FunctionProcess(Process):
                     spec.input_whole(
                         parameter.name,
                         without_marks(annotation),
-                        default=default,
+                        default=FIELD_UNSPECIFIED if default is UNSPECIFIED else default,
                         help=help_string,
                     )
                     continue
 
-                if is_structured(annotation):
+                if is_structured(without_marks(annotation)):
                     spec.input_namespace_from(
                         parameter.name,
-                        annotation,
+                        without_marks(annotation),
                         required=default is UNSPECIFIED,
                         help=help_string,
                     )

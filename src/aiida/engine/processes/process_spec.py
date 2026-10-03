@@ -54,7 +54,7 @@ def _as_a_port(field: Field) -> dict[str, t.Any]:
     unless what it holds is a node already.
     """
     declared = infer_valid_type_from_type_annotation(field.annotation)
-    options: dict[str, t.Any] = {'required': field.required}
+    options: dict[str, t.Any] = {'required': field.required, 'help': field.help}
 
     if not field.required:
         options['default'] = _lazily(field.default)
@@ -182,7 +182,7 @@ class ProcessSpec(spec.ProcessSpec):
             under = f'{name}{self.namespace_separator}{field.name}'
 
             if fields_of(field.annotation) is not None and not field.whole:
-                self.input_namespace_from(under, field.annotation, required=field.required)
+                self.input_namespace_from(under, field.annotation, required=field.required, help=field.help)
                 continue
 
             self.input(

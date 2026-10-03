@@ -57,6 +57,7 @@ __all__ = (
     'Orchestrated',
     'OutputNames',
     'OutputPort',
+    'PortField',
     'PortNamespace',
     'Process',
     'ProcessBuilder',

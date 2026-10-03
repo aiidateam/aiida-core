@@ -19,7 +19,7 @@ from types import UnionType
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.engine.processes.structured import build, fields_of, is_a_plain_class, marked_whole
+from aiida.engine.processes.structured import build, fields_of, is_a_plain_class, marked_whole, without_marks
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 from aiida.orm.nodes.data.jsonable import JsonableData
 
@@ -329,6 +329,7 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
 
         return valid_type_map.get(annotation)
 
+    annotation = without_marks(annotation)
     inferred_valid_type: tuple[t.Any, ...] = ()
 
     if is_a_plain_class(annotation):
@@ -366,6 +367,7 @@ def as_written(annotation: t.Any, value: t.Any) -> t.Any:
     if marked_whole(annotation):
         return _unwrapped(value)
 
+    annotation = without_marks(annotation)
     fields = fields_of(annotation)
 
     if fields is None or not isinstance(value, Mapping):

@@ -22,7 +22,19 @@ from __future__ import annotations
 import dataclasses
 import typing as t
 
-__all__ = ('Field', 'Whole', 'as_dict', 'build', 'fields_of', 'is_structured', 'marked_whole', 'without_marks')
+from typing_extensions import NotRequired, Required
+
+__all__ = (
+    'Field',
+    'PortField',
+    'Whole',
+    'as_dict',
+    'build',
+    'fields_of',
+    'is_structured',
+    'marked_whole',
+    'without_marks',
+)
 
 UNSPECIFIED = object()
 """What a field has instead of a default when it has none, since ``None`` is a default like any other."""
@@ -44,6 +56,18 @@ class Whole:
     """
 
 
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class PortField:
+    """Metadata for an input port, written as ``Annotated[T, PortField(help='...')]``.
+
+    Requiredness remains part of the type or default, rather than being duplicated in this metadata.
+
+    :param help: the help displayed for the generated input port or namespace.
+    """
+
+    help: str | None = None
+
+
 @dataclasses.dataclass(frozen=True)
 class Field:
     """One field of a structured type, in the words a port is declared with."""
@@ -53,6 +77,9 @@ class Field:
     default: t.Any = UNSPECIFIED
     whole: bool = False
     """Whether the field is one value rather than the namespace its own fields would name."""
+
+    help: str | None = None
+    """Help for the input port or namespace this field declares."""
 
     @property
     def required(self) -> bool:
@@ -151,14 +178,55 @@ def build(container: type, values: t.Mapping[str, t.Any]) -> t.Any:
     return container(**held)
 
 
+def _metadata(annotation: t.Any) -> tuple[object, ...]:
+    """Read metadata through key-requiredness wrappers, regardless of their nesting order."""
+    metadata: list[object] = []
+    while (origin := t.get_origin(annotation)) in (t.Annotated, Required, NotRequired):
+        args = t.get_args(annotation)
+        if origin is t.Annotated:
+            metadata.extend(args[1:])
+        annotation = args[0]
+    return tuple(metadata)
+
+
 def marked_whole(annotation: t.Any) -> bool:
     """Return whether the annotation is marked as one value rather than as a namespace."""
-    return Whole in t.get_args(annotation)[1:] if t.get_origin(annotation) is t.Annotated else False
+    return Whole in _metadata(annotation)
+
+
+def _help(metadata: t.Iterable[object]) -> str | None:
+    """Read only explicit port help, leaving unrelated annotation metadata untouched."""
+    return next((mark.help for mark in metadata if isinstance(mark, PortField)), None)
+
+
+def _port_help(annotation: t.Any) -> str | None:
+    """Return explicitly annotated input help, or ``None`` when none is declared.
+
+    :param annotation: the type annotation of a field or parameter.
+    :return: the help carried by its ``PortField`` metadata.
+    """
+    return _help(_metadata(annotation))
 
 
 def without_marks(annotation: t.Any) -> t.Any:
-    """Return the type an annotation names, without the marks written beside it."""
-    return t.get_args(annotation)[0] if t.get_origin(annotation) is t.Annotated else annotation
+    """Return the type an annotation names, without metadata or key-requiredness wrappers."""
+    while t.get_origin(annotation) in (t.Annotated, Required, NotRequired):
+        annotation = t.get_args(annotation)[0]
+    return annotation
+
+
+def _required_key(annotation: t.Any, *, fallback: bool) -> bool:
+    """Prefer resolved markers over key sets that can be stale with postponed annotations.
+
+    Unmarked inherited fields still need the key sets: the child's totality says nothing about the parent's.
+    """
+    while (origin := t.get_origin(annotation)) in (t.Annotated, Required, NotRequired):
+        if origin is Required:
+            return True
+        if origin is NotRequired:
+            return False
+        annotation = t.get_args(annotation)[0]
+    return fallback
 
 
 def _is_a_model(annotation: type) -> bool:
@@ -176,6 +244,7 @@ def _of_model(annotation: t.Any) -> tuple[Field, ...]:
             annotation=info.annotation,
             default=UNSPECIFIED if info.is_required() else info.get_default(call_default_factory=True),
             whole=Whole in info.metadata,
+            help=_help(info.metadata) if _help(info.metadata) is not None else info.description,
         )
         for name, info in annotation.model_fields.items()
     )
@@ -193,8 +262,9 @@ def _of_typed_dict(annotation: t.Any) -> tuple[Field, ...]:
         Field(
             name=name,
             annotation=without_marks(hint),
-            default=None if name in optional else UNSPECIFIED,
+            default=UNSPECIFIED if _required_key(hint, fallback=name not in optional) else None,
             whole=marked_whole(hint),
+            help=_port_help(hint),
         )
         for name, hint in t.get_type_hints(annotation, include_extras=True).items()
     )
@@ -216,6 +286,7 @@ def _of_named_tuple(annotation: t.Any) -> tuple[Field, ...]:
             annotation=without_marks(hints.get(name)),
             default=defaults.get(name, UNSPECIFIED),
             whole=marked_whole(hints.get(name)),
+            help=_port_help(hints.get(name)),
         )
         for name in annotation._fields
     )
@@ -241,6 +312,7 @@ def _of_dataclass(annotation: t.Any) -> tuple[Field, ...]:
                 annotation=without_marks(hint),
                 default=default,
                 whole=marked_whole(hint),
+                help=_port_help(hint),
             )
         )
 

@@ -253,7 +253,7 @@ def show(code: Code):
         if attribute.model_field_info.title:
             title = attribute.model_field_info.title
         else:
-            title = name.replace('_', ' ').title()
+            title = name.replace('_', ' ').capitalize()
 
         value = getattr(code, name)
 

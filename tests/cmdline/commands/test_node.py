@@ -881,20 +881,21 @@ def create_nodes_verdi_node_list(aiida_profile_clean_class):
         orm.Int(value=0).store(),
         orm.Int(value=1).store(),
         orm.Int(value=2).store(),
-        orm.ArrayData().store(),
-        orm.KpointsData().store(),
-        orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),
+        orm.ArrayData.from_arrays([1, 2, 3]).store(),
+        orm.KpointsData.from_arrays({'kpoints': [[0.0, 0.0, 0.0]]}).store(),
+        # TODO ctime is read-only, so we need another way to test time-based filters
+        # orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),
     )
 
 
 @pytest.mark.usefixtures('create_nodes_verdi_node_list')
 class TestNodeList:
-    """Tests for the ``verdi node rehash`` command."""
+    """Tests for the ``verdi node list`` command."""
 
     @pytest.mark.parametrize(
         'options, expected_nodes',
         (
-            ([], [6, 0, 1, 2, 3, 4, 5]),
+            ([], [0, 1, 2, 3, 4, 5]),
             (['-e', 'core.int'], [1, 2, 3]),
             (['-e', 'core.int', '--limit', '1'], [1]),
             (['-e', 'core.int', '--order-direction', 'desc'], [3, 2, 1]),

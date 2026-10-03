@@ -84,7 +84,11 @@ class Code(Data, metaclass=abc.ABCMeta):
         type_check(value, str)
         self.backend_entity.description = value
 
-    @attribute
+    @attribute(
+        model_field_info=pdt.fields.FieldInfo(
+            title='Default `CalcJob` plugin',
+        )
+    )
     def default_calc_job_plugin(self) -> str | None:
         """The entry point name of the default ``CalcJob`` plugin."""
         return self.base.attributes.get(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
@@ -313,7 +317,7 @@ class Code(Data, metaclass=abc.ABCMeta):
         import yaml
 
         context = {'repository_dump_path': pathlib.Path.cwd() / self.label}
-        code_data = type(self).cli_spec.serialize(self, context=context)
+        code_data = type(self).cli_spec.serialize(self, context=context, exclude_none=True)
 
         return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 

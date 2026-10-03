@@ -160,7 +160,7 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path):
             'unused_node': orm.RemoteData(computer=aiida_localhost, remote_path=str(tmp_path)),
         },
         'instructions': orm.Dict(
-            dict={
+            **{
                 'local_files': [('inexistent_node', None, None)],
                 'remote_files': [('inexistent_node', None, None)],
                 'symlink_files': [('inexistent_node', None, None)],
@@ -218,7 +218,7 @@ def test_integration_transfer(aiida_localhost, tmp_path):
     list_for_remote = [('source_remote', 'file_remote.txt', 'file_remote.txt')]
 
     instructions = orm.Dict(
-        dict={
+        **{
             'retrieve_files': True,
             'local_files': list_for_local,
             'remote_files': list_for_remote,

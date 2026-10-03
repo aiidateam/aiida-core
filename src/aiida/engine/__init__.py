@@ -125,3 +125,26 @@ __all__ = (
 )
 
 # fmt: on
+
+import typing as t
+from collections.abc import Callable
+
+from aiida.engine.processes.graphs.build_source import graph as graph_source
+from aiida.engine.processes.graphs.build_source import task as task_source
+
+
+def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
+    """Declare a function as a source graph of tasks.
+
+    Thin wrapper around :func:`graph_source`, so ``from aiida.engine import graph`` defaults to the
+    source flavour without executing the graph body.
+    """
+    return graph_source(function, identifier=identifier)
+
+
+def task(function: Callable[..., t.Any]) -> t.Any:
+    """Register a Python function as a source task.
+
+    Thin wrapper around :func:`task_source`.
+    """
+    return task_source(function)

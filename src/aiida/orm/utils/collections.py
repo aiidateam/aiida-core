@@ -10,18 +10,21 @@
 
 from __future__ import annotations
 
-from typing import Any
+import typing as t
 
 __all__ = ('shallow_copy_nested_dict',)
 
 
-def shallow_copy_nested_dict(dictionary: dict[Any, Any]) -> dict[Any, Any]:
+def shallow_copy_nested_dict(dictionary: dict[t.Any, t.Any]) -> dict[t.Any, t.Any]:
     """Return a recursive shallow copy of a nested dictionary.
 
-    Nested dictionaries are copied recursively, while all non-dictionary values are kept by reference. This is useful
-    for dictionaries containing ORM nodes, where ``copy.deepcopy`` would invoke node-specific copy behavior.
+    Use this to modify nested process-input dictionaries without cloning their ORM nodes, as ``copy.deepcopy`` would.
+    Only dictionary containers are copied, into plain dictionaries. Other values, including lists, tuples and ORM nodes,
+    are kept by reference. Dictionaries inside lists or tuples are therefore not copied either.
+
+    :param dictionary: Dictionary to copy. Nested dictionaries must not contain reference cycles.
+    :return: New dictionary with independent nested dictionaries and the original non-dictionary values.
     """
     return {
-        key: shallow_copy_nested_dict(value) if isinstance(value, dict) else value
-        for key, value in dictionary.items()
+        key: shallow_copy_nested_dict(value) if isinstance(value, dict) else value for key, value in dictionary.items()
     }

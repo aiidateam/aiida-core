@@ -13,6 +13,7 @@
 # fmt: off
 
 from aiida.orm.utils.calcjob import *
+from aiida.orm.utils.collections import *
 from aiida.orm.utils.links import *
 from aiida.orm.utils.loaders import *
 from aiida.orm.utils.managers import *
@@ -41,6 +42,7 @@ __all__ = (
     'load_group',
     'load_node',
     'load_node_class',
+    'shallow_copy_nested_dict',
     'validate_link',
 )
 

@@ -53,7 +53,7 @@ def test_registry_name_for(entity_factory, expected):
 def test_registry_name_for_unregistered_raises():
     """A node type with no registered base class raises a clear error."""
     with pytest.raises(NotImplementedError, match='No dump registry'):
-        registry_name_for(orm.Int(1))
+        registry_name_for(orm.Int(value=1))
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

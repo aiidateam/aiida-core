@@ -88,7 +88,7 @@ def calcfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     >>> def sum(a, b):
     >>>    return a + b
     >>> # Run it with some input
-    >>> r = sum(Int(4), Int(5))
+    >>> r = sum(Int(value=4), Int(value=5))
     >>> print(r)
     9
     >>> r.base.links.get_incoming().all() # doctest: +SKIP
@@ -114,7 +114,7 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     >>> def select(a, b):
     >>>    return a
     >>> # Run it with some input
-    >>> r = select(Int(4), Int(5))
+    >>> r = select(Int(value=4), Int(value=5))
     >>> print(r)
     4
     >>> r.base.links.get_incoming().all() # doctest: +SKIP
@@ -521,7 +521,7 @@ class FunctionProcess(Process):
     def _setup_db_record(self) -> None:
         """Set up the database record for the process."""
         super()._setup_db_record()
-        self.node.store_source_info(self._func)
+        self.node.store_source_info(self._func)  # type: ignore[attr-defined]
 
     @override
     async def run(self) -> ExitCode | None:

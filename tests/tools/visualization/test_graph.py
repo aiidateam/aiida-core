@@ -362,9 +362,13 @@ class TestVisGraph:
             image_name='image',
             engine_command='docker {image_name}',
         )
-        shell = orm.ShellCode(computer=self.computer, filepath_executable='bash')
+        shell = orm.InstalledCode(
+            computer=self.computer,
+            filepath_executable='bash',
+            default_calc_job_plugin='core.shell',
+        )
         (tmp_path / 'bash').touch()
-        portable = orm.PortableCode(filepath_executable='bash', filepath_files=tmp_path)
+        portable = orm.PortableCode.from_directory(filepath_executable='bash', filepath_files=tmp_path)
 
         assert graph_mod.default_node_styles(installed) == expected
         assert graph_mod.default_node_styles(containerized) == expected
@@ -380,9 +384,9 @@ class TestVisGraph:
             image_name='image',
             engine_command='docker {image_name}',
         )
-        shell = orm.ShellCode(computer=self.computer, filepath_executable='bash')
+        shell = orm.ShellCode(computer=self.computer, filepath_executable='bash', default_calc_job_plugin='core.shell')
         (tmp_path / 'bash').touch()
-        portable = orm.PortableCode(filepath_executable='bash', filepath_files=tmp_path)
+        portable = orm.PortableCode.from_directory(filepath_executable='bash', filepath_files=tmp_path)
 
         label = self.computer.label
         assert graph_mod.default_node_sublabels(installed) == f'{bash_path.name}@{label}'

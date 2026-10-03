@@ -15,7 +15,10 @@ import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
 
+from aiida.cmdline.spec import PydanticCliCreateSpec
+from aiida.common.lang import classproperty
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.pydantic import AiiDABaseModel
 
 if t.TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
@@ -61,6 +64,8 @@ class StorageBackend(abc.ABC):
     """
 
     read_only = False
+
+    class CliModel(AiiDABaseModel): ...
 
     @classmethod
     @abc.abstractmethod
@@ -312,6 +317,11 @@ class StorageBackend(abc.ABC):
         :param full: flag to perform operations that require to stop using the profile to be maintained.
         :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
+
+    @classproperty
+    def cli_spec(cls: type[StorageBackend]) -> PydanticCliCreateSpec:  # noqa: N805
+        """Return the CLI creation specification for this storage backend."""
+        return PydanticCliCreateSpec(cls.CliModel)
 
     def _backup(
         self,

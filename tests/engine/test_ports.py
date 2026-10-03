@@ -21,8 +21,8 @@ class TestInputPort:
         """Test that a tuple of valid types is accepted."""
         port = InputPort('port', valid_type=(Int, Str))
 
-        assert port.validate(Int(1)) is None
-        assert port.validate(Str('string')) is None
+        assert port.validate(Int(value=1)) is None
+        assert port.validate(Str(value='string')) is None
         assert port.validate(Dict()) is not None
 
     def test_with_non_db(self):
@@ -113,11 +113,11 @@ class TestPortNamespace:
         assert port_namespace.validate(inputs) is not None
 
         # Passing an explicit value for the port will forego the default and validation on returned inputs should pass
-        inputs = port_namespace.pre_process({'port': Int(5)})
+        inputs = port_namespace.pre_process({'port': Int(value=5)})
         assert port_namespace.validate(inputs) is None
 
         # Redefining the port, this time with a correct default
-        port_namespace['port'] = InputPort('port', valid_type=Int, default=lambda: Int(5))
+        port_namespace['port'] = InputPort('port', valid_type=Int, default=lambda: Int(value=5))
 
         # Pre processing the namespace shall evaluate the default and return the int node
         inputs = port_namespace.pre_process({})
@@ -125,7 +125,7 @@ class TestPortNamespace:
         assert inputs['port'].value == 5
 
         # Passing an explicit value for the port will forego the default
-        inputs = port_namespace.pre_process({'port': Int(3)})
+        inputs = port_namespace.pre_process({'port': Int(value=3)})
         assert isinstance(inputs['port'], Int)
         assert inputs['port'].value == 3
 

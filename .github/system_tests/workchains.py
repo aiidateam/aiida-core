@@ -78,8 +78,8 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
     @process_handler(priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
     def error_negative_sum(self, node):
         """What even is a negative number, how can I have minus three melons?!."""
-        self.ctx.inputs.x = Int(abs(node.inputs.x.value))
-        self.ctx.inputs.y = Int(abs(node.inputs.y.value))
+        self.ctx.inputs.x = Int(value=abs(node.inputs.x.value))
+        self.ctx.inputs.y = Int(value=abs(node.inputs.y.value))
         return ProcessHandlerReport(True)
 
 
@@ -106,10 +106,10 @@ class NestedWorkChain(WorkChain):
         if self.should_submit():
             self.report('Getting sub-workchain output.')
             sub_workchain = self.ctx.workchain[0]
-            self.out('output', Int(sub_workchain.outputs.output + 1).store())
+            self.out('output', Int(value=sub_workchain.outputs.output + 1).store())
         else:
             self.report('Bottom-level workchain reached.')
-            self.out('output', Int(0).store())
+            self.out('output', Int(value=0).store())
 
 
 class SerializeWorkChain(WorkChain):
@@ -119,7 +119,7 @@ class SerializeWorkChain(WorkChain):
     def define(cls, spec):
         super().define(spec)
 
-        spec.input('test', valid_type=Str, serializer=lambda x: Str(ObjectLoader().identify_object(x)))
+        spec.input('test', valid_type=Str, serializer=lambda x: Str(value=ObjectLoader().identify_object(x)))
 
         spec.outline(cls.echo)
         spec.outputs.dynamic = True
@@ -209,7 +209,7 @@ class DynamicMixedInput(WorkChain):
         assert isinstance(input_non_db, int)
         assert not isinstance(input_non_db, Int)
         assert isinstance(input_db, Int)
-        self.out('output', Int(input_db + input_non_db).store())
+        self.out('output', Int(value=input_db + input_non_db).store())
 
 
 class CalcFunctionRunnerWorkChain(WorkChain):
@@ -251,4 +251,4 @@ def echo(value):
 
 @calcfunction
 def increment(data):
-    return Int(data + 1)
+    return Int(value=data + 1)

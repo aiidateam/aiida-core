@@ -153,7 +153,7 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
                 message = (
                     f'default of input port `{args[0]}` is a `Node` instance, '
                     'which can lead to unexpected side effects.'
-                    ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'
+                    ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(value=5)`.'
                 )
                 warnings.warn(UserWarning(message))
 

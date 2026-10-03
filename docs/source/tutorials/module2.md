@@ -14,6 +14,7 @@ execution:
 ---
 
 (tutorial:module2)=
+
 # Module 2: Structured data and calcfunctions
 
 {bdg-secondary}`⏱️ ~75 min read` {bdg-success}`Beginner`
@@ -28,6 +29,7 @@ If you have not already installed these in an earlier module, run:
 ```bash
 uv pip install "aiida-core>=2.9" "aiida-shell>=0.9.0" matplotlib "gsrd>=0.2.0"
 ```
+
 :::
 
 :::{note}
@@ -145,7 +147,7 @@ results, calc_node = launch_shell_job(
 ```
 
 As in {ref}`Module 1 <tutorial:module1>`, getting the `variance_V` value back out means a hand-written regex over the run's `stdout` node.
-The provenance records **file in → ShellJob → stdout/file out**, so AiiDA knows *that* a stdout log and a `results.npz` were produced, but not *what's inside* them.
+The provenance records **file in → ShellJob → stdout/file out**, so AiiDA knows _that_ a stdout log and a `results.npz` were produced, but not _what's inside_ them.
 A query like "all runs where `variance_V > 0.001`" would therefore mean opening every stdout node and re-running that regex ourselves.
 
 Looking at the provenance graph of the run (exactly the same shape as the one we saw in {ref}`Module 1 <tutorial:module1>`) makes this visible:
@@ -191,7 +193,7 @@ Let's write two: one for input preparation, and one for output parsing.
 ### Preparing the input
 
 In {ref}`Module 1 <tutorial:module1>`, we handed `gsrd` a ready-made `input.yaml`. To capture the parameters themselves as queryable data, we now build that file from a `Dict` inside a calcfunction instead.
-`prepare_input` bridges the two natural representations of a simulation's parameters: the dictionary of typed values we want to *think* in (floats, ints, strings) and the YAML input file the binary actually *reads*.
+`prepare_input` bridges the two natural representations of a simulation's parameters: the dictionary of typed values we want to _think_ in (floats, ints, strings) and the YAML input file the binary actually _reads_.
 Most scientific codes take an input file on disk, but the values that drive them are often set programmatically (e.g., from Python), as typed variables.
 Doing the conversion inside a `calcfunction` keeps both representations in the provenance graph: the `Dict` is queryable, the rendered file is what `gsrd` consumes:
 
@@ -210,12 +212,12 @@ def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
 ```
 
 Inside `prepare_input`, `parameters` arrives as an `orm.Dict` node (not a plain `dict`), whose contents you read with `.value`, the same `.value` every data node exposes, including the `orm.Float` outputs later.
-At the *call* site you can still pass a plain `dict`; AiiDA auto-wraps it into that `orm.Dict` node for you.
+At the _call_ site you can still pass a plain `dict`; AiiDA auto-wraps it into that `orm.Dict` node for you.
 
 This also starts to address one of {ref}`Module 0 <tutorial:module0>`'s pain points: the parameters now live in a single `Dict` node, stored with full provenance and reviewable in one place, rather than a hand-edited YAML file whose mistyped keys vanish silently.
 
 :::{tip}
-A `Dict` on its own still doesn't *validate* the keys, but real {ref}`CalcJob <topics:calculations:concepts:calcjobs>` plugins do: they check the inputs for you and reject unknown or malformed parameters before the calculation ever runs.
+A `Dict` on its own still doesn't _validate_ the keys, but real {ref}`CalcJob <topics:calculations:concepts:calcjobs>` plugins do: they check the inputs for you and reject unknown or malformed parameters before the calculation ever runs.
 :::
 
 ### Parsing the output
@@ -246,8 +248,8 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
     mean_v = float(MEAN_RE.search(text).group(1))
 
     return {
-        'variance_V': orm.Float(variance_v),
-        'mean_V': orm.Float(mean_v),
+        'variance_V': orm.Float(value=variance_v),
+        'mean_V': orm.Float(value=mean_v),
     }
 ```
 
@@ -325,7 +327,7 @@ plot_provenance(node)
 ```
 
 Compare this to the opaque run at the start of the module: the provenance now shows `Dict` going in and `Float` values coming out, not just opaque files.
-What changed is not the simulation but *how* we get the numbers back: the `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
+What changed is not the simulation but _how_ we get the numbers back: the `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
 
 We've now chained these three steps by hand.
 Packaging them into a function, `run_pipeline`, makes the sweep below repeatable. It returns the run's final `parse_output` node, which carries the `variance_V` and `mean_V` outputs and links back through the full provenance:
@@ -348,7 +350,7 @@ def run_pipeline(params: dict, command: orm.InstalledCode) -> orm.CalcFunctionNo
 
 :::{note}
 `run_pipeline` runs immediately: each `engine.run_get_node` and `launch_shell_job` call blocks until its process finishes, so the nodes exist as soon as the function returns.
-{ref}`Module 3 <tutorial:module3>` takes this same function and turns it into a tracked **WorkGraph** workflow, where you instead *build* the graph first and run it as a single separate step.
+{ref}`Module 3 <tutorial:module3>` takes this same function and turns it into a tracked **WorkGraph** workflow, where you instead _build_ the graph first and run it as a single separate step.
 :::
 
 ## Organizing and querying your results
@@ -371,7 +373,7 @@ Queries also get far more useful once each run carries additional metadata to fi
 
 ### Extras
 
-There are often properties you want to attach to a node *after* it was created: a quality flag, a review status, e.g., "this is the run I used in the paper", etc.
+There are often properties you want to attach to a node _after_ it was created: a quality flag, a review status, e.g., "this is the run I used in the paper", etc.
 The **extras** dictionary on every AiiDA node is AiiDA's mechanism for exactly that: unlike node attributes (immutable once stored), extras can be set and changed freely, long after the node was created, without touching the provenance graph.
 
 Having run the sweep, say you want to mark the run at the **pattern transition**, a judgement about the results that the provenance itself does not record.
@@ -410,7 +412,7 @@ Group labels are hierarchical: the `/` works like a directory separator, so `tut
 
 ### QueryBuilder
 
-Extras and groups are how you *organize* nodes; {class}`~aiida.orm.QueryBuilder` is how you *find* them.
+Extras and groups are how you _organize_ nodes; {class}`~aiida.orm.QueryBuilder` is how you _find_ them.
 It is AiiDA's structured-search API over the provenance graph: filter by node type, by attribute value, by extras, by which group they belong to, by their relationships to other nodes, etc.
 
 You build a query by **appending** the entity type you're after, optionally with `filters` (which nodes to keep) and a `project` (which fields to return), then run it with `.count()`, `.all()`, or `.first()`.
@@ -427,7 +429,7 @@ qb = orm.QueryBuilder().append(
 print(f'parse_output calcfunctions in this profile: {qb.count()}')
 ```
 
-That counts by node *type*. You can just as well filter by a stored **attribute**, for example the feed rate `F` that each run recorded on its input `Dict`:
+That counts by node _type_. You can just as well filter by a stored **attribute**, for example the feed rate `F` that each run recorded on its input `Dict`:
 
 ```{code-cell} ipython3
 # Filter input Dict nodes by a stored parameter value.
@@ -466,7 +468,7 @@ print(f'Transition run: parse_output PK {transition_parse.pk}')
 print(f'gsrd simulation behind it: ShellJob PK {simulation.pk}')
 ```
 
-The examples above already chain multiple `append` calls and follow a link through the provenance graph by hand. QueryBuilder and node navigation go much further: *projecting* single fields instead of loading whole nodes, and chaining hops across entire workflows. We'll cover those patterns properly in a later module.
+The examples above already chain multiple `append` calls and follow a link through the provenance graph by hand. QueryBuilder and node navigation go much further: _projecting_ single fields instead of loading whole nodes, and chaining hops across entire workflows. We'll cover those patterns properly in a later module.
 
 With all this activity, our profile is filling up, so let's list every process we have run so far across all modules:
 
@@ -480,7 +482,7 @@ With all this activity, our profile is filling up, so let's list every process w
 ## Next steps
 
 We now have a tracked pipeline with structured data, but two things are still plain Python.
-`run_pipeline` packages `prepare_input → ShellJob → parse_output` into one function, but that function just runs the three steps in order when you call it. The provenance records them as three individual processes with no parent **workflow** node tying them together, so there's no single object that *is* a run to hand around, restart, or query as one unit, and if a step fails you handle it yourself.
+`run_pipeline` packages `prepare_input → ShellJob → parse_output` into one function, but that function just runs the three steps in order when you call it. The provenance records them as three individual processes with no parent **workflow** node tying them together, so there's no single object that _is_ a run to hand around, restart, or query as one unit, and if a step fails you handle it yourself.
 And the sweep runs each parameter set one after another, with no way to run independent runs in parallel.
 
 In {ref}`Module 3a <tutorial:module3a>`, you'll wrap that pipeline into a single **WorkGraph workflow**.

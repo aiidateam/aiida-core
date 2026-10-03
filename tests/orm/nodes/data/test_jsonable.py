@@ -38,7 +38,7 @@ def test_construct():
     """Test the ``JsonableData`` constructor."""
     data = {'a': 1}
     obj = JsonableClass(data)
-    node = JsonableData(obj)
+    node = JsonableData.from_object(obj)
 
     assert isinstance(node, JsonableData)
     assert not node.is_stored
@@ -51,7 +51,7 @@ def test_invalid_class_no_as_dict():
         pass
 
     with pytest.raises(TypeError, match=r'the `obj` argument does not have the required `as_dict` method.'):
-        JsonableData(InvalidClass())
+        JsonableData.from_object(InvalidClass())
 
 
 def test_invalid_class_not_serializable():
@@ -59,14 +59,14 @@ def test_invalid_class_not_serializable():
     obj = JsonableClass({'datetime': datetime.datetime.now()})
 
     with pytest.raises(TypeError, match=r'the object `.*` is not JSON-serializable and therefore cannot be stored.'):
-        JsonableData(obj)
+        JsonableData.from_object(obj)
 
 
 def test_store():
     """Test storing a ``JsonableData`` instance."""
     data = {'a': 1}
     obj = JsonableClass(data)
-    node = JsonableData(obj)
+    node = JsonableData.from_object(obj)
     assert not node.is_stored
 
     node.store()
@@ -77,7 +77,7 @@ def test_load():
     """Test loading a ``JsonableData`` instance."""
     data = {'a': 1}
     obj = JsonableClass(data)
-    node = JsonableData(obj)
+    node = JsonableData.from_object(obj)
     node.store()
 
     loaded = load_node(node.pk)
@@ -89,7 +89,7 @@ def test_obj():
     """Test the ``JsonableData.obj`` property."""
     data = [1, float('inf'), float('-inf'), float('nan')]
     obj = JsonableClass(data)
-    node = JsonableData(obj)
+    node = JsonableData.from_object(obj)
     node.store()
 
     assert isinstance(node.obj, JsonableClass)
@@ -110,7 +110,7 @@ def test_obj():
 def test_unimportable_module():
     """Test the ``JsonableData.obj`` property if the associated module cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])
-    node = JsonableData(obj)
+    node = JsonableData.from_object(obj)
 
     # Artificially change the ``@module`` in the attributes so it becomes unloadable
     node.base.attributes.set('@module', 'not.existing')
@@ -125,7 +125,7 @@ def test_unimportable_module():
 def test_unimportable_class():
     """Test the ``JsonableData.obj`` property if the associated class cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])
-    node = JsonableData(obj)
+    node = JsonableData.from_object(obj)
 
     # Artificially change the ``@class`` in the attributes so it becomes unloadable
     node.base.attributes.set('@class', 'NonExistingClass')
@@ -140,7 +140,7 @@ def test_unimportable_class():
 def test_msonable():
     """Test that an ``MSONAble`` object can be wrapped, stored and loaded again."""
     obj = Molecule(['H'], [[0, 0, 0]])
-    node = JsonableData(obj)
+    node = JsonableData.from_object(obj)
     node.store()
     assert node.is_stored
 

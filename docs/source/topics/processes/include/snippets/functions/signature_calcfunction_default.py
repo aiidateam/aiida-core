@@ -5,10 +5,10 @@ from aiida.orm import Int
 @calcfunction
 def add_multiply(x, y, z=None):
     if z is None:
-        z = Int(3)
+        z = Int(value=3)
 
     return (x + y) * z
 
 
-result = add_multiply(Int(1), Int(2))
-result = add_multiply(Int(1), Int(2), Int(3))
+result = add_multiply(Int(value=1), Int(value=2))
+result = add_multiply(Int(value=1), Int(value=2), Int(value=3))

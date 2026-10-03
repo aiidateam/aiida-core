@@ -10,10 +10,11 @@
 
 from __future__ import annotations
 
+from aiida.common import exceptions
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+from aiida.orm.decorators.attributes import attribute
 from aiida.orm.nodes.data.remote.stash.base import RemoteStashData
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('RemoteStashCustomData',)
 
@@ -23,66 +24,45 @@ class RemoteStashCustomData(RemoteStashData):
 
     _storable = True
 
-    class AttributesModel(RemoteStashData.AttributesModel):
-        target_basepath: str = OrmMetadataField(
-            description='The the target basepath',
-        )
-        source_list: list[str] = OrmMetadataField(
-            description='The list of source files that were stashed',
-        )
-
-    def __init__(
-        self,
-        stash_mode: StashMode,
-        target_basepath: str,
-        source_list: list[str],
-        **kwargs,
-    ):
-        """Construct a new instance
-
-        :param stash_mode: the stashing mode with which the data was stashed on the remote.
-        :param target_basepath: the target basepath.
-        :param source_list: the list of source files.
-        """
-
-        super().__init__(stash_mode, **kwargs)
-
-        self.target_basepath = target_basepath
-        self.source_list = source_list
-
-        if stash_mode != StashMode.SUBMIT_CUSTOM_CODE:
-            raise ValueError('`RemoteStashCustomData` can only be used with `stash_mode == StashMode.COPY`.')
-
-    @property
+    @attribute
     def target_basepath(self) -> str:
-        """Return the target basepath.
-
-        :return: the target basepath.
-        """
+        """The target basepath."""
         return self.base.attributes.get('target_basepath')
 
     @target_basepath.setter
-    def target_basepath(self, value: str):
-        """Set the target basepath.
-
-        :param value: the target basepath.
-        """
+    def target_basepath(self, value: str) -> None:
         type_check(value, str)
         self.base.attributes.set('target_basepath', value)
 
-    @property
-    def source_list(self) -> list | tuple:
-        """Return the list of source files that were stashed.
-
-        :return: the list of source files.
-        """
+    @attribute
+    def source_list(self) -> list[str]:
+        """The list of source files that were stashed."""
         return self.base.attributes.get('source_list')
 
     @source_list.setter
-    def source_list(self, value: list | tuple):
-        """Set the list of source files that were stashed.
-
-        :param value: the list of source files.
-        """
+    def source_list(self, value: list[str] | tuple[str, ...]) -> None:
         type_check(value, (list, tuple))
-        self.base.attributes.set('source_list', value)
+
+        if not all(isinstance(source, str) for source in value):
+            raise TypeError('`source_list` should contain only strings.')
+
+        self.base.attributes.set('source_list', list(value))
+
+    def _validate(self) -> None:
+        """Validate the custom stash configuration."""
+        super()._validate()
+
+        if self.stash_mode != StashMode.SUBMIT_CUSTOM_CODE:
+            raise exceptions.ValidationError(
+                '`RemoteStashCustomData` can only be used with `stash_mode == StashMode.SUBMIT_CUSTOM_CODE`.'
+            )
+
+        try:
+            self.target_basepath
+        except AttributeError as exc:
+            raise exceptions.ValidationError("attribute 'target_basepath' not set.") from exc
+
+        try:
+            self.source_list
+        except AttributeError as exc:
+            raise exceptions.ValidationError("attribute 'source_list' not set.") from exc

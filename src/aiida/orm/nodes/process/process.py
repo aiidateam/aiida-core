@@ -18,10 +18,11 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 from aiida.common.processes import ProcessState
+from aiida.orm.decorators import attribute
+from aiida.orm.models.adapters import EnumStrAdapter
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.orm.nodes.links import NodeLinks
 from aiida.orm.nodes.node import Node
-from aiida.orm.pydantic import OrmMetadataField
 from aiida.orm.utils.mixins import Sealable
 
 if t.TYPE_CHECKING:
@@ -42,7 +43,11 @@ class ProcessNodeCaching(NodeCaching):
 
         :returns: True if the cache should be considered, False otherwise.
         """
-        metadata_inputs = self._node.get_metadata_inputs() or {}
+        if not isinstance(self._node, ProcessNode):
+            msg = f'expected a ProcessNode instance; got {type(self._node)}'
+            raise ValueError(msg)
+
+        metadata_inputs = self._node.metadata_inputs or {}
         disable_cache = metadata_inputs.get('metadata', {}).get('disable_cache', None)
 
         if disable_cache:
@@ -102,6 +107,8 @@ class ProcessNodeCaching(NodeCaching):
 
 class ProcessNodeLinks(NodeLinks):
     """Interface for links of a node instance."""
+
+    _node: ProcessNode
 
     def validate_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from a given node to ourself.
@@ -172,61 +179,151 @@ class ProcessNode(Sealable, Node):
 
         return f'{base}'
 
-    @classproperty
-    def _hash_ignored_attributes(cls) -> tuple[str, ...]:  # noqa: N805
-        return super()._hash_ignored_attributes + ('metadata_inputs',)
+    @attribute
+    def process_label(self) -> str | None:
+        """The process label"""
+        return self.base.attributes.get(self.PROCESS_LABEL_KEY, None)
 
-    @classproperty
-    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
-        return super()._updatable_attributes + (
-            cls.PROCESS_PAUSED_KEY,
-            cls.CHECKPOINT_KEY,
-            cls.EXCEPTION_KEY,
-            cls.EXIT_MESSAGE_KEY,
-            cls.EXIT_STATUS_KEY,
-            cls.PROCESS_LABEL_KEY,
-            cls.PROCESS_STATE_KEY,
-            cls.PROCESS_STATUS_KEY,
-        )
+    @process_label.setter
+    def process_label(self, label: str) -> None:
+        self.base.attributes.set(self.PROCESS_LABEL_KEY, label)
 
-    class AttributesModel(Node.AttributesModel, Sealable.AttributesModel):
-        process_label: str | None = OrmMetadataField(
-            None,
-            description='The process label',
-        )
-        process_state: str | None = OrmMetadataField(
-            None,
-            description='The process state enum',
-        )
-        process_status: str | None = OrmMetadataField(
-            None,
-            description='The process status is a generic status message',
-        )
-        exit_status: int | None = OrmMetadataField(
-            None,
-            description='The process exit status',
-        )
-        exit_message: str | None = OrmMetadataField(
-            None,
-            description='The process exit message',
-        )
-        exception: str | None = OrmMetadataField(
-            None,
-            description='The process exception message',
-        )
-        paused: bool | None = OrmMetadataField(
-            None,
-            description='Whether the process is paused',
-            orm_to_model=lambda node: t.cast(ProcessNode, node).base.attributes.get('paused', None),
-        )
+    @attribute(model_adapter=EnumStrAdapter(ProcessState))
+    def process_state(self) -> ProcessState | None:
+        """The process state."""
+        state = self.base.attributes.get(self.PROCESS_STATE_KEY, None)
 
-    def set_metadata_inputs(self, value: dict[str, t.Any]) -> None:
-        """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
-        return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
+        if state is None:
+            return state
 
-    def get_metadata_inputs(self) -> dict[str, t.Any] | None:
-        """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return ProcessState(state)
+
+    @process_state.setter
+    def process_state(self, state: str | ProcessState | None):
+        if isinstance(state, ProcessState):
+            state = state.value
+        return self.base.attributes.set(self.PROCESS_STATE_KEY, state)
+
+    @attribute
+    def process_status(self) -> str | None:
+        """The process status.
+
+        The process status is a generic status message e.g. the reason it might be paused or when it is being killed
+        """
+        return self.base.attributes.get(self.PROCESS_STATUS_KEY, None)
+
+    @process_status.setter
+    def process_status(self, status: str | None) -> None:
+        if status is None:
+            del self.process_status
+            return None
+
+        if not isinstance(status, str):
+            raise TypeError('process status should be a string')
+
+        return self.base.attributes.set(self.PROCESS_STATUS_KEY, status)
+
+    @process_status.deleter
+    def process_status(self) -> None:
+        try:
+            self.base.attributes.delete(self.PROCESS_STATUS_KEY)
+        except AttributeError:
+            pass
+
+    @attribute
+    def exit_status(self) -> int | None:
+        """The exit status of the process."""
+        return self.base.attributes.get(self.EXIT_STATUS_KEY, None)
+
+    @exit_status.setter
+    def exit_status(self, status: enum.Enum | int | None = None) -> None:
+        if status is None:
+            status = 0
+
+        if isinstance(status, enum.Enum):
+            status = status.value
+
+        if not isinstance(status, int):
+            msg = f'exit status has to be an integer, got {status}'
+            raise ValueError(msg)
+
+        return self.base.attributes.set(self.EXIT_STATUS_KEY, status)
+
+    @attribute
+    def exit_message(self) -> str | None:
+        """The exit message of the process."""
+        return self.base.attributes.get(self.EXIT_MESSAGE_KEY, None)
+
+    @exit_message.setter
+    def exit_message(self, message: str | None) -> None:
+        if message is None:
+            return None
+
+        if not isinstance(message, str):
+            msg = f'exit message has to be a string type, got {type(message)}'
+            raise ValueError(msg)
+
+        return self.base.attributes.set(self.EXIT_MESSAGE_KEY, message)
+
+    @attribute
+    def exception(self) -> str | None:
+        """The exception of the process or None if the process is not excepted.
+
+        If the process is marked as excepted yet there is no exception attribute, an empty string will be returned.
+        """
+        if self.is_excepted:
+            return self.base.attributes.get(self.EXCEPTION_KEY, '')
+
+        return None
+
+    @exception.setter
+    def exception(self, exception: str) -> None:
+        if not isinstance(exception, str):
+            msg = f'exception message has to be a string type, got {type(exception)}'
+            raise ValueError(msg)
+
+        return self.base.attributes.set(self.EXCEPTION_KEY, exception)
+
+    @attribute
+    def paused(self) -> bool:
+        """Whether the process is paused."""
+        return self.base.attributes.get(self.PROCESS_PAUSED_KEY, False)
+
+    @paused.setter
+    def paused(self, paused: bool) -> None:
+        return self.base.attributes.set(self.PROCESS_PAUSED_KEY, paused)
+
+    @paused.deleter
+    def paused(self) -> None:
+        try:
+            self.base.attributes.delete(self.PROCESS_PAUSED_KEY)
+        except AttributeError:
+            pass
+
+    @attribute
+    def checkpoints(self) -> str | None:
+        """The checkpoint payload for the process."""
+        return self.base.attributes.get(self.CHECKPOINT_KEY, None)
+
+    @checkpoints.setter
+    def checkpoints(self, checkpoint: str) -> None:
+        return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
+
+    @checkpoints.deleter
+    def checkpoints(self) -> None:
+        try:
+            self.base.attributes.delete(self.CHECKPOINT_KEY)
+        except AttributeError:
+            pass
+
+    @attribute
+    def metadata_inputs(self) -> dict[str, t.Any] | None:
+        """The mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
         return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
+
+    @metadata_inputs.setter
+    def metadata_inputs(self, value: dict[str, t.Any]) -> None:
+        return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
 
     @property
     def logger(self):
@@ -246,34 +343,6 @@ class ProcessNode(Sealable, Node):
             self._logger_adapter = create_logger_adapter(self._logger, self)
 
         return self._logger_adapter
-
-    @classmethod
-    def recursive_merge(cls, left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None:
-        """Recursively merge the ``right`` dictionary into the ``left`` dictionary.
-
-        :param left: Base dictionary.
-        :param right: Dictionary to recurisvely merge on top of ``left`` dictionary.
-        """
-        for key, value in right.items():
-            if key in left and isinstance(left[key], dict) and isinstance(value, dict):
-                cls.recursive_merge(left[key], value)
-            else:
-                left[key] = value
-
-    def get_builder_restart(self) -> ProcessBuilder:
-        """Return a `ProcessBuilder` that is ready to relaunch the process that created this node.
-
-        The process class will be set based on the `process_type` of this node and the inputs of the builder will be
-        prepopulated with the inputs registered for this node. This functionality is very useful if a process has
-        completed and you want to relaunch it with slightly different inputs.
-
-        :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
-        """
-        builder = self.process_class.get_builder()
-        inputs = self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested()
-        self.recursive_merge(inputs, self.get_metadata_inputs() or {})
-        builder._update(inputs)
-        return builder
 
     @property
     def process_class(self) -> type[Process]:
@@ -316,80 +385,6 @@ class ProcessNode(Sealable, Node):
                 raise ValueError(msg) from exception
 
         return process_class
-
-    def set_process_type(self, process_type_string: str) -> None:
-        """Set the process type string.
-
-        :param process_type: the process type string identifying the class using this process node as storage.
-        """
-        self.process_type = process_type_string
-
-    @property
-    def process_label(self) -> str | None:
-        """Return the process label
-
-        :returns: the process label
-        """
-        return self.base.attributes.get(self.PROCESS_LABEL_KEY, None)
-
-    def set_process_label(self, label: str) -> None:
-        """Set the process label
-
-        :param label: process label string
-        """
-        self.base.attributes.set(self.PROCESS_LABEL_KEY, label)
-
-    @property
-    def process_state(self) -> ProcessState | None:
-        """Return the process state
-
-        :returns: the process state instance of ProcessState enum
-        """
-        state = self.base.attributes.get(self.PROCESS_STATE_KEY, None)
-
-        if state is None:
-            return state
-
-        return ProcessState(state)
-
-    def set_process_state(self, state: str | ProcessState | None):
-        """Set the process state
-
-        :param state: value or instance of ProcessState enum
-        """
-        if isinstance(state, ProcessState):
-            state = state.value
-        return self.base.attributes.set(self.PROCESS_STATE_KEY, state)
-
-    @property
-    def process_status(self) -> str | None:
-        """Return the process status
-
-        The process status is a generic status message e.g. the reason it might be paused or when it is being killed
-
-        :returns: the process status
-        """
-        return self.base.attributes.get(self.PROCESS_STATUS_KEY, None)
-
-    def set_process_status(self, status: str | None) -> None:
-        """Set the process status
-
-        The process status is a generic status message e.g. the reason it might be paused or when it is being killed.
-        If status is None, the corresponding attribute will be deleted.
-
-        :param status: string process status
-        """
-        if status is None:
-            try:
-                self.base.attributes.delete(self.PROCESS_STATUS_KEY)
-            except AttributeError:
-                pass
-            return None
-
-        if not isinstance(status, str):
-            raise TypeError('process status should be a string')
-
-        return self.base.attributes.set(self.PROCESS_STATUS_KEY, status)
 
     @property
     def is_terminated(self) -> bool:
@@ -477,126 +472,6 @@ class ProcessNode(Sealable, Node):
         return ExitCode(exit_status, exit_message)
 
     @property
-    def exit_status(self) -> int | None:
-        """Return the exit status of the process
-
-        :returns: the exit status, an integer exit code or None
-        """
-        return self.base.attributes.get(self.EXIT_STATUS_KEY, None)
-
-    def set_exit_status(self, status: enum.Enum | int | None = None) -> None:
-        """Set the exit status of the process
-
-        :param status: the exit status, an integer exit code, or None
-        """
-        if status is None:
-            status = 0
-
-        if isinstance(status, enum.Enum):
-            status = status.value
-
-        if not isinstance(status, int):
-            msg = f'exit status has to be an integer, got {status}'
-            raise ValueError(msg)
-
-        return self.base.attributes.set(self.EXIT_STATUS_KEY, status)
-
-    @property
-    def exit_message(self) -> str | None:
-        """Return the exit message of the process
-
-        :returns: the exit message
-        """
-        return self.base.attributes.get(self.EXIT_MESSAGE_KEY, None)
-
-    def set_exit_message(self, message: str | None) -> None:
-        """Set the exit message of the process, if None nothing will be done
-
-        :param message: a string message
-        """
-        if message is None:
-            return None
-
-        if not isinstance(message, str):
-            msg = f'exit message has to be a string type, got {type(message)}'
-            raise ValueError(msg)
-
-        return self.base.attributes.set(self.EXIT_MESSAGE_KEY, message)
-
-    @property
-    def exception(self) -> str | None:
-        """Return the exception of the process or None if the process is not excepted.
-
-        If the process is marked as excepted yet there is no exception attribute, an empty string will be returned.
-
-        :returns: the exception message or None
-        """
-        if self.is_excepted:
-            return self.base.attributes.get(self.EXCEPTION_KEY, '')
-
-        return None
-
-    def set_exception(self, exception: str) -> None:
-        """Set the exception of the process
-
-        :param exception: the exception message
-        """
-        if not isinstance(exception, str):
-            msg = f'exception message has to be a string type, got {type(exception)}'
-            raise ValueError(msg)
-
-        return self.base.attributes.set(self.EXCEPTION_KEY, exception)
-
-    @property
-    def checkpoint(self) -> str | None:
-        """Return the checkpoint payload for the process
-
-        :returns: checkpoint payload if it exists, None otherwise
-        """
-        return self.base.attributes.get(self.CHECKPOINT_KEY, None)
-
-    def set_checkpoint(self, checkpoint: str) -> None:
-        """Set the checkpoint payload for the process
-
-        :param state: string representation of the stepper state info
-        """
-        return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
-
-    def delete_checkpoint(self) -> None:
-        """Delete the checkpoint payload for the process"""
-        try:
-            self.base.attributes.delete(self.CHECKPOINT_KEY)
-        except AttributeError:
-            pass
-
-    @property
-    def paused(self) -> bool:
-        """Return whether the process is paused
-
-        :returns: True if the Calculation is marked as paused, False otherwise
-        """
-        return self.base.attributes.get(self.PROCESS_PAUSED_KEY, False)
-
-    def pause(self) -> None:
-        """Mark the process as paused by setting the corresponding attribute.
-
-        This serves only to reflect that the corresponding Process is paused and so this method should not be called
-        by anyone but the Process instance itself.
-        """
-        return self.base.attributes.set(self.PROCESS_PAUSED_KEY, True)
-
-    def unpause(self) -> None:
-        """Mark the process as unpaused by removing the corresponding attribute.
-
-        This serves only to reflect that the corresponding Process is unpaused and so this method should not be called
-        by anyone but the Process instance itself.
-        """
-        try:
-            self.base.attributes.delete(self.PROCESS_PAUSED_KEY)
-        except AttributeError:
-            pass
-
-    @property
     def called(self) -> list[ProcessNode]:
         """Return a list of nodes that the process called
 
@@ -629,6 +504,50 @@ class ProcessNode(Sealable, Node):
         except ValueError:
             return None
         return caller
+
+    def pause(self) -> None:
+        """Mark the process as paused by setting the corresponding attribute.
+
+        This serves only to reflect that the corresponding Process is paused and so this method should not be called
+        by anyone but the Process instance itself.
+        """
+        self.paused = True
+
+    def unpause(self) -> None:
+        """Mark the process as unpaused by removing the corresponding attribute.
+
+        This serves only to reflect that the corresponding Process is unpaused and so this method should not be called
+        by anyone but the Process instance itself.
+        """
+        del self.paused
+
+    @classmethod
+    def recursive_merge(cls, left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None:
+        """Recursively merge the ``right`` dictionary into the ``left`` dictionary.
+
+        :param left: Base dictionary.
+        :param right: Dictionary to recursively merge on top of ``left`` dictionary.
+        """
+        for key, value in right.items():
+            if key in left and isinstance(left[key], dict) and isinstance(value, dict):
+                cls.recursive_merge(left[key], value)
+            else:
+                left[key] = value
+
+    def get_builder_restart(self) -> ProcessBuilder:
+        """Return a `ProcessBuilder` that is ready to relaunch the process that created this node.
+
+        The process class will be set based on the `process_type` of this node and the inputs of the builder will be
+        prepopulated with the inputs registered for this node. This functionality is very useful if a process has
+        completed and you want to relaunch it with slightly different inputs.
+
+        :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
+        """
+        builder = self.process_class.get_builder()
+        inputs = self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested()
+        self.recursive_merge(inputs, self.metadata_inputs or {})
+        builder._update(inputs)
+        return builder
 
     def dump(
         self,
@@ -684,3 +603,93 @@ class ProcessNode(Sealable, Node):
         engine.dump()
 
         return target_path
+
+    @classproperty
+    def _hash_ignored_attributes(cls) -> tuple[str, ...]:  # noqa: N805
+        return super()._hash_ignored_attributes + ('metadata_inputs',)
+
+    @classproperty
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
+        return super()._updatable_attributes + (
+            cls.PROCESS_PAUSED_KEY,
+            cls.CHECKPOINT_KEY,
+            cls.EXCEPTION_KEY,
+            cls.EXIT_MESSAGE_KEY,
+            cls.EXIT_STATUS_KEY,
+            cls.PROCESS_LABEL_KEY,
+            cls.PROCESS_STATE_KEY,
+            cls.PROCESS_STATUS_KEY,
+        )
+
+    # TODO the following methods are handled above via property operations - consider removing
+
+    def set_exit_status(self, status: enum.Enum | int | None = None) -> None:
+        """Set the exit status of the process
+
+        :param status: the exit status, an integer exit code, or None
+        """
+        self.exit_status = status
+
+    def set_exit_message(self, message: str | None) -> None:
+        """Set the exit message of the process, if None nothing will be done
+
+        :param message: a string message
+        """
+        self.exit_message = message
+
+    def set_exception(self, exception: str) -> None:
+        """Set the exception of the process
+
+        :param exception: the exception message
+        """
+        self.exception = exception
+
+    def set_checkpoint(self, checkpoint: str) -> None:
+        """Set the checkpoint payload for the process
+
+        :param checkpoint: string representation of the stepper state info
+        """
+        self.checkpoints = checkpoint
+
+    def delete_checkpoint(self) -> None:
+        """Delete the checkpoint payload for the process"""
+        del self.checkpoints
+
+    def set_metadata_inputs(self, value: dict[str, t.Any]) -> None:
+        """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        self.metadata_inputs = value
+
+    def get_metadata_inputs(self) -> dict[str, t.Any] | None:
+        """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return self.metadata_inputs
+
+    def set_process_type(self, process_type_string: str) -> None:
+        """Set the process type string.
+
+        :param process_type: the process type string identifying the class using this process node as storage.
+        """
+        self.process_type = process_type_string
+
+    def set_process_label(self, label: str) -> None:
+        """Set the process label
+
+        :param label: process label string
+        """
+        self.process_label = label
+
+    def set_process_state(self, state: str | ProcessState | None) -> None:
+        """Set the process state
+
+        :param state: value or instance of ProcessState enum
+        """
+        self.process_state = state
+
+    def set_process_status(self, status: str | None) -> None:
+        """Set the process status
+
+        The process status is a generic status message e.g. the reason it might be paused or when it is being killed.
+        If status is None, the corresponding attribute will be deleted.
+
+        :param status: string process status
+        """
+        self.process_status = status

@@ -91,7 +91,7 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
     parameters.pop('occupancy_tolerance', None)
     parameters.pop('site_tolerance', None)
 
-    return {'structure': StructureData(ase=cif.get_ase(**parameters))}
+    return {'structure': StructureData.from_ase(cif.get_ase(**parameters))}
 
 
 @calcfunction
@@ -146,7 +146,7 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
                 'detected atomic sites with an occupation number larger than the occupation tolerance'
             ) from ValueError
 
-    return {'structure': StructureData(pymatgen_structure=structures[0])}
+    return {'structure': StructureData.from_pymatgen_structure(structures[0])}
 
 
 @calcfunction
@@ -178,7 +178,7 @@ def refine_inline(node):
 
     refined_atoms, symmetry = ase_refine_cell(original_atoms)
 
-    cif = CifData(ase=refined_atoms)
+    cif = CifData.from_ase(ase=refined_atoms)
     if name != str(0):
         cif.values.rename(str(0), name)
 
@@ -195,7 +195,7 @@ def refine_inline(node):
     ]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
-    cif.values[name]['_chemical_formula_sum'] = StructureData(ase=original_atoms).get_formula(
+    cif.values[name]['_chemical_formula_sum'] = StructureData.from_ase(original_atoms).get_formula(
         mode='hill', separator=' '
     )
 

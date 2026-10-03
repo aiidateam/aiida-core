@@ -25,8 +25,8 @@ ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 def arithmetic_add_builder(aiida_code_installed):
     builder = ArithmeticAddCalculation.get_builder()
     builder.code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
-    builder.x = orm.Int(1)
-    builder.y = orm.Int(1)
+    builder.x = orm.Int(value=1)
+    builder.y = orm.Int(value=1)
     builder.metadata = {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}}
     return builder
 
@@ -76,7 +76,7 @@ class AddWorkChain(WorkChain):
         spec.output('result', valid_type=orm.Int)
 
     def add(self):
-        self.out('result', orm.Int(self.inputs.term_a + self.inputs.term_b).store())
+        self.out('result', orm.Int(value=self.inputs.term_a + self.inputs.term_b).store())
 
 
 @pytest.mark.usefixtures('started_daemon_client')
@@ -123,7 +123,7 @@ def test_submit_without_daemon(aiida_config_tmp, aiida_profile_factory, config_s
             exceptions.InvalidOperation,
             match=r'Cannot submit because the daemon is not running\.',
         ):
-            launch.submit(AddWorkChain, term_a=orm.Int(1), term_b=orm.Int(2))
+            launch.submit(AddWorkChain, term_a=orm.Int(value=1), term_b=orm.Int(value=2))
 
 
 def test_run_launchers_without_live_broker(aiida_config_tmp, aiida_profile_factory, config_sqlite_dos):
@@ -143,14 +143,14 @@ def test_run_launchers_without_live_broker(aiida_config_tmp, aiida_profile_facto
     ):
         assert get_manager().get_broker() is not None
 
-        result = launch.run(add, term_a=orm.Int(1), term_b=orm.Int(2))
+        result = launch.run(add, term_a=orm.Int(value=1), term_b=orm.Int(value=2))
         assert result == 3
 
-        result, node = launch.run_get_node(add, term_a=orm.Int(1), term_b=orm.Int(2))
+        result, node = launch.run_get_node(add, term_a=orm.Int(value=1), term_b=orm.Int(value=2))
         assert result == 3
         assert isinstance(node, orm.CalcFunctionNode)
 
-        result, pk = launch.run_get_pk(add, term_a=orm.Int(1), term_b=orm.Int(2))
+        result, pk = launch.run_get_pk(add, term_a=orm.Int(value=1), term_b=orm.Int(value=2))
         assert result == 3
         assert isinstance(pk, int)
 
@@ -174,8 +174,8 @@ def test_await_processes(aiida_code_installed, caplog):
     """Test :func:`aiida.engine.launch.await_processes`."""
     builder = ArithmeticAddCalculation.get_builder()
     builder.code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
-    builder.x = orm.Int(1)
-    builder.y = orm.Int(2)
+    builder.x = orm.Int(value=1)
+    builder.y = orm.Int(value=2)
     builder.metadata = {'options': {'resources': {'num_machines': 1}}}
     node = launch.submit(builder)
 
@@ -194,8 +194,8 @@ class TestLaunchers:
     def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
-        self.term_a = orm.Int(1)
-        self.term_b = orm.Int(2)
+        self.term_a = orm.Int(value=1)
+        self.term_b = orm.Int(value=2)
         self.result = 3
         assert Process.current() is None
 
@@ -292,8 +292,8 @@ class TestLaunchersDryRun:
         """All launchers should work with `dry_run=True`, even `submit` which forwards to `run`."""
         inputs = {
             'code': self.code,
-            'x': orm.Int(1),
-            'y': orm.Int(1),
+            'x': orm.Int(value=1),
+            'y': orm.Int(value=1),
             'metadata': {'dry_run': True, 'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
         }
 
@@ -324,8 +324,8 @@ class TestLaunchersDryRun:
 
         builder = ArithmeticAddCalculation.get_builder()
         builder.code = self.code
-        builder.x = orm.Int(1)
-        builder.y = orm.Int(1)
+        builder.x = orm.Int(value=1)
+        builder.y = orm.Int(value=1)
         builder.metadata = {
             'dry_run': True,
             'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}},
@@ -344,8 +344,8 @@ class TestLaunchersDryRun:
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
         inputs = {
             'code': self.code,
-            'x': orm.Int(1),
-            'y': orm.Int(1),
+            'x': orm.Int(value=1),
+            'y': orm.Int(value=1),
             'metadata': {
                 'dry_run': True,
                 'store_provenance': False,
@@ -385,9 +385,9 @@ class TestLaunchersDryRun:
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')
             handle.flush()
-            single_file = orm.SinglefileData(file=handle.name)
-            file_one = orm.SinglefileData(file=handle.name)
-            file_two = orm.SinglefileData(file=handle.name)
+            single_file = orm.SinglefileData.from_path(handle.name)
+            file_one = orm.SinglefileData.from_path(handle.name)
+            file_two = orm.SinglefileData.from_path(handle.name)
 
         inputs = {
             'code': self.code,

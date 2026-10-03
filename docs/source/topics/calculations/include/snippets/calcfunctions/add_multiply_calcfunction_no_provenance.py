@@ -8,8 +8,8 @@ def add(x, y):
 
 
 inputs = {
-    'x': Int(1),
-    'y': Int(2),
+    'x': Int(value=1),
+    'y': Int(value=2),
     'metadata': {
         'store_provenance': False,
     },

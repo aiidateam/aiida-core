@@ -86,7 +86,7 @@ This is controlled by the ``max_iterations`` input, which defaults to ``5``:
             'input_1': value_1,
             'input_2': value_2
         },
-        'max_iterations': Int(10)
+        'max_iterations': Int(value=10)
     }
     submit(SomeBaseWorkChain, **inputs)
 
@@ -124,7 +124,7 @@ This input takes a ``Dict`` node, that has the following form:
 
 .. code-block:: python
 
-    handler_overrides = Dict({
+    handler_overrides = Dict(**{
         'handler_negative_sum': {   # Insert the name of the process handler here
             'enabled': True,
             'priority': 10000
@@ -261,7 +261,7 @@ We can now launch it like any other work chain and the ``BaseRestartWorkChain`` 
 
 .. code-block:: python
 
-    submit(ArithmeticAddBaseWorkChain, x=Int(3), y=Int(4), code=load_code('add@tutor'))
+    submit(ArithmeticAddBaseWorkChain, x=Int(value=3), y=Int(value=4), code=load_code('add@tutor'))
 
 Once the work chain finished, we can inspect what has happened with, for example, ``verdi process status``:
 
@@ -338,8 +338,8 @@ When submitting or running the work chain using namespaced inputs (``add`` in th
 
     inputs = {
         'add': {
-            'x': Int(3),
-            'y': Int(4),
+            'x': Int(value=3),
+            'y': Int(value=4),
             'code': load_code('add@tutor')
         }
     }
@@ -403,7 +403,7 @@ Let's launch the work chain with inputs that will cause the calculation to fail,
 
 .. code-block:: python
 
-    submit(ArithmeticAddBaseWorkChain, add={'x': Int(3), 'y': Int(-4), 'code': load_code('add@tutor')})
+    submit(ArithmeticAddBaseWorkChain, add={'x': Int(value=3), 'y': Int(value=-4), 'code': load_code('add@tutor')})
 
 This time we will see that the work chain takes quite a different path:
 
@@ -444,8 +444,8 @@ To "register" a process handler for a base restart work chain implementation, yo
                 that a problem was detected and potentially handled.
             """
             if node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status:
-                self.ctx.inputs['x'] = orm.Int(abs(node.inputs.x.value))
-                self.ctx.inputs['y'] = orm.Int(abs(node.inputs.y.value))
+                self.ctx.inputs['x'] = orm.Int(value=abs(node.inputs.x.value))
+                self.ctx.inputs['y'] = orm.Int(value=abs(node.inputs.y.value))
                 return ProcessHandlerReport()
 
 The method name can be anything as long as it is a valid Python method name and does not overlap with one of the base work chain's methods.
@@ -476,8 +476,8 @@ Instead of having a conditional at the start of each handler to compare the exit
     @process_handler(exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
     def handle_negative_sum(self, node):
         """Handle the `ERROR_NEGATIVE_NUMBER` failure mode of the `ArithmeticAddCalculation`."""
-        self.ctx.inputs['x'] = orm.Int(abs(node.inputs.x.value))
-        self.ctx.inputs['y'] = orm.Int(abs(node.inputs.y.value))
+        self.ctx.inputs['x'] = orm.Int(value=abs(node.inputs.x.value))
+        self.ctx.inputs['y'] = orm.Int(value=abs(node.inputs.y.value))
         return ProcessHandlerReport()
 
 If the ``exit_codes`` keyword is defined, which can be either a single instance of :class:`~aiida.engine.processes.exit_code.ExitCode` or a list thereof, the process handler will only be called if the exit status of the node corresponds to one of those exit codes, otherwise it will simply be skipped.
@@ -493,8 +493,8 @@ This can be done through the ``priority`` keyword:
     @process_handler(priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
     def handle_negative_sum(self, node):
         """Handle the `ERROR_NEGATIVE_NUMBER` failure mode of the `ArithmeticAddCalculation`."""
-        self.ctx.inputs['x'] = orm.Int(abs(node.inputs.x.value))
-        self.ctx.inputs['y'] = orm.Int(abs(node.inputs.y.value))
+        self.ctx.inputs['x'] = orm.Int(value=abs(node.inputs.x.value))
+        self.ctx.inputs['y'] = orm.Int(value=abs(node.inputs.y.value))
         return ProcessHandlerReport()
 
 The process handlers with a higher priority will be called first.
@@ -506,8 +506,8 @@ This can be achieved by setting the ``do_break`` argument of the ``ProcessHandle
     @process_handler(priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
     def handle_negative_sum(self, node):
         """Handle the `ERROR_NEGATIVE_NUMBER` failure mode of the `ArithmeticAddCalculation`."""
-        self.ctx.inputs['x'] = orm.Int(abs(node.inputs.x.value))
-        self.ctx.inputs['y'] = orm.Int(abs(node.inputs.y.value))
+        self.ctx.inputs['x'] = orm.Int(value=abs(node.inputs.x.value))
+        self.ctx.inputs['y'] = orm.Int(value=abs(node.inputs.y.value))
         return ProcessHandlerReport(do_break=True)
 
 Finally, sometimes one detects a problem that simply cannot or should not be corrected by the work chain.

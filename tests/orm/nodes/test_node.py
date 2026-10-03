@@ -1016,7 +1016,7 @@ class TestNodeCaching:
 
     def test_subclasses_are_distinguished(self):
         """Test that subclasses get different hashes even if they contain the same attributes."""
-        node_int = Int(5).store()
+        node_int = Int(value=5).store()
         node_data = Data()
         node_data.base.attributes.set_many(node_int.base.attributes.all)
         node_data.store()

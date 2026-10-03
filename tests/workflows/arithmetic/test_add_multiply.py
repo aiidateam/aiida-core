@@ -24,9 +24,9 @@ def test_factory():
 @pytest.mark.requires_broker
 def test_run():
     """Test running the work function."""
-    x = Int(1)
-    y = Int(2)
-    z = Int(3)
+    x = Int(value=1)
+    y = Int(value=2)
+    z = Int(value=3)
 
     result = add_multiply(x, y, z)
 

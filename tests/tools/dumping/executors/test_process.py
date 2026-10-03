@@ -37,13 +37,13 @@ def dumped_node_outputs(dump_path: Path) -> list[str]:
     'make_outputs, expected',
     (
         pytest.param(
-            lambda: {'arraydata': orm.ArrayData(arrays=np.ones(3))},
+            lambda: {'arraydata': orm.ArrayData.from_arrays(np.ones(3))},
             ['node_outputs', 'node_outputs/arraydata', 'node_outputs/arraydata/default.npy'],
             id='array-only',
         ),
         pytest.param(
             lambda: {
-                'arraydata': orm.ArrayData(arrays=np.ones(3)),
+                'arraydata': orm.ArrayData.from_arrays(np.ones(3)),
                 'singlefile': orm.SinglefileData.from_string(content='a', filename='file.txt'),
             },
             [
@@ -55,7 +55,7 @@ def dumped_node_outputs(dump_path: Path) -> list[str]:
             ],
             id='array-and-file',
         ),
-        pytest.param(lambda: {'result': orm.Dict({'answer': 42}), 'count': orm.Int(1)}, [], id='database-only'),
+        pytest.param(lambda: {'result': orm.Dict(**{'answer': 42}), 'count': orm.Int(value=1)}, [], id='database-only'),
         pytest.param(lambda: {'folderdata': orm.FolderData()}, [], id='empty-repository'),
     ),
 )
@@ -80,7 +80,7 @@ def test_node_outputs_gated_on_repository_content(generate_calculation_node, tmp
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_dumped_array_round_trips(generate_calculation_node, tmp_path):
     """The dumped ``.npy`` payload is the array that went in, not just a file of the right name."""
-    node = generate_calculation_node(outputs={'arraydata': orm.ArrayData(arrays=np.ones(3))})
+    node = generate_calculation_node(outputs={'arraydata': orm.ArrayData.from_arrays(np.ones(3))})
     node.seal()
 
     dump_path = node.dump(output_path=tmp_path / 'dump', include_outputs=True)

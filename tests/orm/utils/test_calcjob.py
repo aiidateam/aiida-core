@@ -24,7 +24,7 @@ def get_calcjob_node(generate_calculation_node):
         'key_two': 'val_two',
     }
 
-    results = Dict(dict=dictionary).store()
+    results = Dict(**dictionary).store()
     results.base.links.add_incoming(
         node, link_type=LinkType.CREATE, link_label=node.process_class.spec().default_output_node
     )

@@ -117,7 +117,7 @@ def test_reexport(aiida_profile_clean, tmp_path):
     # give some text:
     trial_dict.update({str(k): ''.join(random.choice(chars) for _ in range(size)) for k in range(20, 30)})
 
-    param = orm.Dict(dict=trial_dict)
+    param = orm.Dict(**trial_dict)
     param.label = str(datetime.now())
     param.description = f'd_{datetime.now()!s}'
     param.store()
@@ -213,7 +213,7 @@ def test_complex_export_filter_size(tmp_path, aiida_profile_clean):
     # Create nodes with different users
     nodes = []
     for i, user in enumerate(users):
-        node = orm.Int(i, user=user)
+        node = orm.Int(value=i, user=user)
         node.label = f'node_{i}'
         node.store()
         nodes.append(node)

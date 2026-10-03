@@ -68,7 +68,7 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
         :raises: :class:`PersistenceError` Raised if there was a problem loading the checkpoint
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
-        from aiida.orm import load_node
+        from aiida.orm import ProcessNode, load_node
 
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')
@@ -79,7 +79,8 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
             msg = f'Failed to load the node for process<{pid}>: {traceback.format_exc()}'
             raise PersistenceError(msg)
 
-        checkpoint = calculation.checkpoint
+        assert isinstance(calculation, ProcessNode), 'expected a calculation node'
+        checkpoint = calculation.checkpoints
 
         if checkpoint is None:
             msg = f'Calculation<{calculation.pk}> does not have a saved checkpoint'
@@ -112,10 +113,11 @@ class AiidaCheckpointPersister(process_persistence.CheckpointPersister):
         :param pid: the process id of the :class:`aiida.engine.processes.generic.process.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
         """
-        from aiida.orm import load_node
+        from aiida.orm import ProcessNode, load_node
 
         calc = load_node(pid)
-        calc.delete_checkpoint()
+        assert isinstance(calc, ProcessNode), 'expected a calculation node'
+        del calc.checkpoints
 
     def delete_process_checkpoints(self, pid: Hashable):
         """Delete all persisted checkpoints related to the given process id.

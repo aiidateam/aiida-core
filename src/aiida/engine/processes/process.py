@@ -354,9 +354,11 @@ class Process(ProcessBase):
                 self.node.logger.error(f'While cancelling the scheduler job an error was raised: {exc}')
                 return False
 
-        result = super().kill(msg_text, force_kill)
-
+        # Snapshot termination state before delegating to plumpy: for a paused
+        # process, super().kill() transitions synchronously to KILLED.
         had_been_terminated = self.has_terminated()
+
+        result = super().kill(msg_text, force_kill)
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:

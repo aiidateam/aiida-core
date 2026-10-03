@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import builtins
 import typing as t
+from copy import deepcopy
 
 import pydantic as pdt
 
@@ -139,8 +140,9 @@ class Dict(Data):
         if not isinstance(dictionary, dict):
             raise TypeError('Must supply dict type')
 
+        source = deepcopy(self.base.attributes.get('source'))
         self.base.attributes.clear()
-        self.base.attributes.set_many(dictionary)
+        self.base.attributes.set_many({'source': source, **dictionary})
 
 
 @to_aiida_type.register(dict)

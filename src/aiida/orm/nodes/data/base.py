@@ -31,6 +31,10 @@ class BaseType(Data, abc.ABC):
     def value(self) -> object:
         """Return the wrapped Python value."""
 
+    @value.setter
+    def value(self, value: t.Any) -> None:
+        raise NotImplementedError()
+
     def __str__(self) -> str:
         return f'{super().__str__()} value: {self.value}'
 

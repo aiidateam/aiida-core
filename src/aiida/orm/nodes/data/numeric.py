@@ -50,6 +50,11 @@ class NumericType(BaseType, abc.ABC):
         """Return the numeric value stored in this node."""
         raise NotImplementedError()
 
+    @value.setter
+    @abc.abstractmethod
+    def value(self, value: int | float) -> None:
+        raise NotImplementedError()
+
     @_left_operator
     def __add__(self, other):
         return self + other

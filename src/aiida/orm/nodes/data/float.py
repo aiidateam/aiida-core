@@ -10,8 +10,6 @@
 
 import numbers
 
-import pydantic as pdt
-
 from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.numeric import NumericType
@@ -24,7 +22,7 @@ class Float(NumericType):
 
     _type = float
 
-    @attribute(model_field_info=pdt.fields.FieldInfo(title='Float value'))
+    @attribute
     def value(self) -> float:
         """The float value stored in this node."""
         return self.base.attributes.get('value', 0.0)

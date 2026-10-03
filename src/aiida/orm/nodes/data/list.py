@@ -4,8 +4,6 @@ import builtins
 import typing as t
 from collections.abc import MutableSequence
 
-import pydantic as pdt
-
 from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.data import Data
@@ -42,7 +40,7 @@ class List(Data, MutableSequence[t.Any]):
             return self.list == other.list
         return self.list == other
 
-    @attribute(model_field_info=pdt.fields.FieldInfo(title='List contents'))
+    @attribute
     def list(self) -> builtins.list[t.Any]:
         """The list content."""
         return self.base.attributes.get('list', [])

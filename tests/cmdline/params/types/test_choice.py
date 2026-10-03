@@ -1,8 +1,7 @@
 """Unit tests for the LazyChoice click parameter type."""
 
-from importlib import metadata
-
 import click
+import importlib_metadata as metadata
 import pytest
 from packaging import version
 

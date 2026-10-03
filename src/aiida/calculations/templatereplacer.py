@@ -127,14 +127,14 @@ class TemplatereplacerCalculation(CalcJob):
         retrieve_temporary_files = template.pop('retrieve_temporary_files', [])
 
         if template:
-            raise exceptions.InputValidationError(
-                f'The following keys could not be used in the template node: {template.keys()}'
-            )
+            msg = f'The following keys could not be used in the template node: {template.keys()}'
+            raise exceptions.InputValidationError(msg)
 
         try:
             validate_list_of_string_tuples(files_to_copy, tuple_length=2)
         except ValidationError as exc:
-            raise exceptions.InputValidationError(f'invalid file_to_copy format: {exc}')
+            msg = f'invalid file_to_copy format: {exc}'
+            raise exceptions.InputValidationError(msg)
 
         local_copy_list = []
         remote_copy_list = []
@@ -143,20 +143,19 @@ class TemplatereplacerCalculation(CalcJob):
             try:
                 fileobj = self.inputs.files[link_name]
             except AttributeError:
-                raise exceptions.InputValidationError(
-                    f'You are asking to copy a file link {link_name}, but there is no input link with such a name'
-                )
+                msg = f'You are asking to copy a file link {link_name}, but there is no input link with such a name'
+                raise exceptions.InputValidationError(msg)
             if isinstance(fileobj, orm.SinglefileData):
                 local_copy_list.append((fileobj.uuid, fileobj.filename, dest_rel_path))
             elif isinstance(fileobj, orm.RemoteData):  # can be a folder
                 remote_copy_list.append((fileobj.computer.uuid, fileobj.get_remote_path(), dest_rel_path))
             else:
-                raise exceptions.InputValidationError(
-                    'If you ask to copy a file link {}, '
-                    'it must be either a SinglefileData or a RemoteData; it is instead of type {}'.format(
-                        link_name, fileobj.__class__.__name__
-                    )
+                msg = (
+                    f'If you ask to copy a file link {link_name}, '
+                    'it must be either a SinglefileData or a RemoteData; '
+                    f'it is instead of type {fileobj.__class__.__name__}'
                 )
+                raise exceptions.InputValidationError(msg)
 
         if input_file_name is not None and not input_file_template:
             raise exceptions.InputValidationError(

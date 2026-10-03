@@ -6,9 +6,8 @@ import shutil
 import typing as t
 
 from aiida.common.lang import type_check
+from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 from aiida.storage.log import STORAGE_LOGGER
-
-from .abstract import AbstractRepositoryBackend, InfoDictType
 
 if t.TYPE_CHECKING:
     from disk_objectstore import Container
@@ -46,7 +45,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         return 'DiskObjectStoreRepository: <uninitialised>'
 
     @property
-    def uuid(self) -> t.Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository."""
         if not self.is_initialised:
             return None
@@ -54,7 +53,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return container.container_id
 
     @property
-    def key_format(self) -> t.Optional[str]:
+    def key_format(self) -> str | None:
         with self._container as container:
             return container.hash_type
 
@@ -90,7 +89,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
-    def has_objects(self, keys: t.List[str]) -> t.List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         with self._container as container:
             return container.has_objects(keys)
 
@@ -108,18 +107,19 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
 
         if not self.has_object(key):
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+            msg = f'object with key `{key}` does not exist.'
+            raise FileNotFoundError(msg)
         with self._container as container:
             with container.get_object_stream(key) as handle:
                 yield t.cast(t.BinaryIO, handle)
 
-    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
+    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
         with self._container.get_objects_stream_and_meta(keys) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]
 
-    def delete_objects(self, keys: t.List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         super().delete_objects(keys)
         with self._container as container:
             container.delete_objects(keys)
@@ -150,10 +150,10 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         self,
         dry_run: bool = False,
         live: bool = True,
-        pack_loose: t.Optional[bool] = None,
-        do_repack: t.Optional[bool] = None,
-        clean_storage: t.Optional[bool] = None,
-        do_vacuum: t.Optional[bool] = None,
+        pack_loose: bool | None = None,
+        do_repack: bool | None = None,
+        clean_storage: bool | None = None,
+        do_vacuum: bool | None = None,
         compress: bool = False,
         incremental_cleanup: bool = True,
     ) -> None:
@@ -177,7 +177,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
             keys = ', '.join([key for key, override in overrides.items() if override is True])
-            raise ValueError(f'The following overrides were enabled but cannot be if `live=True`: {keys}')
+            msg = f'The following overrides were enabled but cannot be if `live=True`: {keys}'
+            raise ValueError(msg)
 
         pack_loose = True if pack_loose is None else pack_loose
 

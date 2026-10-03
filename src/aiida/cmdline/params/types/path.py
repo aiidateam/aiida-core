@@ -20,7 +20,7 @@ __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
 
 URL_TIMEOUT_SECONDS = 10
 
-PathType = t.Union[str, bytes, os.PathLike[str]]
+PathType = str | bytes | os.PathLike[str]
 
 
 def check_timeout_seconds(timeout_seconds: float) -> int:
@@ -28,7 +28,8 @@ def check_timeout_seconds(timeout_seconds: float) -> int:
     try:
         timeout_seconds = int(timeout_seconds)
     except ValueError:
-        raise TypeError(f'timeout_seconds should be an integer but got: {type(timeout_seconds)}')
+        msg = f'timeout_seconds should be an integer but got: {type(timeout_seconds)}'
+        raise TypeError(msg)
 
     if timeout_seconds < 0 or timeout_seconds > 60:
         raise ValueError('timeout_seconds needs to be in the range [0;60].')
@@ -66,15 +67,13 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
         return 'ABSOLUTEPATHEMPTY'
 
 
-def convert_possible_url(value: str, timeout: int) -> t.Any:
+def convert_possible_url(value: str, timeout: int) -> t.IO[bytes]:
     """If ``value`` does not correspond to a path on disk, try to open it as a URL.
 
     :param value: Potential path to file on disk or URL.
     :param timeout: The timeout in seconds when opening the URL.
-    :param return_handle: Return the ``value`` as is. When set to ``True`` return an open file handle instead.
-    :returns: The URL if ``value`` could be opened as a URL
+    :returns: An open binary response if ``value`` could be opened as a URL.
     """
-    import socket
     import urllib.error
     import urllib.request
 
@@ -82,19 +81,23 @@ def convert_possible_url(value: str, timeout: int) -> t.Any:
 
     # Check whether the path actually corresponds to a file on disk, in which case the exception is reraised.
     if filepath.exists():
-        raise click.BadParameter(f'The path `{value}` exists but could not be read.')
+        msg = f'The path `{value}` exists but could not be read.'
+        raise click.BadParameter(msg)
 
     try:
-        return urllib.request.urlopen(value, timeout=timeout)
+        return t.cast(t.IO[bytes], urllib.request.urlopen(value, timeout=timeout))
     except urllib.error.URLError:
-        raise click.BadParameter(f'The URL `{value}` could not be reached.')
-    except socket.timeout:
-        raise click.BadParameter(f'The URL `{value}` could not be reached within {timeout} seconds.')
+        msg = f'The URL `{value}` could not be reached.'
+        raise click.BadParameter(msg)
+    except TimeoutError:
+        msg = f'The URL `{value}` could not be reached within {timeout} seconds.'
+        raise click.BadParameter(msg)
     except ValueError as exception_url:
-        raise click.BadParameter(
+        msg = (
             f'The path `{value}` does not correspond to a file and also could not be reached as a URL.\n'
             'Please check the spelling for typos and if it is a URL, make sure to include the protocol, e.g., http://'
-        ) from exception_url
+        )
+        raise click.BadParameter(msg) from exception_url
 
 
 class PathOrUrl(click.Path):
@@ -137,4 +140,7 @@ class FileOrUrl(click.File):
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
-            return convert_possible_url(value, self.timeout_seconds)
+            handle = convert_possible_url(value, self.timeout_seconds)
+            if ctx is not None:
+                ctx.call_on_close(handle.close)
+            return handle

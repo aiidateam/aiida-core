@@ -185,15 +185,17 @@ def get_use_cache(*, identifier: str | None = None, strict: bool = False) -> boo
                     most_specific.append(PatternWithResult(pattern=specific_pattern, use_cache=False))
 
             if len(most_specific) > 1:
-                raise exceptions.ConfigurationError(
+                msg = (
                     f'Invalid configuration: multiple matches for identifier `{identifier}`, but the most specific '
                     f'identifier is not unique. Candidates: {[match.pattern for match in most_specific]}'
                 )
+                raise exceptions.ConfigurationError(msg)
             if not most_specific:
-                raise exceptions.ConfigurationError(
+                msg = (
                     f'Invalid configuration: multiple matches for identifier `{identifier}`, but none of them is most '
                     'specific.'
                 )
+                raise exceptions.ConfigurationError(msg)
             return most_specific[0].use_cache
         if enable_matches:
             return True
@@ -246,9 +248,8 @@ def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
     assert ENTRY_POINT_STRING_SEPARATOR not in '.*'  # The logic of this function depends on this
     # Check if it can be an entry point string
     if identifier.count(ENTRY_POINT_STRING_SEPARATOR) > 1:
-        raise ValueError(
-            f'{common_error_msg}Can contain at most one entry point string separator `{ENTRY_POINT_STRING_SEPARATOR}`'
-        )
+        msg = f'{common_error_msg}Can contain at most one entry point string separator `{ENTRY_POINT_STRING_SEPARATOR}`'
+        raise ValueError(msg)
     # If there is one separator, it must be an entry point string.
     # Check if the left hand side is a matching pattern
     if ENTRY_POINT_STRING_SEPARATOR in identifier:
@@ -294,9 +295,11 @@ def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
                 )
         else:
             if not identifier_part.isidentifier():
-                raise ValueError(f'{common_error_msg}`{identifier_part}` is not a valid Python identifier.')
+                msg = f'{common_error_msg}`{identifier_part}` is not a valid Python identifier.'
+                raise ValueError(msg)
             if keyword.iskeyword(identifier_part):
-                raise ValueError(f'{common_error_msg}`{identifier_part}` is a reserved Python keyword.')
+                msg = f'{common_error_msg}`{identifier_part}` is a reserved Python keyword.'
+                raise ValueError(msg)
 
     if not strict:
         return
@@ -304,7 +307,7 @@ def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
     # If there is no separator, it must be a fully qualified Python name.
     try:
         module_name = '.'.join(identifier.split('.')[:-1])
-        class_name = identifier.split('.')[-1]
+        class_name = identifier.rsplit('.', maxsplit=1)[-1]
         module = importlib.import_module(module_name)
         getattr(module, class_name)
     except (ModuleNotFoundError, AttributeError, IndexError) as exc:

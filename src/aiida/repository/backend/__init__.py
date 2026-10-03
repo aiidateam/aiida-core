@@ -4,9 +4,9 @@
 
 # fmt: off
 
-from .abstract import *
-from .disk_object_store import *
-from .sandbox import *
+from aiida.repository.backend.abstract import *
+from aiida.repository.backend.disk_object_store import *
+from aiida.repository.backend.sandbox import *
 
 __all__ = (
     'AbstractRepositoryBackend',

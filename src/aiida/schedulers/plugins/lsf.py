@@ -20,13 +20,12 @@ import typing as t
 from typing_extensions import override
 
 import aiida.schedulers
+from aiida.common.datastructures import JobInfo, JobResource, JobState, JobTemplate
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import ConfigurationError, FeatureNotAvailable
 from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobResource, JobState, JobTemplate
-
-from .bash import BashCliScheduler
+from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
@@ -284,7 +283,7 @@ class LsfScheduler(BashCliScheduler):
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
 
-        command = ['bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
+        command = ['bjobs', '-noheader', f'-o \'{" ".join(self._joblist_fields)} delimiter="{_FIELD_SEPARATOR}"\'']
 
         if user and jobs:
             raise FeatureNotAvailable('Cannot query by user and job(s) in LSF')
@@ -370,7 +369,7 @@ class LsfScheduler(BashCliScheduler):
                 'LSF scheduler does not support joining '
                 'the standard output and standard error '
                 'files; std error file assigned instead '
-                'to the file {}'.format(sched_error_path)
+                f'to the file {sched_error_path}'
             )
 
         if sched_error_path:
@@ -412,11 +411,11 @@ class LsfScheduler(BashCliScheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError as exc:
-                raise ValueError(
-                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
-                        (job_tmpl.max_wallclock_seconds)
-                    )
-                ) from exc
+                msg = (
+                    'max_wallclock_seconds must be a positive integer (in seconds)! '
+                    f"It is instead '{job_tmpl.max_wallclock_seconds}'"
+                )
+                raise ValueError(msg) from exc
             hours = tot_secs // 3600
             # The double negation results in the ceiling rather than the floor
             # of the division
@@ -430,9 +429,8 @@ class LsfScheduler(BashCliScheduler):
                 if physical_memory_kb <= 0:
                     raise ValueError
             except ValueError as exc:
-                raise ValueError(
-                    f'max_memory_kb must be a positive integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
-                ) from exc
+                msg = f'max_memory_kb must be a positive integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
+                raise ValueError(msg) from exc
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job
             lines.append(f'#BSUB -M {physical_memory_kb}')
@@ -510,9 +508,8 @@ fi
 
         if retval != 0:
             self.logger.warning(f'Error in _parse_joblist_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(
-                f'Error during parsing joblist output, retval={retval}\nstdout={stdout}\nstderr={stderr}'
-            )
+            msg = f'Error during parsing joblist output, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+            raise SchedulerError(msg)
 
         # will contain raw data parsed from output: only lines with the
         # separator, and already split in fields
@@ -652,8 +649,8 @@ fi
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
-                        'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(len(this_job.allocated_machines), this_job.num_machines)
+                        f'nodes ({len(this_job.allocated_machines)}) is different from the '
+                        f'expected number of nodes ({this_job.num_machines})!'
                     )
 
             # I append to the list of jobs to return
@@ -671,7 +668,8 @@ fi
         """
         if retval != 0:
             self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+            msg = f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+            raise SchedulerError(msg)
 
         try:
             transport_string = f' for {self.transport}'
@@ -684,7 +682,8 @@ fi
         try:
             return stdout.strip().split('Job <')[1].split('>')[0]
         except IndexError as exc:
-            raise SchedulerParsingError(f'Cannot parse submission output: `{stdout}`') from exc
+            msg = f'Cannot parse submission output: `{stdout}`'
+            raise SchedulerParsingError(msg) from exc
 
     def _parse_time_string(self, string: str, fmt: str = '%b %d %H:%M') -> datetime.datetime:
         """Parse a time string and returns a datetime object.
@@ -692,7 +691,8 @@ fi
         """
 
         if string == '-':
-            raise ValueError(f'Invalid time string {string}')
+            msg = f'Invalid time string {string}'
+            raise ValueError(msg)
 
         # The year is not specified. I have to add it, and I set it to the
         # current year. This is actually not correct, if we are close
@@ -707,7 +707,8 @@ fi
                 thetime = datetime.datetime.strptime(actual_string, f'{actual_fmt} L')
         except Exception as exc:
             self.logger.debug(f'Unable to parse time string {string}, the message was {exc}')
-            raise ValueError(f'Problem parsing the time string: `{string}`') from exc
+            msg = f'Problem parsing the time string: `{string}`'
+            raise ValueError(msg) from exc
 
         return thetime
 

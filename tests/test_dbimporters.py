@@ -121,7 +121,7 @@ class TestCodDbImporter:
                 {'id': '2000000', 'svnrevision': '1234'},
             ]
         )
-        assert [res for res in iter(results)] == [results.at(0), results.at(1), results.at(2)]
+        assert list(iter(results)) == [results.at(0), results.at(1), results.at(2)]
         assert len(results) == 3
         assert results.at(1).source == {
             'db_name': 'Crystallography Open Database',
@@ -253,7 +253,7 @@ class TestNnincDbImporter:
         entry = results.at(0)
 
         path_pseudos = os.path.join(STATIC_DIR, 'pseudos')
-        with open(os.path.join(path_pseudos, f'{upf}.UPF'), 'r', encoding='utf8') as fpntr:
+        with open(os.path.join(path_pseudos, f'{upf}.UPF'), encoding='utf8') as fpntr:
             entry._contents = fpntr.read()
 
         upfnode = entry.get_upf_node()

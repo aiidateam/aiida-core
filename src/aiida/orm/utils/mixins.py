@@ -15,9 +15,7 @@ import inspect
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
 from aiida.common.warnings import warn_deprecation
-from aiida.orm.pydantic import OrmMetadataField
-
-from ..pydantic import OrmModel
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 
 class FunctionCalculationMixin:
@@ -201,7 +199,7 @@ class Sealable:
         """Returns whether the node is sealed, i.e. whether the sealed attribute has been set to True."""
         return self.sealed
 
-    def seal(self) -> 'Sealable':
+    def seal(self) -> Sealable:
         """Seal the node by setting the sealed attribute to True."""
         if not self.is_sealed:
             self.base.attributes.set(self.SEALED_KEY, True)  # type: ignore[attr-defined]
@@ -224,6 +222,5 @@ class Sealable:
             if keys is None:
                 raise exceptions.ModificationNotAllowed('Cannot bulk modify attributes of a stored+unsealed node')
             elif any(key not in self._updatable_attributes for key in keys):
-                raise exceptions.ModificationNotAllowed(
-                    f'Cannot modify non-updatable attributes of a stored+unsealed node: {keys}'
-                )
+                msg = f'Cannot modify non-updatable attributes of a stored+unsealed node: {keys}'
+                raise exceptions.ModificationNotAllowed(msg)

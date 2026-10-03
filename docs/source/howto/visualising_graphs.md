@@ -25,21 +25,67 @@ The provenance graph of a database can be visually inspected, *via* [graphviz](h
 `verdi graph generate -h`
 ```
 
-We first load a profile, containing the provenance graph (in this case we load an archive as the profile).
+We first create a temporary profile containing an example provenance graph.
 
 ```{code-cell} ipython3
-from aiida import load_profile
+from aiida import load_profile, orm
 from aiida.common import LinkType
 from aiida.orm import LinkPair
-from aiida.storage.sqlite_zip import SqliteZipBackend
+from aiida.storage.sqlite_temp import SqliteTempBackend
 from aiida.tools.visualization import Graph, pstate_node_styles
 
-profile = load_profile(SqliteZipBackend.create_profile('include/graph1.aiida'))
+profile = load_profile(
+    SqliteTempBackend.create_profile(
+        'graph-visualization', options={'warnings.development_version': False}, debug=False
+    ),
+    allow_switch=True,
+)
+
+computer = orm.Computer(
+    label='example-computer',
+    hostname='localhost',
+    transport_type='core.local',
+    scheduler_type='core.direct',
+).store()
+code = orm.InstalledCode(computer=computer, filepath_executable='/bin/true', label='example-code').store()
+dict1 = orm.Dict({}).store()
+int1 = orm.Int(3).store()
+
+workflow = orm.WorkChainNode()
+for node, label in ((dict1, 'input1'), (int1, 'input2'), (code, 'code')):
+    workflow.base.links.add_incoming(node, LinkType.INPUT_WORK, label)
+workflow.store()
+
+calc1 = orm.CalcJobNode(computer=computer, label='calc1')
+for node, label in ((dict1, 'input1'), (int1, 'input2'), (code, 'code')):
+    calc1.base.links.add_incoming(node, LinkType.INPUT_CALC, label)
+calc1.base.links.add_incoming(workflow, LinkType.CALL_CALC, 'call1')
+calc1.store()
+
+remote = orm.RemoteData(computer=computer, remote_path='/x/y.py')
+remote.base.links.add_incoming(calc1, LinkType.CREATE, 'output')
+remote.store()
+
+string = orm.Str('abc').store()
+calcfunction = orm.CalcFunctionNode(label='calcf1')
+for node, label in ((remote, 'input1'), (string, 'input2')):
+    calcfunction.base.links.add_incoming(node, LinkType.INPUT_CALC, label)
+calcfunction.base.links.add_incoming(workflow, LinkType.CALL_CALC, 'call2')
+calcfunction.store()
+
+for node, label in ((orm.Dict({}), 'output1'), (orm.FolderData(), 'output2')):
+    node.base.links.add_incoming(calcfunction, LinkType.CREATE, label)
+    node.store()
+    node.base.links.add_incoming(workflow, LinkType.RETURN, label)
+
+calc1.seal()
+calcfunction.seal()
+workflow.seal()
 ```
 
 ```{code-cell} ipython3
-dict1_uuid = '0ea79a16-501f-408a-8c84-a2704a778e4b'
-calc1_uuid = 'b23e692e-4e01-48dd-b515-4c63877d73a4'
+dict1_uuid = dict1.uuid
+calc1_uuid = calc1.uuid
 ```
 
 The {py:class}`~aiida.tools.visualization.graph.Graph` class is used to store visual representations of the nodes and edges, which can be added separately or cumulatively by one of the graph traversal methods.

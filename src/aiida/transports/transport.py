@@ -16,7 +16,6 @@ import re
 import sys
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
-from typing import Optional, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
@@ -24,7 +23,7 @@ from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
-TransportPath = Union[str, Path, PurePosixPath]
+TransportPath = str | Path | PurePosixPath
 
 _MAGIC_CHECK = re.compile('[*?[]')
 
@@ -46,7 +45,8 @@ def validate_positive_number(ctx, param, value):
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
 
-        raise BadParameter(f'{value} is not a valid positive number')
+        msg = f'{value} is not a valid positive number'
+        raise BadParameter(msg)
 
     return value
 
@@ -318,7 +318,7 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def _gotocomputer_string(self, remotedir: Optional[TransportPath] = None):
+    def _gotocomputer_string(self, remotedir: TransportPath | None = None):
         """Command executed when goto computer."""
         if remotedir is None:
             return self._bash_command_str
@@ -327,7 +327,7 @@ class Transport(abc.ABC):
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
             """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-                bash_command=self._bash_command_str, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir
+                bash_command=self._bash_command_str, escaped_remotedir=f"'{remotedir}'", remotedir=remotedir
             )
         )
 
@@ -365,7 +365,7 @@ class Transport(abc.ABC):
         :type gid: int
         """
         warn_deprecation(
-            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
+            'The `Transport.chown` method is deprecated and will be removed. It is not used internally by AiiDA.',
             version=3,
         )
         raise NotImplementedError('chown is not implemented for this transport.')
@@ -486,7 +486,7 @@ class Transport(abc.ABC):
                 transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
     @abc.abstractmethod
-    def _exec_command_internal(self, command: str, workdir: Optional[TransportPath] = None, **kwargs):
+    def _exec_command_internal(self, command: str, workdir: TransportPath | None = None, **kwargs):
         """Execute the command on the shell, similarly to os.system.
 
         Enforce the execution to be run from `workdir`.
@@ -506,7 +506,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def exec_command_wait_bytes(self, command: str, stdin=None, workdir: Optional[TransportPath] = None, **kwargs):
+    def exec_command_wait_bytes(self, command: str, stdin=None, workdir: TransportPath | None = None, **kwargs):
         """Execute the command on the shell, waits for it to finish,
         and return the retcode, the stdout and the stderr as bytes.
 
@@ -525,9 +525,7 @@ class Transport(abc.ABC):
         :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
 
-    def exec_command_wait(
-        self, command, stdin=None, encoding='utf-8', workdir: Optional[TransportPath] = None, **kwargs
-    ):
+    def exec_command_wait(self, command, stdin=None, encoding='utf-8', workdir: TransportPath | None = None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :note: this function also decodes the bytes received into a string with the specified encoding,
@@ -700,7 +698,7 @@ class Transport(abc.ABC):
         :return: a list of strings
         """
 
-    def listdir_withattributes(self, path: TransportPath = '.', pattern: Optional[str] = None):
+    def listdir_withattributes(self, path: TransportPath = '.', pattern: str | None = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -870,7 +868,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -917,7 +915,8 @@ class Transport(abc.ABC):
             return username.strip()
 
         self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
-        raise OSError(f'Error while executing whoami. Exit code: {retval}')
+        msg = f'Error while executing whoami. Exit code: {retval}'
+        raise OSError(msg)
 
     @abc.abstractmethod
     def path_exists(self, path: TransportPath):
@@ -1000,7 +999,7 @@ class Transport(abc.ABC):
             dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             names = self.listdir(dirname)
-        except EnvironmentError:
+        except OSError:
             return []
         if pattern[0] != '.':
             names = [name for name in names if name[0] != '.']
@@ -1027,7 +1026,7 @@ class Transport(abc.ABC):
     def compress(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -1117,8 +1116,7 @@ class Transport(abc.ABC):
         :type gid: int
         """
         warn_deprecation(
-            'The `Transport.chown_async` method is deprecated and will be removed. '
-            'It is not used internally by AiiDA.',
+            'The `Transport.chown_async` method is deprecated and will be removed. It is not used internally by AiiDA.',
             version=3,
         )
         raise NotImplementedError('chown_async is not implemented for this transport.')
@@ -1196,9 +1194,9 @@ class Transport(abc.ABC):
     async def exec_command_wait_async(
         self,
         command: str,
-        stdin: Optional[str] = None,
+        stdin: str | None = None,
         encoding: str = 'utf-8',
-        workdir: Optional[TransportPath] = None,
+        workdir: TransportPath | None = None,
         **kwargs,
     ):
         """Executes the specified command and waits for it to finish.
@@ -1320,7 +1318,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def listdir_async(self, path: TransportPath, pattern: Optional[str] = None):
+    async def listdir_async(self, path: TransportPath, pattern: str | None = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -1338,7 +1336,7 @@ class Transport(abc.ABC):
     async def listdir_withattributes_async(
         self,
         path: TransportPath,
-        pattern: Optional[str] = None,
+        pattern: str | None = None,
     ):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
@@ -1538,7 +1536,7 @@ class Transport(abc.ABC):
     async def compress_async(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -1597,7 +1595,7 @@ class BlockingTransport(Transport):
     def compress(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -1623,16 +1621,20 @@ class BlockingTransport(Transport):
         :raises OSError: if root_dir is not a directory
         """
         if not self.isdir(root_dir):
-            raise OSError(f'The relative root {root_dir} does not exist, or is not a directory.')
+            msg = f'The relative root {root_dir} does not exist, or is not a directory.'
+            raise OSError(msg)
 
         if self.isdir(remotedestination):
-            raise OSError(f'The remote destination {remotedestination} is a directory, should include a filename.')
+            msg = f'The remote destination {remotedestination} is a directory, should include a filename.'
+            raise OSError(msg)
 
         if not overwrite and self.path_exists(remotedestination):
-            raise OSError(f'The remote destination {remotedestination} already exists.')
+            msg = f'The remote destination {remotedestination} already exists.'
+            raise OSError(msg)
 
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
-            raise ValueError(f'Unsupported compression format: {type}')
+            msg = f'Unsupported compression format: {type}'
+            raise ValueError(msg)
 
         self.makedirs(Path(remotedestination).parent, ignore_existing=True)
 
@@ -1652,20 +1654,22 @@ class BlockingTransport(Transport):
             if has_magic(source):
                 copy_list = self.glob(source)
                 if not copy_list:
-                    raise OSError(
-                        f'Either the remote path {source} does not exist, or a matching file/folder not found.'
-                    )
+                    msg = f'Either the remote path {source} does not exist, or a matching file/folder not found.'
+                    raise OSError(msg)
             else:
                 if not self.path_exists(source):
-                    raise OSError(f'The remote path {source} does not exist')
+                    msg = f'The remote path {source} does not exist'
+                    raise OSError(msg)
 
                 copy_list.append(source)
 
         copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
         # note: order of the flags is important
+        # COPYFILE_DISABLE=1 prevents macOS bsdtar from including AppleDouble (._) resource fork files
+        # See https://unix.stackexchange.com/a/9865
         tar_command = (
-            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
-            + copy_items
+            f'COPYFILE_DISABLE=1 tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} '
+            f'-C {root_dir!s} ' + copy_items
         )
 
         retval, stdout, stderr = self.exec_command_wait(tar_command)
@@ -1675,11 +1679,11 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f'Problem executing tar. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
-            raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
+            msg = f'Error while creating the tar archive. Exit code: {retval}'
+            raise OSError(msg)
 
     def extract(
         self,
@@ -1708,7 +1712,8 @@ class BlockingTransport(Transport):
             raise NotImplementedError('The overwrite=False is not implemented yet')
 
         if not self.path_exists(remotesource):
-            raise OSError(f'The remote path {remotesource} does not exist')
+            msg = f'The remote path {remotesource} does not exist'
+            raise OSError(msg)
 
         self.makedirs(remotedestination, ignore_existing=True)
 
@@ -1721,11 +1726,11 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f'Problem executing tar. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
-            raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
+            msg = f'Error while extracting the tar archive. Exit code: {retval}'
+            raise OSError(msg)
 
     async def open_async(self):
         """Counterpart to open() that is async."""
@@ -1884,8 +1889,7 @@ class AsyncTransport(Transport):
 
     def run_command_blocking(self, func, *args, **kwargs):
         """Run an async transport method synchronously."""
-        from plumpy import run_until_complete
-
+        from aiida.engine.processes.greenback import run_until_complete
         from aiida.manage import get_manager
 
         loop = get_manager().get_runner().loop

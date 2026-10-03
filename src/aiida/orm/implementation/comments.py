@@ -9,14 +9,14 @@
 """Module for comment backend classes."""
 
 import abc
+import typing as t
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, List, Optional
 
-from .entities import BackendCollection, BackendEntity
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
-if TYPE_CHECKING:
-    from .nodes import BackendNode
-    from .users import BackendUser
+if t.TYPE_CHECKING:
+    from aiida.orm.implementation.nodes import BackendNode
+    from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendComment', 'BackendCommentCollection')
 
@@ -77,7 +77,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
 
     @abc.abstractmethod
     def create(  # type: ignore[override]
-        self, node: 'BackendNode', user: 'BackendUser', content: Optional[str] = None, **kwargs: Any
+        self, node: 'BackendNode', user: 'BackendUser', content: str | None = None, **kwargs: t.Any
     ) -> BackendComment:
         """Create a Comment for a given node and user
 
@@ -105,7 +105,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: dict) -> list[int]:
         """Delete Comments based on ``filters``
 
         :param filters: similar to QueryBuilder filter

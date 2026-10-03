@@ -1,17 +1,20 @@
-"""A sub class of ``plumpy.ProcessLauncher`` to launch a ``Process``."""
+"""Process launcher with AiiDA-specific process-node handling."""
 
 import asyncio
 import logging
 import traceback
+import typing as t
 
-import kiwipy
-import plumpy
+from aiida.brokers import exceptions as broker_exceptions
+from aiida.brokers import futures as broker_futures
+from aiida.engine.processes.communications import ProcessLauncher as BaseProcessLauncher
+from aiida.engine.processes.exceptions import KilledError
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ProcessLauncher(plumpy.ProcessLauncher):
-    """A sub class of :class:`plumpy.ProcessLauncher` to launch a ``Process``.
+class ProcessLauncher(BaseProcessLauncher):
+    """Subclass of :class:`aiida.engine.processes.communications.ProcessLauncher` for AiiDA processes.
 
     It overrides the _continue method to make sure the node corresponding to the task can be loaded and
     that if it is already marked as terminated, it is not continued but the future is reconstructed and returned
@@ -70,7 +73,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         if node.is_terminated:
             LOGGER.info('not continuing process<%d> which is already terminated with state %s', pid, node.process_state)
 
-            future = kiwipy.Future()
+            future: broker_futures.Future[t.Any] = broker_futures.Future()
 
             if node.is_finished:
                 future.set_result(
@@ -79,7 +82,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             elif node.is_excepted:
                 future.set_exception(PastException(node.exception))
             elif node.is_killed:
-                future.set_exception(plumpy.KilledError())
+                future.set_exception(KilledError())
 
             return future.result()
 
@@ -89,9 +92,9 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)
             raise
-        except kiwipy.DuplicateSubscriberIdentifier:
+        except broker_exceptions.DuplicateSubscriberIdentifier:
             # This happens when the current worker has already subscribed itself with this process identifier. The call
-            # to ``_continue`` will call ``Process.init`` which will add RPC and broadcast subscribers. ``kiwipy`` and
+            # to ``_continue`` will call ``Process.init`` which will add RPC and broadcast subscribers. The broker and
             # ``aiormq`` further down keep track of processes that are already subscribed and if subscribed again, a
             # ``DuplicateSubscriberIdentifier`` is raised. Possible reasons for the worker receiving a process task that
             # it already has, include:
@@ -107,7 +110,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             # second case we are deleting the *original* task, and once the worker finishes running the process there
             # won't be a task in RabbitMQ to acknowledge anymore. This, however, is silently ignored.
             #
-            # Note: the exception is raised by ``kiwipy`` based on an internal cache it and ``aiormq`` keep of the
+            # Note: the exception is raised by the broker communicator based on an internal cache it and ``aiormq`` keep
             # current subscribers. This means that this will only occur when the tasks is resent to the *same* daemon
             # worker. If another worker were to receive it, no exception would be raised as the check is client and not
             # server based.

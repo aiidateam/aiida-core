@@ -113,7 +113,7 @@ Next we should define what outputs we expect the calculation to produce:
 Just as for the inputs, one can specify what node type each output should have.
 By default a defined output will be 'required', which means that if the calculation job terminates and the output has not been attached, the process will be marked as failed.
 To indicate that an output is optional, one can use ``required=False`` in the ``spec.output`` call.
-Note that the process spec, and its :py:meth:`~plumpy.ProcessSpec.input` and :py:meth:`~plumpy.ProcessSpec.output` methods provide a lot more functionality.
+Note that the process spec, and its :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.input` and :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.output` methods provide a lot more functionality.
 Fore more details, please refer to the section on :ref:`process specifications<topics:processes:usage:spec>`.
 
 
@@ -1035,7 +1035,7 @@ The ``Code``
 
 When creating a code, you can tell AiiDA that it should be run as an MPI program, by setting the ``with_mpi`` attribute to ``True`` or ``False``.
 From AiiDA 2.3 onward, this is the **recommended** way of controlling MPI behavior.
-The attribute can be set from the Python API as ``AbstractCode(with_mpi=with_mpi)`` or through the ``--with-mpi`` / ``--no-with-mpi`` option of the ``verdi code create`` CLI command.
+The attribute can be set from the Python API as ``InstalledCode(with_mpi=with_mpi, ...)`` or through the ``--with-mpi`` / ``--no-with-mpi`` option of the ``verdi code create`` CLI command.
 If the code can be run with or without MPI, setting the ``with_mpi`` attribute can be skipped.
 It will default to ``None``, leaving the question of whether to run with or without MPI up to the ``CalcJob`` plugin or user input.
 

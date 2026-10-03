@@ -10,16 +10,17 @@
 
 from __future__ import annotations
 
+import base64
+import io
+import typing as t
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Any, BinaryIO, Union
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
 
+from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
-
-from ..base import to_aiida_type
-from ..data import Data
 
 __all__ = ('ArrayData',)
 
@@ -66,7 +67,7 @@ class ArrayData(Data):
     class ConstructorArgsModel(OrmModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        arrays: Union[Sequence, dict[str, Sequence]] = OrmMetadataField(
+        arrays: Sequence | dict[str, Sequence] = OrmMetadataField(
             description='A single (or dictionary of) array(s) to store',
             write_only=True,
         )
@@ -89,10 +90,12 @@ class ArrayData(Data):
                     elif isinstance(array, np.ndarray):
                         arrays[key] = array.tolist()
                     else:
-                        raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
+                        msg = f'`arrays` should be an iterable or dictionary of iterables but got: {value}'  # type: ignore[unreachable]
+                        raise TypeError(msg)
                 return arrays
             else:
-                raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
+                msg = f'`arrays` should be an iterable or dictionary of iterables but got: {value}'  # type: ignore[unreachable]
+                raise TypeError(msg)
 
     array_prefix = 'array|'
     default_array_name = 'default'
@@ -111,10 +114,60 @@ class ArrayData(Data):
             arrays = {self.default_array_name: arrays}
 
         if not isinstance(arrays, dict) or any(not isinstance(a, (Sequence, np.ndarray)) for a in arrays.values()):
-            raise TypeError(f'`arrays` should be a single sequence or dictionary of sequences but got: {arrays}')
+            msg = f'`arrays` should be a single sequence or dictionary of sequences but got: {arrays}'
+            raise TypeError(msg)
 
         for key, value in arrays.items():
             self.set_array(key, np.asarray(value))
+
+    @staticmethod
+    def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
+        """Serialize arrays to base64-encoded ``.npy`` payloads.
+
+        :param arrays: Mapping of array names to numpy arrays.
+        :return: Mapping of array names to base64-encoded bytes.
+        """
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation(
+            '`ArrayData.save_arrays` is deprecated. Use `numpy.save` with `io.BytesIO` directly instead.',
+            version=3,
+            stacklevel=2,
+        )
+
+        results = {}
+
+        for key, array in arrays.items():
+            stream = io.BytesIO()
+            np.save(stream, array, allow_pickle=False)
+            stream.seek(0)
+            results[key] = base64.encodebytes(stream.read())
+
+        return results
+
+    @staticmethod
+    def load_arrays(arrays: dict[str, bytes]) -> dict[str, np.ndarray]:
+        """Deserialize arrays from base64-encoded ``.npy`` payloads.
+
+        :param arrays: Mapping of array names to base64-encoded bytes.
+        :return: Mapping of array names to numpy arrays.
+        """
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation(
+            '`ArrayData.load_arrays` is deprecated. Use `numpy.load` with `io.BytesIO` directly instead.',
+            version=3,
+            stacklevel=2,
+        )
+
+        results = {}
+
+        for key, encoded in arrays.items():
+            stream = io.BytesIO(base64.decodebytes(encoded))
+            stream.seek(0)
+            results[key] = np.load(stream, allow_pickle=False)
+
+        return results
 
     @property
     def arrays(self) -> dict[str, np.ndarray]:
@@ -131,7 +184,8 @@ class ArrayData(Data):
         """
         fname = f'{name}.npy'
         if fname not in self.base.repository.list_object_names():
-            raise KeyError(f"Array with name '{name}' not found in node pk= {self.pk}")
+            msg = f"Array with name '{name}' not found in node pk= {self.pk}"
+            raise KeyError(msg)
 
         # remove both file and attribute
         self.base.repository.delete_object(fname)
@@ -195,7 +249,8 @@ class ArrayData(Data):
             filename = f'{name}.npy'
 
             if filename not in self.base.repository.list_object_names():
-                raise KeyError(f'Array with name `{name}` not found in ArrayData<{self.pk}>')
+                msg = f'Array with name `{name}` not found in ArrayData<{self.pk}>'
+                raise KeyError(msg)
 
             # Open a handle in binary read mode as the arrays are written as binary files as well
             with self.base.repository.open(filename, mode='rb') as handle:
@@ -250,9 +305,10 @@ class ArrayData(Data):
         # Store the array name and shape for querying purposes
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
-    def attach_file(self, name: str, fileobj: BinaryIO) -> None:
+    def attach_file(self, name: str, fileobj: t.BinaryIO) -> None:
         if not name.lower().endswith('.npy'):
-            raise ValueError(f'expected .npy file: {name}')
+            msg = f'expected .npy file: {name}'
+            raise ValueError(msg)
         base = name.removesuffix('.npy')
         array = np.load(fileobj, allow_pickle=False)
         self.set_array(base, array)
@@ -266,10 +322,11 @@ class ArrayData(Data):
         import re
 
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
-            raise ValueError(
+            msg = (
                 f'The name assigned to the array ({name}) is not valid. '
                 'It can only contain digits, letters and underscores'
             )
+            raise ValueError(msg)
 
     def _validate(self) -> bool:
         """Check if the list of .npy files stored inside the node and the
@@ -283,12 +340,11 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            raise ValidationError(
-                f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
-            )
+            msg = f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
+            raise ValidationError(msg)
         return super()._validate()
 
-    def _get_array_entries(self) -> dict[str, Any]:
+    def _get_array_entries(self) -> dict[str, t.Any]:
         """Return a dictionary with the different array entries.
 
         The idea is that this dictionary contains the array name as a key and
@@ -320,10 +376,10 @@ class ArrayData(Data):
     def to_model_field_values(
         self,
         *,
-        context: dict[str, Any] | None = None,
+        context: dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, t.Any]:
         fields = super().to_model_field_values(context=context, minimal=minimal, schema=schema)
         if schema in (self.ReadModel, self.WriteModel):
             return fields | {'attributes': self.base.attributes.all}

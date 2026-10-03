@@ -22,7 +22,7 @@ class CallableDefaultOption(click.Option):
     https://github.com/pallets/click/issues/2614
     """
 
-    def get_default(self, ctx: click.Context, call: bool = True) -> t.Optional[t.Union[t.Any, t.Callable[[], t.Any]]]:
+    def get_default(self, ctx: click.Context, call: bool = True) -> t.Any | t.Callable[[], t.Any] | None:
         """Return default unless in tab-completion context."""
         if ctx.resilient_parsing:
             return None

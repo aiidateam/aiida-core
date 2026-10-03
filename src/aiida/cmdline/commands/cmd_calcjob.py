@@ -111,9 +111,10 @@ def calcjob_inputcat(calcjob, path):
     if path is None:
         # Still no path available
         echo.echo_critical(
-            '"{}" and its process class "{}" do not define a default input file '
+            f'"{calcjob.__class__.__name__}" and its process class "{calcjob.process_class.__name__}" '
+            'do not define a default input file '
             '(option "input_filename" not found).\n'
-            'Please specify a path explicitly.'.format(calcjob.__class__.__name__, calcjob.process_class.__name__)
+            'Please specify a path explicitly.'
         )
 
     try:
@@ -187,9 +188,10 @@ def calcjob_outputcat(calcjob, path):
     if path is None:
         # Still no path available
         echo.echo_critical(
-            '"{}" and its process class "{}" do not define a default output file '
+            f'"{calcjob.__class__.__name__}" and its process class "{calcjob.process_class.__name__}" '
+            'do not define a default output file '
             '(option "output_filename" not found).\n'
-            'Please specify a path explicitly.'.format(calcjob.__class__.__name__, calcjob.process_class.__name__)
+            'Please specify a path explicitly.'
         )
 
     try:
@@ -327,10 +329,11 @@ def get_remote_and_path(calcjob: orm.CalcJobNode, path: str | None = None) -> tu
     try:
         process_class = calcjob.process_class
     except ValueError as exception:
-        raise ValueError(
+        msg = (
             f'The process class of `CalcJobNode<{calcjob.pk}>` cannot be loaded and so the default output filename '
             'cannot be determined.\nPlease specify a path explicitly.'
-        ) from exception
+        )
+        raise ValueError(msg) from exception
 
     # Try to get the default output filename from the node's associated process class spec
     port = process_class.spec_options.get('output_filename')  # type: ignore[attr-defined]
@@ -340,8 +343,9 @@ def get_remote_and_path(calcjob: orm.CalcJobNode, path: str | None = None) -> tu
     if path is not None:
         return remote_folder, path
 
-    raise ValueError(
+    msg = (
         f'`CalcJobNode<{calcjob.pk}>` does not define a default output file (option "output_filename" not found) '
         f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
         'Please specify a path explicitly.'
     )
+    raise ValueError(msg)

@@ -30,6 +30,8 @@ DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'List', 'List'),
     ('aiida.orm', 'Dict', 'Dict'),
     ('aiida.orm', 'Code', 'Code'),
+    ('aiida.orm', 'InstalledCode', 'InstalledCode'),
+    ('aiida.orm', 'PortableCode', 'PortableCode'),
     ('aiida.orm', 'Computer', 'Computer'),
     ('aiida.orm', 'Group', 'Group'),
     ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),

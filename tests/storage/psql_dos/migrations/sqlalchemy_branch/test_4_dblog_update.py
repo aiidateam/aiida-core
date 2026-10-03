@@ -233,18 +233,14 @@ class TestDbLogMigrationRecordCleaning:
                 .with_entities(column('dbnode_id'))
                 .one()[0]
             )
-            assert dbnode_id_1 == self.to_check['CalculationNode'][0], (
-                'The the referenced node is not ' 'the expected one'
-            )
+            assert dbnode_id_1 == self.to_check['CalculationNode'][0], 'The the referenced node is not the expected one'
             dbnode_id_2 = (
                 session.query(DbLog)
                 .filter(DbLog.id == self.to_check['CalculationNode'][3])
                 .with_entities(column('dbnode_id'))
                 .one()[0]
             )
-            assert dbnode_id_2 == self.to_check['CalculationNode'][2], (
-                'The the referenced node is not ' 'the expected one'
-            )
+            assert dbnode_id_2 == self.to_check['CalculationNode'][2], 'The the referenced node is not the expected one'
 
     def test_dblog_correct_export_of_logs(self):
         """Verify that export log methods for legacy workflows, unknown entities and log records that
@@ -256,8 +252,8 @@ class TestDbLogMigrationRecordCleaning:
         assert self.to_check['WorkflowNode'][0] == self.to_check['WorkflowNode'][1]
         assert self.to_check['WorkflowNode'][2] == 1
 
-        assert sorted(list(json.loads(self.to_check['NoNode'][0])), key=lambda k: k['id']) == sorted(
-            list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id']
+        assert sorted(json.loads(self.to_check['NoNode'][0]), key=lambda k: k['id']) == sorted(
+            json.loads(self.to_check['NoNode'][1]), key=lambda k: k['id']
         )
         assert self.to_check['NoNode'][2] == 2
 

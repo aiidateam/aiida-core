@@ -20,4 +20,4 @@ stash_mode: QbAnyField('attributes.stash_mode', dtype=<enum 'StashMode'>, doc='T
   mode with which the data was stashed')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

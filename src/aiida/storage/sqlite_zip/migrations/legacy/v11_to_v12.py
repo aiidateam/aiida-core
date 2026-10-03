@@ -11,7 +11,7 @@
 This migration is necessary after the `core.` prefix was added to entry points shipped with `aiida-core`.
 """
 
-from ..utils import update_metadata, verify_metadata_version
+from aiida.storage.sqlite_zip.migrations.utils import update_metadata, verify_metadata_version
 
 MAPPING_DATA = {
     'data.array.ArrayData.': 'data.core.array.ArrayData.',

@@ -14,9 +14,9 @@ of subsets of the provenance graph, to a single file
 
 # fmt: off
 
-from .create import *
-from .exceptions import *
-from .imports import *
+from aiida.tools.archive.create import *
+from aiida.tools.archive.exceptions import *
+from aiida.tools.archive.imports import *
 
 __all__ = (
     'ArchiveExportError',

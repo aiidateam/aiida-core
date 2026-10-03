@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import numbers
 
+from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.numeric import NumericType
 from aiida.orm.pydantic import OrmMetadataField
-
-from .base import to_aiida_type
-from .numeric import NumericType
 
 __all__ = ('Int',)
 

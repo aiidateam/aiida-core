@@ -6,19 +6,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
+"""AiiDA-specific process ports."""
 
 from __future__ import annotations
 
 import re
+import typing as t
 import warnings
-from collections.abc import Mapping
-from typing import Any, Callable, Dict, Optional, Sequence
-
-from plumpy import ports
-from plumpy.ports import breadcrumbs_to_port
+from collections.abc import Callable, Mapping, Sequence
 
 from aiida.common.links import validate_link_label
+from aiida.engine.processes.generic import ports
+from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.orm import Data, Node, to_aiida_type
 
 __all__ = (
@@ -31,9 +30,10 @@ __all__ = (
     'WithSerialize',
 )
 
+OutputPort = ports.OutputPort
+
 PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1
 PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label
-OutputPort = ports.OutputPort
 
 
 class WithNonDb:
@@ -115,14 +115,14 @@ class WithSerialize:
     def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
         super().__init__(*args, **kwargs)
-        self._serializer: Callable[[Any], 'Data'] | None = serializer
+        self._serializer: Callable[[t.Any], Data] | None = serializer
 
     @property
-    def serializer(self) -> Callable[[Any], 'Data'] | None:
+    def serializer(self) -> Callable[[t.Any], Data] | None:
         """Return the serializer."""
         return self._serializer
 
-    def serialize(self, value: Any) -> 'Data':
+    def serialize(self, value: t.Any) -> Data:
         """Serialize the given value, unless it is ``None``, already a Data type, or no serializer function is defined.
 
         :param value: the value to be serialized
@@ -135,8 +135,9 @@ class WithSerialize:
 
 
 class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
-    """Sub class of plumpy.InputPort which mixes in the WithSerialize and WithNonDb mixins to support automatic
-    value serialization to database storable types and support non database storable input types as well.
+    """Subclass of :class:`aiida.engine.processes.generic.ports.InputPort` with serialization and non-database support.
+
+    Values can be serialized automatically to database-storable types, while inputs can also be marked as non-storable.
 
     The mixins have to go before the main port class in the superclass order to make sure they have the chance to
     process their specific keywords.
@@ -150,8 +151,9 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
             # people set node instances as defaults which can cause various problems.
             if default is not ports.UNSPECIFIED and isinstance(default, Node):
                 message = (
-                    'default of input port `{}` is a `Node` instance, which can lead to unexpected side effects.'
-                    ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
+                    f'default of input port `{args[0]}` is a `Node` instance, '
+                    'which can lead to unexpected side effects.'
+                    ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'
                 )
                 warnings.warn(UserWarning(message))
 
@@ -166,7 +168,7 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
 
         super().__init__(*args, **kwargs)
 
-    def get_description(self) -> Dict[str, str]:
+    def get_description(self) -> dict[str, str]:
         """Return a description of the InputPort, which will be a dictionary of its attributes
 
         :returns: a dictionary of the stringified InputPort attributes
@@ -179,7 +181,7 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
 
 
 class CalcJobOutputPort(ports.OutputPort):
-    """Sub class of plumpy.OutputPort which adds the `_pass_to_parser` attribute."""
+    """Output port for calcjobs that adds the ``_pass_to_parser`` attribute."""
 
     def __init__(self, *args, **kwargs) -> None:
         pass_to_parser = kwargs.pop('pass_to_parser', False)
@@ -192,7 +194,7 @@ class CalcJobOutputPort(ports.OutputPort):
 
 
 class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
-    """Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
+    """Subclass of :class:`aiida.engine.processes.generic.ports.PortNamespace` supporting automatic recursive
     serialization of a given mapping onto the ports of the PortNamespace.
     """
 
@@ -249,16 +251,18 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         try:
             validate_link_label(port_name)
         except ValueError as exception:
-            raise ValueError(f'invalid port name `{port_name}`: {exception}')
+            msg = f'invalid port name `{port_name}`: {exception}'
+            raise ValueError(msg)
 
         # Following regexes will match all groups of consecutive underscores where each group will be of the form
         # `('___', '_')`, where the first element is the matched group of consecutive underscores.
         consecutive_underscores = [match[0] for match in re.findall(r'((_)\2+)', port_name)]
 
         if any(len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores):
-            raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
+            msg = f'invalid port name `{port_name}`: more than two consecutive underscores'
+            raise ValueError(msg)
 
-    def serialize(self, mapping: Optional[Dict[str, Any]], breadcrumbs: Sequence[str] = ()) -> Optional[Dict[str, Any]]:
+    def serialize(self, mapping: dict[str, t.Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, t.Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.
 
         It will recursively call this function on any nested `PortNamespace` or the serialize function on any `Ports`.
@@ -274,9 +278,10 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
         if not isinstance(mapping, Mapping):
             port_name = breadcrumbs_to_port(breadcrumbs)  # type: ignore[unreachable]
-            raise TypeError(f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary')
+            msg = f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary'
+            raise TypeError(msg)
 
-        result: dict[str, Any] = {}
+        result: dict[str, t.Any] = {}
 
         for name, value in mapping.items():
             if name in self:
@@ -286,7 +291,8 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                 elif isinstance(port, InputPort):
                     result[name] = port.serialize(value)
                 else:
-                    raise AssertionError(f'port does not have a serialize method: {port}')
+                    msg = f'port does not have a serialize method: {port}'
+                    raise AssertionError(msg)
             else:
                 result[name] = value
 

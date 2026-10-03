@@ -11,10 +11,11 @@
 from __future__ import annotations
 
 import datetime
+import typing as t
 import warnings
+from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
 from uuid import UUID
 
 from typing_extensions import Self
@@ -23,12 +24,11 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+from aiida.orm import convert, entities, extras, users
+from aiida.orm.pydantic import OrmMetadataField
 
-from . import convert, entities, extras, users
-from .pydantic import OrmMetadataField
-
-if TYPE_CHECKING:
-    from importlib.metadata import EntryPoint
+if t.TYPE_CHECKING:
+    from importlib_metadata import EntryPoint
 
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 
 
-def load_group_class(type_string: str) -> Type[Group]:
+def load_group_class(type_string: str) -> type[Group]:
     """Load the sub class of `Group` that corresponds to the given `type_string`.
 
     .. note:: will fall back on `aiida.orm.groups.Group` if `type_string` cannot be resolved to loadable entry point.
@@ -61,13 +61,13 @@ def load_group_class(type_string: str) -> Type[Group]:
 class GroupCollection(entities.Collection['Group']):
     """Collection of Groups"""
 
-    collection_type: ClassVar[str] = 'groups'
+    collection_type: t.ClassVar[str] = 'groups'
 
     @staticmethod
-    def _entity_base_cls() -> Type[Group]:
+    def _entity_base_cls() -> type[Group]:
         return Group
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[Group, bool]:
+    def get_or_create(self, label: str | None = None, **kwargs) -> tuple[Group, bool]:
         """Try to retrieve a group from the DB with the given arguments;
         create (and store) a new group if such a group was not present yet.
 
@@ -113,7 +113,7 @@ class GroupBase:
 class Group(entities.Entity['BackendGroup', GroupCollection]):
     """An AiiDA ORM implementation of group of nodes."""
 
-    __type_string: ClassVar[Optional[str]]
+    __type_string: t.ClassVar[str | None]
 
     identity_field = 'uuid'
 
@@ -131,7 +131,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         user: int = OrmMetadataField(
             description='The PK of the group owner',
             orm_class='core.user',
-            orm_to_model=lambda group: cast(Group, group).user.pk,
+            orm_to_model=lambda group: t.cast(Group, group).user.pk,
             read_only=True,
             examples=[1],
         )
@@ -149,10 +149,10 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             description='The group description',
             examples=['This is my group description.'],
         )
-        extras: dict[str, Any] = OrmMetadataField(
+        extras: dict[str, t.Any] = OrmMetadataField(
             default_factory=dict,
             description='The group extras',
-            orm_to_model=lambda group: cast(Group, group).base.extras.all,
+            orm_to_model=lambda group: t.cast(Group, group).base.extras.all,
             may_be_large=True,
             examples=[{'key': 'value'}],
         )
@@ -161,13 +161,13 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     def __init__(
         self,
-        label: Optional[str] = None,
-        user: Optional['User'] = None,
+        label: str | None = None,
+        user: User | None = None,
         description: str = '',
-        type_string: Optional[str] = None,
-        time: Optional[datetime.datetime] = None,
-        extras: Optional[Dict[str, Any]] = None,
-        backend: Optional['StorageBackend'] = None,
+        type_string: str | None = None,
+        time: datetime.datetime | None = None,
+        extras: dict[str, t.Any] | None = None,
+        backend: StorageBackend | None = None,
     ):
         """Create a new group. Either pass a dbgroup parameter, to reload
         a group from the DB (and then, no further parameters are allowed),
@@ -186,7 +186,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             warn_deprecation('Passing the `type_string` is deprecated, it is determined automatically', version=3)
 
         backend = backend or get_manager().get_profile_storage()
-        user = cast(users.User, user or backend.default_user)
+        user = t.cast(users.User, user or backend.default_user)
         type_check(user, users.User)
 
         model = backend.groups.create(
@@ -197,7 +197,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             self.base.extras.set_many(extras)
 
     @classproperty
-    def _type_string(cls) -> Optional[str]:  # noqa: N805
+    def _type_string(cls) -> str | None:  # noqa: N805
         from aiida.plugins.entry_point import get_entry_point_from_class
 
         if hasattr(cls, '__type_string'):
@@ -237,7 +237,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return super().store()
 
     @classproperty
-    def entry_point(cls) -> Optional['EntryPoint']:  # noqa: N805
+    def entry_point(cls) -> EntryPoint | None:  # noqa: N805
         """Return the entry point associated this group type.
 
         :return: the associated entry point or ``None`` if it isn't known.
@@ -295,12 +295,12 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return self._backend_entity.time
 
     @property
-    def user(self) -> 'User':
+    def user(self) -> User:
         """:return: the user associated with this group"""
         return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     @user.setter
-    def user(self, user: 'User') -> None:
+    def user(self, user: User) -> None:
         """Set the user.
 
         :param user: the user
@@ -339,14 +339,14 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         """Remove all the nodes from this group."""
         return self._backend_entity.clear()
 
-    def add_nodes(self, nodes: Union['Node', Sequence['Node']]) -> None:
+    def add_nodes(self, nodes: Node | Sequence[Node]) -> None:
         """Add a node or a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a single `Node` or a list of `Nodes`
         """
-        from .nodes import Node
+        from aiida.orm.nodes import Node
 
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('cannot add nodes to an unstored group')
@@ -360,14 +360,14 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         self._backend_entity.add_nodes([node.backend_entity for node in nodes])
 
-    def remove_nodes(self, nodes: Union['Node', Sequence['Node']]) -> None:
+    def remove_nodes(self, nodes: Node | Sequence[Node]) -> None:
         """Remove a node or a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a single `Node` or a list of `Nodes`
         """
-        from .nodes import Node
+        from aiida.orm.nodes import Node
 
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('cannot add nodes to an unstored group')
@@ -387,14 +387,14 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     def dump(
         self,
-        output_path: Optional[Union[str, Path]] = None,
+        output_path: str | Path | None = None,
         # Dump mode options
         dry_run: bool = False,
         overwrite: bool = False,
         # Time filtering options
-        past_days: Optional[int] = None,
-        start_date: Optional[datetime.datetime] = None,
-        end_date: Optional[datetime.datetime] = None,
+        past_days: int | None = None,
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
         filter_by_last_dump_time: bool = True,
         # Node collection options
         only_top_level_calcs: bool = True,
@@ -478,7 +478,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         'extras_keys': 'keys',
     }
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> t.Any:
         """This method is called when an extras is not found in the instance.
 
         It allows for the handling of deprecated mixin methods.

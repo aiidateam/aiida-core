@@ -129,7 +129,7 @@ class KpointsDataTranslator(DataTranslator):
         # kpoints)
         # tab_mesh: whether to include a table with the mesh and offsets
 
-        bool_fields = dict(has_cell=has_cell, has_mesh=has_mesh, has_labels=has_labels)
+        bool_fields = {'has_cell': has_cell, 'has_mesh': has_mesh, 'has_labels': has_labels}
 
         response.update(bool_fields)
 

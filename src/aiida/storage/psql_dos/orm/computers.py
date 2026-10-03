@@ -16,8 +16,7 @@ from sqlalchemy.orm.session import make_transient
 from aiida.common import exceptions
 from aiida.orm.implementation.computers import BackendComputer, BackendComputerCollection
 from aiida.storage.psql_dos.models.computer import DbComputer
-
-from . import entities, utils
+from aiida.storage.psql_dos.orm import entities, utils
 
 
 class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
@@ -125,4 +124,5 @@ class SqlaComputerCollection(BackendComputerCollection):
             session.delete(row)
             session.commit()
         except SQLAlchemyError as exc:
-            raise exceptions.InvalidOperation(f'Unable to delete the requested computer: {exc}')
+            msg = f'Unable to delete the requested computer: {exc}'
+            raise exceptions.InvalidOperation(msg)

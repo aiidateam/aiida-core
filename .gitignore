@@ -21,7 +21,6 @@ __pycache__/
 .vscode
 pyrightconfig.json
 stubs/
-.tox
 Pipfile
 
 .aiida
@@ -64,3 +63,6 @@ docker-bake.override.json
 
 # dev files
 .dev
+# pixi environments
+.pixi/*
+!.pixi/config.toml

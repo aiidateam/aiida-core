@@ -151,13 +151,8 @@ To view all configuration options set for the current profile:
     daemon.worker_process_slots            default   200
     db.batch_size                          default   100000
     logging.aiida_loglevel                 default   REPORT
-    logging.alembic_loglevel               default   WARNING
-    logging.circus_loglevel                default   INFO
-    logging.db_loglevel                    default   REPORT
-    logging.kiwipy_loglevel                default   WARNING
-    logging.paramiko_loglevel              default   WARNING
-    logging.plumpy_loglevel                default   WARNING
-    logging.sqlalchemy_loglevel            default   WARNING
+    logging.database_handler               default   REPORT
+    logging.terminal_handler               default   REPORT
     broker.task_timeout                    default   10
     runner.poll.interval                   profile   50
     transport.task_maximum_attempts        global    6

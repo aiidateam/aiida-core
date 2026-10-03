@@ -270,7 +270,7 @@ def test_complex_workflow_graph_export_sets(aiida_profile_clean, tmp_path, aiida
     """Test ex-/import of individual nodes in complex graph"""
     for export_conf in range(0, 9):
         _, (export_node, export_target) = construct_complex_graph(aiida_localhost_factory, export_conf)
-        export_target_uuids = set(_.uuid for _ in export_target)
+        export_target_uuids = {_.uuid for _ in export_target}
 
         export_file = tmp_path.joinpath('export.aiida')
         create_archive([export_node], filename=export_file, overwrite=True)
@@ -283,7 +283,7 @@ def test_complex_workflow_graph_export_sets(aiida_profile_clean, tmp_path, aiida
         # Get all the nodes of the database
         builder = orm.QueryBuilder()
         builder.append(orm.Node, project='uuid')
-        imported_node_uuids = set(_[0] for _ in builder.all())
+        imported_node_uuids = {_[0] for _ in builder.all()}
 
         assert export_target_uuids == imported_node_uuids, (
             'Problem in comparison of export node: '
@@ -363,9 +363,9 @@ def test_high_level_workflow_links(aiida_profile_clean, tmp_path, aiida_localhos
             export_set = [tuple(_) for _ in export_links]
             import_set = [tuple(_) for _ in import_links]
 
-            assert set(export_set) == set(
-                import_set
-            ), f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
+            assert set(export_set) == set(import_set), (
+                f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
+            )
 
 
 def prepare_link_flags_export(nodes_to_export, test_data):
@@ -397,10 +397,9 @@ def link_flags_import_helper(test_data, reset_db):
         for node_type, node_cls in nodes_util.items():
             if node_type in expected_nodes:
                 builder = orm.QueryBuilder().append(node_cls, project='uuid')
-                assert builder.count() == len(
-                    expected_nodes[node_type]
-                ), 'Expected {} {} node(s), but got {}. Test: "{}"'.format(
-                    len(expected_nodes[node_type]), node_type, builder.count(), test
+                assert builder.count() == len(expected_nodes[node_type]), (
+                    f'Expected {len(expected_nodes[node_type])} {node_type} node(s), but got {builder.count()}. '
+                    f'Test: "{test}"'
                 )
                 for node_uuid in builder.iterall():
                     assert node_uuid[0] in expected_nodes[node_type], f'Failed for test: "{test}"'
@@ -615,7 +614,7 @@ def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
     work1.seal()
     work2.seal()
 
-    uuids_wanted = set(_.uuid for _ in (work1, data_out, data_in, work2))
+    uuids_wanted = {_.uuid for _ in (work1, data_out, data_in, work2)}
     links_wanted = get_all_node_links()
 
     export_file = tmp_path.joinpath('export.aiida')
@@ -676,7 +675,7 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
     links = get_all_node_links()
     assert len(links) == 1, (
         'Only a single Link (from Calc. to Data) is expected, '
-        'instead {} were found (in, out, label, type): {}'.format(len(links), links)
+        f'instead {len(links)} were found (in, out, label, type): {links}'
     )
     for from_uuid, to_uuid, found_label, found_type in links:
         assert from_uuid == calc_uuid
@@ -696,7 +695,7 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
         assert node[0] in [data_uuid, calc_uuid, work_uuid]
 
     links = get_all_node_links()
-    assert (
-        len(links) == 2
-    ), f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
+    assert len(links) == 2, (
+        f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
+    )
     assert sorted(links) == sorted(before_links)

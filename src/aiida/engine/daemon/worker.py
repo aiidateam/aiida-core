@@ -12,7 +12,6 @@ import asyncio
 import logging
 import signal
 import sys
-from typing import Union
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
@@ -40,11 +39,10 @@ async def shutdown_worker(runner: Runner) -> None:
     LOGGER.info('Daemon worker stopped')
 
 
-def start_daemon_worker(foreground: bool = False, profile_name: Union[str, None] = None) -> None:
+def start_daemon_worker(foreground: bool = False, profile_name: str | None = None) -> None:
     """Start a daemon worker for the given profile or the currently configured profile.
 
-    :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
-        write to the daemon log file.
+    :param foreground: If true, the logging will be also configured to write to stdout, and not only to log file.
     :param profile_name: Optional profile name.
     """
     manager = get_manager()
@@ -68,10 +66,17 @@ def start_daemon_worker(foreground: bool = False, profile_name: Union[str, None]
         LOGGER.info('Setting maximum recursion limit of daemon worker to %s', rlimit)
         sys.setrecursionlimit(rlimit)
 
+    shutdown_tasks: set[asyncio.Task[None]] = set()
+
+    def schedule_shutdown() -> None:
+        task = asyncio.create_task(shutdown_worker(runner))
+        shutdown_tasks.add(task)
+        task.add_done_callback(shutdown_tasks.discard)
+
     signals = (signal.SIGTERM, signal.SIGINT)
     for s in signals:
         # https://github.com/python/mypy/issues/12557
-        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
+        runner.loop.add_signal_handler(s, schedule_shutdown)
 
     try:
         LOGGER.info('Starting a daemon worker')

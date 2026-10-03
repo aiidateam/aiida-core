@@ -11,8 +11,7 @@
 import inspect
 
 from aiida.engine import CalcJob
-
-from .process import AiidaProcessDirective, AiidaProcessDocumenter
+from aiida.sphinxext.process import AiidaProcessDirective, AiidaProcessDocumenter
 
 
 def setup_extension(app):

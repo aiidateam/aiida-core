@@ -8,6 +8,9 @@
 ###########################################################################
 """Tests for ``verdi config``."""
 
+import json
+import pathlib
+
 import pytest
 
 from aiida import get_profile
@@ -93,13 +96,20 @@ def test_config_get_option(run_cli_command, config_with_profile_factory):
     assert option_value in result.output.strip()
 
 
-def test_config_unset_option(run_cli_command, config_with_profile_factory):
+@pytest.mark.parametrize(
+    'option_name, option_value, requires_daemon_restart',
+    (
+        ('daemon.timeout', '30', False),
+        ('daemon.default_workers', '2', True),
+    ),
+)
+def test_config_unset_option(
+    run_cli_command, config_with_profile_factory, option_name, option_value, requires_daemon_restart
+):
     """Test the `verdi config` command when unsetting an option."""
     from aiida.manage.configuration.options import get_option
 
     config_with_profile_factory()
-    option_name = 'daemon.timeout'
-    option_value = str(30)
 
     options = ['config', 'set', option_name, str(option_value)]
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
@@ -112,9 +122,64 @@ def test_config_unset_option(run_cli_command, config_with_profile_factory):
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert f"'{option_name}' unset" in result.output.strip()
 
+    if requires_daemon_restart:
+        assert 'verdi daemon restart' in result.output
+    else:
+        assert 'verdi daemon restart' not in result.output
+
     options = ['config', 'get', option_name]
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert result.output.strip() == str(get_option(option_name).default)  # back to the default
+
+
+def test_config_set_handler_warns_when_ineffective(run_cli_command, config_with_profile_factory):
+    """`verdi config set` should warn when a handler filter is set more verbose than any logger level.
+
+    ``logging.aiida_loglevel`` defaults to ``REPORT``, so setting ``terminal_handler`` to ``DEBUG`` cannot surface any
+    additional messages until a logger level is lowered as well.
+    """
+    config_with_profile_factory()
+    options = ['config', 'set', 'logging.terminal_handler', 'DEBUG']
+    result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
+    assert 'Warning' in result.output
+    assert 'no logger emits messages at that level' in result.output
+    assert 'logging.aiida_loglevel' in result.output
+    assert 'REPORT' in result.output
+
+
+@pytest.mark.parametrize(
+    'option_name, value, effective_option_name, requires_daemon_restart',
+    (
+        ('daemon.default_workers', '2', 'daemon.default_workers', True),
+        ('daemon.timeout', '10', 'daemon.timeout', False),
+        ('logging.aiida_loglevel', 'DEBUG', 'logging.aiida_loglevel', True),
+        ('logging.db_loglevel', 'DEBUG', 'logging.database_handler', True),
+        ('caching.default_enabled', 'True', 'caching.default_enabled', True),
+        ('rmq.task_timeout', '5', 'broker.task_timeout', True),
+    ),
+)
+def test_config_set_option_requires_daemon_restart(
+    run_cli_command,
+    config_with_profile_factory,
+    option_name,
+    value,
+    effective_option_name,
+    requires_daemon_restart,
+):
+    """Test that `verdi config set` reports when an option requires restarting the daemon."""
+    config_with_profile_factory()
+    options = ['config', 'set', option_name, value]
+    result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
+
+    assert f"'{effective_option_name}' set to" in result.output
+
+    if option_name != effective_option_name:
+        assert 'deprecated using' in result.output
+
+    if requires_daemon_restart:
+        assert 'verdi daemon restart' in result.output
+    else:
+        assert 'verdi daemon restart' not in result.output
 
 
 def test_config_set_option_global_only(run_cli_command, config_with_profile_factory):
@@ -141,6 +206,7 @@ def test_config_list(run_cli_command, config_with_profile_factory):
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
 
     assert 'daemon.timeout' in result.output
+    assert 'logging.db_loglevel' not in result.output
     assert 'Timeout in seconds' not in result.output
 
 
@@ -209,3 +275,30 @@ def test_config_downgrade(run_cli_command, config_with_profile_factory):
     options = ['config', 'downgrade', '1']
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert 'Success: Downgraded' in result.output.strip()
+
+
+def test_config_downgrade_incompatible_but_downgradeable(run_cli_command, config_with_profile_factory, monkeypatch):
+    """Test `verdi config downgrade` can run even if the config cannot be loaded normally."""
+    from aiida.manage import configuration
+    from aiida.manage.configuration.migrations import migrations
+
+    config = config_with_profile_factory()
+    filepath = pathlib.Path(config.filepath)
+    dictionary = config.dictionary
+    dictionary['CONFIG_VERSION'] = {'CURRENT': 10, 'OLDEST_COMPATIBLE': 10}
+    dictionary.setdefault('options', {})['broker.task_timeout'] = 12
+    filepath.write_text(json.dumps(dictionary), encoding='utf8')
+
+    configuration.CONFIG = None
+    monkeypatch.setattr(migrations, 'CURRENT_CONFIG_VERSION', 9)
+    monkeypatch.setattr(migrations, 'MAXIMUM_DOWNGRADE_CONFIG_VERSION', 10)
+
+    result = run_cli_command(
+        cmd_verdi.verdi, ['config', 'downgrade', '9'], initialize_ctx_obj=False, use_subprocess=False
+    )
+
+    assert 'Success: Downgraded' in result.output.strip()
+    dictionary = json.loads(filepath.read_text(encoding='utf8'))
+    assert dictionary['CONFIG_VERSION'] == {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9}
+    assert dictionary['options']['rmq.task_timeout'] == 12
+    assert 'broker.task_timeout' not in dictionary['options']

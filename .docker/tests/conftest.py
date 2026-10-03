@@ -56,7 +56,7 @@ def _docker_service_wait(docker_services):
         docker_services.wait_until_responsive(
             timeout=300.0,
             pause=10,
-            check=lambda: is_container_ready(),
+            check=is_container_ready,
         )
     except Exception:
         print('Timed out waiting for the profile and daemon to be up and running.')

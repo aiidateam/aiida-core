@@ -177,6 +177,7 @@ They usually allow creating some resources that are required by the test, such a
 
     def test_calculation(aiida_code_installed):
         """Test running a calculation using a ``CalcJob`` plugin."""
+        from aiida import orm
         from aiida.engine import run
 
         code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')

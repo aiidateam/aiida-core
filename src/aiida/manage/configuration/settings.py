@@ -13,8 +13,8 @@ from __future__ import annotations
 import os
 import pathlib
 import sys
+import typing as t
 import warnings
-from typing import final
 
 DEFAULT_UMASK = 0o0077
 DEFAULT_AIIDA_PATH_VARIABLE = 'AIIDA_PATH'
@@ -23,14 +23,16 @@ DEFAULT_AIIDA_USER = 'aiida@localhost'
 DEFAULT_CONFIG_DIR_NAME = '.aiida'
 DEFAULT_CONFIG_FILE_NAME = 'config.json'
 DEFAULT_CONFIG_INDENT_SIZE = 4
+DEFAULT_ZMQ_BROKER_SERVICE_BASE_DIR_NAME = 'broker'
 DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
+DEFAULT_PROFILE_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
 __all__ = ('AiiDAConfigDir', 'AiiDAConfigPathResolver')
 
 
-@final
+@t.final
 class AiiDAConfigDir:
     """Singleton for setting and getting the path to configuration directory."""
 
@@ -58,7 +60,7 @@ class AiiDAConfigDir:
         _create_instance_directories(cls._glb_aiida_config_folder)
 
 
-@final
+@t.final
 class AiiDAConfigPathResolver:
     """For resolving configuration directory, daemon dir, daemon log dir and access control dir.
     The locations are all trivially derived from the config directory.
@@ -80,6 +82,14 @@ class AiiDAConfigPathResolver:
         return self._aiida_path / DEFAULT_DAEMON_DIR_NAME / DEFAULT_DAEMON_LOG_DIR_NAME
 
     @property
+    def _zmq_broker_service_base_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_ZMQ_BROKER_SERVICE_BASE_DIR_NAME
+
+    @property
+    def profile_log_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_PROFILE_LOG_DIR_NAME
+
+    @property
     def access_control_dir(self) -> pathlib.Path:
         return self._aiida_path / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
@@ -99,6 +109,8 @@ def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> No
         path_resolver.aiida_path,
         path_resolver.daemon_dir,
         path_resolver.daemon_log_dir,
+        path_resolver._zmq_broker_service_base_dir,
+        path_resolver.profile_log_dir,
         path_resolver.access_control_dir,
     ]
 
@@ -112,7 +124,8 @@ def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> No
             try:
                 path.mkdir(parents=True, exist_ok=True)
             except OSError as exc:
-                raise ConfigurationError(f'could not create the `{path}` configuration directory: {exc}') from exc
+                msg = f'could not create the `{path}` configuration directory: {exc}'
+                raise ConfigurationError(msg) from exc
     finally:
         _ = os.umask(umask)
 

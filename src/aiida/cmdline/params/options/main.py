@@ -16,15 +16,14 @@ import typing as t
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
+from aiida.cmdline.params import types
+from aiida.cmdline.params.options.callable import CallableDefaultOption
+from aiida.cmdline.params.options.config import ConfigFileOption
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
+from aiida.cmdline.params.options.overridable import OverridableOption
+from aiida.cmdline.utils import defaults, echo
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
-
-from ...utils import defaults, echo
-from .. import types
-from .callable import CallableDefaultOption
-from .config import ConfigFileOption
-from .multivalue import MultipleValueOption
-from .overridable import OverridableOption
 
 if t.TYPE_CHECKING:
     from click.decorators import FC
@@ -109,6 +108,7 @@ __all__ = (
     'PROCESS_STATE',
     'PROFILE',
     'PROFILE_ONLY_CONFIG',
+    'PROFILE_OPTION_NAME',
     'PROFILE_SET_DEFAULT',
     'PROJECT',
     'RAW',
@@ -157,7 +157,7 @@ TRAVERSAL_RULE_HELP_STRING = {
 
 def valid_process_states() -> tuple[str, ...]:
     """Return a list of valid values for the ProcessState enum."""
-    from plumpy import ProcessState
+    from aiida.common.processes import ProcessState
 
     return tuple(state.value for state in ProcessState)
 
@@ -171,7 +171,7 @@ def valid_calc_job_states() -> tuple[str, ...]:
 
 def active_process_states() -> list[str]:
     """Return a list of process states that are considered active."""
-    from plumpy import ProcessState
+    from aiida.common.processes import ProcessState
 
     return [
         ProcessState.CREATED.value,
@@ -188,7 +188,7 @@ def graph_traversal_rules(rules: dict[t.Any, t.Any]) -> t.Callable[[FC], FC]:
         for name, traversal_rule in sorted(rules.items(), reverse=True):
             if traversal_rule.toggleable:
                 option_name = name.replace('_', '-')
-                option_label = '--{option_name}/--no-{option_name}'.format(option_name=option_name)
+                option_label = f'--{option_name}/--no-{option_name}'
                 help_string = f'Whether to expand the node set by following {TRAVERSAL_RULE_HELP_STRING[name]}.'
                 click.option(option_label, default=traversal_rule.default, show_default=True, help=help_string)(command)
 
@@ -202,11 +202,9 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
 
     Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
     is that after this callback is finished, the :meth:`aiida.common.log.configure_logging` method can be called again,
-    for example when the database backend is loaded, and this will undo this change. So instead, we set to globals in
-    the :mod:`aiida.common.log` module: ``CLI_ACTIVE`` and ``CLI_LOG_LEVEL``. The ``CLI_ACTIVE`` global is always set to
-    ``True``. The ``configure_logging`` function will interpret this as the code being executed through a ``verdi``
-    call. The ``CLI_LOG_LEVEL`` global is only set if an explicit value is set for the ``--verbosity`` option. In this
-    case, it is set to the specified log level and ``configure_logging`` will then set this log level for all loggers.
+    for example when the database backend is loaded, and this will undo this change. So instead, we set the
+    ``CLI_LOG_LEVEL`` global in :mod:`aiida.common.log`. If an explicit value is set for the ``--verbosity`` option, it
+    is set to the specified log level and ``configure_logging`` will then set this log level for all loggers.
 
     This approach tightly couples the generic :mod:`aiida.common.log` module to the :mod:`aiida.cmdline` module, which
     is not the cleanest, but given that other module code can undo the logging configuration by calling that method,
@@ -229,10 +227,12 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
     try:
         log_level = value.upper()
     except AttributeError:
-        raise click.BadParameter(f'`{value}` is not a string.')
+        msg = f'`{value}` is not a string.'
+        raise click.BadParameter(msg)
 
     if log_level not in LOG_LEVELS:
-        raise click.BadParameter(f'`{log_level}` is not a valid log level.')
+        msg = f'`{log_level}` is not a valid log level.'
+        raise click.BadParameter(msg)
 
     log.CLI_LOG_LEVEL = log_level
 
@@ -251,10 +251,12 @@ VERBOSITY = OverridableOption(
     help='Set the verbosity of the output.',
 )
 
+PROFILE_OPTION_NAME = 'profile'
+
 PROFILE = OverridableOption(
     '-p',
     '--profile',
-    'profile',
+    PROFILE_OPTION_NAME,
     type=types.ProfileParamType(),
     default=defaults.get_default_profile,
     cls=CallableDefaultOption,

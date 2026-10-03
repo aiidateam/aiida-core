@@ -8,11 +8,10 @@ from aiida.common import exceptions
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
 from aiida.common.warnings import warn_deprecation
-
-from ..querybuilder import QueryBuilder
+from aiida.orm.querybuilder import QueryBuilder
 
 if t.TYPE_CHECKING:
-    from .node import Node
+    from aiida.orm.nodes.node import Node
 
 
 class NodeCaching:
@@ -23,7 +22,7 @@ class NodeCaching:
     _VALID_CACHE_KEY: str = '_aiida_valid_cache'
     CACHED_FROM_KEY: str = '_aiida_cached_from'
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Initialize the caching interface."""
         self._node = node
 
@@ -113,7 +112,7 @@ class NodeCaching:
 
         return get_use_cache(identifier=self._node.process_type)
 
-    def _get_same_node(self) -> 'Node' | None:
+    def _get_same_node(self) -> Node | None:
         """Returns a stored node from which the current Node can be cached or None if it does not exist
 
         If a node is returned it is a valid cache, meaning its `_aiida_hash` extra matches `self.compute_hash()`.
@@ -130,7 +129,7 @@ class NodeCaching:
         except StopIteration:
             return None
 
-    def get_all_same_nodes(self) -> list['Node']:
+    def get_all_same_nodes(self) -> list[Node]:
         """Return a list of stored nodes which match the type and hash of the current node.
 
         All returned nodes are valid caches, meaning their `_aiida_hash` extra matches `self.compute_hash()`.
@@ -140,7 +139,7 @@ class NodeCaching:
         """
         return list(self._iter_all_same_nodes())
 
-    def _iter_all_same_nodes(self, allow_before_store=False) -> t.Iterator['Node']:
+    def _iter_all_same_nodes(self, allow_before_store=False) -> t.Iterator[Node]:
         """Returns an iterator of all same nodes.
 
         Note: this should be only called on stored nodes, or internally from .store() since it first calls

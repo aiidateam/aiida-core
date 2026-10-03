@@ -184,15 +184,14 @@ def test_import_to_group(tmp_path, aiida_profile_clean):
 
     # Check Group for content
     builder = orm.QueryBuilder().append(orm.Group, filters={'label': group_label}, project='uuid')
-    assert (
-        builder.count() == 1
-    ), f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
+    assert builder.count() == 1, (
+        f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
+    )
     imported_group = load_group(builder.all()[0][0])
     assert imported_group.uuid == group_uuid
     assert imported_group.count() == len(node_uuids), (
-        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' 'Nodes'.format(
-            imported_group.count(), len(node_uuids)
-        )
+        f'{imported_group.count()} Nodes were found in the automatic import group, '
+        f'instead there should have been exactly {len(node_uuids)} Nodes'
     )
     for node in imported_group.nodes:
         assert node.uuid in node_uuids
@@ -207,9 +206,8 @@ def test_import_to_group(tmp_path, aiida_profile_clean):
     imported_group = load_group(label=group_label)
     assert imported_group.uuid == group_uuid
     assert imported_group.count() == len(node_uuids), (
-        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' 'Nodes'.format(
-            imported_group.count(), len(node_uuids)
-        )
+        f'{imported_group.count()} Nodes were found in the automatic import group, '
+        f'instead there should have been exactly {len(node_uuids)} Nodes'
     )
     for node in imported_group.nodes:
         assert node.uuid in node_uuids

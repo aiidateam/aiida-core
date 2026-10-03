@@ -16,8 +16,9 @@ import uuid
 
 import pytest
 
+from aiida.common.datastructures import JobState
 from aiida.engine import CalcJob
-from aiida.schedulers import JobState, SchedulerError
+from aiida.schedulers import SchedulerError
 from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler
 
 # job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
@@ -42,7 +43,7 @@ def test_resource_validation():
     """Tests to verify that resources are correctly validated."""
     with pytest.raises(
         ValueError,
-        match='At least two among `num_machines`, `num_mpiprocs_per_machine` or `tot_num_mpiprocs` must be specified.',
+        match='At least two among `num_machines`, `num_mpiprocs_per_machine` or `tot_num_mpiprocs` must be specified',
     ):
         SlurmJobResource()
 
@@ -56,11 +57,11 @@ def test_resource_validation():
     }
 
     with pytest.raises(
-        ValueError, match='`tot_num_mpiprocs` is not equal to `num_mpiprocs_per_machine \\* num_machines`.'
+        ValueError, match='`tot_num_mpiprocs` is not equal to `num_mpiprocs_per_machine \\* num_machines`'
     ):
         SlurmJobResource(num_cores_per_machine=1, tot_num_mpiprocs=1, num_mpiprocs_per_machine=2)
 
-    with pytest.raises(ValueError, match='num_cores_per_machine must be greater than or equal to one.'):
+    with pytest.raises(ValueError, match='num_cores_per_machine must be greater than or equal to one'):
         SlurmJobResource(num_machines=1, tot_num_mpiprocs=1, num_cores_per_machine=0)
 
     with pytest.raises(
@@ -182,13 +183,13 @@ def test_time_conversion_errors(caplog):
 
     # Disable logging to avoid excessive output during test
     with caplog.at_level(logging.CRITICAL):
-        with pytest.raises(ValueError, match='Unrecognized format for time string.'):
+        with pytest.raises(ValueError, match='Unrecognized format for time string'):
             # Empty string not valid
             scheduler._convert_time('')
-        with pytest.raises(ValueError, match='Unrecognized format for time string.'):
+        with pytest.raises(ValueError, match='Unrecognized format for time string'):
             # there should be something after the dash
             scheduler._convert_time('1-')
-        with pytest.raises(ValueError, match='Unrecognized format for time string.'):
+        with pytest.raises(ValueError, match='Unrecognized format for time string'):
             # there should be something after the dash
             # there cannot be a dash after the colons
             scheduler._convert_time('1:2-3')
@@ -199,8 +200,7 @@ class TestSubmitScript:
 
     def test_submit_script(self):
         """Test the creation of a simple submission script."""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -227,8 +227,7 @@ class TestSubmitScript:
 
     def test_submit_script_bad_shebang(self):
         """Test that first line of submit script is as expected."""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
         tmpl_code_info = JobTemplateCodeInfo()
@@ -254,8 +253,7 @@ class TestSubmitScript:
         """Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -284,8 +282,7 @@ class TestSubmitScript:
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
         """Test to verify if scripts works fine if we pass only num_cores_per_mpiproc value"""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -318,8 +315,7 @@ class TestSubmitScript:
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -353,7 +349,7 @@ class TestSubmitScript:
         It should fail in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
 
@@ -371,8 +367,7 @@ class TestSubmitScript:
                 raise ValueError
         and correctly set the memory value in the script with the --mem option.
         """
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
         job_tmpl = JobTemplate()
@@ -403,7 +398,7 @@ class TestSubmitScript:
         """
         import re
 
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
         job_tmpl = JobTemplate()
@@ -417,8 +412,7 @@ class TestSubmitScript:
 
     def test_submit_script_rerunnable(self):
         """Test the creation of a submission script with the `rerunnable` option."""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 

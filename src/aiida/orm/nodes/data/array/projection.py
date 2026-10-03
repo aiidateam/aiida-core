@@ -13,11 +13,10 @@ import copy
 import numpy as np
 
 from aiida.common import exceptions
+from aiida.orm.nodes.data.array.array import ArrayData
+from aiida.orm.nodes.data.array.bands import BandsData
+from aiida.orm.nodes.data.orbital import OrbitalData
 from aiida.plugins import OrbitalFactory
-
-from ..orbital import OrbitalData
-from .array import ArrayData
-from .bands import BandsData
 
 __all__ = ('ProjectionData',)
 
@@ -213,9 +212,11 @@ class ProjectionData(OrbitalData, ArrayData):
             a failure
             """
             if not all(isinstance(_, np.ndarray) for _ in array_list):
-                raise exceptions.ValidationError(f'{array_name} was not composed entirely of ndarrays')
+                msg = f'{array_name} was not composed entirely of ndarrays'
+                raise exceptions.ValidationError(msg)
             if len(array_list) != orb_length:
-                raise exceptions.ValidationError(f'{array_name} did not have the same length as the list of orbitals')
+                msg = f'{array_name} did not have the same length as the list of orbitals'
+                raise exceptions.ValidationError(msg)
 
         ##############
         list_of_orbitals = single_to_list(list_of_orbitals)
@@ -236,7 +237,8 @@ class ProjectionData(OrbitalData, ArrayData):
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')
             except KeyError:
-                raise exceptions.ValidationError(f'No _orbital_type key found in dictionary: {orbital_dict}')
+                msg = f'No _orbital_type key found in dictionary: {orbital_dict}'
+                raise exceptions.ValidationError(msg)
             cls = OrbitalFactory(orbital_type)
             test_orbital = cls(**orbital_dict)
             list_of_orbital_dicts.append(test_orbital.get_orbital_dict())

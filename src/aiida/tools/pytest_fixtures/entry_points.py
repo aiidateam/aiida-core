@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
-import importlib.metadata
 import typing as t
 
+import importlib_metadata
 import pytest
 
 
 class EntryPointManager:
     """Manager to temporarily add or remove entry points."""
 
-    def __init__(self, entry_points: importlib.metadata.EntryPoints):
+    def __init__(self, entry_points: importlib_metadata.EntryPoints):
         self.entry_points = entry_points
 
-    def eps(self) -> importlib.metadata.EntryPoints:
+    def eps(self) -> importlib_metadata.EntryPoints:
         return self.entry_points
 
-    def eps_select(self, group, name=None) -> importlib.metadata.EntryPoints:
+    def eps_select(self, group, name=None) -> importlib_metadata.EntryPoints:
         if name is None:
             return self.eps().select(group=group)
         return self.eps().select(group=group, name=name)
@@ -73,12 +73,16 @@ class EntryPointManager:
         :raises ValueError: If `entry_point_string` is not defined, nor a `group` and `name`.
         :raises ValueError: If `entry_point_string` is not a complete entry point string with group and name.
         """
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
         if not isinstance(value, str):
             value = f'{value.__module__}:{value.__name__}'
 
         group, name = self._validate_entry_point(entry_point_string, group, name)
-        entry_point = importlib.metadata.EntryPoint(name=name, value=value, group=group)
-        self.entry_points = importlib.metadata.EntryPoints([*self.entry_points, entry_point])
+        entry_point = importlib_metadata.EntryPoint(name=name, value=value, group=group)
+        self.entry_points = importlib_metadata.EntryPoints([*self.entry_points, entry_point])
+
+        get_entry_point_from_class.cache_clear()
 
     def remove(
         self, entry_point_string: str | None = None, *, name: str | None = None, group: str | None = None
@@ -94,14 +98,19 @@ class EntryPointManager:
         :raises ValueError: If `entry_point_string` is not defined, nor a `group` and `name`.
         :raises ValueError: If `entry_point_string` is not a complete entry point string with group and name.
         """
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
         group, name = self._validate_entry_point(entry_point_string, group, name)
         try:
             self.entry_points[name]
         except KeyError:
-            raise KeyError(f'entry point `{name}` does not exist in group `{group}`.')
-        self.entry_points = importlib.metadata.EntryPoints(
-            (ep for ep in self.entry_points if not (ep.name == name and ep.group == group))
+            msg = f'entry point `{name}` does not exist in group `{group}`.'
+            raise KeyError(msg)
+        self.entry_points = importlib_metadata.EntryPoints(
+            ep for ep in self.entry_points if not (ep.name == name and ep.group == group)
         )
+
+        get_entry_point_from_class.cache_clear()
 
 
 @pytest.fixture
@@ -125,4 +134,8 @@ def entry_points(monkeypatch) -> t.Generator[EntryPointManager, None, None]:
     epm = EntryPointManager(entry_point.eps())
     monkeypatch.setattr(entry_point, 'eps', epm.eps)
     monkeypatch.setattr(entry_point, 'eps_select', epm.eps_select)
-    yield epm
+    entry_point.get_entry_point_from_class.cache_clear()
+    try:
+        yield epm
+    finally:
+        entry_point.get_entry_point_from_class.cache_clear()

@@ -21,9 +21,8 @@ import numpy
 
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import join_labels, prettify_labels
+from aiida.orm.nodes.data.array.kpoints import KpointsData
 from aiida.orm.pydantic import OrmMetadataField
-
-from .kpoints import KpointsData
 
 __all__ = ('BandsData', 'find_bandgap')
 
@@ -133,7 +132,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                     ]
                 )
             ]
-            number_electrons = int(round(sum(sum(i) for i in occupations) / num_kpoints))
+            number_electrons = round(sum(sum(i) for i in occupations) / num_kpoints)
 
             homo_indexes = [numpy.where(numpy.array([nint(_) for _ in x]) > 0)[0][-1] for x in occupations]
             if len(set(homo_indexes)) > 1:  # there must be intersections of valence and conduction bands
@@ -217,11 +216,11 @@ class BandsData(KpointsData):
     """Class to handle bands data"""
 
     class AttributesModel(KpointsData.AttributesModel):
-        array_labels: t.Optional[t.List[str]] = OrmMetadataField(
+        array_labels: list[str] | None = OrmMetadataField(
             None,
             description='Labels associated with the band arrays',
         )
-        units: t.Optional[str] = OrmMetadataField(
+        units: str | None = OrmMetadataField(
             None,
             description='Units in which the data in bands were stored',
             orm_to_model=lambda node: t.cast(BandsData, node).base.attributes.get('units', None),
@@ -280,11 +279,12 @@ class BandsData(KpointsData):
         the_bands = numpy.array(bands)
 
         if len(the_bands.shape) not in [2, 3]:
-            raise ValueError(
+            msg = (
                 'Bands must be an array of dimension 2'
                 '([N_kpoints, N_bands]) or of dimension 3 '
-                ' ([N_arrays, N_kpoints, N_bands]), found instead {}'.format(len(the_bands.shape))
+                f' ([N_arrays, N_kpoints, N_bands]), found instead {len(the_bands.shape)}'
             )
+            raise ValueError(msg)
 
         list_of_arrays_to_be_checked = []
 
@@ -296,9 +296,10 @@ class BandsData(KpointsData):
         if occupations is not None:
             the_occupations = numpy.array(occupations)
             if the_occupations.shape != the_bands.shape:
-                raise ValueError(
+                msg = (
                     f'Shape of occupations {the_occupations.shape} different from shapeshape of bands {the_bands.shape}'
                 )
+                raise ValueError(msg)
 
             if not the_bands.dtype.type == numpy.float64:
                 list_of_arrays_to_be_checked.append([the_occupations, 'occupations'])
@@ -310,11 +311,12 @@ class BandsData(KpointsData):
         if not the_bands.dtype.type == numpy.float64:
             list_of_arrays_to_be_checked.append([the_bands, 'bands'])
 
-        for x, msg in list_of_arrays_to_be_checked:
+        for array, array_name in list_of_arrays_to_be_checked:
             try:
-                [float(_) for _ in x.flatten() if _ is not None]  # type: ignore[attr-defined]
+                [float(_) for _ in array.flatten() if _ is not None]  # type: ignore[attr-defined]
             except (TypeError, ValueError):
-                raise ValueError(f'The {msg} array can only contain float or None values')
+                msg = f'The {array_name} array can only contain float or None values'
+                raise ValueError(msg)
 
         # check the labels
         if labels is not None:
@@ -323,11 +325,11 @@ class BandsData(KpointsData):
             elif isinstance(labels, (tuple, list)) and all(isinstance(_, str) for _ in labels):
                 the_labels = [str(_) for _ in labels]
             else:
-                raise ValidationError(
-                    'Band labels have an unrecognized type ({})but should be a string or a list of strings'.format(
-                        labels.__class__
-                    )
+                msg = (
+                    'Band labels have an unrecognized type '
+                    f'({labels.__class__})but should be a string or a list of strings'
                 )
+                raise ValidationError(msg)
 
             if len(the_bands.shape) == 2 and len(the_labels) != 1:
                 raise ValidationError('More array labels than the number of arrays')
@@ -797,7 +799,8 @@ class BandsData(KpointsData):
 
         for key, value in kwargs.items():
             if key not in valid_additional_keywords:
-                raise TypeError(f"_matplotlib_get_dict() got an unexpected keyword argument '{key}'")
+                msg = f"_matplotlib_get_dict() got an unexpected keyword argument '{key}'"
+                raise TypeError(msg)
             all_data[key] = value
 
         return all_data
@@ -1113,9 +1116,11 @@ class BandsData(KpointsData):
 
         # load the x and y of every set
         if color_number > MAX_NUM_AGR_COLORS:
-            raise ValueError(f'Color number is too high (should be less than {MAX_NUM_AGR_COLORS})')
+            msg = f'Color number is too high (should be less than {MAX_NUM_AGR_COLORS})'
+            raise ValueError(msg)
         if color_number2 > MAX_NUM_AGR_COLORS:
-            raise ValueError(f'Color number 2 is too high (should be less than {MAX_NUM_AGR_COLORS})')
+            msg = f'Color number 2 is too high (should be less than {MAX_NUM_AGR_COLORS})'
+            raise ValueError(msg)
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -1130,7 +1135,7 @@ class BandsData(KpointsData):
             y_min_lim = the_bands.min()
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
-        ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
+        ytick_spacing = 10 ** int(math.log10(y_max_lim - y_min_lim))
 
         # prepare xticks labels
         sx1 = ''

@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import pathlib
+import typing as t
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Any, Optional
 from uuid import uuid4
 
 from alembic.config import Config
@@ -30,16 +30,15 @@ from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
 from aiida.storage.log import MIGRATE_LOGGER
+from aiida.storage.migrations import TEMPLATE_INVALID_SCHEMA_VERSION
+from aiida.storage.psql_dos import PsqlDosBackend
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.backend import validate_sqlite_version
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
-from ..migrations import TEMPLATE_INVALID_SCHEMA_VERSION
-from ..psql_dos import PsqlDosBackend
-from ..psql_dos.migrator import PsqlDosMigrator
-
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from disk_objectstore import Container
 
     from aiida.orm.entities import EntityTypes
@@ -110,7 +109,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
             context.stamp(context.script, 'main@head')  # type: ignore[arg-type]
             self.connection.commit()
 
-    def get_schema_version_profile(self) -> Optional[str]:  # type: ignore[override]
+    def get_schema_version_profile(self) -> str | None:  # type: ignore[override]
         """Return the schema version of the backend instance for this profile.
 
         Note, the version will be None if the database is empty or is a legacy django database.
@@ -162,10 +161,11 @@ class SqliteDosMigrator(PsqlDosMigrator):
         if database_repository_uuid is None:
             raise exceptions.CorruptStorage('The database has no repository UUID set.')
         if database_repository_uuid != repository_uuid:
-            raise exceptions.CorruptStorage(
+            msg = (
                 f'The database has a repository UUID configured to {database_repository_uuid} '
                 f"but the disk-objectstore's is {repository_uuid}."
             )
+            raise exceptions.CorruptStorage(msg)
 
     @property
     def is_database_initialised(self) -> bool:
@@ -235,14 +235,12 @@ class SqliteDosStorage(PsqlDosBackend):
         try:
             filepath.mkdir(parents=True, exist_ok=True)
         except FileExistsError as exception:
-            raise ValueError(
-                f'`{filepath}` is a file and cannot be used for instance of `SqliteDosStorage`.'
-            ) from exception
+            msg = f'`{filepath}` is a file and cannot be used for instance of `SqliteDosStorage`.'
+            raise ValueError(msg) from exception
 
         if list(filepath.iterdir()):
-            raise ValueError(
-                f'`{filepath}` already exists but is not empty and cannot be used for instance of `SqliteDosStorage`.'
-            )
+            msg = f'`{filepath}` already exists but is not empty and cannot be used for instance of `SqliteDosStorage`.'
+            raise ValueError(msg)
 
         return super().initialise(profile, reset)
 
@@ -273,16 +271,16 @@ class SqliteDosStorage(PsqlDosBackend):
             rmtree(self.filepath_root)
             LOGGER.report(f'Deleted storage directory at `{self.filepath_root}`.')
 
-    def get_container(self) -> 'Container':
+    def get_container(self) -> Container:
         return Container(str(self.filepath_container))
 
-    def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+    def get_repository(self) -> DiskObjectStoreRepositoryBackend:
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
         return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
+    def version_profile(cls, profile: Profile) -> str | None:
         with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile()
 
@@ -323,14 +321,14 @@ class SqliteDosStorage(PsqlDosBackend):
 
     @staticmethod
     @lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: 'EntityTypes', with_pk: bool) -> tuple[Any, set[Any]]:
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[t.Any, set[t.Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
         """
         from sqlalchemy import inspect
 
-        from ..sqlite_zip.models import MAP_ENTITY_TYPE_TO_MODEL
+        from aiida.storage.sqlite_zip.models import MAP_ENTITY_TYPE_TO_MODEL
 
         model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
         mapper = inspect(model).mapper  # type: ignore[union-attr]
@@ -340,7 +338,7 @@ class SqliteDosStorage(PsqlDosBackend):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ) -> None:
         """Create a backup of the storage.
 

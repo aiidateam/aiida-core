@@ -12,12 +12,12 @@
 
 # fmt: off
 
-from .calcjob import *
-from .collections import *
-from .links import *
-from .loaders import *
-from .managers import *
-from .node import *
+from aiida.orm.utils.calcjob import *
+from aiida.orm.utils.collections import *
+from aiida.orm.utils.links import *
+from aiida.orm.utils.loaders import *
+from aiida.orm.utils.managers import *
+from aiida.orm.utils.node import *
 
 __all__ = (
     'AbstractNodeMeta',

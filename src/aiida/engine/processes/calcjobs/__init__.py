@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .calcjob import *
-from .importer import *
-from .manager import *
+from aiida.engine.processes.calcjobs.calcjob import *
+from aiida.engine.processes.calcjobs.importer import *
+from aiida.engine.processes.calcjobs.manager import *
 
 __all__ = (
     'CalcJob',

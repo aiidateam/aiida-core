@@ -12,18 +12,19 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import inspect
 import logging
+import typing as t
+from collections.abc import Awaitable, Callable, Iterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
-from plumpy import get_or_create_event_loop
+from aiida.engine.processes.events import get_or_create_event_loop
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
+    from aiida.engine.processes import Process, ProcessBuilder
+    from aiida.engine.runners import Runner
     from aiida.orm import ProcessNode
-
-    from .processes import Process, ProcessBuilder
-    from .runners import Runner
 
 __all__ = ('InterruptableFuture', 'interruptable_task', 'is_process_function')
 
@@ -32,7 +33,7 @@ PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 
 
-def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+def prepare_inputs(inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> dict[str, t.Any]:
     """Prepare inputs for launch of a process.
 
     This is a utility function to pre-process inputs for the process that can be specified both through keyword
@@ -52,9 +53,7 @@ def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[
     return inputs or {}
 
 
-def instantiate_process(
-    runner: 'Runner', process: Union['Process', Type['Process'], 'ProcessBuilder'], **inputs
-) -> 'Process':
+def instantiate_process(runner: Runner, process: Process | type[Process] | ProcessBuilder, **inputs) -> Process:
     """Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
 
@@ -67,7 +66,7 @@ def instantiate_process(
     :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
     :param inputs: the inputs for the process to be instantiated with
     """
-    from .processes import Process, ProcessBuilder
+    from aiida.engine.processes import Process, ProcessBuilder
 
     if isinstance(process, Process):
         assert not inputs
@@ -80,10 +79,11 @@ def instantiate_process(
         inputs.update(**builder._inputs(prune=True))
     elif is_process_function(process):
         process_class = process.process_class  # type: ignore[attr-defined]
-    elif inspect.isclass(process) and issubclass(process, Process):
+    elif inspect.isclass(process) and issubclass(process, Process):  # type: ignore[redundant-expr]
         process_class = process
     else:
-        raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
+        msg = f'invalid process {type(process)}, needs to be Process or ProcessBuilder'  # type: ignore[unreachable]
+        raise ValueError(msg)
 
     process = process_class(runner=runner, inputs=inputs)
 
@@ -93,11 +93,24 @@ def instantiate_process(
 class InterruptableFuture(asyncio.Future):
     """A future that can be interrupted by calling `interrupt`."""
 
-    def interrupt(self, reason: Exception) -> None:
-        """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
-        self.set_exception(reason)
+    _task: asyncio.Task[t.Any] | None = None
 
-    async def with_interrupt(self, coro: Awaitable[Any]) -> Any:
+    def _retain_task(self, task: asyncio.Task[t.Any]) -> None:
+        """Retain the task until it completes."""
+        self._task = task
+        task.add_done_callback(self._release_task)
+
+    def _release_task(self, task: asyncio.Task[t.Any]) -> None:
+        """Release the completed task."""
+        if self._task is task:
+            self._task = None
+
+    def interrupt(self, reason: Exception) -> None:
+        """Interrupt the coroutine represented by this future, unless it has already completed."""
+        if not self.done():
+            self.set_exception(reason)
+
+    async def with_interrupt(self, coro: Awaitable[t.Any]) -> t.Any:
         """Return result of a coroutine which will be interrupted if this future is interrupted ::
 
             import asyncio
@@ -113,16 +126,22 @@ class InterruptableFuture(asyncio.Future):
         :return: The result of the coroutine
         """
         task = asyncio.ensure_future(coro)
-        wait_iter = asyncio.as_completed({self, task})
-        result = await next(wait_iter)
-        if self.done():
-            raise RuntimeError(f"This interruptible future had it's result set unexpectedly to '{result}'")
+        try:
+            wait_iter = asyncio.as_completed({self, task})
+            result = await next(wait_iter)
+            if self.done():
+                msg = f"This interruptible future had it's result set unexpectedly to '{result}'"
+                raise RuntimeError(msg)
 
-        return result
+            return result
+        finally:
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
 
 
 def interruptable_task(
-    coro: Callable[[InterruptableFuture], Awaitable[Any]], loop: Optional[asyncio.AbstractEventLoop] = None
+    coro: Callable[[InterruptableFuture], Awaitable[t.Any]], loop: asyncio.AbstractEventLoop | None = None
 ) -> InterruptableFuture:
     """Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
@@ -153,35 +172,44 @@ def interruptable_task(
             if not future.done():
                 future.set_result(result)
 
-    loop.create_task(execute_coroutine())
+    future._retain_task(loop.create_task(execute_coroutine()))
 
     return future
 
 
-def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
-    """Ensure that the given function ``fct`` is a coroutine
+def ensure_coroutine(fct: Callable[..., t.Any]) -> Callable[..., Awaitable[t.Any]]:
+    """Return a coroutine function for a callable."""
+    if not callable(fct):
+        # Defensive check: callers can reach this with values loaded from a persisted state
+        msg = 'fct must be callable'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
-    If the passed function is not already a coroutine, it will be made to be a coroutine
+    # Normalize a callable class to its ``__call__`` method before checking whether it is a coroutine function.
+    # Returning the class itself for an ``async def __call__`` would make callers await an instance, which is not
+    # awaitable.
+    if inspect.isclass(fct):
+        fct = fct.__call__
 
-    :param fct: the function
-    :returns: the coroutine
-    """
-    if inspect.iscoroutinefunction(fct):
+    # The second check catches instances of a class with an ``async def __call__``
+    if inspect.iscoroutinefunction(fct) or inspect.iscoroutinefunction(fct.__call__):  # type: ignore[operator]
         return fct
 
-    async def wrapper(*args, **kwargs):
-        return fct(*args, **kwargs)
+    from aiida.engine.processes.greenback import run_with_portal
+
+    @functools.wraps(fct)
+    async def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        return await run_with_portal(fct, *args, **kwargs)
 
     return wrapper
 
 
 async def exponential_backoff_retry(
-    fct: Callable[..., Any],
-    initial_interval: Union[int, float] = 10.0,
+    fct: Callable[..., t.Any],
+    initial_interval: int | float = 10.0,
     max_attempts: int = 5,
-    logger: Optional[logging.Logger] = None,
-    ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None,
-) -> Any:
+    logger: logging.Logger | None = None,
+    ignore_exceptions: type[Exception] | tuple[type[Exception], ...] | None = None,
+) -> t.Any:
     """Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
     This coroutine will loop ``max_attempts`` times, calling the ``fct`` function, breaking immediately when the call
@@ -198,7 +226,7 @@ async def exponential_backoff_retry(
     if logger is None:
         logger = LOGGER
 
-    result: Any = None
+    result: t.Any = None
     coro = ensure_coroutine(fct)
     interval = initial_interval
 
@@ -226,7 +254,7 @@ async def exponential_backoff_retry(
     return result
 
 
-def is_process_function(function: Any) -> bool:
+def is_process_function(function: t.Any) -> bool:
     """Return whether the given function is a process function
 
     :param function: a function
@@ -243,7 +271,7 @@ def is_process_scoped() -> bool:
 
     :returns: True if the current scope is within a nested process, False otherwise
     """
-    from .processes.process import Process
+    from aiida.engine.processes.process import Process
 
     return Process.current() is not None
 
@@ -263,7 +291,7 @@ def loop_scope(loop) -> Iterator[None]:
         asyncio.set_event_loop(current)
 
 
-def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
+def set_process_state_change_timestamp(node: ProcessNode) -> None:
     """Set the global setting that reflects the last time a process changed state, for the process type
     of the given process, to the current timestamp. The process type will be determined based on
     the class of the calculation node it has as its database container.
@@ -284,7 +312,8 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
         # This will only occur for testing, as in general users cannot launch plain Process classes
         return
     else:
-        raise ValueError(f'unsupported calculation node type {type(node)}')
+        msg = f'unsupported calculation node type {type(node)}'  # type: ignore[unreachable]
+        raise ValueError(msg)
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
@@ -304,7 +333,7 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
         )
 
 
-def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
+def get_process_state_change_timestamp(process_type: str | None = None) -> datetime | None:
     """Get the global setting that reflects the last time a process of the given process type changed its state.
     The returned value will be the corresponding timestamp or None if the setting does not exist.
 
@@ -318,14 +347,15 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
-        raise ValueError(f"invalid value for process_type, valid values are {', '.join(valid_process_types)}")
+        msg = f'invalid value for process_type, valid values are {", ".join(valid_process_types)}'
+        raise ValueError(msg)
 
     if process_type is None:
         process_types = valid_process_types
     else:
         process_types = [process_type]
 
-    timestamps: List[datetime] = []
+    timestamps: list[datetime] = []
 
     backend = get_manager().get_profile_storage()
 

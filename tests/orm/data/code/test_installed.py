@@ -13,7 +13,6 @@ import pathlib
 import pytest
 
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import Computer
 from aiida.orm.nodes.data.code.installed import InstalledCode
 
@@ -43,7 +42,7 @@ def test_validate(aiida_localhost, bash_path):
     code.computer = aiida_localhost
     code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
 
-    with pytest.raises(ValidationError, match='The `filepath_executable` is not set.'):
+    with pytest.raises(ValidationError, match='The `filepath_executable` is not set'):
         code.store()
 
     code.filepath_executable = filepath_executable
@@ -94,12 +93,13 @@ def computer(request, aiida_computer_local, aiida_computer_ssh):
     if request.param == 'core.ssh':
         return aiida_computer_ssh(configure=False)
 
-    raise ValueError(f'unsupported request parameter: {request.param}')
+    msg = f'unsupported request parameter: {request.param}'
+    raise ValueError(msg)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('computer', ('core.local', 'core.ssh'), indirect=True)
-def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
+def test_validate_filepath_executable(computer, bash_path, tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.validate_filepath_executable` method."""
 
     filepath_executable = '/usr/bin/not-existing'
@@ -113,7 +113,9 @@ def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
         code.validate_filepath_executable()
 
     if computer.transport_type == 'core.ssh':
-        computer.configure(key_filename=str(ssh_key), key_policy='AutoAddPolicy')
+        # The connection details are taken from ``~/.ssh/config``, which has to allow a password-less
+        # connection to the localhost.
+        computer.configure(backend='asyncssh')
     else:
         computer.configure()
 
@@ -136,10 +138,3 @@ def test_full_label(aiida_localhost, bash_path):
     label = 'some-label'
     code = InstalledCode(label=label, computer=aiida_localhost, filepath_executable=str(bash_path.absolute()))
     assert code.full_label == f'{label}@{aiida_localhost.label}'
-
-
-def test_get_execname(aiida_localhost, bash_path):
-    """Test the deprecated :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.get_execname` method."""
-    code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable=str(bash_path.absolute()))
-    with pytest.warns(AiidaDeprecationWarning):
-        assert code.get_execname() == str(bash_path.absolute())

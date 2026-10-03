@@ -18,5 +18,5 @@ repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.A
 source: QbDictField('attributes.source', dtype=dict | None, doc='Source of the data')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
 value: QbStrField('attributes.value', dtype=<class 'str'>, doc='The value of the string')

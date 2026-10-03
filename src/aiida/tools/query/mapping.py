@@ -10,9 +10,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+import typing as t
+from collections.abc import Callable
 
-from . import formatting
+from aiida.tools.query import formatting
 
 
 class ProjectionMapper:
@@ -34,7 +35,7 @@ class ProjectionMapper:
         self,
         projection_labels: dict[str, str] | None = None,
         projection_attributes: dict[str, str] | None = None,
-        projection_formatters: dict[str, Callable[[Any], str]] | None = None,
+        projection_formatters: dict[str, Callable[[t.Any], str]] | None = None,
     ):
         """Construct new instance."""
         if not self._valid_projections:
@@ -76,10 +77,10 @@ class ProjectionMapper:
     def get_attribute(self, projection: str) -> str:
         return self._projection_attributes[projection]
 
-    def get_formatter(self, projection: str) -> Callable[[Any], str]:
+    def get_formatter(self, projection: str) -> Callable[[t.Any], str]:
         return self._projection_formatters[projection]
 
-    def format(self, projection: str, value: Any) -> str:
+    def format(self, projection: str, value: t.Any) -> str:
         return self.get_formatter(projection)(value)
 
 
@@ -91,7 +92,7 @@ class CalculationProjectionMapper(ProjectionMapper):
         projections: tuple[str, ...],
         projection_labels: dict[str, str] | None = None,
         projection_attributes: dict[str, str] | None = None,
-        projection_formatters: dict[str, Callable[[Any], str]] | None = None,
+        projection_formatters: dict[str, Callable[[t.Any], str]] | None = None,
     ):
         from aiida.orm import ProcessNode
         from aiida.orm.nodes.caching import NodeCaching
@@ -148,21 +149,24 @@ class CalculationProjectionMapper(ProjectionMapper):
         if projection_labels is not None:
             for projection, label in projection_labels.items():
                 if projection not in self.valid_projections:
-                    raise ValueError(f'{projection} is not a valid projection')
+                    msg = f'{projection} is not a valid projection'
+                    raise ValueError(msg)
                 else:
                     default_labels[projection] = label
 
         if projection_attributes is not None:
             for projection, attribute in projection_attributes.items():
                 if projection not in self.valid_projections:
-                    raise ValueError(f'{projection} is not a valid projection')
+                    msg = f'{projection} is not a valid projection'
+                    raise ValueError(msg)
                 else:
                     default_attributes[projection] = attribute
 
         if projection_formatters is not None:
             for projection, formatter in projection_formatters.items():
                 if projection not in self.valid_projections:
-                    raise ValueError(f'{projection} is not a valid projection')
+                    msg = f'{projection} is not a valid projection'
+                    raise ValueError(msg)
                 else:
                     default_formatters[projection] = formatter
 

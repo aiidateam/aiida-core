@@ -8,9 +8,8 @@
 ###########################################################################
 """Utilities for testing components from the workflow engine"""
 
-import plumpy
-
 from aiida.engine import Process
+from aiida.engine.processes.states import Wait
 from aiida.orm import Bool, CalcJobNode, Data, WorkflowNode
 
 
@@ -75,7 +74,7 @@ class WaitProcess(Process):
     _node_class = WorkflowNode
 
     async def run(self):
-        return plumpy.Wait(self.next_step)
+        return Wait(self.next_step)
 
     def next_step(self):
         pass

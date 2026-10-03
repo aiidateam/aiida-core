@@ -34,7 +34,9 @@ Each process class has a corresponding node class that records its execution:
 
 Code style is enforced via **pre-commit hooks** (`.pre-commit-config.yaml`). Always run `uv run pre-commit` before pushing.
 Formatting: `ruff`. Type checking: `mypy`. Write new code following ruff conventions with proper type hints.
-Docstrings: Sphinx-style (`:param:`, `:return:`, `:raises:`), types in annotations not docstrings. Prefer `pathlib` over `os.path`.
+Typing is progressively strict: modules listed under `[[tool.mypy.overrides]]` in `pyproject.toml` require full annotations, and a module joins that list once it is fully typed.
+Docstrings: Sphinx-style (`:param:`, `:return:`, `:raises:`) required for public API, types in annotations not docstrings.
+Comments and docstrings explain *why*, not *what*.
 New source files should include the standard copyright header (copy from any existing `.py` file).
 In `cmdline/`: delay `aiida` imports to function level (keeps `verdi` CLI responsive, see the `adding-a-cli-command` skill).
 See the `linting-and-ci` skill for details.
@@ -44,16 +46,90 @@ See the `linting-and-ci` skill for details.
 Use `aiida.common.exceptions` for AiiDA-specific exceptions, `aiida.common.warnings` for non-fatal issues.
 Assign exception messages to a variable before raising: `msg = f'...'; raise TypeError(msg)`
 
-### Best practices (not enforced)
+## Design principles
 
-- Prefer pure functions without side effects where possible
-- Prefer explicit keyword arguments over positional, especially for same-type parameters. Minimize `*args`/`**kwargs`.
-- Prefer `dataclass` or `TypedDict` over plain dicts for structured data
-- Use `Enum` or `Literal` over bare strings to constrain inputs
-- Avoid mutable default arguments — use `None` and assign inside the body
-- Use context managers for resource cleanup (files, connections, transactions)
-- Favor composition over inheritance. Use `Protocol` for structural subtyping where possible.
-- Follow SOLID principles, Postel's law (accept broad inputs, return narrow types), the principle of least surprise, and separation of concerns
+Useful frameworks:
+
+- **SOLID:** single responsibility, open/closed, Liskov, interface segregation, dependency inversion.
+- **GRASP:** assign each responsibility to the class that already holds the information; low coupling, high cohesion.
+- **CUPID:** composable, does one thing well, predictable, idiomatic, domain-based.
+
+Design patterns are deliberately not listed here.
+Where a problem genuinely calls for one, fetch [refactoring.guru/design-patterns](https://refactoring.guru/design-patterns) and work from it rather than from memory.
+Don't force code into a pattern it does not need.
+
+### Heuristics
+
+- **Reuse what exists:** search the codebase before writing a helper, and call `super()` rather than restating base-class logic.
+- **YAGNI:** build what is needed now, not what might be needed later.
+- **Redesign rather than document:** logic needing a paragraph of comments to follow is too complex.
+- **Chesterton's fence:** don't remove or rewrite code whose purpose you haven't established.
+- **Changing observable behaviour is a breaking change** (Hyrum's law), even where the signature stays the same.
+- **DRY, but rule of three:** duplication is cheaper than the wrong abstraction, so wait for the third occurrence.
+- **Principle of least astonishment:** where two designs are defensible, pick the one the name already implies.
+
+### API design
+
+- **Flat over nested:** re-export at package level. File layout is an implementation detail.
+- **Keep dependencies acyclic:** needing a function-level import to break a runtime cycle means the layering is wrong.
+- **Don't repeat context in names:** `kpoints.set_mesh()`, not `kpoints.set_kpoints_mesh()`.
+- **Keyword-only (`*`) arguments** for several or same-typed parameters, and always for booleans.
+- **Progressive disclosure:** simple things simple, complex things possible. Don't front-load complexity.
+- **Pit of success:** safe defaults, unsafe behaviour behind explicit opt-in. Make wrong code look wrong.
+- **Permissive at the boundary, strict inside:** parse messy external input at the edge; internal code passes domain types, not generic containers.
+- **Fail fast:** reject bad input where it enters, naming the offending value.
+- **Prefer pure functions:** no side effects, no mutation of inputs, same output for the same arguments.
+- **Minimize mutable state:** return new values over mutating inputs, and a copy or read-only view over an alias to your own container.
+- **No global mutable state:** keyword arguments with defaults, state on a class instance, or `ContextVar`.
+- **Raise exceptions rather than signalling failure with `None` or a sentinel;** status values are for failures that must persist or cross a process boundary.
+- **Context managers** for acquire/release and setup/teardown, since cleanup the caller must remember gets skipped.
+
+### Object-oriented design
+
+- **Composition over inheritance:** delegate to a collaborator; inheritance means is-a, and using it to share code risks coupling conceptually unrelated classes.
+- **Depend on abstractions:** shape the interface around what callers need, so it does not simply mirror one concrete implementation.
+- **Prefer `Protocol`,** where no inheritance should be imposed; use an **ABC** when the contract needs runtime enforcement or shared base behaviour.
+- **Liskov substitution:** never narrow a parameter type in a subclass override, and mark overrides with `@override`.
+- **Encapsulate:** needing another object's underscore-prefixed members means the API is missing something.
+- **Adapt at the boundary:** conversion into our abstractions belongs on the incoming type or in a dedicated adapter, not spread through the consuming code.
+- **Command-query separation:** a method either does something or answers something, not both.
+- **Law of Demeter:** talk to immediate collaborators, since `a.b.c.d()` couples the caller to the whole chain.
+- **Overload an operator** only when a reader can predict what it does from the types involved.
+- **Keep attribute access cheap:** attribute syntax reads as free, so an expensive lookup belongs behind a method or a `cached_property`.
+
+### Types
+
+- **Annotate as you write:** a suspiciously broad return type signals a missing abstraction.
+- **The signature is the contract:** types and names alone should convey what to pass and what comes back.
+- **Avoid `Any`:** it is contagious, and unlike `type: ignore` it leaves no marker that a decision was made.
+- **Every `type: ignore` is a decision:** fix the design or record the debt.
+- **Make illegal states unrepresentable:** a type should admit exactly the valid values and nothing more, so invalid states and calls cannot be written.
+- **`TypedDict`/`dataclass` over plain dicts:** a dict key typo is silent; a field name typo is a type error.
+- **`Literal`/`Enum` over bare strings** for constrained value sets. `assert_never` for exhaustiveness.
+- **Sensible default values over `None` as a default,** where one exists: `None` hides the real default and widens the type for every caller.
+- **Postel's law:** accept broad types (`Sequence`, `Mapping`), return narrow ones (`list`, `dict`).
+- **`TypeAlias`** to name any complex type that appears more than once.
+- **Generics (`TypeVar`)** to carry type information across function boundaries.
+- **`@overload`** to narrow return types statically, **`@singledispatch`** over `isinstance` chains.
+- **`Final`** for constants, **`@final`** for classes that must not be subclassed.
+- **`TypeGuard`/`TypeIs`** for narrowing in validation functions, **`Self`** for fluent APIs, **`ParamSpec`** to carry signatures through decorators.
+- **A type that is hard to write** is a sign the design needs work, not that the annotation needs loosening.
+
+### Python idioms
+
+- **Guard clauses** over deep nesting: edge case first, main path at low indentation.
+- **`is None` / `is not None`** over truthiness for optionals, and `isinstance()` rather than `type()`.
+- **No mutable default arguments:** default `None`, assign in the body.
+- **Modern stdlib idioms:** `pathlib.Path` over `os.path`, f-strings over `.format()`/`%`.
+- **Catch specific exceptions,** never bare `except:`, which swallows `KeyboardInterrupt` and `SystemExit`, nor blanket `except Exception:`, which hides genuine bugs.
+- **`contextlib.suppress(...)`** over `except ...: pass`.
+- **Preserve the cause when re-raising:** `raise ValueError(msg) from err`.
+- **Comprehensions** over `map`/`filter` with lambdas, and `itertools` and generators over large materialized lists.
+- **Let the container do the work:** `defaultdict`, `Counter`, `deque`, `dict.get(key, default)` over hand-written equivalents.
+- **`functools.cached_property` / `lru_cache`** for expensive computed values.
+- **Timezone-aware datetimes:** `datetime.now(tz=timezone.utc)`, never naive `datetime.now()`.
+- **Monotonic clocks for measuring elapsed time:** use `time.monotonic()` or `time.monotonic_ns()`, never wall-clock time.
+- **Never call blocking I/O from async code:** it stalls every other task on that event loop, and in the daemon every AiiDA process the worker is running. Use an async API, or offload the blocking work explicitly.
 
 ## Claude Code skills
 

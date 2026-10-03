@@ -18,9 +18,8 @@ if t.TYPE_CHECKING:
 import click
 from click.shell_completion import CompletionItem
 
+from aiida.cmdline.params.types.identifier import IdentifierParamType
 from aiida.cmdline.utils import decorators
-
-from .identifier import IdentifierParamType
 
 __all__ = ('CodeParamType',)
 
@@ -64,10 +63,10 @@ class CodeParamType(IdentifierParamType):
         if code and self._entry_point is not None:
             entry_point = code.default_calc_job_plugin
             if entry_point != self._entry_point:
-                raise click.BadParameter(
-                    'the retrieved Code<{}> has plugin type "{}" while "{}" is required'.format(
-                        code.pk, entry_point, self._entry_point
-                    )
+                msg = (
+                    f'the retrieved Code<{code.pk}> has plugin type "{entry_point}" '
+                    f'while "{self._entry_point}" is required'
                 )
+                raise click.BadParameter(msg)
 
         return code

@@ -11,6 +11,7 @@
 import pytest
 
 from aiida.common.links import LinkType
+from aiida.common.progress_reporter import ProgressReporterAbstract, set_progress_reporter
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
 
@@ -295,7 +296,7 @@ class TestTraverseGraph:
         every_node = [data_take, data_drop, work_select]
 
         for single_node in every_node:
-            expected_nodes = set([single_node])
+            expected_nodes = {single_node}
             obtained_nodes = traverse_graph([single_node])['nodes']
             assert obtained_nodes == expected_nodes
 
@@ -313,7 +314,7 @@ class TestTraverseGraph:
         obtained_nodes = traverse_graph([data_take], links_forward=links_forward, links_backward=links_backward)[
             'nodes'
         ]
-        expected_nodes = set([work_select, data_take])
+        expected_nodes = {work_select, data_take}
         assert obtained_nodes == expected_nodes
 
         # Forward: work_select to (return) data_take (data_drop is not returned)
@@ -326,7 +327,7 @@ class TestTraverseGraph:
         links_backward = [LinkType.INPUT_WORK, LinkType.RETURN]
 
         # Backward: data_drop is not returned so it has no backward link
-        expected_nodes = set([data_drop])
+        expected_nodes = {data_drop}
         obtained_nodes = traverse_graph([data_drop], links_forward=links_forward, links_backward=links_backward)[
             'nodes'
         ]
@@ -397,20 +398,80 @@ class TestTraverseGraph:
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['data_o'].pk])['nodes']
-        expected_nodes = set(nodes_pklist).difference(set([nodes_dict['data_i'].pk]))
+        expected_nodes = set(nodes_pklist).difference({nodes_dict['data_i'].pk})
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['work_1'].pk], call_calc_forward=False)['nodes']
-        expected_nodes = set([nodes_dict['work_1'].pk, nodes_dict['work_2'].pk])
+        expected_nodes = {nodes_dict['work_1'].pk, nodes_dict['work_2'].pk}
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['work_2'].pk], call_work_forward=False)['nodes']
-        expected_nodes = set([nodes_dict['work_2'].pk])
+        expected_nodes = {nodes_dict['work_2'].pk}
         assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['calc_0'].pk], create_forward=False)['nodes']
-        expected_nodes = set([nodes_dict['calc_0'].pk, nodes_dict['work_1'].pk, nodes_dict['work_2'].pk])
+        expected_nodes = {nodes_dict['calc_0'].pk, nodes_dict['work_1'].pk, nodes_dict['work_2'].pk}
         assert obtained_nodes == expected_nodes
 
         with pytest.raises(ValueError):
             _ = get_nodes_delete([nodes_dict['data_o'].pk], create_backward=False)
+
+
+@pytest.fixture
+def reporter_events():
+    """Install a progress reporter that logs every call it receives, and yield the log."""
+    events: list[tuple] = []
+
+    class Recorder(ProgressReporterAbstract):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            events.append(('init', kwargs))
+
+        def set_description_str(self, text=None, refresh=True):
+            super().set_description_str(text, refresh)
+            events.append(('desc', text))
+
+        def update(self, n=1):
+            super().update(n)
+            events.append(('count', self.n))
+
+    set_progress_reporter(Recorder)
+    try:
+        yield events
+    finally:
+        set_progress_reporter(None)
+
+
+class TestTraversalProgress:
+    """Tests for progress reporting during graph traversal."""
+
+    def test_progress_reported_per_iteration(self, reporter_events):
+        """Each traversal iteration must update the progress reporter, counting the nodes visited so far."""
+        nodes_dict = create_minimal_graph()
+
+        result = traverse_graph(
+            [nodes_dict['data_i'].pk],
+            links_forward=[LinkType.INPUT_CALC, LinkType.CREATE],
+        )
+
+        # Three iterations: data_i -> calc_0, calc_0 -> data_o, data_o -> nothing new
+        assert result['nodes'] == {nodes_dict['data_i'].pk, nodes_dict['calc_0'].pk, nodes_dict['data_o'].pk}
+        # `unit` is named so the count cannot be misread as the iteration number beside it, and
+        # `bar_format` is dropped because the project format's percentage would sit frozen at 0%.
+        # The seeded count lands before the first query, followed by its forced redraw.
+        assert reporter_events == [
+            ('init', {'total': None, 'desc': 'Traversing provenance graph', 'unit': ' nodes', 'bar_format': None}),
+            ('count', 1),
+            ('desc', 'Traversing provenance graph'),
+            ('desc', 'Traversing provenance graph (iteration 1)'),
+            ('count', 2),
+            ('desc', 'Traversing provenance graph (iteration 2)'),
+            ('count', 3),
+            ('desc', 'Traversing provenance graph (iteration 3)'),
+            ('count', 3),
+        ]
+
+    def test_progress_skipped_for_empty_start(self, reporter_events):
+        """No progress reporter should be created when there is nothing to traverse."""
+        traverse_graph([], links_forward=[LinkType.CREATE])
+        assert reporter_events == []

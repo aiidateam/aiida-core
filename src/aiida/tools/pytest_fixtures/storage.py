@@ -78,7 +78,7 @@ def postgres_cluster():
 @pytest.fixture(scope='session')
 def config_psql_dos(
     tmp_path_factory: pytest.TempPathFactory,
-    postgres_cluster: 'PGTest',
+    postgres_cluster: PGTest,
 ) -> t.Callable[[str | None, str | None, str | None], dict[str, t.Any]]:
     """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`.
 

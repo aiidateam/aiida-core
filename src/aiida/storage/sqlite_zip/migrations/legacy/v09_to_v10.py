@@ -8,7 +8,7 @@
 ###########################################################################
 """Migration from v0.9 to v0.10, used by `verdi export migrate` command."""
 
-from ..utils import update_metadata, verify_metadata_version
+from aiida.storage.sqlite_zip.migrations.utils import update_metadata, verify_metadata_version
 
 
 def migrate_v9_to_v10(metadata: dict, data: dict) -> None:

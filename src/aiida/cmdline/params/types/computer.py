@@ -19,8 +19,8 @@ import click
 from click.shell_completion import CompletionItem
 from click.types import StringParamType
 
-from ...utils import decorators
-from .identifier import IdentifierParamType
+from aiida.cmdline.params.types.identifier import IdentifierParamType
+from aiida.cmdline.utils import decorators
 
 __all__ = ('ComputerParamType', 'MpirunCommandParamType', 'ShebangParamType')
 
@@ -99,7 +99,7 @@ class MpirunCommandParamType(StringParamType):
             )
 
         # Prepare some substitution values to check if it is all ok
-        subst = {i: 'value' for i in job_resource_keys}
+        subst = dict.fromkeys(job_resource_keys, 'value')
         subst['tot_num_mpiprocs'] = 'value'
 
         try:

@@ -15,6 +15,7 @@ import enum
 import json
 import os
 import pathlib
+import shlex
 import shutil
 import socket
 import subprocess
@@ -24,7 +25,6 @@ import time
 import typing as t
 import urllib.parse
 import urllib.request
-from typing import TYPE_CHECKING
 
 import psutil
 
@@ -35,8 +35,10 @@ from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.manager import get_manager
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from circus.client import CircusClient
+
+    from aiida.manage.configuration.config import CircusEndpointFilepaths, CircusEndpointName
 
 LOGGER = AIIDA_LOGGER.getChild('engine.daemon.client')
 
@@ -187,7 +189,7 @@ class DaemonStalePidException(DaemonException):
     """Raised when a connection to the daemon is attempted but it fails and the PID file appears to be stale."""
 
 
-def get_daemon_client(profile_name: str | None = None) -> 'DaemonClient':
+def get_daemon_client(profile_name: str | None = None) -> DaemonClient:
     """Return the daemon client for the given profile or the currently loaded profile if not specified.
 
     :param profile_name: Optional profile name.
@@ -226,19 +228,11 @@ class DaemonClient:
 
         :param profile: The profile instance.
         """
-        from aiida.common.docs import URL_NO_BROKER
-
         type_check(profile, Profile)
         self._config = get_config()
         self._profile = profile
         self._socket_directory: str | None = None
         self._daemon_timeout: int = self._config.get_option('daemon.timeout', scope=profile.name)
-
-        if self._profile.process_control_backend is None:
-            raise ConfigurationError(
-                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used. '
-                f'See {URL_NO_BROKER} for more details.'
-            )
 
     @property
     def profile(self) -> Profile:
@@ -282,9 +276,32 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
-    def cmd_start_broker(self) -> list[str]:
-        """Return the command to start the ZMQ broker server process."""
-        return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'broker']
+    def _zmq_broker_service_dir(self) -> str:
+        """Return the directory for the ZMQ broker service files, derived from the settings.
+
+        The daemon manages the broker service and therefore determines where the service writes its state files.
+        """
+        return self._config.filepaths(self.profile)['broker_service']['dir']
+
+    @property
+    def _zmq_broker_service_log_file(self) -> str:
+        """Return the log file of the ZMQ broker service, derived from the settings."""
+        return self._config.filepaths(self.profile)['broker_service']['log']
+
+    @property
+    def _cmd_start_zmq_broker(self) -> list[str]:
+        """Return the command to start the ZMQ broker service process."""
+        return [
+            self._verdi_bin,
+            '-p',
+            self.profile.name,
+            'daemon',
+            'broker',
+            '--service-dir',
+            shlex.quote(self._zmq_broker_service_dir),
+            '--log-file-path',
+            shlex.quote(self._zmq_broker_service_log_file),
+        ]
 
     @property
     def loglevel(self) -> str:
@@ -311,8 +328,13 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['circus']['socket']['file']
 
     @property
-    def circus_socket_endpoints(self) -> dict[str, str]:
-        return self._config.filepaths(self.profile)['circus']['socket']
+    def circus_socket_endpoints(self) -> CircusEndpointFilepaths:
+        socket_filepaths = self._config.filepaths(self.profile)['circus']['socket']
+        return {
+            'controller': socket_filepaths['controller'],
+            'pubsub': socket_filepaths['pubsub'],
+            'stats': socket_filepaths['stats'],
+        }
 
     @property
     def daemon_log_file(self) -> str:
@@ -323,7 +345,7 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['daemon']['pid']
 
     @property
-    def daemon_env_info_file(self) -> str:
+    def _daemon_env_info_file(self) -> str:
         try:
             return self._config.filepaths(self.profile)['daemon']['daemon_env_info']
         except KeyError as exc:
@@ -340,7 +362,7 @@ class DaemonClient:
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_port_file, encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
             except (ValueError, OSError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
@@ -388,7 +410,7 @@ class DaemonClient:
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_socket_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_socket_file, encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return content
             except (ValueError, OSError):
@@ -412,7 +434,7 @@ class DaemonClient:
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                with open(self.circus_pid_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_pid_file, encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return int(content)
             except (ValueError, OSError):
@@ -466,7 +488,8 @@ class DaemonClient:
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint(self.get_circus_port())
         else:
-            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
+            msg = f'invalid controller protocol {self._ENDPOINT_PROTOCOL}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         return endpoint
 
@@ -483,7 +506,8 @@ class DaemonClient:
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
-            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
+            msg = f'invalid controller protocol {self._ENDPOINT_PROTOCOL}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         return endpoint
 
@@ -500,11 +524,12 @@ class DaemonClient:
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
-            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
+            msg = f'invalid controller protocol {self._ENDPOINT_PROTOCOL}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         return endpoint
 
-    def get_ipc_endpoint(self, endpoint):
+    def get_ipc_endpoint(self, endpoint: CircusEndpointName):
         """Get the ipc endpoint string for a circus daemon endpoint for a given socket.
 
         :param endpoint: The circus endpoint for which to return a socket.
@@ -513,9 +538,9 @@ class DaemonClient:
         filepath = self.get_circus_socket_directory()
         filename = self.circus_socket_endpoints[endpoint]
         template = 'ipc://{filepath}/{filename}'
-        endpoint = template.format(filepath=filepath, filename=filename)
+        endpoint_string = template.format(filepath=filepath, filename=filename)
 
-        return endpoint
+        return endpoint_string
 
     def get_tcp_endpoint(self, port=None):
         """Get the tcp endpoint string for a circus daemon endpoint.
@@ -534,7 +559,7 @@ class DaemonClient:
         return endpoint
 
     @contextlib.contextmanager
-    def get_client(self, timeout: int | None = None) -> 'CircusClient':
+    def get_client(self, timeout: int | None = None) -> CircusClient:
         """Return an instance of the CircusClient.
 
         The endpoint is defined by the controller endpoint, which used the port that was written to the port file upon
@@ -636,7 +661,7 @@ class DaemonClient:
         return self.call_client(command, timeout=timeout)
 
     @staticmethod
-    def get_package_version_snapshot() -> PackageVersionSnapshot:
+    def _get_package_version_snapshot() -> PackageVersionSnapshot:
         """Return version information for installed packages that provide ``aiida.*`` entry points.
 
         For packages installed from a git repository through a VCS URL, the
@@ -695,20 +720,20 @@ class DaemonClient:
     def _write_version_file(self) -> None:
         """Write the current package version snapshot to the daemon version file."""
         env_info: DaemonEnvInfo = {
-            'packages': self.get_package_version_snapshot(),
+            'packages': self._get_package_version_snapshot(),
             'python_binary': sys.executable,
         }
         try:
-            pathlib.Path(self.daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
+            pathlib.Path(self._daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
         except ConfigurationError:
             LOGGER.debug('Cannot write daemon version file: version file path is not configured.')
         except OSError as exc:
             LOGGER.warning('Failed to write daemon version file: %s', exc)
 
-    def get_daemon_env_info(self) -> DaemonEnvInfo | None:
+    def _get_daemon_env_info(self) -> DaemonEnvInfo | None:
         """Read and validate the daemon version file, or return None if unavailable or invalid."""
         try:
-            data = json.loads(pathlib.Path(self.daemon_env_info_file).read_text(encoding='utf8'))
+            data = json.loads(pathlib.Path(self._daemon_env_info_file).read_text(encoding='utf8'))
         except (ConfigurationError, OSError, json.JSONDecodeError):
             return None
 
@@ -725,26 +750,37 @@ class DaemonClient:
 
         return DaemonEnvInfo(packages=packages, python_binary=python_binary)
 
-    def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
+    def increase_workers(self, number: int, timeout: int | None = None, wait: bool = False) -> dict[str, t.Any]:
         """Increase the number of workers.
 
         :param number: The number of workers to add.
         :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
             instantiation taken from the ``daemon.timeout`` config option.
+        :param wait: If ``False``, return as soon as the daemon acknowledged the command, i.e. before the workers have
+            been spawned. If ``True``, return only once they have and include the resulting ``numprocesses`` in the
+            response. Note that the workers still need to boot before they start consuming tasks.
         :return: The client call response.
+        :raises DaemonTimeoutException: If ``wait`` is ``True`` and spawning takes longer than ``timeout``. The workers
+            are still spawned in that case, only the response is not awaited.
         """
-        command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number}}
+        command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number, 'waiting': wait}}
         return self.call_client(command, timeout=timeout)
 
-    def decrease_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
+    def decrease_workers(self, number: int, timeout: int | None = None, wait: bool = False) -> dict[str, t.Any]:
         """Decrease the number of workers.
 
         :param number: The number of workers to remove.
         :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
             instantiation taken from the ``daemon.timeout`` config option.
+        :param wait: If ``False``, return as soon as the daemon acknowledged the command, i.e. before the workers have
+            been stopped. If ``True``, return only once they have and include the resulting ``numprocesses`` in the
+            response. Since workers are shut down gracefully, this can take a while for a worker that is still running
+            processes, in which case ``timeout`` needs to be increased beyond the ``daemon.timeout`` default.
         :return: The client call response.
+        :raises DaemonTimeoutException: If ``wait`` is ``True`` and stopping takes longer than ``timeout``. The workers
+            are still stopped in that case, only the response is not awaited.
         """
-        command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number}}
+        command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number, 'waiting': wait}}
         return self.call_client(command, timeout=timeout)
 
     def start_daemon(
@@ -770,7 +806,8 @@ class DaemonClient:
             subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exception:
             # CalledProcessError is not passing the subprocess stderr in its message so we add it in DaemonException
-            raise DaemonException(f'The daemon failed to start with error:\n{exception.stdout.decode()}') from exception
+            msg = f'The daemon failed to start with error:\n{exception.stdout.decode()}'
+            raise DaemonException(msg) from exception
 
         if not wait:
             self._write_version_file()
@@ -822,7 +859,7 @@ class DaemonClient:
 
         # Best-effort cleanup of version file
         try:
-            pathlib.Path(self.daemon_env_info_file).unlink(missing_ok=True)
+            pathlib.Path(self._daemon_env_info_file).unlink(missing_ok=True)
         except ConfigurationError:
             LOGGER.debug('Cannot remove daemon version file: version file path is not configured.')
         except OSError as exc:
@@ -882,17 +919,17 @@ class DaemonClient:
             # The circus daemon process can appear as ``start-circus`` or ``circusd``. See this issue comment for
             # details: https://github.com/aiidateam/aiida-core/issues/5336#issuecomment-1376093322
             if not any(cmd in process.cmdline() for cmd in ['start-circus', 'circusd']):
-                raise DaemonException(
+                msg = (
                     f'process command `{process.cmdline()}` of PID `{pid}` does not match expected AiiDA daemon command'
                 )
+                raise DaemonException(msg)
 
             process_user = process.username()
             current_user = psutil.Process().username()
 
             if process_user != current_user:
-                raise DaemonException(
-                    f'process user `{process_user}` of PID `{pid}` does not match current user `{current_user}`'
-                )
+                msg = f'process user `{process_user}` of PID `{pid}` does not match current user `{current_user}`'
+                raise DaemonException(msg)
 
         except (psutil.AccessDenied, psutil.NoSuchProcess, DaemonException) as exception:
             raise DaemonException(exception) from exception
@@ -942,32 +979,37 @@ class DaemonClient:
 
         watchers = []
 
-        # Start ZMQ broker before workers so its sockets are ready when workers connect.
+        # Start ZeroMQ broker before workers so its sockets are ready when workers connect.
         # Skip if a broker is already running (e.g. started by the test fixture).
-        if self.profile.process_control_backend == 'core.zmq':
-            from aiida.manage.manager import get_manager
+        from aiida.brokers.zeromq import ZeromqBroker
+        from aiida.manage.manager import get_manager
 
-            broker_instance = get_manager().get_broker()
-            broker_already_running = (
-                broker_instance is not None and hasattr(broker_instance, 'is_running') and broker_instance.is_running
-            )
+        supervised_by_daemon = self.profile.process_control_config.get('supervised_by_daemon', True)
+        if self.profile.process_control_backend == 'core.zeromq' and supervised_by_daemon:
+            try:
+                broker_instance = get_manager().get_broker()
+            except Exception:
+                LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
+                broker_instance = None
+            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.check_service_reachable():
+                # prepare zmq broker service profile directory
+                pathlib.Path(self._zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
 
-            if not broker_already_running:
                 watchers.append(
                     {
-                        'cmd': ' '.join(self.cmd_start_broker),
-                        'name': f'{self.daemon_name}-broker',
+                        'cmd': ' '.join(self._cmd_start_zmq_broker),
+                        'name': f'{self.daemon_name}-zmq-broker-service',
                         'numprocesses': 1,
                         'virtualenv': self.virtualenv,
                         'copy_env': True,
                         'stdout_stream': {
                             'class': 'FileStream',
-                            'filename': self.daemon_log_file,
+                            'filename': self._zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'stderr_stream': {
                             'class': 'FileStream',
-                            'filename': self.daemon_log_file,
+                            'filename': self._zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'env': self.get_env(),

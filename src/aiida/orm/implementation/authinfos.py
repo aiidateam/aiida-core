@@ -9,13 +9,13 @@
 """Module for the backend implementation of the `AuthInfo` ORM class."""
 
 import abc
-from typing import TYPE_CHECKING, Any, Dict
+import typing as t
 
-from .entities import BackendCollection, BackendEntity
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
-if TYPE_CHECKING:
-    from .computers import BackendComputer
-    from .users import BackendUser
+if t.TYPE_CHECKING:
+    from aiida.orm.implementation.computers import BackendComputer
+    from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
 
@@ -55,28 +55,28 @@ class BackendAuthInfo(BackendEntity):
         """Return the user associated with this instance."""
 
     @abc.abstractmethod
-    def get_auth_params(self) -> Dict[str, Any]:
+    def get_auth_params(self) -> dict[str, t.Any]:
         """Return the dictionary of authentication parameters
 
         :return: a dictionary with authentication parameters
         """
 
     @abc.abstractmethod
-    def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
+    def set_auth_params(self, auth_params: dict[str, t.Any]) -> None:
         """Set the dictionary of authentication parameters
 
         :param auth_params: a dictionary with authentication parameters
         """
 
     @abc.abstractmethod
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, t.Any]:
         """Return the dictionary of metadata
 
         :return: a dictionary with metadata
         """
 
     @abc.abstractmethod
-    def set_metadata(self, metadata: Dict[str, Any]) -> None:
+    def set_metadata(self, metadata: dict[str, t.Any]) -> None:
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata

@@ -16,51 +16,16 @@ pytest_plugins = ['aiida.tools.pytest_fixtures']
 
 
 def test_aiida_localhost(aiida_localhost):
-    """Test the ``aiida_localhost`` fixture.
-
-    The label is suffixed with the pytest-xdist worker id to avoid collisions with literal
-    ``'localhost'`` Computers created by other tests or commands (e.g. ``verdi presto``).
-    """
-    # Assert at the contract level (the suffix exists) rather than coupling to the specific
-    # worker-id value, which depends on ``PYTEST_XDIST_WORKER`` at runtime.
-    assert aiida_localhost.label.startswith('localhost-')
+    """Test the ``aiida_localhost`` fixture."""
+    assert aiida_localhost.label == 'localhost'
     assert aiida_localhost.hostname == 'localhost'
     assert aiida_localhost.transport_type == 'core.local'
     assert aiida_localhost.scheduler_type == 'core.direct'
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_aiida_localhost_no_literal_collision(request):
-    """The fixture's Computer must coexist with a pre-existing literal ``'localhost'`` Computer.
-
-    ``verdi presto`` and other code paths create a Computer with the literal ``'localhost'``
-    label in the same profile. This is the actual #7347 failure
-    order: the literal row is inserted first, then ``aiida_localhost`` is requested. Worker-
-    suffixing the fixture's label makes its row distinct from any literal-label row already in
-    the database, so no UNIQUE-constraint collision can fire.
-    """
-    Computer(
-        label='localhost',
-        hostname='localhost',
-        transport_type='core.ssh',
-        scheduler_type='core.direct',
-        workdir='/tmp',
-    ).store()
-
-    # Defer the fixture's creation until *after* the literal-``'localhost'`` row exists, mirroring
-    # the actual #7347 failure order. If we depended on ``aiida_localhost`` via the test signature,
-    # pytest would evaluate it before the test body runs and the literal row would not yet be
-    # present — we'd be testing the wrong direction of the race.
-    aiida_localhost = request.getfixturevalue('aiida_localhost')
-
-    assert aiida_localhost.label != 'localhost'
-    assert aiida_localhost.transport_type == 'core.local'
-
-
 @pytest.mark.parametrize(
     'fixture_name, transport_cls, transport_type',
     [
-        ('aiida_computer_ssh', BlockingTransport, 'core.ssh'),
         ('aiida_computer_local', BlockingTransport, 'core.local'),
     ],
 )
@@ -166,7 +131,7 @@ def test_aiida_computer_integrity_error_rebuild(aiida_computer):
 def test_aiida_computer_fixtures_async(backend, backend_class, request):
     """Test the computer fixtures."""
 
-    aiida_computer = request.getfixturevalue('aiida_computer_ssh_async')
+    aiida_computer = request.getfixturevalue('aiida_computer_ssh')
 
     # check if the fixture works for configuration parameters, if any
     computer = aiida_computer(label=str(uuid.uuid4()), configure=True, backend=backend)
@@ -174,15 +139,17 @@ def test_aiida_computer_fixtures_async(backend, backend_class, request):
     assert isinstance(computer, Computer)
     assert computer.is_configured
     assert computer.hostname == 'localhost'
-    assert computer.transport_type == 'core.ssh_async'
+    assert computer.transport_type == 'core.ssh'
 
     with computer.get_transport() as transport:
         assert isinstance(transport, AsyncTransport)
         assert isinstance(transport.async_backend, backend_class)
 
     # Calling it again with the same label should simply return the existing computer
-    computer_alt = aiida_computer(label=computer.label)
+    computer_alt = aiida_computer(label=computer.label, configure=False)
     assert computer_alt.uuid == computer.uuid
+    # And leave it configured as it was.
+    assert computer_alt.get_configuration()['backend'] == backend
 
     computer_new = aiida_computer(label=str(uuid.uuid4()), configure=True, backend=backend)
     assert computer_new.uuid != computer.uuid

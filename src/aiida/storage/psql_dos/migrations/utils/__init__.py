@@ -8,6 +8,6 @@
 ###########################################################################
 """Utilities to perform the migrations."""
 
-from .reflect import ReflectMigrations
+from aiida.storage.psql_dos.migrations.utils.reflect import ReflectMigrations
 
 __all__ = ('ReflectMigrations',)

@@ -24,4 +24,4 @@ target_basepath: QbStrField('attributes.target_basepath', dtype=<class 'str'>, d
   the target basepath')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

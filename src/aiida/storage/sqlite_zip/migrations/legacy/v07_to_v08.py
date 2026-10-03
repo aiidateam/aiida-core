@@ -23,7 +23,7 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 
-from ..utils import update_metadata, verify_metadata_version
+from aiida.storage.sqlite_zip.migrations.utils import update_metadata, verify_metadata_version
 
 
 def migration_default_link_label(data: dict):

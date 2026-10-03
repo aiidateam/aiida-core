@@ -31,17 +31,15 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v7.3.1
-      with:
-        version: latest
+      uses: astral-sh/setup-uv@v10.2.0
 
     - name: Install utils/ dependencies
       run: uv pip install --system -r utils/requirements.txt
@@ -58,10 +56,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@v4
       with:
         channels: conda-forge
 
@@ -83,10 +81,10 @@ jobs:
         extras: ['', '[atomic_tools,docs,notebook,rest,tests,tui]']
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
 
@@ -125,10 +123,10 @@ jobs:
           optional: false
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@v4
       with:
         channels: conda-forge
 
@@ -144,18 +142,6 @@ jobs:
       run: >
         echo "::warning ::Failed conda installation for
         Python ${{ matrix.python-version }}."
-
-    - name: Slack notification
-      if: >-
-        failure() &&
-        github.event_name != 'pull_request' &&
-        env.SLACK_WEBHOOK != null
-      uses: ./.github/actions/slack-notification
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-      with:
-        title: Installation via Conda failed on `aiida-core/main`
-        message: '`test-install.yml:install-with-conda` GHA workflow for Python ${{ matrix.python-version }} failed.'
 
   tests:
 
@@ -193,13 +179,12 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Install aiida-core
-      id: install
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
@@ -210,24 +195,29 @@ jobs:
       run: .github/workflows/setup.sh
 
     - name: Run test suite
-      id: tests
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       run: |
         pytest -n auto --db-backend psql -m 'not nightly' tests/
 
-    - name: Slack notification
-      # Run this step if any of the previous steps fail.
-      # Don't run on PRs, the failure is clearly visible in GitHub UI.
-      # Run only when the `secrets.SLACK_WEBHOOK` is available, which is not the case for forks.
-      if: >-
-        failure() &&
-        github.event_name != 'pull_request' &&
-        env.SLACK_WEBHOOK != null
-      uses: ./.github/actions/slack-notification
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  notify-maintainers:
+
+    if: >-
+      always() &&
+      contains(needs.*.result, 'failure') &&
+      github.repository == 'aiidateam/aiida-core' &&
+      github.event_name != 'pull_request'
+    needs: [validate-dependency-specification, create-conda-environment, install-with-pip, install-with-conda, tests]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+    - name: Notify maintainers
+      uses: peter-evans/commit-comment@v4
       with:
-        title: Install tests of `aiida-core/main` failed
-        message: '`test-install.yml` GHA workflow for Python ${{ matrix.python-version }} failed.'
+        body: |
+          @aiidateam/core-maintainers
+
+          The test-install workflow failed. [View the workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).

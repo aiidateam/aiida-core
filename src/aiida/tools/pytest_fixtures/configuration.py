@@ -6,6 +6,7 @@ import contextlib
 import os
 import pathlib
 import secrets
+import time
 import typing as t
 
 import pytest
@@ -104,7 +105,7 @@ def aiida_profile_factory():
 
     @contextlib.contextmanager
     def factory(
-        config: 'Config',
+        config: Config,
         *,
         storage_backend: str = 'core.sqlite_dos',
         storage_config: dict[str, t.Any] | None = None,
@@ -121,14 +122,20 @@ def aiida_profile_factory():
         storage_config = storage_config or {'filepath': str(pathlib.Path(config.dirpath) / name / 'storage')}
 
         if broker_backend and broker_config is None:
-            broker_config = {
-                'broker_protocol': 'amqp',
-                'broker_username': 'guest',
-                'broker_password': 'guest',
-                'broker_host': '127.0.0.1',
-                'broker_port': 5672,
-                'broker_virtual_host': '',
-            }
+            if broker_backend == 'core.rabbitmq':
+                broker_config = {
+                    'broker_protocol': 'amqp',
+                    'broker_username': 'guest',
+                    'broker_password': 'guest',
+                    'broker_host': '127.0.0.1',
+                    'broker_port': 5672,
+                    'broker_virtual_host': '',
+                }
+            elif broker_backend == 'core.zeromq':
+                pass
+            else:
+                msg = f'Unsupported broker backend: {broker_backend}'
+                raise ValueError(msg)
 
         profile = create_profile(
             config,
@@ -150,22 +157,42 @@ def aiida_profile_factory():
             This ensures that the contents of the profile are reset as well as the ``Manager``, which may hold
             references to data that will be destroyed. The daemon will also be stopped if it was running.
             """
-            from aiida.engine.daemon.client import DaemonException, get_daemon_client
+            from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException, get_daemon_client
             from aiida.orm import User
 
-            if broker_backend:
-                daemon_client = get_daemon_client()
+            active_profile = manager.get_profile()
+            target_profile = (
+                active_profile
+                if active_profile is not None and active_profile.name == profile.name
+                else config.get_profile(profile.name)
+            )
 
-                if daemon_client.is_daemon_running:
-                    try:
-                        daemon_client.stop_daemon(wait=True)
-                    except DaemonException:
-                        pass
+            with profile_context(target_profile, allow_switch=True):
+                if broker_backend:
+                    daemon_client = get_daemon_client()
 
-            manager.get_profile_storage()._clear()
-            manager.reset_profile()
+                    if daemon_client.is_daemon_running:
+                        try:
+                            daemon_client.stop_daemon(wait=True)
+                        except DaemonException:
+                            pass
 
-            User(email=profile.default_user_email or email).store()
+                        # ``stop_daemon(wait=True)`` returns once the stop is requested, but the
+                        # daemon process may still be shutting down and briefly report as running.
+                        # Wait until it is confirmed stopped so reset does not clear storage
+                        # underneath a live worker that retains the old default user.
+                        start_time = time.monotonic()
+                        while daemon_client.is_daemon_running:
+                            if time.monotonic() - start_time > 5:
+                                msg = 'The daemon failed to stop before resetting storage.'
+                                raise DaemonTimeoutException(msg)
+                            time.sleep(0.1)
+
+                default_user_email = target_profile.default_user_email or email
+                manager.get_profile_storage()._clear()
+                manager.reset_profile()
+
+                User(email=default_user_email).store()
 
         # Add the ``reset_storage`` method, such that users can empty the storage through the ``Profile`` instance that
         # is returned by this fixture.
@@ -186,6 +213,10 @@ def aiida_config(tmp_path_factory, aiida_config_factory):
     :returns :class:`~aiida.manage.configuration.config.Config`: The loaded temporary config.
     """
     with aiida_config_factory(tmp_path_factory.mktemp(secrets.token_hex(16))) as config:
+        # Test suites should not emit development-version warnings by default. Individual tests can still enable the
+        # option explicitly when they need to assert the warning behavior.
+        config.set_option('warnings.development_version', False)
+        config.store()
         yield config
 
 

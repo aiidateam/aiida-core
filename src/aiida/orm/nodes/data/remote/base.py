@@ -12,15 +12,14 @@ from __future__ import annotations
 
 import logging
 import os
+import typing as t
 from pathlib import Path
-from typing import Optional, cast
 
 from aiida.orm import AuthInfo
 from aiida.orm.computers import Computer
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.transports import Transport
-
-from ..data import Data
 
 _logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class RemoteData(Data):
     KEY_EXTRA_CLEANED = 'cleaned'
 
     class AttributesModel(Data.AttributesModel):
-        remote_path: Optional[str] = OrmMetadataField(
+        remote_path: str | None = OrmMetadataField(
             None,
             title='Remote path',
             description='Filepath on the remote computer',
@@ -47,11 +46,11 @@ class RemoteData(Data):
         computer: int = OrmMetadataField(
             title='Computer',
             description='The pk of the remote computer on which the data resides',
-            orm_to_model=lambda node: cast(RemoteData, node).computer.pk,
+            orm_to_model=lambda node: t.cast(RemoteData, node).computer.pk,
             orm_class=Computer,
         )
 
-    def __init__(self, remote_path: Optional[str] = None, **kwargs):
+    def __init__(self, remote_path: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)
@@ -96,11 +95,11 @@ class RemoteData(Data):
                 transport.getfile(full_path, destpath)
             except OSError as exception:
                 if exception.errno == 2:  # file does not exist
-                    raise OSError(
-                        'The required remote file {} on {} does not exist or has been deleted.'.format(
-                            full_path, self.computer.label
-                        )
-                    ) from exception
+                    msg = (
+                        f'The required remote file {full_path} on {self.computer.label} '
+                        'does not exist or has been deleted.'
+                    )
+                    raise OSError(msg) from exception
                 raise
 
     def listdir(self, relpath='.'):
@@ -114,10 +113,11 @@ class RemoteData(Data):
         with authinfo.get_transport() as transport:
             full_path = os.path.join(self.get_remote_path(), relpath)
             if not transport.isdir(full_path):
-                raise OSError(
+                msg = (
                     f'The required remote path {full_path} on {self.computer.label} does not exist, is not a '
                     'directory or has been deleted.'
                 )
+                raise OSError(msg)
 
             try:
                 return transport.listdir(full_path)
@@ -145,10 +145,11 @@ class RemoteData(Data):
         with authinfo.get_transport() as transport:
             full_path = os.path.join(self.get_remote_path(), path)
             if not transport.isdir(full_path):
-                raise OSError(
+                msg = (
                     f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
                     'directory or has been deleted.'
                 )
+                raise OSError(msg)
 
             try:
                 return transport.listdir_withattributes(full_path)
@@ -184,9 +185,8 @@ class RemoteData(Data):
                 clean_remote(_transport, remote_dir)
         else:
             if transport.hostname != self.computer.hostname:
-                raise ValueError(
-                    f'Transport hostname `{transport.hostname}` does not equal `{self.computer.hostname}` of {self}.'
-                )
+                msg = f'Transport hostname `{transport.hostname}` does not equal `{self.computer.hostname}` of {self}.'
+                raise ValueError(msg)
             clean_remote(transport, remote_dir)
 
         self.base.extras.set(self.KEY_EXTRA_CLEANED, True)
@@ -317,7 +317,8 @@ class RemoteData(Data):
             raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.') from exc
 
         if stderr or retval != 0:
-            raise RuntimeError(f'Error executing `du` command: {stderr}')
+            msg = f'Error executing `du` command: {stderr}'
+            raise RuntimeError(msg)
         else:
             total_size: int = int(stdout.split('\t')[0])
             return total_size

@@ -40,7 +40,7 @@ def setup_groups():
 
 def test_get_by_id(setup_groups, parameter_type):
     """Verify that using the ID will retrieve the correct entity."""
-    entity_01, entity_02, entity_03 = setup_groups
+    entity_01, _entity_02, _entity_03 = setup_groups
     identifier = f'{entity_01.pk}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
@@ -48,7 +48,7 @@ def test_get_by_id(setup_groups, parameter_type):
 
 def test_get_by_uuid(setup_groups, parameter_type):
     """Verify that using the UUID will retrieve the correct entity."""
-    entity_01, entity_02, entity_03 = setup_groups
+    entity_01, _entity_02, _entity_03 = setup_groups
     identifier = f'{entity_01.uuid}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
@@ -56,7 +56,7 @@ def test_get_by_uuid(setup_groups, parameter_type):
 
 def test_get_by_label(setup_groups, parameter_type):
     """Verify that using the LABEL will retrieve the correct entity."""
-    entity_01, entity_02, entity_03 = setup_groups
+    entity_01, _entity_02, _entity_03 = setup_groups
     identifier = f'{entity_01.label}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
@@ -68,7 +68,7 @@ def test_ambiguous_label_pk(setup_groups, parameter_type):
     Verify that using an ambiguous identifier gives precedence to the ID interpretation. Appending the special ambiguity
     breaker character will force the identifier to be treated as a LABEL.
     """
-    entity_01, entity_02, entity_03 = setup_groups
+    entity_01, entity_02, _entity_03 = setup_groups
     identifier = f'{entity_02.label}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
@@ -84,7 +84,7 @@ def test_ambiguous_label_uuid(setup_groups, parameter_type):
     Verify that using an ambiguous identifier gives precedence to the UUID interpretation. Appending the special
     ambiguity breaker character will force the identifier to be treated as a LABEL.
     """
-    entity_01, entity_02, entity_03 = setup_groups
+    entity_01, _entity_02, entity_03 = setup_groups
     identifier = f'{entity_03.label}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid

@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .base import *
+from aiida.tools.workflows.base import *
 
 __all__ = (
     'WorkflowTools',

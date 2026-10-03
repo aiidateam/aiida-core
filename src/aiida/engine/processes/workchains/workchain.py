@@ -15,23 +15,20 @@ import functools
 import logging
 import typing as t
 
-from plumpy import run_with_portal
-from plumpy.persistence import auto_persist
-from plumpy.process_states import Continue, Wait
-from plumpy.processes import ProcessStateMachineMeta
-from plumpy.workchains import Stepper, _PropagateReturn, if_, return_, while_
-from plumpy.workchains import WorkChainSpec as PlumpyWorkChainSpec
-
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
+from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.greenback import run_with_portal
+from aiida.engine.processes.persistence import auto_persist
+from aiida.engine.processes.process import Process, ProcessState
+from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.states import Continue, Wait
+from aiida.engine.processes.workchains.awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
+from aiida.engine.processes.workchains.outline import Stepper, _PropagateReturn, if_, return_, while_
+from aiida.engine.processes.workchains.outline import WorkChainSpec as ProcessWorkChainSpec
 from aiida.orm import Node, ProcessNode, WorkChainNode
 from aiida.orm.utils import load_node
-
-from ..exit_code import ExitCode
-from ..process import Process, ProcessState
-from ..process_spec import ProcessSpec
-from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -39,67 +36,12 @@ if t.TYPE_CHECKING:
 __all__ = ('WorkChain', 'if_', 'return_', 'while_')
 
 
-class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):
+class WorkChainSpec(ProcessSpec, ProcessWorkChainSpec):
     pass
 
 
-MethodType = t.TypeVar('MethodType')
-
-
-class Protect(ProcessStateMachineMeta):
-    """Metaclass that allows protecting class methods from being overridden by subclasses.
-
-    Usage as follows::
-
-        class SomeClass(metaclass=Protect):
-
-            @Protect.final
-            def private_method(self):
-                "This method cannot be overridden by a subclass."
-
-    If a subclass is imported that overrides the subclass, a ``RuntimeError`` is raised.
-    """
-
-    __SENTINEL = object()
-
-    def __new__(mcs, name, bases, namespace, **kwargs):  # noqa: N804
-        """Collect all methods that were marked as protected and raise if the subclass defines it.
-
-        :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.
-        """
-        private = {
-            key for base in bases for key, value in vars(base).items() if callable(value) and mcs.__is_final(value)
-        }
-        for key in namespace:
-            if key in private:
-                raise RuntimeError(f'the method `{key}` is protected cannot be overridden.')
-        return super().__new__(mcs, name, bases, namespace, **kwargs)
-
-    @classmethod
-    def __is_final(mcs, method) -> bool:  # noqa: N804
-        """Return whether the method has been decorated by the ``final`` classmethod.
-
-        :return: Boolean, ``True`` if the method is marked as final, ``False`` otherwise.
-        """
-        try:
-            return method.__final is mcs.__SENTINEL
-        except AttributeError:
-            return False
-
-    @classmethod
-    def final(mcs, method: MethodType) -> MethodType:  # noqa: N804
-        """Decorate a method with this method to protect it from being overridden.
-
-        Adds the ``__SENTINEL`` object as the ``__final`` private attribute to the given ``method`` and wraps it in
-        the ``typing.final`` decorator. The latter indicates to typing systems that it cannot be overridden in
-        subclasses.
-        """
-        method.__final = mcs.__SENTINEL  # type: ignore[attr-defined]
-        return t.final(method)
-
-
 @auto_persist('_awaitables')
-class WorkChain(Process, metaclass=Protect):
+class WorkChain(Process):
     """The `WorkChain` class is the principle component to implement workflows in AiiDA."""
 
     _node_class = WorkChainNode
@@ -111,7 +53,7 @@ class WorkChain(Process, metaclass=Protect):
         self,
         inputs: dict | None = None,
         logger: logging.Logger | None = None,
-        runner: 'Runner' | None = None,
+        runner: Runner | None = None,
         enable_persistence: bool = True,
     ) -> None:
         """Construct a WorkChain instance.
@@ -153,7 +95,7 @@ class WorkChain(Process, metaclass=Protect):
         :param out_state: state to save in
 
         :param save_context:
-        :type save_context: :class:`!plumpy.persistence.LoadSaveContext`
+        :type save_context: :class:`!aiida.engine.processes.persistence.CheckpointContext`
 
         """
         super().save_instance_state(out_state, save_context)
@@ -174,14 +116,14 @@ class WorkChain(Process, metaclass=Protect):
         self._stepper = None
         stepper_state = saved_state.get(self._STEPPER_STATE, None)
         if stepper_state is not None:
-            self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)  # type: ignore[arg-type]
+            self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)
 
-        self.set_logger(self.node.logger)
+        self._set_logger(self.node.logger)
 
         if self._awaitables:
             self._action_awaitables()
 
-    @Protect.final
+    @t.final
     def on_run(self):
         super().on_run()
         self.node.set_stepper_state_info(str(self._stepper))
@@ -210,10 +152,11 @@ class WorkChain(Process, metaclass=Protect):
             # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
             #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
             if type(ctx) is not AttributeDict:
-                raise ValueError(
+                msg = (
                     f'Can not update the context for key `{key}`:'
-                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
+                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[: index + 1])}`, expected AttributeDict'
                 )
+                raise ValueError(msg)
 
         return ctx, ctx_path[-1]
 
@@ -233,7 +176,8 @@ class WorkChain(Process, metaclass=Protect):
         elif awaitable.action == AwaitableAction.APPEND:
             ctx.setdefault(key, []).append(awaitable)
         else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
+            msg = f'Unsupported awaitable action: {awaitable.action}'
+            raise AssertionError(msg)
 
         self._awaitables.append(
             awaitable
@@ -259,9 +203,11 @@ class WorkChain(Process, metaclass=Protect):
                     container[index] = value
                     break
             else:
-                raise AssertionError(f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`')
+                msg = f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`'
+                raise AssertionError(msg)
         else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
+            msg = f'Unsupported awaitable action: {awaitable.action}'
+            raise AssertionError(msg)
 
         awaitable.resolved = True
         self._awaitables.remove(awaitable)  # remove only if everything went ok, otherwise we may lose track
@@ -271,7 +217,7 @@ class WorkChain(Process, metaclass=Protect):
             # then we should not try to update it
             self._update_process_status()
 
-    @Protect.final
+    @t.final
     def to_context(self, **kwargs: Awaitable | ProcessNode) -> None:
         """Add a dictionary of awaitables to the context.
 
@@ -286,7 +232,7 @@ class WorkChain(Process, metaclass=Protect):
     def _update_process_status(self) -> None:
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
-            status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
+            status = f'Waiting for child processes: {", ".join([str(_.pk) for _ in self._awaitables])}'
         else:
             status = None
         if self.paused:
@@ -297,9 +243,15 @@ class WorkChain(Process, metaclass=Protect):
             self.set_status(status)
 
     @override
-    @Protect.final
+    @t.final
+    async def step(self) -> None:
+        """Advance the process state machine by one step."""
+        await super().step()
+
+    @override
+    @t.final
     async def run(self) -> t.Any:
-        self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
+        self._stepper = self.spec().get_outline().create_stepper(self)
         return await run_with_portal(self._do_step)
 
     def _do_step(self) -> t.Any:
@@ -310,7 +262,7 @@ class WorkChain(Process, metaclass=Protect):
         will enter in the Wait state, otherwise it will go to Continue. When the stepper returns that it is done, the
         stepper result will be converted to None and returned, unless it is an integer or instance of ExitCode.
         """
-        from .context import ToContext
+        from aiida.engine.processes.workchains.context import ToContext
 
         self._awaitables = []
         result: t.Any = None
@@ -356,7 +308,7 @@ class WorkChain(Process, metaclass=Protect):
                 self._store_nodes(value)
 
     @override
-    @Protect.final
+    @t.final
     def on_exiting(self) -> None:
         """Ensure that any unstored nodes in the context are stored, before the state is exited
 
@@ -370,7 +322,7 @@ class WorkChain(Process, metaclass=Protect):
             # An uncaught exception here will have bizarre and disastrous consequences
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
-    @Protect.final
+    @t.final
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
         """Entering the WAITING state."""
         super().on_wait(awaitables)
@@ -391,7 +343,8 @@ class WorkChain(Process, metaclass=Protect):
                 callback = functools.partial(self.call_soon, self._on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
-                raise AssertionError(f"invalid awaitable target '{awaitable.target}'")
+                msg = f"invalid awaitable target '{awaitable.target}'"
+                raise AssertionError(msg)
 
     def _on_awaitable_finished(self, awaitable: Awaitable) -> None:
         """Callback function, for when an awaitable process instance is completed.
@@ -406,7 +359,8 @@ class WorkChain(Process, metaclass=Protect):
         try:
             node = load_node(awaitable.pk)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
+            msg = f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance'
+            raise ValueError(msg)
 
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}

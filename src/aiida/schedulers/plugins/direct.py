@@ -15,11 +15,10 @@ import typing as t
 
 from typing_extensions import override
 
+from aiida.common.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
-
-from .bash import BashCliScheduler
+from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
@@ -115,7 +114,7 @@ class DirectScheduler(BashCliScheduler):
                 command += f' {escape_for_bash(jobs)}'  # type: ignore[unreachable]
             else:
                 try:
-                    command += f" {' '.join(escape_for_bash(job) for job in jobs if job)}"
+                    command += f' {" ".join(escape_for_bash(job) for job in jobs if job)}'
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
 
@@ -236,7 +235,8 @@ class DirectScheduler(BashCliScheduler):
             this_job.job_id = job[0]
 
             if len(job) < 3:
-                raise SchedulerError(f"Unexpected output from the scheduler, not enough fields in line '{line}'")
+                msg = f"Unexpected output from the scheduler, not enough fields in line '{line}'"
+                raise SchedulerError(msg)
 
             try:
                 job_state_string = job[1][0]  # I just check the first character
@@ -364,7 +364,8 @@ class DirectScheduler(BashCliScheduler):
         """
         if retval != 0:
             self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+            msg = f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+            raise SchedulerError(msg)
 
         if stderr.strip():
             self.logger.warning(
@@ -373,7 +374,8 @@ class DirectScheduler(BashCliScheduler):
 
         if not stdout.strip():
             self.logger.debug(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
+            msg = f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}'
+            raise SchedulerError(msg)
 
         return stdout.strip()
 

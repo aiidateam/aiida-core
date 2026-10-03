@@ -16,7 +16,6 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Optional
 
 from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
@@ -83,7 +82,7 @@ class LocalTransport(BlockingTransport):
 
     def __str__(self):
         """Return a description as a string."""
-        return f"local [{'OPEN' if self._is_open else 'CLOSED'}]"
+        return f'local [{"OPEN" if self._is_open else "CLOSED"}]'
 
     @property
     def curdir(self):
@@ -111,9 +110,11 @@ class LocalTransport(BlockingTransport):
         path = str(path)
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
-            raise OSError(f"'{new_path}' is not a valid directory")
+            msg = f"'{new_path}' is not a valid directory"
+            raise OSError(msg)
         elif not os.access(new_path, os.R_OK):
-            raise OSError(f"Do not have read permission to '{new_path}'")
+            msg = f"Do not have read permission to '{new_path}'"
+            raise OSError(msg)
 
         self._internal_dir = os.path.normpath(new_path)
 
@@ -308,7 +309,8 @@ class LocalTransport(BlockingTransport):
         elif ignore_nonexisting:
             pass
         else:
-            raise OSError(f'The local path {localpath} does not exist')
+            msg = f'The local path {localpath} does not exist'
+            raise OSError(msg)
 
     def putfile(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Copies a file from localpath to remotepath.
@@ -471,7 +473,8 @@ class LocalTransport(BlockingTransport):
         elif ignore_nonexisting:
             pass
         else:
-            raise OSError(f'The remote path {remotepath} does not exist')
+            msg = f'The remote path {remotepath} does not exist'
+            raise OSError(msg)
 
     def getfile(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Copies a file recursively from 'remote' remotepath to
@@ -533,7 +536,8 @@ class LocalTransport(BlockingTransport):
             raise ValueError('Localpaths must be an absolute path')
 
         if not self.isdir(remotepath):
-            raise OSError(f'Input remotepath is not a folder: {remotepath}')
+            msg = f'Input remotepath is not a folder: {remotepath}'
+            raise OSError(msg)
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -739,7 +743,7 @@ class LocalTransport(BlockingTransport):
         return os.path.isfile(os.path.join(self.curdir, path))
 
     @contextlib.contextmanager
-    def _exec_command_internal(self, command, workdir: Optional[TransportPath] = None, **kwargs):
+    def _exec_command_internal(self, command, workdir: TransportPath | None = None, **kwargs):
         """Executes the specified command in bash login shell.
 
 
@@ -792,7 +796,7 @@ class LocalTransport(BlockingTransport):
         ) as process:
             yield process
 
-    def exec_command_wait_bytes(self, command, stdin=None, workdir: Optional[TransportPath] = None, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, workdir: TransportPath | None = None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
@@ -848,7 +852,7 @@ class LocalTransport(BlockingTransport):
 
         return retval, output_text, stderr_text
 
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -875,13 +879,17 @@ class LocalTransport(BlockingTransport):
         oldpath = str(oldpath)
         newpath = str(newpath)
         if not oldpath:
-            raise ValueError(f'Source {oldpath} is not a valid string')
+            msg = f'Source {oldpath} is not a valid string'
+            raise ValueError(msg)
         if not newpath:
-            raise ValueError(f'Destination {newpath} is not a valid string')
+            msg = f'Destination {newpath} is not a valid string'
+            raise ValueError(msg)
         if not os.path.exists(oldpath):
-            raise OSError(f'Source {oldpath} does not exist')
+            msg = f'Source {oldpath} does not exist'
+            raise OSError(msg)
         if os.path.exists(newpath):
-            raise OSError(f'Destination {newpath} already exists.')
+            msg = f'Destination {newpath} already exists.'
+            raise OSError(msg)
 
         shutil.move(oldpath, newpath)
 
@@ -910,7 +918,8 @@ class LocalTransport(BlockingTransport):
             try:
                 os.symlink(remotesource, os.path.join(self.curdir, remotedestination))
             except OSError:
-                raise OSError(f'!!: {remotesource}, {self.curdir}, {remotedestination}')
+                msg = f'!!: {remotesource}, {self.curdir}, {remotedestination}'
+                raise OSError(msg)
 
     def path_exists(self, path: TransportPath):
         """Check if path exists"""

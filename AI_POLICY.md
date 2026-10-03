@@ -27,6 +27,9 @@ Before requesting review, contributors must ensure that all CI checks pass (`uv 
 PRs that fail CI and receive no further attention from the contributor will be closed.
 The same goes for PRs that show signs of being unverified AI output.
 
+On repositories where CodeRabbit is enabled, it reviews every non-draft PR automatically.
+Open your PR as a draft if you want to iterate without review, and address its comments before tagging maintainers.
+
 ### Curate your PR
 
 All PRs must be thoughtfully authored, including the title, description, and commit messages.

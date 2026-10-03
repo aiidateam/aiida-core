@@ -13,10 +13,10 @@
 
 # fmt: off
 
-from .migrations import *
-from .options import *
-from .profile import *
-from .settings import *
+from aiida.manage.configuration.migrations import *
+from aiida.manage.configuration.options import *
+from aiida.manage.configuration.profile import *
+from aiida.manage.configuration.settings import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
@@ -52,24 +52,23 @@ __all__ += (
 )
 
 import os
+import typing as t
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Optional
 
 from aiida.common.warnings import AiidaDeprecationWarning
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
+    from aiida.manage.configuration.config import Config
     from aiida.orm import User
 
-    from .config import Config
-
 # global variables for aiida
-CONFIG: Optional['Config'] = None
+CONFIG: t.Optional['Config'] = None
 
 
 def get_config_path():
     """Returns path to aiida configuration file."""
-    from .settings import DEFAULT_CONFIG_FILE_NAME, AiiDAConfigDir
+    from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME, AiiDAConfigDir
 
     return os.path.join(AiiDAConfigDir.get(), DEFAULT_CONFIG_FILE_NAME)
 
@@ -88,18 +87,19 @@ def load_config(create=False) -> 'Config':
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
     from aiida.common import exceptions
-
-    from .config import Config
+    from aiida.manage.configuration.config import Config
 
     filepath = get_config_path()
 
     if not os.path.isfile(filepath) and not create:
-        raise exceptions.MissingConfigurationError(f'configuration file {filepath} does not exist')
+        msg = f'configuration file {filepath} does not exist'
+        raise exceptions.MissingConfigurationError(msg)
 
     try:
         config = Config.from_file(filepath)
     except ValueError as exc:
-        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON') from exc
+        msg = f'configuration file {filepath} contains invalid JSON'
+        raise exceptions.ConfigurationError(msg) from exc
 
     _merge_deprecated_cache_yaml(config, filepath)
 
@@ -122,7 +122,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist
     while not cache_path_backup or os.path.isfile(cache_path_backup):
-        cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+        cache_path_backup = f'{cache_path}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
     warnings.warn(
         'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
@@ -131,7 +131,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
         stacklevel=2,
     )
 
-    with open(cache_path, 'r', encoding='utf8') as handle:
+    with open(cache_path, encoding='utf8') as handle:
         cache_config = yaml.safe_load(handle)
     for profile_name, data in cache_config.items():
         if profile_name not in config.profile_names:
@@ -151,7 +151,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
     shutil.move(cache_path, cache_path_backup)
 
 
-def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile':
+def load_profile(profile: str | None = None, allow_switch=False) -> 'Profile':
     """Load a global profile, unloading any previously loaded profile.
 
     .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
@@ -168,7 +168,7 @@ def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile'
     return get_manager().load_profile(profile, allow_switch)
 
 
-def get_profile() -> Optional['Profile']:
+def get_profile() -> t.Optional['Profile']:
     """Return the currently loaded profile.
 
     :return: the globally loaded `Profile` instance or `None`
@@ -201,9 +201,9 @@ def profile_context(profile: 'Profile | str | None' = None, allow_switch=False) 
 def create_default_user(
     profile: Profile,
     email: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    institution: Optional[str] = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
 ) -> 'User':
     """Create a default user for the given profile.
 
@@ -243,14 +243,14 @@ def create_profile(
     config: 'Config',
     *,
     storage_backend: str,
-    storage_config: dict[str, Any],
+    storage_config: dict[str, t.Any],
     broker_backend: 'str | None' = None,
     broker_config: 'dict[str, Any] | None' = None,
     name: str,
     email: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    institution: Optional[str] = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
     is_test_profile: bool = False,
 ) -> Profile:
     """Create a new profile, initialise its storage and create a default user.
@@ -327,7 +327,7 @@ def get_config(create=False) -> 'Config':
     return CONFIG
 
 
-def get_config_option(option_name: str) -> Any:
+def get_config_option(option_name: str) -> t.Any:
     """Return the value of a configuration option.
 
     In order of priority, the option is returned from:
@@ -336,10 +336,21 @@ def get_config_option(option_name: str) -> Any:
     2. The current configuration, if loaded and the option specified
     3. The default value for the option
 
+    If an explicit ``verdi --verbosity`` override is active, logger-level options are resolved to that value so the
+    override applies consistently even when logging is reconfigured later during the command execution.
+
     :param option_name: the name of the option to return
     :return: the value of the option
     :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
     """
+    from aiida.common import log
     from aiida.manage import get_manager
+
+    if (
+        log.CLI_ACTIVE is True
+        and log.CLI_LOG_LEVEL is not None
+        and option_name in ['logging.aiida_loglevel', 'logging.terminal_handler']
+    ):
+        return log.CLI_LOG_LEVEL
 
     return get_manager().get_option(option_name)

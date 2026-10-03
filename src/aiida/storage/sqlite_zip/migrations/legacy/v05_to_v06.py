@@ -23,16 +23,14 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 
-from typing import Union
-
-from ..utils import update_metadata, verify_metadata_version
+from aiida.storage.sqlite_zip.migrations.utils import update_metadata, verify_metadata_version
 
 
 def migrate_deserialized_datetime(data, conversion):
     """Deserialize datetime strings from export archives, meaning to reattach the UTC timezone information."""
     from aiida.common.exceptions import StorageMigrationError
 
-    ret_data: Union[str, dict, list]
+    ret_data: str | dict | list
 
     if isinstance(data, dict):
         ret_data = {}
@@ -59,7 +57,8 @@ def migrate_deserialized_datetime(data, conversion):
         # Since we know that all strings will be UTC, here we are simply reattaching that information.
         ret_data = f'{data}+00:00'
     else:
-        raise StorageMigrationError(f"Unknown convert_type '{conversion}'")
+        msg = f"Unknown convert_type '{conversion}'"
+        raise StorageMigrationError(msg)
 
     return ret_data
 

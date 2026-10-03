@@ -8,14 +8,13 @@
 ###########################################################################
 """Module with `Node` sub class for workflow processes."""
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from aiida.common.links import LinkType
+from aiida.orm.nodes.process.process import ProcessNode, ProcessNodeLinks
 from aiida.orm.utils.managers import NodeLinksManager
 
-from ..process import ProcessNode, ProcessNodeLinks
-
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Node
 
 __all__ = ('WorkflowNode',)
@@ -39,11 +38,13 @@ class WorkflowNodeLinks(ProcessNodeLinks):
         """
         super().validate_outgoing(target, link_type, link_label)
         if link_type is LinkType.RETURN and not target.is_stored:
-            raise ValueError(
-                'Workflow<{}> tried returning an unstored `Data` node. This likely means new `Data` is being created '
+            msg = (
+                f'Workflow<{self._node.process_label}> tried returning an unstored `Data` node. '
+                'This likely means new `Data` is being created '
                 'inside the workflow. In order to preserve data provenance, use a `calcfunction` to create this node '
-                'and return its output from the workflow'.format(self._node.process_label)
+                'and return its output from the workflow'
             )
+            raise ValueError(msg)
 
 
 class WorkflowNode(ProcessNode):

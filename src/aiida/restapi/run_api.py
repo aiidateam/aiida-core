@@ -14,8 +14,8 @@ import os
 
 from flask_cors import CORS
 
-from . import api as api_classes
-from .common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
+from aiida.restapi import api as api_classes
+from aiida.restapi.common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
 
 __all__ = ('configure_api', 'run_api')
 
@@ -44,7 +44,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     api = configure_api(flask_app, flask_api, **kwargs)
 
     # Run app through built-in werkzeug server
-    print(f" * REST API running on http://{hostname}:{port}{API_CONFIG['PREFIX']}")
+    print(f' * REST API running on http://{hostname}:{port}{API_CONFIG["PREFIX"]}')
     api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
 
 
@@ -72,7 +72,8 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     posting = kwargs.pop('posting', CLI_DEFAULTS['POSTING'])
 
     if kwargs:
-        raise ValueError(f'Unknown keyword arguments: {kwargs}')
+        msg = f'Unknown keyword arguments: {kwargs}'
+        raise ValueError(msg)
 
     # Import the configuration file
     spec = importlib.util.spec_from_file_location(os.path.join(config, 'config'), os.path.join(config, 'config.py'))

@@ -20,12 +20,11 @@ import typing as t
 
 from typing_extensions import override
 
+from aiida.common.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 from aiida.common.exceptions import FeatureNotAvailable
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
-
-from .bash import BashCliScheduler
+from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
     from aiida.common import AttributeDict
@@ -238,7 +237,7 @@ class SlurmScheduler(BashCliScheduler):
             if len(joblist) == 1:
                 joblist += [joblist[0]]
 
-            command.append(f"--jobs={','.join(joblist)}")
+            command.append(f'--jobs={",".join(joblist)}')
 
         comm = ' '.join(command)
         self.logger.debug(f'squeue command: {comm}')
@@ -321,8 +320,7 @@ class SlurmScheduler(BashCliScheduler):
             # I specify a different --output file
             if job_tmpl.sched_error_path:
                 self.logger.info(
-                    'sched_join_files is True, but sched_error_path is set in '
-                    'SLURM script; ignoring sched_error_path'
+                    'sched_join_files is True, but sched_error_path is set in SLURM script; ignoring sched_error_path'
                 )
         elif job_tmpl.sched_error_path:
             lines.append(f'#SBATCH --error={job_tmpl.sched_error_path}')
@@ -362,11 +360,11 @@ class SlurmScheduler(BashCliScheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
-                        (job_tmpl.max_wallclock_seconds)
-                    )
+                msg = (
+                    'max_wallclock_seconds must be a positive integer (in seconds)! '
+                    f"It is instead '{job_tmpl.max_wallclock_seconds}'"
                 )
+                raise ValueError(msg)
             days = tot_secs // 86400
             tot_hours = tot_secs % 86400
             hours = tot_hours // 3600
@@ -385,9 +383,8 @@ class SlurmScheduler(BashCliScheduler):
                 if physical_memory_kb < 0:  # 0 is allowed and means no limit (https://slurm.schedmd.com/sbatch.html)
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    f'max_memory_kb must be a non-negative integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
-                )
+                msg = f'max_memory_kb must be a non-negative integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
+                raise ValueError(msg)
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.
             lines.append(f'#SBATCH --mem={physical_memory_kb // 1024}')
@@ -428,7 +425,8 @@ class SlurmScheduler(BashCliScheduler):
             if 'Invalid account' in stderr:
                 return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT  # type: ignore[no-any-return]
 
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+            msg = f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+            raise SchedulerError(msg)
 
         try:
             transport_string = f' for {self.transport}'
@@ -448,7 +446,7 @@ class SlurmScheduler(BashCliScheduler):
         # If I am here, no valid line could be found.
         self.logger.error(f'in _parse_submit_output{transport_string}: unable to find the job id: {stdout}')
         raise SchedulerError(
-            'Error during submission, could not retrieve the jobID from ' 'sbatch output; see log for more info.'
+            'Error during submission, could not retrieve the jobID from sbatch output; see log for more info.'
         )
 
     def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
@@ -471,11 +469,10 @@ class SlurmScheduler(BashCliScheduler):
 
         # See discussion in _get_joblist_command on how we ensure that AiiDA can expect exit code 0 here.
         if retval != 0:
-            raise SchedulerError(
-                f"""squeue returned exit code {retval} (_parse_joblist_output function)
+            msg = f"""squeue returned exit code {retval} (_parse_joblist_output function)
 stdout='{stdout.strip()}'
 stderr='{stderr.strip()}'"""
-            )
+            raise SchedulerError(msg)
         if stderr.strip():
             self.logger.warning(
                 f"squeue returned exit code 0 (_parse_joblist_output function) but non-empty stderr='{stderr.strip()}'"
@@ -562,7 +559,7 @@ stderr='{stderr.strip()}'"""
                 this_job.num_machines = int(thisjob_dict['number_nodes'])
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated nodes is not ' 'an integer ({}) for job id {}!'.format(
+                    'The number of allocated nodes is not an integer ({}) for job id {}!'.format(
                         thisjob_dict['number_nodes'], this_job.job_id
                     )
                 )
@@ -625,8 +622,8 @@ stderr='{stderr.strip()}'"""
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
-                        'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(len(this_job.allocated_machines), this_job.num_machines)
+                        f'nodes ({len(this_job.allocated_machines)}) is different from the '
+                        f'expected number of nodes ({this_job.num_machines})!'
                     )
 
             # I append to the list of jobs to return
@@ -745,10 +742,11 @@ stderr='{stderr.strip()}'"""
             attributes = lines[1].split('|')
 
             if len(fields) != len(attributes):
-                raise ValueError(
+                msg = (
                     'first and second line in `detailed_job_info.stdout` differ in length: '
                     f'{len(fields)} vs {len(attributes)}'
                 )
+                raise ValueError(msg)
 
             data = dict(zip(fields, attributes))
 

@@ -75,15 +75,15 @@ class ServerInfo(Resource):
         headers = self.utils.build_headers(url=request.url, total_count=1)
 
         ## Build response and return it
-        data = dict(
-            method=request.method,
-            url=url,
-            url_root=url_root,
-            path=path,
-            query_string=query_string,
-            resource_type='Info',
-            data=response,
-        )
+        data = {
+            'method': request.method,
+            'url': url,
+            'url_root': url_root,
+            'path': path,
+            'query_string': query_string,
+            'resource_type': 'Info',
+            'data': response,
+        }
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
@@ -146,7 +146,8 @@ class BaseResource(Resource):
         node = load_node(node_id)
 
         if not isinstance(node, self.trans._aiida_class):
-            raise RestInputValidationError(f'node {node_id} is not of the required type {self.trans._aiida_class}')
+            msg = f'node {node_id} is not of the required type {self.trans._aiida_class}'
+            raise RestInputValidationError(msg)
 
         return node
 
@@ -210,7 +211,7 @@ class BaseResource(Resource):
         if query_type == 'projectable_properties':
             ## Retrieve the projectable properties
             projectable_properties, ordering = self.trans.get_projectable_properties()
-            results = dict(fields=projectable_properties, ordering=ordering)
+            results = {'fields': projectable_properties, 'ordering': ordering}
             ## Build response and return it
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
@@ -234,16 +235,16 @@ class BaseResource(Resource):
             results = self.trans.get_results()
 
         ## Build response and return it
-        data = dict(
-            method=request.method,
-            url=url,
-            url_root=url_root,
-            path=request.path,
-            id=node_id,
-            query_string=query_string,
-            resource_type=resource_type,
-            data=results,
-        )
+        data = {
+            'method': request.method,
+            'url': url,
+            'url_root': url_root,
+            'path': request.path,
+            'id': node_id,
+            'query_string': query_string,
+            'resource_type': resource_type,
+            'data': results,
+        }
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
@@ -459,7 +460,7 @@ class Node(BaseResource):
         if query_type == 'projectable_properties':
             ## Retrieve the projectable properties
             projectable_properties, ordering = self.trans.get_projectable_properties()
-            results = dict(fields=projectable_properties, ordering=ordering)
+            results = {'fields': projectable_properties, 'ordering': ordering}
             ## Build response and return it
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
@@ -567,16 +568,16 @@ class Node(BaseResource):
                         del node[f'extras.{extra!s}']
 
         ## Build response
-        data = dict(
-            method=request.method,
-            url=url,
-            url_root=url_root,
-            path=path,
-            id=node_id,
-            query_string=query_string,
-            resource_type=resource_type,
-            data=results,
-        )
+        data = {
+            'method': request.method,
+            'url': url,
+            'url_root': url_root,
+            'path': path,
+            'id': node_id,
+            'query_string': query_string,
+            'resource_type': resource_type,
+            'data': results,
+        }
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
@@ -622,7 +623,7 @@ class ProcessNode(Node):
         :return: http response
         """
         path, url, url_root, query_string = self.unquote_request()
-        resource_type, page, node_id, query_type = self.parse_path(path)
+        resource_type, _page, node_id, query_type = self.parse_path(path)
         profile = self.parse_query_string(query_string)[-1]
 
         try:
@@ -653,19 +654,19 @@ class ProcessNode(Node):
         elif query_type == 'projectable_properties':
             ## Retrieve the projectable properties
             projectable_properties, ordering = self.trans.get_projectable_properties()
-            results = dict(fields=projectable_properties, ordering=ordering)
+            results = {'fields': projectable_properties, 'ordering': ordering}
 
         ## Build response
-        data = dict(
-            method=request.method,
-            url=url,
-            url_root=url_root,
-            path=path,
-            id=node_id,
-            query_string=query_string,
-            resource_type=resource_type,
-            data=results,
-        )
+        data = {
+            'method': request.method,
+            'url': url,
+            'url_root': url_root,
+            'path': path,
+            'id': node_id,
+            'query_string': query_string,
+            'resource_type': resource_type,
+            'data': results,
+        }
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
@@ -684,7 +685,7 @@ class CalcJobNode(ProcessNode):
         :return: http response
         """
         path, url, url_root, query_string = self.unquote_request()
-        resource_type, page, node_id, query_type = self.parse_path(path)
+        resource_type, _page, node_id, query_type = self.parse_path(path)
         profile = self.parse_query_string(query_string)[-1]
 
         try:
@@ -719,15 +720,15 @@ class CalcJobNode(ProcessNode):
         headers = self.utils.build_headers(url=request.url, total_count=1)
 
         ## Build response
-        data = dict(
-            method=request.method,
-            url=url,
-            url_root=url_root,
-            path=path,
-            id=node_id,
-            query_string=query_string,
-            resource_type=resource_type,
-            data=results,
-        )
+        data = {
+            'method': request.method,
+            'url': url,
+            'url_root': url_root,
+            'path': path,
+            'id': node_id,
+            'query_string': query_string,
+            'resource_type': resource_type,
+            'data': results,
+        }
 
         return self.utils.build_response(status=200, headers=headers, data=data)

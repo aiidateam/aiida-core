@@ -9,19 +9,20 @@
 """Abstract BackendNode and BackendNodeCollection implementation."""
 
 import abc
+import typing as t
+from collections.abc import Iterable, Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar
 
-from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 
-if TYPE_CHECKING:
-    from ..utils import LinkTriple
-    from .computers import BackendComputer
-    from .users import BackendUser
+if t.TYPE_CHECKING:
+    from aiida.orm.implementation.computers import BackendComputer
+    from aiida.orm.implementation.users import BackendUser
+    from aiida.orm.utils import LinkTriple
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 
-BackendNodeType = TypeVar('BackendNodeType', bound='BackendNode')
+BackendNodeType = t.TypeVar('BackendNodeType', bound='BackendNode')
 
 
 class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta):
@@ -55,7 +56,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @property
     @abc.abstractmethod
-    def process_type(self) -> Optional[str]:
+    def process_type(self) -> str | None:
         """Return the node process type.
 
         :return: the process type
@@ -63,7 +64,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @process_type.setter
     @abc.abstractmethod
-    def process_type(self, value: Optional[str]) -> None:
+    def process_type(self, value: str | None) -> None:
         """Set the process type.
 
         :param value: the new value to set
@@ -103,7 +104,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @property
     @abc.abstractmethod
-    def repository_metadata(self) -> Dict[str, Any]:
+    def repository_metadata(self) -> dict[str, t.Any]:
         """Return the node repository metadata.
 
         :return: the repository metadata
@@ -111,7 +112,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @repository_metadata.setter
     @abc.abstractmethod
-    def repository_metadata(self, value: Dict[str, Any]) -> None:
+    def repository_metadata(self, value: dict[str, t.Any]) -> None:
         """Set the repository metadata.
 
         :param value: the new value to set
@@ -119,7 +120,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @property
     @abc.abstractmethod
-    def computer(self) -> Optional['BackendComputer']:
+    def computer(self) -> t.Optional['BackendComputer']:
         """Return the computer of this node.
 
         :return: the computer or None
@@ -127,7 +128,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @computer.setter
     @abc.abstractmethod
-    def computer(self, computer: Optional['BackendComputer']) -> None:
+    def computer(self, computer: t.Optional['BackendComputer']) -> None:
         """Set the computer of this node.
 
         :param computer: a `BackendComputer`
@@ -180,7 +181,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @abc.abstractmethod
     def store(
-        self: BackendNodeType, links: Optional[Sequence['LinkTriple']] = None, clean: bool = True
+        self: BackendNodeType, links: Sequence['LinkTriple'] | None = None, clean: bool = True
     ) -> BackendNodeType:
         """Store the node in the database.
 
@@ -201,7 +202,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @property
     @abc.abstractmethod
-    def attributes(self) -> Dict[str, Any]:
+    def attributes(self) -> dict[str, t.Any]:
         """Return the complete attributes dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
@@ -216,7 +217,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         """
 
     @abc.abstractmethod
-    def get_attribute(self, key: str) -> Any:
+    def get_attribute(self, key: str) -> t.Any:
         """Return the value of an attribute.
 
         .. warning:: While the entity is unstored, this will return a reference of the attribute on the database model,
@@ -230,7 +231,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :raises AttributeError: if the attribute does not exist
         """
 
-    def get_attribute_many(self, keys: Iterable[str]) -> List[Any]:
+    def get_attribute_many(self, keys: Iterable[str]) -> list[t.Any]:
         """Return the values of multiple attributes.
 
         .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
@@ -248,17 +249,18 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         try:
             return [self.get_attribute(key) for key in keys]
         except KeyError as exception:
-            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+            msg = f'attribute `{exception}` does not exist'
+            raise AttributeError(msg) from exception
 
     @abc.abstractmethod
-    def set_attribute(self, key: str, value: Any) -> None:
+    def set_attribute(self, key: str, value: t.Any) -> None:
         """Set an attribute to the given value.
 
         :param key: name of the attribute
         :param value: value of the attribute
         """
 
-    def set_attribute_many(self, attributes: Dict[str, Any]) -> None:
+    def set_attribute_many(self, attributes: dict[str, t.Any]) -> None:
         """Set multiple attributes.
 
         .. note:: This will override any existing attributes that are present in the new dictionary.
@@ -269,7 +271,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
             self.set_attribute(key, value)
 
     @abc.abstractmethod
-    def reset_attributes(self, attributes: Dict[str, Any]) -> None:
+    def reset_attributes(self, attributes: dict[str, t.Any]) -> None:
         """Reset the attributes.
 
         .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
@@ -299,7 +301,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         """Delete all attributes."""
 
     @abc.abstractmethod
-    def attributes_items(self) -> Iterable[Tuple[str, Any]]:
+    def attributes_items(self) -> Iterable[tuple[str, t.Any]]:
         """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs

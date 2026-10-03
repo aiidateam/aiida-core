@@ -30,7 +30,8 @@ class ConfigOptionParamType(click.types.StringParamType):
         from aiida.manage.configuration.options import get_option, get_option_names
 
         if value not in get_option_names():
-            raise click.BadParameter(f'{value} is not a valid configuration option')
+            msg = f'{value} is not a valid configuration option'
+            raise click.BadParameter(msg)
 
         return get_option(value)
 

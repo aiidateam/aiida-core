@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .calculation import *
-from .process import *
-from .workflow import *
+from aiida.orm.nodes.process.calculation import *
+from aiida.orm.nodes.process.process import *
+from aiida.orm.nodes.process.workflow import *
 
 __all__ = (
     'CalcFunctionNode',

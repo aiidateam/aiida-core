@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .base import *
+from aiida.tools.calculations.base import *
 
 __all__ = (
     'CalculationTools',

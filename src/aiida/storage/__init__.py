@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .sqlite_dos import *
+from aiida.storage.sqlite_dos import *
 
 __all__ = (
     'SqliteDosStorage',

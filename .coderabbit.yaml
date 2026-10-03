@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+#
+# CodeRabbit config for aiida-core.
+# Reference: https://docs.coderabbit.ai/reference/configuration
+#
+# CodeRabbit reviews every non-draft PR automatically. Open a PR as a draft to
+# iterate without review. Commands to comment on a PR:
+#
+#   @coderabbitai review         re-review the latest changes
+#   @coderabbitai full review    full re-review from scratch
+#   @coderabbitai resolve        resolve all its comments
+#   @coderabbitai configuration  print the effective config
+#   @coderabbitai help           list every command
+#
+# AGENTS.md / CLAUDE.md already steer reviews as guidance (default); no config needed.
+
+language: en-US
+
+reviews:
+  # Surface only higher-signal comments; `chill` (default) or `assertive` for more.
+  profile: quiet
+
+  auto_review:
+    enabled: true                   # full review of a non-draft PR once, when it opens
+    auto_incremental_review: false  # no re-review on push; ask again with `@coderabbitai full review`
+    drafts: false                   # so opening as a draft is how you skip review while iterating
+
+  # Don't write a summary into the PR description unasked; `@coderabbitai summary` on demand.
+  high_level_summary: false
+
+  # CodeRabbit reviews the diff, so it can suggest a test that already exists just
+  # outside the changed lines. Nudge it to look first (a hint, not a guarantee).
+  path_instructions:
+  - path: tests/**
+    instructions: >-
+      Before suggesting a new test, check the surrounding test file and module
+      for an equivalent existing test, and do not propose one that duplicates
+      existing coverage.
+
+  # Each of these opens a bot-authored PR or commits to the branch, and AGENTS.md
+  # / AI_POLICY.md require a human author for every PR. `autofix` stays on: it
+  # applies a suggestion a human already read and accepted.
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+
+  tools:
+    ruff:
+      enabled: false  # already enforced by pre-commit and CI; avoids duplicate comments
+    languagetool:
+      enabled: false  # noisy grammar/spell checks on prose and docstrings
+
+chat:
+  auto_reply: false  # don't chime into threads unless tagged
+
+knowledge_base:
+  # CodeRabbit remembers preferences from your chat replies and applies them to
+  # later reviews. If a comment is wrong (e.g. it suggests a test that already
+  # exists), reply and tag `@coderabbitai` explaining why, and it won't repeat it.
+  # On by default; kept explicit because this is how we correct the bot over time.
+  learnings:
+    scope: auto  # auto = repo-local for a public repo like this one

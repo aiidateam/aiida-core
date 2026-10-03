@@ -12,11 +12,10 @@ import json
 from pathlib import Path
 
 from aiida import orm
+from aiida.calculations.stash import StashCalculation
 from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, UnstashTargetMode
 from aiida.engine import CalcJob
-
-from .stash import StashCalculation
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('UnstashCalculation')
 
@@ -137,9 +136,8 @@ class UnstashCalculation(CalcJob):
             if 'code' in self.inputs:
                 code_info.code_uuid = self.inputs.code.uuid
             else:
-                raise ValueError(
-                    f"Input 'code' is required for `UnstashTargetMode.{UnstashTargetMode(unstash_target_mode)}` mode."
-                )
+                msg = f"Input 'code' is required for `UnstashTargetMode.{UnstashTargetMode(unstash_target_mode)}` mode."
+                raise ValueError(msg)
 
             calc_info.codes_info = [code_info]
             calc_info.retrieve_list = [self.options.output_filename]
@@ -149,11 +147,12 @@ class UnstashCalculation(CalcJob):
 
         else:
             if 'code' in self.inputs:
-                raise ValueError(
+                msg = (
                     f"Input 'code' cannot be used for `UnstashTargetMode.{UnstashTargetMode(unstash_target_mode)}`"
                     ' mode. This UnStash mode is performed on the login node, '
                     'no submission is planned therefore no code is needed.'
                 )
+                raise ValueError(msg)
 
             calc_info.skip_submit = True
 

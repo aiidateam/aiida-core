@@ -21,7 +21,7 @@ def test_migrate_external(migrate_from_func):
             'core.upf',
             'core.import',
             'core.auto',
-        ], f"encountered illegal type string `{attributes['type_string']}`"
+        ], f'encountered illegal type string `{attributes["type_string"]}`'
 
 
 def test_migration_dbgroup_type_string():

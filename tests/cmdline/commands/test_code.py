@@ -47,6 +47,18 @@ def test_help(run_cli_command):
     run_cli_command(cmd_code.setup_code, ['--help'])
 
 
+def test_code_create_help(run_cli_command):
+    """Test the help message of the ``verdi code create`` group.
+
+    The abstract `Code` base is registered for querying but cannot be created through the CLI.
+    """
+    result = run_cli_command(cmd_code.code_create, ['--help'])
+    assert 'core.code.containerized' in result.output
+    assert 'core.code.installed' in result.output
+    assert 'core.code.portable' in result.output
+    assert 'core.code.abstract' not in result.output
+
+
 def test_code_setup_deprecation(run_cli_command):
     """Checks if a deprecation warning is printed in stdout and stderr."""
     # Checks if the deprecation warning is present when invoking the help page
@@ -192,7 +204,7 @@ def test_code_delete_one_force(run_cli_command, code):
         load_code('code')
 
 
-def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, computer_label, hostname) -> str:
+def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostname, filepath_executable=None) -> str:
     """Normalize dynamic values in CLI output for stable regression testing.
 
     Args:
@@ -200,10 +212,8 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, compute
         code_pk: The actual PK to be replaced with placeholder
         code_uuid: The actual UUID to be replaced with placeholder
         computer_pk: Optional computer PK to be replaced with placeholder
-        computer_label: Optional suffixed ``aiida_localhost`` label whose worker-id suffix should be
-            stripped (e.g. ``localhost-gw1`` -> ``localhost``), so the golden file can carry the
-            user-facing label without an xdist artefact
         hostname: Optional hostname to be replaced with placeholder
+        filepath_executable: Optional executable path to be replaced with placeholder
 
     Returns:
         Normalized output string with placeholders
@@ -222,13 +232,6 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, compute
     # Replace UUID first (before PK, as PK digits might appear in UUID)
     normalized = normalized.replace(code_uuid, '<UUID>')
 
-    # Strip the worker-id suffix from the ``aiida_localhost`` label so the golden file shows the
-    # user-facing ``localhost`` rather than ``localhost-gw1``. Done before hostname substitution
-    # because the suffixed label contains the hostname as a substring (matching ``localhost``
-    # first would leave a dangling ``-gw1``).
-    if computer_label and computer_label.startswith(f'{hostname}-'):
-        normalized = normalized.replace(computer_label, hostname)
-
     # Replace hostname if provided
     if hostname:
         normalized = normalized.replace(hostname, '<hostname>')
@@ -236,6 +239,10 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, compute
     # Replace computer PK if provided
     if computer_pk is not None:
         normalized = normalized.replace(f'pk: {computer_pk}', 'pk: <COMPUTER_PK>')
+
+    # Replace filepath executable if provided (platform-dependent path like /usr/bin/bash vs /opt/homebrew/bin/bash)
+    if filepath_executable is not None:
+        normalized = normalized.replace(filepath_executable, '<FILEPATH_EXECUTABLE>')
 
     # Replace code PK (as whole word to avoid replacing parts of other numbers)
     normalized = re.sub(rf'\b{code_pk}\b', '<PK>', normalized)
@@ -300,8 +307,10 @@ def test_code_show(run_cli_command, aiida_localhost, tmp_path, bash_path, aiida_
         code_pk=code.pk,
         code_uuid=code.uuid,
         computer_pk=computer.pk if computer else None,
-        computer_label=computer.label if computer else None,
         hostname=computer.hostname if computer else None,
+        filepath_executable=None
+        if code.filepath_executable is None
+        else str(pathlib.Path(code.filepath_executable).absolute()),
     )
 
     # Check against regression fixture
@@ -421,7 +430,7 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
-def test_code_export(run_cli_command, aiida_code_installed, aiida_localhost, tmp_path, file_regression, sort_option):
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort_option):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -435,10 +444,8 @@ def test_code_export(run_cli_command, aiida_code_installed, aiida_localhost, tmp
     options = [str(code.pk), str(filepath), sort_option]
     result = run_cli_command(cmd_code.export, options)
     assert str(filepath) in result.output, 'Filename should be in terminal output but was not found.'
-    # file regression check; strip the worker-id suffix from the computer label so the golden
-    # file carries the user-facing ``localhost`` rather than ``localhost-gw1`` (see
-    # ``aiida_localhost`` fixture).
-    content = filepath.read_text().replace(aiida_localhost.label, aiida_localhost.hostname)
+    # file regression check
+    content = filepath.read_text()
     file_regression.check(content, extension='.yml')
 
     # round trip test by create code from the config file
@@ -494,7 +501,7 @@ def test_code_export_overwrite(run_cli_command, aiida_code_installed, tmp_path):
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.usefixtures('chdir_tmp_path')
-def test_code_export_default_filename(run_cli_command, aiida_code_installed, aiida_localhost):
+def test_code_export_default_filename(run_cli_command, aiida_code_installed):
     """Test default filename being created if no argument passed."""
 
     prepend_text = 'module load something\n    some command'
@@ -508,7 +515,7 @@ def test_code_export_default_filename(run_cli_command, aiida_code_installed, aii
     options = [str(code.pk)]
     run_cli_command(cmd_code.export, options)
 
-    assert pathlib.Path(f'code@{aiida_localhost.label}.yaml').is_file()
+    assert pathlib.Path('code@localhost.yaml').is_file()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
@@ -536,12 +543,6 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     """Test setting up a code from a config file from URL."""
     from urllib import request
 
-    monkeypatch.setattr(
-        request,
-        'urlopen',
-        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label),
-    )
-
     config_file_template = textwrap.dedent(
         """
         label: {label}
@@ -552,8 +553,11 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     )
 
     label = 'noninteractive_config_url'
+    response = io.BytesIO(config_file_template.format(label=label, computer=aiida_localhost.label).encode())
+    monkeypatch.setattr(request, 'urlopen', lambda *args, **kwargs: response)
     fake_url = 'https://my.url.com'
     run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url], use_subprocess=False)
+    assert response.closed
     assert isinstance(load_code(label), InstalledCode)
 
 

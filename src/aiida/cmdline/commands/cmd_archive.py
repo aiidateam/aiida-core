@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import logging
 import traceback
+import typing as t
 from enum import Enum
 from pathlib import Path
-from typing import NoReturn
 
 import click
 from click_spinner import spinner
@@ -332,7 +332,7 @@ class ExtrasImportCode(Enum):
     '--extras-mode-new',
     type=click.Choice(EXTRAS_MODE_NEW),
     default='import',
-    help='Specify whether to import extras of new nodes: ' 'import: import extras. ' 'none: do not import extras.',
+    help='Specify whether to import extras of new nodes: import: import extras. none: do not import extras.',
 )
 @click.option(
     '--comment-mode',
@@ -418,7 +418,7 @@ def import_archive(
         _import_archive_and_migrate(ctx, archive, web_based, import_kwargs, migration)
 
 
-def _echo_exception(msg: str, exception: Exception) -> NoReturn:
+def _echo_exception(msg: str, exception: Exception) -> t.NoReturn:
     """Report an exception and exit.
 
     :param msg: The message prefix

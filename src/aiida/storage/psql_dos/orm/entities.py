@@ -8,18 +8,17 @@
 ###########################################################################
 """Classes and methods for Django specific backend entities"""
 
-from typing import Generic, Set, TypeVar
+import typing as t
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.models.base import Base
+from aiida.storage.psql_dos.orm import utils
 
-from . import utils
-
-ModelType = TypeVar('ModelType')
-SelfType = TypeVar('SelfType', bound='SqlaModelEntity')
+ModelType = t.TypeVar('ModelType')
+SelfType = t.TypeVar('SelfType', bound='SqlaModelEntity')
 
 
-class SqlaModelEntity(Generic[ModelType]):
+class SqlaModelEntity(t.Generic[ModelType]):
     """A mixin that adds some common SQLA backend entity methods"""
 
     MODEL_CLASS = None
@@ -38,7 +37,7 @@ class SqlaModelEntity(Generic[ModelType]):
         :param backend: the corresponding storage backend
         :return: the AiiDA entity
         """
-        from ..backend import PsqlDosBackend
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
 
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
@@ -89,6 +88,6 @@ class SqlaModelEntity(Generic[ModelType]):
         self.model.save()
         return self
 
-    def _flush_if_stored(self, fields: Set[str]) -> None:
+    def _flush_if_stored(self, fields: set[str]) -> None:
         if self.model.is_saved():
             self.model._flush(fields)

@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .workchain import *
-from .workflow import *
-from .workfunction import *
+from aiida.orm.nodes.process.workflow.workchain import *
+from aiida.orm.nodes.process.workflow.workflow import *
+from aiida.orm.nodes.process.workflow.workfunction import *
 
 __all__ = (
     'WorkChainNode',

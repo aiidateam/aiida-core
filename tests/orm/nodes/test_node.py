@@ -676,8 +676,8 @@ class TestNodeLinks:
         called.base.links.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='call')
         called.store()
 
-        uuids_incoming = set(node.uuid for node in called.base.links.get_incoming().all_nodes())
-        uuids_expected = set([caller.uuid, data.uuid])
+        uuids_incoming = {node.uuid for node in called.base.links.get_incoming().all_nodes()}
+        uuids_expected = {caller.uuid, data.uuid}
         assert uuids_incoming == uuids_expected
 
     def test_node_indegree_unique_triple(self):
@@ -694,8 +694,8 @@ class TestNodeLinks:
         data.base.links.add_incoming(return_one, link_type=LinkType.RETURN, link_label='returned')
         data.base.links.add_incoming(return_two, link_type=LinkType.RETURN, link_label='returned')
 
-        uuids_incoming = set(node.uuid for node in data.base.links.get_incoming().all_nodes())
-        uuids_expected = set([return_one.uuid, return_two.uuid])
+        uuids_incoming = {node.uuid for node in data.base.links.get_incoming().all_nodes()}
+        uuids_expected = {return_one.uuid, return_two.uuid}
         assert uuids_incoming == uuids_expected
 
     def test_node_outdegree_unique_triple(self):
@@ -715,8 +715,8 @@ class TestNodeLinks:
         data_one.store()
         data_two.store()
 
-        uuids_outgoing = set(node.uuid for node in creator.base.links.get_outgoing().all_nodes())
-        uuids_expected = set([data_one.uuid, data_two.uuid])
+        uuids_outgoing = {node.uuid for node in creator.base.links.get_outgoing().all_nodes()}
+        uuids_expected = {data_one.uuid, data_two.uuid}
         assert uuids_outgoing == uuids_expected
 
     def test_get_node_by_label(self):

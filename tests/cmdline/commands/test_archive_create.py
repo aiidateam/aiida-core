@@ -16,7 +16,6 @@ import pytest
 
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Computer, Dict, Group, InstalledCode
-from aiida.storage.sqlite_zip.migrator import list_versions
 from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
@@ -175,30 +174,49 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
         assert handle.testzip() is None
 
 
-@pytest.mark.parametrize('version', [v for v in list_versions() if v not in ('main_0000a', 'main_0000b')])
-def test_version(run_cli_command, version):
-    """Test the functionality of `verdi archive version`."""
+@pytest.mark.parametrize(
+    'version',
+    ('0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '0.10', '0.11', '0.12', '0.13', 'main_0000'),
+)
+def test_version_legacy(run_cli_command, version):
+    """Test `verdi archive version` for pinned legacy archives on disk."""
     archive = f'export_{version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = [filename_input]
-    result = run_cli_command(cmd_archive.archive_version, options)
-    assert version in result.output
+    result = run_cli_command(cmd_archive.archive_version, [filename_input])
+    # Quote the version: the archive filename itself contains the bare version string.
+    assert f"'{version}'" in result.output
 
 
-def test_info(run_cli_command):
+@pytest.mark.parametrize(
+    'archive_fixture, version',
+    [
+        ('archive_main_0001', 'main_0001'),
+        ('archive_main_0002', 'main_0002'),
+    ],
+)
+def test_version_main(run_cli_command, archive_fixture, version, request):
+    """Test `verdi archive version` for explicitly requested ``main`` revisions."""
+    filename_input = request.getfixturevalue(archive_fixture)
+    result = run_cli_command(cmd_archive.archive_version, [filename_input])
+    assert f"'{version}'" in result.output
+
+
+def test_version_head(run_cli_command, archive_main_head):
+    """Test `verdi archive version` for the head archive generated at runtime."""
+    result = run_cli_command(cmd_archive.archive_version, [archive_main_head])
+    assert f"'{ArchiveFormatSqlZip().latest_version}'" in result.output
+
+
+def test_info(run_cli_command, archive_main_head):
     """Test the functionality of `verdi archive info`."""
-    archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
-    filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = [filename_input]
+    options = [archive_main_head]
     result = run_cli_command(cmd_archive.archive_info, options)
     assert 'export_version' in result.output
 
 
-def test_info_detailed(run_cli_command):
+def test_info_detailed(run_cli_command, archive_main_head):
     """Test the functionality of `verdi archive info --detailed`."""
-    archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
-    filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = ['--detailed', filename_input]
+    options = ['--detailed', archive_main_head]
     result = run_cli_command(cmd_archive.archive_info, options)
     assert 'Nodes:' in result.output
 

@@ -10,14 +10,12 @@
 
 import sys
 from tempfile import NamedTemporaryFile
-from typing import Set
 
 import click
 import sqlalchemy as sa
 
 from aiida.cmdline.utils import echo
-
-from .utils import dumps_json
+from aiida.storage.psql_dos.migrations.utils.utils import dumps_json
 
 
 def get_legacy_workflow_log_number(connection):
@@ -131,8 +129,9 @@ def export_and_clean_workflow_logs(connection, profile):
 
     if not profile.is_test_profile:
         echo.echo_warning(
-            'We found {} log records that correspond to legacy workflows and {} log records to correspond '
-            'to an unknown entity.'.format(lwf_no_number, other_number)
+            f'We found {lwf_no_number} log records that correspond to legacy workflows and {other_number} '
+            f'log records to correspond '
+            'to an unknown entity.'
         )
         echo.echo_warning(
             'These records will be removed from the database and exported to JSON files (to the current directory).'
@@ -232,7 +231,7 @@ def set_new_uuid(connection):
     ids = []
     for (curr_id,) in id_res:
         ids.append(curr_id)
-    uuids: Set[str] = set()
+    uuids: set[str] = set()
     while len(uuids) < len(ids):
         uuids.add(get_new_uuid())
 

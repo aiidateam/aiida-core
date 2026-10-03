@@ -9,9 +9,9 @@
 """Utilities for this backend."""
 
 import json
+import typing as t
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
 
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
@@ -48,7 +48,7 @@ def sqlite_case_sensitive_like(dbapi_connection, _):
     cursor.close()
 
 
-def _contains(lhs: Union[dict, list], rhs: Union[dict, list]):
+def _contains(lhs: dict | list, rhs: dict | list):
     if isinstance(lhs, dict) and isinstance(rhs, dict):
         for key in rhs:
             if key not in lhs or not _contains(lhs[key], rhs[key]):
@@ -64,7 +64,7 @@ def _contains(lhs: Union[dict, list], rhs: Union[dict, list]):
         return lhs == rhs
 
 
-def _json_contains(lhs: Union[str, bytes, bytearray, dict, list], rhs: Union[str, bytes, bytearray, dict, list]):
+def _json_contains(lhs: str | bytes | bytearray | dict | list, rhs: str | bytes | bytearray | dict | list):
     try:
         if isinstance(lhs, (str, bytes, bytearray)):
             lhs = json.loads(lhs)
@@ -79,7 +79,7 @@ def register_json_contains(dbapi_connection, _):
     dbapi_connection.create_function('json_contains', 2, _json_contains)
 
 
-def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = True, **kwargs) -> Engine:
+def create_sqla_engine(path: str | Path, *, enforce_foreign_keys: bool = True, **kwargs) -> Engine:
     """Create a new engine instance."""
     engine = create_engine(f'sqlite:///{path}', json_serializer=json.dumps, json_deserializer=json.loads, **kwargs)
     event.listen(engine, 'connect', sqlite_case_sensitive_like)
@@ -89,7 +89,7 @@ def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = T
     return engine
 
 
-def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10) -> Dict[str, Any]:
+def extract_metadata(path: str | Path, *, search_limit: int | None = 10) -> dict[str, t.Any]:
     """Extract the metadata dictionary from the archive.
 
     :param search_limit: the maximum number of records to search for the metadata file in a zip file.
@@ -100,7 +100,8 @@ def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10
 
     path = Path(path)
     if not path.exists():
-        raise UnreachableStorage(f'path not found: {path}')
+        msg = f'path not found: {path}'
+        raise UnreachableStorage(msg)
 
     if path.is_dir():
         if not path.joinpath(META_FILENAME).is_file():
@@ -108,27 +109,31 @@ def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10
         try:
             metadata = json.loads(path.joinpath(META_FILENAME).read_text(encoding='utf8'))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+            msg = f'Could not read metadata: {exc}'
+            raise CorruptStorage(msg) from exc
     elif path.is_file() and zipfile.is_zipfile(path):
         try:
             metadata = json.loads(read_file_in_zip(path, META_FILENAME, search_limit=search_limit))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+            msg = f'Could not read metadata: {exc}'
+            raise CorruptStorage(msg) from exc
     elif path.is_file() and tarfile.is_tarfile(path):
         try:
             metadata = json.loads(read_file_in_tar(path, META_FILENAME))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+            msg = f'Could not read metadata: {exc}'
+            raise CorruptStorage(msg) from exc
     else:
         raise CorruptStorage('Path not a folder, zip or tar file')
 
     if not isinstance(metadata, dict):
-        raise CorruptStorage(f'Metadata is not a dictionary: {type(metadata)}')
+        msg = f'Metadata is not a dictionary: {type(metadata)}'
+        raise CorruptStorage(msg)
 
     return metadata
 
 
-def read_version(path: Union[str, Path], *, search_limit: Optional[int] = None) -> str:
+def read_version(path: str | Path, *, search_limit: int | None = None) -> str:
     """Read the version of the storage instance from the path.
 
     This is intended to work for all versions of the storage format.

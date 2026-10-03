@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .deletions import *
+from aiida.tools.graph.deletions import *
 
 __all__ = (
     'delete_group_nodes',

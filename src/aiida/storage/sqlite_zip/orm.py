@@ -14,8 +14,8 @@ but redefines the SQLAlchemy models to the SQLite compatible ones.
 """
 
 import json
+import typing as t
 from functools import singledispatch
-from typing import Any, List, Optional, Tuple, Union
 
 from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
@@ -34,24 +34,23 @@ from aiida.storage.psql_dos.orm.querybuilder.main import (
     String,
     get_column,
 )
+from aiida.storage.sqlite_zip import models
+from aiida.storage.sqlite_zip.utils import ReadOnlyError
 from aiida.storage.utils import _create_smarter_in_clause
-
-from . import models
-from .utils import ReadOnlyError
 
 
 class SqliteEntityOverride:
     """Overrides type-checking of psql_dos ``Entity``."""
 
-    MODEL_CLASS: Any
+    MODEL_CLASS: t.Any
     _model: utils.ModelWrapper
 
     @classmethod
     def _class_check(cls):
         """Assert that the class is correctly configured"""
-        assert issubclass(
-            cls.MODEL_CLASS, models.SqliteBase
-        ), 'Must set the MODEL_CLASS in the derived class to a SQLA model'
+        assert issubclass(cls.MODEL_CLASS, models.SqliteBase), (
+            'Must set the MODEL_CLASS in the derived class to a SQLA model'
+        )
 
     @classmethod
     def from_dbmodel(cls, dbmodel, backend):
@@ -71,7 +70,8 @@ class SqliteEntityOverride:
     def store(self, *args, **kwargs):
         backend = self._model._backend
         if backend.read_only:
-            raise ReadOnlyError(f'Cannot store entity in read-only backend: {backend}')
+            msg = f'Cannot store entity in read-only backend: {backend}'
+            raise ReadOnlyError(msg)
         return super().store(*args, **kwargs)  # type: ignore
 
 
@@ -183,9 +183,9 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     def _get_projectable_entity(
         alias: AliasedClass,
         column_name: str,
-        attrpath: List[str],
-        cast: Optional[str] = None,
-    ) -> Union[ColumnElement, InstrumentedAttribute]:
+        attrpath: list[str],
+        cast: str | None = None,
+    ) -> ColumnElement | InstrumentedAttribute:
         if not (attrpath or column_name in ('attributes', 'extras')):
             return get_column(column_name, alias)
 
@@ -205,11 +205,12 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         elif cast == 'd':
             raise NotImplementedError('Date casting (d) for JSON key, not implemented for sqlite backend')
         else:
-            raise ValueError(f'Unknown casting key {cast}')
+            msg = f'Unknown casting key {cast}'
+            raise ValueError(msg)
         return entity
 
     def get_filter_expr_from_jsonb(
-        self, operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+        self, operator: str, value, attr_key: list[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.
 
@@ -220,7 +221,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         query_str = f'{alias or ""}.{column_name or ""}.{attr_key} {operator} {value}'
 
-        def _cast_json_type(comparator: JSON.Comparator, value: Any) -> Tuple[ColumnElement, JSON.Comparator]:
+        def _cast_json_type(comparator: JSON.Comparator, value: t.Any) -> tuple[ColumnElement, JSON.Comparator]:
             """Cast the JSON comparator to the target type."""
             if isinstance(value, bool):
                 # SQLite booleans in JSON evaluate to 0/1, see:
@@ -236,7 +237,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
                 return func.json_type(comparator) == 'array', comparator.as_json()
             if isinstance(value, dict):
                 return func.json_type(comparator) == 'object', comparator.as_json()
-            raise TypeError(f'Unsupported type {type(value)} for SQLite query: {query_str}')
+            msg = f'Unsupported type {type(value)} for SQLite query: {query_str}'
+            raise TypeError(msg)
 
         database_entity: JSON.Comparator = column[tuple(attr_key)]
 
@@ -275,7 +277,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
                 return case((type_filter, value_filter <= value), else_=False)
             if value == 'number':
                 return func.json_type(database_entity).in_(['integer', 'real'])
-            raise ValueError(f'value {value!r} for `of_type` is not among valid types: {valid_types}')
+            msg = f'value {value!r} for `of_type` is not among valid types: {valid_types}'
+            raise ValueError(msg)
 
         if operator == 'like':
             type_filter, casted_entity = _cast_json_type(database_entity, value)
@@ -343,13 +346,15 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
                 else_=False,
             )
 
-        raise ValueError(f'SQLite does not support JSON query: {query_str}')
+        msg = f'SQLite does not support JSON query: {query_str}'
+        raise ValueError(msg)
 
-    def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
+    def get_filter_expr_from_column(self, operator: str, value: t.Any, column) -> BinaryExpression:
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
         if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
-            raise TypeError(f'column ({type(column)}) {column} is not a valid column')
+            msg = f'column ({type(column)}) {column} is not a valid column'
+            raise TypeError(msg)
         database_entity = column
         if operator == '==':
             expr = database_entity == value
@@ -370,13 +375,15 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         elif operator == 'in':
             expr = _create_smarter_in_clause(session=self.get_session(), column=column, values=value)
         else:
-            raise ValueError(f'Unknown operator {operator} for filters on columns')
+            msg = f'Unknown operator {operator} for filters on columns'
+            raise ValueError(msg)
         return expr
 
 
 @singledispatch
 def get_backend_entity(dbmodel, backend):
-    raise TypeError(f"No corresponding AiiDA backend class exists for the model class '{dbmodel.__class__.__name__}'")
+    msg = f"No corresponding AiiDA backend class exists for the model class '{dbmodel.__class__.__name__}'"
+    raise TypeError(msg)
 
 
 @get_backend_entity.register(models.DbUser)  # type: ignore[call-overload]

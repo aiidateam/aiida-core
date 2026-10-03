@@ -35,7 +35,7 @@ Usage
 import json
 import shlex
 
-from IPython import get_ipython, version_info  # type: ignore[attr-defined]
+from IPython import get_ipython, version_info
 from IPython.core import magic
 
 
@@ -99,10 +99,11 @@ class AiiDALoaderMagics(magic.Magics):
         command_name = cmdline_arguments[0]
 
         if command_name in ('-p', '--profile'):
-            raise ValueError(
+            msg = (
                 'The `-p/--profile` option is not supported for the `%verdi` magic operator. It will use the currently '
                 f'loaded profile `{profile}`'
             )
+            raise ValueError(msg)
 
         # Construct the subcommand that will be executed, thereby circumventing the profile option of ``verdi`` itself.
         # If the caller specified a subcommand that doesn't exist, the following will raise an exception.
@@ -110,7 +111,8 @@ class AiiDALoaderMagics(magic.Magics):
         command = verdi.get_command(context, command_name)
 
         if command is None:
-            raise RuntimeError(f'command `{command_name}` not found.')
+            msg = f'command `{command_name}` not found.'
+            raise RuntimeError(msg)
 
         return command(
             cmdline_arguments[1:],
@@ -173,7 +175,7 @@ class AiiDALoaderMagics(magic.Magics):
     def _repr_latex_(self):
         """Output in LaTeX format."""
         if self.is_warning:
-            latex = '\\emph{%s}\n' % self.current_state
+            latex = f'\\emph{{{self.current_state}}}\n'
         else:
             latex = f'{self.current_state}\n'
 

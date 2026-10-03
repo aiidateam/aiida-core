@@ -74,9 +74,7 @@ def devel_check_undesired_imports():
 
     undesired_modules = [
         'requests',
-        'plumpy',
         'disk_objectstore',
-        'paramiko',
         'seekpath',
         'CifFile',
         'ase',
@@ -268,7 +266,7 @@ def prepare_localhost():
         computer = Computer(
             label='localhost',
             hostname='localhost',
-            description='Localhost automatically created by `aiida.engine.launch_shell_job`',
+            description='Localhost automatically created by `verdi devel launch-add`',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir=tempfile.gettempdir(),

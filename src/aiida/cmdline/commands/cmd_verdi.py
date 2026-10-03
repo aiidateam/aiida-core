@@ -11,14 +11,16 @@
 import click
 
 from aiida import __version__
-
-from ..groups import VerdiCommandGroup
-from ..params import options, types
+from aiida.cmdline.groups import VerdiCommandGroup
+from aiida.cmdline.params import options, types
 
 
 # Pass the version explicitly to ``version_option`` otherwise editable installs can show the wrong version number
 @click.group(cls=VerdiCommandGroup, context_settings={'help_option_names': ['--help', '-h']})
-@options.PROFILE(type=types.ProfileParamType(load_profile=True), expose_value=False)
+# The top-level `--profile` option is only resolved here. The actual profile loading is performed ahead of normal
+# Click dispatch in `VerdiCommandGroup.parse_args`, such that `verdi --help` and other eager-exit paths behave the
+# same as regular command invocations.
+@options.PROFILE(type=types.ProfileParamType(), expose_value=False)
 @options.VERBOSITY()
 @click.version_option(__version__, package_name='aiida_core', message='AiiDA version %(version)s')
 def verdi():

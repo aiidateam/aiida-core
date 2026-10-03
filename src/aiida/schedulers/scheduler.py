@@ -14,11 +14,10 @@ import abc
 import typing as t
 
 from aiida.common import exceptions, log, warnings
-from aiida.common.datastructures import CodeRunMode
+from aiida.common.datastructures import CodeRunMode, JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.schedulers.datastructures import JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
 
 if t.TYPE_CHECKING:
     from aiida.transports import Transport
@@ -47,7 +46,7 @@ class Scheduler(metaclass=abc.ABCMeta):
     _features: dict[str, bool] = {}
 
     # The class to be used for the job resource.
-    _job_resource_class: t.Type[JobResource] | None = None
+    _job_resource_class: type[JobResource] | None = None
 
     def __init__(self) -> None:
         assert self._job_resource_class is not None and issubclass(self._job_resource_class, JobResource)
@@ -104,7 +103,8 @@ class Scheduler(metaclass=abc.ABCMeta):
         try:
             return self._features[feature_name]
         except KeyError:
-            raise NotImplementedError(f'Feature {feature_name} not implemented for this scheduler')
+            msg = f'Feature {feature_name} not implemented for this scheduler'
+            raise NotImplementedError(msg)
 
     @property
     def logger(self) -> log.AiidaLoggerType:
@@ -115,7 +115,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             raise exceptions.InternalError('No self._logger configured for {}!')
 
     @classproperty
-    def job_resource_class(cls) -> t.Type[JobResource]:  # noqa: N805
+    def job_resource_class(cls) -> type[JobResource]:  # noqa: N805
         assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
         return cls._job_resource_class
 
@@ -211,7 +211,8 @@ class Scheduler(metaclass=abc.ABCMeta):
         elif job_tmpl.shebang is None:
             script_lines.append('#!/bin/bash')
         else:
-            raise ValueError(f'Invalid shebang set: {job_tmpl.shebang}')
+            msg = f'Invalid shebang set: {job_tmpl.shebang}'  # type: ignore[unreachable]
+            raise ValueError(msg)
 
         script_header = self._get_submit_script_header(job_tmpl)
         script_lines.append(script_header)
@@ -352,6 +353,13 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
         raise exceptions.FeatureNotAvailable('Cannot get detailed job info')
 
+    def can_get_detailed_job_info(self) -> bool:
+        try:
+            self._get_detailed_job_info_command('1')
+        except exceptions.FeatureNotAvailable:
+            return False
+        return True
+
     def get_detailed_job_info(self, job_id: str) -> dict[str, str | int]:
         """Return the detailed job info.
 
@@ -402,4 +410,5 @@ class Scheduler(metaclass=abc.ABCMeta):
         :param stderr: string with the output written by the scheduler to stderr.
         :return: None or an instance of :class:`aiida.engine.processes.exit_code.ExitCode`.
         """
-        raise exceptions.FeatureNotAvailable(f'output parsing is not available for `{self.__class__.__name__}`')
+        msg = f'output parsing is not available for `{self.__class__.__name__}`'
+        raise exceptions.FeatureNotAvailable(msg)

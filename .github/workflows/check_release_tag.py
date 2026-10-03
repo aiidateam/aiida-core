@@ -11,7 +11,8 @@ def get_version_from_module(content: str) -> str:
     try:
         module = ast.parse(content)
     except SyntaxError as exc:
-        raise OSError(f'Unable to parse module: {exc}')
+        msg = f'Unable to parse module: {exc}'
+        raise OSError(msg)
     try:
         return next(
             ast.literal_eval(statement.value)

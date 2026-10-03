@@ -16,9 +16,8 @@ from aiida.manage import get_config_option
 
 if t.TYPE_CHECKING:
     from aiida.common.typing import FilePath
+    from aiida.orm.nodes.node import Node
     from aiida.repository import File, Repository
-
-    from .node import Node
 
 __all__ = ('NodeRepository',)
 
@@ -41,9 +40,9 @@ class NodeRepository:
     ``repository_metadata`` does not give accurate information, as long as the node is not yet stored.
     """
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Construct a new instance of the repository interface."""
-        self._node: 'Node' = node
+        self._node: Node = node
         self._repository_instance: Repository | None = None
 
     @property
@@ -116,7 +115,7 @@ class NodeRepository:
         # update the metadata on the node backend
         self._node.backend_entity.repository_metadata = self.serialize()
 
-    def _copy(self, repo: 'NodeRepository') -> None:
+    def _copy(self, repo: NodeRepository) -> None:
         """Copy a repository from another instance.
 
         This is used when storing cached nodes.
@@ -125,7 +124,7 @@ class NodeRepository:
         """
         self._repository = copy.copy(repo._repository)
 
-    def _clone(self, repo: 'NodeRepository') -> None:
+    def _clone(self, repo: NodeRepository) -> None:
         """Clone the repository from another instance.
 
         This is used when cloning a node.
@@ -208,7 +207,8 @@ class NodeRepository:
         :raises OSError: if the file could not be opened.
         """
         if mode not in ['r', 'rb']:
-            raise ValueError(f'the mode {mode} is not supported.')
+            msg = f'the mode {mode} is not supported.'
+            raise ValueError(msg)
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
@@ -268,7 +268,8 @@ class NodeRepository:
         :raises OSError: if the file could not be opened.
         """
         if mode not in ['r', 'rb']:
-            raise ValueError(f'the mode {mode} is not supported.')
+            msg = f'the mode {mode} is not supported.'
+            raise ValueError(msg)
 
         if 'b' not in mode:
             return self._repository.get_object_content(path).decode('utf-8')

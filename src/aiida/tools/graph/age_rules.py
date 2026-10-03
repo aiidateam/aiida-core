@@ -10,16 +10,16 @@
 
 from __future__ import annotations
 
+import typing as t
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Literal, cast
 
 from aiida.common.lang import type_check
 from aiida.tools.graph.age_entities import Basket
 
-if TYPE_CHECKING:
-    from collections.abc import Iterable
+if t.TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
 
     from aiida.orm import QueryBuilder
     from aiida.orm.implementation.querybuilder import QueryDictType
@@ -84,7 +84,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         """
         super().__init__(max_iterations, track_edges=track_edges)
 
-        def get_spec_from_path(query_dict: QueryDictType, idx: int) -> Literal['nodes', 'groups']:
+        def get_spec_from_path(query_dict: QueryDictType, idx: int) -> t.Literal['nodes', 'groups']:
             from aiida.orm.implementation.querybuilder import GROUP_ENTITY_TYPE_PREFIX
 
             entity_type = query_dict['path'][idx]['entity_type']
@@ -93,7 +93,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             # but that is not handled by the code below!
             assert isinstance(entity_type, str)
 
-            result: Literal['nodes', 'groups']
+            result: t.Literal['nodes', 'groups']
             if (
                 entity_type.startswith('node')
                 or entity_type.startswith('data')
@@ -104,7 +104,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
             elif entity_type.startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise RuntimeError(f'not understood entity from ( {entity_type} )')
+                msg = f'not understood entity from ( {entity_type} )'
+                raise RuntimeError(msg)
             return result
 
         query_dict = querybuilder.as_dict()
@@ -113,12 +114,12 @@ class QueryRule(Operation, metaclass=ABCMeta):
         query_projections = query_dict['project']
         for projection_key in query_projections:
             if query_projections[projection_key] != []:
-                raise ValueError(
+                msg = (
                     'The input querybuilder must not have any projections.\n'
-                    'Instead, it has the following:\n - Key: {}\n - Val: {}\n'.format(
-                        projection_key, query_projections[projection_key]
-                    )
+                    f'Instead, it has the following:\n - Key: {projection_key}\n - Val: '
+                    f'{query_projections[projection_key]}\n'
                 )
+                raise ValueError(msg)
         for pathspec in query_dict['path']:
             if not pathspec['entity_type']:
                 pathspec['entity_type'] = 'node.Node.'
@@ -174,8 +175,9 @@ class QueryRule(Operation, metaclass=ABCMeta):
             # Need to get the edge_set: This is given by entity1_entity2. Here, the results needs to
             # be sorted somehow in order to ensure that the same key is used when entity_from and
             # entity_to are exchanged.
-            edge_key = cast(
-                "Literal['nodes_nodes', 'groups_nodes']", '{}_{}'.format(*sorted((self._entity_from, self._entity_to)))
+            edge_key = t.cast(
+                "t.Literal['nodes_nodes', 'groups_nodes']",
+                '{}_{}'.format(*sorted((self._entity_from, self._entity_to))),
             )
             edge_set = operational_set.dict[edge_key]
 
@@ -196,7 +198,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
                     # For now I can only specify edge_identifiers as 'edge', ie. project on the edge
                     # itself, or by the entity_from, entity_to keyword, ie. groups or nodes.
                     # One could think of other keywords...
-                    raise ValueError(f'This tag ({tag}) is not known')
+                    msg = f'This tag ({tag}) is not known'
+                    raise ValueError(msg)
                 self._edge_keys.append((actual_tag, projection))
                 projections[actual_tag].append(projection)
 
@@ -234,8 +237,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
             if self._track_edges:
                 assert self._edge_keys is not None
                 # As in _init_run, I need the key for the edge_set
-                edge_key = cast(
-                    "Literal['nodes_nodes', 'groups_nodes']",
+                edge_key = t.cast(
+                    "t.Literal['nodes_nodes', 'groups_nodes']",
                     '{}_{}'.format(*sorted((self._entity_from, self._entity_to))),
                 )
                 edge_set = operational_set.dict[edge_key]
@@ -362,13 +365,25 @@ class RuleSequence(Operation):
     the first (see RuleSetWalkers and RuleSaveWalkers).
     """
 
-    def __init__(self, rules: Iterable[Operation], max_iterations: int = 1):
+    def __init__(
+        self,
+        rules: Iterable[Operation],
+        max_iterations: int = 1,
+        *,
+        iteration_callback: Callable[[int, int], None] | None = None,
+    ):
+        """:param rules: the rules to apply in order on each iteration.
+        :param max_iterations: maximum number of iterations to perform.
+        :param iteration_callback: called after each iteration with the number of iterations done so
+            far and the number of nodes visited so far, e.g. to report progress of long traversals.
+        """
         for rule in rules:
             if not isinstance(rule, Operation):
                 raise TypeError('rule has to be an instance of Operation-subclass')
         self._rules = rules
         self._accumulator_set: Basket | None = None
         self._visits_set: Basket | None = None
+        self._iteration_callback = iteration_callback
         super().__init__(max_iterations, track_edges=False)
 
     def run(self, operational_set: Basket) -> Basket:
@@ -402,6 +417,9 @@ class RuleSequence(Operation):
             # I set the operational set to all results that have not been visited yet.
             operational_set = new_results - self._accumulator_set
             self._accumulator_set += new_results
+
+            if self._iteration_callback is not None:
+                self._iteration_callback(self._iterations_done, len(self._visits_set.nodes.keyset))
 
         return self._visits_set.copy()
 

@@ -10,9 +10,9 @@
 
 import abc
 import logging
-from typing import Any, Dict
+import typing as t
 
-from .entities import BackendCollection, BackendEntity
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
 
@@ -62,11 +62,11 @@ class BackendComputer(BackendEntity):
         """
 
     @abc.abstractmethod
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, t.Any]:
         """Return the metadata for the computer."""
 
     @abc.abstractmethod
-    def set_metadata(self, metadata: Dict[str, Any]) -> None:
+    def set_metadata(self, metadata: dict[str, t.Any]) -> None:
         """Set the metadata for the computer."""
 
     @abc.abstractmethod

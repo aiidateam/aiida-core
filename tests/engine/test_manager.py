@@ -12,9 +12,9 @@ import asyncio
 import time
 
 import pytest
-from plumpy import get_or_create_event_loop
 
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
+from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.engine.transports import TransportQueue
 from aiida.orm import User
 
@@ -88,7 +88,7 @@ class TestJobsList:
         """
         from unittest.mock import patch
 
-        from aiida.schedulers.datastructures import JobInfo, JobState
+        from aiida.common.datastructures import JobInfo, JobState
 
         jobs_list = self.jobs_list
 

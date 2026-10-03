@@ -10,21 +10,25 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, TypedDict, cast
+import typing as t
+from collections.abc import Callable, Iterable
+
+from typing_extensions import TypedDict
 
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import GraphTraversalRules, LinkType
+from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.utils.links import LinkQuadruple
     from aiida.tools.graph.age_rules import Operation
 
 
-class TraverseGraphOutput(TypedDict, total=False):
+class TraverseGraphOutput(TypedDict, total=False, closed=True):
     nodes: set[int]
     links: set[LinkQuadruple] | None
     rules: dict[str, bool]
@@ -33,8 +37,8 @@ class TraverseGraphOutput(TypedDict, total=False):
 def get_nodes_delete(
     starting_pks: Iterable[int],
     get_links: bool = False,
-    missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['StorageBackend'] = None,
+    missing_callback: Callable[[Iterable[int]], None] | None = None,
+    backend: StorageBackend | None = None,
     **traversal_rules: bool,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
@@ -64,19 +68,17 @@ def get_nodes_delete(
         missing_callback=missing_callback,
     )
 
-    function_output: TraverseGraphOutput = {
-        'nodes': traverse_output['nodes'],
-        'links': traverse_output['links'],
-        'rules': traverse_links['rules_applied'],
-    }
-
-    return function_output
+    return TraverseGraphOutput(
+        nodes=traverse_output['nodes'],
+        links=traverse_output['links'],
+        rules=traverse_links['rules_applied'],
+    )
 
 
 def get_nodes_export(
     starting_pks: Iterable[int],
     get_links: bool = False,
-    backend: Optional['StorageBackend'] = None,
+    backend: StorageBackend | None = None,
     **traversal_rules: bool,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
@@ -106,18 +108,16 @@ def get_nodes_export(
         links_backward=traverse_links['backward'],
     )
 
-    function_output: TraverseGraphOutput = {
-        'nodes': traverse_output['nodes'],
-        'links': traverse_output['links'],
-        'rules': traverse_links['rules_applied'],
-    }
-
-    return function_output
+    return TraverseGraphOutput(
+        nodes=traverse_output['nodes'],
+        links=traverse_output['links'],
+        rules=traverse_links['rules_applied'],
+    )
 
 
 def validate_traversal_rules(
     ruleset: GraphTraversalRules = GraphTraversalRules.DEFAULT, **traversal_rules: bool
-) -> dict[str, Any]:
+) -> dict[str, t.Any]:
     """Validates the keywords with a ruleset template and returns a parsed dictionary
     ready to be used.
 
@@ -136,25 +136,26 @@ def validate_traversal_rules(
     :param call_work_backward: will traverse CALL_WORK links in the backward direction.
     """
     if not isinstance(ruleset, GraphTraversalRules):
-        raise TypeError(
-            f'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {type(ruleset)}'
-        )
+        msg = f'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {type(ruleset)}'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
-    rules_applied: Dict[str, bool] = {}
-    links_forward: List[LinkType] = []
-    links_backward: List[LinkType] = []
+    rules_applied: dict[str, bool] = {}
+    links_forward: list[LinkType] = []
+    links_backward: list[LinkType] = []
 
     for name, rule in ruleset.value.items():
         follow = rule.default
 
         if name in traversal_rules:
             if not rule.toggleable:
-                raise ValueError(f'input rule {name} is not toggleable for ruleset {ruleset}')
+                msg = f'input rule {name} is not toggleable for ruleset {ruleset}'
+                raise ValueError(msg)
 
             follow = traversal_rules.pop(name)
 
             if not isinstance(follow, bool):
-                raise ValueError(f'the value of rule {name} must be boolean, but it is: {follow}')
+                msg = f'the value of rule {name} must be boolean, but it is: {follow}'  # type: ignore[unreachable]
+                raise ValueError(msg)
 
         if follow:
             if rule.direction == 'forward':
@@ -162,12 +163,13 @@ def validate_traversal_rules(
             elif rule.direction == 'backward':
                 links_backward.append(rule.link_type)
             else:
-                raise exceptions.InternalError(f'unrecognized direction `{rule.direction}` for graph traversal rule')
+                msg = f'unrecognized direction `{rule.direction}` for graph traversal rule'
+                raise exceptions.InternalError(msg)
 
         rules_applied[name] = follow
 
     if traversal_rules:
-        error_message = f"unrecognized keywords: {', '.join(traversal_rules.keys())}"
+        error_message = f'unrecognized keywords: {", ".join(traversal_rules.keys())}'
         raise exceptions.ValidationError(error_message)
 
     valid_output = {
@@ -181,12 +183,12 @@ def validate_traversal_rules(
 
 def traverse_graph(
     starting_pks: Iterable[int],
-    max_iterations: Optional[int] = None,
+    max_iterations: int | None = None,
     get_links: bool = False,
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),
-    missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['StorageBackend'] = None,
+    missing_callback: Callable[[Iterable[int]], None] | None = None,
+    backend: StorageBackend | None = None,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
     to a list of initial nodes through any sequence of specified links.
@@ -208,29 +210,33 @@ def traverse_graph(
     from numpy import inf
 
     if max_iterations is None:
-        max_iterations = cast('int', inf)
+        max_iterations = t.cast('int', inf)
     elif not (isinstance(max_iterations, int) or max_iterations is inf):  # type: ignore[unreachable]
         raise TypeError('Max_iterations has to be an integer or infinity')
 
     linktype_list = []
     for linktype in links_forward:
         if not isinstance(linktype, LinkType):
-            raise TypeError(f'links_forward should contain links, but one of them is: {type(linktype)}')
+            msg = f'links_forward should contain links, but one of them is: {type(linktype)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         linktype_list.append(linktype.value)
     filters_forwards = {'type': {'in': linktype_list}}
 
     linktype_list = []
     for linktype in links_backward:
         if not isinstance(linktype, LinkType):
-            raise TypeError(f'links_backward should contain links, but one of them is: {type(linktype)}')
+            msg = f'links_backward should contain links, but one of them is: {type(linktype)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
         linktype_list.append(linktype.value)
     filters_backwards = {'type': {'in': linktype_list}}
 
     if not isinstance(starting_pks, Iterable):
-        raise TypeError(f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}')
+        msg = f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
     if any(not isinstance(pk, int) for pk in starting_pks):
-        raise TypeError(f'one of the starting_pks is not of type int:\n {starting_pks}')
+        msg = f'one of the starting_pks is not of type int:\n {starting_pks}'
+        raise TypeError(msg)
     operational_set = set(starting_pks)
 
     if not operational_set:
@@ -244,9 +250,8 @@ def traverse_graph(
 
     missing_pks = operational_set.difference(existing_pks)
     if missing_pks and missing_callback is None:
-        raise exceptions.NotExistent(
-            f'The following pks are not in the database and must be pruned before this call: {missing_pks}'
-        )
+        msg = f'The following pks are not in the database and must be pruned before this call: {missing_pks}'
+        raise exceptions.NotExistent(msg)
     elif missing_pks and missing_callback is not None:
         missing_callback(missing_pks)
 
@@ -282,14 +287,26 @@ def traverse_graph(
         rule_incoming = UpdateRule(query_incoming, max_iterations=1, track_edges=get_links)
         rules += [rule_incoming]
 
-    rulesequence = RuleSequence(rules, max_iterations=max_iterations)
+    # Without a total the project bar format's percentage sits frozen at 0%, so `bar_format=None`
+    # falls back to tqdm's plain counter. `unit` is set because tqdm's default renders the count as
+    # `251000it`, which beside a description ending in "(iteration 3)" reads as a count of iterations.
+    description = 'Traversing provenance graph'
+    with get_progress_reporter()(total=None, desc=description, unit=' nodes', bar_format=None) as progress:
+        # The starting nodes already count as visited. `update` alone is throttled and the next
+        # tick is the long first query itself, so the description write is what forces the redraw.
+        progress.update(len(basket.nodes.keyset))
+        progress.set_description_str(description, refresh=True)
 
-    results = rulesequence.run(basket)
+        def update_progress(iterations_done: int, nodes_visited: int) -> None:
+            # refresh=False: the throttled `update` below redraws anyway, and refreshing here on
+            # every level would flood non-TTY output such as CI logs.
+            progress.set_description_str(f'{description} (iteration {iterations_done})', refresh=False)
+            progress.update(nodes_visited - progress.n)
 
-    output: TraverseGraphOutput = {}
-    output['nodes'] = results.nodes.keyset
-    output['links'] = None
-    if get_links:
-        output['links'] = results['nodes_nodes'].keyset
+        rulesequence = RuleSequence(rules, max_iterations=max_iterations, iteration_callback=update_progress)
+        results = rulesequence.run(basket)
 
-    return output
+    return TraverseGraphOutput(
+        nodes=results.nodes.keyset,
+        links=results['nodes_nodes'].keyset if get_links else None,
+    )

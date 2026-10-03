@@ -39,7 +39,7 @@ The second option allows managing multiple remote compute resources (including H
 .. note::
 
     The second option requires access through an SSH keypair.
-    If your compute resource demands two-factor authentication, you may need to install AiiDA directly on the compute resource instead.
+    If your compute resource demands two-factor authentication, configure the ``authentication_script`` for the ``core.ssh`` transport to obtain fresh credentials before each connection; see :ref:`how-to:ssh:2fa`.
 
 
 Computer requirements
@@ -136,7 +136,7 @@ The second step configures private connection details using:
 
     $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
-Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
+Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of the chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
 
 After the setup and configuration have been completed, let's check that everything is working properly:
 
@@ -983,7 +983,8 @@ This approach, therefore, is mostly useful when submitting processes to the daem
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
 
-For a guide on running external codes without writing a dedicated plugin, and on monitoring calculations while they are running, see also these blog posts:
+To run an external code without writing a dedicated plugin, see :ref:`how-to:run-shell-commands`.
 
-* `aiida-shell: Make running programs through AiiDA a piece of cake <https://aiida.net/news/posts/2024-11-01-aiida-shell.html>`__
+For monitoring calculations while they are running, see also this blog post:
+
 * `Live monitoring of running simulations with AiiDA <https://aiida.net/news/posts/2026-01-23-monitors.html>`__

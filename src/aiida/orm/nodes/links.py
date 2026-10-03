@@ -3,29 +3,27 @@
 from __future__ import annotations
 
 import typing as t
-from typing import Optional, cast
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
-
-from ..querybuilder import QueryBuilder
-from ..utils.links import LinkManager, LinkTriple
+from aiida.orm.querybuilder import QueryBuilder
+from aiida.orm.utils.links import LinkManager, LinkTriple
 
 if t.TYPE_CHECKING:
-    from .node import Node
+    from aiida.orm.nodes.node import Node
 
 
 class NodeLinks:
     """Interface for links of a node instance."""
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Initialize the links interface."""
         self._node = node
         self.incoming_cache: list[LinkTriple] = []
 
-    def _add_incoming_cache(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
+    def _add_incoming_cache(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Add an incoming link to the cache.
 
         .. note: the proposed link is not validated in this function, so this should not be called directly
@@ -41,11 +39,12 @@ class NodeLinks:
         link_triple = LinkTriple(source, link_type, link_label)
 
         if link_triple in self.incoming_cache:
-            raise exceptions.UniquenessError(f'the link triple {link_triple} is already present in the cache')
+            msg = f'the link triple {link_triple} is already present in the cache'
+            raise exceptions.UniquenessError(msg)
 
         self.incoming_cache.append(link_triple)
 
-    def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
+    def add_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.
 
         :param source: the node from which the link is coming
@@ -62,7 +61,7 @@ class NodeLinks:
         else:
             self._add_incoming_cache(source, link_type, link_label)
 
-    def validate_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
+    def validate_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from a given node to ourself.
 
         This function will first validate the types of the inputs, followed by the node and link types and validate
@@ -77,9 +76,8 @@ class NodeLinks:
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
+        from aiida.orm.nodes.node import Node
         from aiida.orm.utils.links import validate_link
-
-        from .node import Node
 
         validate_link(source, self._node, link_type, link_label, backend=self._node.backend)
 
@@ -93,7 +91,7 @@ class NodeLinks:
             if builder.count() > 0:
                 raise ValueError('the link you are attempting to create would generate a cycle in the graph')
 
-    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
+    def validate_outgoing(self, target: Node, link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from ourself to a given node.
 
         The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
@@ -106,16 +104,16 @@ class NodeLinks:
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        from .node import Node
+        from aiida.orm.nodes.node import Node
 
         type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
         type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
 
     def get_stored_link_triples(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type[Node] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         link_direction: str = 'incoming',
         only_uuid: bool = False,
     ) -> list[LinkTriple]:
@@ -130,13 +128,14 @@ class NodeLinks:
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
-        from .node import Node
+        from aiida.orm.nodes.node import Node
 
         if not isinstance(link_type, (tuple, list)):
-            link_type = cast(t.Sequence[LinkType], (link_type,))
+            link_type = t.cast(t.Sequence[LinkType], (link_type,))
 
         if link_type and not all(isinstance(t, LinkType) for t in link_type):
-            raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
+            msg = f'link_type should be a LinkType or tuple of LinkType: got {link_type}'
+            raise TypeError(msg)
 
         node_class = node_class or Node
         node_filters: dict[str, t.Any] = {'id': {'==': self._node.pk}}
@@ -173,9 +172,9 @@ class NodeLinks:
 
     def get_incoming(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type[Node] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) incoming into this node.
@@ -189,7 +188,7 @@ class NodeLinks:
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
         if not isinstance(link_type, (tuple, list)):
-            link_type = cast(t.Sequence[LinkType], (link_type,))
+            link_type = t.cast(t.Sequence[LinkType], (link_type,))
 
         if self._node.is_stored:
             link_triples = self.get_stored_link_triples(
@@ -208,9 +207,8 @@ class NodeLinks:
                 )
 
             if link_triple in link_triples:
-                raise exceptions.InternalError(
-                    f'Node<{self._node.pk}> has both a stored and cached link triple {link_triple}'
-                )
+                msg = f'Node<{self._node.pk}> has both a stored and cached link triple {link_triple}'
+                raise exceptions.InternalError(msg)
 
             if not link_type or link_triple.link_type in link_type:
                 if link_label_filter is not None:
@@ -223,9 +221,9 @@ class NodeLinks:
 
     def get_outgoing(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type[Node] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) outgoing of this node.

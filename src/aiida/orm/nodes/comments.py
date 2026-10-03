@@ -4,21 +4,21 @@ from __future__ import annotations
 
 import typing as t
 
-from ..comments import Comment
-from ..users import User
+from aiida.orm.comments import Comment
+from aiida.orm.users import User
 
 if t.TYPE_CHECKING:
-    from .node import Node
+    from aiida.orm.nodes.node import Node
 
 
 class NodeComments:
     """Interface for comments of a node instance."""
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Initialize the comments interface."""
         self._node = node
 
-    def add(self, content: str, user: t.Optional[User] = None) -> Comment:
+    def add(self, content: str, user: User | None = None) -> Comment:
         """Add a new comment.
 
         :param content: string with comment

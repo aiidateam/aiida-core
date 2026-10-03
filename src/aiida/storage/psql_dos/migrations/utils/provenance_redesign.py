@@ -13,8 +13,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import column, select, table, text
 
 from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
-
-from .integrity import infer_calculation_entry_point, write_database_integrity_violation
+from aiida.storage.psql_dos.migrations.utils.integrity import (
+    infer_calculation_entry_point,
+    write_database_integrity_violation,
+)
 
 SELECT_CALCULATIONS_WITH_OUTGOING_CALL = """
     SELECT node_in.uuid, node_out.uuid, link.type, link.label
@@ -105,7 +107,7 @@ def migrate_infer_calculation_entry_point(alembic_op):
     )
 
     query_set = connection.execute(select(DbNode.c.type).where(DbNode.c.type.like('calculation.%'))).fetchall()
-    type_strings = set(entry[0] for entry in query_set)
+    type_strings = {entry[0] for entry in query_set}
     mapping_node_type_to_entry_point = infer_calculation_entry_point(type_strings=type_strings)
 
     fallback_cases = []

@@ -8,77 +8,19 @@
 ###########################################################################
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 
-from uuid import uuid4
-
 import pytest
-from pgtest.pgtest import PGTest
 from sqlalchemy import text
 
 from aiida.manage.configuration import Profile
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-
-
-@pytest.fixture(scope='session')
-def empty_pg_cluster():
-    """Create an empty PostgreSQL cluster, for the duration of the session."""
-    pg_cluster = PGTest()
-    yield pg_cluster
-    pg_cluster.close()
+from tests.storage.psql_dos.migrations.fixtures import empty_pg_cluster, psql_dos_migration_profile  # noqa: F401
 
 
 @pytest.fixture
-def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
+def uninitialised_profile(request):
     """Create a profile attached to an empty database and repository folder."""
-    import psycopg
-
-    database_name = f'test_{uuid4().hex}'
-    dsn = empty_pg_cluster.dsn
-    dsn['dbname'] = dsn.pop('database')
-
-    conn = None
-    try:
-        conn = psycopg.connect(**dsn)
-        conn.autocommit = True
-        with conn.cursor() as cursor:
-            cursor.execute(f"CREATE DATABASE {database_name} ENCODING 'utf8';")
-    finally:
-        if conn:
-            conn.close()
-
-    yield Profile(
-        'test_migrate',
-        {
-            'test_profile': True,
-            'storage': {
-                'backend': 'core.psql_dos',
-                'config': {
-                    'database_engine': 'postgresql_psycopg',
-                    'database_port': empty_pg_cluster.port,
-                    'database_hostname': empty_pg_cluster.dsn['host'],
-                    'database_name': database_name,
-                    'database_password': '',
-                    'database_username': empty_pg_cluster.username,
-                    'repository_uri': f'file:///{tmp_path}',
-                },
-            },
-            'process_control': {'backend': 'null', 'config': {}},
-        },
-    )
-
-    conn = None
-    try:
-        conn = psycopg.connect(**dsn)
-        conn.autocommit = True
-        with conn.cursor() as cursor:
-            # note after postgresql 13 you can use 'DROP DATABASE name WITH (FORCE)'
-            # but for now, we first close all possible open connections to the database, before dropping it
-            # see: https://dba.stackexchange.com/questions/11893/force-drop-db-while-others-may-be-connected
-            cursor.execute(f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{database_name}';")
-            cursor.execute(f'DROP DATABASE {database_name};')
-    finally:
-        if conn:
-            conn.close()
+    return request.getfixturevalue('psql_dos_migration_profile')
 
 
 @pytest.fixture()

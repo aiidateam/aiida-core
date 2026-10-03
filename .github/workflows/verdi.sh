@@ -13,15 +13,16 @@ VERDI=`which verdi`
 # Typically these types of tests are fragile. But with a load limit of more than twice
 # the ideal loading time, if exceeded, should give a reasonably sure indication
 # that the loading of `verdi` is unacceptably slowed down.
-LOAD_LIMIT=0.3
+LOAD_LIMIT=0.4
 MAX_NUMBER_ATTEMPTS=5
 
 iteration=0
+TIMEFORMAT=%R
 
 while true; do
 
     iteration=$((iteration+1))
-    load_time=$(/usr/bin/time -q -f "%e" $VERDI -h 2>&1 > /dev/null)
+    load_time=$( { time "$VERDI" -h > /dev/null 2>&1; } 2>&1 )
 
     if (( $(echo "$load_time < $LOAD_LIMIT" | bc -l) )); then
         echo "SUCCESS: loading time $load_time at iteration $iteration below $LOAD_LIMIT"

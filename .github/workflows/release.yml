@@ -3,8 +3,8 @@ name: release
 # Automate publishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
 # the workflow will publish to PyPI. When the 'test-release' label is active on
 # a PR, the workflow will publish to TestPyPI on each update. In both cases it
-# is checked if pre-commit and the tests pass. When a release tag is pushed it
-# will in addition check if the tag and aiida-core version and tag match.
+# is checked if the lock file is upgraded, pre-commit and the tests pass. When a
+# release tag is pushed it will also check that the tag matches the aiida-core version.
 
 on:
   # pull request event we use for test releases
@@ -28,15 +28,40 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
 
     - name: Check tag
       run: python .github/workflows/check_release_tag.py $GITHUB_REF
+
+  check-lock:
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
+
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Read uv version from pre-commit configuration
+      id: uv-version
+      run: |
+        version=$(awk '$2 == "repo:" && $3 == "https://github.com/astral-sh/uv-pre-commit" {getline; print $2}' .pre-commit-config.yaml)
+        test -n "$version"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.2.0
+      with:
+        version: ${{ steps.uv-version.outputs.version }}
+
+    - name: Check uv.lock has the latest compatible dependencies
+      run: |
+        uv lock --upgrade
+        git diff --exit-code -- uv.lock
 
   pre-commit:
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
@@ -45,17 +70,19 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core and pre-commit
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.11'
         extras: pre-commit
+        # Full pre-commit runs in locked CI; run mypy additionally here
+        # with latest compatible dependencies for release validation.
         from-lock: 'false'
 
-    - name: Run pre-commit
-      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+    - name: Run mypy
+      run: pre-commit run mypy --all-files
 
   tests:
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
@@ -64,10 +91,12 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.10'
 
     - name: Run sub-set of test suite
       run: pytest -s -m requires_broker --broker-backend zmq --db-backend=sqlite tests/
@@ -77,7 +106,7 @@ jobs:
 
     name: Publish to PyPI
 
-    needs: [check-release-tag, pre-commit, tests]
+    needs: [check-release-tag, check-lock, pre-commit, tests]
 
     runs-on: ubuntu-24.04
 
@@ -87,13 +116,13 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
     - name: Install flit
-      run: pip install flit~=3.4
+      run: pip install "flit>=4.0.2,<5"
     - name: Build
       run: flit build
     - name: Publish to PyPI
@@ -105,7 +134,7 @@ jobs:
 
     name: Publish to test PyPI
 
-    needs: [pre-commit, tests]
+    needs: [check-lock, pre-commit, tests]
 
     runs-on: ubuntu-24.04
 
@@ -115,13 +144,13 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
     - name: Install flit
-      run: pip install flit~=3.4
+      run: pip install "flit>=4.0.2,<5"
     - name: Build
       run: flit build
     - name: Publish to TestPyPI

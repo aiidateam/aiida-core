@@ -10,18 +10,19 @@
 
 import abc
 import datetime
-from typing import TYPE_CHECKING, List, Optional, Protocol, Sequence, Union
+import typing as t
+from collections.abc import Sequence
 
-from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
-from .nodes import BackendNode
+from aiida.orm.implementation.entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
+from aiida.orm.implementation.nodes import BackendNode
 
-if TYPE_CHECKING:
-    from .users import BackendUser
+if t.TYPE_CHECKING:
+    from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendGroup', 'BackendGroupCollection')
 
 
-class NodeIterator(Protocol):
+class NodeIterator(t.Protocol):
     """Protocol for iterating over nodes in a group"""
 
     def __iter__(self) -> 'NodeIterator':
@@ -30,7 +31,7 @@ class NodeIterator(Protocol):
     def __next__(self) -> BackendNode:
         """Return the next node in the group."""
 
-    def __getitem__(self, value: Union[int, slice]) -> Union[BackendNode, List[BackendNode]]:
+    def __getitem__(self, value: int | slice) -> BackendNode | list[BackendNode]:
         """Index node(s) from the group."""
 
     def __len__(self) -> int:
@@ -61,12 +62,12 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
 
     @property
     @abc.abstractmethod
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         """Return the description of the group as a string."""
 
     @description.setter
     @abc.abstractmethod
-    def description(self, value: Optional[str]):
+    def description(self, value: str | None):
         """Return the description of the group as a string."""
 
     @property
@@ -127,7 +128,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any(not isinstance(node, BackendNode) for node in nodes):
-            raise TypeError(f'nodes have to be of type {BackendNode}')
+            msg = f'nodes have to be of type {BackendNode}'
+            raise TypeError(msg)
 
     def remove_nodes(self, nodes: Sequence[BackendNode]) -> None:
         """Remove a set of nodes from the group.
@@ -143,7 +145,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any(not isinstance(node, BackendNode) for node in nodes):
-            raise TypeError(f'nodes have to be of type {BackendNode}')
+            msg = f'nodes have to be of type {BackendNode}'
+            raise TypeError(msg)
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'

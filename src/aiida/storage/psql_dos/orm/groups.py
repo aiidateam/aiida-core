@@ -14,10 +14,9 @@ from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
-
-from . import entities, users, utils
-from .extras_mixin import ExtrasMixin
-from .nodes import SqlaNode
+from aiida.storage.psql_dos.orm import entities, users, utils
+from aiida.storage.psql_dos.orm.extras_mixin import ExtrasMixin
+from aiida.storage.psql_dos.orm.nodes import SqlaNode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,7 +67,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
             try:
                 self.model.save()
             except Exception:
-                raise UniquenessError(f'a group of the same type with the label {label} already exists') from Exception
+                msg = f'a group of the same type with the label {label} already exists'
+                raise UniquenessError(msg) from Exception
 
     @property
     def description(self):
@@ -181,7 +181,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         def check_node(given_node):
             """Check if given node is of correct type and stored"""
             if not isinstance(given_node, self.NODE_CLASS):
-                raise TypeError(f'invalid type {type(given_node)}, has to be {self.NODE_CLASS}')
+                msg = f'invalid type {type(given_node)}, has to be {self.NODE_CLASS}'
+                raise TypeError(msg)
 
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -215,7 +216,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
 
         def check_node(node):
             if not isinstance(node, self.NODE_CLASS):
-                raise TypeError(f'invalid type {type(node)}, has to be {self.NODE_CLASS}')
+                msg = f'invalid type {type(node)}, has to be {self.NODE_CLASS}'
+                raise TypeError(msg)
 
             if node.id is None:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')

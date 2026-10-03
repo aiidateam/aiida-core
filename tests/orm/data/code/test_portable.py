@@ -14,7 +14,6 @@ import pathlib
 import pytest
 
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.nodes.data.code.portable import PortableCode
 
 
@@ -61,7 +60,7 @@ def test_validate(tmp_path):
 
     code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
 
-    with pytest.raises(ValidationError, match='The `filepath_executable` is not set.'):
+    with pytest.raises(ValidationError, match='The `filepath_executable` is not set'):
         code.store()
 
     code.filepath_executable = filepath_executable
@@ -135,13 +134,6 @@ def test_full_label(tmp_path):
     label = 'some-label'
     code = PortableCode(label=label, filepath_executable='bash', filepath_files=tmp_path)
     assert code.full_label == label
-
-
-def test_get_execname(tmp_path):
-    """Test the deprecated :meth:`aiida.orm.nodes.data.code.portable.PortableCode.get_execname` method."""
-    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=tmp_path)
-    with pytest.warns(AiidaDeprecationWarning):
-        assert code.get_execname() == 'bash'
 
 
 def test_portablecode_extra_files(tmp_path, chdir_tmp_path):

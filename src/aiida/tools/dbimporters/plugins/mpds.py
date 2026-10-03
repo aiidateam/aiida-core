@@ -148,7 +148,8 @@ class MpdsDbImporter(DbImporter):
 
             search_results = MpdsSearchResults(results, return_class=MpdsCifEntry)
         else:
-            raise ValueError(f'Unsupported collection: {collection}')
+            msg = f'Unsupported collection: {collection}'
+            raise ValueError(msg)
 
         return search_results
 
@@ -218,14 +219,16 @@ class MpdsDbImporter(DbImporter):
         :raises ValueError: HTTP response 200 contained non zero error message
         """
         if not response.ok:
-            raise RuntimeError(f'HTTP[{response.status_code}] request failed: {response.text}')
+            msg = f'HTTP[{response.status_code}] request failed: {response.text}'
+            raise RuntimeError(msg)
 
         if fmt == ApiFormat.JSON:
             content = response.json()
             error = content.get('error', None)
 
             if error is not None:
-                raise ValueError(f'Got error response: {error}')
+                msg = f'Got error response: {error}'
+                raise ValueError(msg)
 
             return content
 

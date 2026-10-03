@@ -10,9 +10,8 @@
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
-
-from ...data import Data
 
 __all__ = ('RemoteStashData',)
 

@@ -14,10 +14,8 @@ import typing as t
 
 import pytest
 
-from aiida.engine import (
-    graph,
-    task,
-)
+from aiida.engine import graph_execution as graph
+from aiida.engine import task_execution as task
 from aiida.engine.processes.graphs.spec import (
     TASK_KINDS,
     BranchControl,

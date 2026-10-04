@@ -25,14 +25,14 @@ classifiers = [
   'Programming Language :: Python :: 3.14',
   'Topic :: Scientific/Engineering'
 ]
-# NOTE: When updating versions of some packages, such as requests or paramiko,
+# NOTE: When updating versions of some packages, such as requests,
 # you need to also update the versions of corresponding stub packages
 # in the 'pre-commit' group e.g. 'types-requests'
 dependencies = [
   'aio-pika~=9.5.0',
   'alembic~=1.8',
   'archive-path~=0.4.2',
-  "asyncssh~=2.22.0",
+  "asyncssh~=2.22",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
@@ -48,7 +48,6 @@ dependencies = [
   'jinja2~=3.0',
   'numpy>=1.21,<3',
   'pamqp~=3.2',
-  'paramiko~=3.0',
   'pytray>=0.3.4,<0.4.0',
   'pgsu~=0.3.0',
   'psutil~=7.0',
@@ -94,7 +93,6 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.cmdline.computer.configure']
 'core.local' = 'aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD'
-'core.ssh' = 'aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD'
 
 [project.entry-points.'aiida.cmdline.data']
 'core.array' = 'aiida.cmdline.commands.cmd_data.cmd_array:array'
@@ -119,8 +117,7 @@ requires-python = '>=3.10'
 'core.base' = 'aiida.orm.nodes.data:BaseType'
 'core.bool' = 'aiida.orm.nodes.data.bool:Bool'
 'core.cif' = 'aiida.orm.nodes.data.cif:CifData'
-'core.code' = 'aiida.orm.nodes.data.code.legacy:Code'
-'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
+'core.code' = 'aiida.orm.nodes.data.code:Code'
 'core.code.containerized' = 'aiida.orm.nodes.data.code.containerized:ContainerizedCode'
 'core.code.installed' = 'aiida.orm.nodes.data.code.installed:InstalledCode'
 'core.code.installed.shell' = 'aiida.orm.nodes.data.code.shell:ShellCode'
@@ -195,8 +192,8 @@ requires-python = '>=3.10'
 [project.entry-points.'aiida.tools.calculations']
 
 [project.entry-points.'aiida.tools.data.orbitals']
-'core.orbital' = 'aiida.tools.data.orbital.orbital:Orbital'
-'core.realhydrogen' = 'aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital'
+'core.orbital' = 'aiida.common.datastructures.orbital:Orbital'
+'core.realhydrogen' = 'aiida.common.datastructures.orbital:RealhydrogenOrbital'
 
 [project.entry-points.'aiida.tools.dbexporters']
 
@@ -215,8 +212,7 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.transports']
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
-'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
-'core.ssh_async' = 'aiida.transports.plugins.ssh_async:AsyncSshTransport'
+'core.ssh' = 'aiida.transports.plugins.ssh:AsyncSshTransport'
 
 [project.entry-points.'aiida.workflows']
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
@@ -224,7 +220,7 @@ requires-python = '>=3.10'
 
 [project.optional-dependencies]
 atomic_tools = [
-  'PyCifRW~=4.4',
+  'PyCifRW~=5.0',
   'ase~=3.21',
   'matplotlib~=3.3,>=3.3.4',
   'pymatgen>=2024.3.1',
@@ -264,7 +260,6 @@ pre-commit = [
   'types-click-spinner~=0.1.8',
   'types-docutils~=0.20',
   'types-PyYAML~=6.0',
-  'types-paramiko~=3.0',
   'types-psutil~=5.6',
   'types-pytz~=2021.1',
   'types-tabulate>=0.9.0,<0.10.0',
@@ -519,6 +514,7 @@ ignore = [
   'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]
 select = [
+  'C4',  # flake8-comprehensions
   'E',  # pydocstyle
   'W',  # pydocstyle
   'F',  # pyflakes
@@ -548,92 +544,6 @@ ban-relative-imports = "all"
 # Needed due to https://github.com/astral-sh/ruff/issues/9298
 [tool.ruff.lint.pyflakes]
 extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.Collection"]
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-minversion = 3.18.0
-envlist = py39
-
-[testenv]
-usedevelop=True
-deps =
-    py310: -rrequirements/requirements-py-3.10.txt
-    py311: -rrequirements/requirements-py-3.11.txt
-    py312: -rrequirements/requirements-py-3.12.txt
-
-[testenv:py{310,311,312}-presto]
-passenv =
-    PYTHONASYNCIODEBUG
-setenv =
-    AIIDA_WARN_v3 =
-commands = pytest -m 'presto' {posargs}
-
-[testenv:py{310,311,312}]
-passenv =
-    PYTHONASYNCIODEBUG
-setenv =
-    AIIDA_WARN_v3 =
-commands = pytest {posargs}
-
-[testenv:py{310,311,312}-verdi]
-passenv =
-    AIIDA_TEST_BACKEND
-setenv =
-    AIIDA_PATH = {toxinidir}/.tox/.aiida
-commands = verdi {posargs}
-
-[testenv:py{310,311,312}-docs-{clean,update}]
-description =
-    clean: Build the documentation (remove any existing build)
-    update: Build the documentation (modify any existing build)
-passenv = RUN_APIDOC
-setenv =
-    update: RUN_APIDOC = False
-changedir = docs
-allowlist_externals = make
-commands =
-    clean: make clean
-    make debug
-
-[testenv:py{310,311,312}-docs-live]
-# tip: remove apidocs before using this feature (`cd docs; make clean`)
-description = Build the documentation and launch browser (with live updates)
-deps =
-    py310: -rrequirements/requirements-py-3.10.txt
-    py311: -rrequirements/requirements-py-3.11.txt
-    py312: -rrequirements/requirements-py-3.12.txt
-    sphinx-autobuild
-setenv =
-    RUN_APIDOC = False
-commands =
-    sphinx-autobuild \
-        --re-ignore build/.* \
-        --re-ignore .*/.aiida-tutorial/.* \
-        --re-ignore .*/tutorials/(results.npz|input.yaml|input_bad.yaml)$ \
-        --port 0 --open-browser \
-        -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
-
-[testenv:py{39,310,311,312}-pre-commit]
-description = Run the pre-commit checks
-extras = pre-commit
-commands = pre-commit run {posargs}
-
-[testenv:molecule]
-description = Run the molecule containerised tests
-skip_install = true
-parallel_show_output = true
-deps =
-    ansible~=2.10.0
-    docker~=4.2
-    molecule[docker]~=3.1.0
-setenv =
-    MOLECULE_GLOB = .molecule/*/config_local.yml
-passenv =
-    AIIDA_TEST_BACKEND
-    AIIDA_TEST_WORKERS
-commands = molecule {posargs:test}
-"""
 
 [tool.uv]
 # We specify a minimum uv version so that the format of uv.lock file

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""orm.Code tests for the export and import routines"""
+"""Code tests for the export and import routines"""
 
 import uuid
 

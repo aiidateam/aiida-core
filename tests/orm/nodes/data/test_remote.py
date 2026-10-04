@@ -36,7 +36,7 @@ def remote_data_factory(tmp_path, aiida_localhost, aiida_computer_ssh):
         elif mode == 'ssh':
             # Let ``aiida_computer_ssh`` auto-generate a UUID label, so concurrent xdist workers
             # (or repeated calls within the same session) cannot collide on ``Computer.label``.
-            computer = aiida_computer_ssh()
+            computer = aiida_computer_ssh(backend='asyncssh')
         else:
             msg = f'Unknown mode: {mode}'
             raise ValueError(msg)

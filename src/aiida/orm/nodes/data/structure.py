@@ -46,7 +46,7 @@ def _get_valid_cell(inputcell):
     :raise ValueError: whenever the format is not valid.
     """
     try:
-        the_cell = list(list(float(c) for c in i) for i in inputcell)
+        the_cell = [[float(c) for c in i] for i in inputcell]
         if len(the_cell) != 3:
             raise ValueError
         if any(len(i) != 3 for i in the_cell):
@@ -975,7 +975,7 @@ class StructureData(Data):
                 msg = f'A site has kind {site.kind_name}, but no specie with that name exists'
                 raise ValidationError(msg)
 
-        kinds_without_sites = set(k.name for k in kinds) - set(s.kind_name for s in sites)
+        kinds_without_sites = {k.name for k in kinds} - {s.kind_name for s in sites}
         if kinds_without_sites:
             msg = f'The following kinds are defined, but there are no sites with that kind: {list(kinds_without_sites)}'
             raise ValidationError(msg)

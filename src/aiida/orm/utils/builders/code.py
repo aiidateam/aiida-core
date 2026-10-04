@@ -52,7 +52,7 @@ class CodeBuilder:
         self.validate()
 
         # Will be used at the end to check if all keys are known (those that are not None)
-        passed_keys = set(k for k in self._code_spec.keys() if self._code_spec[k] is not None)
+        passed_keys = {k for k in self._code_spec.keys() if self._code_spec[k] is not None}
         used = set()
 
         if self._get_and_count('code_type', used) == self.CodeType.STORE_AND_UPLOAD:

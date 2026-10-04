@@ -473,7 +473,7 @@ class RenameRmqAndLogging(SingleMigration):
 
 
 class AiidaV3Migration(SingleMigration):
-    """Merge the plumpy and kiwipy log-level options into the aiida-core log level."""
+    """Merge the plumpy and kiwipy log-level options into the aiida-core log level and drop the paramiko one."""
 
     down_revision = 10
     down_compatible = 10
@@ -484,12 +484,18 @@ class AiidaV3Migration(SingleMigration):
         'logging.plumpy_loglevel',
         'logging.kiwipy_loglevel',
     )
+    # The `core.ssh` transport plugin no longer uses paramiko, so the logger it configured is gone. The
+    # level is dropped instead of merged: it configured a third-party logger, not an AiiDA one.
+    dropped_options = ('logging.paramiko_loglevel',)
 
     @classmethod
     def _upgrade_options(cls, options: dict[str, t.Any]) -> None:
         for removed_option in cls.removed_options:
             if (value := options.pop(removed_option, None)) is not None:
                 options.setdefault('logging.aiida_core_loglevel', value)
+
+        for dropped_option in cls.dropped_options:
+            options.pop(dropped_option, None)
 
     @classmethod
     def _downgrade_options(cls, options: dict[str, t.Any]) -> None:

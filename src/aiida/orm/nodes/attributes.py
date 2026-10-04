@@ -17,7 +17,7 @@ if t.TYPE_CHECKING:
 
 __all__ = ('NodeAttributes',)
 
-_NO_DEFAULT: t.Any = tuple()
+_NO_DEFAULT: t.Any = ()
 
 
 class NodeAttributes:

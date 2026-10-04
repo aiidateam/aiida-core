@@ -36,15 +36,15 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
         )
         session.add(user)
         session.commit()
-        kwargs = dict(
-            user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
-            label='test',
-            description='',
-            nodeversion=1,
-            public=True,
-        )
+        kwargs = {
+            'user_id': user.id,
+            'ctime': timezone.now(),
+            'mtime': timezone.now(),
+            'label': 'test',
+            'description': '',
+            'nodeversion': 1,
+            'public': True,
+        }
         node_calc = node_model(uuid=get_new_uuid(), type='node.process.calculation.calcjob.CalcJobNode.', **kwargs)
         node_data = node_model(uuid=get_new_uuid(), type='node.data.int.Int.', **kwargs)
         node_paramdata = node_model(uuid=get_new_uuid(), type='node.data.parameter.ParameterData.', **kwargs)

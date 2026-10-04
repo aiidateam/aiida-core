@@ -19,11 +19,8 @@ __all__ = (
     'AsyncSshTransport',
     'AsyncTransport',
     'BlockingTransport',
-    'SshTransport',
     'Transport',
     'TransportPath',
-    'convert_to_bool',
-    'parse_sshconfig',
 )
 
 # fmt: on

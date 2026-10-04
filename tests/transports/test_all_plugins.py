@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 import signal
+import stat
 import sys
 import tempfile
 import time
@@ -62,10 +63,9 @@ def tmp_path_local(tmp_path_factory):
     scope='function',
     params=[
         ('core.local', None),
-        ('core.ssh', None),
-        ('core.ssh_async', 'asyncssh'),
+        ('core.ssh', 'asyncssh'),
         pytest.param(
-            ('core.ssh_async', 'openssh'),
+            ('core.ssh', 'openssh'),
             marks=pytest.mark.skipif(
                 sys.platform == 'darwin',
                 reason='openssh transport uses GNU stat -c, unavailable on macOS localhost',
@@ -78,8 +78,6 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     plugin = TransportFactory(request.param[0])
 
     if request.param[0] == 'core.ssh':
-        kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param[0] == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
             'backend': request.param[1],
@@ -203,7 +201,7 @@ def test_listdir_withattributes(custom_transport, tmp_path_remote):
                 # Just put an empty file there at the right file name
                 transport.putfile(tmpf.name, tmp_path_remote / fname)
 
-        comparison_list = {k: True for k in list_of_dir}
+        comparison_list = dict.fromkeys(list_of_dir, True)
         for k in list_of_files:
             comparison_list[k] = False
 
@@ -286,19 +284,19 @@ def test_dir_reading_permissions(custom_transport, tmp_path_remote):
     with custom_transport as transport:
         directory = tmp_path_remote / 'test'
 
-        # create directory with non default permissions
-        transport.mkdir(directory)
+        try:
+            # create directory with non default permissions
+            transport.mkdir(directory)
 
-        # change permissions to low ones
-        transport.chmod(directory, 0)
+            # change permissions to low ones
+            transport.chmod(directory, 0)
 
-        # test if the security bits have changed
-        assert transport.get_mode(directory) == 0
-
-        # TODO : the test leaves a directory even if it is successful
-        #        The bug is in paramiko. After lowering the permissions,
-        #        I cannot restore them to higher values
-        # transport.rmdir(directory)
+            # test if the security bits have changed
+            assert transport.get_mode(directory) == 0
+        finally:
+            # Restore access locally so pytest can remove its temporary directory.
+            if directory.exists():
+                directory.chmod(stat.S_IRWXU)
 
 
 def test_isfile_isdir(custom_transport, tmp_path_remote):
@@ -557,7 +555,7 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
 
         # Check st_mtime_ns to sure it is overwritten
         # Note: this test will fail if getfile() would preserve the remote timestamp,
-        # this is supported by core.ssh_async, but the default value is False
+        # this is supported by core.ssh, but the default value is False
         assert t2 > t1
 
 
@@ -701,14 +699,14 @@ def test_copy(custom_transport, tmp_path_remote):
 
         # first test the copy. Copy of two files matching patterns, into a folder
         transport.copy(base_dir / '*.txt', workdir)
-        assert set(['a.txt', 'c.txt', 'origin']) == set(transport.listdir(workdir))
+        assert {'a.txt', 'c.txt', 'origin'} == set(transport.listdir(workdir))
         transport.remove(workdir / 'a.txt')
         transport.remove(workdir / 'c.txt')
 
         # second test copy. Copy of two folders
         transport.copy(base_dir, workdir / 'prova')
-        assert set(['prova', 'origin']) == set(transport.listdir(workdir))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(workdir / 'prova'))
+        assert {'prova', 'origin'} == set(transport.listdir(workdir))
+        assert {'a.txt', 'b.tmp', 'c.txt'} == set(transport.listdir(workdir / 'prova'))
         transport.rmtree(workdir / 'prova')
 
         # third test copy. Can copy one file into a new file
@@ -724,7 +722,7 @@ def test_copy(custom_transport, tmp_path_remote):
         # fifth test, copying one file into a folder
         transport.mkdir(workdir / 'prova')
         transport.copy((base_dir / 'a.txt'), (workdir / 'prova'))
-        assert set(transport.listdir(workdir / 'prova')) == set(['a.txt'])
+        assert set(transport.listdir(workdir / 'prova')) == {'a.txt'}
         transport.rmtree(workdir / 'prova')
 
         # sixth test, copying one file into a file
@@ -736,8 +734,8 @@ def test_copy(custom_transport, tmp_path_remote):
         # tests performed locally on a Mac may result in a failure.
         transport.mkdir(workdir / 'prova')
         transport.copy((base_dir), (workdir / 'prova'))
-        assert set(['origin']) == set(transport.listdir(workdir / 'prova'))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(workdir / 'prova' / 'origin'))
+        assert {'origin'} == set(transport.listdir(workdir / 'prova'))
+        assert {'a.txt', 'b.tmp', 'c.txt'} == set(transport.listdir(workdir / 'prova' / 'origin'))
 
 
 def test_put(custom_transport, tmp_path_remote, tmp_path_local):
@@ -769,14 +767,14 @@ def test_put(custom_transport, tmp_path_remote, tmp_path_local):
 
         # first test the put. Copy of two files matching patterns, into a folder
         transport.put((local_base_dir / '*.txt'), (remote_workdir))
-        assert set(['a.txt', 'c.txt']) == set(transport.listdir(remote_workdir))
+        assert {'a.txt', 'c.txt'} == set(transport.listdir(remote_workdir))
         transport.remove(remote_workdir / 'a.txt')
         transport.remove(remote_workdir / 'c.txt')
 
         # second test put. Put of two folders
         transport.put((local_base_dir), (remote_workdir / 'prova'))
-        assert set(['prova']) == set(transport.listdir(remote_workdir))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(remote_workdir / 'prova'))
+        assert {'prova'} == set(transport.listdir(remote_workdir))
+        assert {'a.txt', 'b.tmp', 'c.txt'} == set(transport.listdir(remote_workdir / 'prova'))
         transport.rmtree(remote_workdir / 'prova')
 
         # third test put. Can copy one file into a new file
@@ -799,7 +797,7 @@ def test_put(custom_transport, tmp_path_remote, tmp_path_local):
         # fifth test, copying one file into a folder
         transport.mkdir(remote_workdir / 'prova')
         transport.put((local_base_dir / 'a.txt'), (remote_workdir / 'prova'))
-        assert set(transport.listdir(remote_workdir / 'prova')) == set(['a.txt'])
+        assert set(transport.listdir(remote_workdir / 'prova')) == {'a.txt'}
         transport.rmtree(remote_workdir / 'prova')
 
         # sixth test, copying one file into a file
@@ -812,8 +810,8 @@ def test_put(custom_transport, tmp_path_remote, tmp_path_local):
         # tests performed locally on a Mac may result in a failure.
         transport.mkdir(remote_workdir / 'prova')
         transport.put((local_base_dir), (remote_workdir / 'prova'))
-        assert set(['origin']) == set(transport.listdir(remote_workdir / 'prova'))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(remote_workdir / 'prova' / 'origin'))
+        assert {'origin'} == set(transport.listdir(remote_workdir / 'prova'))
+        assert {'a.txt', 'b.tmp', 'c.txt'} == set(transport.listdir(remote_workdir / 'prova' / 'origin'))
         transport.rmtree(remote_workdir / 'prova')
         # exit
         transport.rmtree(remote_workdir)
@@ -847,27 +845,27 @@ def test_get(custom_transport, tmp_path_remote, tmp_path_local):
 
         # first test get. Get two files matching patterns, from mocked remote folder into a local folder
         transport.get((remote_base_dir / '*.txt'), (local_workdir))
-        assert set(['a.txt', 'c.txt']) == set([p.name for p in (local_workdir).iterdir()])
+        assert {'a.txt', 'c.txt'} == {p.name for p in (local_workdir).iterdir()}
         (local_workdir / 'a.txt').unlink()
         (local_workdir / 'c.txt').unlink()
 
         # second. Copy of folder into a non existing folder
         transport.get((remote_base_dir), (local_workdir / 'prova'))
-        assert set(['prova']) == set([p.name for p in local_workdir.iterdir()])
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set([p.name for p in (local_workdir / 'prova').iterdir()])
+        assert {'prova'} == {p.name for p in local_workdir.iterdir()}
+        assert {'a.txt', 'b.tmp', 'c.txt'} == {p.name for p in (local_workdir / 'prova').iterdir()}
         shutil.rmtree(local_workdir / 'prova')
 
         # third. copy of folder into an existing folder
         (local_workdir / 'prova').mkdir()
         transport.get((remote_base_dir), (local_workdir / 'prova'))
-        assert set(['prova']) == set([p.name for p in local_workdir.iterdir()])
-        assert set(['origin']) == set([p.name for p in (local_workdir / 'prova').iterdir()])
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set([p.name for p in (local_workdir / 'prova' / 'origin').iterdir()])
+        assert {'prova'} == {p.name for p in local_workdir.iterdir()}
+        assert {'origin'} == {p.name for p in (local_workdir / 'prova').iterdir()}
+        assert {'a.txt', 'b.tmp', 'c.txt'} == {p.name for p in (local_workdir / 'prova' / 'origin').iterdir()}
         shutil.rmtree(local_workdir / 'prova')
 
         # test get one file into a new file prova
         transport.get((remote_base_dir / '*.tmp'), (local_workdir / 'prova'))
-        assert set(['prova']) == set([p.name for p in local_workdir.iterdir()])
+        assert {'prova'} == {p.name for p in local_workdir.iterdir()}
         assert (local_workdir / 'prova').is_file()
         (local_workdir / 'prova').unlink()
 
@@ -885,7 +883,7 @@ def test_get(custom_transport, tmp_path_remote, tmp_path_local):
         # fifth test, copying one file into a folder
         (local_workdir / 'prova').mkdir()
         transport.get((remote_base_dir / 'a.txt'), (local_workdir / 'prova'))
-        assert set(['a.txt']) == set([p.name for p in (local_workdir / 'prova').iterdir()])
+        assert {'a.txt'} == {p.name for p in (local_workdir / 'prova').iterdir()}
         shutil.rmtree(local_workdir / 'prova')
 
         # sixth test, copying one file into a file

@@ -57,6 +57,9 @@ class Postgres(PGSU):
 
     def __init__(self, dbinfo=None, **kwargs):
         """See documentation of :py:meth:`pgsu.PGSU.__init__`."""
+        if dbinfo is not None and 'database' in dbinfo:
+            dbinfo = dbinfo.copy()
+            dbinfo['dbname'] = dbinfo.pop('database')
         super().__init__(dsn=dbinfo, **kwargs)
 
     @classmethod
@@ -73,10 +76,10 @@ class Postgres(PGSU):
         """
         dbinfo = DEFAULT_DBINFO.copy()
         dbinfo.update(
-            dict(
-                host=profile.storage_config['database_hostname'] or DEFAULT_DBINFO['host'],
-                port=profile.storage_config['database_port'] or DEFAULT_DBINFO['port'],
-            )
+            {
+                'host': profile.storage_config['database_hostname'] or DEFAULT_DBINFO['host'],
+                'port': profile.storage_config['database_port'] or DEFAULT_DBINFO['port'],
+            }
         )
 
         return Postgres(dbinfo=dbinfo, **kwargs)

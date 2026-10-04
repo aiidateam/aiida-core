@@ -252,8 +252,8 @@ class TestDbLogMigrationRecordCleaning:
         assert self.to_check['WorkflowNode'][0] == self.to_check['WorkflowNode'][1]
         assert self.to_check['WorkflowNode'][2] == 1
 
-        assert sorted(list(json.loads(self.to_check['NoNode'][0])), key=lambda k: k['id']) == sorted(
-            list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id']
+        assert sorted(json.loads(self.to_check['NoNode'][0]), key=lambda k: k['id']) == sorted(
+            json.loads(self.to_check['NoNode'][1]), key=lambda k: k['id']
         )
         assert self.to_check['NoNode'][2] == 2
 

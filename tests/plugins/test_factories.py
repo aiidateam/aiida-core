@@ -10,6 +10,7 @@
 
 import pytest
 
+from aiida.common.datastructures import Orbital
 from aiida.common.exceptions import InvalidEntryPointTypeError
 from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, workfunction
 from aiida.orm import CalcFunctionNode, Data, Node, WorkFunctionNode
@@ -17,7 +18,6 @@ from aiida.orm.implementation.storage_backend import StorageBackend
 from aiida.parsers import Parser
 from aiida.plugins import entry_point, factories
 from aiida.schedulers import Scheduler
-from aiida.tools.data.orbital import Orbital
 from aiida.tools.dbimporters import DbImporter
 from aiida.transports import AsyncTransport, BlockingTransport, Transport
 
@@ -89,6 +89,12 @@ def mock_load_entry_point(monkeypatch):
     """Monkeypatch the :meth:`aiida.plugins.entry_point.load_entry_point` method."""
     monkeypatch.setattr(entry_point, 'load_entry_point', custom_load_entry_point)
     yield
+
+
+@pytest.mark.parametrize('load', [True, False])
+def test_broker_factory_legacy_rabbitmq(load):
+    """The legacy profile backend name resolves to the RabbitMQ entry point for both factory modes."""
+    assert factories.BrokerFactory('rabbitmq', load=load) == factories.BrokerFactory('core.rabbitmq', load=load)
 
 
 class TestFactories:

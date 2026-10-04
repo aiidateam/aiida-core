@@ -50,9 +50,7 @@ def test_help(run_cli_command):
 def test_code_create_help(run_cli_command):
     """Test the help message of the ``verdi code create`` group.
 
-    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: the ``core.code.abstract`` entry
-    point resolves to the abstract base class ``AbstractCode`` which cannot be created through the CLI. Rendering
-    the help of the dynamic group used to crash with an ``UnsupportedSchemaError`` while building its options.
+    The abstract `Code` base is registered for querying but cannot be created through the CLI.
     """
     result = run_cli_command(cmd_code.code_create, ['--help'])
     assert 'core.code.containerized' in result.output
@@ -545,12 +543,6 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     """Test setting up a code from a config file from URL."""
     from urllib import request
 
-    monkeypatch.setattr(
-        request,
-        'urlopen',
-        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label),
-    )
-
     config_file_template = textwrap.dedent(
         """
         label: {label}
@@ -561,8 +553,11 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     )
 
     label = 'noninteractive_config_url'
+    response = io.BytesIO(config_file_template.format(label=label, computer=aiida_localhost.label).encode())
+    monkeypatch.setattr(request, 'urlopen', lambda *args, **kwargs: response)
     fake_url = 'https://my.url.com'
     run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url], use_subprocess=False)
+    assert response.closed
     assert isinstance(load_code(label), InstalledCode)
 
 

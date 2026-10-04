@@ -142,12 +142,12 @@ def get_explicit_kpoints_path(
 
     def _is_path_1(path):
         try:
-            are_two = all([len(i) == 2 for i in path])
+            are_two = all(len(i) == 2 for i in path)
             if not are_two:
                 return False
 
             for i in path:
-                are_str = all([isinstance(b, str) for b in i])
+                are_str = all(isinstance(b, str) for b in i)
                 if not are_str:
                     return False
         except IndexError:
@@ -156,17 +156,17 @@ def get_explicit_kpoints_path(
 
     def _is_path_2(path):
         try:
-            are_three = all([len(i) == 3 for i in path])
+            are_three = all(len(i) == 3 for i in path)
             if not are_three:
                 return False
 
-            are_good = all([all([isinstance(b[0], str), isinstance(b[1], str), isinstance(b[2], int)]) for b in path])
+            are_good = all(all([isinstance(b[0], str), isinstance(b[1], str), isinstance(b[2], int)]) for b in path)
             if not are_good:
                 return False
 
             # check that at least two points per segment (beginning and end)
             points_num = [int(i[2]) for i in path]
-            if any([i < 2 for i in points_num]):
+            if any(i < 2 for i in points_num):
                 raise ValueError('Must set at least two points per path segment')
 
         except IndexError:
@@ -177,7 +177,7 @@ def get_explicit_kpoints_path(
         # [('G',(0,0,0),'M',(1,1,1)), (...), ...]
         try:
             _ = len(path)
-            are_four = all([len(i) == 4 for i in path])
+            are_four = all(len(i) == 4 for i in path)
             if not are_four:
                 return False
             have_labels = all(all([isinstance(i[0], str), isinstance(i[2], str)]) for i in path)
@@ -196,18 +196,18 @@ def get_explicit_kpoints_path(
         # [('G',(0,0,0),'M',(1,1,1),30), (...), ...]
         try:
             _ = len(path)
-            are_five = all([len(i) == 5 for i in path])
+            are_five = all(len(i) == 5 for i in path)
             if not are_five:
                 return False
             have_labels = all(all([isinstance(i[0], str), isinstance(i[2], str)]) for i in path)
             if not have_labels:
                 return False
-            have_points_num = all([isinstance(i[4], int) for i in path])
+            have_points_num = all(isinstance(i[4], int) for i in path)
             if not have_points_num:
                 return False
             # check that at least two points per segment (beginning and end)
             points_num = [int(i[4]) for i in path]
-            if any([i < 2 for i in points_num]):
+            if any(i < 2 for i in points_num):
                 raise ValueError('Must set at least two points per path segment')
             for i in path:
                 coord1 = [float(j) for j in i[1]]
@@ -337,7 +337,7 @@ def get_explicit_kpoints_path(
     explicit_kpoints = [tuple(point_coordinates[path[0][0]])]
     labels = [(0, path[0][0])]
 
-    assert all([_.is_integer() for _ in num_points if isinstance(_, (float, numpy.float64))]), (
+    assert all(_.is_integer() for _ in num_points if isinstance(_, (float, numpy.float64))), (
         f'Could not determine number of points as a whole number. num_points={num_points}'
     )
     num_points = [int(_) for _ in num_points]
@@ -994,7 +994,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length, epsilon
 
         # find the two in-plane lattice vectors
         out_of_plane_index = pbc.index(False)  # the non-periodic dimension
-        in_plane_indexes = list(set(range(3)) - set([out_of_plane_index]))
+        in_plane_indexes = list(set(range(3)) - {out_of_plane_index})
         # in_plane_indexes are the indexes of the two dimensions (e.g. [0,1])
 
         # build a length-2 list with the 2D cell lattice vectors
@@ -1085,7 +1085,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length, epsilon
             in_line_index = pbc.index(True)  # the only periodic dimension
             # the permutation is set such that p[0]=in_line_index (the 2 last
             # axes are always the non-periodic ones)
-            permutation = [in_line_index] + list(set(range(3)) - set([in_line_index]))
+            permutation = [in_line_index] + list(set(range(3)) - {in_line_index})
         else:
             permutation = [0, 1, 2]
 

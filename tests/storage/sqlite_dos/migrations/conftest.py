@@ -13,25 +13,13 @@ import pytest
 
 from aiida.manage.configuration import Profile
 from tests.storage.sqlite.utils import reflect_schema as reflect_sqlite_schema
+from tests.storage.sqlite_dos.migrations.fixtures import sqlite_dos_migration_profile  # noqa: F401
 
 
 @pytest.fixture
-def uninitialised_profile(tmp_path):
+def uninitialised_profile(request):
     """Create a profile attached to an empty database and repository folder."""
-
-    yield Profile(
-        'test_migrate',
-        {
-            'test_profile': True,
-            'storage': {
-                'backend': 'core.sqlite_dos',
-                'config': {
-                    'filepath': str(tmp_path),
-                },
-            },
-            'process_control': {'backend': 'null', 'config': {}},
-        },
-    )
+    return request.getfixturevalue('sqlite_dos_migration_profile')
 
 
 @pytest.fixture

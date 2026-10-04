@@ -67,13 +67,12 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
         return 'ABSOLUTEPATHEMPTY'
 
 
-def convert_possible_url(value: str, timeout: int) -> t.Any:
+def convert_possible_url(value: str, timeout: int) -> t.IO[bytes]:
     """If ``value`` does not correspond to a path on disk, try to open it as a URL.
 
     :param value: Potential path to file on disk or URL.
     :param timeout: The timeout in seconds when opening the URL.
-    :param return_handle: Return the ``value`` as is. When set to ``True`` return an open file handle instead.
-    :returns: The URL if ``value`` could be opened as a URL
+    :returns: An open binary response if ``value`` could be opened as a URL.
     """
     import urllib.error
     import urllib.request
@@ -86,7 +85,7 @@ def convert_possible_url(value: str, timeout: int) -> t.Any:
         raise click.BadParameter(msg)
 
     try:
-        return urllib.request.urlopen(value, timeout=timeout)
+        return t.cast(t.IO[bytes], urllib.request.urlopen(value, timeout=timeout))
     except urllib.error.URLError:
         msg = f'The URL `{value}` could not be reached.'
         raise click.BadParameter(msg)
@@ -141,4 +140,7 @@ class FileOrUrl(click.File):
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
-            return convert_possible_url(value, self.timeout_seconds)
+            handle = convert_possible_url(value, self.timeout_seconds)
+            if ctx is not None:
+                ctx.call_on_close(handle.close)
+            return handle

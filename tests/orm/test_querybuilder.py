@@ -863,14 +863,9 @@ class TestQueryBuilderCornerCases:
         qb = orm.QueryBuilder().append(orm.Data, filters={'or': [{}, {}]})
         assert qb.count() == count
 
-    @pytest.mark.usefixtures('suppress_internal_deprecations')
     @pytest.mark.usefixtures('aiida_profile_clean')
-    def test_abstract_code_filtering(self, aiida_localhost, aiida_code, tmp_path):
-        """Test that querying for AbstractCode correctly returns all code instances.
-
-        This tests the fix for issue #6687, where QueryBuilder couldn't find codes
-        when looking for AbstractCode due to a node_type mismatch.
-        """
+    def test_code_filtering(self, aiida_localhost, aiida_code, tmp_path):
+        """Querying for the Code base returns all concrete code plugins."""
         installed_code = aiida_code(
             'core.code.installed',
             label='installed-code',
@@ -884,11 +879,6 @@ class TestQueryBuilderCornerCases:
             filepath_executable='fake_exec',
             filepath_files=tmp_path,
         )
-        legacy_code = aiida_code(
-            'core.code',
-            label='legacy-code',
-            remote_computer_exec=(aiida_localhost, '/bin/bash'),
-        )
 
         qb = orm.QueryBuilder
 
@@ -901,36 +891,19 @@ class TestQueryBuilderCornerCases:
         assert portable_code in portable_results
         assert len(portable_results) == 1
 
-        # Using orm.Code actually matches all codes.
-        # for backwards compatibility reasons we will not fix this.
-        legacy_results = qb().append(orm.Code).all(flat=True)
-        assert legacy_code in legacy_results
-        assert len(legacy_results) == 3
+        # The abstract base finds all code types.
+        code_results = qb().append(orm.Code).all(flat=True)
+        assert installed_code in code_results
+        assert portable_code in code_results
+        assert len(code_results) == 2
 
-        # Turning off subclassing should however only match the one legacy Code
-        legacy_results = qb().append(orm.Code, subclassing=False).all(flat=True)
-        assert legacy_code in legacy_results
-        assert len(legacy_results) == 1
-
-        # AbstractCode query should find all code types
-        abstract_results = qb().append(orm.AbstractCode).all(flat=True)
-        assert installed_code in abstract_results, (
-            f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
-        )
-        assert portable_code in abstract_results, (
-            f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
-        )
-        assert legacy_code in abstract_results, f'Code not found with AbstractCode query. Result: {abstract_results}'
-        assert len(abstract_results) == 3
-
-        # AbstractCode with basic filtering
-        qb_filtered = qb().append(orm.AbstractCode, filters={'label': 'installed-code'})
+        qb_filtered = qb().append(orm.Code, filters={'label': 'installed-code'})
         filtered_results = qb_filtered.all(flat=True)
         assert installed_code in filtered_results
         assert len(filtered_results) == 1
 
         # QB should find no codes if subclassing is False
-        subclassing_off_results = qb().append(orm.AbstractCode, subclassing=False).all(flat=True)
+        subclassing_off_results = qb().append(orm.Code, subclassing=False).all(flat=True)
         assert len(subclassing_off_results) == 0
 
 
@@ -978,33 +951,33 @@ class TestAttributes:
         for val in (1.0, 1):
             qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': val}, project='uuid')
             res = [str(_) for (_,) in qb.all()]
-            assert set(res) == set((n_float.uuid, n_int.uuid))
+            assert set(res) == {n_float.uuid, n_int.uuid}
             qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'>': 0.5}}, project='uuid')
             res = [str(_) for (_,) in qb.all()]
-            assert set(res) == set((n_float.uuid, n_int.uuid))
+            assert set(res) == {n_float.uuid, n_int.uuid}
             qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'<': 1.5}}, project='uuid')
             res = [str(_) for (_,) in qb.all()]
-            assert set(res) == set((n_float.uuid, n_int.uuid))
+            assert set(res) == {n_float.uuid, n_int.uuid}
         # Now I am testing the boolean value:
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': True}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_bool.uuid,))
+        assert set(res) == {n_bool.uuid}
 
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'like': '%n%'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str2.uuid,))
+        assert set(res) == {n_str2.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'ilike': 'On%'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str2.uuid,))
+        assert set(res) == {n_str2.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'like': '1'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str.uuid,))
+        assert set(res) == {n_str.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'==': '1'}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_str.uuid,))
+        assert set(res) == {n_str.uuid}
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'of_length': 3}}, project='uuid')
         res = [str(_) for (_,) in qb.all()]
-        assert set(res) == set((n_arr.uuid,))
+        assert set(res) == {n_arr.uuid}
 
 
 class TestQueryBuilderLimitOffsets:
@@ -1337,7 +1310,7 @@ class QueryBuilderPath:
             node.store()
 
         # There are no parents to n9, checking that
-        assert set([]) == set(self.get_all_parents([n9.pk]))
+        assert set() == set(self.get_all_parents([n9.pk]))
         # There is one parent to n6
         assert {(_,) for _ in (n6.pk,)} == {tuple(_) for _ in self.get_all_parents([n7.pk])}
         # There are several parents to n4

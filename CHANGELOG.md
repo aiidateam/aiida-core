@@ -4,6 +4,8 @@
 
 ### Breaking changes
 
+`Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
+
 Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.
 
 Process checkpoints created with earlier releases cannot be continued after upgrading because process state classes are now provided in-tree instead of by `plumpy`.
@@ -27,6 +29,18 @@ Use `aiida.tools.pytest_fixtures` instead, which provides the fixtures for plugi
 pytest_plugins = 'aiida.tools.pytest_fixtures'
 ```
 Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
+
+#### `Code`: the deprecated data plugin has been removed
+
+The `Code` class, deprecated since `aiida-core==2.1`, and its `core.code` entry point have been removed.
+`InstalledCode` and `PortableCode` now derive from the renamed `AbstractCode` base class, `Code`, without the legacy plugin's deprecated methods, such as `get_execname`, `can_run_on` and `hide`.
+
+`AbstractCode` and its `core.code.abstract` entry point have been removed. Use the abstract `Code` base class for type hints, `isinstance` checks and `QueryBuilder` queries.
+Note that `aiida.orm.load_code`, the `CodeParamType` and `verdi code` already resolve any code plugin and need no changes.
+
+Stored nodes are migrated automatically: `verdi storage migrate` rewrites `data.core.code.Code.` nodes to `InstalledCode` (if `is_local` was false) or `PortableCode` (if it was true), renaming the `remote_exec_path`/`local_executable` attribute to `filepath_executable`.
+The migration invalidates the hashes of the migrated nodes, so run `verdi node rehash` afterwards if you rely on caching.
+Loading a node whose storage has not been migrated now raises `IncompatibleStorageSchema` instead of silently falling back to the `Data` class.
 
 ### New features
 

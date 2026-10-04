@@ -190,10 +190,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
-    _updatable_attributes: tuple[str, ...] = tuple()
+    _updatable_attributes: tuple[str, ...] = ()
 
     # A tuple of attribute names that will be ignored when creating the hash.
-    _hash_ignored_attributes: tuple[str, ...] = tuple()
+    _hash_ignored_attributes: tuple[str, ...] = ()
 
     # Flag that determines whether the class can be cached.
     _cachable = False
@@ -1184,7 +1184,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _patch_read_model(cls):
         """Patch `ReadModel` by wiring the subclass-specific `attributes` model.
 
-        Only `RemoteData` and `AbstractCode` are allowed to override `ReadModel`
+        Only `RemoteData` and `Code` are allowed to override `ReadModel`
         due to required read-only fields, (e.g., computer).
         """
 
@@ -1196,7 +1196,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             # TODO ideally we should do this check with issubclass, but we can't import
             # the exception classes here without creating a circular import.
             # Best to move all model-related logic to a separate module!
-            exceptions = ('RemoteData', 'AbstractCode')
+            exceptions = ('RemoteData', 'Code')
             is_exception = next(
                 (mro.__name__ for mro in cls.mro() if mro.__name__ in exceptions),
                 None,

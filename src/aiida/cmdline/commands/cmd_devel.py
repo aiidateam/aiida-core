@@ -75,7 +75,6 @@ def devel_check_undesired_imports():
     undesired_modules = [
         'requests',
         'disk_objectstore',
-        'paramiko',
         'seekpath',
         'CifFile',
         'ase',

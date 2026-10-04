@@ -93,7 +93,7 @@ class ModelWrapper:
         """
         setattr(self._model, key, value)
         if self.is_saved() and self._is_mutable_model_field(key):
-            fields = set((key,))
+            fields = {key}
             self._flush(fields=fields)
 
     def is_saved(self):

@@ -29,7 +29,6 @@ from aiida.orm.utils import *
 __all__ = (
     'ASCENDING',
     'DESCENDING',
-    'AbstractCode',
     'AbstractNodeMeta',
     'ArrayData',
     'AttributeManager',

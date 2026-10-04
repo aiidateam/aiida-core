@@ -74,7 +74,7 @@ The SQLite ZIP archive migrations have their own ``main`` revision lineage:
    * - ``core.sqlite_zip``
      - ``main_0003``
      - AiiDA 3.0.0
-     - Placeholder for future archive migrations.
+     - Renames the ``core.ssh_async`` transport of exported computers to ``core.ssh``, matching the profile database migration.
 
 Schema regression snapshots
 ---------------------------

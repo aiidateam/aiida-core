@@ -908,7 +908,7 @@ class TestNodeList:
         """Test the ``verdi node list`` command."""
         nodes = orm.QueryBuilder().append(orm.Node).order_by({orm.Node: ['id']}).all(flat=True)
 
-        if set(['-P', 'uuid']).issubset(set(options)):
+        if {'-P', 'uuid'}.issubset(set(options)):
             expected_projections = [nodes[index].uuid for index in expected_nodes]
         else:
             expected_projections = [str(nodes[index].pk) for index in expected_nodes]

@@ -117,6 +117,8 @@ __all__ = (
     'submit',
     'task',
     'task_execution',
+    'task_from_calcjob',
+    'task_from_workchain',
     'task_node',
     'task_source',
     'tasks',

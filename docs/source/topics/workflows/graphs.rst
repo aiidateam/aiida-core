@@ -75,8 +75,12 @@ The source flavour instead reads the task function's annotations.
 Placing a calculation or a work chain
 -------------------------------------
 
-The execution-flavour ``task_execution`` adapter places a process class as a task, wired through the ports it already declares, however deeply those are nested.
-The following example uses explicit execution-flavour decorators rather than source parsing:
+Use :func:`~aiida.engine.task_from_calcjob` or :func:`~aiida.engine.task_from_workchain` to place an existing process class as a task in either a source or an execution graph.
+These helpers use the process's existing inputs and outputs, including nested namespaces, defaults and requiredness, without capturing its source or executing its implementation while building the graph.
+For example, ``relax = task_from_workchain(RelaxWorkChain)`` creates a handle that can be called inside either graph flavour, including through a local or imported alias.
+When the graph runs, the original process runs as its child with normal provenance.
+The existing ``task_execution(ProcessClass)`` adapter remains supported.
+The following example uses that adapter with explicit execution-flavour decorators:
 
 .. include:: include/snippets/graphs/process_class.py
     :code: python

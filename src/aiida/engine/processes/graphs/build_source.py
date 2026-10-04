@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from aiida.engine.processes.graphs.build_execution import task as build_task
 from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_annotations, namespace_for_outputs
 from aiida.engine.processes.graphs.interface import GraphHandle
+from aiida.engine.processes.graphs.source_bindings import resolve_binding, task_spec_for
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     BranchControl,
@@ -61,6 +62,7 @@ _LOCATIONS: dict[str, _SourceLocation] = {}
 _TASKS: dict[str, t.Any] = {}
 _GRAPHS: set[str] = set()
 _GRAPH_HINTS: dict[str, dict[str, t.Any]] = {}
+_GRAPH_FUNCTIONS: dict[str, Callable[..., t.Any]] = {}
 
 
 def _key(function: Callable[..., t.Any]) -> str:
@@ -133,6 +135,7 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
     def decorator(function: Callable[..., t.Any]) -> SourceGraphHandle:
         key = _register(function)
         _GRAPHS.add(key)
+        _GRAPH_FUNCTIONS[key] = function
         _GRAPH_HINTS[key] = t.get_type_hints(function, include_extras=True)
         return SourceGraphHandle(function, identifier=identifier)
 
@@ -423,23 +426,26 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     if expression.args or any(keyword.arg is None for keyword in expression.keywords):
         _reject(state, expression, 'calls require named arguments without unpacking')
     name = expression.func.id
-    key = f'{state.key.partition(":")[0]}:{name}'
-    if key not in SOURCES or (key not in _TASKS and key not in _GRAPHS):
-        _reject(state, expression, f'unregistered call {name!r}')
     if name in state.names:
         _reject(state, expression, f'call target {name!r} is shadowed')
+    target = resolve_binding(_GRAPH_FUNCTIONS[state.key], name)
+    spec = task_spec_for(target)
+    if spec is None and not isinstance(target, SourceGraphHandle):
+        _reject(state, expression, f'unregistered call {name!r}')
     state.used[name] += 1
     instance = name if state.used[name] == 1 else f'{name}_{state.used[name]}'
-    if key in _GRAPHS:
-        body = _lower_registered_graph(key, state.stack)
-        ports = body.inputs
+    inputs: t.Collection[str]
+    outputs: t.Collection[str]
+    if isinstance(target, SourceGraphHandle):
+        body = _lower_registered_graph(_key(target._function), state.stack)
+        inputs = body.inputs
         outputs = body.outputs
 
         def make_task(inputs: dict[str, t.Any]) -> ProcessTask | SubgraphTask:
             return SubgraphTask(name=instance, inputs=inputs, body=body)
     else:
-        spec = _TASKS[key].task_spec
-        ports = spec.inputs
+        assert spec is not None
+        inputs = spec.inputs
         outputs = spec.outputs
 
         def make_task(inputs: dict[str, t.Any]) -> ProcessTask | SubgraphTask:
@@ -449,7 +455,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     for keyword in expression.keywords:
         port = keyword.arg
         assert port is not None
-        if port in given or port not in ports:
+        if port in given or port not in inputs:
             _reject(state, keyword, f'duplicate or unknown input {port!r} of {name!r}')
         value = _lower_value(state, keyword.value)
         _wire(state, instance, port, value, given)

@@ -14,9 +14,9 @@ def total_of(parts: Many[int]) -> int:
 
 
 @graph
-def shift_all(values, by):
+def shift_all(values, by) -> int:
     shifted = shift(value=each(values), by=by)
-    return {'total': total_of(parts=shifted.shifted).total}
+    return total_of(parts=shifted.shifted).total
 
 
 results = run(shift_all, values=[1, 2, 3], by=10)

@@ -224,16 +224,16 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
 def _lower_return(
     state: _LoweringState, expression: ast.expr, annotation: t.Any = None, prefix: str = ''
 ) -> dict[str, Endpoint]:
-    """Lower named returns without constructing their Python containers."""
+    """Wire returned values against namespaces declared exclusively by PortModel annotations."""
     fields = fields_of(annotation)
     members: list[tuple[str, ast.expr]] | None = None
     if isinstance(expression, ast.Dict):
-        members = []
-        for key, value in zip(expression.keys, expression.values):
-            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
-                _reject(state, expression, 'output names must be string literals')
-            members.append((key.value, value))
-    elif fields is not None and isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+        _reject(
+            state,
+            expression,
+            'graph namespace returns require PortModel values and a PortModel return annotation, not dictionaries',
+        )
+    if fields is not None and isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
         if expression.func.id == annotation.__name__:
             if expression.args or any(keyword.arg is None for keyword in expression.keywords):
                 _reject(state, expression, 'structured returns require named fields')
@@ -242,6 +242,12 @@ def _lower_return(
         outputs: dict[str, Endpoint] = {}
         annotations = {field.name: field.annotation for field in fields or ()}
         for name, value in members:
+            if name not in annotations:
+                _reject(
+                    state,
+                    expression,
+                    f'graph output {prefix}{name!r} is not declared by its PortModel return annotation',
+                )
             lowered = _lower_return(state, value, annotations.get(name), f'{prefix}{name}.')
             if outputs.keys() & lowered.keys():
                 _reject(state, expression, 'duplicate graph output')

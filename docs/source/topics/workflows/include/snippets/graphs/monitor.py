@@ -17,6 +17,6 @@ def size_of(path: str) -> int:
 
 
 @graph
-def read_once_written(path):
+def read_once_written(path) -> int:
     written = file_is_there(path=path, interval=5)
-    return {'size': size_of(path=path).after(written).size}
+    return size_of(path=path).after(written).size

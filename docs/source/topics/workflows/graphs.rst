@@ -25,7 +25,8 @@ It takes and returns plain Python values, and the engine stores them as nodes on
 
 The return annotation declares the output type.
 A scalar result is stored on the ``result`` output port.
-Source graphs currently require tasks with a single output.
+An ordinary dictionary is stored as one ``Dict`` node, even without a return annotation; its keys never become output ports.
+A ``PortModel`` return annotation declares named and nested outputs, which the task must populate by returning model instances rather than dictionaries.
 
 A node holding one plain value arrives as that value, so the function is written the way it would be written without a graph around it.
 Anything else arrives as the node it is, since a :class:`~aiida.orm.nodes.data.structure.StructureData` or a :class:`~aiida.orm.nodes.data.folder.FolderData` is not a value there is a plain Python spelling of.
@@ -38,7 +39,7 @@ Saying what a task takes and produces
 -------------------------------------
 
 A :class:`~aiida.engine.PortModel` declares a namespace using annotated fields and defaults.
-Its fields become ordinary AiiDA input ports, and nested models become nested namespaces.
+Its fields become ordinary AiiDA ports, and nested models become nested namespaces.
 Use :class:`~aiida.engine.PortField` inside ``Annotated`` to attach configuration help.
 A field without a default is required; a field with a default can be omitted.
 
@@ -51,7 +52,9 @@ This is the same namespace-value representation used by WorkChain inputs, except
 An annotation naming an ORM node type preserves the node itself.
 The engine does not reconstruct a ``PortModel`` instance or run its constructor during validation or task execution.
 
-Supply mappings or model instances at launch; namespaces are stored as individually linked data-node leaves, not as container nodes.
+Supply mappings or model instances as inputs at launch; input namespaces are stored as individually linked data-node leaves, not as container nodes.
+For task output namespaces, return a ``PortModel`` instance, including model instances for nested namespaces.
+A dictionary-valued field remains one ``Dict`` node rather than a namespace.
 Opaque objects should be declared as ORM nodes such as :class:`~aiida.orm.Dict` or :class:`~aiida.orm.JsonableData`.
 Arbitrary dataclasses, ``TypedDict``, ``NamedTuple`` and Pydantic models do not declare namespaces.
 
@@ -80,7 +83,7 @@ These helpers use the process's existing inputs and outputs, including nested na
 For example, ``relax = task_from_workchain(RelaxWorkChain)`` creates a handle that can be called inside either graph flavour, including through a local or imported alias.
 When the graph runs, the original process runs as its child with normal provenance.
 The existing ``task_execution(ProcessClass)`` adapter remains supported.
-The following example uses that adapter with explicit execution-flavour decorators:
+The following example uses the explicit registration helper with execution-flavour decorators:
 
 .. include:: include/snippets/graphs/process_class.py
     :code: python
@@ -101,6 +104,24 @@ Calling a registered task records a dependency rather than running that task:
     :code: python
 
 The parameters of the function are the inputs of the graph, and what it returns are its outputs.
+Named and nested graph outputs must be declared by a ``PortModel`` return annotation.
+Return a model instance containing task-output or graph-input references, or forward an already-declared namespace with the same fields.
+Raw dictionary returns are rejected, including when the graph has a ``PortModel`` annotation: dictionary shape never declares a graph namespace.
+A scalar return remains a single output; a task annotated with ``dict`` produces one dictionary-valued output, not one output per key.
+For example:
+
+.. code-block:: python
+
+    from aiida.engine import PortModel, graph_source
+
+    class Results(PortModel):
+        total: int
+
+    @graph_source
+    def named_sum(x: int, y: int) -> Results:
+        result = add(x=x, y=y)
+        return Results(total=result)
+
 Only the supported source syntax described below is accepted; ordinary Python expressions are not executed while building the graph.
 Independent task calls are not forced to execute in source order.
 :meth:`~aiida.engine.processes.graphs.spec.GraphSpec.unread` reports tasks whose outputs are not consumed.

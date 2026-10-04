@@ -17,18 +17,21 @@ from aiida.common.links import LinkType
 from aiida.engine import (
     CalcJob,
     GraphProcess,
+    Met,
     PortModel,
     WorkChain,
     graph_execution,
     graph_source,
+    monitor,
     run_get_node,
     task_execution,
     task_source,
 )
+from aiida.engine.processes.graphs.build_source import UnsupportedSyntax
 from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_outputs
 from aiida.engine.processes.graphs.spec import Endpoint, GraphSpec
 from aiida.engine.processes.ports import OutputPort
-from aiida.orm import Int
+from aiida.orm import Dict, Int
 
 pytestmark = pytest.mark.presto
 
@@ -45,7 +48,7 @@ class Results(PortModel):
 
 @task_source
 def make_values(value: int) -> Values:
-    return {'total': value + 1}
+    return Values(total=value + 1)
 
 
 @graph_source
@@ -57,13 +60,13 @@ def named_source(value: int) -> Results:
 @graph_execution
 def named_execution(value: int) -> Results:
     result = make_values(value=value)
-    return {'values': {'total': result.total}, 'count': result.total}
+    return Results(values=Values(total=result.total), count=result.total)
 
 
 @graph_source
 def selected_source(value: int) -> Values:
     result = make_values(value=value)
-    return {'total': result.total, 'extra': result.extra}
+    return Values(total=result.total, extra=result.extra)
 
 
 @graph_execution
@@ -79,13 +82,13 @@ def whole_source(value: int) -> Values:
 @graph_source
 def nested_source(value: int) -> Values:
     result = named_source(value=value)
-    return {'total': result.values.total}
+    return Values(total=result.values.total)
 
 
 @graph_execution
 def nested_execution(value: int) -> Values:
     result = named_execution(value=value)
-    return {'total': result.values.total}
+    return Values(total=result.values.total)
 
 
 @pytest.mark.parametrize(
@@ -159,6 +162,227 @@ def test_registered_process_output_declarations_are_preserved(process):
     leaf = original['results']['energy']
     assert leaf.valid_type is Int
     assert leaf.required
+
+
+@graph_source
+def unannotated_dictionary(value: int):
+    result = make_values(value=value)
+    return {'total': result.total}
+
+
+@graph_source
+def scalar_dictionary_namespace(value: int) -> dict:
+    result = make_values(value=value)
+    return {'total': result.total}
+
+
+@graph_execution
+def unannotated_execution_dictionary(value: int):
+    result = make_values(value=value)
+    return {'total': result.total}
+
+
+@graph_execution
+def scalar_execution_dictionary_namespace(value: int) -> dict:
+    result = make_values(value=value)
+    return {'total': result.total}
+
+
+@graph_source
+def annotated_source_dictionary(value: int) -> Values:
+    result = make_values(value=value)
+    return {'total': result.total}
+
+
+@graph_execution
+def annotated_execution_dictionary(value: int) -> Values:
+    result = make_values(value=value)
+    return {'total': result.total}
+
+
+@pytest.mark.parametrize(
+    'handle',
+    [
+        unannotated_dictionary,
+        scalar_dictionary_namespace,
+        unannotated_execution_dictionary,
+        scalar_execution_dictionary_namespace,
+        annotated_source_dictionary,
+        annotated_execution_dictionary,
+    ],
+)
+def test_dictionaries_do_not_declare_graph_namespaces(handle):
+    with pytest.raises((TypeError, UnsupportedSyntax), match='PortModel return annotation'):
+        handle.build()
+
+
+class DictionaryResults(PortModel):
+    values: dict[str, int]
+
+
+@task_source
+def make_dictionary(value: int) -> dict[str, int]:
+    return {'value': value, 'nested': {'value': value + 1}}
+
+
+@graph_source
+def dictionary_source(value: int) -> dict[str, int]:
+    return make_dictionary(value=value)
+
+
+@graph_execution
+def dictionary_execution(value: int) -> dict[str, int]:
+    return make_dictionary(value=value)
+
+
+@graph_source
+def named_dictionary_source(value: int) -> DictionaryResults:
+    return DictionaryResults(values=make_dictionary(value=value))
+
+
+@graph_execution
+def named_dictionary_execution(value: int) -> DictionaryResults:
+    return DictionaryResults(values=make_dictionary(value=value))
+
+
+@pytest.mark.parametrize(
+    'handle,name',
+    [
+        (dictionary_source, 'result'),
+        (dictionary_execution, 'result'),
+        (named_dictionary_source, 'values'),
+        (named_dictionary_execution, 'values'),
+    ],
+)
+def test_dictionary_annotation_is_one_data_output(handle, name):
+    assert list(make_dictionary.task_spec.outputs) == ['result']
+    spec = handle.build()
+    assert list(spec.outputs) == [name]
+    results, node = run_get_node(handle, value=2)
+    assert node.is_finished_ok, node.exit_message
+    assert isinstance(results[name], Dict)
+    assert results[name].get_dict() == {'value': 2, 'nested': {'value': 3}}
+
+
+@graph_source
+def undeclared_source_field(value: int) -> Values:
+    result = make_values(value=value)
+    return Values(unknown=result.total)
+
+
+@graph_execution
+def undeclared_execution_field(value: int) -> Values:
+    result = make_values(value=value)
+    return Values(unknown=result.total)
+
+
+@pytest.mark.parametrize('handle', [undeclared_source_field, undeclared_execution_field])
+def test_returned_fields_must_be_declared(handle):
+    with pytest.raises((TypeError, ValueError, UnsupportedSyntax), match=r'not declared|unknown'):
+        handle.build()
+
+
+@graph_source
+def undeclared_nested_namespace(value: int) -> Values:
+    result = make_values(value=value)
+    return Values(total={'hidden': result.total})
+
+
+@graph_execution
+def undeclared_execution_namespace(value: int) -> Values:
+    result = make_values(value=value)
+    return Values(total={'hidden': result.total})
+
+
+@pytest.mark.parametrize('handle', [undeclared_nested_namespace, undeclared_execution_namespace])
+def test_dictionary_shape_cannot_turn_a_leaf_into_a_namespace(handle):
+    with pytest.raises((ValueError, UnsupportedSyntax), match=r'PortModel|not the output'):
+        handle.build()
+
+
+@task_source
+def unannotated_task_dictionary(value: int):
+    return {'total': value, 'nested': {'extra': value + 1}}
+
+
+@task_execution(outputs=['payload'])
+def named_task_dictionary(value: int) -> dict:
+    return {'total': value, 'nested': {'extra': value + 1}}
+
+
+@pytest.mark.parametrize('handle,name', [(unannotated_task_dictionary, 'result'), (named_task_dictionary, 'payload')])
+def test_task_dictionary_is_data_without_namespace_inference(handle, name):
+    _, node = run_get_node(handle, value=2)
+    assert node.is_finished_ok
+    assert list(node.outputs) == [name]
+    assert isinstance(node.outputs[name], Dict)
+    assert node.outputs[name].get_dict() == {'total': 2, 'nested': {'extra': 3}}
+
+
+@task_source
+def dictionary_instead_of_model(value: int) -> Values:
+    return {'total': value}
+
+
+@task_source
+def dictionary_instead_of_nested_model(value: int) -> Results:
+    return Results(values={'total': value}, count=value)
+
+
+@task_source
+def unannotated_task_model(value: int):
+    return Values(total=value)
+
+
+@pytest.mark.parametrize(
+    'handle', [dictionary_instead_of_model, dictionary_instead_of_nested_model, unannotated_task_model]
+)
+def test_task_namespaces_require_model_declarations_and_values(handle):
+    with pytest.raises(TypeError, match='PortModel'):
+        run_get_node(handle, value=2)
+
+
+@task_source
+def nested_task_model(value: int) -> Results:
+    return Results(values=Values(total=value), count=value + 1)
+
+
+@task_source
+def dictionary_field_model(value: int) -> DictionaryResults:
+    return DictionaryResults(values={'total': value, 'nested': {'extra': value + 1}})
+
+
+def test_nested_task_model_values_are_stored_under_declared_ports():
+    _, node = run_get_node(nested_task_model, value=2)
+    assert node.is_finished_ok
+    assert node.outputs.values.total == 2
+    assert 'extra' not in node.outputs.values
+    assert node.outputs.count == 3
+    assert sorted(node.base.links.get_outgoing(link_type=LinkType.CREATE).all_link_labels()) == [
+        'count',
+        'values__total',
+    ]
+
+
+def test_model_dictionary_field_remains_one_data_node():
+    _, node = run_get_node(dictionary_field_model, value=2)
+    assert node.is_finished_ok
+    assert isinstance(node.outputs.values, Dict)
+    assert node.outputs.values.get_dict() == {'total': 2, 'nested': {'extra': 3}}
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all_link_labels() == ['values']
+
+
+@monitor(outputs=['payload', 'total'])
+def declared_monitor_outputs(value: int) -> Met:
+    return Met(payload={'total': value}, total=value)
+
+
+def test_monitor_keeps_explicit_output_bindings():
+    _, node = run_get_node(declared_monitor_outputs, value=2)
+    assert node.is_finished_ok
+    assert isinstance(node.outputs.payload, Dict)
+    assert node.outputs.payload.get_dict() == {'total': 2}
+    assert node.outputs.total == 2
 
 
 def test_legacy_namespace_and_independent_snapshots():

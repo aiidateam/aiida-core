@@ -44,8 +44,8 @@ def model_route(codes: ModelCodes) -> int:
 
 
 @graph_execution
-def execution_model_route(codes: ModelCodes):
-    return {'result': consume_model(codes=codes)}
+def execution_model_route(codes: ModelCodes) -> int:
+    return consume_model(codes=codes)
 
 
 @pytest.mark.parametrize('handle', (model_route, execution_model_route))
@@ -102,8 +102,8 @@ def outer(codes: Codes, unused: int) -> int:
 
 
 @graph_execution
-def defaulted(value: int = 5):
-    return {'value': value}
+def defaulted(value: int = 5) -> int:
+    return value
 
 
 def restored(handle):

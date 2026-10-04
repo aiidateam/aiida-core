@@ -9,12 +9,12 @@ def add(x: int, y: int) -> int:
 
 
 @graph
-def add_twice_then_double(x, y):
+def add_twice_then_double(x, y) -> int:
     with subgraph() as added:
         once = add(x=x, y=y)
         added.returns(total=add(x=once.total, y=y).total)
 
-    return {'total': add(x=added.total, y=added.total).total}
+    return add(x=added.total, y=added.total).total
 
 
 results = run(add_twice_then_double, x=1, y=2)

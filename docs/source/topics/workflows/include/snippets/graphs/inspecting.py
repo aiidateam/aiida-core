@@ -9,8 +9,8 @@ def add(x: int, y: int) -> int:
 
 
 @graph
-def add_twice(x, y):
-    return {'total': add(x=add(x=x, y=y).total, y=y).total}
+def add_twice(x, y) -> int:
+    return add(x=add(x=x, y=y).total, y=y).total
 
 
 results, node = run_get_node(add_twice, x=1, y=2)

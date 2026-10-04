@@ -16,6 +16,7 @@ from aiida.common.links import LinkType
 from aiida.engine import (
     CalcJob,
     GraphProcess,
+    PortModel,
     WorkChain,
     graph_execution,
     graph_source,
@@ -36,28 +37,32 @@ from tests.engine.processes.graphs.test_ast_parser import sum_two as imported_ad
 local_alias = combined
 
 
+class Total(PortModel):
+    total: orm.Int | orm.Float
+
+
 @graph_source
-def source_workflow(pair):
+def source_workflow(pair) -> Total:
     result = local_alias(pair=pair)
-    return {'total': result.sums.total}
+    return Total(total=result.sums.total)
 
 
 @graph_execution
-def execution_workflow(pair):
+def execution_workflow(pair) -> Total:
     result = combined(pair=pair)
-    return {'total': result.sums.total}
+    return Total(total=result.sums.total)
 
 
 @graph_source
-def source_calculation(code, x, y):
+def source_calculation(code, x, y) -> Total:
     result = calculation(code=code, x=x, y=y)
-    return {'total': result.sum}
+    return Total(total=result.sum)
 
 
 @graph_execution
-def execution_calculation(code, x, y):
+def execution_calculation(code, x, y) -> Total:
     result = calculation(code=code, x=x, y=y)
-    return {'total': result.sum}
+    return Total(total=result.sum)
 
 
 @graph_source
@@ -66,9 +71,9 @@ def imported_alias_workflow(x, y):
 
 
 @graph_source
-def imported_process_workflow(pair):
+def imported_process_workflow(pair) -> Total:
     result = imported_workchain(pair=pair)
-    return {'total': result.sums.total}
+    return Total(total=result.sums.total)
 
 
 @pytest.mark.parametrize(

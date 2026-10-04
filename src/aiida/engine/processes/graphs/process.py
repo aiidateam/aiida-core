@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import collections.abc
 import functools
 import inspect
 import typing as t
@@ -25,7 +24,7 @@ from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
-from aiida.engine.processes.port_model import as_dict
+from aiida.engine.processes.port_model import PortModel, fields_of, is_structured
 from aiida.engine.processes.ports import PortNamespace, as_written
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
@@ -76,31 +75,25 @@ class TaskProcess(FunctionProcess):
 
     @override
     def _out_result(self, result: t.Any) -> None:
-        declared = list(self.spec().outputs.keys())
-
-        # A returned structured type says which output each of its fields is, exactly as it does where it is an input.
-        if (fields := as_dict(result)) is not None:
-            result = fields
-
-        if not self.spec().outputs.dynamic and not isinstance(result, collections.abc.Mapping):
+        outputs = self.spec().outputs
+        annotation = get_annotations(self._func, eval_str=True).get('return')
+        if isinstance(result, PortModel) or is_structured(annotation):
+            if outputs.dynamic:
+                msg = 'Task namespaces require a PortModel output declaration.'
+                raise TypeError(msg)
+            result = _stored(result, outputs)
+        elif outputs.dynamic:
+            result = _stored(result, None)
+        else:
+            declared = list(outputs)
             values = result if isinstance(result, tuple) else (result,)
-
             if len(values) != len(declared):
                 msg = (
                     f'`{self.process_class.__name__}` declares {len(declared)} outputs {declared} but the function '
                     f'returned {len(values)} value(s).'
                 )
                 raise ValueError(msg)
-
-            result = dict(zip(declared, values, strict=True))
-
-        outputs = self.spec().outputs
-
-        if isinstance(result, collections.abc.Mapping):
-            result = {key: _stored(value, outputs[key] if key in outputs else None) for key, value in result.items()}
-        elif not isinstance(result, Data):
-            result = to_aiida_type(result)
-
+            result = {name: _stored(value, outputs[name]) for name, value in zip(declared, values, strict=True)}
         super()._out_result(result)
 
 
@@ -111,17 +104,20 @@ def _stored(value: t.Any, port: t.Any) -> t.Any:
     the inputs, so what a task produced for it is stored as the ports under it hold it rather than as one node
     holding the whole mapping.
     """
-    if isinstance(value, Data):
-        return value
-
     if isinstance(port, PortNamespace):
-        held = as_dict(value)
-        given = value if held is None else held
+        fields = fields_of(type(value))
+        if fields is None:
+            msg = f'Task output namespace `{port.name}` requires PortModel values, got {type(value).__name__}.'
+            raise TypeError(msg)
+        stored = {}
+        for field in fields:
+            item = getattr(value, field.name)
+            if not field.required and item == field.default:
+                continue
+            stored[field.name] = _stored(item, port[field.name] if field.name in port else None)
+        return stored
 
-        if isinstance(given, collections.abc.Mapping):
-            return {name: _stored(item, port[name] if name in port else None) for name, item in given.items()}
-
-    return to_aiida_type(value)
+    return value if isinstance(value, Data) else to_aiida_type(value)
 
 
 class GraphProcess(Process):

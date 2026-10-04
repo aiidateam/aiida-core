@@ -20,8 +20,8 @@ def converge(steps: int) -> int:
 
 
 @graph
-def converge_from(steps):
-    return {'value': converge(steps=steps, max_iterations=5).value}
+def converge_from(steps) -> int:
+    return converge(steps=steps, max_iterations=5).value
 
 
 results = run(converge_from, steps=1)

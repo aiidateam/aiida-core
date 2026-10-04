@@ -9,14 +9,14 @@ def add(x: int, y: int) -> int:
 
 
 @graph
-def refine_or_not(value, refine_it):
+def refine_or_not(value, refine_it) -> int:
     with branch(refine_it) as refined:
         refined.returns(total=add(x=value, y=100).total)
 
     with refined.otherwise:
         refined.returns(total=add(x=value, y=1).total)
 
-    return {'total': refined.total}
+    return refined.total
 
 
 results = run(refine_or_not, value=2, refine_it=True)

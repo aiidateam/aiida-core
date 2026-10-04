@@ -153,7 +153,7 @@ class MonitorProcess(TaskProcess):
                     raise ValueError(msg)
 
                 if found:
-                    self._out_result(found)
+                    self._out_result(tuple(found[name] for name in self.spec().outputs))
 
                 return ExitCode()
 

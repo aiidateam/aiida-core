@@ -42,7 +42,7 @@ from aiida.engine.processes.graphs.spec import (
     SubgraphTask,
     TaskSpec,
 )
-from aiida.engine.processes.port_model import as_dict, is_structured
+from aiida.engine.processes.port_model import as_dict, fields_of, is_structured
 from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.orm import CalcFunctionNode, WorkFunctionNode
@@ -693,10 +693,7 @@ class GraphBuilder:
 
         :param identifier: the name the graph is known by, which a run of it is labelled with.
         """
-        # What is returned is worked out first: one of those may belong to the graph around this one, which this
-        # graph then takes as an input of its own, and the inputs have to be read after that has happened.
         outputs = self._declared_outputs(returned)
-
         graph = GraphSpec(
             tasks=tuple(self._tasks),
             dependencies=tuple(self._dependencies),
@@ -716,36 +713,31 @@ class GraphBuilder:
         return graph
 
     def _declared_outputs(self, returned: t.Any) -> dict[str, Endpoint]:
-        """Return the outputs of the graph, from what its function returned."""
+        """Wire model fields or explicit output bindings, without inferring namespaces from dictionaries."""
         if returned is None:
             return {}
-
-        held = as_dict(returned)
-        if held is not None:
-            returned = held
-        if isinstance(returned, dict):
+        if (fields := fields_of(type(returned))) is not None:
             outputs = {}
-            for name, value in returned.items():
-                nested = as_dict(value)
-                if nested is not None or isinstance(value, dict):
+            for field in fields:
+                value = getattr(returned, field.name)
+                if not field.required and value == field.default:
+                    continue
+                if is_structured(type(value)):
                     outputs.update(
-                        {
-                            f'{name}.{path}': source
-                            for path, source in self._declared_outputs(nested if nested is not None else value).items()
-                        }
+                        {f'{field.name}.{path}': source for path, source in self._declared_outputs(value).items()}
                     )
                 else:
-                    outputs[name] = self._output_source(value, name)
+                    outputs[field.name] = self._output_source(value, field.name)
             return outputs
-
+        if isinstance(returned, dict):
+            # These bindings come from region.returns() or forwarding declared task outputs, not graph return syntax.
+            return {name: self._output_source(value, name) for name, value in returned.items()}
         source = self._as_source(returned, 'it')
-
         if source is None:
-            raise ValueError(
-                'a graph returns the outputs of its tasks, or its own inputs, so it has to return one of those, '
-                'or a dictionary of them.'
+            msg = (
+                'A graph must return a task output or graph input, or values declared by a PortModel return annotation.'
             )
-
+            raise ValueError(msg)
         return {source.port: source}
 
     def _output_source(self, value: t.Any, name: str) -> Endpoint:
@@ -801,9 +793,11 @@ class ExecutionGraphHandle(GraphHandle):
 
         annotations = get_annotations(self._function, eval_str=True)
         output_namespace = namespace_for_outputs(annotations.get('return'))
+        if isinstance(returned, dict) or (is_structured(type(returned)) and output_namespace is None):
+            msg = 'Graph namespaces require PortModel values and a PortModel return annotation, not dictionary returns.'
+            raise TypeError(msg)
         if output_namespace is not None and isinstance(returned, TaskOutputs):
-            if all(name in returned.ports for name in output_namespace):
-                returned = {name: returned._reference(name) for name in output_namespace}
+            returned = {name: returned._reference(name) for name in output_namespace if name in returned.ports}
         result = builder.finish(returned, identifier=self.identifier)
         if output_namespace is not None and isinstance(returned, GraphInput):
 

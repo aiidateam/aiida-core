@@ -1,34 +1,23 @@
-from dataclasses import dataclass
+import typing as t
 
-from pydantic import BaseModel
-
-from aiida.engine import graph, run, task
+from aiida.engine import PortField, PortModel, graph_source, run_get_node, task_source
 
 
-class RelaxInputs(BaseModel):
-    """What the task takes, said once and used in both places."""
-
-    structure: str
+class RelaxInputs(PortModel):
+    structure: t.Annotated[str, PortField(help='Structure to relax.')]
     steps: int = 10
 
 
-@dataclass
-class RelaxOutputs:
-    """What it produces, which need not be said in the same words."""
-
-    relaxed: str
-    energy: float
+@task_source
+def relax(given: RelaxInputs) -> str:
+    # given is an attribute-accessible namespace, not a RelaxInputs instance.
+    return f'{given.structure}-relaxed-{given.steps}'
 
 
-@task
-def relax(given: RelaxInputs) -> RelaxOutputs:
-    return RelaxOutputs(relaxed=f'{given.structure}-relaxed', energy=-1.0 * given.steps)
+@graph_source
+def relax_and_report(given: RelaxInputs) -> str:
+    return relax(given=given)
 
 
-@graph
-def relax_and_report(structure):
-    relaxed = relax(given={'structure': structure, 'steps': 3})
-    return {'energy': relaxed.energy}
-
-
-results = run(relax_and_report, structure='si')
+results, node = run_get_node(relax_and_report, given={'structure': 'si'})
+assert results['result'] == 'si-relaxed-10'

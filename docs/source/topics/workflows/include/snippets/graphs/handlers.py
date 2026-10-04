@@ -1,4 +1,6 @@
-from aiida.engine import ExitCode, ProcessHandlerReport, graph, handler, run, task
+from aiida.engine import ExitCode, ProcessHandlerReport, handler, run
+from aiida.engine import graph_execution as graph
+from aiida.engine import task_execution as task
 
 DID_NOT_CONVERGE = ExitCode(410, 'did not converge')
 

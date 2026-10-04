@@ -1,4 +1,6 @@
-from aiida.engine import graph, loop, run, task
+from aiida.engine import graph_execution as graph
+from aiida.engine import loop, run
+from aiida.engine import task_execution as task
 
 
 @task(outputs=['value', 'keep_going'])

@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from aiida.engine import graph, monitor, task
+from aiida.engine import graph_execution as graph
+from aiida.engine import monitor
+from aiida.engine import task_execution as task
 
 
 @monitor

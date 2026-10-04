@@ -1,4 +1,6 @@
-from aiida.engine import Many, each, graph, run, task
+from aiida.engine import Many, each, run
+from aiida.engine import graph_execution as graph
+from aiida.engine import task_execution as task
 
 
 @task(outputs=['shifted'])

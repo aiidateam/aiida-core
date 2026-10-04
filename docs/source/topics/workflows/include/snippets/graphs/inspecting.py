@@ -1,4 +1,6 @@
-from aiida.engine import graph, rerun_from, run_get_node, task, tasks
+from aiida.engine import graph_execution as graph
+from aiida.engine import rerun_from, run_get_node, tasks
+from aiida.engine import task_execution as task
 
 
 @task(outputs=['total'])

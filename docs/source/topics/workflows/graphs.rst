@@ -16,14 +16,16 @@ Every task in it is a process of its own, so each one has its own node, its own 
 Tasks
 =====
 
-A task is an ordinary Python function, marked with :func:`~aiida.engine.processes.graphs.build.task`.
+A task is an ordinary Python function, marked with :func:`~aiida.engine.task_source`.
+The top-level ``aiida.engine.task`` decorator also selects the source flavour.
 It takes and returns plain Python values, and the engine stores them as nodes on the way in and on the way out:
 
 .. include:: include/snippets/graphs/task.py
     :code: python
 
-``outputs`` names the ports the returned values are attached to, and a returned tuple is mapped onto them in order.
-Without it, the task produces one output called ``result``, unless the return annotation is a structured type, in which case each of its fields is a port.
+The return annotation declares the output type.
+A scalar result is stored on the ``result`` output port.
+Source graphs currently require tasks with a single output.
 
 A node holding one plain value arrives as that value, so the function is written the way it would be written without a graph around it.
 Anything else arrives as the node it is, since a :class:`~aiida.orm.nodes.data.structure.StructureData` or a :class:`~aiida.orm.nodes.data.folder.FolderData` is not a value there is a plain Python spelling of.
@@ -35,35 +37,46 @@ A task can be launched on its own, with :func:`~aiida.engine.launch.run` or :fun
 Saying what a task takes and produces
 -------------------------------------
 
-A ``TypedDict``, a dataclass, a ``NamedTuple`` and a pydantic model all say the same thing in different words:
-these names, of these types, some of them with a default.
-That is what a namespace of ports says too, so a parameter annotated with one names a namespace whose ports are
-its fields, and a returned one says which output each of its fields is:
+A :class:`~aiida.engine.PortModel` declares a namespace using annotated fields and defaults.
+Its fields become ordinary AiiDA input ports, and nested models become nested namespaces.
+Use :class:`~aiida.engine.PortField` inside ``Annotated`` to attach configuration help.
+A field without a default is required; a field with a default can be omitted.
 
 .. include:: include/snippets/graphs/structured.py
     :code: python
 
-The fields are ordinary ports, so a graph wires into one of them, ``relax(given={'structure': prepared.structure})``,
-and the function is handed back an instance of the structured type it asked for.
-Validation belongs to the ports, wherever the value came from, so the structured type is a way of saying what a namespace
-holds rather than a second place where types live.
-A pydantic model is the richest way to say it, since it can also say how a field is rendered for storage, which is
-how a value AiiDA has no way to store is stored and read back as the type the model declares.
+``PortModel`` is declaration syntax, not a runtime validation model.
+Inside the task, ``given`` is an :class:`~aiida.common.extendeddicts.AttributesFrozendict`, supporting both ``given.steps`` and ``given['steps']``.
+This is the same namespace-value representation used by WorkChain inputs, except tasks unwrap scalar nodes when their annotations request Python values.
+An annotation naming an ORM node type preserves the node itself.
+The engine does not reconstruct a ``PortModel`` instance or run its constructor during validation or task execution.
+
+Supply mappings or model instances at launch; namespaces are stored as individually linked data-node leaves, not as container nodes.
+Opaque objects should be declared as ORM nodes such as :class:`~aiida.orm.Dict` or :class:`~aiida.orm.JsonableData`.
+Arbitrary dataclasses, ``TypedDict``, ``NamedTuple`` and Pydantic models do not declare namespaces.
+
+Source graph bodies currently pass a namespace as a whole, as in ``relax(given=given)``.
+Selecting ``given.structure`` or ``given['structure']`` inside a graph body, or constructing a mapping of symbolic values there, is not supported by the source parser.
+Select fields or assemble values inside registered tasks instead.
 
 A function that carries no annotations, because it came from somewhere else, is described where it is placed:
 
 .. code-block:: python
 
-    relax = task(their_relax, inputs=RelaxInputs, outputs=RelaxOutputs)
+    from aiida.engine import task_execution
 
-which names the ports at the top level, one per field, since such a function takes them one by one.
+    relax = task_execution(their_relax, inputs=RelaxInputs, outputs=RelaxOutputs)
+
+This explicit execution-flavour adapter names top-level ports for an unannotated function.
+The source flavour instead reads the task function's annotations.
 
 .. _topics:workflows:graphs:tasks:processes:
 
 Placing a calculation or a work chain
 -------------------------------------
 
-A process class is placed as a task as it is, wired through the ports it already declares, however deeply those are nested:
+The execution-flavour ``task_execution`` adapter places a process class as a task, wired through the ports it already declares, however deeply those are nested.
+The following example uses explicit execution-flavour decorators rather than source parsing:
 
 .. include:: include/snippets/graphs/process_class.py
     :code: python
@@ -75,32 +88,18 @@ This is how a graph meets the rest of AiiDA: a ``CalcJob``, a ``WorkChain``, a :
 Writing a graph
 ===============
 
-A graph is written as a function marked with :func:`~aiida.engine.processes.graphs.build.graph`.
-Its body is traced once, so calling a task inside it records the call rather than running it, and passing what one task produced to another records that the second waits for the first:
+A source graph is written as a function marked with :func:`~aiida.engine.graph_source`.
+The top-level ``aiida.engine.graph`` decorator also selects this flavour.
+Its source is parsed without executing the graph body.
+Calling a registered task records a dependency rather than running that task:
 
 .. include:: include/snippets/graphs/graph.py
     :code: python
 
 The parameters of the function are the inputs of the graph, and what it returns are its outputs.
-Because the body is ordinary Python, a graph is built programmatically wherever that is useful: a ``for`` loop over a list of structures places one task per structure.
-
-What one task produces is what orders it against another, so a task whose outputs nothing takes runs beside whatever was meant to follow it.
-Writing such a graph warns where it is written, naming the task:
-
-.. code-block:: python
-
-    @graph
-    def forgot(x, y):
-        add(x=x, y=y)
-
-        return {'product': multiply(x=3, y=4).product}
-
-    # UserWarning: task `add` produces outputs that nothing in this graph takes, so it runs beside the
-    # tasks that were meant to follow it. Take one of its outputs, return it from the graph, or order
-    # what should wait for it with `.after(add)`.
-
-:meth:`~aiida.engine.processes.graphs.spec.GraphSpec.unread` is the same question asked of a declaration, including one read back from a stored run.
-A task that produces nothing is left out of both, since it is run for what it does.
+Only the supported source syntax described below is accepted; ordinary Python expressions are not executed while building the graph.
+Independent task calls are not forced to execute in source order.
+:meth:`~aiida.engine.processes.graphs.spec.GraphSpec.unread` reports tasks whose outputs are not consumed.
 
 Building a restricted graph from source
 ---------------------------------------
@@ -111,21 +110,21 @@ from the source code without executing the graph function:
 
 .. code-block:: python
 
-    from aiida.engine.processes.graphs.build_source import build_from_source, graph, task
+    from aiida.engine import graph_source, task_source
 
-    @task
+    @task_source
     def add(x: int, y: int) -> int:
         return x + y
 
-    @graph
+    @graph_source
     def add_twice(x: int, y: int) -> int:
         first = add(x=x, y=y)
         return add(x=first, y=y)
 
-    declaration = build_from_source(add_twice)
+    declaration = add_twice.build()
 
-The source decorators are imported from the source-based builder to distinguish them from
-``graph_execution`` and ``task_execution``, which build graphs by executing their bodies.
+Use the explicit ``graph_source`` and ``task_source`` names to make the authoring flavour clear.
+``graph_execution`` and ``task_execution`` provide a separate execution-tracing flavour.
 They capture source when a module is imported; definitions must be at module scope. The parser reads a graph's assignments and calls in source
 order, resolving only tasks and graphs registered in the same module. Task
 bodies are not parsed. It accepts single-name assignments to registered calls,
@@ -140,16 +139,63 @@ comparisons and arithmetic belong in registered tasks. These forms lower to
 branch, loop and map tasks, respectively, rather than executing Python control
 flow at parse time. Other forms, including ``break``, ``continue`` and loop
 ``else`` blocks, are rejected with :class:`~aiida.engine.processes.graphs.build_source.UnsupportedSyntax`,
-pointing at the offending source. This syntax is intentionally narrower than ``@graph``; use ``@graph``
-for the full graph-building API. The result is a declaration, not a launched
-process. Independent calls are not forced to execute in source order.
+pointing at the offending source.
+The result is a declaration, not a launched process.
+
+Source graphs currently accept only ordinary positional-or-keyword parameters without defaults.
+Positional-only parameters, keyword-only parameters, ``*args``, ``**kwargs`` and graph parameter defaults are rejected when building the declaration.
+Defaults inside a ``PortModel`` are supported, so group defaulted configuration fields in a required namespace parameter.
+An annotation allowing ``None`` does not itself make an input omittable.
+Use an explicit mapping input for extra options; ``task(**symbolic_mapping)`` is not supported.
+Conditions and topology must use the supported graph control flow or registered tasks, not build-time decisions based on launch values.
+
+.. _topics:workflows:graphs:launch:
+
+Launching and inspecting declarations
+-------------------------------------
+
+A graph handle and its :class:`~aiida.engine.processes.graphs.spec.GraphSpec` hold declarations, not bound run values.
+Keep a declaration and an input mapping side by side when carrying a workflow between application layers.
+:meth:`~aiida.engine.processes.graphs.process.GraphProcess.launch_inputs` prepares the values for launch; :meth:`~aiida.engine.processes.graphs.interface.GraphHandle.get_launch_inputs` also binds them to the graph signature.
+
+.. include:: include/snippets/graphs/launch.py
+    :code: python
+
+For daemon submission, use the same inputs with :func:`~aiida.engine.launch.submit`:
+
+.. code-block:: python
+
+    from aiida.engine import GraphProcess, submit
+
+    node = submit(GraphProcess, **launch_inputs, metadata={'label': 'example'})
+
+Task definitions must be importable by the daemon worker.
+Validation applies at handle launch, direct ``GraphProcess.launch_inputs`` and raw ``GraphProcess`` construction before graph provenance is stored.
+Missing required inputs raise :class:`~aiida.common.exceptions.MissingRequiredInputsError`.
+Its ``missing`` tuple contains immutable :class:`~aiida.common.exceptions.MissingInput` records in deterministic path order, each with ``identifier``, graph-relative ``socket_path``, ``help`` and ``required``.
+A missing required namespace reports its missing leaves; an absent optional namespace does not require its children.
+Wrong types, shapes and unknown inputs remain separate validation errors.
+Consumers can translate the structured records into application-specific advice without parsing error messages.
+On Python versions supporting exception notes, they can attach advice using ``error.add_note(...)``.
+
+:meth:`~aiida.engine.processes.graphs.spec.GraphSpec.to_dict` and :meth:`~aiida.engine.processes.graphs.spec.GraphSpec.from_dict` preserve the versioned declaration, including boundary help, defaults and requiredness.
+Snapshots contain declaration structure and importable executor/type references, not bound input values or run-state node identities.
+Use ``declaration.task_names`` for the task list.
+The current schema version is ``1.0``; unknown versions are rejected.
+Serialization is versioned, not a promise that snapshot formatting never changes across releases.
+
+Execution-flavour examples
+==========================
+
+The remaining examples use explicit execution-flavour decorators and controls.
+They are not source-parser syntax and should not be copied into a ``graph_source`` body.
 
 .. _topics:workflows:graphs:each:
 
 Running a task once per item
 ============================
 
-:func:`~aiida.engine.processes.graphs.build.each` runs a task once for every item of a collection, whether or not the length of that collection is known before the graph runs:
+:func:`~aiida.engine.processes.graphs.build_execution.each` runs a task once for every item of a collection, whether or not the length of that collection is known before the graph runs:
 
 .. include:: include/snippets/graphs/each.py
     :code: python
@@ -164,7 +210,7 @@ What they produced arrives together at whatever takes it, which is what :class:`
 Choosing between two graphs
 ===========================
 
-:func:`~aiida.engine.processes.graphs.build.branch` runs one of two graphs, and each side is written where it is used:
+:func:`~aiida.engine.processes.graphs.build_execution.branch` runs one of two graphs, and each side is written where it is used:
 
 .. include:: include/snippets/graphs/branch.py
     :code: python
@@ -172,14 +218,14 @@ Choosing between two graphs
 Both sides have to return the same outputs, since what comes after the branch takes them without knowing which side ran.
 A task on the side that was not taken never runs, and neither does anything that waited for one of its outputs.
 
-Where the choice is between two values that already exist, :func:`~aiida.engine.processes.graphs.build.select` is the cheap version: it costs one task rather than a process for each side, and returns the node it was handed rather than a copy of it.
+Where the choice is between two values that already exist, :func:`~aiida.engine.processes.graphs.build_execution.select` is the cheap version: it costs one task rather than a process for each side, and returns the node it was handed rather than a copy of it.
 
 .. _topics:workflows:graphs:loops:
 
 Going round until a condition turns
 ===================================
 
-:func:`~aiida.engine.processes.graphs.build.loop` runs a graph again and again, each run starting from what the one before it produced:
+:func:`~aiida.engine.processes.graphs.build_execution.loop` runs a graph again and again, each run starting from what the one before it produced:
 
 .. include:: include/snippets/graphs/loop.py
     :code: python
@@ -193,7 +239,7 @@ That is what lets a loop be written without an edge pointing backwards, which a 
 Grouping tasks
 ==============
 
-:func:`~aiida.engine.processes.graphs.build.subgraph` groups what is written inside it into a graph of its own, run as one task:
+:func:`~aiida.engine.processes.graphs.build_execution.subgraph` groups what is written inside it into a graph of its own, run as one task:
 
 .. include:: include/snippets/graphs/subgraph.py
     :code: python
@@ -206,7 +252,7 @@ That is what makes the group a contract: what it takes and produces is declared,
 Recovering from a run that failed
 =================================
 
-A task can say how to recover from a run that failed, with :func:`~aiida.engine.processes.graphs.build.handler`:
+A task can say how to recover from a run that failed, with :func:`~aiida.engine.processes.graphs.build_execution.handler`:
 
 .. include:: include/snippets/graphs/handlers.py
     :code: python
@@ -226,7 +272,7 @@ Waiting for something outside the graph
 A graph waits for what it runs itself by taking its outputs.
 Waiting for something else takes one of two forms, depending on whether the engine already knows about it.
 
-A :func:`~aiida.engine.processes.graphs.build.monitor` is a task whose function says whether a condition is met, looked at again every ``interval`` seconds until it is, or until ``timeout`` seconds have gone by and the task fails:
+A :func:`~aiida.engine.processes.graphs.build_execution.monitor` is a task whose function says whether a condition is met, looked at again every ``interval`` seconds until it is, or until ``timeout`` seconds have gone by and the task fails:
 
 .. include:: include/snippets/graphs/monitor.py
     :code: python
@@ -271,7 +317,7 @@ A monitor is looked at over and over because what it watches changes, so it is n
     Give it a ``timeout`` it should never reach rather than leaving it at a day, and prefer a condition the engine has no other way of hearing about.
 
 A process ending is not one of those, since the engine is told when it happens.
-Waiting for one the graph did not run is :func:`~aiida.engine.processes.graphs.build.wait_for`, which needs no interval and no timeout because it is woken when it happens:
+Waiting for one the graph did not run is :func:`~aiida.engine.processes.graphs.build_execution.wait_for`, which needs no interval and no timeout because it is woken when it happens:
 
 .. code-block:: python
 

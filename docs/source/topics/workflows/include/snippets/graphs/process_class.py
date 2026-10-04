@@ -1,5 +1,7 @@
 from aiida import orm
-from aiida.engine import WorkChain, graph, run, task
+from aiida.engine import WorkChain, run
+from aiida.engine import graph_execution as graph
+from aiida.engine import task_execution as task
 
 
 class Combine(WorkChain):

@@ -1,9 +1,10 @@
-from aiida.engine import task
+from aiida.engine import task_source
 
 
-@task(outputs=['total', 'product'])
-def sum_product(x: int, y: int) -> tuple[int, int]:
-    return x + y, x * y
+@task_source
+def add(x: int, y: int) -> int:
+    return x + y
 
 
-results = sum_product(x=2, y=3)
+result = add(x=2, y=3)
+assert result == 5

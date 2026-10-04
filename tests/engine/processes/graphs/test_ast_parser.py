@@ -155,6 +155,52 @@ def unsupported_iteration(values: list[int]) -> int:
     return result
 
 
+@graph_source
+def positional_only(x: int, /) -> int:
+    return sum_two(x=x, y=1)
+
+
+@graph_source
+def keyword_only(*, x: int) -> int:
+    return sum_two(x=x, y=1)
+
+
+@graph_source
+def variadic_args(*args) -> int:
+    return sum_two(x=1, y=1)
+
+
+@graph_source
+def variadic_kwargs(**kwargs) -> int:
+    return sum_two(x=1, y=1)
+
+
+@graph_source
+def default_parameter(x: int = 1) -> int:
+    return sum_two(x=x, y=1)
+
+
+@graph_source
+def none_default(x: int | None = None) -> int:
+    return sum_two(x=x, y=1)
+
+
+@pytest.mark.parametrize(
+    'handle, message',
+    [
+        (positional_only, 'only ordinary positional parameters are supported'),
+        (keyword_only, 'only ordinary positional parameters are supported'),
+        (variadic_args, 'only ordinary positional parameters are supported'),
+        (variadic_kwargs, 'only ordinary positional parameters are supported'),
+        (default_parameter, 'parameter defaults are not supported'),
+        (none_default, 'parameter defaults are not supported'),
+    ],
+)
+def test_source_signature_restrictions_are_explicit(handle, message):
+    with pytest.raises(UnsupportedSyntax, match=message):
+        handle.build()
+
+
 def test_control_flow_rejections():
     for function, reason in (
         (missing_else, 'if requires one assignment'),

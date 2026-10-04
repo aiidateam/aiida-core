@@ -1364,7 +1364,7 @@ def task(
     >>>     return compute(given.structure, given.spin)
 
     The fields of the structured type are the ports of the namespace it names, so a graph wires into one of them,
-    `ph(given={'structure': relaxed.structure})`, and the function is handed the structured type it asked for. A
+    `ph(given={'structure': relaxed.structure})`, and the function receives an attribute-accessible namespace. A
     function that carries no annotations, because it came from somewhere else, is described where it is placed:
 
     >>> ph = task(their_ph, inputs=PhInputs, outputs=PhOutputs)

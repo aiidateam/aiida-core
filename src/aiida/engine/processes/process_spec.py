@@ -19,30 +19,11 @@ from aiida.engine.processes.ports import (
     CalcJobOutputPort,
     InputPort,
     PortNamespace,
-    as_written,
     infer_valid_type_from_type_annotation,
 )
 from aiida.orm import Data, Dict, to_aiida_type
 
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
-
-
-def _against(container: type) -> t.Callable[[t.Any, t.Any], str | None]:
-    """Return what checks a namespace against the structured type that named it.
-
-    The ports check field types; constructing the declared container also checks
-    that the namespace can be handed to the function before the task starts.
-    """
-
-    def validate(value: t.Any, port: t.Any) -> str | None:
-        try:
-            as_written(container, value)
-        except Exception as exception:
-            return f'these do not make a `{getattr(container, "__name__", container)}`: {exception}'
-
-        return None
-
-    return validate
 
 
 def _as_a_port(field: Field) -> dict[str, t.Any]:
@@ -125,7 +106,6 @@ class ProcessSpec(spec.ProcessSpec):
             )
             raise TypeError(msg)
 
-        kwargs.setdefault('validator', _against(container))
         self.input_namespace(name, **kwargs)
 
         for field in fields:

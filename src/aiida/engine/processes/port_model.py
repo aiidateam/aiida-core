@@ -35,7 +35,9 @@ class PortModel:
     """Declare a namespace using annotated fields and optional defaults.
 
     Subclasses are frozen, keyword-only dataclasses. AiiDA ports validate the
-    values; the model itself does not coerce them. Opaque inputs use ORM nodes.
+    values; the model itself does not coerce them. Task functions receive
+    attribute-accessible namespace mappings, not reconstructed model instances.
+    Model instances are optional input/output conveniences. Opaque inputs use ORM nodes.
     """
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:

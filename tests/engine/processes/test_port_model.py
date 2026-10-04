@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 import pytest
 from pydantic import BaseModel
 
+from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.engine import (
     PortField,
     PortModel,
@@ -30,6 +31,41 @@ from aiida.engine import (
 )
 from aiida.engine.processes.port_model import as_dict, build, fields_of, is_structured
 from aiida.orm import Dict, Float, Int, JsonableData, Str, load_node
+
+
+class DeclarationOnly(PortModel):
+    steps: int
+
+    def __post_init__(self):
+        raise AssertionError('declaration models must not be constructed by the engine')
+
+
+@task(outputs=['steps'])
+def reads_namespace(config: DeclarationOnly) -> int:
+    assert isinstance(config, AttributesFrozendict)
+    with pytest.raises(TypeError):
+        config['steps'] = 99
+    return config.steps
+
+
+def test_models_are_not_constructed_during_validation_or_execution():
+    ports = reads_namespace.process_class.spec().inputs['config']
+    assert ports.validator is None
+    results, node = run_get_node(reads_namespace, config={'steps': 3})
+    assert node.is_finished_ok
+    assert results['steps'] == 3
+    with pytest.raises(ValueError, match='required value was not provided'):
+        run_get_node(reads_namespace, config={})
+
+
+def test_explicit_namespace_validators_are_preserved():
+    def validator(values, port):
+        return 'steps must be positive' if values['steps'].value <= 0 else None
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', DeclarationOnly, validator=validator)
+    assert spec.inputs['config'].validator is validator
+    assert spec.inputs['config'].validate({'steps': Int(0)}) is not None
 
 
 class AsModel(PortModel):
@@ -334,6 +370,9 @@ def test_something_that_is_not_a_container_is_refused():
 
 @task(outputs=['steps', 'kind'])
 def takes_model(given: AsModel) -> tuple[int, str]:
+    assert isinstance(given, AttributesFrozendict)
+    assert not isinstance(given, PortModel)
+    assert given.steps == given['steps']
     return given.steps, type(given).__name__
 
 
@@ -363,11 +402,11 @@ def test_a_task_takes_a_container_as_a_namespace(container):
 
 
 @KINDS
-def test_a_task_is_handed_the_container_it_named(container):
-    """The namespace holds what the structured type said it would, so the function is given one of those back."""
+def test_a_task_receives_an_attribute_accessible_namespace(container):
+    """Models declare ports; task arguments hold the validated namespace values."""
     results, _ = run_get_node(TAKES[container], given={'structure': 'si', 'steps': 3})
 
-    assert results['kind'] == container.__name__
+    assert results['kind'] == 'AttributesFrozendict'
 
 
 @KINDS
@@ -494,12 +533,12 @@ def test_a_field_that_is_a_container_names_a_namespace_under_this_one(container)
     assert Int in ports['kpoints']['mesh'].valid_type
 
 
-def test_a_nested_container_is_handed_back_whole():
-    """What the function named is what it is given, however deep the structured type goes."""
+def test_nested_namespaces_have_attribute_access():
+    """Nested model declarations produce nested namespace mappings at runtime."""
     results, node = run_get_node(sees_nested, given=Nested(structure='si'))
 
     assert node.is_finished_ok, node.exit_message
-    assert results['seen'] == 'si/4/Kpoints'
+    assert results['seen'] == 'si/4/AttributesFrozendict'
     assert sorted(node.base.links.get_incoming().all_link_labels()) == [
         'given__kpoints__mesh',
         'given__kpoints__offset',
@@ -522,7 +561,7 @@ def test_a_task_fills_one_field_of_a_nested_container():
     results, node = run_get_node(pick_then_see, structure='silicon')
 
     assert node.is_finished_ok, node.exit_message
-    assert results['seen'] == 'silicon/14/Kpoints', 'the mesh the other task chose, not the default'
+    assert results['seen'] == 'silicon/14/AttributesFrozendict', 'the mesh the other task chose, not the default'
 
 
 class Spacing(PortModel):

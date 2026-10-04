@@ -16,10 +16,11 @@ import warnings
 from collections.abc import Callable, Mapping, Sequence
 from types import UnionType
 
+from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.engine.processes.port_model import build, fields_of, is_a_plain_class, without_marks
+from aiida.engine.processes.port_model import fields_of, is_a_plain_class, without_marks
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
@@ -347,16 +348,13 @@ def _plain(value: t.Any) -> t.Any:
 
 
 def as_written(annotation: t.Any, value: t.Any) -> t.Any:
-    """Return what was stored, as the thing that asked for it was written to take it.
+    """Adapt stored inputs to task arguments without constructing declaration models.
 
-    A structured type is handed back as one of those, built from the namespace its fields were stored in, so this goes
-    as deep as the structured type does. Everything else is the plain value a node holds, or the node itself where the
-    annotation names one.
+    PortModel annotations declare namespaces, delivered as immutable mappings
+    with attribute access. Leaves become plain values unless annotated as nodes.
 
-    :param annotation: what the parameter or field declared, or ``None`` where nothing was declared.
-    :param value: what is stored for it, which is a node or a mapping of them.
-    :raises Exception: whatever the structured type raises for values it refuses, which is what makes this the check a
-        namespace runs at submit as well as the way a value reaches a function.
+    :param annotation: the parameter or field declaration.
+    :param value: a stored node or namespace mapping.
     """
     annotation = without_marks(annotation)
     fields = fields_of(annotation)
@@ -371,4 +369,4 @@ def as_written(annotation: t.Any, value: t.Any) -> t.Any:
 
     held = {field.name: as_written(field.annotation, value[field.name]) for field in fields if field.name in value}
 
-    return build(annotation, held)
+    return AttributesFrozendict(held)

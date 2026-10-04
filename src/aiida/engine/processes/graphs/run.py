@@ -445,14 +445,22 @@ class GraphRun:
         for output, source in self.graph.outputs.items():
             if source.task is None:
                 # The graph passes one of its own inputs on, so the value is already there and nothing produced it.
-                produced[output] = self.given[source.port]
+                try:
+                    produced[output] = at(self.given, source.port)
+                except KeyError:
+                    if self.graph.output_required(output):
+                        raise
                 continue
 
             if source.task in self.skipped:
                 continue
 
             if not isinstance(self.graph.task(source.task), MappedTask):
-                produced[output] = at(self._produced_by(source.task).outputs, source.port)
+                try:
+                    produced[output] = at(self._produced_by(source.task).outputs, source.port)
+                except KeyError:
+                    if self.graph.output_required(output):
+                        raise
                 continue
 
             for instance in self.instances[source.task]:

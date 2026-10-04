@@ -80,6 +80,12 @@ class Process(ProcessBase):
     def spec(cls) -> ProcessSpec:
         return super().spec()  # type: ignore[return-value]
 
+    @property
+    @override
+    def output_ports(self) -> PortNamespace:
+        """Return the AiiDA output namespace for this process instance."""
+        return self.spec().outputs
+
     @classmethod
     def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
         """Define the specification of the process, including its inputs, outputs and known exit codes.
@@ -918,7 +924,7 @@ class Process(ProcessBase):
 
         :return: flat dictionary of parsed outputs
         """
-        return dict(self._flatten_outputs(self.spec().outputs, self.outputs))
+        return dict(self._flatten_outputs(self.output_ports, self.outputs))
 
     def _flatten_inputs(
         self,

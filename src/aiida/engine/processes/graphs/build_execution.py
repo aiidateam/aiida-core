@@ -21,7 +21,7 @@ from inspect import get_annotations
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
-from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_function
+from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_function, namespace_for_outputs
 from aiida.engine.processes.graphs.interface import ACTIVE_BUILDER, GraphHandle
 from aiida.engine.processes.graphs.monitors import MonitorProcess, WaitProcess
 from aiida.engine.processes.graphs.process import TaskProcess
@@ -191,7 +191,18 @@ class OutputNames:
     @classmethod
     def named(cls, names: t.Iterable[str]) -> OutputNames:
         """Return exactly these names, which is what a graph declares as its outputs."""
-        return cls(names=dict.fromkeys(names))
+        result = cls()
+        for path in names:
+            parent = result
+            segments = path.split('.')
+            for segment in segments[:-1]:
+                child = parent.names.get(segment)
+                if child is None:
+                    child = cls()
+                    parent.names[segment] = child
+                parent = child
+            parent.names[segments[-1]] = None
+        return result
 
 
 class TaskOutputs:
@@ -709,8 +720,23 @@ class GraphBuilder:
         if returned is None:
             return {}
 
+        held = as_dict(returned)
+        if held is not None:
+            returned = held
         if isinstance(returned, dict):
-            return {name: self._output_source(value, name) for name, value in returned.items()}
+            outputs = {}
+            for name, value in returned.items():
+                nested = as_dict(value)
+                if nested is not None or isinstance(value, dict):
+                    outputs.update(
+                        {
+                            f'{name}.{path}': source
+                            for path, source in self._declared_outputs(nested if nested is not None else value).items()
+                        }
+                    )
+                else:
+                    outputs[name] = self._output_source(value, name)
+            return outputs
 
         source = self._as_source(returned, 'it')
 
@@ -773,8 +799,25 @@ class ExecutionGraphHandle(GraphHandle):
         finally:
             ACTIVE_BUILDER.reset(token)
 
-        result = builder.finish(returned, identifier=self.identifier)
         annotations = get_annotations(self._function, eval_str=True)
+        output_namespace = namespace_for_outputs(annotations.get('return'))
+        if output_namespace is not None and isinstance(returned, TaskOutputs):
+            if all(name in returned.ports for name in output_namespace):
+                returned = {name: returned._reference(name) for name in output_namespace}
+        result = builder.finish(returned, identifier=self.identifier)
+        if output_namespace is not None and isinstance(returned, GraphInput):
+
+            def expand(namespace: PortNamespace, prefix: str = '') -> dict[str, Endpoint]:
+                outputs = {}
+                for name, port in namespace.items():
+                    path = f'{prefix}{name}'
+                    if isinstance(port, PortNamespace):
+                        outputs.update(expand(port, f'{path}.'))
+                    else:
+                        outputs[path] = Endpoint(task=None, port=f'{returned.name}.{path}')
+                return outputs
+
+            result = replace(result, outputs=expand(output_namespace))
         input_hints = {
             name: hint
             for name in result.inputs
@@ -784,6 +827,7 @@ class ExecutionGraphHandle(GraphHandle):
         output_hints = dict.fromkeys(result.outputs, output_hint) if len(result.outputs) == 1 and output_hint else {}
         return replace(
             result,
+            output_namespace=dump_port(output_namespace, defaults=False) if output_namespace is not None else None,
             input_typehints=input_hints,
             output_typehints=output_hints,
             input_namespace=dump_port(namespace_for_function(self._function)),

@@ -22,7 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from aiida.engine.processes.graphs.build_execution import task as build_task
-from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_annotations
+from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_annotations, namespace_for_outputs
 from aiida.engine.processes.graphs.interface import GraphHandle
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
@@ -35,6 +35,7 @@ from aiida.engine.processes.graphs.spec import (
     ProcessTask,
     SubgraphTask,
 )
+from aiida.engine.processes.port_model import fields_of
 from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
@@ -198,23 +199,80 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
     result = statements[-1].value
     if result is None:
         _reject(state, statements[-1], 'return must name a task or graph input')
-    output = _lower_value(state, result, allow_call=True)
-    if not isinstance(output, _Reference):
-        _reject(state, result, 'return must name a task or graph input')
     hints = _GRAPH_HINTS[state.key]
+    outputs = _lower_return(state, result, hints.get('return'))
     output_hint = infer_valid_type_from_type_annotation(hints.get('return'))
+    output_namespace = namespace_for_outputs(hints.get('return'))
     return GraphSpec(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
-        outputs={output.port: Endpoint(task=output.task, port=output.port)},
+        outputs=outputs,
         identifier=state.key.partition(':')[2],
         input_typehints={
             name: hint for name in state.inputs if (hint := infer_valid_type_from_type_annotation(hints.get(name)))
         },
-        output_typehints={output.port: output_hint} if output_hint else {},
+        output_typehints=dict.fromkeys(outputs, output_hint) if len(outputs) == 1 and output_hint else {},
+        output_namespace=dump_port(output_namespace, defaults=False) if output_namespace is not None else None,
         input_namespace=dump_port(namespace_for_annotations(hints, tuple(state.inputs))),
     )
+
+
+def _lower_return(
+    state: _LoweringState, expression: ast.expr, annotation: t.Any = None, prefix: str = ''
+) -> dict[str, Endpoint]:
+    """Lower named returns without constructing their Python containers."""
+    fields = fields_of(annotation)
+    members: list[tuple[str, ast.expr]] | None = None
+    if isinstance(expression, ast.Dict):
+        members = []
+        for key, value in zip(expression.keys, expression.values):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                _reject(state, expression, 'output names must be string literals')
+            members.append((key.value, value))
+    elif fields is not None and isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+        if expression.func.id == annotation.__name__:
+            if expression.args or any(keyword.arg is None for keyword in expression.keywords):
+                _reject(state, expression, 'structured returns require named fields')
+            members = [(t.cast(str, keyword.arg), keyword.value) for keyword in expression.keywords]
+    if members is not None:
+        outputs: dict[str, Endpoint] = {}
+        annotations = {field.name: field.annotation for field in fields or ()}
+        for name, value in members:
+            lowered = _lower_return(state, value, annotations.get(name), f'{prefix}{name}.')
+            if outputs.keys() & lowered.keys():
+                _reject(state, expression, 'duplicate graph output')
+            outputs.update(lowered)
+        return outputs
+    reference = _lower_value(state, expression, allow_call=True)
+    if not isinstance(reference, _Reference) or (not reference.port and fields is None):
+        _reject(state, expression, 'return must select a task output or graph input')
+    if fields is not None:
+
+        def expand(annotation: t.Any, target: str, source: str) -> dict[str, Endpoint]:
+            children = fields_of(annotation)
+            if children is None:
+                return {target: Endpoint(task=reference.task, port=source)}
+            expanded = {}
+            for child in children:
+                expanded.update(
+                    expand(
+                        child.annotation,
+                        f'{target}.{child.name}' if target else child.name,
+                        f'{source}.{child.name}' if source else child.name,
+                    )
+                )
+            return expanded
+
+        source_path = reference.port
+        if reference.task is not None and isinstance(expression, (ast.Name, ast.Call)):
+            task = next(task for task in state.tasks if task.name == reference.task)
+            declared = task.spec.outputs if isinstance(task, ProcessTask) else task.body.output_spec()
+            if declared.keys() == {field.name for field in fields}:
+                source_path = ''
+        return expand(annotation, prefix.rstrip('.'), source_path)
+    name = prefix.rstrip('.') if prefix else reference.port
+    return {name: Endpoint(task=reference.task, port=reference.port)}
 
 
 def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
@@ -387,8 +445,6 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         def make_task(inputs: dict[str, t.Any]) -> ProcessTask | SubgraphTask:
             return ProcessTask(name=instance, inputs=inputs, spec=spec)
 
-    if len(outputs) != 1:
-        _reject(state, expression, f'{name!r} must declare exactly one output')
     given: dict[str, t.Any] = {}
     for keyword in expression.keywords:
         port = keyword.arg
@@ -398,12 +454,20 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         value = _lower_value(state, keyword.value)
         _wire(state, instance, port, value, given)
     state.tasks.append(make_task(given))
-    return _Reference(instance, next(iter(outputs)))
+    return _Reference(instance, next(iter(outputs)) if len(outputs) == 1 else '')
 
 
 def _lower_value(
     state: _LoweringState, expression: ast.expr, *, allow_call: bool = False
 ) -> _Reference | int | float | str | bool:
+    if isinstance(expression, ast.Attribute):
+        parent = _lower_value(state, expression.value, allow_call=allow_call)
+        if not isinstance(parent, _Reference) or parent.task is None:
+            _reject(state, expression, 'selection must name a task output')
+        path = f'{parent.port}.{expression.attr}' if parent.port else expression.attr
+        if isinstance(expression.value, ast.Name) and parent.port == expression.attr:
+            path = parent.port
+        return _Reference(parent.task, path)
     if isinstance(expression, ast.Name):
         if expression.id not in state.names:
             _reject(state, expression, f'unbound name {expression.id!r}')

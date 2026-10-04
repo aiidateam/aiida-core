@@ -311,7 +311,7 @@ def test_passthrough_namespace_has_leaf_links_not_a_container_node():
     leaf = Int(7)
     inputs = passthrough.get_launch_inputs(configuration={'codes': {'kcp': leaf}})
     results, process_node = run_get_node(GraphProcess, **inputs)
-    assert results['configuration']['codes']['kcp'].uuid == leaf.uuid
+    assert results['codes']['kcp'].uuid == leaf.uuid
     incoming = process_node.base.links.get_incoming(link_type=LinkType.INPUT_WORK)
     assert {entry.link_label for entry in incoming.all()} == {
         'graph',

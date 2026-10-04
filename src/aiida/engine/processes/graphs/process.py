@@ -22,12 +22,11 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
-from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.port_model import as_dict
-from aiida.engine.processes.ports import as_written
+from aiida.engine.processes.ports import PortNamespace, as_written
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
@@ -181,6 +180,12 @@ class GraphProcess(Process):
             cls._GRAPH: Dict(dict=body.to_dict()),
             cls._GRAPH_INPUTS: body.serialize_inputs(inputs),
         }
+
+    @property
+    @override
+    def output_ports(self) -> PortNamespace:
+        """Use the stored graph declaration without mutating the shared process spec."""
+        return self.graph.output_spec()
 
     @property
     def run_state(self) -> GraphRun:

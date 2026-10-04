@@ -535,6 +535,9 @@ class BodyTask(GraphTask):
     def has_outputs(self) -> bool:
         return bool(self.body.outputs)
 
+    def produces_namespace(self, port: str) -> bool:
+        return self.body.output_namespace is not None and has_namespace(self.body.output_spec(), port)
+
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'body': self.body.to_dict()}
 
@@ -721,8 +724,14 @@ class GraphSpec:
     input_namespace: dict[str, t.Any] | None = None
     """Serialized ordinary port namespace for the boundary, without bound values or ORM identity."""
 
+    output_namespace: dict[str, t.Any] | None = None
+    """Serialized ordinary output ports, distinct from the output source mapping."""
+
     def __post_init__(self) -> None:
         self.validate()
+        if self.output_namespace is not None:
+            object.__setattr__(self, 'output_namespace', deepcopy(self.output_namespace))
+            self._validate_output_namespace()
         if self.input_namespace is not None:
             object.__setattr__(self, 'input_namespace', deepcopy(self.input_namespace))
             self.input_spec()
@@ -766,6 +775,91 @@ class GraphSpec:
                     inferred.default = declared.default
             namespace[name] = inferred
         return namespace
+
+    def output_spec(self) -> PortNamespace:
+        """Reconstruct declared output ports, or a dynamic namespace for legacy graphs."""
+        if self.output_namespace is None:
+            return PortNamespace('outputs', dynamic=True)
+        namespace = load_port(self.output_namespace, output=True)
+        if not isinstance(namespace, PortNamespace):
+            msg = 'the graph output boundary must be a port namespace.'
+            raise ValueError(msg)
+        return namespace
+
+    def output_required(self, path: str) -> bool:
+        """Return whether an output and every namespace containing it are required."""
+        if self.output_namespace is None:
+            return True
+        namespace = self.output_spec()
+        segments = path.split('.')
+        return all(namespace.get_port('.'.join(segments[:index])).required for index in range(1, len(segments) + 1))
+
+    def _validate_output_namespace(self) -> None:
+        namespace = self.output_spec()
+        for path in self.outputs:
+            try:
+                target = namespace.get_port(path)
+            except ValueError as exception:
+                msg = f'graph output `{path}` is not declared in the output namespace.'
+                raise ValueError(msg) from exception
+            source = self.outputs[path]
+            if source.task is None:
+                source_namespace = self.input_spec()
+            else:
+                task = self.task(source.task)
+                if isinstance(task, ProcessTask):
+                    source_namespace = task.spec.outputs
+                elif isinstance(task, BodyTask):
+                    source_namespace = task.body.output_spec()
+                else:
+                    continue
+            try:
+                origin = source_namespace.get_port(source.port)
+            except ValueError:
+                continue
+            self._check_output_ports(origin, target, path)
+
+        def required(port: PortNamespace, prefix: str = '') -> None:
+            for name, child in port.items():
+                path = f'{prefix}{name}'
+                if any(path == mapped or path.startswith(f'{mapped}.') for mapped in self.outputs):
+                    continue
+                if not child.required:
+                    continue
+                if isinstance(child, PortNamespace) and child:
+                    required(child, f'{path}.')
+                else:
+                    msg = f'required graph output `{path}` has no source.'
+                    raise ValueError(msg)
+
+        required(namespace)
+        self.validate_typehints()
+
+    @classmethod
+    def _check_output_ports(cls, source: t.Any, target: t.Any, path: str) -> None:
+        if isinstance(source, PortNamespace) != isinstance(target, PortNamespace):
+            msg = f'graph output `{path}` has incompatible value and namespace shapes.'
+            raise ValueError(msg)
+        if not isinstance(target, PortNamespace):
+            source_types = source.valid_type or ()
+            target_types = target.valid_type or ()
+            source_types = source_types if isinstance(source_types, tuple) else (source_types,)
+            target_types = target_types if isinstance(target_types, tuple) else (target_types,)
+            if isinstance(source, InputPort):
+                source_types = tuple(kind for kind in source_types if kind is not type(None))
+            cls._check_types(source_types, target_types, f'graph output `{path}`')
+            return
+        for name, child in source.items():
+            if name not in target:
+                if not target.dynamic:
+                    msg = f'graph output `{path}.{name}` is not declared in the output namespace.'
+                    raise ValueError(msg)
+                continue
+            cls._check_output_ports(child, target[name], f'{path}.{name}')
+        for name, child in target.items():
+            if child.required and name not in source and not source.dynamic:
+                msg = f'required graph output `{path}.{name}` has no source.'
+                raise ValueError(msg)
 
     @staticmethod
     def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
@@ -881,7 +975,11 @@ class GraphSpec:
         valid = getattr(holder, 'valid_type', None)
         if valid is None:
             return ()
-        return valid if isinstance(valid, tuple) else (valid,)
+        types = valid if isinstance(valid, tuple) else (valid,)
+        # Optional input ports accept None during parsing, not as a produced data node.
+        if isinstance(holder, InputPort):
+            types = tuple(kind for kind in types if kind is not type(None))
+        return types
 
     def _types_at(self, task: GraphTask, port: str, *, output: bool) -> tuple[type, ...]:
         """Find types at a task boundary, following nested graph boundaries where necessary."""
@@ -899,6 +997,8 @@ class GraphSpec:
         return ()
 
     def _input_types(self, name: str) -> tuple[type, ...]:
+        if '.' in name:
+            return self._port_types(self.input_spec(), name)
         if name in self.input_typehints:
             return self.input_typehints[name]
         for task_name, port in self.inputs.get(name, ()):
@@ -907,6 +1007,8 @@ class GraphSpec:
         return ()
 
     def _output_types(self, name: str) -> tuple[type, ...]:
+        if self.output_namespace is not None:
+            return self._port_types(self.output_spec(), name)
         if name in self.output_typehints:
             return self.output_typehints[name]
         source = self.outputs[name]
@@ -969,7 +1071,7 @@ class GraphSpec:
             )
 
         for name in self.outputs:
-            if name not in self.output_typehints:
+            if name not in self.output_typehints and self.output_namespace is None:
                 continue
             source = self.outputs[name]
             produced = (
@@ -977,7 +1079,12 @@ class GraphSpec:
                 if source.task is None
                 else self._types_at(self.task(source.task), source.port, output=True)
             )
-            self._check_types(produced, self.output_typehints[name], f'graph output `{name}`')
+            expected = (
+                self._port_types(self.output_spec(), name)
+                if self.output_namespace is not None
+                else self.output_typehints[name]
+            )
+            self._check_types(produced, expected, f'graph output `{name}`')
 
     def predecessors(self, name: str) -> set[str]:
         """Return the names of the tasks the given one waits for, whether it takes a value from them or not."""
@@ -1047,7 +1154,7 @@ class GraphSpec:
 
         for output, source in self.outputs.items():
             if source.task is None:
-                if source.port not in self.inputs:
+                if source.port.split('.')[0] not in self.inputs:
                     msg = f'output `{output}` passes on `{source.port}`, which is not an input.'
                     raise ValueError(msg)
 
@@ -1213,6 +1320,7 @@ class GraphSpec:
             'identifier': self.identifier,
             'version': self.version,
             'input_namespace': deepcopy(self.input_namespace),
+            'output_namespace': deepcopy(self.output_namespace),
             'input_typehints': {
                 name: [get_object_loader().identify_object(kind) for kind in types]
                 for name, types in self.input_typehints.items()
@@ -1243,6 +1351,7 @@ class GraphSpec:
             identifier=data.get('identifier'),
             version=version,
             input_namespace=data.get('input_namespace'),
+            output_namespace=data.get('output_namespace'),
             input_typehints={
                 name: tuple(get_object_loader().load_object(kind) for kind in types)
                 for name, types in data.get('input_typehints', {}).items()

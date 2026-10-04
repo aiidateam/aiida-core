@@ -25,7 +25,7 @@ from aiida.engine.processes.port_model import (
     fields_of,
     without_marks,
 )
-from aiida.engine.processes.ports import InputPort, PortNamespace, infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 from aiida.orm import Data, to_aiida_type
 
 
@@ -91,7 +91,18 @@ def namespace_for_function(function: Callable[..., t.Any]) -> PortNamespace:
     return namespace
 
 
-def dump_port(port: InputPort | PortNamespace, *, defaults: bool = True) -> dict[str, t.Any]:
+def namespace_for_outputs(annotation: t.Any) -> PortNamespace | None:
+    """Declare structured graph returns with the ordinary process output machinery."""
+    from aiida.engine.processes.process_spec import ProcessSpec
+
+    if fields_of(annotation) is None:
+        return None
+    spec = ProcessSpec()
+    spec.outputs_from(annotation)
+    return spec.outputs
+
+
+def dump_port(port: InputPort | OutputPort | PortNamespace, *, defaults: bool = True) -> dict[str, t.Any]:
     """Snapshot declarative port properties, not live serializers or validators.
 
     Task-specific conversion and custom validation remain on the executor's ports.
@@ -109,7 +120,7 @@ def dump_port(port: InputPort | PortNamespace, *, defaults: bool = True) -> dict
             None if kind is type(None) else get_object_loader().identify_object(kind)
             for kind in dict.fromkeys(valid_types)
         ]
-    if defaults and port.has_default():
+    if defaults and isinstance(port, (InputPort, PortNamespace)) and port.has_default():
         value = port.default
         if isinstance(value, partial) and value.func is to_aiida_type:
             value = value.args[0]
@@ -117,7 +128,7 @@ def dump_port(port: InputPort | PortNamespace, *, defaults: bool = True) -> dict
     return result
 
 
-def load_port(data: Mapping[str, t.Any]) -> InputPort | PortNamespace:
+def load_port(data: Mapping[str, t.Any], *, output: bool = False) -> InputPort | OutputPort | PortNamespace:
     """Reconstruct ordinary AiiDA ports from their declaration snapshot."""
     options = {'required': data['required'], 'help': data.get('help')}
     if not isinstance(options['required'], bool) or (
@@ -130,7 +141,8 @@ def load_port(data: Mapping[str, t.Any]) -> InputPort | PortNamespace:
     if 'ports' not in data:
         if 'default' in options:
             options['default'] = partial(to_aiida_type, options['default'])
-        return InputPort(
+        port_class = OutputPort if output else InputPort
+        return port_class(
             data['name'],
             valid_type=tuple(
                 type(None) if kind is None else get_object_loader().load_object(kind) for kind in data['valid_type']
@@ -140,7 +152,7 @@ def load_port(data: Mapping[str, t.Any]) -> InputPort | PortNamespace:
         )
     namespace = PortNamespace(data['name'], dynamic=data['dynamic'], populate_defaults=data['required'], **options)
     for name, child in data['ports'].items():
-        namespace[name] = load_port(child)
+        namespace[name] = load_port(child, output=output)
     return namespace
 
 

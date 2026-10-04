@@ -394,6 +394,11 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         return self._parsed_inputs
 
     @property
+    def output_ports(self) -> ports.PortNamespace:
+        """Return output declarations for this process instance."""
+        return self.spec().outputs
+
+    @property
     def outputs(self) -> dict[str, t.Any]:
         """
         Get the current outputs emitted by the Process.  These may grow over
@@ -865,7 +870,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
     def on_finish(self, result: t.Any, successful: bool) -> None:
         """Entering the FINISHED state."""
         if successful:
-            validation_error = self.spec().outputs.validate(self.outputs)
+            validation_error = self.output_ports.validate(self.outputs)
             if validation_error:
                 state_cls = self.get_states_map()[ProcessState.FINISHED]
                 finished_state = state_cls(self, result=result, successful=False)
@@ -1382,7 +1387,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         namespace = output_path[:-1]
 
         unresolved_path = output_path.copy()
-        port_namespace = self.spec().outputs
+        port_namespace = self.output_ports
 
         # For output_path == ['sub', 'a', 'b'], where only sub is declared, this leaves
         # port_namespace as sub and unresolved_path as ['a', 'b'].

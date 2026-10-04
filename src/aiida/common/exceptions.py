@@ -8,6 +8,8 @@
 ###########################################################################
 """Module that define the exceptions that are thrown by AiiDA's internal code."""
 
+from dataclasses import dataclass
+
 __all__ = (
     'AiidaException',
     'ClosedStorage',
@@ -33,6 +35,8 @@ __all__ = (
     'LockingProfileError',
     'MissingConfigurationError',
     'MissingEntryPointError',
+    'MissingInput',
+    'MissingRequiredInputsError',
     'ModificationNotAllowed',
     'MultipleEntryPointError',
     'MultipleObjectsError',
@@ -62,6 +66,32 @@ class AiidaException(Exception):  # noqa: N818
     Each module will have its own subclass, inherited from this
     (e.g. ExecManagerException, TransportException, ...)
     """
+
+
+@dataclass(frozen=True)
+class MissingInput:
+    """One missing required input, with graph-relative path and configuration help."""
+
+    identifier: str | None
+    socket_path: str
+    help: str | None
+    required: bool
+
+
+class MissingRequiredInputsError(AiidaException):
+    """Required graph inputs are missing.
+
+    :param missing: the missing inputs, in deterministic path order.
+    """
+
+    def __init__(self, missing: tuple[MissingInput, ...]) -> None:
+        self.missing = missing
+        message = f'missing required graph inputs: {", ".join(item.socket_path for item in missing)}.'
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[type, tuple[tuple[MissingInput, ...]]]:
+        """Preserve structured diagnostics when the exception is pickled."""
+        return type(self), (self.missing,)
 
 
 class NotExistent(AiidaException):

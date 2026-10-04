@@ -11,11 +11,13 @@
 from __future__ import annotations
 
 import json
+import pickle
 import typing as t
 from dataclasses import replace
 
 import pytest
 
+from aiida.common.exceptions import MissingInput, MissingRequiredInputsError
 from aiida.common.links import LinkType
 from aiida.engine import GraphProcess, PortField, PortModel, graph_execution, graph_source, run_get_node, task_source
 from aiida.engine.processes.graphs.inputs import dump_port, load_port, merge_ports, namespace_for_function
@@ -56,8 +58,9 @@ def test_port_model_graph_boundary(handle, as_model):
     given = ModelCodes(kcp=Int(2)) if as_model else {'kcp': Int(2)}
     prepared = spec.serialize_inputs({'codes': given})
     assert prepared['codes']['pw'] == 1
-    with pytest.raises(ValueError, match=r'inputs\.codes\.kcp.*required value was not provided'):
+    with pytest.raises(MissingRequiredInputsError) as caught:
         spec.prepare_inputs({})
+    assert caught.value.missing == (MissingInput(spec.identifier, 'codes.kcp', 'Configure the KCP executable.', True),)
     results, node = run_get_node(GraphProcess, **handle.get_launch_inputs(codes=given))
     assert node.is_finished_ok
     assert next(iter(results.values())) == 3
@@ -130,8 +133,9 @@ def test_boundary_reconstructs_ordinary_ports_and_preserves_help():
 def test_unannotated_graph_input_infers_the_connected_task_namespace():
     spec = restored(untyped_route)
     assert isinstance(spec.input_spec()['codes'], PortNamespace)
-    with pytest.raises(ValueError, match=r'inputs\.codes\.kcp.*required value was not provided'):
+    with pytest.raises(MissingRequiredInputsError) as caught:
         GraphProcess.launch_inputs(spec, {'codes': {}})
+    assert [item.socket_path for item in caught.value.missing] == ['codes.kcp']
     node = Int(7)
     assert GraphProcess.launch_inputs(spec, {'codes': {'kcp': node}})['graph_inputs'] == {'codes': {'kcp': node}}
 
@@ -142,27 +146,33 @@ def test_nested_graph_boundary_metadata_round_trips():
 
 
 @pytest.mark.parametrize('launch', ['handle', 'direct', 'raw'])
-def test_missing_inputs_report_the_same_port_error_before_storage(launch):
+def test_missing_inputs_report_identical_diagnostics_before_storage(launch):
     spec = restored(route)
     count = QueryBuilder().append(GraphNode).count()
-    with pytest.raises(ValueError, match=r'inputs\.codes\.kcp.*required value was not provided'):
+    with pytest.raises(MissingRequiredInputsError) as caught:
         if launch == 'handle':
             route.get_launch_inputs(codes={})
         elif launch == 'direct':
             GraphProcess.launch_inputs(spec, {'codes': {}})
         else:
             GraphProcess(inputs={'graph': Dict(dict=spec.to_dict()), 'graph_inputs': {'codes': {}}})
+    assert caught.value.missing == (
+        MissingInput(spec.identifier, 'codes.kcp', 'Configure the KCP executable.', True),
+        MissingInput(spec.identifier, 'unused', None, True),
+    )
     assert QueryBuilder().append(GraphNode).count() == count
 
 
-def test_missing_scalar_graph_input_reports_a_port_error():
-    with pytest.raises(ValueError, match=r'inputs\.unused.*required value was not provided'):
+def test_missing_scalar_graph_input_has_structured_diagnostics():
+    with pytest.raises(MissingRequiredInputsError) as caught:
         route.get_launch_inputs(codes={'kcp': Int(1)})
+    assert caught.value.missing == (MissingInput(route.build().identifier, 'unused', None, True),)
 
 
 def test_omitted_required_namespace_reports_its_leaf():
-    with pytest.raises(ValueError, match=r'inputs\.configuration\.codes\.kcp.*required value was not provided'):
+    with pytest.raises(MissingRequiredInputsError) as caught:
         passthrough.get_launch_inputs()
+    assert [item.socket_path for item in caught.value.missing] == ['configuration.codes.kcp']
 
 
 def test_optional_namespace_is_checked_only_when_supplied():
@@ -177,10 +187,9 @@ def test_optional_namespace_is_checked_only_when_supplied():
     inputs = GraphProcess.launch_inputs(spec, supplied)
     assert 'optional_codes' not in inputs['graph_inputs']['configuration']
     assert supplied == {'configuration': {'codes': {'kcp': node}}}
-    with pytest.raises(
-        ValueError, match=r'inputs\.configuration\.optional_codes\.kcp.*required value was not provided'
-    ):
+    with pytest.raises(MissingRequiredInputsError) as caught:
         GraphProcess.launch_inputs(spec, {'configuration': {'codes': {'kcp': node}, 'optional_codes': {}}})
+    assert [item.socket_path for item in caught.value.missing] == ['configuration.optional_codes.kcp']
 
 
 def test_defaults_work_without_the_live_graph_handle():
@@ -210,8 +219,9 @@ def test_manual_graph_uses_task_namespace_without_lifting_task_defaults():
     )
     spec = GraphSpec.from_dict(spec.to_dict())
     assert spec.input_spec()['codes']['kcp'].help == 'Configure the KCP executable.'
-    with pytest.raises(ValueError, match=r'inputs\.codes\.kcp.*required value was not provided'):
+    with pytest.raises(MissingRequiredInputsError) as caught:
         GraphProcess.launch_inputs(spec, {'codes': {}})
+    assert [item.socket_path for item in caught.value.missing] == ['codes.kcp']
 
 
 class Options(PortModel):
@@ -234,8 +244,9 @@ def test_structured_value_and_nested_defaults_use_leaf_nodes():
 
 
 def test_required_namespace_with_only_defaulted_children_is_still_required():
-    with pytest.raises(ValueError, match=r'inputs\.options.*required value was not provided'):
+    with pytest.raises(MissingRequiredInputsError) as caught:
         structured_passthrough.get_launch_inputs()
+    assert [item.socket_path for item in caught.value.missing] == ['options']
 
 
 def test_raw_launch_applies_defaults_before_provenance_links():
@@ -275,6 +286,20 @@ def test_shared_consumer_metadata_is_deterministic_and_task_defaults_stay_local(
     assert not forward.has_default()
     with pytest.raises(ValueError, match='incompatible'):
         merge_ports('codes', [required, PortNamespace('codes')])
+
+
+def test_missing_diagnostics_are_pickleable_and_do_not_mutate_inputs():
+    given = {'codes': {}}
+    spec = restored(route)
+    with pytest.raises(MissingRequiredInputsError) as caught:
+        spec.prepare_inputs(given)
+    assert given == {'codes': {}}
+    error = caught.value
+    restored_error = pickle.loads(pickle.dumps(error))
+    assert restored_error.missing == error.missing
+    assert str(restored_error) == str(error)
+    with pytest.raises(AttributeError):
+        error.missing[0].socket_path = 'changed'
 
 
 def test_wrong_leaf_type_reports_a_type_error():

@@ -16,8 +16,8 @@ import typing as t
 from collections.abc import Callable, Mapping, Sequence
 from functools import partial
 
+from aiida.common.exceptions import MissingInput, MissingRequiredInputsError
 from aiida.common.loaders import get_object_loader
-from aiida.engine.processes.generic.ports import PortValidationError
 from aiida.engine.processes.port_model import (
     UNSPECIFIED,
     _port_help,
@@ -172,15 +172,13 @@ def merge_ports(name: str, ports: Sequence[InputPort | PortNamespace]) -> InputP
     return namespace
 
 
-def prepare_inputs(namespace: PortNamespace, given: Mapping[str, t.Any]) -> dict[str, t.Any]:
-    """Normalize mappings and defaults, rejecting missing required inputs without mutation."""
-
-    def missing(port: InputPort | PortNamespace, path: str) -> t.NoReturn:
-        error = PortValidationError(f"required value was not provided for '{port.name}'", f'inputs.{path}')
-        raise ValueError(error)
+def prepare_inputs(namespace: PortNamespace, given: Mapping[str, t.Any], identifier: str | None) -> dict[str, t.Any]:
+    """Normalize defaults and aggregate missing fields without mutating inputs."""
+    missing: list[MissingInput] = []
 
     def visit(port: InputPort | PortNamespace, value: t.Any, path: str) -> t.Any:
         absent_namespace = False
+        missing_before = len(missing)
         if value is UNSPECIFIED:
             if port.has_default():
                 default = port.default
@@ -190,7 +188,8 @@ def prepare_inputs(namespace: PortNamespace, given: Mapping[str, t.Any]) -> dict
             elif not port.required:
                 return UNSPECIFIED
             elif not isinstance(port, PortNamespace) or not port:
-                missing(port, path)
+                missing.append(MissingInput(identifier, path, port.help, True))
+                return UNSPECIFIED
             else:
                 absent_namespace = True
                 value = {}
@@ -211,9 +210,11 @@ def prepare_inputs(namespace: PortNamespace, given: Mapping[str, t.Any]) -> dict
             prepared = visit(child, value.get(name, UNSPECIFIED), child_path)
             if prepared is not UNSPECIFIED:
                 result[name] = prepared
-        if absent_namespace:
-            missing(port, path)
+        if absent_namespace and len(missing) == missing_before:
+            missing.append(MissingInput(identifier, path, port.help, True))
         return result
 
     prepared = visit(namespace, given, '')
+    if missing:
+        raise MissingRequiredInputsError(tuple(missing))
     return t.cast(dict[str, t.Any], prepared)

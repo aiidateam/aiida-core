@@ -789,7 +789,7 @@ class GraphSpec:
         :param inputs: the supplied values, left unchanged.
         :return: a normalized mapping with graph defaults applied.
         """
-        return prepare_inputs(self.input_spec(), inputs)
+        return prepare_inputs(self.input_spec(), inputs, self.identifier)
 
     def serialize_inputs(self, inputs: t.Mapping[str, t.Any]) -> dict[str, t.Any]:
         """Prepare and serialize thin namespaces as mappings of data-node leaves.

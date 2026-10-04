@@ -31,9 +31,8 @@ __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
 def _against(container: type) -> t.Callable[[t.Any, t.Any], str | None]:
     """Return what checks a namespace against the structured type that named it.
 
-    The ports check that each value is of the type the field declared. Whatever else the structured type says, a
-    pydantic `Field` constraint or a validator of its own, it says while being built, so building one here is
-    what refuses a run where it is submitted rather than where the task starts.
+    The ports check field types; constructing the declared container also checks
+    that the namespace can be handed to the function before the task starts.
     """
 
     def validate(value: t.Any, port: t.Any) -> str | None:
@@ -148,11 +147,11 @@ class ProcessSpec(spec.ProcessSpec):
     def input_namespace_from(self, name: str, container: type, **kwargs: t.Any) -> None:
         """Declare a namespace holding one port per field of a structured type.
 
-        A ``TypedDict``, a dataclass, a ``NamedTuple`` and a pydantic model each say which names a value has, of
+        A ``TypedDict``, a dataclass, a ``NamedTuple`` and a ``PortModel`` each say which names a value has, of
         which types, and which of them have a default. That is what a namespace of ports says, so this is how one
         is written once and said in both places:
 
-        >>> class Relax(BaseModel):
+        >>> class Relax(PortModel):
         >>>     structure: StructureData
         >>>     steps: int = 10
         >>>
@@ -171,7 +170,7 @@ class ProcessSpec(spec.ProcessSpec):
         if fields is None:
             msg = (
                 f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
-                f'to declare `{name}` from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
+                f'to declare `{name}` from. Use a `PortModel`, a `TypedDict`, a dataclass or a `NamedTuple`.'
             )
             raise TypeError(msg)
 
@@ -197,7 +196,7 @@ class ProcessSpec(spec.ProcessSpec):
         type is the namespace its own fields name, so a task producing one and a task taking one declare the same
         shape and a graph can wire the two onto each other.
 
-        >>> class Relaxed(BaseModel):
+        >>> class Relaxed(PortModel):
         >>>     structure: StructureData
         >>>     energy: float
         >>>
@@ -212,7 +211,7 @@ class ProcessSpec(spec.ProcessSpec):
         if fields is None:
             msg = (
                 f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
-                f'to declare the outputs from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
+                f'to declare the outputs from. Use a `PortModel`, a `TypedDict`, a dataclass or a `NamedTuple`.'
             )
             raise TypeError(msg)
 

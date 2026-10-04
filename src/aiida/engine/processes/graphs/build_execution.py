@@ -1347,9 +1347,9 @@ def task(
     >>> converging = task(converge, handlers=[push_further])
 
     A structured type says what a task takes and produces, and where the function is annotated with one, it
-    says so itself. A `TypedDict`, a dataclass, a `NamedTuple` and a pydantic model all do:
+    says so itself. A `TypedDict`, a dataclass, a `NamedTuple` and a `PortModel` all do:
 
-    >>> class PhInputs(BaseModel):
+    >>> class PhInputs(PortModel):
     >>>     structure: str
     >>>     spin: str = 'none'
     >>>

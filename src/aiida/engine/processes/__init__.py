@@ -58,6 +58,7 @@ __all__ = (
     'OutputNames',
     'OutputPort',
     'PortField',
+    'PortModel',
     'PortNamespace',
     'Process',
     'ProcessBuilder',

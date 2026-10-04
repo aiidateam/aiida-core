@@ -331,7 +331,7 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
     if fields is None:
         msg = (
             f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing to '
-            f'declare the inputs from. Use a `TypedDict`, a dataclass, a `NamedTuple` or a pydantic model.'
+            f'declare the inputs from. Use a `PortModel`, a `TypedDict`, a dataclass or a `NamedTuple`.'
         )
         raise TypeError(msg)
 

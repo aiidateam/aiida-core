@@ -10,15 +10,14 @@
 
 import typing as t
 from dataclasses import dataclass, field
-from decimal import Decimal
 
 import pytest
-from pydantic import BaseModel, ConfigDict, field_serializer
-from pydantic import Field as ModelField
+from pydantic import BaseModel
 from typing_extensions import NotRequired, Required
 
 from aiida.engine import (
     PortField,
+    PortModel,
     ProcessSpec,
     Whole,
     WorkChain,
@@ -40,7 +39,7 @@ class AsTypedDict(t.TypedDict):
     steps: int
 
 
-class AsModel(BaseModel):
+class AsModel(PortModel):
     structure: str
     steps: int = 10
 
@@ -249,7 +248,7 @@ def test_structured_readers_preserve_help_and_defaults(kind):
             steps: hint = 10
     else:
 
-        class Container(BaseModel):
+        class Container(PortModel):
             steps: hint = 10
 
     (item,) = fields_of(Container)
@@ -262,20 +261,32 @@ def test_structured_readers_preserve_help_and_defaults(kind):
     assert spec.inputs['given']['steps'].help == item.help
 
 
-def test_model_descriptions_are_help_unless_explicitly_overridden():
-    class Described(BaseModel):
-        steps: int = ModelField(default=10, description='Model description.')
-        override: t.Annotated[int, PortField(help='Explicit help.')] = ModelField(description='Other description.')
-        unrelated: t.Annotated[int, 'Not port help.']
+def test_port_model_inheritance_defaults_and_constructor():
+    class Extended(AsModel):
+        label: str
+        tags: list[str] = field(default_factory=list)
 
-    items = {item.name: item for item in fields_of(Described)}
-    assert items['steps'].help == 'Model description.'
-    assert items['override'].help == 'Explicit help.'
-    assert items['unrelated'].help is None
-    spec = ProcessSpec()
-    spec.input_namespace_from('given', Described)
-    assert spec.inputs['given']['steps'].help == 'Model description.'
-    assert spec.inputs['given']['override'].help == 'Explicit help.'
+    first = Extended(structure='si', label='first')
+    second = Extended(structure='ge', label='second')
+    assert first.steps == 10
+    assert first.tags is not second.tags
+    assert build(Extended, as_dict(first)) == first
+    assert [item.name for item in fields_of(Extended)] == ['structure', 'steps', 'label', 'tags']
+    with pytest.raises(TypeError):
+        Extended(structure='si')
+    with pytest.raises(TypeError):
+        Extended(structure='si', label='first', unknown=True)
+    with pytest.raises(AttributeError):
+        first.steps = 20
+
+
+def test_pydantic_models_do_not_declare_namespaces():
+    class ExternalModel(BaseModel):
+        steps: int = 10
+
+    assert fields_of(ExternalModel) is None
+    assert not is_structured(ExternalModel)
+    assert as_dict(ExternalModel()) is None
 
 
 @KINDS
@@ -452,31 +463,6 @@ def test_a_field_takes_what_another_task_produced():
     assert results['seen'] == 'si-relaxed'
 
 
-class Money(BaseModel):
-    """A model that says how to render a value AiiDA has no way to store."""
-
-    amount: Decimal
-
-    @field_serializer('amount')
-    def _dump_amount(self, value: Decimal) -> str:
-        return str(value)
-
-
-@task(outputs=['kind', 'doubled'])
-def double(money: Money) -> tuple[str, str]:
-    return type(money.amount).__name__, str(money.amount * 2)
-
-
-def test_a_model_says_how_its_own_fields_are_stored():
-    """What a model renders to is what is stored, and building it back gives the field its own type again."""
-    results, node = run_get_node(double, money=Money(amount=Decimal('0.10')))
-
-    assert node.is_finished_ok, node.exit_message
-    assert node.inputs.money.amount == '0.10', 'stored as the model rendered it'
-    assert results['kind'] == 'Decimal', 'and handed back as the type the model declares'
-    assert results['doubled'] == '0.20'
-
-
 def untyped(structure, steps):
     """A function from somewhere else, whose signature says nothing about what it takes."""
     return f'{structure}/{steps}'
@@ -528,12 +514,12 @@ def test_describing_a_task_with_something_that_is_not_a_container_is_refused():
             return x
 
 
-class Kpoints(BaseModel):
+class Kpoints(PortModel):
     mesh: int = 4
     offset: float = 0.0
 
 
-class Nested(BaseModel):
+class Nested(PortModel):
     structure: str
     kpoints: Kpoints = Kpoints()
 
@@ -602,10 +588,8 @@ def test_a_task_fills_one_field_of_a_nested_container():
     assert results['seen'] == 'silicon/14/Kpoints', 'the mesh the other task chose, not the default'
 
 
-class Spacing(BaseModel):
+class Spacing(PortModel):
     """A structured type declaring a node type beside a plain one."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     spacing: Float
     points: int = 4
@@ -635,13 +619,13 @@ def test_a_value_is_converted_to_what_the_field_declares(as_nodes):
     assert results['seen'] == 'Float=0.2/int=8', 'and handed over as the field declares it, node or value'
 
 
-class Conf(BaseModel):
+class Conf(PortModel):
     """Opaque configuration, which nothing wires into."""
 
     tolerance: float = 1e-6
 
 
-class Opaque(BaseModel):
+class Opaque(PortModel):
     structure: str
     config: t.Annotated[Conf, Whole] = Conf()
 
@@ -716,23 +700,21 @@ def test_a_port_holding_a_container_takes_its_fields_as_a_mapping():
 
 
 def test_a_model_is_stored_whole_and_read_back():
-    """`JsonableData` takes a pydantic model as readily as anything else saying how it is written."""
-    stored = JsonableData(Opaque(structure='si')).store()
+    """A port model supports whole-value storage through its mapping interface."""
+    stored = JsonableData(Nested(structure='si')).store()
     back = load_node(stored.pk).obj
 
-    assert isinstance(back, Opaque)
-    assert (back.structure, back.config.tolerance) == ('si', 1e-6), 'the nested one came back too'
+    assert isinstance(back, Nested)
+    assert (back.structure, back.kpoints.mesh) == ('si', 4), 'the nested one came back too'
 
 
-class HoldsANode(BaseModel):
+class HoldsANode(PortModel):
     """A structured type holding a node, which is not something JSON has a way to write."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     spacing: Float
 
 
-class KeptWhole(BaseModel):
+class KeptWhole(PortModel):
     label: str
     config: t.Annotated[HoldsANode, Whole]
 

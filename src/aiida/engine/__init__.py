@@ -60,6 +60,7 @@ __all__ = (
     'OutputPort',
     'PastException',
     'PortField',
+    'PortModel',
     'PortNamespace',
     'Process',
     'ProcessBuilder',

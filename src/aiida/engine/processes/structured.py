@@ -8,7 +8,7 @@
 ###########################################################################
 """Reading the fields of a structured type, so that one can say what a namespace of ports holds.
 
-A ``TypedDict``, a dataclass, a ``NamedTuple`` and a pydantic model all say the same thing in different words:
+A ``TypedDict``, a dataclass, a ``NamedTuple`` and a ``PortModel`` all say the same thing in different words:
 these names, of these types, some of them with a default. A namespace of ports says it too, so a structured type used
 as an annotation names one and the ports under it are its fields.
 
@@ -27,6 +27,7 @@ from typing_extensions import NotRequired, Required
 __all__ = (
     'Field',
     'PortField',
+    'PortModel',
     'Whole',
     'as_dict',
     'build',
@@ -47,7 +48,7 @@ class Whole:
     task produced. Where it is opaque data instead, a configuration nobody wires into, this says so and the whole
     of it is one node:
 
-    >>> class Given(BaseModel):
+    >>> class Given(PortModel):
     >>>     structure: str
     >>>     config: Annotated[SomeConfig, Whole]
 
@@ -66,6 +67,27 @@ class PortField:
     """
 
     help: str | None = None
+
+
+class PortModel:
+    """Declare a namespace using annotated fields and optional defaults.
+
+    Subclasses are frozen, keyword-only dataclasses. Values are not coerced or
+    validated here: ordinary AiiDA ports perform validation at the boundary.
+    """
+
+    def __init_subclass__(cls, **kwargs: t.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        dataclasses.dataclass(cls, frozen=True, kw_only=True)
+
+    def as_dict(self) -> dict[str, t.Any]:
+        """Return the declared fields as a namespace mapping."""
+        return t.cast(dict[str, t.Any], as_dict(self))
+
+    @classmethod
+    def from_dict(cls, values: t.Mapping[str, t.Any]) -> t.Any:
+        """Reconstruct a model, including nested namespaces, from a mapping."""
+        return build(cls, values)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -131,14 +153,6 @@ def as_dict(value: t.Any) -> dict[str, t.Any] | None:
 
     if fields is None:
         return None
-
-    kept = {field.name: getattr(value, field.name) for field in fields if field.whole}
-
-    if _is_a_model(type(value)):
-        # A model renders its own fields, which is how a value AiiDA has no way to store is stored: whatever the
-        # model says it renders to is. Building it back coerces the rendering to the field's own type again. It
-        # renders a nested model as well, which is the nested namespace that one names.
-        return {**value.model_dump(), **kept}
 
     return {
         field.name: getattr(value, field.name) if field.whole else _held(getattr(value, field.name)) for field in fields
@@ -229,27 +243,6 @@ def _required_key(annotation: t.Any, *, fallback: bool) -> bool:
     return fallback
 
 
-def _is_a_model(annotation: type) -> bool:
-    """Return whether the annotation is a pydantic model."""
-    from pydantic import BaseModel
-
-    return issubclass(annotation, BaseModel)
-
-
-def _of_model(annotation: t.Any) -> tuple[Field, ...]:
-    """Return the fields of a pydantic model, which says outright which of them are required."""
-    return tuple(
-        Field(
-            name=name,
-            annotation=info.annotation,
-            default=UNSPECIFIED if info.is_required() else info.get_default(call_default_factory=True),
-            whole=Whole in info.metadata,
-            help=_help(info.metadata) if _help(info.metadata) is not None else info.description,
-        )
-        for name, info in annotation.model_fields.items()
-    )
-
-
 def _of_typed_dict(annotation: t.Any) -> tuple[Field, ...]:
     """Return the fields of a ``TypedDict``, which are optional where it says they are.
 
@@ -321,12 +314,10 @@ def _of_dataclass(annotation: t.Any) -> tuple[Field, ...]:
 
 READERS: tuple[tuple[t.Callable[[type], bool], t.Callable[[t.Any], tuple[Field, ...]]], ...] = (
     (t.is_typeddict, _of_typed_dict),
-    (_is_a_model, _of_model),
     (_is_a_named_tuple, _of_named_tuple),
     (dataclasses.is_dataclass, _of_dataclass),
 )
 """Every kind of structured type that can name a namespace, and how to read its fields.
 
-Ordered, since a kind may recognise another: a ``NamedTuple`` is a tuple, and a pydantic model is not a
-dataclass but is close enough to one that the dataclass reader would have to be asked last anyway.
+``PortModel`` subclasses are read by the dataclass reader.
 """

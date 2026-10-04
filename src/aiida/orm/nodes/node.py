@@ -230,7 +230,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             raise ValueError('the computer is not stored')
 
         backend_computer = computer.backend_entity if computer else None
-        backend_user = backend.default_user.backend_entity
+
+        user = backend.default_user
+        if user is None:
+            raise ValueError('the default user is not set in the backend')
 
         if node_type is not None and node_type != self.class_node_type:
             msg = f'provided node_type `{node_type}` does not match the class node type `{self.class_node_type}`'
@@ -241,7 +244,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description=description,
             node_type=self.class_node_type,
             process_type=process_type,
-            user=backend_user,
+            user=user.backend_entity,
             computer=backend_computer,
         )
 

@@ -9,6 +9,7 @@
 """Module for defintion of base `Data` sub class for numeric based data types."""
 
 import abc
+import typing as t
 
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 
@@ -41,19 +42,11 @@ def _right_operator(func):
     return inner
 
 
-class NumericType(BaseType, abc.ABC):
+_NumericT = t.TypeVar('_NumericT', int, float)
+
+
+class NumericType(BaseType[_NumericT], abc.ABC, t.Generic[_NumericT]):
     """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
-
-    @property
-    @abc.abstractmethod
-    def value(self) -> int | float:
-        """Return the numeric value stored in this node."""
-        raise NotImplementedError()
-
-    @value.setter
-    @abc.abstractmethod
-    def value(self, value: int | float) -> None:
-        raise NotImplementedError()
 
     @_left_operator
     def __add__(self, other):

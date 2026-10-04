@@ -17,7 +17,7 @@ from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 __all__ = ('Bool',)
 
 
-class Bool(BaseType):
+class Bool(BaseType[bool]):
     """`Data` sub class to represent a boolean value."""
 
     _type = bool

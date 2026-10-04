@@ -19,7 +19,7 @@ from aiida.orm.nodes.data.numeric import NumericType
 __all__ = ('Float',)
 
 
-class Float(NumericType):
+class Float(NumericType[float]):
     """`Data` sub class to represent a float value."""
 
     _type = float

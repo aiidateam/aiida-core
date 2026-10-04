@@ -20,11 +20,13 @@ from aiida.orm.nodes.data.data import Data
 
 __all__ = ('BaseType', 'to_aiida_type')
 
+_ValueT = t.TypeVar('_ValueT')
 
-class BaseType(Data, abc.ABC):
+
+class BaseType(Data, abc.ABC, t.Generic[_ValueT]):
     """Base class for AiiDA data types wrapping Python primitives."""
 
-    _type: type[t.Any]
+    _type: type[_ValueT]
 
     # TODO automate default setting
     def initialize(self) -> None:
@@ -34,11 +36,11 @@ class BaseType(Data, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def value(self) -> object:
+    def value(self) -> _ValueT:
         """Return the wrapped Python value."""
 
     @value.setter
-    def value(self, value: t.Any) -> None:
+    def value(self, value: _ValueT) -> None:
         raise NotImplementedError()
 
     def __str__(self) -> str:

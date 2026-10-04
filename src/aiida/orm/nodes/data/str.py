@@ -16,7 +16,7 @@ from aiida.orm.nodes.data.base import BaseType, to_aiida_type
 __all__ = ('Str',)
 
 
-class Str(BaseType):
+class Str(BaseType[str]):
     """`Data` sub class to represent a string value."""
 
     _type = str

@@ -21,7 +21,7 @@ from aiida.orm.nodes.data.numeric import NumericType
 __all__ = ('Int',)
 
 
-class Int(NumericType):
+class Int(NumericType[int]):
     """`Data` sub class to represent an integer value."""
 
     _type = int

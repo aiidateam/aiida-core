@@ -24,7 +24,6 @@ from aiida.orm.models.entity import (
 )
 
 if t.TYPE_CHECKING:
-    from aiida.orm import Node
     from aiida.orm.decorators.columns import Column
     from aiida.orm.models.modeling import ModelProjection
 
@@ -48,7 +47,7 @@ class AttributesCreateModel(AttributesModel[_OwnerT]):
     """Create projection of Node attributes."""
 
 
-_NodeT = t.TypeVar('_NodeT', bound='Node')
+_NodeT = t.TypeVar('_NodeT')
 
 
 class NodeCreateModel(CreateModel[_NodeT]):

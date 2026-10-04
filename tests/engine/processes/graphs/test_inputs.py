@@ -228,9 +228,114 @@ class Options(PortModel):
     iterations: t.Annotated[int, PortField(help='Iteration limit.')] = 5
 
 
+class DefaultInputs(PortModel):
+    required: int
+    nullable: int | None
+    defaulted: int = 5
+    optional: int | None = None
+
+
+class NestedDefaultInputs(PortModel):
+    values: DefaultInputs
+    options: Options = Options(iterations=9)
+
+
+@task_source
+def consume_defaults(values: DefaultInputs) -> int:
+    assert values.nullable is None
+    assert values.optional is None
+    return values.required + values.defaulted
+
+
+@graph_source
+def forward_defaults(values: DefaultInputs) -> int:
+    return consume_defaults(values=values)
+
+
+@task_source
+def consume_nested_defaults(configuration: NestedDefaultInputs) -> int:
+    assert configuration.options.iterations == 9
+    assert configuration['values'].nullable is None
+    assert configuration['values'].optional is None
+    return configuration['values'].required + configuration['values'].defaulted
+
+
+@graph_source
+def forward_nested_defaults(configuration: NestedDefaultInputs) -> int:
+    return consume_nested_defaults(configuration=configuration)
+
+
 @graph_source
 def structured_passthrough(options: Options) -> Options:
     return options
+
+
+@pytest.mark.parametrize(
+    'handle, path', [(forward_defaults, 'values'), (forward_nested_defaults, 'configuration.values')]
+)
+def test_model_defaults_and_nullable_fields_forward_to_tasks(handle, path):
+    spec = restored(handle)
+    values = {'required': 2, 'nullable': None}
+    given = {'values': values} if path == 'values' else {'configuration': {'values': values}}
+    prepared = spec.prepare_inputs(given)
+    held = prepared
+    for segment in path.split('.'):
+        held = held[segment]
+    assert held == {'required': 2, 'nullable': None, 'defaulted': 5, 'optional': None}
+    if path != 'values':
+        assert prepared['configuration']['options'] == {'iterations': 9}
+    assert values == {'required': 2, 'nullable': None}
+    results, node = run_get_node(GraphProcess, **GraphProcess.launch_inputs(spec, given))
+    assert node.is_finished_ok
+    assert results['result'] == 7
+    task_values = node.called[0].inputs
+    for segment in path.split('.'):
+        task_values = task_values[segment]
+    assert task_values.required.value == 2
+    assert task_values.defaulted.value == 5
+
+
+@pytest.mark.parametrize(
+    'handle, prefix', [(forward_defaults, 'values'), (forward_nested_defaults, 'configuration.values')]
+)
+def test_model_omission_is_not_explicit_none(handle, prefix):
+    given = {'values': {}} if prefix == 'values' else {'configuration': {'values': {}}}
+    with pytest.raises(MissingRequiredInputsError) as caught:
+        GraphProcess.launch_inputs(restored(handle), given)
+    assert [item.socket_path for item in caught.value.missing] == [f'{prefix}.nullable', f'{prefix}.required']
+
+
+@pytest.mark.parametrize('handle', [forward_defaults, forward_nested_defaults])
+@pytest.mark.parametrize('field', ['required', 'defaulted'])
+@pytest.mark.parametrize('round_trip', [False, True])
+def test_nonnullable_model_fields_reject_explicit_none(handle, field, round_trip):
+    spec = restored(handle) if round_trip else handle.build()
+    values = {'required': 2, 'nullable': None, field: None}
+    given = {'values': values} if handle is forward_defaults else {'configuration': {'values': values}}
+    with pytest.raises(ValueError, match='not of the right type'):
+        GraphProcess.launch_inputs(spec, given)
+
+
+def test_model_declaration_semantics_round_trip():
+    ports = restored(forward_nested_defaults).input_spec()['configuration']
+    assert ports.required
+    assert ports['values']['required'].required
+    assert ports['values']['nullable'].required
+    assert ports['values']['nullable'].valid_type == (Int, type(None))
+    assert not ports['values']['defaulted'].required
+    assert ports['values']['defaulted'].valid_type == (Int,)
+    assert ports['values']['defaulted'].has_default()
+    assert not ports['values']['optional'].required
+    assert ports['values']['optional'].has_default()
+    assert not ports['options'].required
+    assert ports['options'].default == {'iterations': 9}
+
+
+def test_explicit_values_override_model_defaults():
+    given = {'values': {'required': 2, 'nullable': None, 'defaulted': 8, 'optional': None}}
+    results, node = run_get_node(GraphProcess, **forward_defaults.get_launch_inputs(**given))
+    assert node.is_finished_ok
+    assert results['result'] == 10
 
 
 def test_structured_value_and_nested_defaults_use_leaf_nodes():

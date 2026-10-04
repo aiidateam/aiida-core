@@ -57,7 +57,13 @@ def _annotation_port(
     if fields is None:
         if 'default' in options:
             options['default'] = partial(to_aiida_type, options['default'])
-        return InputPort(name, valid_type=infer_valid_type_from_type_annotation(annotation) or None, **options)
+        valid_type = infer_valid_type_from_type_annotation(annotation) or None
+        port = InputPort(name, valid_type=valid_type, **options)
+        # Ordinary optional process ports also accept None. A graph declaration
+        # distinguishes a defaulted key from a nullable value.
+        if default is not None:
+            port.valid_type = valid_type
+        return port
     namespace = PortNamespace(name, populate_defaults=required, **options)
     for field in fields:
         child_annotation = field.annotation
@@ -142,14 +148,14 @@ def load_port(data: Mapping[str, t.Any], *, output: bool = False) -> InputPort |
         if 'default' in options:
             options['default'] = partial(to_aiida_type, options['default'])
         port_class = OutputPort if output else InputPort
-        return port_class(
-            data['name'],
-            valid_type=tuple(
-                type(None) if kind is None else get_object_loader().load_object(kind) for kind in data['valid_type']
-            )
-            or None,
-            **options,
+        valid_type = (
+            tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in data['valid_type'])
+            or None
         )
+        port = port_class(data['name'], valid_type=valid_type, **options)
+        # Restore exactly the snapshot, without optional InputPort's implicit None.
+        port.valid_type = valid_type
+        return port
     namespace = PortNamespace(data['name'], dynamic=data['dynamic'], populate_defaults=data['required'], **options)
     for name, child in data['ports'].items():
         namespace[name] = load_port(child, output=output)

@@ -322,6 +322,7 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
             list: List,
             t.List: List,  # noqa: UP006
             str: Str,
+            type(None): type(None),
         }
 
         if is_a_plain_class(annotation) and issubclass(annotation, Data):

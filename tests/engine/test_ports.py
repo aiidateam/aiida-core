@@ -8,10 +8,20 @@
 ###########################################################################
 """Tests for process spec ports."""
 
+import typing as t
+
 import pytest
 
-from aiida.engine.processes.ports import InputPort, PortNamespace
+from aiida.engine.processes.ports import InputPort, PortNamespace, infer_valid_type_from_type_annotation
 from aiida.orm import Dict, Int, Str, to_aiida_type
+
+
+@pytest.mark.parametrize(
+    'annotation',
+    [int | None, t.Optional[int], Int | None, t.Optional[Int]],  # noqa: UP045 - test legacy annotations too
+)
+def test_nullable_annotations_preserve_none_type(annotation):
+    assert infer_valid_type_from_type_annotation(annotation) == (Int, type(None))
 
 
 class TestInputPort:

@@ -26,6 +26,12 @@ class BaseType(Data, abc.ABC):
 
     _type: type[t.Any]
 
+    # TODO automate default setting
+    def initialize(self) -> None:
+        super().initialize()
+        if 'value' not in self.attributes:
+            self.value = self._type()
+
     @property
     @abc.abstractmethod
     def value(self) -> object:

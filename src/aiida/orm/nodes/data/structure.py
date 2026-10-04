@@ -1267,6 +1267,7 @@ class StructureData(Data):
 
     def initialize(self) -> None:
         super().initialize()
+
         self._internal_kind_tags: dict[int, t.Any] | None = None
 
         if 'cell' not in self.attributes:

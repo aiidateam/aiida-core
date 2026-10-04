@@ -16,9 +16,11 @@ from aiida.orm.decorators.attributes import (
     iter_attributes,
 )
 from aiida.orm.models.entity import (
+    CreateModel,
+    EntityModel,
     ModelsNamespace,
     OrmModel,
-    _build_model_field,
+    _build_field,
 )
 
 if t.TYPE_CHECKING:
@@ -35,18 +37,27 @@ _AttributesProjection = t.Literal['read', 'create']
 
 
 class AttributesModel(OrmModel[_OwnerT]):
-    """Read projection of an ORM entity."""
+    """Base class for Node attributes models."""
 
 
 class AttributesReadModel(AttributesModel[_OwnerT]):
-    """Read projection of an ORM entity."""
+    """Read projection of Node attributes."""
 
 
 class AttributesCreateModel(AttributesModel[_OwnerT]):
-    """Create projection of an ORM entity."""
+    """Create projection of Node attributes."""
 
 
 _NodeT = t.TypeVar('_NodeT', bound='Node')
+
+
+class NodeCreateModel(CreateModel[_NodeT]):
+    """Create model for Nodes, including non-column inputs."""
+
+    files: pdt.json_schema.SkipJsonSchema[dict[str, t.Callable[[], t.BinaryIO | None]] | None] = None
+
+    def _to_entity_field_values(self, *, only_set: bool = False) -> dict[str, t.Any]:
+        return super()._to_entity_field_values(only_set=only_set) | {'files': self.files}
 
 
 class NodeModelsNamespace(ModelsNamespace[_NodeT]):
@@ -62,6 +73,13 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
         """Return the attributes model used by the Node create projection."""
         return self._build_attributes_model('create')
 
+    def _entity_model_base(self, projection: ModelProjection) -> type[EntityModel]:
+        """Return the base class for a Node model projection."""
+        if projection == 'create':
+            return NodeCreateModel
+
+        return super()._entity_model_base(projection)
+
     def _model_field_annotation(self, column: Column, projection: ModelProjection) -> t.Any:
         """Return the model-side annotation for a Node column."""
         if isinstance(column, NodeAttributesColumn):
@@ -71,6 +89,27 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
             return self._attributes_model_annotation(projection)
 
         return super()._model_field_annotation(column, projection)
+
+    def _build_model_field(
+        self,
+        column: Column,
+        projection: ModelProjection,
+    ) -> tuple[t.Any, pdt.fields.FieldInfo]:
+        """Build the Pydantic declaration for a Node model field."""
+        annotation, field_info = super()._build_model_field(column, projection)
+
+        if (
+            projection == 'create'
+            and isinstance(column, NodeAttributesColumn)
+            and field_info.is_required()
+            and not any(field.is_required() for field in self._create_attributes.model_fields.values())
+        ):
+            field_dict = field_info.asdict()
+            attributes = dict(field_dict['attributes'])
+            attributes['default_factory'] = dict
+            field_info = pdt.fields.FieldInfo(**attributes)
+
+        return annotation, field_info
 
     def _attributes_model_annotation(self, projection: _AttributesProjection) -> type[AttributesModel[_NodeT]]:
         """Return the attributes model for a Node projection."""
@@ -118,7 +157,7 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
             if projection == 'create' and spec.readonly:
                 continue
 
-            model_fields[name] = _build_model_field(
+            model_fields[name] = _build_field(
                 self._attribute_model_annotation(attribute, projection),
                 description=spec.description,
                 model_field_info=attribute.model_field_info,
@@ -126,7 +165,7 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
                 readonly=spec.readonly,
             )
 
-        attributes_base_model = _attributes_model_base(projection)
+        attributes_base_model = self._attributes_model_base(projection)
         class_name = f'Attributes{projection.capitalize()}Model'
 
         config: pdt.ConfigDict = {**attributes_base_model.model_config}
@@ -153,7 +192,6 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
     ) -> t.Any:
         """Return the model-side annotation for a typed Node attribute."""
         spec = attribute.spec
-
         field_info = attribute.model_field_info
 
         if field_info.annotation is not None:
@@ -208,13 +246,12 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
 
         return values
 
+    def _attributes_model_base(self, projection: _AttributesProjection) -> type[AttributesModel]:
+        """Return the base class for an attributes model projection."""
+        if projection == 'read':
+            return AttributesReadModel
 
-def _attributes_model_base(projection: _AttributesProjection) -> type[AttributesModel]:
-    """Return the base class for a attributes model projection."""
-    if projection == 'read':
-        return AttributesReadModel
+        if projection == 'create':
+            return AttributesCreateModel
 
-    if projection == 'create':
-        return AttributesCreateModel
-
-    t.assert_never(projection)
+        t.assert_never(projection)

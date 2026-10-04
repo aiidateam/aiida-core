@@ -61,6 +61,19 @@ def check_singlefile_content_with_store(check_singlefile_content):
     return inner
 
 
+def test_create_model_with_file_without_attributes(check_singlefile_content):
+    """Test that a SinglefileData create model defaults its attributes to empty."""
+    content = b'single file content'
+    node = SinglefileData.models.create(files={'example.txt': lambda: io.BytesIO(content)}).to_entity()
+    assert node.filename == 'example.txt'
+    check_singlefile_content(
+        node=node,
+        content_reference=content,
+        filename='example.txt',
+        open_mode='rb',
+    )
+
+
 def test_reload_singlefile_data(check_singlefile_content_with_store, check_singlefile_content):
     """Test writing and reloading a `SinglefileData` instance."""
     content_original = 'some text ABCDE'

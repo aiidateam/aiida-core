@@ -41,6 +41,25 @@ class TestNode:
         node = Data(computer=self.computer).store()
         assert node.computer.pk == self.computer.pk
 
+    def test_create_model_with_files(self):
+        """Test the Node create model accepts repository file factories."""
+        content = b'file content'
+        create_model = Data.models.create
+
+        assert 'files' in create_model.model_fields
+        assert 'files' not in Data.models.read.model_fields
+        assert 'files' not in Data.models.update.model_fields
+        assert 'files' not in create_model.model_json_schema()['properties']
+        assert create_model.model_fields['attributes'].default_factory is dict
+        assert Data.models.read.model_fields['attributes'].is_required()
+
+        node = create_model(files={'folder/file.txt': lambda: BytesIO(content)}).to_entity()
+
+        assert node.base.repository.list_object_names() == ['folder']
+
+        with node.base.repository.open('folder/file.txt', mode='rb') as handle:
+            assert handle.read() == content
+
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
         node = Data()

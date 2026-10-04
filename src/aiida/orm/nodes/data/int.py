@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import numbers
 
+import pydantic as pdt
+
 from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.numeric import NumericType
@@ -24,10 +26,10 @@ class Int(NumericType):
 
     _type = int
 
-    @attribute
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=0))
     def value(self) -> int:
         """The integer value stored in this node."""
-        return self.base.attributes.get('value', 0)
+        return self.base.attributes.get('value')
 
     @value.setter
     def value(self, value: int) -> None:

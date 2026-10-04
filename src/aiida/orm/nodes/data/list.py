@@ -4,6 +4,8 @@ import builtins
 import typing as t
 from collections.abc import MutableSequence
 
+import pydantic as pdt
+
 from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.data import Data
@@ -13,6 +15,11 @@ __all__ = ('List',)
 
 class List(Data, MutableSequence[t.Any]):
     """ORM representation of a list node."""
+
+    def initialize(self):
+        super().initialize()
+        if 'list' not in self.attributes:
+            self.list = []
 
     def __getitem__(self, item: t.Any) -> t.Any:
         return self.list[item]
@@ -40,10 +47,10 @@ class List(Data, MutableSequence[t.Any]):
             return self.list == other.list
         return self.list == other
 
-    @attribute
+    @attribute(model_field_info=pdt.fields.FieldInfo(default_factory=list))
     def list(self) -> builtins.list[t.Any]:
         """The list content."""
-        return self.base.attributes.get('list', [])
+        return self.base.attributes.get('list')
 
     @list.setter
     def list(self, value: builtins.list[t.Any]) -> None:

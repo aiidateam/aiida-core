@@ -105,13 +105,13 @@ class Data(Node):
 
     @source.setter
     def source(self, source: dict | None) -> None:
-        source = source or {}
-        if not isinstance(source, dict):
-            raise ValueError('Source must be supplied as a dictionary')
-        unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
-        if unknown_attrs:
-            msg = f'Unknown source parameters: {", ".join(unknown_attrs)}'
-            raise KeyError(msg)
+        if source:
+            if not isinstance(source, dict):
+                raise ValueError('Source must be supplied as a dictionary')
+            unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
+            if unknown_attrs:
+                msg = f'Unknown source parameters: {", ".join(unknown_attrs)}'
+                raise KeyError(msg)
 
         self.base.attributes.set('source', source)
 

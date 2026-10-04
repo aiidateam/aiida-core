@@ -35,7 +35,6 @@ __all__ = (
     'UpdateModel',
 )
 
-
 _OwnerT = t.TypeVar('_OwnerT')
 
 
@@ -100,13 +99,12 @@ class EntityModel(OrmModel[_EntityT]):
     def _to_entity_field_values(self, *, only_set: bool = False) -> dict[str, t.Any]:
         """Convert model values to entity-side representations."""
         names: t.Iterable[str] = self.model_fields_set if only_set else self.__class__.model_fields
+        cls = self.__class__
 
         return {
-            name: self.__class__._models_namespace._to_entity_value(
-                self.__class__._entity_columns[name],
-                getattr(self, name),
-            )
-            for name in names
+            name: cls._models_namespace._to_entity_value(column, getattr(self, name))
+            for name, column in cls._entity_columns.items()
+            if name in names
         }
 
     @classmethod
@@ -229,7 +227,6 @@ class ModelsNamespace(t.Generic[_EntityT]):
     def _model_field_annotation(self, column: Column, projection: ModelProjection) -> t.Any:
         """Return the model-side annotation for an entity column."""
         spec = column.spec
-
         field_info = column.model_field_info
 
         if field_info.annotation is not None:
@@ -246,6 +243,22 @@ class ModelsNamespace(t.Generic[_EntityT]):
             annotation = make_required(annotation)
 
         return annotation
+
+    def _build_model_field(
+        self,
+        column: Column,
+        projection: ModelProjection,
+    ) -> tuple[t.Any, pdt.fields.FieldInfo]:
+        """Build the Pydantic declaration for an entity model field."""
+        spec = column.spec
+
+        return _build_field(
+            self._model_field_annotation(column, projection),
+            description=spec.description,
+            model_field_info=column.model_field_info,
+            model_metadata=column.model_metadata,
+            readonly=spec.readonly,
+        )
 
     def _to_model_value(
         self,
@@ -285,24 +298,15 @@ class ModelsNamespace(t.Generic[_EntityT]):
         entity_columns: dict[str, Column] = {}
 
         for name, column in iter_columns(self._entity).items():
-            spec = column.spec
-
-            if not _include_column(spec, projection):
+            if not _include_column(column.spec, projection):
                 continue
 
-            model_fields[name] = _build_model_field(
-                self._model_field_annotation(column, projection),
-                description=spec.description,
-                model_field_info=column.model_field_info,
-                model_metadata=column.model_metadata,
-                readonly=spec.readonly,
-            )
-
+            model_fields[name] = self._build_model_field(column, projection)
             entity_columns[name] = column
 
         entity_model_decorators = self._model_decorators(projection)
 
-        entity_model_base = _entity_model_base(projection)
+        entity_model_base = self._entity_model_base(projection)
         class_name = f'{projection.capitalize()}Model'
 
         config: pdt.ConfigDict = {**entity_model_base.model_config}
@@ -329,6 +333,19 @@ class ModelsNamespace(t.Generic[_EntityT]):
 
         return model
 
+    def _entity_model_base(self, projection: ModelProjection) -> type[EntityModel]:
+        """Return the base class for a model projection."""
+        if projection == 'read':
+            return ReadModel
+
+        if projection == 'create':
+            return CreateModel
+
+        if projection == 'update':
+            return UpdateModel
+
+        t.assert_never(projection)
+
     def _model_decorators(self, projection: ModelProjection) -> dict[str, t.Any]:
         """Return Pydantic-decorated model hooks for an entity projection."""
         if self._entity is None:
@@ -351,20 +368,6 @@ class ModelsNamespace(t.Generic[_EntityT]):
         return decorators
 
 
-def _entity_model_base(projection: ModelProjection) -> type[EntityModel]:
-    """Return the base class for a model projection."""
-    if projection == 'read':
-        return ReadModel
-
-    if projection == 'create':
-        return CreateModel
-
-    if projection == 'update':
-        return UpdateModel
-
-    t.assert_never(projection)
-
-
 def _include_column(spec: ColumnSpec, projection: ModelProjection) -> bool:
     """Return whether a column belongs to a model projection."""
     if projection == 'read':
@@ -379,23 +382,22 @@ def _include_column(spec: ColumnSpec, projection: ModelProjection) -> bool:
     t.assert_never(projection)
 
 
-def _build_model_field(
+def _build_field(
     model_type: t.Any,
     *,
     description: str = '',
     model_field_info: pdt.fields.FieldInfo = pdt.fields.FieldInfo(),
     model_metadata: tuple[t.Any, ...] = (),
     readonly: bool = False,
-) -> tuple[t.Any, t.Any]:
-    """Build the Pydantic declaration for a model field."""
-    field_info = model_field_info
-    field_dict = field_info.asdict()
+) -> tuple[t.Any, pdt.fields.FieldInfo]:
+    """Build a Pydantic model field declaration."""
+    field_dict = model_field_info.asdict()
 
     metadata = (*field_dict['metadata'], *model_metadata)
     attributes = dict(field_dict['attributes'])
 
-    if field_info.default is not PydanticUndefined:
-        attributes['default'] = field_info.default
+    if model_field_info.default is not PydanticUndefined:
+        attributes['default'] = model_field_info.default
     elif is_nullable(model_type):
         attributes['default'] = None
 

@@ -21,6 +21,7 @@ from inspect import get_annotations
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
+from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_function
 from aiida.engine.processes.graphs.interface import ACTIVE_BUILDER, GraphHandle
 from aiida.engine.processes.graphs.monitors import MonitorProcess, WaitProcess
 from aiida.engine.processes.graphs.process import TaskProcess
@@ -41,9 +42,9 @@ from aiida.engine.processes.graphs.spec import (
     SubgraphTask,
     TaskSpec,
 )
+from aiida.engine.processes.port_model import as_dict, is_structured
 from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.structured import as_dict, is_structured
 from aiida.orm import CalcFunctionNode, WorkFunctionNode
 
 __all__ = (
@@ -781,7 +782,12 @@ class ExecutionGraphHandle(GraphHandle):
         }
         output_hint = infer_valid_type_from_type_annotation(annotations.get('return'))
         output_hints = dict.fromkeys(result.outputs, output_hint) if len(result.outputs) == 1 and output_hint else {}
-        return replace(result, input_typehints=input_hints, output_typehints=output_hints)
+        return replace(
+            result,
+            input_typehints=input_hints,
+            output_typehints=output_hints,
+            input_namespace=dump_port(namespace_for_function(self._function)),
+        )
 
 
 def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
@@ -1321,7 +1327,7 @@ def task(
     >>>
     >>> node = submit(sum_product, x=2, y=3)
 
-    Output ports are taken from ``outputs`` when given, otherwise from the return annotation: a ``TypedDict``
+    Output ports are taken from ``outputs`` when given, otherwise from the return annotation: a ``PortModel``
     declares one port per field, any other annotation a single ``result`` port. Without either, the output
     namespace stays dynamic, as it is for a calcfunction.
 
@@ -1347,7 +1353,7 @@ def task(
     >>> converging = task(converge, handlers=[push_further])
 
     A structured type says what a task takes and produces, and where the function is annotated with one, it
-    says so itself. A `TypedDict`, a dataclass, a `NamedTuple` and a `PortModel` all do:
+    says so itself. A `PortModel` declares these fields:
 
     >>> class PhInputs(PortModel):
     >>>     structure: str

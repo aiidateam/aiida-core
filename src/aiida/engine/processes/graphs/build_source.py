@@ -22,6 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from aiida.engine.processes.graphs.build_execution import task as build_task
+from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_annotations
 from aiida.engine.processes.graphs.interface import GraphHandle
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
@@ -131,7 +132,7 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
     def decorator(function: Callable[..., t.Any]) -> SourceGraphHandle:
         key = _register(function)
         _GRAPHS.add(key)
-        _GRAPH_HINTS[key] = t.get_type_hints(function)
+        _GRAPH_HINTS[key] = t.get_type_hints(function, include_extras=True)
         return SourceGraphHandle(function, identifier=identifier)
 
     if function is not None:
@@ -212,6 +213,7 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
             name: hint for name in state.inputs if (hint := infer_valid_type_from_type_annotation(hints.get(name)))
         },
         output_typehints={output.port: output_hint} if output_hint else {},
+        input_namespace=dump_port(namespace_for_annotations(hints, tuple(state.inputs))),
     )
 
 

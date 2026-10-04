@@ -21,20 +21,16 @@ from inspect import get_annotations
 import docstring_parser
 
 from aiida.common.lang import override
-from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
-from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec, _as_a_port
-from aiida.engine.processes.structured import (
-    UNSPECIFIED as FIELD_UNSPECIFIED,
-)
-from aiida.engine.processes.structured import (
+from aiida.engine.processes.port_model import (
     _port_help,
     as_dict,
     fields_of,
     is_structured,
-    marked_whole,
     without_marks,
 )
+from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
+from aiida.engine.processes.process import Process
+from aiida.engine.processes.process_spec import ProcessSpec, _as_a_port
 from aiida.manage import get_manager
 from aiida.orm import (
     CalcFunctionNode,
@@ -331,7 +327,7 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
     if fields is None:
         msg = (
             f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing to '
-            f'declare the inputs from. Use a `PortModel`, a `TypedDict`, a dataclass or a `NamedTuple`.'
+            f'declare the inputs from. Use a `PortModel`.'
         )
         raise TypeError(msg)
 
@@ -348,7 +344,7 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
         raise TypeError(msg)
 
     for field in fields:
-        if fields_of(field.annotation) is not None and not field.whole:
+        if fields_of(field.annotation) is not None:
             spec.input_namespace_from(field.name, field.annotation, required=field.required, help=field.help)
             continue
 
@@ -548,15 +544,6 @@ class FunctionProcess(Process):
                         parameter.name,
                         valid_type=valid_type,
                         required=default is UNSPECIFIED,
-                        help=help_string,
-                    )
-                    continue
-
-                if marked_whole(annotation):
-                    spec.input_whole(
-                        parameter.name,
-                        without_marks(annotation),
-                        default=FIELD_UNSPECIFIED if default is UNSPECIFIED else default,
                         help=help_string,
                     )
                     continue

@@ -86,4 +86,8 @@ class GraphHandle(abc.ABC):
         The declaration says what to run and the arguments are what to run it on, so they travel side by side and
         the same declaration serves every run.
         """
-        return GraphProcess.launch_inputs(self.build(), _bind_arguments(self._function, *args, **kwargs))
+        # Omitted parameters must reach the recursive graph validator. Binding
+        # still rejects duplicates and unknown arguments; nested build calls keep
+        # the strict binding used by __call__.
+        bound = inspect.signature(self._function).bind_partial(*args, **kwargs)
+        return GraphProcess.launch_inputs(self.build(), dict(bound.arguments))

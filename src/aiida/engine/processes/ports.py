@@ -19,9 +19,8 @@ from types import UnionType
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.engine.processes.structured import build, fields_of, is_a_plain_class, marked_whole, without_marks
+from aiida.engine.processes.port_model import build, fields_of, is_a_plain_class, without_marks
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
-from aiida.orm.nodes.data.jsonable import JsonableData
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -342,11 +341,6 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
     return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
 
 
-def _unwrapped(value: t.Any) -> t.Any:
-    """Return the object a node holds whole, which is what a field kept whole was stored as."""
-    return value.obj if isinstance(value, JsonableData) else value
-
-
 def _plain(value: t.Any) -> t.Any:
     """Return the plain Python value a node holds, where it holds one, and the node itself where it does not."""
     return from_aiida_type(value)
@@ -364,9 +358,6 @@ def as_written(annotation: t.Any, value: t.Any) -> t.Any:
     :raises Exception: whatever the structured type raises for values it refuses, which is what makes this the check a
         namespace runs at submit as well as the way a value reaches a function.
     """
-    if marked_whole(annotation):
-        return _unwrapped(value)
-
     annotation = without_marks(annotation)
     fields = fields_of(annotation)
 
@@ -378,10 +369,6 @@ def as_written(annotation: t.Any, value: t.Any) -> t.Any:
 
         return _plain(value)
 
-    held = {
-        field.name: _unwrapped(value[field.name]) if field.whole else as_written(field.annotation, value[field.name])
-        for field in fields
-        if field.name in value
-    }
+    held = {field.name: as_written(field.annotation, value[field.name]) for field in fields if field.name in value}
 
     return build(annotation, held)

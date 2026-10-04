@@ -13,13 +13,11 @@ from dataclasses import dataclass, field
 
 import pytest
 from pydantic import BaseModel
-from typing_extensions import NotRequired, Required
 
 from aiida.engine import (
     PortField,
     PortModel,
     ProcessSpec,
-    Whole,
     WorkChain,
     run_get_node,
     task_source,
@@ -30,13 +28,8 @@ from aiida.engine import (
 from aiida.engine import (
     task_execution as task,
 )
-from aiida.engine.processes.structured import as_dict, build, fields_of, is_structured
-from aiida.orm import Float, Int, JsonableData, Str, load_node
-
-
-class AsTypedDict(t.TypedDict):
-    structure: str
-    steps: int
+from aiida.engine.processes.port_model import as_dict, build, fields_of, is_structured
+from aiida.orm import Dict, Float, Int, JsonableData, Str, load_node
 
 
 class AsModel(PortModel):
@@ -44,29 +37,16 @@ class AsModel(PortModel):
     steps: int = 10
 
 
-@dataclass
-class AsDataclass:
-    structure: str
-    steps: int = 10
+KINDS = pytest.mark.parametrize('container', (AsModel,), ids=lambda kind: kind.__name__)
 
 
-class AsTuple(t.NamedTuple):
-    structure: str
-    steps: int = 10
-
-
-KINDS = pytest.mark.parametrize(
-    'container', (AsTypedDict, AsModel, AsDataclass, AsTuple), ids=lambda kind: kind.__name__
-)
-
-
-class Codes(t.TypedDict):
+class Codes(PortModel):
     kcp: t.Annotated[Int, PortField(help='The required KCP code.')]
-    pw: NotRequired[t.Annotated[Int, PortField(help='The optional PW code.')]]
+    pw: t.Annotated[Int | None, PortField(help='The optional PW code.')] = None
     nullable: Int | None
 
 
-class CodeInputs(t.TypedDict):
+class CodeInputs(PortModel):
     codes: t.Annotated[Codes, PortField(help='Configured calculation codes.')]
 
 
@@ -81,7 +61,7 @@ def source_port_metadata(value: t.Annotated[Int, PortField(help='Explicit parame
 
 @task_source
 def source_namespace_metadata(codes: t.Annotated[Codes, PortField(help='Calculation codes.')]) -> int:
-    return codes['kcp'].value
+    return codes.kcp.value
 
 
 @task_source
@@ -94,8 +74,8 @@ def source_docstring_help(value: t.Annotated[int, PortField()]) -> int:
 
 
 @task_source
-def source_whole_metadata(config: t.Annotated[AsDataclass, Whole, PortField(help='Opaque configuration.')]) -> int:
-    return config.steps
+def source_opaque_metadata(config: t.Annotated[Dict, PortField(help='Opaque configuration.')]) -> int:
+    return config.get_dict()['steps']
 
 
 def test_source_task_parameter_metadata_preserves_help_and_node_types():
@@ -124,77 +104,60 @@ def test_source_task_metadata_without_help_preserves_docstring_help():
     assert port.valid_type == (Int,)
 
 
-def test_source_task_metadata_composes_with_whole():
-    port = source_whole_metadata.process_class.spec().inputs['config']
+def test_source_task_metadata_composes_with_orm_nodes():
+    port = source_opaque_metadata.process_class.spec().inputs['config']
     assert port.help == 'Opaque configuration.'
-    assert port.valid_type == (JsonableData,)
+    assert port.valid_type == (Dict,)
     assert port.required
+    value = Dict(dict={'steps': 3})
+    result, node = run_get_node(source_opaque_metadata, config=value)
+    assert result == 3
+    assert node.inputs.config.uuid == value.uuid
 
 
-class OptionalParent(t.TypedDict, total=False):
-    inherited_optional: int
+class OptionalParent(PortModel):
+    inherited_optional: int = 1
 
 
 class RequiredChild(OptionalParent):
     required: int
-    explicit_optional: NotRequired[int]
+    explicit_optional: int = 2
 
 
-class OptionalChild(RequiredChild, total=False):
-    optional: int
-    explicit_required: Required[int]
-
-
-class PostponedKeys(t.TypedDict, total=False):
-    required: 'Required[int]'
-    optional: 'NotRequired[int]'
-    annotated_required: "t.Annotated[Required[int], PortField(help='Required help.')]"
-
-
-class PostponedRequiredKeys(t.TypedDict):
+class PostponedFields(PortModel):
     required: 'int'
-    optional: "t.Annotated[NotRequired[int], PortField(help='Optional help.')]"
+    optional: 'int' = 1
+    annotated_required: "t.Annotated[int, PortField(help='Required help.')]"
 
 
 @pytest.mark.parametrize(
     'container, required',
-    [
-        (RequiredChild, {'required'}),
-        (OptionalChild, {'required', 'explicit_required'}),
-        (PostponedKeys, {'required', 'annotated_required'}),
-        (PostponedRequiredKeys, {'required'}),
-    ],
+    [(RequiredChild, {'required'}), (PostponedFields, {'required', 'annotated_required'})],
 )
-def test_typed_dict_requiredness_uses_resolved_markers_and_inherited_totality(container, required):
+def test_port_model_requiredness_uses_defaults_and_inherited_fields(container, required):
     assert {item.name for item in fields_of(container) if item.required} == required
     assert all(item.annotation is int for item in fields_of(container))
 
 
 @pytest.mark.parametrize('required', [True, False])
-@pytest.mark.parametrize('outer_metadata', [True, False])
-def test_metadata_composes_with_key_requiredness(required, outer_metadata):
-    marker = Required if required else NotRequired
-    annotated = t.Annotated[AsDataclass, Whole, PortField(help='Keep this configuration whole.')]
-    hint = (
-        t.Annotated[marker[AsDataclass], Whole, PortField(help='Keep this configuration whole.')]
-        if outer_metadata
-        else marker[annotated]
-    )
+def test_metadata_composes_with_defaults(required):
+    hint = t.Annotated[Dict, PortField(help='Opaque configuration.')]
+    if required:
 
-    class Marked(t.TypedDict):
-        config: hint
+        class Marked(PortModel):
+            config: hint
+    else:
+
+        class Marked(PortModel):
+            config: hint = None
 
     (item,) = fields_of(Marked)
-
-    assert item.annotation is AsDataclass
+    assert item.annotation is Dict
     assert item.required is required
-    assert item.whole
-    assert item.help == 'Keep this configuration whole.'
-
     spec = ProcessSpec()
     spec.input_namespace_from('given', Marked)
     port = spec.inputs['given']['config']
-    assert port.valid_type == ((JsonableData,) if required else (JsonableData, type(None)))
+    assert port.valid_type == ((Dict,) if required else (Dict, type(None)))
     assert port.required is required
     assert port.help == item.help
 
@@ -229,27 +192,16 @@ def test_explicit_task_input_types_preserve_help(container):
 
 
 def test_postponed_annotated_help_is_preserved():
-    item = {item.name: item for item in fields_of(PostponedKeys)}['annotated_required']
+    item = {item.name: item for item in fields_of(PostponedFields)}['annotated_required']
     assert item.help == 'Required help.'
     assert item.required
 
 
-@pytest.mark.parametrize('kind', ['dataclass', 'tuple', 'model'])
-def test_structured_readers_preserve_help_and_defaults(kind):
+def test_port_model_preserves_help_and_defaults():
     hint = t.Annotated[int, PortField(help='Number of iterations.')]
-    if kind == 'dataclass':
 
-        @dataclass
-        class Container:
-            steps: hint = 10
-    elif kind == 'tuple':
-
-        class Container(t.NamedTuple):
-            steps: hint = 10
-    else:
-
-        class Container(PortModel):
-            steps: hint = 10
+    class Container(PortModel):
+        steps: hint = 10
 
     (item,) = fields_of(Container)
     assert item.help == 'Number of iterations.'
@@ -280,6 +232,33 @@ def test_port_model_inheritance_defaults_and_constructor():
         first.steps = 20
 
 
+def test_typed_dict_and_named_tuple_do_not_declare_namespaces():
+    class Dictionary(t.TypedDict):
+        steps: int
+
+    class Tuple(t.NamedTuple):
+        steps: int
+
+    for container in (Dictionary, Tuple):
+        assert fields_of(container) is None
+        assert not is_structured(container)
+        assert as_dict(container(steps=1)) is None
+        with pytest.raises(TypeError, match='Use a `PortModel`'):
+            ProcessSpec().input_namespace_from('given', container)
+
+
+def test_arbitrary_dataclasses_do_not_declare_namespaces():
+    @dataclass
+    class ExternalConfig:
+        steps: int = 10
+
+    assert fields_of(ExternalConfig) is None
+    assert not is_structured(ExternalConfig)
+    assert as_dict(ExternalConfig()) is None
+    with pytest.raises(TypeError, match='Use a `PortModel`'):
+        ProcessSpec().input_namespace_from('given', ExternalConfig)
+
+
 def test_pydantic_models_do_not_declare_namespaces():
     class ExternalModel(BaseModel):
         steps: int = 10
@@ -300,10 +279,10 @@ def test_the_fields_of_a_container_are_read(container):
 
 @KINDS
 def test_which_fields_have_to_be_given(container):
-    """A field with a default need not be given, and a `t.TypedDict` gives no default so all of them do."""
+    """Only fields without defaults must be supplied."""
     required = {field.name for field in fields_of(container) if field.required}
 
-    assert required == ({'structure', 'steps'} if container is AsTypedDict else {'structure'})
+    assert required == {'structure'}
 
 
 @pytest.mark.parametrize('value', (3, 'three', [3], {'a': 3}, None, AsModel))
@@ -319,8 +298,7 @@ def test_a_container_is_read_and_written_back(container):
     values = {'structure': 'si', 'steps': 3}
     built = build(container, values)
 
-    # An instance of a `t.TypedDict` is a dict, so it is already what it would be flattened into.
-    assert (built if container is AsTypedDict else as_dict(built)) == values
+    assert as_dict(built) == values
 
 
 @KINDS
@@ -338,7 +316,7 @@ def test_a_container_names_a_namespace_of_ports(container):
 
     assert sorted(ports) == ['steps', 'structure']
     assert ports['structure'].valid_type == (Str,)
-    assert ports['steps'].required is (container is AsTypedDict)
+    assert not ports['steps'].required
 
 
 def test_something_that_is_not_a_container_is_refused():
@@ -355,26 +333,11 @@ def test_something_that_is_not_a_container_is_refused():
 
 
 @task(outputs=['steps', 'kind'])
-def takes_typed_dict(given: AsTypedDict) -> tuple[int, str]:
-    return given['steps'], type(given).__name__
-
-
-@task(outputs=['steps', 'kind'])
 def takes_model(given: AsModel) -> tuple[int, str]:
     return given.steps, type(given).__name__
 
 
-@task(outputs=['steps', 'kind'])
-def takes_dataclass(given: AsDataclass) -> tuple[int, str]:
-    return given.steps, type(given).__name__
-
-
-@task(outputs=['steps', 'kind'])
-def takes_tuple(given: AsTuple) -> tuple[int, str]:
-    return given.steps, type(given).__name__
-
-
-TAKES = {AsTypedDict: takes_typed_dict, AsModel: takes_model, AsDataclass: takes_dataclass, AsTuple: takes_tuple}
+TAKES = {AsModel: takes_model}
 
 
 @task
@@ -382,27 +345,7 @@ def returns_model(structure: str) -> AsModel:
     return AsModel(structure=structure, steps=3)
 
 
-@task
-def returns_dataclass(structure: str) -> AsDataclass:
-    return AsDataclass(structure=structure, steps=3)
-
-
-@task
-def returns_tuple(structure: str) -> AsTuple:
-    return AsTuple(structure=structure, steps=3)
-
-
-@task
-def returns_typed_dict(structure: str) -> AsTypedDict:
-    return AsTypedDict(structure=structure, steps=3)
-
-
-RETURNS = {
-    AsTypedDict: returns_typed_dict,
-    AsModel: returns_model,
-    AsDataclass: returns_dataclass,
-    AsTuple: returns_tuple,
-}
+RETURNS = {AsModel: returns_model}
 
 
 @KINDS
@@ -424,7 +367,7 @@ def test_a_task_is_handed_the_container_it_named(container):
     """The namespace holds what the structured type said it would, so the function is given one of those back."""
     results, _ = run_get_node(TAKES[container], given={'structure': 'si', 'steps': 3})
 
-    assert results['kind'] == (dict.__name__ if container is AsTypedDict else container.__name__)
+    assert results['kind'] == container.__name__
 
 
 @KINDS
@@ -468,7 +411,7 @@ def untyped(structure, steps):
     return f'{structure}/{steps}'
 
 
-described = task(untyped, inputs=AsModel, outputs=AsDataclass)
+described = task(untyped, inputs=AsModel, outputs=AsModel)
 
 
 def test_a_task_is_described_where_it_is_placed():
@@ -524,12 +467,6 @@ class Nested(PortModel):
     kpoints: Kpoints = Kpoints()
 
 
-@dataclass
-class NestedDataclass:
-    structure: str
-    kpoints: Kpoints = field(default_factory=Kpoints)
-
-
 @task(outputs=['seen'])
 def sees_nested(given: Nested) -> str:
     return f'{given.structure}/{given.kpoints.mesh}/{type(given.kpoints).__name__}'
@@ -540,7 +477,7 @@ def choose_mesh(structure: str) -> int:
     return len(structure) * 2
 
 
-@pytest.mark.parametrize('container', (Nested, NestedDataclass), ids=('model', 'dataclass'))
+@pytest.mark.parametrize('container', (Nested,))
 def test_a_field_that_is_a_container_names_a_namespace_under_this_one(container):
     """A structured type nests, and so does a namespace, so the one maps onto the other all the way down."""
 
@@ -620,113 +557,37 @@ def test_a_value_is_converted_to_what_the_field_declares(as_nodes):
 
 
 class Conf(PortModel):
-    """Opaque configuration, which nothing wires into."""
-
     tolerance: float = 1e-6
 
 
 class Opaque(PortModel):
     structure: str
-    config: t.Annotated[Conf, Whole] = Conf()
-
-
-@dataclass
-class OpaqueDataclass:
-    structure: str
-    config: t.Annotated[Conf, Whole] = field(default_factory=Conf)
-
-
-class OpaqueTypedDict(t.TypedDict):
-    structure: str
-    config: t.Annotated[Conf, Whole]
+    config: JsonableData
 
 
 @task(outputs=['seen'])
-def keeps_whole(given: Opaque) -> str:
-    return f'{given.structure}/{type(given.config).__name__}/{given.config.tolerance}'
+def consumes_opaque(given: Opaque) -> str:
+    return f'{given.structure}/{given.config.obj.tolerance}'
 
 
-@pytest.mark.parametrize(
-    'container', (Opaque, OpaqueDataclass, OpaqueTypedDict), ids=('model', 'dataclass', 'typed-dict')
-)
-def test_a_field_marked_whole_is_read_as_one_value(container):
-    """The mark is metadata of the type, so every kind carries it where it writes its annotations."""
-    fields = {field.name: field.whole for field in fields_of(container)}
-
-    assert fields == {'structure': False, 'config': True}
-
-
-def test_a_field_marked_whole_is_one_port_holding_the_object():
-    """A structured type that nothing wires into is one node, rather than the namespace its fields would name."""
-    ports = keeps_whole.process_class.spec().inputs['given']
-
-    assert JsonableData in ports['config'].valid_type
-    assert not hasattr(ports['config'], 'ports'), 'a port rather than a namespace'
-
-    results, node = run_get_node(keeps_whole, given=Opaque(structure='si', config=Conf(tolerance=0.1)))
-
+def test_opaque_field_uses_an_explicit_orm_node():
+    value = JsonableData(Conf(tolerance=0.1))
+    results, node = run_get_node(consumes_opaque, given=Opaque(structure='si', config=value))
     assert node.is_finished_ok, node.exit_message
+    assert results['seen'] == 'si/0.1'
+    assert node.inputs.given.config.uuid == value.uuid
     assert sorted(node.base.links.get_incoming().all_link_labels()) == ['given__config', 'given__structure']
-    assert isinstance(node.inputs.given.config, JsonableData)
-    assert results['seen'] == 'si/Conf/0.1', 'handed back as the object it was, not as what it was stored as'
+    assert load_node(value.pk).obj.tolerance == 0.1
 
 
 @task(outputs=['seen'])
-def takes_a_whole_parameter(given: t.Annotated[Conf, Whole]) -> str:
-    return f'{type(given).__name__}/{given.tolerance}'
+def consumes_opaque_parameter(config: JsonableData) -> float:
+    return config.obj.tolerance
 
 
-def test_a_parameter_marked_whole_is_one_port_holding_the_object():
-    """The mark reads the same on a parameter as on a field: one node holding the container."""
-    port = takes_a_whole_parameter.process_class.spec().inputs['given']
-
-    assert JsonableData in port.valid_type
-    assert not hasattr(port, 'ports'), 'a port rather than a namespace'
-
-    results, node = run_get_node(takes_a_whole_parameter, given=Conf(tolerance=0.1))
-
-    assert node.is_finished_ok, node.exit_message
-    assert sorted(node.base.links.get_incoming().all_link_labels()) == ['given']
-    assert results['seen'] == 'Conf/0.1', 'handed back as the object it was'
-    assert load_node(node.inputs.given.pk).obj.tolerance == 0.1, 'and the node holds it whole'
-
-
-def test_a_port_holding_a_container_takes_its_fields_as_a_mapping():
-    """A namespace takes the fields written out, so a port holding the whole structured type takes them too."""
-    results, node = run_get_node(takes_a_whole_parameter, given={'tolerance': 0.25})
-
-    assert results['seen'] == 'Conf/0.25', 'the mapping was read as the structured type it stands for'
-    assert isinstance(node.inputs.given, JsonableData)
-
-
-def test_a_model_is_stored_whole_and_read_back():
-    """A port model supports whole-value storage through its mapping interface."""
-    stored = JsonableData(Nested(structure='si')).store()
-    back = load_node(stored.pk).obj
-
-    assert isinstance(back, Nested)
-    assert (back.structure, back.kpoints.mesh) == ('si', 4), 'the nested one came back too'
-
-
-class HoldsANode(PortModel):
-    """A structured type holding a node, which is not something JSON has a way to write."""
-
-    spacing: Float
-
-
-class KeptWhole(PortModel):
-    label: str
-    config: t.Annotated[HoldsANode, Whole]
-
-
-@task(outputs=['seen'])
-def keeps_a_node_whole(given: KeptWhole) -> str:
-    return given.label
-
-
-def test_a_whole_field_that_cannot_be_written_as_json_says_what_to_do():
-    """One node holding a structured type holds it as JSON, which a node inside it has no way to be written as."""
-    given = KeptWhole(label='si', config=HoldsANode(spacing=Float(0.2)))
-
-    with pytest.raises(ValueError, match='drop the mark so that each field is stored as the node it is'):
-        run_get_node(keeps_a_node_whole, given=given)
+def test_opaque_parameter_stays_an_orm_node():
+    value = JsonableData(Conf(tolerance=0.25))
+    results, node = run_get_node(consumes_opaque_parameter, config=value)
+    assert results['seen'] == 0.25
+    assert node.inputs.config.uuid == value.uuid
+    assert node.base.links.get_incoming().all_link_labels() == ['config']

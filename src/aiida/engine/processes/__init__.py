@@ -18,10 +18,10 @@ from aiida.engine.processes.exit_code import *
 from aiida.engine.processes.functions import *
 from aiida.engine.processes.futures import *
 from aiida.engine.processes.graphs import *
+from aiida.engine.processes.port_model import *
 from aiida.engine.processes.ports import *
 from aiida.engine.processes.process import *
 from aiida.engine.processes.process_spec import *
-from aiida.engine.processes.structured import *
 from aiida.engine.processes.workchains import *
 
 __all__ = (
@@ -81,7 +81,6 @@ __all__ = (
     'TaskWorkChain',
     'ToContext',
     'WaitProcess',
-    'Whole',
     'WithNonDb',
     'WithSerialize',
     'WorkChain',

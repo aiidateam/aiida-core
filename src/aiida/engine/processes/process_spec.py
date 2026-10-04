@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Mapping
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
+from aiida.engine.processes.port_model import Field, fields_of
 from aiida.engine.processes.ports import (
     CalcJobOutputPort,
     InputPort,
@@ -22,8 +22,7 @@ from aiida.engine.processes.ports import (
     as_written,
     infer_valid_type_from_type_annotation,
 )
-from aiida.engine.processes.structured import UNSPECIFIED, Field, build, fields_of, is_structured
-from aiida.orm import Data, Dict, JsonableData, to_aiida_type
+from aiida.orm import Data, Dict, to_aiida_type
 
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
 
@@ -47,19 +46,12 @@ def _against(container: type) -> t.Callable[[t.Any, t.Any], str | None]:
 
 
 def _as_a_port(field: Field) -> dict[str, t.Any]:
-    """Return how one field of a structured type is declared as a port.
-
-    A field kept whole is one node holding the object, which is what :class:`~aiida.orm.JsonableData` is for,
-    unless what it holds is a node already.
-    """
+    """Return how one model field is declared as a port."""
     declared = infer_valid_type_from_type_annotation(field.annotation)
     options: dict[str, t.Any] = {'required': field.required, 'help': field.help}
 
     if not field.required:
         options['default'] = _lazily(field.default)
-
-    if field.whole and not declared:
-        return {**options, 'valid_type': (JsonableData,), 'serializer': _as_one_node(field)}
 
     return {**options, 'valid_type': declared or (Data,)}
 
@@ -72,32 +64,7 @@ def _as_an_output_port(field: Field) -> dict[str, t.Any]:
     """
     declared = infer_valid_type_from_type_annotation(field.annotation)
 
-    if field.whole and not declared:
-        return {'required': field.required, 'valid_type': (JsonableData,)}
-
     return {'required': field.required, 'valid_type': declared or (Data,)}
-
-
-def _as_one_node(field: Field) -> t.Callable[[t.Any], JsonableData]:
-    """Return what stores a field kept whole, which is one node holding the whole of it."""
-
-    def store(value: t.Any) -> JsonableData:
-        # A namespace takes the fields written as a mapping, so a port holding the whole structured type takes one
-        # too, and the structured type is what says whether those fields are acceptable.
-        if isinstance(value, Mapping) and is_structured(field.annotation):
-            value = build(field.annotation, dict(value))
-
-        try:
-            return JsonableData(value)
-        except Exception as exception:
-            msg = (
-                f'`{field.name}` is kept whole, so it is stored as one node holding it as JSON, and '
-                f'`{type(value).__name__}` holds something that cannot be written that way. Either say how that '
-                f'value is rendered, or drop the mark so that each field is stored as the node it is.'
-            )
-            raise ValueError(msg) from exception
-
-    return store
 
 
 def _lazily(default: t.Any) -> t.Any:
@@ -128,26 +95,10 @@ class ProcessSpec(spec.ProcessSpec):
         super().__init__()
         self._exit_codes = ExitCodesNamespace()
 
-    def input_whole(self, name: str, container: type, default: t.Any = UNSPECIFIED, **kwargs: t.Any) -> None:
-        """Declare one port holding the whole of a structured type.
-
-        This is what :class:`~aiida.engine.processes.structured.Whole` asks for: the structured type is stored as one
-        node holding it as JSON, so nothing wires into a field of it and the provenance carries one value:
-
-        >>> spec.input_whole('config', SomeConfig)
-
-        :param name: the port to declare.
-        :param structured type: the structured type the port holds.
-        :param default: what the port holds when nothing is given, or ``UNSPECIFIED`` to make it required.
-        :param kwargs: passed on to the port, ``help`` among them.
-        """
-        field = Field(name=name, annotation=container, default=default, whole=True)
-        self.input(name, **{**_as_a_port(field), **kwargs})
-
     def input_namespace_from(self, name: str, container: type, **kwargs: t.Any) -> None:
         """Declare a namespace holding one port per field of a structured type.
 
-        A ``TypedDict``, a dataclass, a ``NamedTuple`` and a ``PortModel`` each say which names a value has, of
+        A ``PortModel`` declares which names a value has, of
         which types, and which of them have a default. That is what a namespace of ports says, so this is how one
         is written once and said in both places:
 
@@ -170,7 +121,7 @@ class ProcessSpec(spec.ProcessSpec):
         if fields is None:
             msg = (
                 f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
-                f'to declare `{name}` from. Use a `PortModel`, a `TypedDict`, a dataclass or a `NamedTuple`.'
+                f'to declare `{name}` from. Use a `PortModel`.'
             )
             raise TypeError(msg)
 
@@ -180,7 +131,7 @@ class ProcessSpec(spec.ProcessSpec):
         for field in fields:
             under = f'{name}{self.namespace_separator}{field.name}'
 
-            if fields_of(field.annotation) is not None and not field.whole:
+            if fields_of(field.annotation) is not None:
                 self.input_namespace_from(under, field.annotation, required=field.required, help=field.help)
                 continue
 
@@ -211,14 +162,14 @@ class ProcessSpec(spec.ProcessSpec):
         if fields is None:
             msg = (
                 f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
-                f'to declare the outputs from. Use a `PortModel`, a `TypedDict`, a dataclass or a `NamedTuple`.'
+                f'to declare the outputs from. Use a `PortModel`.'
             )
             raise TypeError(msg)
 
         for field in fields:
             name = f'{prefix}{field.name}'
 
-            if fields_of(field.annotation) is not None and not field.whole:
+            if fields_of(field.annotation) is not None:
                 self.output_namespace(name, required=field.required)
                 self.outputs_from(field.annotation, prefix=f'{name}{self.namespace_separator}')
                 continue

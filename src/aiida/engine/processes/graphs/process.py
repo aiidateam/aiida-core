@@ -17,6 +17,7 @@ import typing as t
 from collections.abc import MutableMapping
 from inspect import get_annotations
 
+from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
@@ -25,11 +26,11 @@ from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
+from aiida.engine.processes.port_model import as_dict
 from aiida.engine.processes.ports import as_written
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.engine.processes.structured import as_dict
 from aiida.orm import Data, Dict, GraphNode, ProcessNode
 from aiida.orm.nodes.data.base import to_aiida_type
 
@@ -156,6 +157,16 @@ class GraphProcess(Process):
         self._run: GraphRun | None = None
         self._saved: dict[str, t.Any] = {}
 
+    @override
+    def _create_and_setup_db_record(self) -> t.Any:
+        """Check raw graph inputs after engine parsing but before provenance is stored."""
+        graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
+        supplied = dict(self.inputs.get(self._GRAPH_INPUTS, {}))
+        self._parsed_inputs = AttributesFrozendict(
+            {**self.inputs, self._GRAPH_INPUTS: graph.serialize_inputs(supplied)}
+        )
+        return super()._create_and_setup_db_record()
+
     @classmethod
     def launch_inputs(cls, body: GraphSpec, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
         """Return the inputs with which to launch a graph: the declaration, and the values to run it on.
@@ -168,19 +179,17 @@ class GraphProcess(Process):
         """
         return {
             cls._GRAPH: Dict(dict=body.to_dict()),
-            cls._GRAPH_INPUTS: {
-                name: value if isinstance(value, Data) else body.serializer_for_input(name)(value)
-                for name, value in inputs.items()
-            },
+            cls._GRAPH_INPUTS: body.serialize_inputs(inputs),
         }
 
     @property
     def run_state(self) -> GraphRun:
         """Return how far the graph has got, read back from the declaration and what was checkpointed."""
         if self._run is None:
+            graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
             self._run = GraphRun.from_dict(
-                graph=GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict()),
-                given=dict(self.inputs.get(self._GRAPH_INPUTS, {})),
+                graph=graph,
+                given=graph.serialize_inputs(dict(self.inputs.get(self._GRAPH_INPUTS, {}))),
                 data=self._saved,
             )
 

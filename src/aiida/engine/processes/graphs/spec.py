@@ -13,14 +13,16 @@ from __future__ import annotations
 import abc
 import typing as t
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass, field
 
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.graphs.handlers import TaskWorkChain
-from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.graphs.inputs import load_port, merge_ports, prepare_inputs
+from aiida.engine.processes.port_model import as_dict
+from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.structured import as_dict
 from aiida.orm import Data, to_aiida_type
 
 __all__ = (
@@ -716,9 +718,14 @@ class GraphSpec:
     version: str = SPEC_VERSION
     input_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
     output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
+    input_namespace: dict[str, t.Any] | None = None
+    """Serialized ordinary port namespace for the boundary, without bound values or ORM identity."""
 
     def __post_init__(self) -> None:
         self.validate()
+        if self.input_namespace is not None:
+            object.__setattr__(self, 'input_namespace', deepcopy(self.input_namespace))
+            self.input_spec()
 
     @property
     def task_names(self) -> tuple[str, ...]:
@@ -731,6 +738,80 @@ class GraphSpec:
                 return task
         msg = f'no task named `{name}` in this graph.'
         raise KeyError(msg)
+
+    def input_spec(self) -> PortNamespace:
+        """Reconstruct the thin input namespace, inferring routed manual inputs from task ports.
+
+        :return: an ordinary AiiDA port namespace, not an ORM container.
+        """
+        if self.input_namespace is not None:
+            namespace = load_port(self.input_namespace)
+            if not isinstance(namespace, PortNamespace) or namespace.keys() != self.inputs.keys():
+                msg = 'the graph boundary namespace must declare exactly the graph inputs.'
+                raise ValueError(msg)
+        else:
+            namespace = PortNamespace('inputs')
+        for name, targets in self.inputs.items():
+            declared = t.cast(InputPort | PortNamespace | None, namespace.get(name))
+            if declared is not None and (isinstance(declared, PortNamespace) or declared.valid_type):
+                continue
+            consumers = [
+                port for task_name, path in targets for port in self._input_ports_at(self.task(task_name), path)
+            ]
+            inferred = merge_ports(name, consumers)
+            if declared is not None:
+                inferred.required = declared.required
+                inferred.help = declared.help if declared.help is not None else inferred.help
+                if declared.has_default():
+                    inferred.default = declared.default
+            namespace[name] = inferred
+        return namespace
+
+    @staticmethod
+    def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
+        if isinstance(task, ProcessTask):
+            port: t.Any = task.spec.inputs
+            for segment in path.split('.'):
+                if not isinstance(port, PortNamespace) or segment not in port:
+                    return []
+                port = port[segment]
+            return [port]
+        if isinstance(task, BodyTask):
+            if isinstance(task, (BranchControl, LoopControl)) and path == task.condition_port:
+                return []
+            bodies = task.branches if isinstance(task, BranchControl) else (task.body,)
+            return [body.input_spec()[path] for body in bodies if path in body.inputs]
+        return []
+
+    def prepare_inputs(self, inputs: t.Mapping[str, t.Any]) -> dict[str, t.Any]:
+        """Apply boundary defaults and report required fields before constructing launch inputs.
+
+        :param inputs: the supplied values, left unchanged.
+        :return: a normalized mapping with graph defaults applied.
+        """
+        return prepare_inputs(self.input_spec(), inputs)
+
+    def serialize_inputs(self, inputs: t.Mapping[str, t.Any]) -> dict[str, t.Any]:
+        """Prepare and serialize thin namespaces as mappings of data-node leaves.
+
+        :param inputs: supplied graph values, left unchanged.
+        :return: values suitable for process input links, without a namespace node.
+        """
+        prepared = self.prepare_inputs(inputs)
+        serialized = {
+            name: value if isinstance(value, Data) else self.serializer_for_input(name)(value)
+            for name, value in prepared.items()
+        }
+        error = self.input_spec().validate(serialized)
+        if error is not None:
+            raise ValueError(error)
+        for name, value in serialized.items():
+            for task_name, path in self.inputs[name]:
+                for port in self._input_ports_at(self.task(task_name), path):
+                    error = port.validate(value)
+                    if error is not None:
+                        raise ValueError(error)
+        return serialized
 
     def serializer_for_input(self, name: str) -> t.Callable[[t.Any], t.Any]:
         """Return what stores a value given for one of the graph's own inputs.
@@ -749,6 +830,9 @@ class GraphSpec:
             if found is not None:
                 return found
 
+        if self.input_namespace is not None:
+            boundary = t.cast(InputPort | PortNamespace, self.input_spec()[name])
+            return _into(boundary) if isinstance(boundary, PortNamespace) else boundary.serialize
         return to_aiida_type
 
     def _serializer_at(self, task_name: str, port: str) -> t.Callable[[t.Any], t.Any] | None:
@@ -1128,6 +1212,7 @@ class GraphSpec:
             'outputs': {name: source.to_dict() for name, source in self.outputs.items()},
             'identifier': self.identifier,
             'version': self.version,
+            'input_namespace': deepcopy(self.input_namespace),
             'input_typehints': {
                 name: [get_object_loader().identify_object(kind) for kind in types]
                 for name, types in self.input_typehints.items()
@@ -1157,6 +1242,7 @@ class GraphSpec:
             outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
             identifier=data.get('identifier'),
             version=version,
+            input_namespace=data.get('input_namespace'),
             input_typehints={
                 name: tuple(get_object_loader().load_object(kind) for kind in types)
                 for name, types in data.get('input_typehints', {}).items()

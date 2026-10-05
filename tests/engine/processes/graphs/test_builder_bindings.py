@@ -9,12 +9,16 @@
 """Prepared inputs remain launch values, rather than calculation outputs."""
 
 import json
+import typing as t
 
 import pytest
 
 from aiida import orm
+from aiida.common.exceptions import MissingInput
 from aiida.engine import (
     GraphProcess,
+    PortField,
+    PortModel,
     WorkChain,
     graph_execution,
     graph_source,
@@ -24,6 +28,7 @@ from aiida.engine import (
 )
 from aiida.engine.processes.graphs.build_source import UnsupportedSyntax
 from aiida.engine.processes.graphs.inputs import MissingRequiredInputsError
+from aiida.engine.processes.graphs.run import place
 from aiida.engine.processes.graphs.spec import GraphSpec
 from tests.engine.processes.graphs.registration_tasks import RegisteredCalculation
 
@@ -97,6 +102,72 @@ def prepared(value=2):
     builder.pw.pseudos = {'X': orm.Int(10).store()}
     builder.metadata.label = 'prepared label'
     return builder
+
+
+class RoutedInputs(PortModel):
+    value: t.Annotated[orm.Int, PortField(help='Required routed value.')]
+
+
+class NestedRoutedInputs(PortModel):
+    nested: RoutedInputs
+
+
+@graph_source
+def routed_namespace(inputs: RoutedInputs) -> orm.Int:
+    return step(pw={'structure': inputs.value}).result
+
+
+@graph_source
+def routed_nested_namespace(inputs: NestedRoutedInputs) -> orm.Int:
+    return step(pw={'structure': inputs.nested.value}).result
+
+
+NAMESPACE_ROUTES = [(routed_namespace, 'inputs.value'), (routed_nested_namespace, 'inputs.nested.value')]
+
+
+@pytest.mark.parametrize(('template', 'path'), NAMESPACE_ROUTES)
+def test_prepared_binding_preserves_declared_namespace(template, path):
+    original = template.build()
+    handle = template.bind_tasks(step=task_from_builder(prepared()))
+    bound = handle.build()
+    restored = GraphSpec.from_dict(json.loads(json.dumps(bound.to_dict())))
+    assert restored == bound
+    assert template.build() == original
+    assert restored.inputs[path] == original.inputs[path] == (('step', 'pw.structure'),)
+    assert restored.input_namespace['ports']['inputs'] == original.input_namespace['ports']['inputs']
+    private = next(name for name, targets in restored.inputs.items() if targets == (('step', 'pw.parameters'),))
+    assert restored.input_spec()[private].valid_type == (orm.Dict,)
+    assert restored.input_spec()[private].required
+    with pytest.raises(MissingRequiredInputsError) as caught:
+        handle.get_launch_inputs()
+    assert caught.value.missing == (MissingInput(bound.identifier, path, 'Required routed value.', True),)
+
+
+@pytest.mark.requires_broker
+@pytest.mark.parametrize(('template', 'path'), NAMESPACE_ROUTES)
+def test_prepared_namespace_roundtrip_preserves_routed_identity(template, path):
+    builder = prepared()
+    handle = template.bind_tasks(step=task_from_builder(builder))
+    value = orm.Int(42).store()
+    given = {}
+    place(given, path, value)
+    launch = handle.get_launch_inputs(**given)
+    declaration = json.dumps(launch['graph'].get_dict())
+    assert value.uuid not in declaration
+    assert builder.pw.parameters.uuid not in declaration
+    restored = GraphSpec.from_dict(json.loads(declaration))
+    private = next(name for name, targets in restored.inputs.items() if targets == (('step', 'pw.parameters'),))
+    assert launch['graph_inputs'][private].uuid == builder.pw.parameters.uuid
+    with pytest.raises(MissingRequiredInputsError) as caught:
+        restored.prepare_inputs(given)
+    assert private in {item.socket_path for item in caught.value.missing}
+    launch['graph'] = orm.Dict(restored.to_dict())
+    results, node = run_get_node(GraphProcess, **launch)
+    assert node.is_finished_ok, node.exit_message
+    (child,) = node.called
+    assert child.inputs.pw.structure.uuid == results['result'].uuid == value.uuid
+    assert child.inputs.pw.parameters.uuid == builder.pw.parameters.uuid
+    assert child.label == builder.metadata.label
 
 
 def test_source_rejects_global_run_specific_handle(monkeypatch):

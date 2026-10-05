@@ -70,7 +70,6 @@ def bind_declaration(body: GraphSpec, bindings: Mapping[str, t.Any]) -> GraphSpe
     inputs = dict(body.inputs)
     tasks = list(body.tasks)
     namespace = body.input_spec()
-    hidden_ports: dict[str, t.Any] = {}
     collector = LAUNCH_BINDINGS.get()
     for task_name, handle in bindings.items():
         placed = body.task(task_name)
@@ -99,14 +98,10 @@ def bind_declaration(body: GraphSpec, bindings: Mapping[str, t.Any]) -> GraphSpe
                 else:
                     msg = f'Unknown prepared input `{task_name}.{path}`.'
                     raise ValueError(msg)
-            hidden_ports[name] = load_port(dump_port(port, defaults=False))
+            namespace[name] = load_port(dump_port(port, defaults=False))
             if collector is not None:
                 collector[name] = copy_containers(value)
-    result = replace(body, tasks=tuple(tasks), inputs=inputs, input_namespace=None)
-    inferred = result.input_spec()
-    for name, port in {**dict(namespace.items()), **hidden_ports}.items():
-        inferred[name] = port
-    return replace(result, input_namespace=dump_port(inferred))
+    return replace(body, tasks=tuple(tasks), inputs=inputs, input_namespace=dump_port(namespace))
 
 
 def _copy_ports(namespace: PortNamespace) -> PortNamespace:

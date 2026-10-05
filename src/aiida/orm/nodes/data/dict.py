@@ -140,7 +140,7 @@ class Dict(Data):
         if not isinstance(dictionary, dict):
             raise TypeError('Must supply dict type')
 
-        source = deepcopy(self.base.attributes.get('source'))
+        source = deepcopy(self.source)
         self.base.attributes.clear()
         self.base.attributes.set_many({'source': source, **dictionary})
 

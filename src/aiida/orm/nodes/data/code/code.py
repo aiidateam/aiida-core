@@ -36,7 +36,8 @@ __all__ = ('Code',)
 class Code(Data, metaclass=abc.ABCMeta):
     """Abstract base class providing the shared behavior of executable code plugins."""
 
-    # The class is re-exported from the package; use that path for its public identity and node type string.
+    # The class is re-exported from the package.
+    # Use that path for its public identity and node type string.
     __module__ = 'aiida.orm.nodes.data.code'
 
     KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'default_calc_job_plugin'

@@ -28,7 +28,6 @@ class BaseType(Data, abc.ABC, t.Generic[_ValueT]):
 
     _type: type[_ValueT]
 
-    # TODO automate default setting
     def initialize(self) -> None:
         super().initialize()
         if 'value' not in self.attributes:
@@ -37,7 +36,7 @@ class BaseType(Data, abc.ABC, t.Generic[_ValueT]):
     @property
     @abc.abstractmethod
     def value(self) -> _ValueT:
-        """Return the wrapped Python value."""
+        """The wrapped Python value."""
 
     @value.setter
     def value(self, value: _ValueT) -> None:

@@ -130,7 +130,7 @@ jobs:
       contains(needs.*.result, 'failure') &&
       github.repository == 'aiidateam/aiida-core' &&
       github.event_name != 'pull_request'
-    needs: [mypy, nightly-tests, rabbitmq-tests]
+    needs: [nightly-tests, rabbitmq-tests]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

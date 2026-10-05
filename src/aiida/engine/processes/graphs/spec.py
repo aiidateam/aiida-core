@@ -21,7 +21,7 @@ from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.graphs.handlers import TaskWorkChain
 from aiida.engine.processes.graphs.inputs import load_port, merge_ports, prepare_inputs
 from aiida.engine.processes.port_model import as_dict
-from aiida.engine.processes.ports import InputPort, PortNamespace, infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.orm import Data, to_aiida_type
 
@@ -1301,6 +1301,20 @@ class GraphSpec:
                 f'branch ran. Both branches have to return the same outputs.'
             )
             raise ValueError(msg)
+
+        if task.otherwise is not None and all(branch.output_namespace is not None for branch in task.branches):
+
+            def contract(port: PortNamespace | OutputPort) -> tuple[t.Any, ...]:
+                valid_types = port.valid_type or ()
+                valid_types = valid_types if isinstance(valid_types, tuple) else (valid_types,)
+                properties = (port.required, frozenset(valid_types))
+                if isinstance(port, PortNamespace):
+                    return (*properties, port.dynamic, {name: contract(child) for name, child in port.items()})
+                return properties
+
+            if contract(task.body.output_spec()) != contract(task.otherwise.output_spec()):
+                msg = f'`{task.name}` branches have incompatible output contracts.'
+                raise ValueError(msg)
 
     def _check_endpoint(self, name: str, port: str, direction: t.Literal['input', 'output'], referrer: str) -> None:
         """Raise if a task referred to somewhere in the graph does not exist, or has no port under that name.

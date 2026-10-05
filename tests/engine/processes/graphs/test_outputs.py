@@ -17,6 +17,7 @@ from aiida.common.links import LinkType
 from aiida.engine import (
     CalcJob,
     GraphProcess,
+    Many,
     Met,
     PortModel,
     WorkChain,
@@ -55,6 +56,110 @@ def make_values(value: int) -> Values:
 def named_source(value: int) -> Results:
     result = make_values(value=value)
     return Results(values=Values(total=result.total), count=result.total)
+
+
+@graph_source
+def branch_values(value: int, condition: bool) -> Values:
+    if condition:
+        selected = make_values(value=value)
+    else:
+        selected = whole_source(value=value)
+    return Values(total=selected.total, extra=selected.extra)
+
+
+@graph_source
+def reverse_branch_values(value: int, condition: bool) -> Values:
+    if condition:
+        selected = whole_source(value=value)
+    else:
+        selected = make_values(value=value)
+    return selected
+
+
+class BranchProducts(PortModel):
+    values: Values
+    dynamic: Many[Int]
+
+
+@task_source
+def make_branch_products(value: int) -> BranchProducts:
+    return BranchProducts(values=Values(total=value), dynamic={'item': Int(value)})
+
+
+@task_source
+def make_other_branch_products(value: int) -> BranchProducts:
+    return BranchProducts(values=Values(total=value + 10), dynamic={'item': Int(value + 10)})
+
+
+@graph_source
+def branch_products_graph(value: int) -> BranchProducts:
+    return make_other_branch_products(value=value)
+
+
+@graph_source
+def branch_products(value: int, condition: bool) -> BranchProducts:
+    if condition:
+        selected = make_branch_products(value=value)
+    else:
+        selected = branch_products_graph(value=value)
+    return BranchProducts(values=selected.values, dynamic=selected.dynamic)
+
+
+@graph_source
+def incompatible_branch(value: int, condition: bool) -> Values:
+    if condition:
+        selected = make_values(value=value)
+    else:
+        selected = make_branch_products(value=value)
+    return selected
+
+
+@pytest.mark.parametrize('handle', (branch_values, reverse_branch_values, branch_products))
+@pytest.mark.parametrize('condition', (True, False))
+def test_branch_output_contracts(handle, condition):
+    spec = handle.build()
+    restored = GraphSpec.from_dict(json.loads(json.dumps(spec.to_dict())))
+    assert restored == spec
+    branch = restored.tasks[0]
+    for body in branch.branches:
+        declared = body.output_spec()
+        values = declared['values'] if handle is branch_products else declared
+        assert values['total'].required
+        assert not values['extra'].required
+        assert values['total'].valid_type == (Int,)
+        if handle is branch_products:
+            assert declared['dynamic'].dynamic
+            assert declared['dynamic'].valid_type == (Int,)
+            assert set(body.outputs) == {'values.total', 'values.extra', 'dynamic'}
+        else:
+            assert set(body.outputs) == {'total', 'extra'}
+    outputs, node = run_get_node(
+        GraphProcess, **GraphProcess.launch_inputs(restored, {'value': 2, 'condition': condition})
+    )
+    assert node.is_finished_ok
+    if handle is branch_products:
+        expected = 2 if condition else 12
+        assert outputs['values']['total'] == expected
+        assert outputs['dynamic']['item'] == expected
+    else:
+        expected = 3
+        assert outputs['total'] == expected
+
+
+@pytest.mark.parametrize('property_name, value', [('required', False), ('valid_type', [])])
+def test_branch_rejects_incompatible_field_contracts(property_name, value):
+    spec = branch_values.build()
+    branch = spec.tasks[0]
+    payload = branch.otherwise.to_dict()
+    payload['output_namespace']['ports']['total'][property_name] = value
+    otherwise = GraphSpec.from_dict(payload)
+    with pytest.raises(ValueError, match='incompatible output contracts'):
+        replace(spec, tasks=(replace(branch, otherwise=otherwise),))
+
+
+def test_branch_rejects_incompatible_output_names():
+    with pytest.raises(ValueError, match='Both branches have to return the same outputs'):
+        incompatible_branch.build()
 
 
 @graph_execution

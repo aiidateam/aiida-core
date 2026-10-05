@@ -39,7 +39,7 @@ from aiida.engine.processes.graphs.spec import (
     SubgraphTask,
 )
 from aiida.engine.processes.port_model import fields_of
-from aiida.engine.processes.ports import PortNamespace, infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
 # would otherwise shadow the graph-builder decorator exported by ``aiida.engine``.
@@ -365,7 +365,32 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     for statements in (statement.body, statement.orelse):
         child = _region(state, statements)
         name = _lower_assignment(child, statements[0])
-        sides.append((name, child, _body(child, {'result': child.names[name]})))
+        reference = child.names[name]
+        task = next(task for task in child.tasks if task.name == reference.task)
+        namespace = task.spec.outputs if isinstance(task, ProcessTask) else task.body.output_spec()
+        if isinstance(task, SubgraphTask) and task.body.output_namespace is None:
+            namespace = PortNamespace('outputs')
+            for path in task.body.outputs:
+                namespace[path] = OutputPort(path, valid_type=task.body.output_typehints.get(path))
+
+        def expand(port: PortNamespace, prefix: str = '') -> dict[str, Endpoint]:
+            outputs = {}
+            for field_name, field_port in port.items():
+                path = f'{prefix}.{field_name}' if prefix else field_name
+                if isinstance(field_port, PortNamespace) and not field_port.dynamic and field_port:
+                    outputs.update(expand(field_port, path))
+                else:
+                    outputs[path] = Endpoint(task=reference.task, port=path)
+            return outputs
+
+        body = GraphSpec(
+            tasks=tuple(child.tasks),
+            dependencies=tuple(child.dependencies),
+            inputs={name: tuple(targets) for name, targets in child.inputs.items()},
+            outputs=expand(namespace),
+            output_namespace=dump_port(namespace, defaults=False),
+        )
+        sides.append((name, child, body))
     if sides[0][0] != sides[1][0] or sides[0][0] in state.names:
         _reject(state, statement, 'if requires one new name shared by both sides')
     if CONDITION_PORT in sides[0][2].inputs or CONDITION_PORT in sides[1][2].inputs:
@@ -376,7 +401,9 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     for name in sorted(set(sides[0][1].inputs) | set(sides[1][1].inputs)):
         _wire(state, instance, name, state.names[name], given)
     state.tasks.append(BranchControl(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
-    state.names[sides[0][0]] = _Reference(instance, 'result')
+    namespace = sides[0][2].output_spec()
+    scalar = set(namespace) == {'result'} and not isinstance(namespace['result'], PortNamespace)
+    state.names[sides[0][0]] = _Reference(instance, 'result' if scalar else '')
 
 
 def _lower_loop(state: _LoweringState, statement: ast.While) -> None:

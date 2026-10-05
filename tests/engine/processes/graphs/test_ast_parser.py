@@ -13,6 +13,7 @@ import pytest
 from aiida.engine import (
     ExecutionGraphHandle,
     GraphHandle,
+    PortModel,
     graph_execution,
     graph_source,
     task_execution,
@@ -118,6 +119,39 @@ def choose(x: int, flag: bool) -> int:
     return sum_two(x=selected, y=x)
 
 
+class BranchPair(PortModel):
+    left: int
+    right: int
+
+
+class SingleBranchNamespace(PortModel):
+    pair: BranchPair
+
+
+@task
+def declared_branch_namespace() -> SingleBranchNamespace:
+    raise AssertionError('Building must not execute task bodies')
+
+
+@graph
+def choose_declared_namespace(condition: bool) -> SingleBranchNamespace:
+    if condition:
+        selected = declared_branch_namespace()
+    else:
+        selected = declared_branch_namespace()
+    return SingleBranchNamespace(pair=BranchPair(left=selected.pair.left, right=selected.pair.right))
+
+
+def test_branch_build_preserves_single_nested_namespace_without_execution():
+    spec = choose_declared_namespace.build()
+    branch = spec.tasks[0]
+    for body in branch.branches:
+        assert set(body.outputs) == {'pair.left', 'pair.right'}
+        assert all(endpoint.port == name for name, endpoint in body.outputs.items())
+    assert spec.outputs['pair.left'].port == 'pair.left'
+    assert spec.outputs['pair.right'].port == 'pair.right'
+
+
 @graph
 def count(x: int, keep_going: bool) -> int:
     while keep_going:
@@ -216,7 +250,7 @@ def test_control_flow_specs():
     branch = chosen.tasks[0]
     assert isinstance(branch, BranchControl)
     assert branch.otherwise is not None
-    assert branch.body.outputs.keys() == branch.otherwise.outputs.keys()
+    assert branch.body.outputs.keys() == branch.otherwise.outputs.keys() == {'result'}
     assert chosen.dependencies[0].source == branch.name
 
     counted = build_from_source(count)

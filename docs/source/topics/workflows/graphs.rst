@@ -55,6 +55,26 @@ The engine does not reconstruct a ``PortModel`` instance or run its constructor 
 Supply mappings or model instances as inputs at launch; input namespaces are stored as individually linked data-node leaves, not as container nodes.
 For task output namespaces, return a ``PortModel`` instance, including model instances for nested namespaces.
 A dictionary-valued field remains one ``Dict`` node rather than a namespace.
+To produce a keyed collection with runtime-defined names, annotate an output field as ``Many[T]``:
+
+.. code-block:: python
+
+    from aiida import orm
+    from aiida.engine import Many, PortModel, task
+
+    class Prepared(PortModel):
+        values: Many[orm.Int]
+
+    @task
+    def prepare_values() -> Prepared:
+        return Prepared(values={'a': orm.Int(1), 'b': orm.Int(2)})
+
+``values`` declares a dynamic namespace with leaves of type ``T``.
+Return a mapping for this field; each leaf has its own output link, and keys must be valid AiiDA port names.
+The namespace can be wired as a whole to a task input namespace, including when the mapping is empty.
+Tasks retain calculation-function provenance rules: returning already stored nodes is not allowed.
+Use a workflow to return existing nodes rather than copying them or bypassing provenance validation.
+
 Opaque objects should be declared as ORM nodes such as :class:`~aiida.orm.Dict` or :class:`~aiida.orm.JsonableData`.
 Arbitrary dataclasses, ``TypedDict``, ``NamedTuple`` and Pydantic models do not declare namespaces.
 

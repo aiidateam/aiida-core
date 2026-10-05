@@ -15,6 +15,7 @@ import typing as t
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
+from aiida.engine.processes.many import _takes_many
 from aiida.engine.processes.port_model import Field, fields_of
 from aiida.engine.processes.ports import (
     CalcJobOutputPort,
@@ -148,6 +149,12 @@ class ProcessSpec(spec.ProcessSpec):
 
         for field in fields:
             name = f'{prefix}{field.name}'
+
+            if _takes_many(field.annotation):
+                arguments = t.get_args(field.annotation)
+                valid_type = infer_valid_type_from_type_annotation(arguments[0]) if arguments else ()
+                self.output_namespace(name, dynamic=True, valid_type=valid_type or (Data,), required=field.required)
+                continue
 
             if fields_of(field.annotation) is not None:
                 self.output_namespace(name, required=field.required)

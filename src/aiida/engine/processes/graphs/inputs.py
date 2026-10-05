@@ -118,7 +118,7 @@ def dump_port(port: InputPort | OutputPort | PortNamespace, *, defaults: bool = 
         result.update(
             dynamic=port.dynamic, ports={name: dump_port(child, defaults=defaults) for name, child in port.items()}
         )
-    else:
+    if not isinstance(port, PortNamespace) or port.valid_type:
         valid_types = port.valid_type or ()
         if isinstance(valid_types, type):
             valid_types = (valid_types,)
@@ -156,7 +156,15 @@ def load_port(data: Mapping[str, t.Any], *, output: bool = False) -> InputPort |
         # Restore exactly the snapshot, without optional InputPort's implicit None.
         port.valid_type = valid_type
         return port
-    namespace = PortNamespace(data['name'], dynamic=data['dynamic'], populate_defaults=data['required'], **options)
+    valid_type = (
+        tuple(
+            type(None) if kind is None else get_object_loader().load_object(kind) for kind in data.get('valid_type', ())
+        )
+        or None
+    )
+    namespace = PortNamespace(
+        data['name'], dynamic=data['dynamic'], valid_type=valid_type, populate_defaults=data['required'], **options
+    )
     for name, child in data['ports'].items():
         namespace[name] = load_port(child, output=output)
     return namespace

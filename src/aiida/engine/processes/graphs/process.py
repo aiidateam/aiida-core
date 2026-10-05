@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import functools
 import typing as t
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
 from inspect import get_annotations
 
 from aiida.common.extendeddicts import AttributesFrozendict
@@ -79,6 +79,20 @@ def _stored(value: t.Any, port: t.Any) -> t.Any:
     holding the whole mapping.
     """
     if isinstance(port, PortNamespace):
+        if port.dynamic:
+            if not isinstance(value, Mapping):
+                msg = f'Task output namespace `{port.name}` requires a mapping, got {type(value).__name__}.'
+                raise TypeError(msg)
+            stored = {}
+            for name, item in value.items():
+                port.validate_port_name(name)
+                leaf = _stored(item, None)
+                if port.valid_type and not isinstance(leaf, port.valid_type):
+                    msg = f'Invalid type {type(leaf)} for task output `{port.name}.{name}`: expected {port.valid_type}.'
+                    raise TypeError(msg)
+                stored[name] = leaf
+            return stored
+
         fields = fields_of(type(value))
         if fields is None:
             msg = f'Task output namespace `{port.name}` requires PortModel values, got {type(value).__name__}.'

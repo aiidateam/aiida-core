@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from aiida.common.links import LinkType
+from aiida.engine.processes.generic.ports import Port, PortNamespace
 from aiida.engine.processes.graphs.spec import (
     BranchControl,
     Dependency,
@@ -24,6 +25,7 @@ from aiida.engine.processes.graphs.spec import (
     LoopControl,
     MapGraphControl,
     MappedTask,
+    ProcessTask,
     SubgraphTask,
 )
 from aiida.orm import Dict, List, Node, ProcessNode, load_node
@@ -457,7 +459,7 @@ class GraphRun:
 
             if not isinstance(self.graph.task(source.task), MappedTask):
                 try:
-                    produced[output] = at(self._produced_by(source.task).outputs, source.port)
+                    produced[output] = self._output_at(source.task, self._produced_by(source.task), source.port)
                 except KeyError:
                     if self.graph.output_required(output):
                         raise
@@ -465,7 +467,7 @@ class GraphRun:
 
             for instance in self.instances[source.task]:
                 key = self._item_key(source.task, instance)
-                produced[f'{output}.{key}'] = at(load_node(self.done[instance]).outputs, source.port)
+                produced[f'{output}.{key}'] = self._output_at(source.task, load_node(self.done[instance]), source.port)
 
         return produced
 
@@ -614,16 +616,41 @@ class GraphRun:
             if isinstance(self.graph.task(edge.source), MappedTask):
                 place(inputs, target_port, self._gathered(edge, source_port))
             else:
-                place(inputs, target_port, at(self._produced_by(edge.source).outputs, source_port))
+                place(inputs, target_port, self._output_at(edge.source, self._produced_by(edge.source), source_port))
 
         return inputs
 
     def _gathered(self, edge: Dependency, source_port: str) -> dict[str, t.Any]:
         """Return what a task that ran once per item produced, under the key of the item each run was for."""
         return {
-            self._item_key(edge.source, instance): at(load_node(self.done[instance]).outputs, source_port)
+            self._item_key(edge.source, instance): self._output_at(
+                edge.source, load_node(self.done[instance]), source_port
+            )
             for instance in self.instances[edge.source]
         }
+
+    def _output_at(self, task: str, node: Node, path: str) -> t.Any:
+        """Recover empty required dynamic namespaces, which have no output links."""
+        try:
+            return at(node.outputs, path)
+        except KeyError:
+            declaration = self.graph.task(task)
+            port: Port | PortNamespace
+            if isinstance(declaration, ProcessTask):
+                port = declaration.spec.outputs
+            elif isinstance(declaration, SubgraphTask):
+                port = declaration.body.output_spec()
+            else:
+                raise
+            for name in path.split('.'):
+                if not isinstance(port, PortNamespace) or name not in port:
+                    raise
+                port = port[name]
+                if not port.required:
+                    raise
+            if isinstance(port, PortNamespace) and port.dynamic:
+                return {}
+            raise
 
     def _produced_by(self, name: str) -> t.Any:
         """Return the node holding what a task produced, which for one that ran more than once is its last run."""

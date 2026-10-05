@@ -22,6 +22,7 @@ from inspect import get_annotations
 import docstring_parser
 
 from aiida.common.lang import override
+from aiida.engine.processes.many import Many, _takes_many
 from aiida.engine.processes.port_model import (
     _port_help,
     as_dict,
@@ -270,28 +271,6 @@ def process_function(
         return decorated_function  # type: ignore[return-value]
 
     return decorator
-
-
-_ManyType = t.TypeVar('_ManyType')
-
-
-class Many(dict[str, _ManyType]):
-    """Annotates a parameter that takes many values at once, keyed by name.
-
-    A parameter holds one value, so a task cannot be handed the results of a fan-out, which arrive one per item.
-    Annotating it with this declares a namespace instead, and the function is given a mapping:
-
-    >>> @task(outputs=['total'])
-    >>> def total_of(parts: Many[int]) -> int:
-    >>>     return sum(part.value for part in parts.values())
-
-    The keys are whatever named the results, which for a fan-out is the key of each item.
-    """
-
-
-def _takes_many(annotation: t.Any) -> bool:
-    """Return whether a parameter is annotated as taking many values at once."""
-    return annotation is Many or t.get_origin(annotation) is Many
 
 
 def _flattened(annotation: t.Any, value: t.Any) -> t.Any:

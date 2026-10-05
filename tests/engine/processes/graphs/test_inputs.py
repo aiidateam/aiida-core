@@ -20,10 +20,11 @@ import pytest
 from aiida.common.exceptions import MissingInput, MissingRequiredInputsError
 from aiida.common.links import LinkType
 from aiida.engine import GraphProcess, PortField, PortModel, graph_execution, graph_source, run_get_node, task_source
+from aiida.engine.processes.graphs.build_source import UnsupportedSyntax
 from aiida.engine.processes.graphs.inputs import dump_port, load_port, merge_ports, namespace_for_function
 from aiida.engine.processes.graphs.spec import Endpoint, GraphSpec, ProcessTask
 from aiida.engine.processes.ports import InputPort, PortNamespace
-from aiida.orm import Dict, GraphNode, Int, QueryBuilder, Str
+from aiida.orm import Code, Dict, GraphNode, Int, QueryBuilder, Str
 
 pytestmark = pytest.mark.presto
 
@@ -104,6 +105,116 @@ def outer(codes: Codes, unused: int) -> int:
 @graph_execution
 def defaulted(value: int = 5) -> int:
     return value
+
+
+class Executables(PortModel):
+    pw: t.Annotated[Code, PortField(help='Required PW code.')]
+    optional: t.Annotated[Code | None, PortField(help='Optional code.')] = None
+
+
+class ExecutableConfiguration(PortModel):
+    codes: t.Annotated[Executables, PortField(help='Grouped codes.')]
+
+
+@task_source
+def code_label(code: Code) -> str:
+    return code.label
+
+
+@graph_source
+def select_code(codes: t.Annotated[Executables, PortField(help='Workflow codes.')]) -> str:
+    return code_label(code=codes.pw)
+
+
+@graph_source
+def select_same_named_field(pw: Executables) -> str:
+    return code_label(code=pw.pw)
+
+
+@graph_source
+def select_nested_code(configuration: ExecutableConfiguration) -> str:
+    return code_label(code=configuration.codes.pw)
+
+
+@graph_source
+def branch_selected_code(codes: Executables, condition: bool) -> str:
+    if condition:
+        result = code_label(code=codes.pw)
+    else:
+        result = code_label(code=codes.pw)
+    return result
+
+
+@graph_source
+def unknown_input_field(codes: Executables) -> str:
+    return code_label(code=codes.missing)
+
+
+@graph_source
+def dictionary_input_field(values: dict) -> str:
+    return code_label(code=values.pw)
+
+
+@graph_source
+def scalar_input_field(code: Code) -> str:
+    return code_label(code=code.code)
+
+
+@pytest.mark.parametrize(
+    ('handle', 'path'),
+    [
+        (select_code, 'codes.pw'),
+        (select_nested_code, 'configuration.codes.pw'),
+        (select_same_named_field, 'pw.pw'),
+    ],
+)
+def test_selected_input_metadata_and_missing_fields(handle, path):
+    spec = restored(handle)
+    assert len(spec.tasks) == 1
+    assert spec.inputs[path] == (('code_label', 'code'),)
+    port = spec.input_spec().get_port(path)
+    assert port.required
+    assert port.help == 'Required PW code.'
+    assert port.valid_type == (Code,)
+    optional = spec.input_spec().get_port(f'{path.rsplit(".", 1)[0]}.optional')
+    assert not optional.required
+    assert optional.help == 'Optional code.'
+    spec.validate_typehints()
+    with pytest.raises(MissingRequiredInputsError) as caught:
+        GraphProcess.launch_inputs(spec, {})
+    assert caught.value.missing == (MissingInput(spec.identifier, path, port.help, True),)
+
+
+@pytest.mark.parametrize('handle', [select_code, select_nested_code, branch_selected_code])
+def test_selected_stored_code_routes_without_selector(handle, aiida_code_installed):
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/true')
+    code.label = 'original code'
+    given = {'codes': {'pw': code}}
+    if handle is select_nested_code:
+        given = {'configuration': given}
+    if handle is branch_selected_code:
+        given['condition'] = True
+    results, node = run_get_node(GraphProcess, **GraphProcess.launch_inputs(restored(handle), given))
+    assert node.is_finished_ok
+    assert next(iter(results.values())).value == code.label
+    calculations = [
+        child for child in node.called_descendants if child.node_type.endswith('calcfunction.CalcFunctionNode.')
+    ]
+    assert len(calculations) == 1
+    assert (
+        calculations[0].base.links.get_incoming(link_type=LinkType.INPUT_CALC).get_node_by_label('code').uuid
+        == code.uuid
+    )
+    assert not code.base.links.get_incoming(link_type=LinkType.CREATE).all()
+
+
+@pytest.mark.parametrize(
+    ('handle', 'path'),
+    [(unknown_input_field, 'codes.missing'), (dictionary_input_field, 'values.pw'), (scalar_input_field, 'code.code')],
+)
+def test_input_selection_rejects_unknown_fields_and_leaves(handle, path):
+    with pytest.raises(UnsupportedSyntax, match=path):
+        handle.build()
 
 
 def restored(handle):

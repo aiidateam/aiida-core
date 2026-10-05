@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.graphs.handlers import TaskWorkChain
-from aiida.engine.processes.graphs.inputs import load_port, merge_ports, prepare_inputs
+from aiida.engine.processes.graphs.inputs import at, load_port, merge_ports, prepare_inputs
 from aiida.engine.processes.port_model import as_dict
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
@@ -733,6 +733,8 @@ class GraphSpec:
     tasks: tuple[GraphTask, ...]
     dependencies: tuple[Dependency, ...] = ()
     inputs: dict[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
+    """Boundary names or declared namespace paths mapped to child input endpoints."""
+
     outputs: dict[str, Endpoint] = field(default_factory=dict)
     identifier: str | None = None
     version: str = SPEC_VERSION
@@ -772,12 +774,17 @@ class GraphSpec:
         """
         if self.input_namespace is not None:
             namespace = load_port(self.input_namespace)
-            if not isinstance(namespace, PortNamespace) or namespace.keys() != self.inputs.keys():
+            if not isinstance(namespace, PortNamespace) or namespace.keys() != {
+                name.split('.')[0] for name in self.inputs
+            }:
                 msg = 'the graph boundary namespace must declare exactly the graph inputs.'
                 raise ValueError(msg)
         else:
             namespace = PortNamespace('inputs')
         for name, targets in self.inputs.items():
+            if '.' in name:
+                namespace.get_port(name)
+                continue
             declared = t.cast(InputPort | PortNamespace | None, namespace.get(name))
             if declared is not None and (isinstance(declared, PortNamespace) or declared.valid_type):
                 continue
@@ -917,8 +924,12 @@ class GraphSpec:
         error = namespace.validate(namespace.prepare(serialized))
         if error is not None:
             raise ValueError(error)
-        for name, value in serialized.items():
-            for task_name, path in self.inputs[name]:
+        for name, targets in self.inputs.items():
+            try:
+                value = at(serialized, name)
+            except KeyError:
+                continue
+            for task_name, path in targets:
                 for port in self._input_ports_at(self.task(task_name), path):
                     error = port.validate(port.prepare(value))
                     if error is not None:
@@ -1083,7 +1094,7 @@ class GraphSpec:
             for task_name, port in targets:
                 expected = self._types_at(self.task(task_name), port, output=False)
                 self._check_types(types, expected, f'graph input `{name}` to `{task_name}.{port}`')
-                if name not in self.input_typehints:
+                if name not in self.input_typehints and '.' not in name:
                     self._check_types(expected, types, f'graph input `{name}` to `{task_name}.{port}`')
 
         for edge in self.dependencies:
@@ -1175,6 +1186,8 @@ class GraphSpec:
                 self._check_shapes_match(edge, source_port, target_port, referrer)
 
         for graph_input, targets in self.inputs.items():
+            if '.' in graph_input:
+                self.input_spec().get_port(graph_input)
             for name, port in targets:
                 self._check_endpoint(name, port, 'input', f'input `{graph_input}`')
 

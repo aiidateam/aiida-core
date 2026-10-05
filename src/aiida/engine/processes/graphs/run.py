@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 
 from aiida.common.links import LinkType
 from aiida.engine.processes.generic.ports import Port, PortNamespace
+from aiida.engine.processes.graphs.inputs import at
 from aiida.engine.processes.graphs.spec import (
     BranchControl,
     Dependency,
@@ -49,19 +50,6 @@ def holds(condition: t.Any) -> bool:
     as truthy as ``Int(1)``, so it is the value it holds that decides.
     """
     return bool(condition.value if isinstance(condition, BaseType) else condition)
-
-
-def at(container: t.Any, path: str) -> t.Any:
-    """Return what sits at a path in something nested, which may name an output inside a namespace.
-
-    :param path: name of a port, or names separated by dots for one inside a nested namespace.
-    """
-    value = container
-
-    for name in path.split('.'):
-        value = value[name]
-
-    return value
 
 
 def place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
@@ -598,12 +586,13 @@ class GraphRun:
         inputs = dict(task.inputs)
 
         for name, targets in self.graph.inputs.items():
-            if name not in self.given:
+            try:
+                value = at(self.given, name)
+            except KeyError:
                 continue
-
             for target, port in targets:
                 if target == task.name:
-                    place(inputs, port, self.given[name])
+                    place(inputs, port, value)
 
         for edge in self.graph.dependencies:
             carried = edge.carried_between

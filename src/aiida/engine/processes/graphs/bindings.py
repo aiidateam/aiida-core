@@ -16,7 +16,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import replace
 
-from aiida.engine.processes.graphs.inputs import dump_port, load_port, prepare_inputs
+from aiida.engine.processes.graphs.inputs import at, dump_port, load_port, prepare_inputs
 from aiida.engine.processes.graphs.run import place
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.ports import InputPort, PortNamespace
@@ -139,10 +139,13 @@ def validate_bound_tasks(body: GraphSpec, given: Mapping[str, t.Any]) -> None:
         ports = task.spec.process_class.spec().inputs
         values = copy_containers(task.inputs)
         for name, targets in body.inputs.items():
-            if name in given:
-                for task_name, path in targets:
-                    if task_name == task.name:
-                        place(values, path, copy_containers(given[name]))
+            try:
+                value = at(given, name)
+            except KeyError:
+                continue
+            for task_name, path in targets:
+                if task_name == task.name:
+                    place(values, path, copy_containers(value))
         # Validators involving unresolved values run on the child at dispatch.
         concrete_ports = _copy_ports(ports)
         for edge in body.dependencies:

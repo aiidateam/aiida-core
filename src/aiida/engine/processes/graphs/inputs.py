@@ -29,6 +29,19 @@ from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, i
 from aiida.orm import Data, to_aiida_type
 
 
+def at(container: t.Any, path: str) -> t.Any:
+    """Return what sits at a path in something nested, which may name an output inside a namespace.
+
+    :param path: name of a port, or names separated by dots for one inside a nested namespace.
+    """
+    value = container
+
+    for name in path.split('.'):
+        value = value[name]
+
+    return value
+
+
 def _default(value: t.Any) -> t.Any:
     """Copy finite JSON defaults, never node identities or executable defaults."""
     held = as_dict(value)

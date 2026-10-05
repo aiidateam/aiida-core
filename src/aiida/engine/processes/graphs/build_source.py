@@ -38,7 +38,7 @@ from aiida.engine.processes.graphs.spec import (
     ProcessTask,
     SubgraphTask,
 )
-from aiida.engine.processes.port_model import fields_of
+from aiida.engine.processes.port_model import fields_of, without_marks
 from aiida.engine.processes.ports import OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
@@ -219,7 +219,7 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
         },
         output_typehints=dict.fromkeys(outputs, output_hint) if len(outputs) == 1 and output_hint else {},
         output_namespace=dump_port(output_namespace, defaults=False) if output_namespace is not None else None,
-        input_namespace=dump_port(namespace_for_annotations(hints, tuple(state.inputs))),
+        input_namespace=dump_port(namespace_for_annotations(hints, tuple(arg.arg for arg in function.args.args))),
     )
 
 
@@ -298,12 +298,21 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
     return target.id
 
 
+def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
+    """Snapshot region boundaries only when routing a declared namespace field."""
+    if not any('.' in path for path in state.inputs):
+        return None
+    names = tuple(name for name in state.inputs if '.' not in name)
+    return dump_port(namespace_for_annotations(_GRAPH_HINTS[state.key], names))
+
+
 def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
     return GraphSpec(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs={name: Endpoint(task=ref.task, port=ref.port) for name, ref in outputs.items()},
+        input_namespace=_region_input_namespace(state),
     )
 
 
@@ -347,7 +356,7 @@ def _wire(
     if not isinstance(value, _Reference):
         place(given, port, value)
     elif value.task is None:
-        state.inputs[value.port].append((instance, port))
+        state.inputs.setdefault(value.port, []).append((instance, port))
     else:
         state.dependencies.append(Dependency(value.task, instance, value.port, port))
 
@@ -389,6 +398,7 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
             inputs={name: tuple(targets) for name, targets in child.inputs.items()},
             outputs=expand(namespace),
             output_namespace=dump_port(namespace, defaults=False),
+            input_namespace=_region_input_namespace(child),
         )
         sides.append((name, child, body))
     if sides[0][0] != sides[1][0] or sides[0][0] in state.names:
@@ -398,7 +408,7 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     instance = f'branch_{len(state.tasks) + 1}'
     given: dict[str, t.Any] = {}
     _wire(state, instance, CONDITION_PORT, _lower_value(state, statement.test), given)
-    for name in sorted(set(sides[0][1].inputs) | set(sides[1][1].inputs)):
+    for name in sorted({path.split('.')[0] for _, child, _ in sides for path in child.inputs}):
         _wire(state, instance, name, state.names[name], given)
     state.tasks.append(BranchControl(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
     namespace = sides[0][2].output_spec()
@@ -532,10 +542,19 @@ def _lower_value(
 ) -> _Reference | int | float | str | bool | None:
     if isinstance(expression, ast.Attribute):
         parent = _lower_value(state, expression.value, allow_call=allow_call)
-        if not isinstance(parent, _Reference) or parent.task is None:
-            _reject(state, expression, 'selection must name a task output')
+        if not isinstance(parent, _Reference):
+            _reject(state, expression, 'selection must name a task output or declared input namespace')
         path = f'{parent.port}.{expression.attr}' if parent.port else expression.attr
-        if isinstance(expression.value, ast.Name) and parent.port == expression.attr:
+        if parent.task is None:
+            root, *segments = path.split('.')
+            annotation = _GRAPH_HINTS[state.key].get(root)
+            for segment in segments:
+                fields = fields_of(without_marks(annotation))
+                selected = next((field for field in fields or () if field.name == segment), None)
+                if selected is None:
+                    _reject(state, expression, f'unknown or undeclared input namespace field {path!r}')
+                annotation = selected.annotation
+        elif isinstance(expression.value, ast.Name) and parent.port == expression.attr:
             path = parent.port
         return _Reference(parent.task, path)
     if isinstance(expression, ast.Name):

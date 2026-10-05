@@ -80,7 +80,9 @@ Arbitrary dataclasses, ``TypedDict``, ``NamedTuple`` and Pydantic models do not 
 
 Source graph bodies can pass a namespace as a whole, as in ``relax(given=given)``, or populate a declared input namespace with a dictionary of literals and references, as in ``relax(given={'structure': produced.structure})``.
 Dictionary-valued ports are leaves: a literal dictionary replaces the whole value, and symbolic references must supply the whole port rather than its individual dictionary entries.
-Selecting ``given.structure`` or ``given['structure']`` from a graph input inside the body is not supported; select such fields inside registered tasks instead.
+Select declared graph-input namespace fields with attribute syntax, such as ``given.structure`` (including nested namespaces).
+This routes the original input directly to the child process, without a selector task.
+Unknown fields, selection from dictionary-valued leaves, and subscript syntax such as ``given['structure']`` are not supported.
 
 A function that carries no annotations, because it came from somewhere else, is described where it is placed:
 

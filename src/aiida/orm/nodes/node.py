@@ -429,8 +429,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return self._backend_entity.mtime
 
     @column(
+        readonly=True,
         model_field_info=pdt.fields.FieldInfo(
-            default=None,
             description='The PK of the associated computer.',
         ),
         model_adapter=EntityPkAdapter(Computer),
@@ -441,14 +441,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return Computer.from_backend_entity(self._backend_entity.computer)
 
         return None
-
-    @computer.setter
-    def computer(self, computer: Computer | None) -> None:
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot set the computer on a stored node')
-
-        type_check(computer, Computer, allow_none=True)
-        self._backend_entity.computer = None if computer is None else computer.backend_entity
 
     @column(
         readonly=True,

@@ -134,7 +134,7 @@ def test_prepared_binding_preserves_declared_namespace(template, path):
     assert restored == bound
     assert template.build() == original
     assert restored.inputs[path] == original.inputs[path] == (('step', 'pw.structure'),)
-    assert restored.input_namespace['ports']['inputs'] == original.input_namespace['ports']['inputs']
+    assert restored.input_shape.select('inputs') == original.input_shape.select('inputs')
     private = next(name for name, targets in restored.inputs.items() if targets == (('step', 'pw.parameters'),))
     assert restored.input_spec()[private].valid_type == (orm.Dict,)
     assert restored.input_spec()[private].required

@@ -72,7 +72,7 @@ class TaskProcess(FunctionProcess):
         super()._out_result(result)
 
 
-def _stored(value: t.Any, port: t.Any) -> t.Any:
+def _stored(value: t.Any, port: t.Any, *, allow_mapping: bool = False) -> t.Any:
     """Return what is attached to one output port, which for a namespace is its fields stored one by one.
 
     A field of a structured type that is itself one names a namespace of output ports, exactly as it does among
@@ -87,7 +87,7 @@ def _stored(value: t.Any, port: t.Any) -> t.Any:
             stored = {}
             for name, item in value.items():
                 port.validate_port_name(name)
-                leaf = _stored(item, port.entry_port)
+                leaf = _stored(item, port.entry_port, allow_mapping=True)
                 if port.valid_type and not isinstance(leaf, port.valid_type):
                     msg = f'Invalid type {type(leaf)} for task output `{port.name}.{name}`: expected {port.valid_type}.'
                     raise TypeError(msg)
@@ -95,8 +95,8 @@ def _stored(value: t.Any, port: t.Any) -> t.Any:
             return stored
 
         fields = fields_of(type(value))
-        if fields is None and isinstance(value, Mapping):
-            return {name: _stored(item, port.get(name)) for name, item in value.items()}
+        if fields is None and allow_mapping and isinstance(value, Mapping):
+            return {name: _stored(item, port.get(name), allow_mapping=True) for name, item in value.items()}
         if fields is None:
             msg = f'Task output namespace `{port.name}` requires PortModel values, got {type(value).__name__}.'
             raise TypeError(msg)

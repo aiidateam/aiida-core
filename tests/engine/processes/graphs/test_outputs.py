@@ -29,7 +29,8 @@ from aiida.engine import (
     task_source,
 )
 from aiida.engine.processes.graphs.build_source import UnsupportedSyntax
-from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_outputs
+from aiida.engine.processes.graphs.inputs import port_for_shape
+from aiida.engine.processes.graphs.shapes import dump_shape, shape_for_annotation
 from aiida.engine.processes.graphs.spec import Endpoint, GraphSpec
 from aiida.engine.processes.ports import OutputPort
 from aiida.orm import Dict, Int
@@ -146,12 +147,12 @@ def test_branch_output_contracts(handle, condition):
         assert outputs['total'] == expected
 
 
-@pytest.mark.parametrize('property_name, value', [('required', False), ('valid_type', [])])
+@pytest.mark.parametrize('property_name, value', [('required', False), ('types', [])])
 def test_branch_rejects_incompatible_field_contracts(property_name, value):
     spec = branch_values.build()
     branch = spec.tasks[0]
     payload = branch.otherwise.to_dict()
-    payload['output_namespace']['ports']['total'][property_name] = value
+    payload['output_namespace']['fields']['total'][property_name] = value
     otherwise = GraphSpec.from_dict(payload)
     with pytest.raises(ValueError, match='incompatible output contracts'):
         replace(spec, tasks=(replace(branch, otherwise=otherwise),))
@@ -229,18 +230,18 @@ def test_invalid_paths_types_and_missing_required():
         total: str
 
     with pytest.raises(ValueError, match='incompatible types'):
-        replace(selected_source.build(), output_namespace=dump_port(namespace_for_outputs(Wrong)))
+        replace(selected_source.build(), output_namespace=dump_shape(shape_for_annotation(Wrong)))
 
 
 def test_optional_omission_is_not_none():
-    ports = namespace_for_outputs(Values)
+    ports = port_for_shape('outputs', shape_for_annotation(Values), output=True)
     assert ports.validate({'total': Int(1)}) is None
     assert ports.validate({'total': Int(1), 'extra': None}) is not None
 
     class OptionalResults(PortModel):
         values: Values = None
 
-    spec = GraphSpec(tasks=(), output_namespace=dump_port(namespace_for_outputs(OptionalResults)))
+    spec = GraphSpec(tasks=(), output_namespace=dump_shape(shape_for_annotation(OptionalResults), defaults=False))
     assert not spec.output_required('values.total')
     assert spec.output_spec().validate({}) is None
 
@@ -496,6 +497,6 @@ def test_legacy_namespace_and_independent_snapshots():
     legacy.pop('output_namespace')
     assert GraphSpec.from_dict(legacy).output_spec().dynamic
     snapshot = spec.to_dict()
-    snapshot['output_namespace']['ports'].clear()
+    snapshot['output_namespace']['fields'].clear()
     assert spec.output_spec()['total'].required
     assert GraphProcess.spec().outputs.dynamic

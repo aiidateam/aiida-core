@@ -22,11 +22,11 @@ from aiida.engine.processes.functions import ProcessFunctionType, process_functi
 from aiida.engine.processes.generic.ports import PortNamespace
 from aiida.engine.processes.graphs.bindings import bind_declaration, copy_containers, merge_inputs
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
-from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_function, namespace_for_outputs
 from aiida.engine.processes.graphs.interface import ACTIVE_BUILDER, GraphHandle
 from aiida.engine.processes.graphs.monitors import MonitorProcess, WaitProcess
 from aiida.engine.processes.graphs.process import TaskProcess
 from aiida.engine.processes.graphs.run import holds
+from aiida.engine.processes.graphs.shapes import NamespaceShape, dump_shape, shape_for_annotation, shape_for_function
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
     DEFINED_TASKS,
@@ -796,26 +796,27 @@ class ExecutionGraphHandle(GraphHandle):
             ACTIVE_BUILDER.reset(token)
 
         annotations = get_annotations(self._function, eval_str=True)
-        output_namespace = namespace_for_outputs(annotations.get('return'))
-        if isinstance(returned, dict) or (is_structured(type(returned)) and output_namespace is None):
+        declared = shape_for_annotation(annotations.get('return'))
+        output_shape = declared if isinstance(declared, NamespaceShape) else None
+        if isinstance(returned, dict) or (is_structured(type(returned)) and output_shape is None):
             msg = 'Graph namespaces require PortModel values and a PortModel return annotation, not dictionary returns.'
             raise TypeError(msg)
-        if output_namespace is not None and isinstance(returned, TaskOutputs):
-            returned = {name: returned._reference(name) for name in output_namespace if name in returned.ports}
+        if output_shape is not None and isinstance(returned, TaskOutputs):
+            returned = {name: returned._reference(name) for name, _ in output_shape.fields if name in returned.ports}
         result = builder.finish(returned, identifier=self.identifier)
-        if output_namespace is not None and isinstance(returned, GraphInput):
+        if output_shape is not None and isinstance(returned, GraphInput):
 
-            def expand(namespace: PortNamespace, prefix: str = '') -> dict[str, Endpoint]:
+            def expand(namespace: NamespaceShape, prefix: str = '') -> dict[str, Endpoint]:
                 outputs = {}
-                for name, port in namespace.items():
+                for name, shape in namespace.fields:
                     path = f'{prefix}{name}'
-                    if isinstance(port, PortNamespace):
-                        outputs.update(expand(port, f'{path}.'))
+                    if isinstance(shape, NamespaceShape):
+                        outputs.update(expand(shape, f'{path}.'))
                     else:
                         outputs[path] = Endpoint(task=None, port=f'{returned.name}.{path}')
                 return outputs
 
-            result = replace(result, outputs=expand(output_namespace))
+            result = replace(result, outputs=expand(output_shape))
         input_hints = {
             name: hint
             for name in result.inputs
@@ -825,10 +826,10 @@ class ExecutionGraphHandle(GraphHandle):
         output_hints = dict.fromkeys(result.outputs, output_hint) if len(result.outputs) == 1 and output_hint else {}
         result = replace(
             result,
-            output_namespace=dump_port(output_namespace, defaults=False) if output_namespace is not None else None,
+            output_namespace=dump_shape(output_shape, defaults=False) if output_shape is not None else None,
             input_typehints=input_hints,
             output_typehints=output_hints,
-            input_namespace=dump_port(namespace_for_function(self._function)),
+            input_namespace=dump_shape(shape_for_function(self._function)),
         )
         return bind_declaration(result, builder.bound_handles) if builder.bound_handles else result
 

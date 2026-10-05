@@ -26,9 +26,17 @@ from types import MappingProxyType
 
 from aiida.engine.processes.graphs.build_execution import ProcessHandle
 from aiida.engine.processes.graphs.build_execution import task as build_task
-from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_annotations, namespace_for_outputs
 from aiida.engine.processes.graphs.interface import GraphHandle
 from aiida.engine.processes.graphs.run import place
+from aiida.engine.processes.graphs.shapes import (
+    LeafShape,
+    ManyShape,
+    NamespaceShape,
+    Shape,
+    dump_shape,
+    shape_for_annotation,
+    shape_for_annotations,
+)
 from aiida.engine.processes.graphs.source_bindings import resolve_binding, task_spec_for
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
@@ -42,7 +50,6 @@ from aiida.engine.processes.graphs.spec import (
     SubgraphTask,
 )
 from aiida.engine.processes.port_model import fields_of
-from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
 # would otherwise shadow the graph-builder decorator exported by ``aiida.engine``.
@@ -173,18 +180,18 @@ class _Reference:
 
     task: str | None  # None denotes a graph input.
     port: str
-    shape: InputPort | OutputPort | PortNamespace
+    shape: Shape
 
-    def outputs(self, target: str) -> dict[str, Endpoint]:
+    def expand(self, target: str) -> dict[str, _Reference]:
         """Expand fixed fields while keeping runtime-keyed namespaces intact."""
-        if isinstance(self.shape, PortNamespace) and not self.shape.dynamic:
+        if isinstance(self.shape, NamespaceShape) and self.shape.extra is None:
             outputs = {}
-            for name, shape in self.shape.items():
+            for name, shape in self.shape.fields:
                 source = f'{self.port}.{name}' if self.port else name
                 under = f'{target}.{name}' if target else name
-                outputs.update(_Reference(self.task, source, shape).outputs(under))
+                outputs.update(_Reference(self.task, source, shape).expand(under))
             return outputs
-        return {target: Endpoint(task=self.task, port=self.port)}
+        return {target: self}
 
 
 @dataclass
@@ -220,11 +227,10 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
     if function.args.defaults or any(default is not None for default in function.args.kw_defaults):
         msg = f'{state.key}: parameter defaults are not supported'
         raise UnsupportedSyntax(msg)
-    boundary = namespace_for_annotations(state.definition.hints, tuple(arg.arg for arg in function.args.args))
+    boundary = shape_for_annotations(state.definition.hints, tuple(arg.arg for arg in function.args.args))
     for arg in function.args.args:
         state.inputs[arg.arg] = []
-        shape = boundary[arg.arg]
-        assert isinstance(shape, (InputPort, PortNamespace))
+        shape = boundary.select(arg.arg)
         state.names[arg.arg] = _Reference(None, arg.arg, shape)
     statements = function.body
     if statements and isinstance(statements[0], ast.Expr) and isinstance(statements[0].value, ast.Constant):
@@ -246,28 +252,36 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
     if result is None:
         _reject(state, statements[-1], 'return must name a task or graph input')
     hints = state.definition.hints
-    outputs = _lower_return(state, result, hints.get('return'))
-    output_hint = infer_valid_type_from_type_annotation(hints.get('return'))
-    output_namespace = namespace_for_outputs(hints.get('return'))
+    references = _lower_return(state, result, hints.get('return'))
+    returned = shape_for_annotation(hints.get('return'))
+    structured = isinstance(returned, NamespaceShape)
+    output_shape = (
+        returned
+        if structured
+        else NamespaceShape(
+            fields=tuple(
+                (name, reference.shape if isinstance(reference.shape, ManyShape) else returned)
+                for name, reference in references.items()
+            )
+        )
+    )
+    outputs = {name: Endpoint(task=reference.task, port=reference.port) for name, reference in references.items()}
     return GraphSpec(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=outputs,
         identifier=state.key.partition(':')[2],
-        input_typehints={
-            name: hint for name in state.inputs if (hint := infer_valid_type_from_type_annotation(hints.get(name)))
-        },
-        output_typehints=dict.fromkeys(outputs, output_hint) if len(outputs) == 1 and output_hint else {},
-        output_namespace=dump_port(output_namespace, defaults=False) if output_namespace is not None else None,
-        input_namespace=dump_port(namespace_for_annotations(hints, tuple(arg.arg for arg in function.args.args))),
+        result_path='' if structured else next(iter(outputs)),
+        output_namespace=dump_shape(output_shape, defaults=False),
+        input_namespace=dump_shape(boundary),
     )
 
 
 def _lower_return(
     state: _LoweringState, expression: ast.expr, annotation: t.Any = None, prefix: str = ''
-) -> dict[str, Endpoint]:
-    """Wire returned values against namespaces declared exclusively by PortModel annotations."""
+) -> dict[str, _Reference]:
+    """Parse returned values against the native contract declared by the return annotation."""
     fields = fields_of(annotation)
     members: list[tuple[str, ast.expr]] | None = None
     if isinstance(expression, ast.Dict):
@@ -282,7 +296,7 @@ def _lower_return(
                 _reject(state, expression, 'structured returns require named fields')
             members = [(t.cast(str, keyword.arg), keyword.value) for keyword in expression.keywords]
     if members is not None:
-        outputs: dict[str, Endpoint] = {}
+        outputs: dict[str, _Reference] = {}
         annotations = {field.name: field.annotation for field in fields or ()}
         for name, value in members:
             if name not in annotations:
@@ -300,11 +314,11 @@ def _lower_return(
     if not isinstance(reference, _Reference) or (not reference.port and fields is None):
         _reject(state, expression, 'return must select a task output or graph input')
     if fields is not None:
-        if not isinstance(reference.shape, PortNamespace):
+        if not isinstance(reference.shape, NamespaceShape):
             _reject(state, expression, 'structured return requires a namespace reference')
-        return reference.outputs(prefix.rstrip('.'))
+        return reference.expand(prefix.rstrip('.'))
     name = prefix.rstrip('.') if prefix else reference.port
-    return {name: Endpoint(task=reference.task, port=reference.port)}
+    return {name: reference}
 
 
 def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
@@ -324,27 +338,24 @@ def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
     if not any('.' in path for path in state.inputs):
         return None
     names = tuple(name for name in state.inputs if '.' not in name)
-    return dump_port(namespace_for_annotations(state.definition.hints, names))
+    return dump_shape(NamespaceShape(fields=tuple((name, state.names[name].shape) for name in names)))
 
 
 def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
-    declared: dict[str, t.Any] = {'name': 'outputs', 'required': True, 'dynamic': False, 'ports': {}}
+    declared = (
+        outputs[''].shape
+        if '' in outputs
+        else NamespaceShape(fields=tuple((name, reference.shape) for name, reference in outputs.items()))
+    )
     endpoints = {}
     for name, reference in outputs.items():
-        snapshot = dump_port(reference.shape, defaults=False)
-        snapshot['name'] = name
-        if name:
-            declared['ports'][name] = snapshot
-        else:
-            declared = snapshot
-            declared['name'] = 'outputs'
-        endpoints.update(reference.outputs(name))
+        endpoints.update({path: Endpoint(task=ref.task, port=ref.port) for path, ref in reference.expand(name).items()})
     return GraphSpec(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=endpoints,
-        output_namespace=declared,
+        output_namespace=dump_shape(declared, defaults=False),
         input_namespace=_region_input_namespace(state),
     )
 
@@ -375,7 +386,7 @@ def _region(state: _LoweringState, statements: list[ast.stmt], *, item: str | No
         if name != item and name not in state.names:
             _reject(state, statements[0], f'unbound name {name!r}')
         child.inputs[name] = []
-        shape = InputPort(name) if name == item else state.names[name].shape
+        shape = LeafShape() if name == item else state.names[name].shape
         child.names[name] = _Reference(None, name, shape)
     return child
 
@@ -472,13 +483,7 @@ def _lower_map(state: _LoweringState, statement: ast.For) -> None:
     _wire(state, instance, item, _lower_value(state, statement.iter), given)
     _place(state, child, instance, given)
     state.tasks.append(MapGraphControl(name=instance, inputs=given, body=body, item_port=item))
-    shape = reference.shape
-    gathered = PortNamespace(
-        'result',
-        dynamic=True,
-        entry_port=shape if isinstance(shape, PortNamespace) else None,
-        valid_type=None if isinstance(shape, PortNamespace) else shape.valid_type,
-    )
+    gathered = ManyShape(entry=reference.shape)
     state.names[result] = _Reference(instance, 'result', gathered)
 
 
@@ -498,26 +503,22 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         _reject(state, expression, f'unregistered call {name!r}')
     state.used[name] += 1
     instance = name if state.used[name] == 1 else f'{name}_{state.used[name]}'
-    inputs: t.Collection[str]
+    inputs: NamespaceShape
     result_port: str
-    output_shape: PortNamespace
+    result_shape: Shape
     if isinstance(target, SourceGraphHandle):
         body = _lower_registered_graph(_key(target._function), state.stack)
-        inputs = body.inputs
+        inputs = body.input_shape
         result_port = body.result_port
-        output_shape = body.output_spec()
-        if body.output_namespace is None:
-            output_shape = PortNamespace('outputs')
-            for path in body.outputs:
-                output_shape[path] = OutputPort(path, valid_type=body.output_typehints.get(path))
+        result_shape = body.result_shape
 
         def make_task(inputs: dict[str, t.Any]) -> ProcessTask | SubgraphTask:
             return SubgraphTask(name=instance, inputs=inputs, body=body)
     else:
         assert spec is not None
-        inputs = spec.inputs
+        inputs = spec.input_shape
         result_port = spec.result_port
-        output_shape = spec.outputs
+        result_shape = spec.result_shape
 
         def make_task(inputs: dict[str, t.Any]) -> ProcessTask | SubgraphTask:
             return ProcessTask(name=instance, inputs=inputs, spec=spec)
@@ -526,31 +527,36 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     for keyword in expression.keywords:
         port = keyword.arg
         assert port is not None
-        if port in given or port not in inputs:
+        if port in given:
             _reject(state, keyword, f'duplicate or unknown input {port!r} of {name!r}')
-        port_spec = inputs.get(port) if isinstance(inputs, PortNamespace) else None
-        _lower_input(state, instance, port, keyword.value, port_spec, given)
+        try:
+            shape = inputs.select(port)
+        except KeyError:
+            _reject(state, keyword, f'duplicate or unknown input {port!r} of {name!r}')
+        _lower_input(state, instance, port, keyword.value, shape, given)
     state.tasks.append(make_task(given))
-    shape = output_shape[result_port] if result_port else output_shape
-    assert isinstance(shape, (InputPort, OutputPort, PortNamespace))
-    return _Reference(instance, result_port, shape)
+    return _Reference(instance, result_port, result_shape)
 
 
 def _lower_input(
-    state: _LoweringState, instance: str, path: str, expression: ast.expr, port: t.Any, given: dict[str, t.Any]
+    state: _LoweringState, instance: str, path: str, expression: ast.expr, shape: Shape, given: dict[str, t.Any]
 ) -> None:
-    """Expand dictionary syntax only where the process declares a namespace."""
-    if isinstance(expression, ast.Dict) and isinstance(port, PortNamespace):
+    """Expand dictionary syntax only for declared namespaces and keyed collections."""
+    if isinstance(expression, ast.Dict) and isinstance(shape, (NamespaceShape, ManyShape)):
         place(given, path, {})
         seen = set()
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
                 _reject(state, expression, 'namespace keys must be string literals without unpacking')
             name = key.value
-            if name in seen or (name not in port and not port.dynamic):
+            if name in seen:
+                _reject(state, expression, f'duplicate or unknown namespace input {name!r}')
+            try:
+                child = shape.entry if isinstance(shape, ManyShape) else shape.select(name)
+            except KeyError:
                 _reject(state, expression, f'duplicate or unknown namespace input {name!r}')
             seen.add(name)
-            _lower_input(state, instance, f'{path}.{name}', value, port.get(name), given)
+            _lower_input(state, instance, f'{path}.{name}', value, child, given)
         return
     if isinstance(expression, ast.Dict):
         try:
@@ -570,15 +576,15 @@ def _lower_value(
         parent = _lower_value(state, expression.value, allow_call=allow_call)
         if not isinstance(parent, _Reference):
             _reject(state, expression, 'selection must name a task output or declared input namespace')
-        if not isinstance(parent.shape, PortNamespace):
+        if not isinstance(parent.shape, NamespaceShape):
             if parent.task is not None and parent.port == expression.attr:
                 return parent
             _reject(state, expression, 'selection requires a declared namespace')
         path = f'{parent.port}.{expression.attr}' if parent.port else expression.attr
-        if expression.attr not in parent.shape:
+        try:
+            shape = parent.shape.select(expression.attr)
+        except KeyError:
             _reject(state, expression, f'unknown or undeclared namespace field {path!r}')
-        shape = parent.shape[expression.attr]
-        assert isinstance(shape, (InputPort, OutputPort, PortNamespace))
         return _Reference(parent.task, path, shape)
     if isinstance(expression, ast.Name):
         if expression.id not in state.names:

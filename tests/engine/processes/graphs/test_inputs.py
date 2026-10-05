@@ -21,7 +21,8 @@ from aiida.common.exceptions import MissingInput, MissingRequiredInputsError
 from aiida.common.links import LinkType
 from aiida.engine import GraphProcess, PortField, PortModel, graph_execution, graph_source, run_get_node, task_source
 from aiida.engine.processes.graphs.build_source import UnsupportedSyntax
-from aiida.engine.processes.graphs.inputs import dump_port, load_port, merge_ports, namespace_for_function
+from aiida.engine.processes.graphs.inputs import merge_ports, port_for_shape, shape_from_port
+from aiida.engine.processes.graphs.shapes import dump_shape, shape_for_function
 from aiida.engine.processes.graphs.spec import Endpoint, GraphSpec, ProcessTask
 from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.orm import Code, Dict, GraphNode, Int, QueryBuilder, Str
@@ -222,7 +223,7 @@ def restored(handle):
     data = json.loads(json.dumps(spec.to_dict(), allow_nan=False))
     result = GraphSpec.from_dict(data)
     assert result.to_dict() == data
-    assert data['version'] == '1.0'
+    assert data['version'] == '1.1'
     assert 'input_ports' not in data
     return result
 
@@ -290,10 +291,10 @@ def test_optional_namespace_is_checked_only_when_supplied():
     node = Int(7)
     spec = restored(passthrough)
     namespace = spec.input_spec()
-    optional = load_port(dump_port(namespace['configuration']['codes']))
+    optional = port_for_shape('optional_codes', shape_from_port(namespace['configuration']['codes']))
     optional.required = False
     namespace['configuration']['optional_codes'] = optional
-    spec = replace(spec, input_namespace=dump_port(namespace))
+    spec = replace(spec, input_namespace=dump_shape(shape_from_port(namespace)))
     supplied = {'configuration': {'codes': {'kcp': node}}}
     inputs = GraphProcess.launch_inputs(spec, supplied)
     assert 'optional_codes' not in inputs['graph_inputs']['configuration']
@@ -478,7 +479,7 @@ def test_raw_launch_applies_defaults_before_provenance_links():
 def test_namespace_snapshot_is_not_aliased_to_serialized_dictionary():
     spec = restored(route)
     data = spec.to_dict()
-    data['input_namespace']['ports']['codes']['help'] = 'Changed.'
+    data['input_namespace']['fields']['codes']['help'] = 'Changed.'
     assert spec.input_spec()['codes'].help == 'Route-specific codes.'
 
 
@@ -488,7 +489,7 @@ def test_unstorable_graph_defaults_are_rejected(default):
         pass
 
     with pytest.raises(TypeError, match='cannot declare graph input `value`'):
-        namespace_for_function(function)
+        shape_for_function(function)
 
 
 def test_shared_consumer_metadata_is_deterministic_and_task_defaults_stay_local():
@@ -496,7 +497,7 @@ def test_shared_consumer_metadata_is_deterministic_and_task_defaults_stay_local(
     optional = InputPort('pw', valid_type=Int, required=False, help='A help.', default=lambda: Int(5))
     forward = merge_ports('code', [required, optional])
     backward = merge_ports('code', [optional, required])
-    assert dump_port(forward) == dump_port(backward)
+    assert shape_from_port(forward) == shape_from_port(backward)
     assert forward.required
     assert forward.help == 'A help.'
     assert not forward.has_default()

@@ -16,8 +16,9 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.engine import GraphProcess, Many, PortField, PortModel, graph, run, run_get_node, task
-from aiida.engine.processes.graphs.inputs import dump_port, load_port, namespace_for_outputs
+from aiida.engine.processes.graphs.inputs import port_for_shape
 from aiida.engine.processes.graphs.process import _stored
+from aiida.engine.processes.graphs.shapes import shape_for_annotation
 from aiida.engine.processes.graphs.spec import GraphSpec
 
 pytestmark = pytest.mark.presto
@@ -137,6 +138,9 @@ def test_roundtrip(aiida_profile, handle):
     spec = handle.build()
     restored = GraphSpec.from_dict(json.loads(json.dumps(spec.to_dict())))
     assert restored == spec
+    assert restored.input_namespace['kind'] == 'namespace'
+    assert restored.output_namespace['kind'] == 'namespace'
+    assert 'entry_port' not in json.dumps(restored.to_dict())
     inputs = {'values': {'b00': 3, 'b01': 4}} if handle in (map_blocks, map_subgraphs) else {}
     outputs, node = run_get_node(GraphProcess, **GraphProcess.launch_inputs(restored, inputs))
     assert node.is_finished_ok
@@ -166,7 +170,7 @@ def test_individual_links(aiida_profile):
 )
 def test_invalid_entry(aiida_profile, value):
     supplied = {key: {name: kind() for name, kind in fields.items()} for key, fields in value.items()}
-    output = load_port(dump_port(namespace_for_outputs(Blocks)), output=True)['blocks']
+    output = port_for_shape('outputs', shape_for_annotation(Blocks), output=True)['blocks']
     assert output.validate(_stored(supplied, output)) is not None
     with pytest.raises((ValueError, TypeError)):
         run(consume_blocks, blocks=supplied)

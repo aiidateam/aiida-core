@@ -16,8 +16,9 @@ from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import replace
 
-from aiida.engine.processes.graphs.inputs import at, dump_port, load_port, prepare_inputs
+from aiida.engine.processes.graphs.inputs import at, port_for_shape, prepare_inputs, shape_from_port
 from aiida.engine.processes.graphs.run import place
+from aiida.engine.processes.graphs.shapes import dump_shape
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.orm import Node
@@ -98,10 +99,10 @@ def bind_declaration(body: GraphSpec, bindings: Mapping[str, t.Any]) -> GraphSpe
                 else:
                     msg = f'Unknown prepared input `{task_name}.{path}`.'
                     raise ValueError(msg)
-            namespace[name] = load_port(dump_port(port, defaults=False))
+            namespace[name] = port_for_shape(name, shape_from_port(port, defaults=False))
             if collector is not None:
                 collector[name] = copy_containers(value)
-    return replace(body, tasks=tuple(tasks), inputs=inputs, input_namespace=dump_port(namespace))
+    return replace(body, tasks=tuple(tasks), inputs=inputs, input_namespace=dump_shape(shape_from_port(namespace)))
 
 
 def _copy_ports(namespace: PortNamespace) -> PortNamespace:

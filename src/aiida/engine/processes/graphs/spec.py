@@ -19,7 +19,14 @@ from dataclasses import dataclass, field
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.graphs.handlers import TaskWorkChain
-from aiida.engine.processes.graphs.inputs import at, load_port, merge_ports, prepare_inputs
+from aiida.engine.processes.graphs.inputs import (
+    at,
+    merge_ports,
+    port_for_shape,
+    prepare_inputs,
+    shape_from_port,
+)
+from aiida.engine.processes.graphs.shapes import LeafShape, ManyShape, NamespaceShape, Shape, load_shape
 from aiida.engine.processes.port_model import as_dict
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
@@ -41,7 +48,7 @@ __all__ = (
     'TaskSpec',
 )
 
-SPEC_VERSION: str = '1.0'
+SPEC_VERSION: str = '1.1'
 """Version of the graph declaration format, stored with every serialized spec."""
 
 SUPPORTED_SPEC_VERSIONS: frozenset[str] = frozenset({SPEC_VERSION})
@@ -304,6 +311,21 @@ class TaskSpec:
     def result_port(self) -> str:
         """Return the declared call result path, with an empty path denoting the output namespace."""
         return self.process_class.spec().result_port
+
+    @property
+    def input_shape(self) -> NamespaceShape:
+        """Return the native input contract, adapted from its executor declaration."""
+        shape = shape_from_port(self.inputs, defaults=False)
+        assert isinstance(shape, NamespaceShape)
+        return shape
+
+    @property
+    def result_shape(self) -> Shape:
+        """Return the native contract for a call result, adapted from its executor declaration."""
+        ports = self.outputs
+        selected = ports.get_port(self.result_port) if self.result_port else ports
+        assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
+        return shape_from_port(selected, defaults=False)
 
     def get_builder(self) -> ProcessBuilder:
         """Return a builder with which to populate the inputs of this task."""
@@ -750,10 +772,13 @@ class GraphSpec:
     input_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
     output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
     input_namespace: dict[str, t.Any] | None = None
-    """Serialized ordinary port namespace for the boundary, without bound values or ORM identity."""
+    """Native boundary shape snapshot, without values or ORM identities."""
 
     output_namespace: dict[str, t.Any] | None = None
-    """Serialized ordinary output ports, distinct from the output source mapping."""
+    """Native output shape snapshot, distinct from the output source mapping."""
+
+    result_path: str | None = None
+    """The call result path; an empty path denotes the complete output namespace."""
 
     def __post_init__(self) -> None:
         self.validate()
@@ -782,7 +807,7 @@ class GraphSpec:
         :return: an ordinary AiiDA port namespace, not an ORM container.
         """
         if self.input_namespace is not None:
-            namespace = load_port(self.input_namespace)
+            namespace = port_for_shape('inputs', load_shape(self.input_namespace))
             if not isinstance(namespace, PortNamespace) or namespace.keys() != {
                 name.split('.')[0] for name in self.inputs
             }:
@@ -812,13 +837,39 @@ class GraphSpec:
     @property
     def result_port(self) -> str:
         """Return the root for structured returns, or the sole output of a scalar graph."""
+        if self.result_path is not None:
+            return self.result_path
         return next(iter(self.outputs)) if self.output_namespace is None and len(self.outputs) == 1 else ''
+
+    @property
+    def input_shape(self) -> NamespaceShape:
+        """Return the graph boundary contract without exposing engine port objects."""
+        shape = (
+            load_shape(self.input_namespace) if self.input_namespace is not None else shape_from_port(self.input_spec())
+        )
+        assert isinstance(shape, NamespaceShape)
+        return shape
+
+    @property
+    def result_shape(self) -> Shape:
+        """Return the native contract for this graph's result."""
+        if self.output_namespace is not None:
+            shape = load_shape(self.output_namespace)
+            for segment in self.result_port.split('.') if self.result_port else ():
+                assert isinstance(shape, NamespaceShape)
+                shape = shape.select(segment)
+            return shape
+        if self.result_port:
+            return LeafShape(types=self.output_typehints.get(self.result_port))
+        return NamespaceShape(
+            fields=tuple((name, LeafShape(types=self.output_typehints.get(name))) for name in self.outputs)
+        )
 
     def output_spec(self) -> PortNamespace:
         """Reconstruct declared output ports, or a dynamic namespace for legacy graphs."""
         if self.output_namespace is None:
             return PortNamespace('outputs', dynamic=True)
-        namespace = load_port(self.output_namespace, output=True)
+        namespace = port_for_shape('outputs', load_shape(self.output_namespace), output=True)
         if not isinstance(namespace, PortNamespace):
             msg = 'the graph output boundary must be a port namespace.'
             raise ValueError(msg)
@@ -855,6 +906,11 @@ class GraphSpec:
                 origin = source_namespace.get_port(source.port)
             except ValueError:
                 continue
+            if source.task is not None and isinstance(self.task(source.task), MappedTask):
+                assert isinstance(origin, (InputPort, OutputPort, PortNamespace))
+                origin = port_for_shape(
+                    'collection', ManyShape(entry=shape_from_port(origin, defaults=False)), output=True
+                )
             self._check_output_ports(origin, target, path)
 
         def required(port: PortNamespace, prefix: str = '') -> None:
@@ -887,6 +943,16 @@ class GraphSpec:
                 source_types = tuple(kind for kind in source_types if kind is not type(None))
             cls._check_types(source_types, target_types, f'graph output `{path}`')
             return
+        if source.entry_port is not None and target.entry_port is not None:
+            cls._check_output_ports(source.entry_port, target.entry_port, f'{path}.*')
+        elif source.dynamic and target.dynamic:
+            source_types = source.valid_type or ()
+            target_types = target.valid_type or ()
+            cls._check_types(
+                source_types if isinstance(source_types, tuple) else (source_types,),
+                target_types if isinstance(target_types, tuple) else (target_types,),
+                f'graph output `{path}.*`',
+            )
         for name, child in source.items():
             if name not in target:
                 if not target.dynamic:
@@ -1391,6 +1457,7 @@ class GraphSpec:
             'version': self.version,
             'input_namespace': deepcopy(self.input_namespace),
             'output_namespace': deepcopy(self.output_namespace),
+            'result_path': self.result_path,
             'input_typehints': {
                 name: [get_object_loader().identify_object(kind) for kind in types]
                 for name, types in self.input_typehints.items()
@@ -1422,6 +1489,7 @@ class GraphSpec:
             version=version,
             input_namespace=data.get('input_namespace'),
             output_namespace=data.get('output_namespace'),
+            result_path=data.get('result_path'),
             input_typehints={
                 name: tuple(get_object_loader().load_object(kind) for kind in types)
                 for name, types in data.get('input_typehints', {}).items()

@@ -25,8 +25,9 @@ from aiida.engine import (
     task_from_workchain,
     task_source,
 )
-from aiida.engine.processes.graphs.inputs import dump_port, load_port, namespace_for_outputs
+from aiida.engine.processes.graphs.inputs import port_for_shape
 from aiida.engine.processes.graphs.process import _stored
+from aiida.engine.processes.graphs.shapes import dump_shape, load_shape, shape_for_annotation
 from aiida.engine.processes.graphs.spec import GraphSpec
 
 pytestmark = pytest.mark.presto
@@ -172,8 +173,8 @@ def test_empty_collection_wiring():
 
 
 def test_namespace_validation_and_identity():
-    ports = namespace_for_outputs(Prepared)
-    restored = load_port(json.loads(json.dumps(dump_port(ports))), output=True)
+    shape = load_shape(json.loads(json.dumps(dump_shape(shape_for_annotation(Prepared)))))
+    restored = port_for_shape('outputs', shape, output=True)
     port = restored['values']
     assert port.dynamic
     assert port.valid_type == (orm.Int,)
@@ -185,19 +186,19 @@ def test_namespace_validation_and_identity():
 
 @pytest.mark.parametrize('key', ['a.b', 'a__b', '_a', 'a-', '', 1])
 def test_invalid_keys(key):
-    port = namespace_for_outputs(Prepared)['values']
+    port = port_for_shape('outputs', shape_for_annotation(Prepared), output=True)['values']
     with pytest.raises((TypeError, ValueError)):
         _stored({key: orm.Int(1)}, port)
 
 
 @pytest.mark.parametrize('value', [lambda: orm.Str('wrong'), lambda: 'wrong', lambda: {'nested': 1}])
 def test_invalid_leaves(value):
-    port = namespace_for_outputs(Prepared)['values']
+    port = port_for_shape('outputs', shape_for_annotation(Prepared), output=True)['values']
     with pytest.raises(TypeError, match='Invalid type'):
         _stored({'a': value()}, port)
 
 
 def test_requires_mapping():
-    port = namespace_for_outputs(Prepared)['values']
+    port = port_for_shape('outputs', shape_for_annotation(Prepared), output=True)['values']
     with pytest.raises(TypeError, match='requires a mapping'):
         _stored(orm.Int(1), port)

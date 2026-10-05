@@ -17,6 +17,7 @@ from aiida.engine.processes.calcjobs import *
 from aiida.engine.processes.exit_code import *
 from aiida.engine.processes.functions import *
 from aiida.engine.processes.futures import *
+from aiida.engine.processes.port_model import PortField, PortModel
 from aiida.engine.processes.ports import *
 from aiida.engine.processes.process import *
 from aiida.engine.processes.process_spec import *
@@ -39,6 +40,8 @@ __all__ = (
     'JobManager',
     'JobsList',
     'OutputPort',
+    'PortField',
+    'PortModel',
     'PortNamespace',
     'Process',
     'ProcessBuilder',

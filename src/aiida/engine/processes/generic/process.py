@@ -1399,6 +1399,11 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             namespace_name = unresolved_path[0]
 
             if namespace_name not in port_namespace:
+                entry_port = getattr(port_namespace, 'entry_port', None)
+                if entry_port is not None:
+                    port_namespace = entry_port
+                    unresolved_path.pop(0)
+                    continue
                 if not port_namespace.dynamic:
                     msg = f"port '{namespace_name}' does not exist in port namespace '{port_namespace.name}'"
                     raise ValueError(msg)

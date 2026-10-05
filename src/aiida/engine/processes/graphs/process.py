@@ -87,7 +87,7 @@ def _stored(value: t.Any, port: t.Any) -> t.Any:
             stored = {}
             for name, item in value.items():
                 port.validate_port_name(name)
-                leaf = _stored(item, None)
+                leaf = _stored(item, port.entry_port)
                 if port.valid_type and not isinstance(leaf, port.valid_type):
                     msg = f'Invalid type {type(leaf)} for task output `{port.name}.{name}`: expected {port.valid_type}.'
                     raise TypeError(msg)
@@ -95,6 +95,8 @@ def _stored(value: t.Any, port: t.Any) -> t.Any:
             return stored
 
         fields = fields_of(type(value))
+        if fields is None and isinstance(value, Mapping):
+            return {name: _stored(item, port.get(name)) for name, item in value.items()}
         if fields is None:
             msg = f'Task output namespace `{port.name}` requires PortModel values, got {type(value).__name__}.'
             raise TypeError(msg)

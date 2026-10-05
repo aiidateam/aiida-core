@@ -103,6 +103,8 @@ def has_port(ports: PortNamespace, path: str) -> bool:
 
     :param path: name of a port, or names separated by dots for one inside a nested namespace.
     """
+    if not path:
+        return False
     head, _, rest = path.partition(PortNamespace.NAMESPACE_SEPARATOR)
 
     if head not in ports:
@@ -124,6 +126,8 @@ def has_namespace(ports: PortNamespace, path: str) -> bool:
 
     :param path: name of a namespace, or names separated by dots for one inside another.
     """
+    if not path:
+        return True
     head, _, rest = path.partition(PortNamespace.NAMESPACE_SEPARATOR)
 
     if head not in ports:
@@ -295,6 +299,11 @@ class TaskSpec:
     def outputs(self) -> PortNamespace:
         """Return the output ports this task produces."""
         return self.process_class.spec().outputs
+
+    @property
+    def result_port(self) -> str:
+        """Return the declared call result path, with an empty path denoting the output namespace."""
+        return self.process_class.spec().result_port
 
     def get_builder(self) -> ProcessBuilder:
         """Return a builder with which to populate the inputs of this task."""
@@ -800,6 +809,11 @@ class GraphSpec:
             namespace[name] = inferred
         return namespace
 
+    @property
+    def result_port(self) -> str:
+        """Return the root for structured returns, or the sole output of a scalar graph."""
+        return next(iter(self.outputs)) if self.output_namespace is None and len(self.outputs) == 1 else ''
+
     def output_spec(self) -> PortNamespace:
         """Reconstruct declared output ports, or a dynamic namespace for legacy graphs."""
         if self.output_namespace is None:
@@ -1092,7 +1106,10 @@ class GraphSpec:
         for name, targets in self.inputs.items():
             types = self._input_types(name)
             for task_name, port in targets:
-                expected = self._types_at(self.task(task_name), port, output=False)
+                task = self.task(task_name)
+                if isinstance(task, MappedTask) and port == task.item_port:
+                    continue
+                expected = self._types_at(task, port, output=False)
                 self._check_types(types, expected, f'graph input `{name}` to `{task_name}.{port}`')
                 if name not in self.input_typehints and '.' not in name:
                     self._check_types(expected, types, f'graph input `{name}` to `{task_name}.{port}`')

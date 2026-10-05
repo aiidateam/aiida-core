@@ -20,7 +20,7 @@ from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.engine.processes.port_model import is_a_plain_class, without_marks
+from aiida.engine.processes.port_model import as_dict, is_a_plain_class, without_marks
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
@@ -214,6 +214,33 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
     serialization of a given mapping onto the ports of the PortNamespace.
     """
 
+    def __init__(self, *args: t.Any, entry_port: PortNamespace | None = None, **kwargs: t.Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.entry_port = entry_port
+
+    def validate_dynamic_ports(
+        self, port_values: t.Any, breadcrumbs: Sequence[str] = ()
+    ) -> ports.PortValidationError | None:
+        """Validate each runtime key against the declared structured entry shape."""
+        if self.entry_port is None:
+            return super().validate_dynamic_ports(port_values, breadcrumbs)
+        for name, value in port_values.items():
+            self.validate_port_name(name)
+            error = self.entry_port.validate(value, (*breadcrumbs, self.name, name))
+            if error:
+                return error
+        return None
+
+    def pre_process(self, port_values: t.Any) -> AttributesFrozendict:
+        """Apply entry defaults before ordinary namespace preprocessing."""
+        if self.entry_port is not None:
+            values = {}
+            for name, value in port_values.items():
+                held = as_dict(value)
+                values[name] = self.entry_port.pre_process(dict(value if held is None else held))
+            port_values = values
+        return super().pre_process(port_values)
+
     def __setitem__(self, key: str, port: ports.Port) -> None:
         """Ensure that a `Port` being added inherits the `non_db` attribute if not explicitly defined at construction.
 
@@ -300,7 +327,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                 assert isinstance(port, (InputPort, PortNamespace))
                 result[name] = port.prepare(value)
             else:
-                result[name] = dynamic(value)
+                result[name] = self.entry_port.prepare(value) if self.entry_port is not None else dynamic(value)
         return AttributesFrozendict(result)
 
     def serialize(self, mapping: dict[str, t.Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, t.Any] | None:
@@ -341,6 +368,9 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                 else:
                     msg = f'port does not have a serialize method: {port}'
                     raise AssertionError(msg)
+            elif self.entry_port is not None:
+                held = as_dict(value)
+                result[name] = self.entry_port.serialize(value if held is None else held, (*breadcrumbs, name))
             else:
                 result[name] = dynamic(value)
 

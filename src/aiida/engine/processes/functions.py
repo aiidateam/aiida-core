@@ -533,9 +533,10 @@ class FunctionProcess(Process):
                     indirect_default = default  # type: ignore[assignment]
 
                 if _takes_many(annotation):
-                    spec.input_namespace(
+                    spec.input_many(
                         parameter.name,
-                        valid_type=valid_type,
+                        annotation,
+                        node_types=cls.NODE_INPUT_TYPES,
                         required=default is UNSPECIFIED,
                         help=help_string,
                     )

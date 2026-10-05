@@ -361,7 +361,8 @@ class GraphRun:
         return {
             name
             for name in self.finished
-            if all(load_node(self.done[instance]).exit_status == STOPPED for instance in self.instances[name])
+            if self.instances[name]
+            and all(load_node(self.done[instance]).exit_status == STOPPED for instance in self.instances[name])
         }
 
     @property

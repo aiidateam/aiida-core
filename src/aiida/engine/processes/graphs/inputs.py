@@ -34,6 +34,8 @@ def at(container: t.Any, path: str) -> t.Any:
 
     :param path: name of a port, or names separated by dots for one inside a nested namespace.
     """
+    if not path:
+        return container
     value = container
 
     for name in path.split('.'):
@@ -63,6 +65,16 @@ def _annotation_port(
     name: str, annotation: t.Any, *, required: bool, default: t.Any = UNSPECIFIED
 ) -> InputPort | PortNamespace:
     container = without_marks(annotation)
+    from aiida.engine.processes.many import _takes_many
+
+    if _takes_many(container):
+        from aiida.engine.processes.process_spec import ProcessSpec
+
+        spec = ProcessSpec()
+        spec.input_many(name, container, required=required, help=_port_help(annotation))
+        namespace = spec.inputs[name]
+        assert isinstance(namespace, PortNamespace)
+        return namespace
     fields = fields_of(container)
     options: dict[str, t.Any] = {'required': required, 'help': _port_help(annotation)}
     if default is not UNSPECIFIED:
@@ -131,6 +143,8 @@ def dump_port(port: InputPort | OutputPort | PortNamespace, *, defaults: bool = 
         result.update(
             dynamic=port.dynamic, ports={name: dump_port(child, defaults=defaults) for name, child in port.items()}
         )
+        if port.entry_port is not None:
+            result['entry_port'] = dump_port(port.entry_port, defaults=defaults)
     if not isinstance(port, PortNamespace) or port.valid_type:
         valid_types = port.valid_type or ()
         if isinstance(valid_types, type):
@@ -178,6 +192,10 @@ def load_port(data: Mapping[str, t.Any], *, output: bool = False) -> InputPort |
     namespace = PortNamespace(
         data['name'], dynamic=data['dynamic'], valid_type=valid_type, populate_defaults=data['required'], **options
     )
+    if 'entry_port' in data:
+        entry = load_port(data['entry_port'], output=output)
+        assert isinstance(entry, PortNamespace)
+        namespace.entry_port = entry
     for name, child in data['ports'].items():
         namespace[name] = load_port(child, output=output)
     return namespace
@@ -192,13 +210,21 @@ def merge_ports(name: str, ports: Sequence[InputPort | PortNamespace]) -> InputP
         msg = f'graph input `{name}` feeds incompatible value and namespace ports.'
         raise ValueError(msg)
     helps = sorted({port.help for port in ports if port.help})
-    options = {'required': any(port.required for port in ports), 'help': helps[0] if helps else None}
+    options: dict[str, t.Any] = {'required': any(port.required for port in ports), 'help': helps[0] if helps else None}
     if not all(namespaces):
         # Each consumer is validated separately; the inferred port must not select
         # one consumer's valid types and thereby reject another's more specific type.
         return InputPort(name, valid_type=Data, **options)
     consumers = t.cast(Sequence[PortNamespace], ports)
     namespace = PortNamespace(name, dynamic=all(port.dynamic for port in consumers), **options)
+    entries = [port.entry_port for port in consumers if port.entry_port is not None]
+    if entries:
+        if len(entries) != len(consumers):
+            msg = f'graph input `{name}` feeds incompatible keyed namespace contracts.'
+            raise ValueError(msg)
+        entry = merge_ports('entry', entries)
+        assert isinstance(entry, PortNamespace)
+        namespace.entry_port = entry
     names = sorted({key for port in consumers for key in port})
     for key in names:
         children = [t.cast(InputPort | PortNamespace, port[key]) for port in consumers if key in port]
@@ -244,6 +270,8 @@ def prepare_inputs(namespace: PortNamespace, given: Mapping[str, t.Any], identif
             msg = f'unexpected graph inputs under `{path}`: {sorted(unknown)}.'
             raise TypeError(msg)
         result = dict(value)
+        if port.entry_port is not None:
+            result = {name: visit(port.entry_port, item, f'{path}.{name}') for name, item in value.items()}
         for name, child in sorted(port.items()):
             child_path = f'{path}.{name}' if path else name
             prepared = visit(child, value.get(name, UNSPECIFIED), child_path)

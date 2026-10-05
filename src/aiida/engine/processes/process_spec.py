@@ -47,7 +47,7 @@ def _as_an_output_port(field: Field) -> dict[str, t.Any]:
     """
     declared = infer_valid_type_from_type_annotation(field.annotation)
 
-    return {'required': field.required, 'valid_type': declared or (Data,)}
+    return {'required': field.required, 'help': field.help, 'valid_type': declared or (Data,)}
 
 
 def _lazily(default: t.Any, *, node_types: bool) -> t.Any:
@@ -73,6 +73,14 @@ class ProcessSpec(spec.ProcessSpec):
     def __init__(self) -> None:
         super().__init__()
         self._exit_codes = ExitCodesNamespace()
+        self._structured_outputs = False
+
+    @property
+    def result_port(self) -> str:
+        """Return the port representing a call result, or the root for a namespace result."""
+        if self._structured_outputs or len(self.outputs) != 1:
+            return ''
+        return next(iter(self.outputs))
 
     def input_namespace_from(self, name: str, container: type, *, node_types: bool = False, **kwargs: t.Any) -> None:
         """Declare a namespace holding one port per field of a structured type.
@@ -110,6 +118,12 @@ class ProcessSpec(spec.ProcessSpec):
         for field in fields:
             under = f'{name}{self.namespace_separator}{field.name}'
 
+            if _takes_many(field.annotation):
+                self.input_many(
+                    under, field.annotation, node_types=node_types, required=field.required, help=field.help
+                )
+                continue
+
             if fields_of(field.annotation) is not None:
                 self.input_namespace_from(
                     under, field.annotation, node_types=node_types, required=field.required, help=field.help
@@ -120,6 +134,26 @@ class ProcessSpec(spec.ProcessSpec):
                 under,
                 **_as_a_port(field, node_types=node_types),
             )
+
+    def input_many(self, name: str, annotation: t.Any, *, node_types: bool = False, **kwargs: t.Any) -> None:
+        """Declare a keyed namespace retaining the type of each entry.
+
+        :param name: namespace name.
+        :param annotation: the Many annotation.
+        :param node_types: translate Python leaf types to ORM types.
+        :param kwargs: options for the collection namespace.
+        """
+        arguments = t.get_args(annotation)
+        item = arguments[0] if arguments else Data
+        entry = None
+        if fields_of(item) is not None:
+            entry_spec = ProcessSpec()
+            entry_spec.input_namespace_from('entry', item, node_types=node_types)
+            entry = entry_spec.inputs['entry']
+        valid_type = infer_valid_type_from_type_annotation(item, stored=node_types) or (Data,)
+        self.input_namespace(
+            name, dynamic=True, valid_type=None if entry is not None else valid_type, entry_port=entry, **kwargs
+        )
 
     def outputs_from(self, container: type, prefix: str = '') -> None:
         """Declare one output port per field of a structured type.
@@ -147,17 +181,33 @@ class ProcessSpec(spec.ProcessSpec):
             )
             raise TypeError(msg)
 
+        if not prefix:
+            self._structured_outputs = True
+
         for field in fields:
             name = f'{prefix}{field.name}'
 
             if _takes_many(field.annotation):
                 arguments = t.get_args(field.annotation)
-                valid_type = infer_valid_type_from_type_annotation(arguments[0]) if arguments else ()
-                self.output_namespace(name, dynamic=True, valid_type=valid_type or (Data,), required=field.required)
+                item = arguments[0] if arguments else Data
+                entry = None
+                if fields_of(item) is not None:
+                    entry_spec = ProcessSpec()
+                    entry_spec.outputs_from(item)
+                    entry = entry_spec.outputs
+                valid_type = infer_valid_type_from_type_annotation(item)
+                self.output_namespace(
+                    name,
+                    dynamic=True,
+                    valid_type=None if entry is not None else valid_type or (Data,),
+                    entry_port=entry,
+                    required=field.required,
+                    help=field.help,
+                )
                 continue
 
             if fields_of(field.annotation) is not None:
-                self.output_namespace(name, required=field.required)
+                self.output_namespace(name, required=field.required, help=field.help)
                 self.outputs_from(field.annotation, prefix=f'{name}{self.namespace_separator}')
                 continue
 

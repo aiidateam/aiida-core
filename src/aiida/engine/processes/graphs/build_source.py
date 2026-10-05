@@ -41,8 +41,8 @@ from aiida.engine.processes.graphs.spec import (
     ProcessTask,
     SubgraphTask,
 )
-from aiida.engine.processes.port_model import fields_of, without_marks
-from aiida.engine.processes.ports import OutputPort, PortNamespace, infer_valid_type_from_type_annotation
+from aiida.engine.processes.port_model import fields_of
+from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
 # would otherwise shadow the graph-builder decorator exported by ``aiida.engine``.
@@ -169,8 +169,22 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
 
 @dataclass(frozen=True)
 class _Reference:
+    """A parsed value reference with its declared leaf, namespace, or keyed entry shape."""
+
     task: str | None  # None denotes a graph input.
     port: str
+    shape: InputPort | OutputPort | PortNamespace
+
+    def outputs(self, target: str) -> dict[str, Endpoint]:
+        """Expand fixed fields while keeping runtime-keyed namespaces intact."""
+        if isinstance(self.shape, PortNamespace) and not self.shape.dynamic:
+            outputs = {}
+            for name, shape in self.shape.items():
+                source = f'{self.port}.{name}' if self.port else name
+                under = f'{target}.{name}' if target else name
+                outputs.update(_Reference(self.task, source, shape).outputs(under))
+            return outputs
+        return {target: Endpoint(task=self.task, port=self.port)}
 
 
 @dataclass
@@ -206,9 +220,12 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
     if function.args.defaults or any(default is not None for default in function.args.kw_defaults):
         msg = f'{state.key}: parameter defaults are not supported'
         raise UnsupportedSyntax(msg)
+    boundary = namespace_for_annotations(state.definition.hints, tuple(arg.arg for arg in function.args.args))
     for arg in function.args.args:
         state.inputs[arg.arg] = []
-        state.names[arg.arg] = _Reference(None, arg.arg)
+        shape = boundary[arg.arg]
+        assert isinstance(shape, (InputPort, PortNamespace))
+        state.names[arg.arg] = _Reference(None, arg.arg, shape)
     statements = function.body
     if statements and isinstance(statements[0], ast.Expr) and isinstance(statements[0].value, ast.Constant):
         if isinstance(statements[0].value.value, str):
@@ -283,29 +300,9 @@ def _lower_return(
     if not isinstance(reference, _Reference) or (not reference.port and fields is None):
         _reject(state, expression, 'return must select a task output or graph input')
     if fields is not None:
-
-        def expand(annotation: t.Any, target: str, source: str) -> dict[str, Endpoint]:
-            children = fields_of(annotation)
-            if children is None:
-                return {target: Endpoint(task=reference.task, port=source)}
-            expanded = {}
-            for child in children:
-                expanded.update(
-                    expand(
-                        child.annotation,
-                        f'{target}.{child.name}' if target else child.name,
-                        f'{source}.{child.name}' if source else child.name,
-                    )
-                )
-            return expanded
-
-        source_path = reference.port
-        if reference.task is not None and isinstance(expression, (ast.Name, ast.Call)):
-            task = next(task for task in state.tasks if task.name == reference.task)
-            declared = task.spec.outputs if isinstance(task, ProcessTask) else task.body.output_spec()
-            if declared.keys() == {field.name for field in fields}:
-                source_path = ''
-        return expand(annotation, prefix.rstrip('.'), source_path)
+        if not isinstance(reference.shape, PortNamespace):
+            _reject(state, expression, 'structured return requires a namespace reference')
+        return reference.outputs(prefix.rstrip('.'))
     name = prefix.rstrip('.') if prefix else reference.port
     return {name: Endpoint(task=reference.task, port=reference.port)}
 
@@ -331,11 +328,23 @@ def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
 
 
 def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
+    declared: dict[str, t.Any] = {'name': 'outputs', 'required': True, 'dynamic': False, 'ports': {}}
+    endpoints = {}
+    for name, reference in outputs.items():
+        snapshot = dump_port(reference.shape, defaults=False)
+        snapshot['name'] = name
+        if name:
+            declared['ports'][name] = snapshot
+        else:
+            declared = snapshot
+            declared['name'] = 'outputs'
+        endpoints.update(reference.outputs(name))
     return GraphSpec(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
-        outputs={name: Endpoint(task=ref.task, port=ref.port) for name, ref in outputs.items()},
+        outputs=endpoints,
+        output_namespace=declared,
         input_namespace=_region_input_namespace(state),
     )
 
@@ -366,7 +375,8 @@ def _region(state: _LoweringState, statements: list[ast.stmt], *, item: str | No
         if name != item and name not in state.names:
             _reject(state, statements[0], f'unbound name {name!r}')
         child.inputs[name] = []
-        child.names[name] = _Reference(None, name)
+        shape = InputPort(name) if name == item else state.names[name].shape
+        child.names[name] = _Reference(None, name, shape)
     return child
 
 
@@ -399,31 +409,7 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
         child = _region(state, statements)
         name = _lower_assignment(child, statements[0])
         reference = child.names[name]
-        task = next(task for task in child.tasks if task.name == reference.task)
-        namespace = task.spec.outputs if isinstance(task, ProcessTask) else task.body.output_spec()
-        if isinstance(task, SubgraphTask) and task.body.output_namespace is None:
-            namespace = PortNamespace('outputs')
-            for path in task.body.outputs:
-                namespace[path] = OutputPort(path, valid_type=task.body.output_typehints.get(path))
-
-        def expand(port: PortNamespace, prefix: str = '') -> dict[str, Endpoint]:
-            outputs = {}
-            for field_name, field_port in port.items():
-                path = f'{prefix}.{field_name}' if prefix else field_name
-                if isinstance(field_port, PortNamespace) and not field_port.dynamic and field_port:
-                    outputs.update(expand(field_port, path))
-                else:
-                    outputs[path] = Endpoint(task=reference.task, port=path)
-            return outputs
-
-        body = GraphSpec(
-            tasks=tuple(child.tasks),
-            dependencies=tuple(child.dependencies),
-            inputs={name: tuple(targets) for name, targets in child.inputs.items()},
-            outputs=expand(namespace),
-            output_namespace=dump_port(namespace, defaults=False),
-            input_namespace=_region_input_namespace(child),
-        )
+        body = _body(child, {reference.port: reference})
         sides.append((name, child, body))
     if sides[0][0] != sides[1][0] or sides[0][0] in state.names:
         _reject(state, statement, 'if requires one new name shared by both sides')
@@ -435,9 +421,8 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     for name in sorted({path.split('.')[0] for _, child, _ in sides for path in child.inputs}):
         _wire(state, instance, name, state.names[name], given)
     state.tasks.append(BranchControl(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
-    namespace = sides[0][2].output_spec()
-    scalar = set(namespace) == {'result'} and not isinstance(namespace['result'], PortNamespace)
-    state.names[sides[0][0]] = _Reference(instance, 'result' if scalar else '')
+    selected = sides[0][1].names[sides[0][0]]
+    state.names[sides[0][0]] = _Reference(instance, selected.port, selected.shape)
 
 
 def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
@@ -455,7 +440,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         if name not in state.names:
             _reject(state, statement, f'loop state {name!r} must be initialized before the loop')
         child.inputs.setdefault(name, [])
-        child.names[name] = _Reference(None, name)
+        child.names[name] = _Reference(None, name, state.names[name].shape)
     if condition not in assigned:
         _reject(state, statement, 'while body must update its condition')
     for node in statement.body:
@@ -467,7 +452,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     _place(state, child, instance, given)
     state.tasks.append(LoopControl(name=instance, inputs=given, body=body, condition_port=condition))
     for name in assigned:
-        state.names[name] = _Reference(instance, name)
+        state.names[name] = _Reference(instance, name, child.names[name].shape)
 
 
 def _lower_map(state: _LoweringState, statement: ast.For) -> None:
@@ -480,13 +465,21 @@ def _lower_map(state: _LoweringState, statement: ast.For) -> None:
     result = _lower_assignment(child, statement.body[0])
     if result in state.names or result == item:
         _reject(state, statement.body[0], 'loop result must bind a new name')
-    body = _body(child, {'result': child.names[result]})
+    reference = child.names[result]
+    body = _body(child, {'result': reference})
     instance = f'each_{len(state.tasks) + 1}'
     given: dict[str, t.Any] = {}
     _wire(state, instance, item, _lower_value(state, statement.iter), given)
     _place(state, child, instance, given)
     state.tasks.append(MapGraphControl(name=instance, inputs=given, body=body, item_port=item))
-    state.names[result] = _Reference(instance, 'result')
+    shape = reference.shape
+    gathered = PortNamespace(
+        'result',
+        dynamic=True,
+        entry_port=shape if isinstance(shape, PortNamespace) else None,
+        valid_type=None if isinstance(shape, PortNamespace) else shape.valid_type,
+    )
+    state.names[result] = _Reference(instance, 'result', gathered)
 
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
@@ -506,18 +499,25 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     state.used[name] += 1
     instance = name if state.used[name] == 1 else f'{name}_{state.used[name]}'
     inputs: t.Collection[str]
-    outputs: t.Collection[str]
+    result_port: str
+    output_shape: PortNamespace
     if isinstance(target, SourceGraphHandle):
         body = _lower_registered_graph(_key(target._function), state.stack)
         inputs = body.inputs
-        outputs = body.outputs
+        result_port = body.result_port
+        output_shape = body.output_spec()
+        if body.output_namespace is None:
+            output_shape = PortNamespace('outputs')
+            for path in body.outputs:
+                output_shape[path] = OutputPort(path, valid_type=body.output_typehints.get(path))
 
         def make_task(inputs: dict[str, t.Any]) -> ProcessTask | SubgraphTask:
             return SubgraphTask(name=instance, inputs=inputs, body=body)
     else:
         assert spec is not None
         inputs = spec.inputs
-        outputs = spec.outputs
+        result_port = spec.result_port
+        output_shape = spec.outputs
 
         def make_task(inputs: dict[str, t.Any]) -> ProcessTask | SubgraphTask:
             return ProcessTask(name=instance, inputs=inputs, spec=spec)
@@ -531,7 +531,9 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         port_spec = inputs.get(port) if isinstance(inputs, PortNamespace) else None
         _lower_input(state, instance, port, keyword.value, port_spec, given)
     state.tasks.append(make_task(given))
-    return _Reference(instance, next(iter(outputs)) if len(outputs) == 1 else '')
+    shape = output_shape[result_port] if result_port else output_shape
+    assert isinstance(shape, (InputPort, OutputPort, PortNamespace))
+    return _Reference(instance, result_port, shape)
 
 
 def _lower_input(
@@ -568,19 +570,16 @@ def _lower_value(
         parent = _lower_value(state, expression.value, allow_call=allow_call)
         if not isinstance(parent, _Reference):
             _reject(state, expression, 'selection must name a task output or declared input namespace')
+        if not isinstance(parent.shape, PortNamespace):
+            if parent.task is not None and parent.port == expression.attr:
+                return parent
+            _reject(state, expression, 'selection requires a declared namespace')
         path = f'{parent.port}.{expression.attr}' if parent.port else expression.attr
-        if parent.task is None:
-            root, *segments = path.split('.')
-            annotation = state.definition.hints.get(root)
-            for segment in segments:
-                fields = fields_of(without_marks(annotation))
-                selected = next((field for field in fields or () if field.name == segment), None)
-                if selected is None:
-                    _reject(state, expression, f'unknown or undeclared input namespace field {path!r}')
-                annotation = selected.annotation
-        elif isinstance(expression.value, ast.Name) and parent.port == expression.attr:
-            path = parent.port
-        return _Reference(parent.task, path)
+        if expression.attr not in parent.shape:
+            _reject(state, expression, f'unknown or undeclared namespace field {path!r}')
+        shape = parent.shape[expression.attr]
+        assert isinstance(shape, (InputPort, OutputPort, PortNamespace))
+        return _Reference(parent.task, path, shape)
     if isinstance(expression, ast.Name):
         if expression.id not in state.names:
             _reject(state, expression, f'unbound name {expression.id!r}')

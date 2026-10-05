@@ -118,6 +118,7 @@ class TemplatereplacerCalculation(CalcJob):
         except AttributeError:
             parameters = {}
 
+        template.pop('source', None)
         input_file_template = template.pop('input_file_template', '')
         input_file_name = template.pop('input_file_name', None)
         output_file_name = template.pop('output_file_name', None)

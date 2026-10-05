@@ -321,9 +321,9 @@ def test_model_declaration_semantics_round_trip():
     assert ports.required
     assert ports['values']['required'].required
     assert ports['values']['nullable'].required
-    assert ports['values']['nullable'].valid_type == (Int, type(None))
+    assert ports['values']['nullable'].valid_type == (int, type(None))
     assert not ports['values']['defaulted'].required
-    assert ports['values']['defaulted'].valid_type == (Int,)
+    assert ports['values']['defaulted'].valid_type == (int,)
     assert ports['values']['defaulted'].has_default()
     assert not ports['values']['optional'].required
     assert ports['values']['optional'].has_default()

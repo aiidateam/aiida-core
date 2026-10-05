@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import functools
-import inspect
 import typing as t
 from collections.abc import MutableMapping
 from inspect import get_annotations
@@ -25,7 +24,7 @@ from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_n
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.port_model import PortModel, fields_of, is_structured
-from aiida.engine.processes.ports import PortNamespace, as_written
+from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.states import Wait
@@ -38,40 +37,15 @@ __all__ = ('GraphProcess', 'TaskProcess', 'launched_as', 'task_node')
 class TaskProcess(FunctionProcess):
     """A :class:`FunctionProcess` whose wrapped function takes and returns plain Python values.
 
-    A node holding one plain value is handed to the function as that value, unless its parameter is annotated
-    with a ``Data`` subclass, in which case the node itself is handed over. A value the function returns that is
-    not already a ``Data`` node is stored with ``to_aiida_type``, so graph edges always carry provenance nodes.
-    Other data nodes arrive as nodes when no plain Python representation is registered for them.
+    Input adaptation is inherited from ``Process``: Python annotations receive Python values and ``Data``
+    annotations receive nodes. A returned value that is not already a ``Data`` node is stored with
+    ``to_aiida_type``, so graph edges always carry provenance nodes.
 
     When the task declares its output ports, a returned tuple is mapped onto them in order.
     """
 
-    TAKES_PLAIN_VALUES: t.ClassVar[bool] = True
-    """Whether a node holding one plain value is unwrapped before the function is called.
-
-    A task that passes one of the values it was given straight back has to be handed the nodes, since returning
-    the value would store a second node holding the same thing rather than saying it returned the first.
-    """
-
-    @override
-    def _function_arguments(self) -> tuple[list[t.Any], dict[str, t.Any]]:
-        args, kwargs = super()._function_arguments()
-
-        if not self.TAKES_PLAIN_VALUES:
-            return args, kwargs
-
-        annotations = get_annotations(self._func, eval_str=True)
-        positional = [
-            name
-            for name, parameter in inspect.signature(self._func).parameters.items()
-            if parameter.kind in (parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD)
-        ]
-
-        # What is positional is named by the signature; anything past that is variable and has no annotation.
-        given = [as_written(annotations.get(name), value) for name, value in zip(positional, args)]
-        given += [as_written(None, value) for value in args[len(positional) :]]
-
-        return given, {name: as_written(annotations.get(name), value) for name, value in kwargs.items()}
+    NODE_INPUT_TYPES: t.ClassVar[bool] = False
+    """Declare the Python types tasks consume, without legacy function annotation translation."""
 
     @override
     def _out_result(self, result: t.Any) -> None:
@@ -157,8 +131,10 @@ class GraphProcess(Process):
         """Check raw graph inputs after engine parsing but before provenance is stored."""
         graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
         supplied = dict(self.inputs.get(self._GRAPH_INPUTS, {}))
+        stored = graph.serialize_inputs(supplied)
+        self._input_sources = AttributesFrozendict({**self._input_sources, self._GRAPH_INPUTS: stored})
         self._parsed_inputs = AttributesFrozendict(
-            {**self.inputs, self._GRAPH_INPUTS: graph.serialize_inputs(supplied)}
+            {**self.inputs, self._GRAPH_INPUTS: graph.input_spec().prepare(stored)}
         )
         return super()._create_and_setup_db_record()
 
@@ -190,7 +166,7 @@ class GraphProcess(Process):
             graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
             self._run = GraphRun.from_dict(
                 graph=graph,
-                given=graph.serialize_inputs(dict(self.inputs.get(self._GRAPH_INPUTS, {}))),
+                given=graph.serialize_inputs(dict(self._input_sources.get(self._GRAPH_INPUTS, {}))),
                 data=self._saved,
             )
 
@@ -200,12 +176,22 @@ class GraphProcess(Process):
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         super().save_instance_state(out_state, save_context)
         out_state['run'] = self.run_state.to_dict()
+        out_state['graph_input_sources'] = self._encode_input_args(
+            dict(self._input_sources.get(self._GRAPH_INPUTS, {}))
+        )
 
     @override
     def load_instance_state(self, saved_state: MutableMapping[str, t.Any], load_context: t.Any) -> None:
         super().load_instance_state(saved_state, load_context)
         self._run = None
         self._saved = dict(saved_state.get('run', {}))
+        if 'graph_input_sources' in saved_state:
+            self._input_sources = AttributesFrozendict(
+                {
+                    **self._input_sources,
+                    self._GRAPH_INPUTS: self._decode_input_args(saved_state['graph_input_sources']),
+                }
+            )
 
     @override
     async def run(self) -> t.Any:

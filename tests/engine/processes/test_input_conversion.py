@@ -155,6 +155,7 @@ def string_process(value: str) -> str:
 
 
 def test_task_python_annotation_preserves_input_link():
+    assert echo_task.process_class.spec().inputs['value'].valid_type == (str,)
     value = orm.Str('value')
     outputs, node = run_get_node(GraphProcess, **string_process.get_launch_inputs(value=value))
     assert next(iter(outputs.values())).value == 'value'
@@ -213,18 +214,7 @@ class RuntimeWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input_namespace('values')
-        for name, valid_type in (
-            ('label', str),
-            ('count', int),
-            ('enabled', bool),
-            ('ratio', float),
-            ('items', list),
-            ('parameters', dict),
-        ):
-            spec.input(f'values.{name}', valid_type=valid_type)
-        spec.input('values.mixed', valid_type=(str, orm.Str), default='default')
-        spec.input('values.optional', valid_type=(str, type(None)), default=None, required=False)
+        spec.input_namespace_from('values', RuntimeValues)
         spec.outline(cls.check_values)
 
     def check_values(self):
@@ -247,7 +237,7 @@ def test_scientific_runtime_values_and_provenance(as_nodes):
         given = {name: orm.to_aiida_type(value) for name, value in given.items()}
     process = RuntimeWorkChain(inputs={'values': given})
     try:
-        assert process.spec().inputs['values']['label'].valid_type is str
+        assert process.spec().inputs['values']['label'].valid_type == (str,)
         assert isinstance(process._input_sources, AttributesFrozendict)
         assert isinstance(process._input_sources['values'], AttributesFrozendict)
         if not as_nodes:
@@ -339,11 +329,11 @@ def test_graph_checkpoint_preserves_original_boundary_node():
     process = GraphProcess(inputs=string_process.get_launch_inputs(value=original))
     restored = None
     try:
-        assert isinstance(process.inputs.graph_inputs['value'], orm.Str)
+        assert type(process.inputs.graph_inputs['value']) is str
         checkpoint = CheckpointPayload.from_object(process)
         process.close()
         restored = checkpoint.decode()
-        assert isinstance(restored.inputs.graph_inputs['value'], orm.Str)
+        assert type(restored.inputs.graph_inputs['value']) is str
         assert restored.run_state.given['value'].uuid == original.uuid
     finally:
         if restored is not None:

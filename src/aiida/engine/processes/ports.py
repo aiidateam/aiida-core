@@ -20,7 +20,7 @@ from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.engine.processes.port_model import fields_of, is_a_plain_class, without_marks
+from aiida.engine.processes.port_model import is_a_plain_class, without_marks
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
@@ -364,38 +364,45 @@ def _runtime_value(
     return value
 
 
-def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
+def infer_valid_type_from_type_annotation(annotation: t.Any, *, stored: bool = True) -> tuple[t.Any, ...]:
     """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
 
     :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :param stored: infer ORM types for legacy function inputs and outputs; disable for runtime input types.
     :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
         tuple is returned.
     """
 
     def get_type_from_annotation(annotation):
-        # `t.Dict`/`t.List` are distinct runtime keys from `dict`/`list` (`t.Dict != dict`) and map the
-        # pre-PEP-585 annotation spelling; UP006 would collapse them into duplicate builtin keys.
+        if annotation is t.Any:
+            return None
+        origin = t.get_origin(annotation)
+        if not stored and origin in (list, dict):
+            annotation = origin
+
         valid_type_map = {
             bool: Bool,
             dict: Dict,
-            t.Dict: Dict,  # noqa: UP006
+            t.Dict: Dict,  # noqa: UP006 - support legacy annotation spelling
             float: Float,
             int: Int,
             list: List,
-            t.List: List,  # noqa: UP006
+            t.List: List,  # noqa: UP006 - support legacy annotation spelling
             str: Str,
             type(None): type(None),
         }
 
-        if is_a_plain_class(annotation) and issubclass(annotation, Data):
-            return annotation
+        if is_a_plain_class(annotation):
+            if not stored or issubclass(annotation, Data):
+                return annotation
+            return valid_type_map.get(annotation)
 
-        return valid_type_map.get(annotation)
+        return valid_type_map.get(annotation) if stored else None
 
     annotation = without_marks(annotation)
     inferred_valid_type: tuple[t.Any, ...] = ()
 
-    if is_a_plain_class(annotation):
+    if is_a_plain_class(annotation) or t.get_origin(annotation) in (list, dict):
         inferred_valid_type = (get_type_from_annotation(annotation),)
     elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
         inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
@@ -403,33 +410,3 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
         inferred_valid_type = (t.get_args(annotation),)
 
     return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
-
-
-def _plain(value: t.Any) -> t.Any:
-    """Return the plain Python value a node holds, where it holds one, and the node itself where it does not."""
-    return from_aiida_type(value)
-
-
-def as_written(annotation: t.Any, value: t.Any) -> t.Any:
-    """Adapt stored inputs to task arguments without constructing declaration models.
-
-    PortModel annotations declare namespaces, delivered as immutable mappings
-    with attribute access. Leaves become plain values unless annotated as nodes.
-
-    :param annotation: the parameter or field declaration.
-    :param value: a stored node or namespace mapping.
-    """
-    annotation = without_marks(annotation)
-    fields = fields_of(annotation)
-
-    if fields is None or not isinstance(value, Mapping):
-        # What was asked for is what is handed over: a node where the annotation names one, and the value it
-        # holds where the annotation names that.
-        if is_a_plain_class(annotation) and issubclass(annotation, Data):
-            return value
-
-        return _plain(value)
-
-    held = {field.name: as_written(field.annotation, value[field.name]) for field in fields if field.name in value}
-
-    return AttributesFrozendict(held)

@@ -21,7 +21,8 @@ from aiida.orm import Bool, Data, Dict, Float, Int, List, Str, to_aiida_type
     [int | None, t.Optional[int], Int | None, t.Optional[Int]],  # noqa: UP045 - test legacy annotations too
 )
 def test_nullable_annotations_preserve_none_type(annotation):
-    assert infer_valid_type_from_type_annotation(annotation) == (Int, type(None))
+    expected = Int if annotation == Int | None else int
+    assert infer_valid_type_from_type_annotation(annotation, stored=False) == (expected, type(None))
 
 
 class TestInputPort:

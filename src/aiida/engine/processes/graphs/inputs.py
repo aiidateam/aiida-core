@@ -56,8 +56,8 @@ def _annotation_port(
         options['default'] = _default(default)
     if fields is None:
         if 'default' in options:
-            options['default'] = partial(to_aiida_type, options['default'])
-        valid_type = infer_valid_type_from_type_annotation(annotation) or None
+            options['default'] = partial(_default, options['default'])
+        valid_type = infer_valid_type_from_type_annotation(annotation, stored=False) or None
         port = InputPort(name, valid_type=valid_type, **options)
         # Ordinary optional process ports also accept None. A graph declaration
         # distinguishes a defaulted key from a nullable value.
@@ -128,7 +128,7 @@ def dump_port(port: InputPort | OutputPort | PortNamespace, *, defaults: bool = 
         ]
     if defaults and isinstance(port, (InputPort, PortNamespace)) and port.has_default():
         value = port.default
-        if isinstance(value, partial) and value.func is to_aiida_type:
+        if isinstance(value, partial) and value.func in (to_aiida_type, _default):
             value = value.args[0]
         result['default'] = _default(value)
     return result
@@ -146,7 +146,7 @@ def load_port(data: Mapping[str, t.Any], *, output: bool = False) -> InputPort |
         options['default'] = _default(data['default'])
     if 'ports' not in data:
         if 'default' in options:
-            options['default'] = partial(to_aiida_type, options['default'])
+            options['default'] = partial(_default, options['default'])
         port_class = OutputPort if output else InputPort
         valid_type = (
             tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in data['valid_type'])
@@ -200,7 +200,7 @@ def prepare_inputs(namespace: PortNamespace, given: Mapping[str, t.Any], identif
         if value is UNSPECIFIED:
             if port.has_default():
                 default = port.default
-                if isinstance(default, partial) and default.func is to_aiida_type:
+                if isinstance(default, partial) and default.func in (to_aiida_type, _default):
                     default = default.args[0]
                 value = _default(default)
             elif not port.required:

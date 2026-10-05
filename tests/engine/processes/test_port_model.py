@@ -30,7 +30,7 @@ from aiida.engine import (
     task_execution as task,
 )
 from aiida.engine.processes.port_model import as_dict, build, fields_of, is_structured
-from aiida.orm import Dict, Float, Int, JsonableData, Str, load_node
+from aiida.orm import Dict, Float, Int, JsonableData, load_node
 
 
 class DeclarationOnly(PortModel):
@@ -137,7 +137,7 @@ def test_source_task_namespace_metadata_preserves_nested_help():
 def test_source_task_metadata_without_help_preserves_docstring_help():
     port = source_docstring_help.process_class.spec().inputs['value']
     assert port.help == 'fallback parameter help.'
-    assert port.valid_type == (Int,)
+    assert port.valid_type == (int,)
 
 
 def test_source_task_metadata_composes_with_orm_nodes():
@@ -351,7 +351,7 @@ def test_a_container_names_a_namespace_of_ports(container):
     ports = Runner.spec().inputs['relax']
 
     assert sorted(ports) == ['steps', 'structure']
-    assert ports['structure'].valid_type == (Str,)
+    assert ports['structure'].valid_type == (str,)
     assert not ports['steps'].required
 
 
@@ -530,7 +530,7 @@ def test_a_field_that_is_a_container_names_a_namespace_under_this_one(container)
     ports = Runner.spec().inputs['relax']
 
     assert sorted(ports['kpoints']) == ['mesh', 'offset']
-    assert Int in ports['kpoints']['mesh'].valid_type
+    assert int in ports['kpoints']['mesh'].valid_type
 
 
 def test_nested_namespaces_have_attribute_access():
@@ -581,7 +581,7 @@ def test_a_field_declaring_a_node_takes_that_node():
     ports = sees_spacing.process_class.spec().inputs['given']
 
     assert ports['spacing'].valid_type == (Float,)
-    assert Int in ports['points'].valid_type
+    assert int in ports['points'].valid_type
 
 
 @pytest.mark.parametrize('as_nodes', (False, True), ids=('plain-values', 'nodes'))

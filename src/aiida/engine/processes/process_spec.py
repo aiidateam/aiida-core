@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import copy
 import typing as t
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
@@ -26,13 +27,13 @@ from aiida.orm import Data, Dict, to_aiida_type
 __all__ = ('CalcJobProcessSpec', 'ProcessSpec')
 
 
-def _as_a_port(field: Field) -> dict[str, t.Any]:
+def _as_a_port(field: Field, *, node_types: bool = False) -> dict[str, t.Any]:
     """Return how one model field is declared as a port."""
-    declared = infer_valid_type_from_type_annotation(field.annotation)
+    declared = infer_valid_type_from_type_annotation(field.annotation, stored=node_types)
     options: dict[str, t.Any] = {'required': field.required, 'help': field.help}
 
     if not field.required:
-        options['default'] = _lazily(field.default)
+        options['default'] = _lazily(field.default, node_types=node_types)
 
     return {**options, 'valid_type': declared or (Data,)}
 
@@ -48,16 +49,12 @@ def _as_an_output_port(field: Field) -> dict[str, t.Any]:
     return {'required': field.required, 'valid_type': declared or (Data,)}
 
 
-def _lazily(default: t.Any) -> t.Any:
-    """Return the default as a port takes it, which for a value to be stored is something that makes it.
-
-    A port default is called where one is needed, so that a node is made at that moment rather than when the
-    class was defined, which is too early for anything to be stored.
-    """
+def _lazily(default: t.Any, *, node_types: bool) -> t.Any:
+    """Copy Python defaults per launch; provenance serialization happens after runtime validation."""
     if default is None or isinstance(default, Data) or callable(default):
         return default
 
-    return lambda: to_aiida_type(default)
+    return lambda: to_aiida_type(default) if node_types else copy.deepcopy(default)
 
 
 class ProcessSpec(spec.ProcessSpec):
@@ -76,7 +73,7 @@ class ProcessSpec(spec.ProcessSpec):
         super().__init__()
         self._exit_codes = ExitCodesNamespace()
 
-    def input_namespace_from(self, name: str, container: type, **kwargs: t.Any) -> None:
+    def input_namespace_from(self, name: str, container: type, *, node_types: bool = False, **kwargs: t.Any) -> None:
         """Declare a namespace holding one port per field of a structured type.
 
         A ``PortModel`` declares which names a value has, of
@@ -94,6 +91,7 @@ class ProcessSpec(spec.ProcessSpec):
 
         :param name: the namespace to declare the fields under.
         :param structured type: the structured type whose fields to declare.
+        :param node_types: translate Python field types to ORM types for legacy process function declarations.
         :param kwargs: passed on to the namespace itself, ``required`` and ``help`` among them.
         :raises TypeError: if the structured type is not one this knows how to read.
         """
@@ -112,12 +110,14 @@ class ProcessSpec(spec.ProcessSpec):
             under = f'{name}{self.namespace_separator}{field.name}'
 
             if fields_of(field.annotation) is not None:
-                self.input_namespace_from(under, field.annotation, required=field.required, help=field.help)
+                self.input_namespace_from(
+                    under, field.annotation, node_types=node_types, required=field.required, help=field.help
+                )
                 continue
 
             self.input(
                 under,
-                **_as_a_port(field),
+                **_as_a_port(field, node_types=node_types),
             )
 
     def outputs_from(self, container: type, prefix: str = '') -> None:

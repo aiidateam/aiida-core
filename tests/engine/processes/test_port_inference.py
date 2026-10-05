@@ -16,7 +16,7 @@ import pytest
 
 from aiida.engine import Many
 from aiida.engine.processes.port_model import fields_of, is_a_plain_class
-from aiida.engine.processes.ports import as_written, infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import PortNamespace, infer_valid_type_from_type_annotation
 from aiida.orm import Data, Int, Str
 
 
@@ -38,18 +38,23 @@ def test_a_class_with_type_arguments_is_not(annotation):
 
 @pytest.mark.parametrize(
     ('annotation', 'expected'),
-    [(int, (Int,)), (str, (Str,)), (Many[int], ()), (list[int], ())],
+    [(int, (int,)), (str, (str,)), (Many[int], ()), (list[int], (list,))],
     ids=['int', 'str', 'many', 'list'],
 )
 def test_what_a_port_takes_is_read_off_the_annotation(annotation, expected):
     """A parameter taking many values declares a namespace, so no single type is inferred for it."""
+    assert infer_valid_type_from_type_annotation(annotation, stored=False) == expected
+
+
+@pytest.mark.parametrize('annotation,expected', [(int, (Int,)), (str, (Str,)), (list[int], ())])
+def test_legacy_function_inference_preserves_node_types(annotation, expected):
     assert infer_valid_type_from_type_annotation(annotation) == expected
 
 
-@pytest.mark.parametrize('annotation', [Many[int], list[int]])
-def test_a_class_with_type_arguments_reaches_a_function_as_it_was_given(annotation):
-    """What a fan-out produced arrives as a mapping, and `as_written` has to hand it over rather than raise."""
-    assert as_written(annotation, {'item_0': Int(1)}) == {'item_0': 1}
+def test_dynamic_namespace_adapts_declared_value_types():
+    """Fan-out values follow the namespace declaration just like explicit input leaves."""
+    namespace = PortNamespace('parts', valid_type=int)
+    assert namespace.prepare({'item_0': Int(1)}) == {'item_0': 1}
 
 
 @pytest.mark.parametrize('annotation', [Many[int], list[int]])

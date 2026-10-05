@@ -1571,7 +1571,7 @@ def select(condition: t.Any, then: t.Any, otherwise: t.Any) -> t.Any:
 class SelectProcess(TaskProcess):
     """The process behind :func:`select`, which is handed the nodes so that it can return one of them."""
 
-    TAKES_PLAIN_VALUES: t.ClassVar[bool] = False
+    NODE_INPUT_TYPES: t.ClassVar[bool] = True
 
 
 # What it returns is one of the values it was given, which already exists, so this records that it returned a node

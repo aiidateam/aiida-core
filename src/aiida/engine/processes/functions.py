@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import collections
+import copy
 import functools
 import inspect
 import logging
@@ -307,7 +308,9 @@ def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
     return value if held is None else held
 
 
-def _declare_input_types(container: type | None, spec: t.Any, signature: inspect.Signature) -> set[str]:
+def _declare_input_types(
+    container: type | None, spec: t.Any, signature: inspect.Signature, *, node_types: bool
+) -> set[str]:
     """Declare one input port per field of a structured type, for a function whose signature does not say what it takes.
 
     This is the way in for a function that came from somewhere else, where the parameters carry no annotation to
@@ -316,6 +319,7 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
     :param structured type: the structured type naming the ports, or ``None`` where the signature says it all.
     :param spec: the spec to declare them on.
     :param signature: the signature of the wrapped function, which has to be able to take them.
+    :param node_types: translate Python declarations to ORM types for legacy process functions.
     :returns: the names that were declared, which the signature is not asked about again.
     :raises TypeError: if the structured type is not one that can be read, or names something the function cannot take.
     """
@@ -345,10 +349,12 @@ def _declare_input_types(container: type | None, spec: t.Any, signature: inspect
 
     for field in fields:
         if fields_of(field.annotation) is not None:
-            spec.input_namespace_from(field.name, field.annotation, required=field.required, help=field.help)
+            spec.input_namespace_from(
+                field.name, field.annotation, node_types=node_types, required=field.required, help=field.help
+            )
             continue
 
-        spec.input(field.name, **_as_a_port(field))
+        spec.input(field.name, **_as_a_port(field, node_types=node_types))
 
     return {field.name for field in fields}
 
@@ -398,6 +404,9 @@ def _declare_output_ports(outputs: t.Sequence[str] | type | None, return_annotat
 
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
+
+    NODE_INPUT_TYPES: t.ClassVar[bool] = True
+    """Preserve the node-valued argument contract of calcfunctions and workfunctions at declaration time."""
 
     _func_args: t.Sequence[str] = ()
     _var_positional: str | None = None
@@ -496,7 +505,7 @@ class FunctionProcess(Process):
 
             super(generated, cls).define(spec)  # type: ignore[arg-type]
 
-            named = _declare_input_types(inputs, spec, signature)
+            named = _declare_input_types(inputs, spec, signature, node_types=cls.NODE_INPUT_TYPES)
 
             for parameter in signature.parameters.values():
                 if parameter.name in named:
@@ -506,7 +515,12 @@ class FunctionProcess(Process):
                     continue
 
                 annotation = annotations.get(parameter.name)
-                valid_type = infer_valid_type_from_type_annotation(annotation) or (Data,)
+                value_annotation = annotation
+                if not cls.NODE_INPUT_TYPES and _takes_many(annotation) and t.get_args(annotation):
+                    value_annotation = t.get_args(annotation)[0]
+                valid_type = infer_valid_type_from_type_annotation(value_annotation, stored=cls.NODE_INPUT_TYPES) or (
+                    Data,
+                )
                 help_string = _port_help(annotation)
                 if help_string is None:
                     help_string = param_help_string.get(parameter.name, None)
@@ -521,7 +535,7 @@ class FunctionProcess(Process):
                 # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
                 # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
                 # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
-                if default is None:
+                if default is None and type(None) not in valid_type:
                     valid_type += (type(None),)
 
                 # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
@@ -535,7 +549,7 @@ class FunctionProcess(Process):
                 ):
 
                     def indirect_default(value=default):
-                        return to_aiida_type(value)
+                        return to_aiida_type(value) if cls.NODE_INPUT_TYPES else copy.deepcopy(value)
                 else:
                     indirect_default = default  # type: ignore[assignment]
 
@@ -552,6 +566,7 @@ class FunctionProcess(Process):
                     spec.input_namespace_from(
                         parameter.name,
                         without_marks(annotation),
+                        node_types=cls.NODE_INPUT_TYPES,
                         required=default is UNSPECIFIED,
                         help=help_string,
                     )
@@ -720,14 +735,14 @@ class FunctionProcess(Process):
 
         return ExitCode()
 
-    def _function_arguments(self) -> tuple[list[t.Any], dict[str, Data]]:
+    def _function_arguments(self) -> tuple[list[t.Any], dict[str, t.Any]]:
         """Return the arguments of the wrapped function, rebuilt from the inputs of the process.
 
         They were passed as they are written in the call, so all positional parameters are popped from the inputs
         and added to the positional arguments, and what is left over is passed by keyword.
         """
         args: list[t.Any] = []
-        kwargs: dict[str, Data] = {}
+        kwargs: dict[str, t.Any] = {}
         inputs = dict(self.inputs or {})
 
         for name, parameter in inspect.signature(self._func).parameters.items():

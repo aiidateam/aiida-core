@@ -21,7 +21,7 @@ from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.graphs.handlers import TaskWorkChain
 from aiida.engine.processes.graphs.inputs import load_port, merge_ports, prepare_inputs
 from aiida.engine.processes.port_model import as_dict
-from aiida.engine.processes.ports import InputPort, PortNamespace
+from aiida.engine.processes.ports import InputPort, PortNamespace, infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.orm import Data, to_aiida_type
 
@@ -896,13 +896,14 @@ class GraphSpec:
             name: value if isinstance(value, Data) else self.serializer_for_input(name)(value)
             for name, value in prepared.items()
         }
-        error = self.input_spec().validate(serialized)
+        namespace = self.input_spec()
+        error = namespace.validate(namespace.prepare(serialized))
         if error is not None:
             raise ValueError(error)
         for name, value in serialized.items():
             for task_name, path in self.inputs[name]:
                 for port in self._input_ports_at(self.task(task_name), path):
-                    error = port.validate(value)
+                    error = port.validate(port.prepare(value))
                     if error is not None:
                         raise ValueError(error)
         return serialized
@@ -1019,11 +1020,17 @@ class GraphSpec:
     @staticmethod
     def _check_types(source: tuple[type, ...], target: tuple[type, ...], context: str) -> None:
         """Check that every possible source type is accepted by the target when both are known."""
+        stored_source = tuple(
+            (infer_valid_type_from_type_annotation(kind, stored=True) or (kind,))[0] for kind in source
+        )
+        stored_target = tuple(
+            (infer_valid_type_from_type_annotation(kind, stored=True) or (kind,))[0] for kind in target
+        )
         if (
-            source
-            and target
-            and Data not in source
-            and not all(any(issubclass(kind, expected) for expected in target) for kind in source)
+            stored_source
+            and stored_target
+            and Data not in stored_source
+            and not all(any(issubclass(kind, expected) for expected in stored_target) for kind in stored_source)
         ):
             msg = f'{context} has incompatible types: {source} cannot feed {target}.'
             raise ValueError(msg)

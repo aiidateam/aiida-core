@@ -272,7 +272,7 @@ def aiida_code():
         import uuid
 
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
-        from aiida.orm import QueryBuilder
+        from aiida.orm import PortableCode, QueryBuilder
         from aiida.plugins import DataFactory
 
         cls = DataFactory(entry_point)
@@ -281,7 +281,11 @@ def aiida_code():
         try:
             code = QueryBuilder().append(cls, filters={'label': label}).one()[0]
         except (MultipleObjectsError, NotExistent):
-            code = cls(label=label, **kwargs).store()
+            if cls is PortableCode:
+                code = PortableCode.from_directory(label=label, **kwargs)
+            else:
+                code = cls(label=label, **kwargs)
+            code.store()
 
         return code
 

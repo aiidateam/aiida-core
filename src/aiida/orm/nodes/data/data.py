@@ -110,8 +110,10 @@ class Data(Node):
                 raise ValueError('Source must be supplied as a dictionary')
             unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
             if unknown_attrs:
-                msg = f'Unknown source parameters: {", ".join(unknown_attrs)}'
-                raise KeyError(msg)
+                unknown = '\n'.join(f'- {attr}' for attr in unknown_attrs)
+                allowed = '\n'.join(f'- {attr}' for attr in self._source_attributes)
+                msg = f'\n\nUnknown source parameters:\n{unknown}\n\nAllowed source parameters:\n{allowed}'
+                raise ValueError(msg)
 
         self.base.attributes.set('source', source)
 

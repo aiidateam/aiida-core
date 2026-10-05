@@ -6,25 +6,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with `Node` sub classes for processes."""
+"""Resolve source callees without invoking them or registering process aliases."""
 
-# AUTO-GENERATED
+from __future__ import annotations
 
-# fmt: off
+import typing as t
+from collections.abc import Callable
 
-from aiida.orm.nodes.process.calculation import *
-from aiida.orm.nodes.process.process import *
-from aiida.orm.nodes.process.workflow import *
+from aiida.engine.processes.graphs.spec import TaskSpec
+from aiida.engine.processes.graphs.tasks import TaskHandle
 
-__all__ = (
-    'CalcFunctionNode',
-    'CalcJobNode',
-    'CalculationNode',
-    'GraphNode',
-    'ProcessNode',
-    'WorkChainNode',
-    'WorkFunctionNode',
-    'WorkflowNode',
-)
 
-# fmt: on
+def resolve_binding(function: Callable[..., t.Any], name: str) -> object:
+    return function.__globals__.get(name)
+
+
+def task_spec_for(target: object) -> TaskSpec | None:
+    return target.task_spec if isinstance(target, TaskHandle) else None

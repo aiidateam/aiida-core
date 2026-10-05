@@ -217,7 +217,12 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
     def pre_process(self, port_values: t.Any) -> AttributesFrozendict:
         """Accept model instances as namespace mappings before applying defaults."""
         held = as_dict(port_values)
-        return super().pre_process(port_values if held is None else held)
+        if held is not None:
+            port_values = held
+        if not isinstance(port_values, Mapping):
+            msg = f'port namespace `{self.name}` received `{type(port_values)}` instead of a dictionary'
+            raise TypeError(msg)
+        return super().pre_process(dict(port_values))
 
     def __setitem__(self, key: str, port: ports.Port) -> None:
         """Ensure that a `Port` being added inherits the `non_db` attribute if not explicitly defined at construction.

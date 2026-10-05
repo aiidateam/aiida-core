@@ -240,6 +240,10 @@ class ProcessBuilder(ProcessBuilderNamespace):
         """Return the process class for which this builder is constructed."""
         return self._process_class
 
+    def get_launch_inputs(self, **inputs: t.Any) -> dict:
+        """Return inputs for launching this builder, with its values taking precedence."""
+        return {**inputs, **self._inputs(prune=True)}
+
     def __str__(self) -> str:
         """Return a readable string showing the process class and its current inputs."""
         import yaml

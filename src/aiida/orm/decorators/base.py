@@ -6,10 +6,11 @@ import typing as t
 from collections.abc import Callable
 
 from pydantic.fields import FieldInfo as ModelFieldInfo
+from pydantic_core import PydanticUndefined
 from typing_extensions import Self
 
 from aiida.common import exceptions
-from aiida.common.utils import is_nullable
+from aiida.common.utils import is_nullable, make_nullable
 from aiida.orm import qb_fields
 from aiida.orm.cli.utils import CliFieldInfo
 
@@ -51,6 +52,9 @@ class BaseFieldSpec:
     description: str
     readonly: bool
     required_once_stored: bool
+    default: t.Any
+    default_factory: Callable[..., t.Any] | None
+    default_is_inferred_nullable: bool
 
 
 class Storable(t.Protocol):
@@ -126,6 +130,27 @@ class BaseField(
     def model_field_info(self) -> ModelFieldInfo:
         """Return optional Pydantic-specific field configuration."""
         return self._config.model_field_info
+
+    @property
+    def model_type(self) -> t.Any:
+        """Return the model-side type for this field."""
+        return self._get_model_type(self.spec.value_type)
+
+    def get_default(self, validated_data: dict[str, t.Any] | None = None) -> t.Any:
+        """Return the configured or inferred default value for this field."""
+        spec = self.spec
+        field_info = self.model_field_info
+
+        if field_info.default is not PydanticUndefined:
+            return field_info.get_default(call_default_factory=False)
+
+        if spec.default_factory is not None:
+            return field_info.get_default(
+                call_default_factory=True,
+                validated_data=validated_data,
+            )
+
+        return spec.default
 
     @property
     def model_metadata(self) -> tuple[t.Any, ...]:
@@ -263,11 +288,39 @@ class BaseField(
         # We only take the first line of the docstring as the description,
         description = (self.__doc__ or '').strip().split('\n')[0].strip()
 
+        field_info = self.model_field_info
+        model_type = self._get_model_type(value_type)
+        default_is_inferred_nullable = (
+            field_info.default is PydanticUndefined and field_info.default_factory is None and is_nullable(model_type)
+        )
+        default = field_info.default
+        if default is PydanticUndefined and default_is_inferred_nullable:
+            default = None
+
         return {
             'name': self._name,
             'value_type': value_type,
             'description': description,
+            'default': default,
+            'default_factory': field_info.default_factory,
+            'default_is_inferred_nullable': default_is_inferred_nullable,
         }
+
+    def _get_model_type(self, value_type: t.Any) -> t.Any:
+        """Return the model-side type for a field with the given entity-side type."""
+        field_info = self.model_field_info
+
+        if field_info.annotation is not None:
+            model_type = field_info.annotation
+        elif self.model_adapter is not None:
+            model_type = self.model_adapter.model_type
+        else:
+            model_type = value_type
+
+        if is_nullable(value_type):
+            model_type = make_nullable(model_type)
+
+        return model_type
 
     def _build_qb_field(self, key: str, *, is_attribute: bool) -> _QbFieldT:
         """Build the QueryBuilder representation of this field."""

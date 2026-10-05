@@ -17,6 +17,7 @@ from functools import cached_property
 from uuid import UUID
 
 import pydantic as pdt
+from pydantic_core import PydanticUndefined
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -283,6 +284,32 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if isinstance(other, Node) and self.uuid == other.uuid:
             return True
         return super().__eq__(other)
+
+    def finalize(self) -> None:
+        """Finalize initialization and persist defaults for declared attributes."""
+        super().finalize()
+
+        # `finalize` is also called during `Entity` reconstruction in `Entity.from_backend_entity`.
+        # In this case, we do not want to re-persist default attributes.
+        if self.is_stored:
+            return
+
+        attributes = self.base.attributes.all.copy()
+        defaults: dict[str, t.Any] = {}
+
+        for name, attribute in iter_attributes(type(self)).items():
+            if name in attributes:
+                continue
+
+            value = attribute.get_default(validated_data=attributes)
+            if value is PydanticUndefined:
+                continue
+
+            defaults[name] = value
+            attributes[name] = value
+
+        if defaults:
+            self.base.attributes.set_many(defaults)
 
     def __hash__(self) -> int:
         """Python-Hash: Implementation that is compatible with __eq__"""

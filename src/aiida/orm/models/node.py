@@ -6,8 +6,6 @@ import typing as t
 import pydantic as pdt
 
 from aiida.common.utils import (
-    is_nullable,
-    make_nullable,
     make_required,
 )
 from aiida.orm.decorators.attributes import (
@@ -159,6 +157,9 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
             model_fields[name] = _build_field(
                 self._attribute_model_annotation(attribute, projection),
                 description=spec.description,
+                default=spec.default,
+                default_factory=spec.default_factory,
+                default_is_inferred_nullable=spec.default_is_inferred_nullable,
                 model_field_info=attribute.model_field_info,
                 model_metadata=attribute.model_metadata,
                 readonly=spec.readonly,
@@ -191,17 +192,7 @@ class NodeModelsNamespace(ModelsNamespace[_NodeT]):
     ) -> t.Any:
         """Return the model-side annotation for a typed Node attribute."""
         spec = attribute.spec
-        field_info = attribute.model_field_info
-
-        if field_info.annotation is not None:
-            annotation = field_info.annotation
-        elif attribute.model_adapter is not None:
-            annotation = attribute.model_adapter.model_type
-        else:
-            annotation = spec.value_type
-
-        if is_nullable(spec.value_type):
-            annotation = make_nullable(annotation)
+        annotation = attribute.model_type
 
         if projection == 'read' and spec.required_once_stored:
             annotation = make_required(annotation)

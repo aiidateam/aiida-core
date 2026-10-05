@@ -11,7 +11,6 @@ from typing_extensions import Self
 from aiida.common.utils import (
     is_nullable,
     make_annotated,
-    make_nullable,
     make_required,
 )
 from aiida.orm.decorators.columns import iter_columns
@@ -227,17 +226,7 @@ class ModelsNamespace(t.Generic[_EntityT]):
     def _model_field_annotation(self, column: Column, projection: ModelProjection) -> t.Any:
         """Return the model-side annotation for an entity column."""
         spec = column.spec
-        field_info = column.model_field_info
-
-        if field_info.annotation is not None:
-            annotation = field_info.annotation
-        elif column.model_adapter is not None:
-            annotation = column.model_adapter.model_type
-        else:
-            annotation = spec.value_type
-
-        if is_nullable(spec.value_type):
-            annotation = make_nullable(annotation)
+        annotation = column.model_type
 
         if projection == 'read' and spec.required_once_stored:
             annotation = make_required(annotation)
@@ -255,6 +244,9 @@ class ModelsNamespace(t.Generic[_EntityT]):
         return _build_field(
             self._model_field_annotation(column, projection),
             description=spec.description,
+            default=spec.default,
+            default_factory=spec.default_factory,
+            default_is_inferred_nullable=spec.default_is_inferred_nullable,
             model_field_info=column.model_field_info,
             model_metadata=column.model_metadata,
             readonly=spec.readonly,
@@ -386,6 +378,9 @@ def _build_field(
     model_type: t.Any,
     *,
     description: str = '',
+    default: t.Any = PydanticUndefined,
+    default_factory: t.Callable[..., t.Any] | None = None,
+    default_is_inferred_nullable: bool = False,
     model_field_info: pdt.fields.FieldInfo = pdt.fields.FieldInfo(),
     model_metadata: tuple[t.Any, ...] = (),
     readonly: bool = False,
@@ -396,10 +391,14 @@ def _build_field(
     metadata = (*field_dict['metadata'], *model_metadata)
     attributes = dict(field_dict['attributes'])
 
-    if model_field_info.default is not PydanticUndefined:
-        attributes['default'] = model_field_info.default
-    elif is_nullable(model_type):
-        attributes['default'] = None
+    attributes.pop('default', None)
+    attributes.pop('default_factory', None)
+
+    if not (default_is_inferred_nullable and not is_nullable(model_type)):
+        if default is not PydanticUndefined:
+            attributes['default'] = default
+        elif default_factory is not None:
+            attributes['default_factory'] = default_factory
 
     if attributes['description'] is None and description:
         attributes['description'] = description

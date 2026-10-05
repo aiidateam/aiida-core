@@ -16,11 +16,6 @@ __all__ = ('List',)
 class List(Data, MutableSequence[t.Any]):
     """ORM representation of a list node."""
 
-    def initialize(self):
-        super().initialize()
-        if 'list' not in self.attributes:
-            self.list = []
-
     def __getitem__(self, item: t.Any) -> t.Any:
         return self.list[item]
 

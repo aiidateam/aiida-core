@@ -17,7 +17,7 @@ import pytest
 
 from aiida.common import LinkType, exceptions, timezone
 from aiida.manage import get_manager
-from aiida.orm import CalculationNode, Data, Int, Log, Node, User, WorkflowNode, load_node
+from aiida.orm import CalculationNode, Data, Int, List, Log, Node, UpfData, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -59,6 +59,32 @@ class TestNode:
 
         with node.base.repository.open('folder/file.txt', mode='rb') as handle:
             assert handle.read() == content
+
+    def test_declared_attribute_defaults_are_set(self):
+        """Test defaults declared for node attributes are persisted on initialization."""
+        assert Data().store().base.attributes.get('source') is None
+        assert Int().store().base.attributes.get('value') == 0
+
+    def test_declared_attribute_default_factory_is_set(self):
+        """Test default factories are evaluated independently for each node."""
+        first = List()
+        second = List()
+
+        assert first.base.attributes.get('list') == []
+        assert second.base.attributes.get('list') == []
+
+        first.append('item')
+
+        assert second.list == []
+        first.store()
+        second.store()
+
+        assert first.base.attributes.get('list') == ['item']
+        assert second.base.attributes.get('list') == []
+
+    def test_required_once_stored_nullable_attribute_is_required_in_read_model(self):
+        """Test nullable required-once-stored attributes are still required by the read model."""
+        assert UpfData.models.attributes.model_fields['filename'].is_required()
 
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
@@ -148,6 +174,8 @@ class TestNodeAttributesExtras:
     def setup_method(self):
         """Setup for methods."""
         self.node = Data()
+        # Test the raw attribute mapping independently of typed defaults.
+        self.node.base.attributes.clear()
 
     def test_attributes(self):
         """Test the `Node.base.attributes.all` property."""

@@ -52,7 +52,7 @@ class KpointsData(ArrayData):
     )
     def cell(self) -> np.ndarray | None:
         """The crystal unit cell, with rows representing crystal vectors in Angstroms."""
-        cell = self.base.attributes.get('cell', None)
+        cell = self.base.attributes.get('cell')
         return None if cell is None else np.array(cell)
 
     @cell.setter
@@ -62,7 +62,7 @@ class KpointsData(ArrayData):
     @attribute
     def pbc1(self) -> bool | None:
         """Periodicity in the first lattice vector direction."""
-        return self.base.attributes.get('pbc1', None)
+        return self.base.attributes.get('pbc1')
 
     @pbc1.setter
     def pbc1(self, value: bool) -> None:
@@ -71,7 +71,7 @@ class KpointsData(ArrayData):
     @attribute
     def pbc2(self) -> bool | None:
         """Periodicity in the second lattice vector direction."""
-        return self.base.attributes.get('pbc2', None)
+        return self.base.attributes.get('pbc2')
 
     @pbc2.setter
     def pbc2(self, value: bool) -> None:
@@ -80,7 +80,7 @@ class KpointsData(ArrayData):
     @attribute
     def pbc3(self) -> bool | None:
         """Periodicity in the third lattice vector direction."""
-        return self.base.attributes.get('pbc3', None)
+        return self.base.attributes.get('pbc3')
 
     @pbc3.setter
     def pbc3(self, value: bool) -> None:
@@ -89,7 +89,7 @@ class KpointsData(ArrayData):
     @attribute
     def mesh(self) -> list[int] | None:
         """The mesh of kpoints."""
-        return self.base.attributes.get('mesh', None)
+        return self.base.attributes.get('mesh')
 
     @mesh.setter
     def mesh(self, value: list[int] | None) -> None:
@@ -98,7 +98,7 @@ class KpointsData(ArrayData):
     @attribute
     def offset(self) -> list[float] | None:
         """The offset of the kpoints mesh."""
-        return self.base.attributes.get('offset', None)
+        return self.base.attributes.get('offset')
 
     @offset.setter
     def offset(self, value: list[float] | None) -> None:
@@ -107,7 +107,7 @@ class KpointsData(ArrayData):
     @attribute
     def labels(self) -> list[str] | None:
         """The labels associated with the list of kpoints."""
-        return self.base.attributes.get('labels', None)
+        return self.base.attributes.get('labels')
 
     @labels.setter
     def labels(self, value: list[str] | None) -> None:
@@ -116,7 +116,7 @@ class KpointsData(ArrayData):
     @attribute
     def label_numbers(self) -> list[int] | None:
         """The indices of the labels in the list of kpoints."""
-        return self.base.attributes.get('label_numbers', None)
+        return self.base.attributes.get('label_numbers')
 
     @label_numbers.setter
     def label_numbers(self, value: list[int] | None) -> None:

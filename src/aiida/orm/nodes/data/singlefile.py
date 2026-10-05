@@ -98,7 +98,7 @@ class SinglefileData(Data):
     @attribute(required_once_stored=True)
     def filename(self) -> str | None:
         """The name of the file stored in the repository."""
-        return self.base.attributes.get('filename', None)
+        return self.base.attributes.get('filename')
 
     @filename.setter
     def filename(self, value: str) -> None:

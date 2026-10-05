@@ -92,7 +92,7 @@ class Code(Data, metaclass=abc.ABCMeta):
     )
     def default_calc_job_plugin(self) -> str | None:
         """The entry point name of the default ``CalcJob`` plugin."""
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN)
 
     @default_calc_job_plugin.setter
     def default_calc_job_plugin(self, value: str | None) -> None:
@@ -107,7 +107,7 @@ class Code(Data, metaclass=abc.ABCMeta):
     )
     def use_double_quotes(self) -> bool:
         """Whether the command line invocation of this code should be escaped with double quotes."""
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_USE_DOUBLE_QUOTES)
 
     @use_double_quotes.setter
     def use_double_quotes(self, value: bool) -> None:
@@ -121,7 +121,7 @@ class Code(Data, metaclass=abc.ABCMeta):
     )
     def with_mpi(self) -> bool | None:
         """Whether the command should be run as an MPI program."""
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_WITH_MPI, None)
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_WITH_MPI)
 
     @with_mpi.setter
     def with_mpi(self, value: bool | None) -> None:
@@ -136,7 +136,7 @@ class Code(Data, metaclass=abc.ABCMeta):
     )
     def wrap_cmdline_params(self) -> bool:
         """Whether all command line parameters should be wrapped with double quotes to form a single argument."""
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS)
 
     @wrap_cmdline_params.setter
     def wrap_cmdline_params(self, value: bool) -> None:
@@ -164,7 +164,7 @@ class Code(Data, metaclass=abc.ABCMeta):
         This can include ``bash`` commands or other shell instructions to run before the main command,
         e.g., setting environment variables, loading modules, etc.
         """
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_PREPEND_TEXT, '')
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_PREPEND_TEXT)
 
     @prepend_text.setter
     def prepend_text(self, value: str) -> None:
@@ -192,7 +192,7 @@ class Code(Data, metaclass=abc.ABCMeta):
         This can include ``bash`` commands or other shell instructions to run after the main command,
         e.g., cleaning up temporary files, logging, etc.
         """
-        return self.base.attributes.get(self.KEY_ATTRIBUTE_APPEND_TEXT, '')
+        return self.base.attributes.get(self.KEY_ATTRIBUTE_APPEND_TEXT)
 
     @append_text.setter
     def append_text(self, value: str) -> None:

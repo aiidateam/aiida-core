@@ -114,7 +114,7 @@ class EntryPointData(Data):
     @attribute(readonly=True)
     def attr(self) -> str | None:
         """The attribute of the wrapped entry point."""
-        return t.cast(str | None, self.base.attributes.get(self.KEY_ATTRIBUTES_ATTR, None))
+        return t.cast(str | None, self.base.attributes.get(self.KEY_ATTRIBUTES_ATTR))
 
     @attribute(readonly=True)
     def extras(self) -> list[str]:
@@ -124,7 +124,7 @@ class EntryPointData(Data):
     @attribute(readonly=True)
     def version(self) -> str | None:
         """The version of the package that provided the entry point, if available."""
-        return t.cast(str | None, self.base.attributes.get(self.KEY_ATTRIBUTES_VERSION, None))
+        return t.cast(str | None, self.base.attributes.get(self.KEY_ATTRIBUTES_VERSION))
 
     def load(self) -> t.Any:
         """Load and return the wrapped entry point.

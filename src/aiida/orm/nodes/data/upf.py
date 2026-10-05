@@ -316,7 +316,7 @@ class UpfData(SinglefileData):
     )
     def element(self) -> str | None:
         """The element of the UPF pseudopotential."""
-        return self.base.attributes.get('element', None)
+        return self.base.attributes.get('element')
 
     @attribute(
         readonly=True,
@@ -324,7 +324,7 @@ class UpfData(SinglefileData):
     )
     def md5(self) -> str | None:
         """The MD5 checksum of the UPF pseudopotential file."""
-        return self.base.attributes.get('md5', None)
+        return self.base.attributes.get('md5')
 
     @property
     def md5sum(self) -> str | None:

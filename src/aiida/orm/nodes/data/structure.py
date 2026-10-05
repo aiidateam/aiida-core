@@ -1283,7 +1283,7 @@ class StructureData(Data):
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def pbc1(self) -> bool:
         """Whether periodic in the a direction."""
-        return self.base.attributes.get('pbc1', False)
+        return self.base.attributes.get('pbc1')
 
     @pbc1.setter
     def pbc1(self, value: bool) -> None:
@@ -1293,7 +1293,7 @@ class StructureData(Data):
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def pbc2(self) -> bool:
         """Whether periodic in the b direction."""
-        return self.base.attributes.get('pbc2', False)
+        return self.base.attributes.get('pbc2')
 
     @pbc2.setter
     def pbc2(self, value: bool) -> None:
@@ -1303,7 +1303,7 @@ class StructureData(Data):
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def pbc3(self) -> bool:
         """Whether periodic in the c direction."""
-        return self.base.attributes.get('pbc3', False)
+        return self.base.attributes.get('pbc3')
 
     @pbc3.setter
     def pbc3(self, value: bool) -> None:
@@ -1335,7 +1335,7 @@ class StructureData(Data):
     )
     def kinds(self) -> list[Kind]:
         """The kinds of atoms."""
-        return [Kind(raw=value) for value in self.base.attributes.get('kinds', [])]
+        return [Kind(raw=value) for value in self.base.attributes.get('kinds')]
 
     @kinds.setter
     def kinds(self, value: list[Kind | dict[str, t.Any]]) -> None:
@@ -1358,7 +1358,7 @@ class StructureData(Data):
     )
     def sites(self) -> list[Site]:
         """The atomic sites."""
-        return [Site(raw=value) for value in self.base.attributes.get('sites', [])]
+        return [Site(raw=value) for value in self.base.attributes.get('sites')]
 
     @sites.setter
     def sites(self, value: list[Site | dict[str, t.Any]]) -> None:
@@ -1771,7 +1771,7 @@ class StructureData(Data):
             msg = f'A kind with the same name ({kind.name}) already exists.'
             raise ValueError(msg)
 
-        raw_kinds = self.base.attributes.get('kinds', [])
+        raw_kinds = self.base.attributes.get('kinds')
         raw_kinds.append(new_kind.get_raw())
         self.base.attributes.set('kinds', raw_kinds)
 
@@ -1798,7 +1798,7 @@ class StructureData(Data):
             msg = f"No kind with name '{site.kind_name}', available kinds are: {[kind.name for kind in self.kinds]}"
             raise ValueError(msg)
 
-        raw_sites = self.base.attributes.get('sites', [])
+        raw_sites = self.base.attributes.get('sites')
         raw_sites.append(new_site.get_raw())
         self.base.attributes.set('sites', raw_sites)
 

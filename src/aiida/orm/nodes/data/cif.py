@@ -344,12 +344,12 @@ class CifData(SinglefileData):
     @attribute(readonly=True)
     def formulae(self) -> list[str | None] | None:
         """The formulae contained in the CIF file."""
-        return self.base.attributes.get('formulae', None)
+        return self.base.attributes.get('formulae')
 
     @attribute(readonly=True)
     def spacegroup_numbers(self) -> list[int | None] | None:
         """The space group numbers of the structures."""
-        return self.base.attributes.get('spacegroup_numbers', None)
+        return self.base.attributes.get('spacegroup_numbers')
 
     @attribute(
         readonly=True,
@@ -357,12 +357,12 @@ class CifData(SinglefileData):
     )
     def md5(self) -> str | None:
         """The MD5 checksum of the file contents."""
-        return self.base.attributes.get('md5', None)
+        return self.base.attributes.get('md5')
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=_SCAN_TYPE_DEFAULT))
     def scan_type(self) -> t.Literal['standard', 'flex']:
         """The scan type for parsing with PyCifRW."""
-        return self.base.attributes.get('scan_type', self._SCAN_TYPE_DEFAULT)
+        return self.base.attributes.get('scan_type')
 
     @scan_type.setter
     def scan_type(self, value: t.Literal['standard', 'flex']) -> None:
@@ -374,7 +374,7 @@ class CifData(SinglefileData):
     @attribute(model_field_info=pdt.fields.FieldInfo(default=_PARSE_POLICY_DEFAULT))
     def parse_policy(self) -> t.Literal['eager', 'lazy']:
         """The parse policy for parsing with PyCifRW."""
-        return self.base.attributes.get('parse_policy', self._PARSE_POLICY_DEFAULT)
+        return self.base.attributes.get('parse_policy')
 
     @parse_policy.setter
     def parse_policy(self, value: t.Literal['eager', 'lazy']) -> None:

@@ -14,6 +14,8 @@ import enum
 import typing as t
 from pathlib import Path
 
+import pydantic as pdt
+
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
@@ -189,7 +191,7 @@ class ProcessNode(Sealable, Node):
     @attribute
     def process_label(self) -> str | None:
         """The process label"""
-        return self.base.attributes.get(self.PROCESS_LABEL_KEY, None)
+        return self.base.attributes.get(self.PROCESS_LABEL_KEY)
 
     @process_label.setter
     def process_label(self, label: str) -> None:
@@ -198,7 +200,7 @@ class ProcessNode(Sealable, Node):
     @attribute(model_adapter=EnumStrAdapter(ProcessState))
     def process_state(self) -> ProcessState | None:
         """The process state."""
-        state = self.base.attributes.get(self.PROCESS_STATE_KEY, None)
+        state = self.base.attributes.get(self.PROCESS_STATE_KEY)
 
         if state is None:
             return state
@@ -217,30 +219,23 @@ class ProcessNode(Sealable, Node):
 
         The process status is a generic status message e.g. the reason it might be paused or when it is being killed
         """
-        return self.base.attributes.get(self.PROCESS_STATUS_KEY, None)
+        return self.base.attributes.get(self.PROCESS_STATUS_KEY)
 
     @process_status.setter
     def process_status(self, status: str | None) -> None:
-        if status is None:
-            del self.process_status
-            return None
-
-        if not isinstance(status, str):
+        if status is not None and not isinstance(status, str):
             raise TypeError('process status should be a string')
 
         return self.base.attributes.set(self.PROCESS_STATUS_KEY, status)
 
     @process_status.deleter
     def process_status(self) -> None:
-        try:
-            self.base.attributes.delete(self.PROCESS_STATUS_KEY)
-        except AttributeError:
-            pass
+        self.base.attributes.set(self.PROCESS_STATUS_KEY, None)
 
     @attribute
     def exit_status(self) -> int | None:
         """The exit status of the process."""
-        return self.base.attributes.get(self.EXIT_STATUS_KEY, None)
+        return self.base.attributes.get(self.EXIT_STATUS_KEY)
 
     @exit_status.setter
     def exit_status(self, status: enum.Enum | int | None = None) -> None:
@@ -259,7 +254,7 @@ class ProcessNode(Sealable, Node):
     @attribute
     def exit_message(self) -> str | None:
         """The exit message of the process."""
-        return self.base.attributes.get(self.EXIT_MESSAGE_KEY, None)
+        return self.base.attributes.get(self.EXIT_MESSAGE_KEY)
 
     @exit_message.setter
     def exit_message(self, message: str | None) -> None:
@@ -272,14 +267,14 @@ class ProcessNode(Sealable, Node):
 
         return self.base.attributes.set(self.EXIT_MESSAGE_KEY, message)
 
-    @attribute
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=''))
     def exception(self) -> str | None:
         """The exception of the process or None if the process is not excepted.
 
         If the process is marked as excepted yet there is no exception attribute, an empty string will be returned.
         """
         if self.is_excepted:
-            return self.base.attributes.get(self.EXCEPTION_KEY, '')
+            return self.base.attributes.get(self.EXCEPTION_KEY)
 
         return None
 
@@ -291,10 +286,10 @@ class ProcessNode(Sealable, Node):
 
         return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 
-    @attribute
+    @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def paused(self) -> bool:
         """Whether the process is paused."""
-        return self.base.attributes.get(self.PROCESS_PAUSED_KEY, False)
+        return self.base.attributes.get(self.PROCESS_PAUSED_KEY)
 
     @paused.setter
     def paused(self, paused: bool) -> None:
@@ -302,15 +297,12 @@ class ProcessNode(Sealable, Node):
 
     @paused.deleter
     def paused(self) -> None:
-        try:
-            self.base.attributes.delete(self.PROCESS_PAUSED_KEY)
-        except AttributeError:
-            pass
+        self.base.attributes.set(self.PROCESS_PAUSED_KEY, False)
 
     @attribute
     def checkpoints(self) -> str | None:
         """The checkpoint payload for the process."""
-        return self.base.attributes.get(self.CHECKPOINT_KEY, None)
+        return self.base.attributes.get(self.CHECKPOINT_KEY)
 
     @checkpoints.setter
     def checkpoints(self, checkpoint: str) -> None:
@@ -318,15 +310,12 @@ class ProcessNode(Sealable, Node):
 
     @checkpoints.deleter
     def checkpoints(self) -> None:
-        try:
-            self.base.attributes.delete(self.CHECKPOINT_KEY)
-        except AttributeError:
-            pass
+        self.base.attributes.set(self.CHECKPOINT_KEY, None)
 
     @attribute
     def metadata_inputs(self) -> dict[str, t.Any] | None:
         """The mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
-        return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
+        return self.base.attributes.get(self.METADATA_INPUTS_KEY)
 
     @metadata_inputs.setter
     def metadata_inputs(self, value: dict[str, t.Any]) -> None:

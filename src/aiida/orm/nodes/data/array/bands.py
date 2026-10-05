@@ -220,12 +220,12 @@ class BandsData(KpointsData):
     @attribute
     def array_labels(self) -> list[str] | None:
         """Labels associated with the band arrays."""
-        return self.base.attributes.get('array_labels', None)
+        return self.base.attributes.get('array_labels')
 
     @attribute
     def units(self) -> str | None:
         """Units in which the data in bands were stored."""
-        return self.base.attributes.get('units', None)
+        return self.base.attributes.get('units')
 
     @units.setter
     def units(self, value: str) -> None:

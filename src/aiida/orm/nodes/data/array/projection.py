@@ -37,7 +37,7 @@ class ProjectionData(OrbitalData, ArrayData):
     @attribute(model_adapter=StrUuidAdapter())
     def reference_bandsdata_uuid(self) -> str | None:
         """The UUID of the reference bands data."""
-        return self.base.attributes.get('reference_bandsdata_uuid', None)
+        return self.base.attributes.get('reference_bandsdata_uuid')
 
     @reference_bandsdata_uuid.setter
     def reference_bandsdata_uuid(self, value: str | None) -> None:
@@ -46,7 +46,7 @@ class ProjectionData(OrbitalData, ArrayData):
     @attribute
     def tags(self) -> list[str] | None:
         """The tags associated with the orbitals."""
-        return self.base.attributes.get('tags', None)
+        return self.base.attributes.get('tags')
 
     @tags.setter
     def tags(self, value: list[str] | None) -> None:

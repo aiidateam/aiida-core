@@ -51,7 +51,7 @@ class TrajectoryData(ArrayData):
     @attribute
     def pbc(self) -> tuple[bool, bool, bool] | None:
         """The periodic boundary conditions of the trajectory."""
-        return t.cast(tuple[bool, bool, bool] | None, self.base.attributes.get('pbc', None))
+        return t.cast(tuple[bool, bool, bool] | None, self.base.attributes.get('pbc'))
 
     @pbc.setter
     def pbc(self, value: tuple[bool, bool, bool] | None) -> None:
@@ -384,8 +384,9 @@ class TrajectoryData(ArrayData):
                 )
                 raise ValueError(msg)
 
-        structure = StructureData(cell=cell)
-        structure.set_pbc(self.pbc)
+        structure = StructureData() if cell is None else StructureData(cell=cell)
+        pbc = self.pbc
+        structure.set_pbc(cell is not None if pbc is None else pbc)
 
         if custom_kinds is not None:
             for kind in custom_kinds:

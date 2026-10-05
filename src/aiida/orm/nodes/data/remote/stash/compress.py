@@ -63,8 +63,7 @@ class RemoteStashCompressedData(RemoteStashData):
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def fail_on_missing(self) -> bool:
         """Whether stashing should fail if any files are missing."""
-        # The default is set for backward compatibility.
-        return self.base.attributes.get('fail_on_missing', False)
+        return self.base.attributes.get('fail_on_missing')
 
     @fail_on_missing.setter
     def fail_on_missing(self, value: bool) -> None:

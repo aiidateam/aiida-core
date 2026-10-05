@@ -74,7 +74,7 @@ class OrbitalData(Data):
     )
     def orbitals(self) -> list[Orbital]:
         """The orbitals."""
-        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbitals', []))
+        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbitals'))
         return [_orbital_from_dict(orbital_dict) for orbital_dict in orbital_dicts]
 
     @orbitals.setter
@@ -100,7 +100,7 @@ class OrbitalData(Data):
         :kwargs: attributes than can filter the set of returned orbitals
         :return list_of_outputs: a list of orbitals
         """
-        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbitals', []))
+        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbitals'))
 
         orbital_dicts = [
             orbital_dict

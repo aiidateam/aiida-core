@@ -75,7 +75,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def imported(self) -> bool | None:
         """Whether the calculation job was imported instead of being an actual run."""
-        return self.base.attributes.get(self.IMMIGRATED_KEY, None)
+        return self.base.attributes.get(self.IMMIGRATED_KEY)
 
     @property
     def is_imported(self) -> bool:
@@ -91,7 +91,7 @@ class CalcJobNode(CalculationNode):
         defined in `aiida.common.datastructures.CalcJobState` and can be used to query for calculation jobs in specific
         active states.
         """
-        state = self.base.attributes.get(self.CALC_JOB_STATE_KEY, None)
+        state = self.base.attributes.get(self.CALC_JOB_STATE_KEY)
 
         try:
             state = CalcJobState(state)
@@ -110,15 +110,12 @@ class CalcJobNode(CalculationNode):
 
     @state.deleter
     def state(self) -> None:
-        try:
-            self.base.attributes.delete(self.CALC_JOB_STATE_KEY)
-        except AttributeError:
-            pass
+        self.base.attributes.set(self.CALC_JOB_STATE_KEY, None)
 
     @attribute
     def remote_workdir(self) -> str | None:
         """The path to the remote (on cluster) scratch folder of the calculation."""
-        return self.base.attributes.get(self.REMOTE_WORKDIR_KEY, None)
+        return self.base.attributes.get(self.REMOTE_WORKDIR_KEY)
 
     @remote_workdir.setter
     def remote_workdir(self, remote_workdir: str) -> None:
@@ -127,7 +124,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def retrieve_list(self) -> Sequence[str | tuple[str, str, int]] | None:
         """The list of files/directories to be retrieved on the cluster after the calculation has completed."""
-        return self.base.attributes.get(self.RETRIEVE_LIST_KEY, None)
+        return self.base.attributes.get(self.RETRIEVE_LIST_KEY)
 
     @retrieve_list.setter
     def retrieve_list(self, retrieve_list: Sequence[str | tuple[str, str, int]]) -> None:
@@ -137,7 +134,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def retrieve_temporary_list(self) -> Sequence[str | tuple[str, str, int]] | None:
         """The list of files to be retrieved from the cluster which will be available during parsing."""
-        return self.base.attributes.get(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
+        return self.base.attributes.get(self.RETRIEVE_TEMPORARY_LIST_KEY)
 
     @retrieve_temporary_list.setter
     def retrieve_temporary_list(self, retrieve_temporary_list: Sequence[str | tuple[str, str, int]]) -> None:
@@ -147,7 +144,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def job_id(self) -> str | None:
         """The job id that was assigned to the calculation by the scheduler."""
-        return self.base.attributes.get(self.SCHEDULER_JOB_ID_KEY, None)
+        return self.base.attributes.get(self.SCHEDULER_JOB_ID_KEY)
 
     @job_id.setter
     def job_id(self, job_id: int | str) -> None:
@@ -156,7 +153,7 @@ class CalcJobNode(CalculationNode):
     @attribute(model_adapter=EnumStrAdapter(JobState))
     def scheduler_state(self) -> JobState | None:
         """The state of the calculation according to the cluster scheduler."""
-        state = self.base.attributes.get(self.SCHEDULER_STATE_KEY, None)
+        state = self.base.attributes.get(self.SCHEDULER_STATE_KEY)
 
         if state is None:
             return None
@@ -180,7 +177,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def scheduler_lastchecktime(self) -> datetime.datetime | None:
         """The time of the last update of the scheduler state by the daemon or None if it was never set."""
-        value = self.base.attributes.get(self.SCHEDULER_LAST_CHECK_TIME_KEY, None)
+        value = self.base.attributes.get(self.SCHEDULER_LAST_CHECK_TIME_KEY)
 
         if value is not None:
             value = datetime.datetime.fromisoformat(value)
@@ -197,7 +194,7 @@ class CalcJobNode(CalculationNode):
 
         The scheduler is polled for the detailed job info after the job is completed and ready to be retrieved.
         """
-        return self.base.attributes.get(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
+        return self.base.attributes.get(self.SCHEDULER_DETAILED_JOB_INFO_KEY)
 
     @detailed_job_info.setter
     def detailed_job_info(self, detailed_job_info: dict | None) -> None:
@@ -213,7 +210,7 @@ class CalcJobNode(CalculationNode):
         as running. Please use :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.detailed_job_info`
         instead.
         """
-        last_job_info_dictserialized = self.base.attributes.get(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
+        last_job_info_dictserialized = self.base.attributes.get(self.SCHEDULER_LAST_JOB_INFO_KEY)
 
         if last_job_info_dictserialized is not None:
             job_info = JobInfo.load_from_dict(last_job_info_dictserialized)
@@ -232,7 +229,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def parser_name(self) -> str | None:
         """Return the name of the parser used for this calculation."""
-        return self.base.attributes.get(self.PARSER_NAME_KEY, None)
+        return self.base.attributes.get(self.PARSER_NAME_KEY)
 
     @parser_name.setter
     def parser_name(self, parser_name: str | None) -> None:
@@ -241,7 +238,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def scheduler_stdout(self) -> str | None:
         """Return the standard output of the scheduler for this calculation."""
-        return self.base.attributes.get(self.SCHEDULER_STDOUT_KEY, None)
+        return self.base.attributes.get(self.SCHEDULER_STDOUT_KEY)
 
     @scheduler_stdout.setter
     def scheduler_stdout(self, scheduler_stdout: str | None) -> None:
@@ -250,7 +247,7 @@ class CalcJobNode(CalculationNode):
     @attribute
     def scheduler_stderr(self) -> str | None:
         """Return the standard error of the scheduler for this calculation."""
-        return self.base.attributes.get(self.SCHEDULER_STDERR_KEY, None)
+        return self.base.attributes.get(self.SCHEDULER_STDERR_KEY)
 
     @scheduler_stderr.setter
     def scheduler_stderr(self, scheduler_stderr: str | None) -> None:

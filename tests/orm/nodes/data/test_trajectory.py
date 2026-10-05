@@ -290,7 +290,7 @@ class TestTrajectory:
         """Test old `TrajectoryData` that do not have the `pbc` attribute."""
         trajectory = TrajectoryData()
         trajectory.set_trajectory(**trajectory_data)
-        trajectory.base.attributes.delete('pbc')  # Emulate an old TrajectoryData without pbc
+        trajectory.base.attributes.set('pbc', None)
 
         assert trajectory.pbc is None
         structure = trajectory.get_step_structure(0)

@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib.metadata
 import typing as t
 
+import pydantic as pdt
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -69,12 +70,12 @@ class PickledData(SinglefileData):
     @attribute(readonly=True)
     def pickler_version(self) -> str | None:
         """The version of the package whose function can unpickle this object."""
-        return t.cast(str | None, self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_VERSION, None))
+        return t.cast(str | None, self.base.attributes.get(self.KEY_ATTRIBUTES_UNPICKLER_VERSION))
 
-    @attribute
+    @attribute(model_field_info=pdt.fields.FieldInfo(default_factory=dict))
     def pickler_kwargs(self) -> dict[str, t.Any]:
         """The keyword arguments forwarded to the pickler."""
-        return t.cast(dict[str, t.Any], self.base.attributes.get(self.KEY_ATTRIBUTES_PICKLER_KWARGS, {}))
+        return t.cast(dict[str, t.Any], self.base.attributes.get(self.KEY_ATTRIBUTES_PICKLER_KWARGS))
 
     @pickler_kwargs.setter
     def pickler_kwargs(self, value: dict[str, t.Any]) -> None:

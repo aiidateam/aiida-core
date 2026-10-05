@@ -101,7 +101,7 @@ class Data(Node):
 
         .. note:: some limitations for setting the data source exist, see ``_validate`` method.
         """
-        return self.base.attributes.get('source', None)
+        return self.base.attributes.get('source')
 
     @source.setter
     def source(self, source: dict | None) -> None:

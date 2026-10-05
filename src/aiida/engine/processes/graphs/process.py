@@ -20,6 +20,7 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.functions import FunctionProcess
+from aiida.engine.processes.graphs.bindings import validate_bound_tasks
 from aiida.engine.processes.graphs.handlers import TaskWorkChain, launch_under_namespace
 from aiida.engine.processes.graphs.run import GraphRun, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
@@ -121,6 +122,7 @@ class GraphProcess(Process):
 
     _GRAPH = 'graph'
     _GRAPH_INPUTS = 'graph_inputs'
+    _GRAPH_BINDINGS = 'graph_bindings'
 
     @classmethod
     def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
@@ -131,6 +133,13 @@ class GraphProcess(Process):
             dynamic=True,
             required=False,
             help='The inputs the graph declares, which are passed on to the tasks that take them.',
+        )
+        spec.input_namespace(
+            cls._GRAPH_BINDINGS,
+            dynamic=True,
+            required=False,
+            non_db=True,
+            help='Captured task values, checkpointed separately from the declaration.',
         )
         spec.outputs.dynamic = True
         spec.exit_code(400, 'ERROR_TASK_FAILED', message='The task `{task}` did not finish successfully.')
@@ -145,15 +154,32 @@ class GraphProcess(Process):
         """Check raw graph inputs after engine parsing but before provenance is stored."""
         graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
         supplied = dict(self.inputs.get(self._GRAPH_INPUTS, {}))
-        stored = graph.serialize_inputs(supplied)
-        self._input_sources = AttributesFrozendict({**self._input_sources, self._GRAPH_INPUTS: stored})
+        bindings = dict(self.inputs.get(self._GRAPH_BINDINGS, {}))
+        stored = graph.serialize_inputs({**bindings, **supplied})
+        validate_bound_tasks(graph, stored)
+        public = {name: value for name, value in stored.items() if name not in bindings}
+        captured = {name: stored[name] for name in bindings}
+        self._input_sources = AttributesFrozendict(
+            {**self._input_sources, self._GRAPH_INPUTS: public, self._GRAPH_BINDINGS: captured}
+        )
+        prepared = graph.input_spec().prepare(stored)
         self._parsed_inputs = AttributesFrozendict(
-            {**self.inputs, self._GRAPH_INPUTS: graph.input_spec().prepare(stored)}
+            {
+                **self.inputs,
+                self._GRAPH_INPUTS: {name: value for name, value in prepared.items() if name not in bindings},
+                self._GRAPH_BINDINGS: {name: prepared[name] for name in bindings},
+            }
         )
         return super()._create_and_setup_db_record()
 
     @classmethod
-    def launch_inputs(cls, body: GraphSpec, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
+    def launch_inputs(
+        cls,
+        body: GraphSpec,
+        inputs: dict[str, t.Any],
+        *,
+        bindings: dict[str, t.Any] | None = None,
+    ) -> dict[str, t.Any]:
         """Return the inputs with which to launch a graph: the declaration, and the values to run it on.
 
         The two travel side by side, so one declaration serves every run. The values are serialized here because
@@ -161,11 +187,33 @@ class GraphProcess(Process):
 
         :param body: the graph to run.
         :param inputs: the values for the inputs the graph declares.
+        :param bindings: captured values for private prepared boundary inputs.
         """
-        return {
+        captured = bindings or {}
+        stored = body.serialize_inputs({**captured, **inputs})
+        validate_bound_tasks(body, stored)
+        private = set()
+        for name in captured:
+            for task_name, path in body.inputs[name]:
+                placed = body.task(task_name)
+                if not isinstance(placed, ProcessTask):
+                    continue
+                port: t.Any = placed.spec.inputs
+                for segment in path.split('.'):
+                    if getattr(port, 'non_db', False) or getattr(port, 'is_metadata', False):
+                        private.add(name)
+                    if not isinstance(port, PortNamespace) or segment not in port:
+                        break
+                    port = port[segment]
+                if getattr(port, 'non_db', False) or getattr(port, 'is_metadata', False):
+                    private.add(name)
+        launch = {
             cls._GRAPH: Dict(dict=body.to_dict()),
-            cls._GRAPH_INPUTS: body.serialize_inputs(inputs),
+            cls._GRAPH_INPUTS: {name: value for name, value in stored.items() if name not in private},
         }
+        if private:
+            launch[cls._GRAPH_BINDINGS] = {name: stored[name] for name in private}
+        return launch
 
     @property
     @override
@@ -180,7 +228,12 @@ class GraphProcess(Process):
             graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
             self._run = GraphRun.from_dict(
                 graph=graph,
-                given=graph.serialize_inputs(dict(self._input_sources.get(self._GRAPH_INPUTS, {}))),
+                given=graph.serialize_inputs(
+                    {
+                        **dict(self._input_sources.get(self._GRAPH_BINDINGS, {})),
+                        **dict(self._input_sources.get(self._GRAPH_INPUTS, {})),
+                    }
+                ),
                 data=self._saved,
             )
 
@@ -190,6 +243,7 @@ class GraphProcess(Process):
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         super().save_instance_state(out_state, save_context)
         out_state['run'] = self.run_state.to_dict()
+        out_state['graph_bindings'] = self._encode_input_args(dict(self._input_sources.get(self._GRAPH_BINDINGS, {})))
         out_state['graph_input_sources'] = self._encode_input_args(
             dict(self._input_sources.get(self._GRAPH_INPUTS, {}))
         )
@@ -199,6 +253,13 @@ class GraphProcess(Process):
         super().load_instance_state(saved_state, load_context)
         self._run = None
         self._saved = dict(saved_state.get('run', {}))
+        if 'graph_bindings' in saved_state:
+            self._input_sources = AttributesFrozendict(
+                {
+                    **self._input_sources,
+                    self._GRAPH_BINDINGS: self._decode_input_args(saved_state['graph_bindings']),
+                }
+            )
         if 'graph_input_sources' in saved_state:
             self._input_sources = AttributesFrozendict(
                 {

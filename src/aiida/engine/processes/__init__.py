@@ -105,6 +105,7 @@ __all__ = (
     'subgraph',
     'task',
     'task_execution',
+    'task_from_builder',
     'task_from_calcjob',
     'task_from_workchain',
     'task_node',

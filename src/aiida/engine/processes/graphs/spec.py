@@ -468,6 +468,14 @@ class ProcessTask(GraphTask):
     KIND: t.ClassVar[TaskKind] = 'process'
 
     spec: TaskSpec
+    validate_inputs: bool = False
+    """Check complete launch inputs before dispatch, including prepared bindings."""
+
+    def __post_init__(self) -> None:
+        candidate: object = self.validate_inputs
+        if not isinstance(candidate, bool):
+            msg = 'Task input-validation mode must be a boolean.'
+            raise TypeError(msg)
 
     def accepts(self, port: str) -> bool:
         return has_port(self.spec.inputs, port)
@@ -486,11 +494,19 @@ class ProcessTask(GraphTask):
         return has_namespace(self.spec.outputs, port)
 
     def to_dict(self) -> dict[str, t.Any]:
-        return {**super().to_dict(), 'spec': self.spec.to_dict()}
+        data = {**super().to_dict(), 'spec': self.spec.to_dict()}
+        if self.validate_inputs:
+            data['validate_inputs'] = True
+        return data
 
     @classmethod
     def _from_payload(cls, data: dict[str, t.Any]) -> ProcessTask:
-        return cls(name=data['name'], inputs=data.get('inputs', {}), spec=TaskSpec.from_dict(data['spec']))
+        return cls(
+            name=data['name'],
+            inputs=data.get('inputs', {}),
+            spec=TaskSpec.from_dict(data['spec']),
+            validate_inputs=data.get('validate_inputs', False),
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -517,6 +533,7 @@ class MapTask(ProcessTask):
             inputs=data.get('inputs', {}),
             spec=TaskSpec.from_dict(data['spec']),
             item_port=data['item_port'],
+            validate_inputs=data.get('validate_inputs', False),
         )
 
 
@@ -893,7 +910,7 @@ class GraphSpec:
         """
         prepared = self.prepare_inputs(inputs)
         serialized = {
-            name: value if isinstance(value, Data) else self.serializer_for_input(name)(value)
+            name: value if value is None or isinstance(value, Data) else self.serializer_for_input(name)(value)
             for name, value in prepared.items()
         }
         namespace = self.input_spec()
@@ -963,6 +980,8 @@ class GraphSpec:
         if isinstance(holder, PortNamespace):
             return _into(holder)
 
+        if isinstance(holder, InputPort) and (holder.non_db or holder.is_metadata):
+            return holder.serialize
         return getattr(holder, 'serializer', None)
 
     @staticmethod

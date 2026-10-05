@@ -78,9 +78,9 @@ Use a workflow to return existing nodes rather than copying them or bypassing pr
 Opaque objects should be declared as ORM nodes such as :class:`~aiida.orm.Dict` or :class:`~aiida.orm.JsonableData`.
 Arbitrary dataclasses, ``TypedDict``, ``NamedTuple`` and Pydantic models do not declare namespaces.
 
-Source graph bodies currently pass a namespace as a whole, as in ``relax(given=given)``.
-Selecting ``given.structure`` or ``given['structure']`` inside a graph body, or constructing a mapping of symbolic values there, is not supported by the source parser.
-Select fields or assemble values inside registered tasks instead.
+Source graph bodies can pass a namespace as a whole, as in ``relax(given=given)``, or populate a declared input namespace with a dictionary of literals and references, as in ``relax(given={'structure': produced.structure})``.
+Dictionary-valued ports are leaves: a literal dictionary replaces the whole value, and symbolic references must supply the whole port rather than its individual dictionary entries.
+Selecting ``given.structure`` or ``given['structure']`` from a graph input inside the body is not supported; select such fields inside registered tasks instead.
 
 A function that carries no annotations, because it came from somewhere else, is described where it is placed:
 
@@ -109,6 +109,64 @@ The following example uses the explicit registration helper with execution-flavo
     :code: python
 
 This is how a graph meets the rest of AiiDA: a ``CalcJob``, a ``WorkChain``, a :class:`~aiida.calculations.shell.ShellJob` and a task written as a function are all tasks, and nothing about them has to be rewritten to be placed in one.
+
+Prepared process builders
+-------------------------
+
+Use :func:`~aiida.engine.task_from_builder` when an upstream plugin has already prepared a ``ProcessBuilder``.
+Call ``get_builder_from_protocol`` in ordinary Python, with concrete arguments, before graph launch.
+Preparation is not a calculation task: selected stored pseudos become ordinary inputs of the child process, not outputs of a preparation calculation.
+The adapter snapshots containers without cloning ORM nodes and preserves the upstream process ports.
+An incomplete builder is allowed; placement or graph launch can supply missing required inputs.
+
+For a source graph, register ordinary process handles at module scope, then bind prepared handles by their placement names using :meth:`~aiida.engine.processes.graphs.interface.GraphHandle.bind_tasks`:
+
+.. code-block:: python
+
+    from aiida.engine import graph_source, submit, task_from_builder, task_from_workchain
+    from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+
+    pw = task_from_workchain(PwBaseWorkChain)
+
+    @graph_source
+    def scf_nscf():
+        scf = pw()
+        nscf = pw(pw={'parent_folder': scf.remote_folder})
+        return nscf.remote_folder
+
+    # Outside the graph body, with concrete code and structure:
+    scf_builder = PwBaseWorkChain.get_builder_from_protocol(
+        code=code, structure=structure, overrides=scf_overrides,
+    )
+    nscf_builder = PwBaseWorkChain.get_builder_from_protocol(
+        code=code, structure=structure, overrides=nscf_overrides,
+    )
+    scf_builder.clean_workdir = False
+    nscf_builder.clean_workdir = False
+    launch = scf_nscf.bind_tasks(
+        pw=task_from_builder(scf_builder),
+        pw_2=task_from_builder(nscf_builder),
+    )
+    node = submit(launch)
+
+Binding keys are declaration placement names (``pw``, then ``pw_2`` for repeated calls), not assignment-variable names.
+The returned graph handle is independent; neither the original graph nor a shared registered task is mutated.
+Execution graphs can also place a prepared handle directly, including a handle captured by a local graph function.
+
+Explicit placement leaves replace bound leaves; unrelated leaves in the same namespace remain.
+Replacing ``pw.parameters`` replaces that whole port rather than merging namelists.
+Optional omissions, upstream defaults, labels and scheduler options retain their upstream semantics.
+Metadata is checkpointed separately and does not become database input links.
+Final validation combines prepared values, launch values and checked task-output references; missing required ports retain structural error records and port help.
+
+The declaration contains private boundary routes, never builders or bound node identities.
+Carry the full mapping returned by ``launch.get_launch_inputs()`` alongside a round-tripped declaration when submitting ``GraphProcess`` directly; the mapping contains the scientific inputs and separate non-database bindings needed by a fresh worker.
+Preparation itself has no process node, and protocol choice is not automatically recorded as a graph input.
+
+Replacing a prepared input does not rerun the protocol builder.
+In particular, changing a structure can invalidate selected pseudos, cutoffs or other derived choices; prepare again when those dependencies change.
+A structure produced by an upstream task cannot be inspected by submission-time protocol preparation: use a workflow that prepares and launches the process at runtime instead.
+For remote-folder chains, disable upstream work-directory cleanup explicitly; the adapter never changes ``clean_workdir`` itself.
 
 .. _topics:workflows:graphs:writing:
 

@@ -21,9 +21,11 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from aiida.engine.processes.graphs.build_execution import ProcessHandle
 from aiida.engine.processes.graphs.build_execution import task as build_task
 from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_annotations, namespace_for_outputs
 from aiida.engine.processes.graphs.interface import GraphHandle
+from aiida.engine.processes.graphs.run import place
 from aiida.engine.processes.graphs.source_bindings import resolve_binding, task_spec_for
 from aiida.engine.processes.graphs.spec import (
     CONDITION_PORT,
@@ -37,7 +39,7 @@ from aiida.engine.processes.graphs.spec import (
     SubgraphTask,
 )
 from aiida.engine.processes.port_model import fields_of
-from aiida.engine.processes.ports import infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import PortNamespace, infer_valid_type_from_type_annotation
 
 # The source decorators are imported explicitly from this module, since ``graph``
 # would otherwise shadow the graph-builder decorator exported by ``aiida.engine``.
@@ -339,11 +341,11 @@ def _wire(
     state: _LoweringState,
     instance: str,
     port: str,
-    value: _Reference | int | float | str | bool,
+    value: _Reference | int | float | str | bool | None,
     given: dict[str, t.Any],
 ) -> None:
     if not isinstance(value, _Reference):
-        given[port] = value
+        place(given, port, value)
     elif value.task is None:
         state.inputs[value.port].append((instance, port))
     else:
@@ -435,6 +437,8 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     if name in state.names:
         _reject(state, expression, f'call target {name!r} is shadowed')
     target = resolve_binding(_GRAPH_FUNCTIONS[state.key], name)
+    if isinstance(target, ProcessHandle) and target.is_prepared:
+        _reject(state, expression, 'inject prepared handles with GraphHandle.bind_tasks instead of module globals')
     spec = task_spec_for(target)
     if spec is None and not isinstance(target, SourceGraphHandle):
         _reject(state, expression, f'unregistered call {name!r}')
@@ -463,15 +467,42 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         assert port is not None
         if port in given or port not in inputs:
             _reject(state, keyword, f'duplicate or unknown input {port!r} of {name!r}')
-        value = _lower_value(state, keyword.value)
-        _wire(state, instance, port, value, given)
+        port_spec = inputs.get(port) if isinstance(inputs, PortNamespace) else None
+        _lower_input(state, instance, port, keyword.value, port_spec, given)
     state.tasks.append(make_task(given))
     return _Reference(instance, next(iter(outputs)) if len(outputs) == 1 else '')
 
 
+def _lower_input(
+    state: _LoweringState, instance: str, path: str, expression: ast.expr, port: t.Any, given: dict[str, t.Any]
+) -> None:
+    """Expand dictionary syntax only where the process declares a namespace."""
+    if isinstance(expression, ast.Dict) and isinstance(port, PortNamespace):
+        place(given, path, {})
+        seen = set()
+        for key, value in zip(expression.keys, expression.values, strict=True):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                _reject(state, expression, 'namespace keys must be string literals without unpacking')
+            name = key.value
+            if name in seen or (name not in port and not port.dynamic):
+                _reject(state, expression, f'duplicate or unknown namespace input {name!r}')
+            seen.add(name)
+            _lower_input(state, instance, f'{path}.{name}', value, port.get(name), given)
+        return
+    if isinstance(expression, ast.Dict):
+        try:
+            value = ast.literal_eval(expression)
+        except (ValueError, TypeError) as exception:
+            msg = 'Dictionary-valued ports require a literal value or a reference to the whole port.'
+            raise UnsupportedSyntax(msg) from exception
+        place(given, path, value)
+        return
+    _wire(state, instance, path, _lower_value(state, expression), given)
+
+
 def _lower_value(
     state: _LoweringState, expression: ast.expr, *, allow_call: bool = False
-) -> _Reference | int | float | str | bool:
+) -> _Reference | int | float | str | bool | None:
     if isinstance(expression, ast.Attribute):
         parent = _lower_value(state, expression.value, allow_call=allow_call)
         if not isinstance(parent, _Reference) or parent.task is None:
@@ -484,7 +515,9 @@ def _lower_value(
         if expression.id not in state.names:
             _reject(state, expression, f'unbound name {expression.id!r}')
         return state.names[expression.id]
-    if isinstance(expression, ast.Constant) and isinstance(expression.value, (int, float, str, bool)):
+    if isinstance(expression, ast.Constant) and (
+        expression.value is None or isinstance(expression.value, (int, float, str, bool))
+    ):
         return expression.value
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression)

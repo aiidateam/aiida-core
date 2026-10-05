@@ -17,6 +17,7 @@ import inspect
 import typing as t
 from collections.abc import Callable
 
+from aiida.engine.processes.graphs.bindings import LAUNCH_BINDINGS, bind_declaration
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.spec import GraphSpec
 
@@ -90,4 +91,37 @@ class GraphHandle(abc.ABC):
         # still rejects duplicates and unknown arguments; nested build calls keep
         # the strict binding used by __call__.
         bound = inspect.signature(self._function).bind_partial(*args, **kwargs)
-        return GraphProcess.launch_inputs(self.build(), dict(bound.arguments))
+        bindings: dict[str, t.Any] = {}
+        token = LAUNCH_BINDINGS.set(bindings)
+        try:
+            body = self.build()
+        finally:
+            LAUNCH_BINDINGS.reset(token)
+        return GraphProcess.launch_inputs(body, dict(bound.arguments), bindings=bindings)
+
+    def bind_tasks(self, **tasks: t.Any) -> GraphHandle:
+        """Return an independently bound graph, keyed by task placement name.
+
+        Source bodies continue to call ordinary registered process handles. This method
+        supplies run-specific prepared handles without mutating those registrations.
+
+        :param tasks: prepared process handles, keyed by names in the declaration.
+        :return: a new launchable handle whose bindings are separate from its declaration.
+        """
+        return BoundGraphHandle(self, tasks)
+
+
+class BoundGraphHandle(GraphHandle):
+    """A declaration and its independently owned prepared task handles."""
+
+    def __init__(self, graph: GraphHandle, tasks: dict[str, t.Any]) -> None:
+        super().__init__(graph._function, graph.identifier)
+        self._graph = graph
+        self._tasks = dict(tasks)
+        for name, handle in tasks.items():
+            if not getattr(handle, 'is_prepared', False):
+                msg = f'Binding `{name}` requires a prepared process handle.'
+                raise TypeError(msg)
+
+    def build(self) -> GraphSpec:
+        return bind_declaration(self._graph.build(), self._tasks)

@@ -20,6 +20,7 @@ from inspect import get_annotations
 
 from aiida.engine.processes.functions import ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import PortNamespace
+from aiida.engine.processes.graphs.bindings import bind_declaration, copy_containers, merge_inputs
 from aiida.engine.processes.graphs.handlers import TaskHandler, handled, launch_under_namespace
 from aiida.engine.processes.graphs.inputs import dump_port, namespace_for_function, namespace_for_outputs
 from aiida.engine.processes.graphs.interface import ACTIVE_BUILDER, GraphHandle
@@ -392,6 +393,7 @@ class GraphBuilder:
 
     def __init__(self, parameters: t.Sequence[str] = (), parent: GraphBuilder | None = None) -> None:
         self._tasks: list[GraphTask] = []
+        self.bound_handles: dict[str, ProcessHandle] = {}
         self._dependencies: list[Dependency] = []
         self._inputs: dict[str, list[tuple[str, str]]] = {name: [] for name in parameters}
         self._used: Counter[str] = Counter()
@@ -454,6 +456,8 @@ class GraphBuilder:
         :raises ValueError: if more than one input is marked with :func:`each`.
         """
         name = self._unique_name(handle.task_spec.identifier)
+        if isinstance(handle, ProcessHandle) and handle.is_prepared:
+            self.bound_handles[name] = handle
         item_ports = [key for key, argument in arguments.items() if isinstance(argument, Each)]
         values = {
             key: argument.collection if isinstance(argument, Each) else argument for key, argument in arguments.items()
@@ -819,13 +823,14 @@ class ExecutionGraphHandle(GraphHandle):
         }
         output_hint = infer_valid_type_from_type_annotation(annotations.get('return'))
         output_hints = dict.fromkeys(result.outputs, output_hint) if len(result.outputs) == 1 and output_hint else {}
-        return replace(
+        result = replace(
             result,
             output_namespace=dump_port(output_namespace, defaults=False) if output_namespace is not None else None,
             input_typehints=input_hints,
             output_typehints=output_hints,
             input_namespace=dump_port(namespace_for_function(self._function)),
         )
+        return bind_declaration(result, builder.bound_handles) if builder.bound_handles else result
 
 
 def graph(function: t.Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
@@ -1211,7 +1216,11 @@ class ProcessHandle:
     a signature to bind them to, since a process takes its inputs by name.
     """
 
-    def __init__(self, process_class: type[Process], spec: TaskSpec) -> None:
+    def __init__(
+        self, process_class: type[Process], spec: TaskSpec, bound_inputs: t.Mapping[str, t.Any] | None = None
+    ) -> None:
+        self.is_prepared = bound_inputs is not None
+        self._bound_inputs = copy_containers(bound_inputs or {})
         self._process_class = process_class
         self.task_spec = spec
         self.__name__ = process_class.__name__
@@ -1228,6 +1237,19 @@ class ProcessHandle:
             raise TypeError(msg)
 
         return builder.add_task(self, inputs)
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
+        """Return prepared inputs merged with explicit launch inputs by namespace.
+
+        :param inputs: input values replacing or completing the captured builder.
+        :return: independent containers for upstream process validation and launch.
+        """
+        return merge_inputs(self._bound_inputs, inputs, self.process_class.spec().inputs)
+
+    @property
+    def bound_inputs(self) -> dict[str, t.Any]:
+        """Return a container snapshot of the prepared inputs, retaining node identities."""
+        return copy_containers(self._bound_inputs)
 
     @property
     def process_class(self) -> type[Process]:

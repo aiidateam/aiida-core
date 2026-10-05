@@ -201,6 +201,12 @@ This allows one to pass any normal value that one would also be able to pass to 
 Automatic input serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Inputs at ports explicitly declaring Python types are adapted before validation.
+For example, a port with ``valid_type=str`` receives a Python string even when an ``orm.Str`` node is supplied.
+An existing node is preserved for the database input link; Python runtime values are serialized separately for provenance.
+Ports accepting ORM types, including mixed node/value unions already accepting the supplied node, retain their nodes at runtime.
+Metadata and ``non_db`` ports use the same adaptation rules without creating provenance input links.
+
 Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a process.
 Doing this manually can be cumbersome, so you can define a function when defining the process specification, which does the conversion automatically.
 This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is not ``None`` *and* not already an AiiDA type.

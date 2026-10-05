@@ -113,11 +113,13 @@ class ProcessBuilderNamespace(MutableMapping):
                     raise AttributeError(msg) from exception
                 port = None
             else:
-                value = port.serialize(value)  # type: ignore[union-attr]
-                validation_error = port.validate(value)  # type: ignore[union-attr]
+                prepared = port.prepare(value)  # type: ignore[union-attr]
+                validation_error = port.validate(prepared)  # type: ignore[union-attr]
                 if validation_error:
                     msg = f'invalid attribute value {validation_error.message}'
                     raise ValueError(msg)
+                if not isinstance(port, PortNamespace) and not isinstance(value, Node):
+                    value = prepared
 
             # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
             # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become

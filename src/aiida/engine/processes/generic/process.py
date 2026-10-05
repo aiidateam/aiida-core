@@ -791,7 +791,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         # dictionaries, so we don't use ``copy.deepcopy`` (which might seem like the obvious choice) as that will also
         # create a clone of the values, which we don't want.
         raw_inputs = recursively_copy_dictionaries(dict(self._raw_inputs)) if self._raw_inputs else {}
-        self._parsed_inputs = self.spec().inputs.pre_process(raw_inputs)
+        self._parsed_inputs = self._pre_process_inputs(raw_inputs)
         result = self.spec().inputs.validate(self._parsed_inputs)
 
         if result is not None:
@@ -801,6 +801,10 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         self._uuid = uuid.uuid4()
         if self._pid is None:
             self._pid = self._uuid
+
+    def _pre_process_inputs(self, inputs: dict[str, t.Any]) -> AttributesFrozendict:
+        """Prepare runtime inputs before validation, applying declared defaults."""
+        return self.spec().inputs.pre_process(inputs)
 
     @super_check
     def on_exit_running(self) -> None:

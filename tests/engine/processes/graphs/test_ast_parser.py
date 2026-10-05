@@ -19,6 +19,7 @@ from aiida.engine import (
     task_execution,
     task_source,
 )
+from aiida.engine.processes.graphs import build_source as source_authoring
 from aiida.engine.processes.graphs.build_execution import graph as build_graph
 from aiida.engine.processes.graphs.build_execution import task as build_task
 from aiida.engine.processes.graphs.build_source import (
@@ -287,6 +288,86 @@ def test_format_graph_shows_wiring_and_nested_control_flow():
     map_view = format_graph(build_from_source(transform))
     assert 'each_1 [map over value](value=values, y=y)' in map_view
     assert 'return result=each_1.result' in map_view
+
+
+def source_registry_task(value: int) -> int:
+    return value
+
+
+def source_registry_graph(value: int) -> int:
+    return source_registry_task(value=value)
+
+
+@graph
+def registry_namespace_build(given: SingleBranchNamespace, condition: bool) -> int:
+    if condition:
+        result = sum_two(x=given.pair.left, y=given.pair.right)
+    else:
+        result = sum_two(x=given.pair.left, y=1)
+    return result
+
+
+def test_registry_is_owned_by_source_decorators_only(monkeypatch):
+    registry = source_authoring._SourceRegistry()
+    monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', registry)
+    graph(source_registry_graph)
+    task(source_registry_task)
+    definition = registry.get_graph(source_authoring._key(source_registry_graph))
+    assert definition.function is source_registry_graph
+    assert definition.hints == {'value': int, 'return': int}
+    assert definition.filename == __file__
+    assert 'return source_registry_task(value=value)' in definition.source
+    with pytest.raises(UnsupportedSyntax, match='is not registered'):
+        registry.get_graph(source_authoring._key(source_registry_task))
+    with pytest.raises(UnsupportedSyntax, match='Duplicate registered function'):
+        graph(source_registry_graph)
+    # Execution authoring does not depend on the source registry being available.
+    monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', object())
+    assert isinstance(build_graph(source_registry_graph), ExecutionGraphHandle)
+    assert build_task(source_registry_task).task_spec is not None
+
+
+def test_failed_registry_capture_does_not_leave_a_partial_definition():
+    registry = source_authoring._SourceRegistry()
+    for _ in range(2):
+        with pytest.raises(NameError, match='missing_orm'):
+            registry.register(unresolved_annotation, kind='graph')
+    with pytest.raises(UnsupportedSyntax, match='is not registered'):
+        registry.get_graph(source_authoring._key(unresolved_annotation))
+
+
+@pytest.mark.parametrize('handle', [registry_namespace_build, unbound])
+def test_lowering_owns_definition_after_registry_lookup(monkeypatch, handle):
+    registry = source_authoring._SOURCE_REGISTRY
+
+    class EntryOnlyRegistry:
+        def get_graph(self, key):
+            definition = registry.get_graph(key)
+            monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', object())
+            return definition
+
+    monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', EntryOnlyRegistry())
+    if handle is unbound:
+        with pytest.raises(UnsupportedSyntax, match='unbound name') as caught:
+            handle.build()
+        assert f'{__file__}:' in str(caught.value)
+    else:
+        spec = handle.build()
+        assert GraphSpec.from_dict(spec.to_dict()) == spec
+
+
+def test_nested_graph_retrieves_each_definition_at_lowering_entry(monkeypatch):
+    registry = source_authoring._SOURCE_REGISTRY
+    get_graph = registry.get_graph
+    lookups = []
+
+    def lookup(key):
+        lookups.append(key)
+        return get_graph(key)
+
+    monkeypatch.setattr(registry, 'get_graph', lookup)
+    outer.build()
+    assert lookups == [source_authoring._key(outer._function), source_authoring._key(chain._function)]
 
 
 def test_graph_decorators_are_exported_with_explicit_names():

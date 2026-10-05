@@ -8,7 +8,9 @@
 ###########################################################################
 """Build a GraphSpec from restricted graph source without executing graph bodies.
 
-The decorators capture definitions; source-based building never executes graph bodies.
+Only the source decorators populate this module's registry; execution authoring does not use it.
+Lowering retrieves each graph definition once and passes it through the parser without further registry reads.
+Source-based building never executes graph bodies.
 """
 
 from __future__ import annotations
@@ -18,8 +20,9 @@ import inspect
 import textwrap
 import typing as t
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from types import MappingProxyType
 
 from aiida.engine.processes.graphs.build_execution import ProcessHandle
 from aiida.engine.processes.graphs.build_execution import task as build_task
@@ -50,38 +53,60 @@ class UnsupportedSyntax(ValueError):  # noqa: N818 - keep the prototype's except
     """A registered graph contains syntax the source parser cannot represent."""
 
 
-# Keys are module:name. Sources are captured at decoration time, not looked up later.
-SOURCES: dict[str, str] = {}
-
-
 @dataclass(frozen=True)
-class _SourceLocation:
+class _SourceDefinition:
+    """A source decorator's captured definition, owned independently of registry lookups."""
+
+    key: str
+    kind: t.Literal['graph', 'task']
+    function: Callable[..., t.Any]
+    source: str
     filename: str
     first_line: int
+    hints: Mapping[str, t.Any]
 
 
-_LOCATIONS: dict[str, _SourceLocation] = {}
-_TASKS: dict[str, t.Any] = {}
-_GRAPHS: set[str] = set()
-_GRAPH_HINTS: dict[str, dict[str, t.Any]] = {}
-_GRAPH_FUNCTIONS: dict[str, Callable[..., t.Any]] = {}
+class _SourceRegistry:
+    """Own definitions registered exclusively by ``graph_source`` and ``task_source``."""
+
+    def __init__(self) -> None:
+        self._definitions: dict[str, _SourceDefinition] = {}
+
+    def register(self, function: Callable[..., t.Any], *, kind: t.Literal['graph', 'task']) -> None:
+        """Capture a definition atomically, without executing its body."""
+        key = _key(function)
+        if key in self._definitions:
+            msg = f'Duplicate registered function {key}'
+            raise UnsupportedSyntax(msg)
+        lines, first_line = inspect.getsourcelines(function)
+        definition = _SourceDefinition(
+            key=key,
+            kind=kind,
+            function=function,
+            source=textwrap.dedent(''.join(lines)),
+            filename=inspect.getsourcefile(function) or '<unknown>',
+            first_line=first_line,
+            hints=MappingProxyType(t.get_type_hints(function, include_extras=True)),
+        )
+        self._definitions[key] = definition
+
+    def get_graph(self, key: str) -> _SourceDefinition:
+        """Retrieve a source graph once, at the entry to its lowering pipeline."""
+        definition = self._definitions.get(key)
+        if definition is None or definition.kind != 'graph':
+            msg = f'Graph {key} is not registered'
+            raise UnsupportedSyntax(msg)
+        return definition
+
+
+_SOURCE_REGISTRY = _SourceRegistry()
+"""The source authoring module owns the single production registry instance."""
 
 
 def _key(function: Callable[..., t.Any]) -> str:
     if function.__qualname__ != function.__name__:
         raise UnsupportedSyntax('Registered functions must be defined at module scope')
     return f'{function.__module__}:{function.__name__}'
-
-
-def _register(function: Callable[..., t.Any]) -> str:
-    key = _key(function)
-    if key in SOURCES:
-        msg = f'Duplicate registered function {key}'
-        raise UnsupportedSyntax(msg)
-    lines, first_line = inspect.getsourcelines(function)
-    SOURCES[key] = textwrap.dedent(''.join(lines))
-    _LOCATIONS[key] = _SourceLocation(inspect.getsourcefile(function) or '<unknown>', first_line)
-    return key
 
 
 class SourceGraphHandle(GraphHandle):
@@ -99,10 +124,8 @@ def task(function: Callable[..., t.Any]) -> t.Any:
     except (NameError, AttributeError) as exception:
         msg = f'Cannot resolve type hints for task `{function.__qualname__}`: {exception}'
         raise TypeError(msg) from exception
-    key = _register(function)
-    decorated = build_task(function)
-    _TASKS[key] = decorated
-    return decorated
+    _SOURCE_REGISTRY.register(function, kind='task')
+    return build_task(function)
 
 
 def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
@@ -135,10 +158,7 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
     """
 
     def decorator(function: Callable[..., t.Any]) -> SourceGraphHandle:
-        key = _register(function)
-        _GRAPHS.add(key)
-        _GRAPH_FUNCTIONS[key] = function
-        _GRAPH_HINTS[key] = t.get_type_hints(function, include_extras=True)
+        _SOURCE_REGISTRY.register(function, kind='graph')
         return SourceGraphHandle(function, identifier=identifier)
 
     if function is not None:
@@ -155,7 +175,7 @@ class _Reference:
 
 @dataclass
 class _LoweringState:
-    key: str
+    definition: _SourceDefinition
     stack: tuple[str, ...]
     tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl | MapGraphControl] = field(
         default_factory=list
@@ -165,17 +185,21 @@ class _LoweringState:
     names: dict[str, _Reference] = field(default_factory=dict)
     used: Counter[str] = field(default_factory=Counter)
 
+    @property
+    def key(self) -> str:
+        return self.definition.key
 
-def _parse_function(key: str) -> ast.FunctionDef:
-    module = ast.parse(SOURCES[key])
+
+def _parse_function(definition: _SourceDefinition) -> ast.FunctionDef:
+    module = ast.parse(definition.source)
     if len(module.body) != 1 or not isinstance(module.body[0], ast.FunctionDef):
-        msg = f'{key}: expected one function definition'
+        msg = f'{definition.key}: expected one function definition'
         raise UnsupportedSyntax(msg)
     return module.body[0]
 
 
 def _lower_function(state: _LoweringState) -> GraphSpec:
-    function = _parse_function(state.key)
+    function = _parse_function(state.definition)
     if function.args.posonlyargs or function.args.kwonlyargs or function.args.vararg or function.args.kwarg:
         msg = f'{state.key}: only ordinary positional parameters are supported'
         raise UnsupportedSyntax(msg)
@@ -204,7 +228,7 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
     result = statements[-1].value
     if result is None:
         _reject(state, statements[-1], 'return must name a task or graph input')
-    hints = _GRAPH_HINTS[state.key]
+    hints = state.definition.hints
     outputs = _lower_return(state, result, hints.get('return'))
     output_hint = infer_valid_type_from_type_annotation(hints.get('return'))
     output_namespace = namespace_for_outputs(hints.get('return'))
@@ -303,7 +327,7 @@ def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
     if not any('.' in path for path in state.inputs):
         return None
     names = tuple(name for name in state.inputs if '.' not in name)
-    return dump_port(namespace_for_annotations(_GRAPH_HINTS[state.key], names))
+    return dump_port(namespace_for_annotations(state.definition.hints, names))
 
 
 def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
@@ -337,7 +361,7 @@ def _region(state: _LoweringState, statements: list[ast.stmt], *, item: str | No
         and id(node) not in callees
     }
     names = reads | ({item} if item is not None else set())
-    child = _LoweringState(state.key, state.stack)
+    child = _LoweringState(state.definition, state.stack)
     for name in sorted(names):
         if name != item and name not in state.names:
             _reject(state, statements[0], f'unbound name {name!r}')
@@ -473,7 +497,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     name = expression.func.id
     if name in state.names:
         _reject(state, expression, f'call target {name!r} is shadowed')
-    target = resolve_binding(_GRAPH_FUNCTIONS[state.key], name)
+    target = resolve_binding(state.definition.function, name)
     if isinstance(target, ProcessHandle) and target.is_prepared:
         _reject(state, expression, 'inject prepared handles with GraphHandle.bind_tasks instead of module globals')
     spec = task_spec_for(target)
@@ -547,7 +571,7 @@ def _lower_value(
         path = f'{parent.port}.{expression.attr}' if parent.port else expression.attr
         if parent.task is None:
             root, *segments = path.split('.')
-            annotation = _GRAPH_HINTS[state.key].get(root)
+            annotation = state.definition.hints.get(root)
             for segment in segments:
                 fields = fields_of(without_marks(annotation))
                 selected = next((field for field in fields or () if field.name == segment), None)
@@ -572,8 +596,8 @@ def _lower_value(
 
 def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
     """Point at the offending node in the original file, not just the extracted function."""
-    source = SOURCES[state.key].splitlines()
-    location = _LOCATIONS[state.key]
+    source = state.definition.source.splitlines()
+    location = state.definition
     line = getattr(node, 'lineno', None)
     column = getattr(node, 'col_offset', None)
     if line is None or column is None or line > len(source):
@@ -592,13 +616,11 @@ def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
 
 
 def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
-    if key not in _GRAPHS:
-        msg = f'Graph {key} is not registered'
-        raise UnsupportedSyntax(msg)
+    definition = _SOURCE_REGISTRY.get_graph(key)
     if key in stack:
         msg = f'Recursive graph call: {" -> ".join((*stack, key))}'
         raise UnsupportedSyntax(msg)
-    return _lower_function(_LoweringState(key, (*stack, key)))
+    return _lower_function(_LoweringState(definition, (*stack, key)))
 
 
 def build_from_source(function: Callable[..., t.Any]) -> GraphSpec:

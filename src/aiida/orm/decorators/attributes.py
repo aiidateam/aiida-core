@@ -36,7 +36,7 @@ __all__ = (
 
 @dataclasses.dataclass(frozen=True)
 class NodeAttributeConfig(BaseFieldConfig):
-    """Unresolved configuration supplied to the `attribute` decorator."""
+    """Unresolved configuration of a Node attribute."""
 
 
 @dataclasses.dataclass(frozen=True)

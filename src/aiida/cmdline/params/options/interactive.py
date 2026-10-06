@@ -65,19 +65,13 @@ class InteractiveOption(ConditionalOption):
         :param prompt_fn: callable(ctx) -> Bool, returns True if the option should be prompted for in interactive mode.
         :param contextual_default: An optional callback function to get a default which is passed the click context.
         """
+        prompt = kwargs.get('prompt')
+        if isinstance(prompt, str):
+            kwargs['prompt'] = click.style(prompt, fg=self.PROMPT_COLOR)
+
         super().__init__(param_decls=param_decls, **kwargs)
         self._prompt_fn = prompt_fn
         self._contextual_default = contextual_default
-
-    @property
-    def prompt(self) -> str | None:
-        """Return a colorized version of the prompt text."""
-        return click.style(self._prompt, fg=self.PROMPT_COLOR)
-
-    @prompt.setter
-    def prompt(self, value: str | None) -> None:
-        """Set the prompt text."""
-        self._prompt = value
 
     def prompt_for_value(self, ctx: click.Context) -> t.Any:
         """Prompt for a value printing a generic help message if this is the first invocation of the command.
@@ -94,12 +88,16 @@ class InteractiveOption(ConditionalOption):
         if self._prompt_fn is not None and self._prompt_fn(ctx) is False:
             return None
 
+        self._print_prompt_help(ctx)
+
+        return super().prompt_for_value(ctx)
+
+    def _print_prompt_help(self, ctx: click.Context) -> None:
+        """Print the shared interactive prompt help once per command."""
         if not hasattr(ctx, 'prompt_loop_info_printed'):
             echo.echo_report(f'enter {self.CHARACTER_PROMPT_HELP} for help.')
             echo.echo_report(f'enter {self.CHARACTER_IGNORE_DEFAULT} to ignore the default and set no value.')
             ctx.prompt_loop_info_printed = True  # type: ignore[attr-defined]
-
-        return super().prompt_for_value(ctx)
 
     def process_value(self, ctx: click.Context, value: t.Any) -> t.Any:
         """Intercept any special characters before calling parent class if in interactive mode.
@@ -135,7 +133,7 @@ class InteractiveOption(ConditionalOption):
         except click.BadParameter as exception:
             if source is click.core.ParameterSource.PROMPT and self.is_interactive(ctx):
                 if isinstance(exception, click.MissingParameter):
-                    click.echo(f'Error: {self._prompt} has to be specified')
+                    click.echo(f'Error: {self.prompt} has to be specified')
                 else:
                     click.echo(f'Error: {exception}')
                 return self.prompt_for_value(ctx)
@@ -191,6 +189,52 @@ class InteractiveOption(ConditionalOption):
         :return: ``True`` if being run interactively, ``False`` otherwise.
         """
         return not ctx.params.get('non_interactive', False)
+
+
+class _BooleanPromptType(click.ParamType):
+    """Accept the explicit boolean prompt values and InteractiveOption control characters."""
+
+    name = 'True/False'
+
+    def convert(
+        self,
+        value: t.Any,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> str:
+        if isinstance(value, str) and value in (
+            'True',
+            'False',
+            InteractiveOption.CHARACTER_PROMPT_HELP,
+            InteractiveOption.CHARACTER_IGNORE_DEFAULT,
+        ):
+            return value
+
+        self.fail('enter True or False', param, ctx)
+
+
+_BOOLEAN_PROMPT_TYPE = _BooleanPromptType()
+
+
+class BooleanInteractiveOption(InteractiveOption):
+    """Interactive boolean flag with explicit ``True``/``False`` prompt choices."""
+
+    def prompt_for_value(self, ctx: click.Context) -> t.Any:
+        if not self.is_interactive(ctx):
+            return self.get_default(ctx)
+
+        if self._prompt_fn is not None and self._prompt_fn(ctx) is False:
+            return None
+
+        self._print_prompt_help(ctx)
+        prompt = f'{self.prompt} (True/False)' if self.prompt else 'True/False'
+        default = 'True' if self.get_default(ctx) else 'False'
+        value = click.prompt(prompt, type=_BOOLEAN_PROMPT_TYPE, default=default)
+
+        if value in (self.CHARACTER_PROMPT_HELP, self.CHARACTER_IGNORE_DEFAULT):
+            return value
+
+        return value == 'True'
 
 
 class TemplateInteractiveOption(InteractiveOption):

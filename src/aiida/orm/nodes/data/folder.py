@@ -17,10 +17,13 @@ import typing as t
 
 from typing_extensions import Self
 
+from aiida.orm.cli import CliFieldInfo
+from aiida.orm.decorators.repo import RepoSourceCliInput, directory_to_repo_files, repo_source
 from aiida.orm.nodes.data.data import Data
 
 if t.TYPE_CHECKING:
     from aiida.common.typing import FilePath
+    from aiida.orm.nodes.repository import NodeRepository
     from aiida.repository import File
 
 
@@ -39,6 +42,24 @@ class FolderData(Data):
         instance = cls(**kwargs)
         instance.base.repository.put_object_from_tree(str(tree))
         return instance
+
+    @repo_source(
+        cli_inputs=(
+            RepoSourceCliInput(
+                name='tree',
+                annotation=pathlib.Path,
+                mapper=directory_to_repo_files,
+                cli_field_info=CliFieldInfo(
+                    prompt='Directory tree to import',
+                    short_name='-d',
+                ),
+                required=True,
+            ),
+        ),
+    )
+    def tree(self) -> NodeRepository:
+        """The repository tree stored in this node."""
+        return self.base.repository
 
     def list_objects(self, path: str | None = None) -> list[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.

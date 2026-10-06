@@ -66,6 +66,20 @@ class EntityCliCreateSpec:
 
     def validate(self, values: dict[str, t.Any]) -> EntityModel:
         """Convert CLI values and validate them through the entity create model."""
+        return self.entity_type.models.create(**self._model_values(values))
+
+    def collect_interactive(
+        self,
+        ctx: t.Any,
+        values: dict[str, t.Any],
+        *,
+        non_interactive: bool,
+    ) -> dict[str, t.Any]:
+        """Return the supplied values unchanged."""
+        return values
+
+    def _model_values(self, values: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Convert CLI values to input values for the create model."""
         model_values: dict[str, t.Any] = {}
 
         cli_fields = {cli_field.name: cli_field.field for cli_field in self._iter_fields()}
@@ -79,7 +93,7 @@ class EntityCliCreateSpec:
             value = self._cli_to_model_value(field, value)  # noqa: PLW2901
             self._set_model_value(model_values, name, field, value)
 
-        return self.entity_type.models.create(**model_values)
+        return model_values
 
     def serialize(
         self,

@@ -58,7 +58,7 @@ class CodeBuilder:
         if self._get_and_count('code_type', used) == self.CodeType.STORE_AND_UPLOAD:
             code = PortableCode.from_directory(
                 filepath_executable=self._get_and_count('code_rel_path', used),
-                filepath_files=pathlib.Path(self._get_and_count('code_folder', used)),
+                directory=pathlib.Path(self._get_and_count('code_folder', used)),
             )
         else:
             code = InstalledCode(

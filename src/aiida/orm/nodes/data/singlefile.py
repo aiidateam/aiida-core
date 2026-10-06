@@ -20,10 +20,61 @@ from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.typing import FilePath
+from aiida.orm.cli import CliFieldInfo
 from aiida.orm.decorators import attribute
+from aiida.orm.decorators.repo import RepoFiles, RepoSourceCliInput, file_to_repo_files, repo_source
 from aiida.orm.nodes.data.data import Data
 
 __all__ = ('SinglefileData',)
+
+
+def _singlefile_to_repo_files(filepath: pathlib.Path, context: t.Mapping[str, t.Any]) -> RepoFiles:
+    """Map a local file to the path selected for its repository entry."""
+    attributes = context.get('attributes') or {}
+    filename = attributes.get('filename') or filepath.name or SinglefileData.DEFAULT_FILENAME
+    return file_to_repo_files(filepath, context, destination=filename)
+
+
+def _singlefile_string_to_repo_files(
+    value: tuple[str, str],
+    context: t.Mapping[str, t.Any],
+) -> RepoFiles:
+    """Map inline text to a repository file."""
+    filename, content = value
+    attributes = context.get('attributes') or {}
+    filename = attributes.get('filename') or filename or SinglefileData.DEFAULT_FILENAME
+    content_bytes = content.encode('utf-8')
+
+    def opener() -> t.BinaryIO:
+        return io.BytesIO(content_bytes)
+
+    return {filename: opener}
+
+
+def _collect_singlefile_cli_input() -> dict[str, t.Any]:
+    """Interactively choose a file or inline string as SinglefileData content."""
+    import click
+
+    source = click.prompt(
+        'Singlefile input',
+        type=click.Choice(('file', 'string')),
+        default='file',
+    )
+
+    if source == 'file':
+        filepath = click.prompt(
+            'File to store',
+            type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=pathlib.Path),
+        )
+        return {'filepath': filepath}
+
+    filename = click.prompt(
+        'File name',
+        type=str,
+        default=SinglefileData.DEFAULT_FILENAME,
+    )
+    content = click.prompt('File content', type=str, default='', show_default=False)
+    return {'string': (filename, content)}
 
 
 class SinglefileData(Data):
@@ -95,7 +146,14 @@ class SinglefileData(Data):
         instance.set_file(handle, filename=filename)
         return instance
 
-    @attribute(required_once_stored=True)
+    @attribute(
+        required_once_stored=True,
+        cli_field_info=CliFieldInfo(
+            prompt=False,
+            help='Optional. Defaults to the input file name, or `file.txt` if no name is available.',
+            priority=1,
+        ),
+    )
     def filename(self) -> str | None:
         """The name of the file stored in the repository."""
         return self.base.attributes.get('filename')
@@ -103,6 +161,41 @@ class SinglefileData(Data):
     @filename.setter
     def filename(self, value: str) -> None:
         self.base.attributes.set('filename', value)
+
+    @repo_source(
+        cli_inputs=(
+            RepoSourceCliInput(
+                name='string',
+                annotation=str,
+                nargs=2,
+                mapper=_singlefile_string_to_repo_files,
+                cli_field_info=CliFieldInfo(
+                    prompt=False,
+                    help='Provide inline content as NAME and a string. `--filename` will override the name.',
+                    short_name='-s',
+                ),
+            ),
+            RepoSourceCliInput(
+                name='filepath',
+                annotation=pathlib.Path,
+                mapper=_singlefile_to_repo_files,
+                cli_field_info=CliFieldInfo(
+                    prompt=False,
+                    help='Use a local file as the source content.',
+                    short_name='-f',
+                ),
+            ),
+        ),
+        min_files=1,
+        max_files=1,
+        interactive_collector=_collect_singlefile_cli_input,
+    )
+    def singlefile(self) -> pathlib.PurePath | None:
+        """The path of the file stored in the node repository."""
+        if self.filename is None:
+            return None
+
+        return pathlib.PurePath(self.filename)
 
     @property
     def content(self) -> bytes:

@@ -11,7 +11,7 @@
 This plugin should be used for executables that are not already installed on the target computer, but instead are
 available on the machine where AiiDA is running. The plugin assumes that the code is self-contained by a single
 directory containing all the necessary files, including a main executable. When constructing a ``PortableCode``, passing
-the absolute filepath as ``filepath_files`` will make sure that all the files contained within are uploaded to AiiDA's
+the absolute filepath as ``directory`` will make sure that all the files contained within are uploaded to AiiDA's
 storage. The ``filepath_executable`` should indicate the filename of the executable within that directory. Each time a
 :class:`aiida.engine.CalcJob` is run using a ``PortableCode``, the uploaded files will be automatically copied to the
 working directory on the selected computer and the executable will be run there.
@@ -31,11 +31,13 @@ from aiida.common.lang import type_check
 from aiida.common.typing import FilePath
 from aiida.orm.cli import CliFieldInfo
 from aiida.orm.decorators.attributes import attribute
+from aiida.orm.decorators.repo import RepoSourceCliInput, directory_to_repo_files, repo_source
 from aiida.orm.models.adapters import PathStrAdapter
 from aiida.orm.nodes.data.code import Code
 
 if t.TYPE_CHECKING:
     from aiida.orm.computers import Computer
+    from aiida.orm.nodes.repository import NodeRepository
 
 __all__ = ('PortableCode',)
 
@@ -51,7 +53,7 @@ class PortableCode(Code):
     def from_directory(
         cls,
         filepath_executable: FilePath,
-        filepath_files: FilePath,
+        directory: FilePath,
         **kwargs: t.Any,
     ) -> Self:
         """Construct a portable code from a directory containing the code files.
@@ -62,18 +64,18 @@ class PortableCode(Code):
             ``base.repository`` attribute of the instance.
 
         :param filepath_executable: The relative filepath of the executable within the directory of uploaded files.
-        :param filepath_files: The filepath to the directory containing all the files of the code.
+        :param directory: The filepath to the directory containing all the files of the code.
         """
-        type_check(filepath_files, (pathlib.PurePath, str))
+        type_check(directory, (pathlib.PurePath, str))
 
-        filepath_files_path = pathlib.Path(filepath_files)
+        directory_path = pathlib.Path(directory)
 
-        if not filepath_files_path.exists():
-            msg = f'The filepath `{filepath_files}` does not exist.'
+        if not directory_path.exists():
+            msg = f'The filepath `{directory}` does not exist.'
             raise ValueError(msg)
 
-        if not filepath_files_path.is_dir():
-            msg = f'The filepath `{filepath_files}` is not a directory.'
+        if not directory_path.is_dir():
+            msg = f'The filepath `{directory}` is not a directory.'
             raise ValueError(msg)
 
         node = cls(
@@ -82,7 +84,7 @@ class PortableCode(Code):
             },
             **kwargs,
         )
-        node.base.repository.put_object_from_tree(str(filepath_files_path))
+        node.base.repository.put_object_from_tree(str(directory_path))
 
         return node
 
@@ -105,6 +107,26 @@ class PortableCode(Code):
             raise ValueError('The `filepath_executable` should not be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, str(value))
+
+    @repo_source(
+        cli_inputs=(
+            RepoSourceCliInput(
+                name='directory',
+                annotation=pathlib.Path,
+                mapper=directory_to_repo_files,
+                cli_field_info=CliFieldInfo(
+                    prompt='Directory containing the code files',
+                    short_name='-d',
+                    priority=2,
+                ),
+                required=True,
+            ),
+        ),
+        min_files=1,
+    )
+    def directory(self) -> NodeRepository:
+        """The repository containing the files for this portable code."""
+        return self.base.repository
 
     @property
     def full_label(self) -> str:
@@ -229,7 +251,7 @@ class PortableCode(Code):
         }
 
         code_data = type(self).cli_spec.serialize(self, context=context)
-        code_data['filepath_files'] = self._export_filepath_files_from_repo(target)
+        code_data['directory'] = self._export_filepath_files_from_repo(target)
 
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
 

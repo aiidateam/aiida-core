@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+import io
+import json
+import pathlib
 import typing as t
 from collections.abc import Mapping, Sequence
 
@@ -17,12 +20,121 @@ import numpy as np
 import pydantic as pdt
 from typing_extensions import Self
 
+from aiida.orm.cli import CliAdapter, CliFieldInfo
+from aiida.orm.decorators.repo import RepoFiles, RepoSourceCliInput, repo_source
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.data import Data
 
 __all__ = ('ArrayData',)
 
 _ArrayLike = Sequence[t.Any] | np.ndarray
+
+
+class _InlineArrayCliAdapter(CliAdapter[tuple[str, str], tuple[str, np.ndarray]]):
+    """Parse a named JSON array supplied to the CLI."""
+
+    def to_model(self, value: tuple[str, str]) -> tuple[str, np.ndarray]:
+        name, serialized = value
+
+        try:
+            parsed = json.loads(serialized)
+        except json.JSONDecodeError as exception:
+            msg = f'array values must be valid JSON: {exception}'
+            raise ValueError(msg) from exception
+
+        if not isinstance(parsed, list):
+            raise ValueError('array values must be a JSON array')
+
+        array = np.asarray(parsed)
+        ArrayData._validate_array_name(name)
+
+        return name, array
+
+    def to_cli(self, value: tuple[str, np.ndarray]) -> tuple[str, str]:
+        name, array = value
+        return name, json.dumps(array.tolist())
+
+
+def _inline_array_to_repo_files(value: tuple[str, np.ndarray], _context: Mapping[str, t.Any]) -> RepoFiles:
+    """Serialize one named array as a repository .npy file."""
+    name, array = value
+    handle = io.BytesIO()
+    np.save(handle, array, allow_pickle=False)
+    content = handle.getvalue()
+    return {f'{name}.npy': _open_array_content(content)}
+
+
+def _array_file_to_repo_files(filepath: pathlib.Path, _context: Mapping[str, t.Any]) -> RepoFiles:
+    """Map one local .npy file to a root-level repository entry."""
+    if not filepath.is_file():
+        msg = f'`{filepath}` is not a file'
+        raise ValueError(msg)
+
+    return {filepath.name: _open_array_file(filepath)}
+
+
+def _open_array_content(content: bytes) -> t.Callable[[], t.BinaryIO]:
+    """Return an opener for serialized NumPy array data."""
+
+    def opener() -> t.BinaryIO:
+        return io.BytesIO(content)
+
+    return opener
+
+
+def _open_array_file(filepath: pathlib.Path) -> t.Callable[[], t.BinaryIO]:
+    """Return an opener for a local .npy file."""
+
+    def opener() -> t.BinaryIO:
+        return filepath.open('rb')
+
+    return opener
+
+
+def _validate_array_repo_files(files: Mapping[str, t.Callable[[], t.BinaryIO | None]]) -> None:
+    """Validate the repository paths accepted by ArrayData."""
+    if not files:
+        raise ValueError('ArrayData requires at least one array')
+
+    for filepath in files:
+        if '/' in filepath or not filepath.endswith('.npy'):
+            msg = f'ArrayData only accepts root-level .npy files, got `{filepath}`'
+            raise ValueError(msg)
+
+        ArrayData._validate_array_name(filepath.removesuffix('.npy'))
+
+
+def _collect_array_cli_inputs() -> dict[str, t.Any]:
+    """Interactively collect arrays from files and inline JSON values."""
+    import click
+
+    arrays: list[tuple[str, str]] = []
+    files: list[pathlib.Path] = []
+
+    while True:
+        source = click.prompt(
+            'Add an array input',
+            type=click.Choice(('file', 'array', 'done')),
+            default='array',
+        )
+
+        if source == 'done':
+            break
+
+        if source == 'file':
+            files.append(
+                click.prompt(
+                    'Path to .npy file',
+                    type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=pathlib.Path),
+                )
+            )
+            continue
+
+        name = click.prompt('Array name', type=str)
+        values = click.prompt('Array values (JSON)', type=str)
+        arrays.append((name, values))
+
+    return {'array': tuple(arrays), 'filepath': tuple(files)}
 
 
 class ArrayData(Data):
@@ -87,7 +199,37 @@ class ArrayData(Data):
         super().initialize()
         self._cached_arrays: dict[str, np.ndarray] = {}
 
-    @property
+    @repo_source(
+        cli_inputs=(
+            RepoSourceCliInput(
+                name='array',
+                adapter=_InlineArrayCliAdapter(),
+                annotation=str,
+                mapper=_inline_array_to_repo_files,
+                cli_field_info=CliFieldInfo(
+                    prompt=False,
+                    help='Provide inline array NAME and JSON values.',
+                    short_name='-a',
+                ),
+                multiple=True,
+                nargs=2,
+            ),
+            RepoSourceCliInput(
+                name='filepath',
+                annotation=pathlib.Path,
+                mapper=_array_file_to_repo_files,
+                cli_field_info=CliFieldInfo(
+                    help='Provide a path to a .npy file.',
+                    prompt=False,
+                    short_name='-f',
+                ),
+                multiple=True,
+            ),
+        ),
+        min_files=1,
+        validator=_validate_array_repo_files,
+        interactive_collector=_collect_array_cli_inputs,
+    )
     def arrays(self) -> dict[str, np.ndarray]:
         """Return all arrays stored in the node."""
         return {name: self.get_array(name) for name in self.get_arraynames()}
@@ -233,7 +375,8 @@ class ArrayData(Data):
             name[len(self.array_prefix) :] for name in self.base.attributes.keys() if name.startswith(self.array_prefix)
         ]
 
-    def _validate_array_name(self, name: str) -> None:
+    @staticmethod
+    def _validate_array_name(name: str) -> None:
         """Validate the array name.
 
         :param name: The name of the array.

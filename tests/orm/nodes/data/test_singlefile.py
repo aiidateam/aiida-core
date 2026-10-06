@@ -74,6 +74,49 @@ def test_create_model_with_file_without_attributes(check_singlefile_content):
     )
 
 
+def test_cli_repo_source(tmp_path, check_singlefile_content):
+    """Test creating a SinglefileData through its CLI creation specification."""
+    content = b'cli single-file content'
+    filepath = tmp_path / 'input.txt'
+    filepath.write_bytes(content)
+
+    model = SinglefileData.cli_spec.validate({'filepath': filepath})
+    node = model.to_entity()
+
+    assert node.singlefile == pathlib.PurePath('input.txt')
+    check_singlefile_content(node, content, 'input.txt', open_mode='rb')
+
+
+def test_cli_repo_source_custom_filename(tmp_path):
+    """Test that the optional filename CLI attribute renames the repository entry."""
+    filepath = tmp_path / 'input.txt'
+    filepath.write_bytes(b'content')
+
+    filename_parameter = next(
+        parameter for parameter in SinglefileData.cli_spec.parameters() if parameter.name == 'filename'
+    )
+    assert not filename_parameter.required
+    assert filename_parameter.prompt is False
+    assert 'Optional.' in filename_parameter.help
+
+    model = SinglefileData.cli_spec.validate({'filepath': filepath, 'filename': 'custom.txt'})
+    node = model.to_entity()
+
+    assert node.filename == 'custom.txt'
+    assert node.base.repository.list_object_names() == ['custom.txt']
+
+
+def test_cli_repo_source_rejects_multiple_files():
+    """Test that a SinglefileData source rejects a files mapping with multiple entries."""
+    with pytest.raises(ValueError, match='at most 1 repository file'):
+        SinglefileData.models.create(
+            files={
+                'first.txt': lambda: io.BytesIO(b'first'),
+                'second.txt': lambda: io.BytesIO(b'second'),
+            }
+        ).to_entity()
+
+
 def test_reload_singlefile_data(check_singlefile_content_with_store, check_singlefile_content):
     """Test writing and reloading a `SinglefileData` instance."""
     content_original = 'some text ABCDE'

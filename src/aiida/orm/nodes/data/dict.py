@@ -48,6 +48,7 @@ class Dict(Data):
     """
 
     _attributes_model_config = pdt.ConfigDict(extra='allow')
+    _cli_expose_extra_attributes = True
 
     def __getitem__(self, key: str) -> t.Any:
         try:

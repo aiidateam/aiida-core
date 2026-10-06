@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_group
+from aiida.cmdline.commands import cmd_data, cmd_group
 from aiida.cmdline.commands.cmd_data import (
     cmd_array,
     cmd_bands,
@@ -187,6 +187,16 @@ class DummyVerdiDataListable:
 class TestVerdiData:
     """Testing reachability of the verdi data subcommands."""
 
+    def test_create_help(self, run_cli_command):
+        """Test the entry-point-driven data create group lists concrete data types."""
+        result = run_cli_command(cmd_data.data_create, ['--help'])
+
+        assert 'core.array' in result.output
+        assert 'core.folder' in result.output
+        assert 'core.singlefile' in result.output
+        assert not any(line.lstrip().startswith('core.code ') for line in result.output.splitlines())
+        assert 'core.base' not in result.output
+
     def test_reachable(self):
         """Testing reachability of the following commands:
         verdi data core.array
@@ -211,6 +221,231 @@ class TestVerdiData:
         for sub_cmd in subcommands:
             output = sp.check_output(['verdi', 'data', sub_cmd, '--help'])
             assert b'Usage:' in output, f'Sub-command verdi data {sub_cmd} --help failed.'
+
+
+class TestVerdiDataCreate:
+    """Test creating nodes using ``verdi data create``."""
+
+    def test_create_array(self, aiida_profile_clean, run_cli_command):
+        """Test inline arrays are available through the generic data create command."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.array', '--non-interactive', '-a', 'from_cli', '[1, 2, 3]'],
+        )
+
+        assert 'Created ArrayData<' in result.output
+        node = orm.QueryBuilder().append(ArrayData).one()[0]
+        assert np.array_equal(node.get_array('from_cli'), np.array([1, 2, 3]))
+
+    @pytest.mark.parametrize(
+        ('answer', 'expected'),
+        (
+            ('True', True),
+            ('False', False),
+            ('', False),
+        ),
+    )
+    def test_create_bool_interactive(self, aiida_profile_clean, run_cli_command, answer, expected):
+        """Test Bool values are prompted as True/False with False as the default."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.bool', '--label', 'test-bool', '--description', ''],
+            user_input=f'{answer}\n',
+        )
+
+        assert 'Value (True/False) [False]:' in result.output
+        assert '[y/N]' not in result.output
+        node = orm.QueryBuilder().append(orm.Bool).one()[0]
+        assert node.value is expected
+
+    def test_create_array_rejects_scalar(self, aiida_profile_clean, run_cli_command):
+        """Test inline array inputs reject scalar JSON values."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.array', '--non-interactive', '-a', 'a', '1'],
+            raises=True,
+        )
+
+        assert 'array values must be a JSON array' in result.output
+
+    def test_create_array_interactive(self, aiida_profile_clean, run_cli_command):
+        """Test interactive array creation uses one source-level collector."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.array'],
+            user_input='\n\n\nfrom_prompt\n[1, 2, 3]\ndone\n',
+        )
+
+        assert 'None [()]' not in result.output
+        assert 'Add an array input (file, array, done)' in result.output
+        assert 'Add an attribute [attribute/done]' not in result.output
+        assert 'Created ArrayData<' in result.output
+        node = orm.QueryBuilder().append(ArrayData).one()[0]
+        assert np.array_equal(node.get_array('from_prompt'), np.array([1, 2, 3]))
+
+    def test_create_dict_interactive_attributes(self, aiida_profile_clean, run_cli_command):
+        """Test that arbitrary dictionary attributes can be entered interactively."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.dict'],
+            user_input='\n\n\nmessage\n"hello"\ndone\n',
+        )
+
+        assert 'Add an attribute [attribute/done]' in result.output
+        assert 'Created Dict<' in result.output
+        node = orm.QueryBuilder().append(Dict).one()[0]
+        assert node['message'] == 'hello'
+
+    def test_create_dict_attributes_options(self, aiida_profile_clean, run_cli_command):
+        """Test that additional dictionary attributes can also be supplied as repeatable options."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            [
+                'core.dict',
+                '--non-interactive',
+                '-A',
+                'message',
+                '"hello"',
+                '--attribute',
+                'count',
+                '3',
+            ],
+        )
+
+        assert 'Created Dict<' in result.output
+        node = orm.QueryBuilder().append(Dict).one()[0]
+        assert node['message'] == 'hello'
+        assert node['count'] == 3
+
+    def test_create_singlefile(self, aiida_profile_clean, run_cli_command, tmp_path):
+        """Test single-file sources are available through the generic data create command."""
+        filepath = tmp_path / 'input.txt'
+        filepath.write_text('cli content', encoding='utf8')
+
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.singlefile', '--non-interactive', '-f', str(filepath)],
+        )
+
+        assert 'Created SinglefileData<' in result.output
+        node = orm.QueryBuilder().append(orm.SinglefileData).one()[0]
+        assert node.get_content() == 'cli content'
+        assert node.filename == filepath.name
+
+    def test_create_singlefile_custom_filename(self, aiida_profile_clean, run_cli_command, tmp_path):
+        """Test the optional filename attribute renames a CLI-supplied file."""
+        filepath = tmp_path / 'input.txt'
+        filepath.write_text('cli content', encoding='utf8')
+
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.singlefile', '--non-interactive', '-f', str(filepath), '--filename', 'custom.txt'],
+        )
+
+        assert 'Created SinglefileData<' in result.output
+        node = orm.QueryBuilder().append(orm.SinglefileData).one()[0]
+        assert node.filename == 'custom.txt'
+        assert node.base.repository.list_object_names() == ['custom.txt']
+
+    def test_create_singlefile_string(self, aiida_profile_clean, run_cli_command):
+        """Test inline string content is stored as the default SinglefileData file."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.singlefile', '--non-interactive', '-s', 'file.txt', 'inline content'],
+        )
+
+        assert 'Created SinglefileData<' in result.output
+        node = orm.QueryBuilder().append(orm.SinglefileData).one()[0]
+        assert node.filename == orm.SinglefileData.DEFAULT_FILENAME
+        assert node.get_content() == 'inline content'
+
+    def test_create_singlefile_string_custom_filename(self, aiida_profile_clean, run_cli_command):
+        """Test the optional filename option names inline string content."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            [
+                'core.singlefile',
+                '--non-interactive',
+                '-s',
+                'ignored.txt',
+                'inline content',
+                '--filename',
+                'greeting.txt',
+            ],
+        )
+
+        assert 'Created SinglefileData<' in result.output
+        node = orm.QueryBuilder().append(orm.SinglefileData).one()[0]
+        assert node.filename == 'greeting.txt'
+        assert node.get_content() == 'inline content'
+
+    def test_create_singlefile_interactive_string_filename(self, aiida_profile_clean, run_cli_command):
+        """Test interactive string input asks for the filename before file content."""
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.singlefile', '--label', 'inline', '--description', ''],
+            user_input='string\ngreeting.txt\nhello from a prompt\n',
+        )
+
+        assert 'File name [file.txt]:' in result.output
+        assert 'File content:' in result.output
+        assert 'Created SinglefileData<' in result.output
+        node = orm.QueryBuilder().append(orm.SinglefileData).one()[0]
+        assert node.filename == 'greeting.txt'
+        assert node.get_content() == 'hello from a prompt'
+
+    def test_create_singlefile_interactive_defaults_to_file(self, aiida_profile_clean, run_cli_command, tmp_path):
+        """Test the interactive source selector defaults to a local file."""
+        filepath = tmp_path / 'interactive.txt'
+        filepath.write_text('from file', encoding='utf8')
+
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.singlefile'],
+            user_input=f'\n\n\n{filepath}\n',
+        )
+
+        assert 'Singlefile input [file/string]' in result.output
+        assert 'Created SinglefileData<' in result.output
+        node = orm.QueryBuilder().append(orm.SinglefileData).one()[0]
+        assert node.filename == filepath.name
+        assert node.get_content() == 'from file'
+
+    def test_create_folder(self, aiida_profile_clean, run_cli_command, tmp_path):
+        """Test folder trees are available through the generic data create command."""
+        (tmp_path / 'nested').mkdir()
+        (tmp_path / 'nested' / 'input.txt').write_text('tree content', encoding='utf8')
+
+        result = run_cli_command(
+            cmd_data.data_create,
+            ['core.folder', '--non-interactive', '-d', str(tmp_path)],
+        )
+
+        assert 'Created FolderData<' in result.output
+        node = orm.QueryBuilder().append(orm.FolderData).one()[0]
+        assert node.base.repository.get_object_content('nested/input.txt') == 'tree content'
+
+    def test_create_portable_code(self, aiida_profile_clean, run_cli_command, tmp_path):
+        """Test code entry points can also be created through the generic data command."""
+        (tmp_path / 'run.sh').write_text('#!/bin/sh\n', encoding='utf8')
+
+        result = run_cli_command(
+            cmd_data.data_create,
+            [
+                'core.code.portable',
+                '--non-interactive',
+                '--label',
+                'portable',
+                '--filepath-executable',
+                'run.sh',
+                '-d',
+                str(tmp_path),
+            ],
+        )
+
+        assert 'Created PortableCode<' in result.output
+        node = orm.QueryBuilder().append(orm.PortableCode).one()[0]
+        assert node.base.repository.list_object_names() == ['run.sh']
 
 
 class TestVerdiDataArray:

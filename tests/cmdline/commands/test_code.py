@@ -705,7 +705,7 @@ def command_options(request, aiida_localhost, tmp_path, bash_path):
     options = [request.param, '-n', '--label', str(uuid.uuid4())]
 
     if 'installed' in request.param:
-        options.extend(['--computer', str(aiida_localhost.pk), '--filepath-executable', '/usr/bin/bash'])
+        options.extend(['--computer', aiida_localhost.label, '--filepath-executable', '/usr/bin/bash'])
 
     if 'portable' in request.param:
         filepath_executable = 'bash'
@@ -718,7 +718,7 @@ def command_options(request, aiida_localhost, tmp_path, bash_path):
         options.extend(
             [
                 '--computer',
-                str(aiida_localhost.pk),
+                aiida_localhost.label,
                 '--filepath-executable',
                 str(bash_path.absolute()),
                 '--engine-command',
@@ -750,3 +750,5 @@ def test_code_create(run_cli_command, command_options, non_interactive_editor):
     assert f'Success: Created {cls.__name__}' in result.output
     code = QueryBuilder().append(Code).one()[0]
     assert code.entry_point.name == entry_point
+    if entry_point == 'core.code.portable':
+        assert code.base.repository.list_object_names() == ['bash']

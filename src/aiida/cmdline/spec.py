@@ -8,6 +8,9 @@ from pydantic_core import PydanticUndefined
 
 from aiida.common.utils import make_required
 
+if t.TYPE_CHECKING:
+    import click
+
 __all__ = (
     'CliCreateSpec',
     'CliParameter',
@@ -28,6 +31,8 @@ class CliParameter:
     priority: int = 0
     short_name: str = ''
     option_cls: t.Any = None
+    multiple: bool = False
+    nargs: int | None = None
 
     @property
     def is_flag(self) -> bool:
@@ -52,6 +57,12 @@ class CliParameter:
         if self.option_cls is not None:
             spec['option_cls'] = self.option_cls
 
+        if self.multiple:
+            spec['multiple'] = True
+
+        if self.nargs is not None:
+            spec['nargs'] = self.nargs
+
         return spec
 
 
@@ -60,6 +71,15 @@ class CliCreateSpec(t.Protocol):
 
     def parameters(self) -> list[CliParameter]:
         """Return the resolved CLI parameters."""
+
+    def collect_interactive(
+        self,
+        ctx: click.Context,
+        values: dict[str, t.Any],
+        *,
+        non_interactive: bool,
+    ) -> dict[str, t.Any]:
+        """Collect any inputs that require interactive entry."""
 
     def validate(self, values: dict[str, t.Any]) -> pdt.BaseModel:
         """Validate CLI values and return the corresponding creation model."""
@@ -104,6 +124,16 @@ class PydanticCliCreateSpec:
             )
 
         return parameters
+
+    def collect_interactive(
+        self,
+        ctx: click.Context,
+        values: dict[str, t.Any],
+        *,
+        non_interactive: bool,
+    ) -> dict[str, t.Any]:
+        """Return the supplied values unchanged."""
+        return values
 
     def validate(self, values: dict[str, t.Any]) -> pdt.BaseModel:
         """Validate values against the underlying Pydantic model."""

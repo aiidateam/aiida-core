@@ -32,7 +32,7 @@ __all__ = (
 
 @dataclasses.dataclass(frozen=True)
 class ColumnConfig(BaseFieldConfig):
-    """Unresolved configuration supplied to the `column` decorator."""
+    """Unresolved configuration of a top-level entity column."""
 
     backend_key: str | None = None
     updatable: bool = False

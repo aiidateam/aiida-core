@@ -18,6 +18,7 @@ from functools import partial
 
 import click
 
+from aiida.cmdline.commands.cmd_data import create_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -40,17 +41,7 @@ def verdi_code():
 
 def create_code(ctx: click.Context, cls: type[Code], model: CreateModel) -> None:
     """Create a new `Code` instance."""
-    try:
-        instance = model.to_entity()
-    except (TypeError, ValueError) as exception:
-        echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
-
-    try:
-        instance.store()
-    except exceptions.ValidationError as exception:
-        echo.echo_critical(f'Failed to store instance of `{cls}`: {exception}')
-
-    echo.echo_success(f'Created {cls.__name__}<{instance.pk}>')
+    create_data(ctx, cls, model)
 
 
 @verdi_code.group(

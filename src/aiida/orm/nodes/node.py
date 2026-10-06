@@ -21,7 +21,7 @@ from pydantic_core import PydanticUndefined
 from typing_extensions import Self
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty, type_check
+from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager
@@ -179,6 +179,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     identity_field = 'uuid'
 
     models: NodeModelsNamespace[Self] = NodeModelsNamespace()
+    _cli_expose_extra_attributes: t.ClassVar[bool] = False
 
     _attributes_model_config: pdt.ConfigDict
 
@@ -602,6 +603,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         repository_metadata: dict | None = None,
     ) -> None:
         """Attach repository files, optionally validated against expected repository metadata."""
+        if files is not None:
+            from aiida.orm.decorators.repo import iter_repo_sources
+
+            for source in iter_repo_sources(type(self)).values():
+                source.validate_files(files)
+
         if repository_metadata:
             import hashlib
 

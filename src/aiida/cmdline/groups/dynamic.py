@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import re
 import typing as t
 
@@ -10,7 +11,7 @@ import click
 
 from aiida.cmdline.groups.verdi import VerdiCommandGroup
 from aiida.cmdline.params import options
-from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options.interactive import BooleanInteractiveOption, InteractiveOption
 from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 from aiida.plugins.factories import BaseFactory
@@ -79,7 +80,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
     def _supports_cli_creation(self, entry_point: str) -> bool:
         """Return whether the plugin supports CLI-based creation."""
         cls = self.factory(entry_point)
-        return self._get_cli_create_spec(cls) is not None  # type: ignore[arg-type]
+        return (
+            not inspect.isabstract(cls)
+            and getattr(cls, '_storable', True)
+            and self._get_cli_create_spec(cls) is not None  # type: ignore[arg-type]
+        )
 
     def list_commands(self, ctx: click.Context) -> list[str]:
         """Return the sorted list of subcommands for this group."""
@@ -122,6 +127,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             raise TypeError(msg)
 
         try:
+            kwargs = cli_spec.collect_interactive(
+                click.get_current_context(),
+                kwargs,
+                non_interactive=non_interactive,
+            )
             model = cli_spec.validate(kwargs)
         except ValidationError as exception:
             error = exception.errors()[0]
@@ -204,8 +214,16 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         short_name = spec.pop('short_name', '')
         option_names = (short_name, option_name) if short_name else (option_name,)
 
+        option_cls = spec.pop('option_cls', None)
+        if option_cls is None:
+            option_cls = (
+                BooleanInteractiveOption
+                if is_flag and spec.get('type') is bool and spec.get('default') is not None
+                else InteractiveOption
+            )
+
         kwargs = {
-            'cls': spec.pop('option_cls', InteractiveOption),
+            'cls': option_cls,
             'show_default': True,
             'is_flag': is_flag,
             **spec,

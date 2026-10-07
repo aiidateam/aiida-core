@@ -24,16 +24,15 @@ from aiida.common import exceptions
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.xfail(reason='ModelWrapper.save rolls back the whole session instead of the savepoint', strict=True)
 def test_integrity_error_in_nested_transaction_preserves_outer_work(backend):
     """A unique-constraint failure in a nested transaction must not take outer work down with it."""
     outer = orm.Data()
 
     with backend.transaction():
         outer.store()
-        with pytest.raises(exceptions.IntegrityError, match='(?i)unique'):
+        orm.User('duplicate@email.com').store()
+        with pytest.raises(exceptions.IntegrityError, match=r'(?i)unique'):
             with backend.transaction():
-                orm.User('duplicate@email.com').store()
                 orm.User('duplicate@email.com').store()
 
         # The session remains usable: further writes succeed and the outer transaction commits.
@@ -64,7 +63,8 @@ def test_bulk_failure_without_handler_rolls_back_to_savepoint(backend):
         with pytest.raises(SAIntegrityError):
             with backend.transaction():
                 backend.bulk_insert(
-                    EntityTypes.USER, [{'email': 'bulk-dup@email.com'}, {'email': 'bulk-dup@email.com'}],
+                    EntityTypes.USER,
+                    [{'email': 'bulk-dup@email.com'}, {'email': 'bulk-dup@email.com'}],
                     allow_defaults=True,
                 )
 
@@ -81,7 +81,7 @@ def test_integrity_error_without_transaction_keeps_session_usable(backend):
     """A constraint failure outside any explicit transaction still raises and leaves a clean session."""
     orm.User('duplicate@email.com').store()
 
-    with pytest.raises(exceptions.IntegrityError, match='(?i)unique'):
+    with pytest.raises(exceptions.IntegrityError, match=r'(?i)unique'):
         orm.User('duplicate@email.com').store()
 
     node = orm.Data()

@@ -183,6 +183,25 @@ def test_constructor():
     assert node.source == source
 
 
+@pytest.mark.parametrize('stored', [False, True])
+def test_clone_extras_independent(stored: bool) -> None:
+    """Editing nested extras on a clone does not change its source or sibling."""
+    source = orm.Data()
+    if stored:
+        source.store()
+    source.base.extras.set('nested', {'values': [0]})
+    clone = source.clone()
+    sibling = source.clone()
+
+    nested = clone.base.extras.get('nested')
+    nested['values'].append(1)
+    clone.base.extras.set('nested', nested)
+
+    assert clone.base.extras.get('nested') == {'values': [0, 1]}
+    assert source.base.extras.get('nested') == {'values': [0]}
+    assert sibling.base.extras.get('nested') == {'values': [0]}
+
+
 def test_data_exporters(data_plugin, generate_class_instance, tmp_path):
     """Verify that the return value of the export methods of all `Data` sub classes have the correct type."""
     export_formats = data_plugin.get_export_formats()

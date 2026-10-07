@@ -210,7 +210,7 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
             return False
 
         if hasattr(self, 'uuid'):
-            return self.uuid == other.uuid
+            return self.uuid == other.uuid  # type: ignore[attr-defined]
 
         return super().__eq__(other)
 

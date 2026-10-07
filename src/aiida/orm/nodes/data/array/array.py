@@ -315,7 +315,7 @@ class ArrayData(Data):
         This function is useful if you want to keep the node in memory, but you
         do not want to waste memory to cache the arrays in RAM.
         """
-        self._cached_arrays = {}
+        self._cached_arrays: dict[str, np.ndarray] = {}
 
     def set_array(self, name: str, array: np.ndarray) -> None:
         """Store a new numpy array inside the node. Possibly overwrite the array

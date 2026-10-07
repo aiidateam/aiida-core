@@ -56,7 +56,10 @@ class Code(Data, metaclass=abc.ABCMeta):
 
     @column(
         updatable=True,
-        cli_field_info=CliFieldInfo(priority=4),
+        cli_field_info=CliFieldInfo(
+            short_name='-L',
+            priority=4,
+        ),
     )
     def label(self) -> str:
         """The unique label of the code."""
@@ -74,7 +77,10 @@ class Code(Data, metaclass=abc.ABCMeta):
     @column(
         updatable=True,
         model_field_info=pdt.fields.FieldInfo(default=''),
-        cli_field_info=CliFieldInfo(priority=3),
+        cli_field_info=CliFieldInfo(
+            short_name='-D',
+            priority=3,
+        ),
     )
     def description(self) -> str:
         """The description of the code."""

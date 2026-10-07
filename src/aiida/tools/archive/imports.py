@@ -488,6 +488,9 @@ def _import_nodes(
 
     new_nodes = len(input_id_uuid) - len(backend_uuid_id)
 
+    if input_id_uuid:
+        _validate_ownership_agreement(backend_from, backend_to, batch_size, input_id_uuid, backend_uuid_id)
+
     if backend_uuid_id:
         _merge_node_extras(backend_from, backend_to, batch_size, backend_uuid_id, merge_extras)
 
@@ -508,6 +511,82 @@ def _import_nodes(
 
     # generate mapping of input backend id to output backend id
     return {int(i): backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
+
+
+def _validate_ownership_agreement(
+    backend_from: StorageBackend,
+    backend_to: StorageBackend,
+    batch_size: int,
+    input_id_uuid: dict[int, str],
+    backend_uuid_id: dict[str, int],
+) -> None:
+    """Validate ownership agreement between archive nodes and stored nodes sharing a UUID (spec §11).
+
+    Archives carry the node-level ownership columns (``owner_id`` is archive-local, hence compared
+    by presence; ``container_element_type`` by value). Membership edges have no archive
+    representation, so any ownership information in the archive cannot round-trip: archive rows
+    carrying ownership are rejected outright. Otherwise, UUID reuse requires agreement — a stored
+    node is reused only when both sides are standalone; any ownership/membership/type mismatch
+    under one UUID is an integrity error. Runs before any import write, so rejection rolls back
+    trivially (nothing was written). Existing standalone nodes remain standalone through migration.
+
+    :raises ImportValidationError: on any ownership disagreement.
+    """
+    archive_rows = (
+        orm.QueryBuilder(backend=backend_from)
+        .append(orm.Node, project=['uuid', 'node_type', 'owner_id', 'container_element_type'], tag='node')
+        .iterdict(batch_size=batch_size)
+    )
+    archive_by_uuid: dict[str, dict] = {}
+    try:
+        for row in archive_rows:
+            entity = row['node']
+            archive_by_uuid[entity['uuid']] = entity
+    except Exception:
+        # Storages predating the ownership schema (old archives) lack the ownership columns; their
+        # rows predate owned containers and are all standalone, so only the stored-side check applies.
+        archive_by_uuid = {uuid: {'uuid': uuid} for uuid in set(input_id_uuid.values())}
+    owned_in_archive = sorted(
+        uuid
+        for uuid, entity in archive_by_uuid.items()
+        if entity.get('owner_id') is not None or entity.get('container_element_type') is not None
+    )
+    if owned_in_archive:
+        shown = ', '.join(owned_in_archive[:5])
+        msg = (
+            'Archive contains owned data containers (or locked element types) without a membership '
+            'representation (e.g. node(s) with UUID(s) '
+            f'{shown}); refusing import rather than dropping ownership on round-trip.'
+        )
+        raise ImportValidationError(msg)
+    reused = [uuid for uuid in archive_by_uuid if uuid in backend_uuid_id]
+    if not reused:
+        return
+    stored_rows = (
+        orm.QueryBuilder(backend=backend_to)
+        .append(
+            orm.Node,
+            filters={'uuid': {'in': reused}},
+            project=['uuid', 'owner_id', 'container_element_type'],
+            tag='node',
+        )
+        .iterdict(batch_size=batch_size)
+    )
+    disagreements = sorted(
+        row['node']['uuid']
+        for row in stored_rows
+        if row['node'].get('owner_id') is not None or row['node'].get('container_element_type') is not None
+    )
+    if disagreements:
+        shown = ', '.join(disagreements[:5])
+        msg = (
+            'Archive UUID(s) '
+            f'{shown} match stored node(s) with conflicting ownership (stored node is owned or '
+            'has a locked element type while the archive row is standalone). Reuse requires '
+            'ownership, membership, positions, keys and element types to agree; refusing import '
+            'rather than detaching nodes or regenerating UUIDs.'
+        )
+        raise ImportValidationError(msg)
 
 
 class NodeTransform:

@@ -310,11 +310,16 @@ def create_archive(
             # stream entity data to the archive
             with get_progress_reporter()(desc='Archiving database: ', total=sum(entity_counts.values())) as progress:
                 for etype, ids in entity_ids.items():
-                    if etype == EntityTypes.NODE and strip_checkpoints:
+                    if etype == EntityTypes.NODE:
+                        # Owned data containers have no archive representation yet (deferred integration):
+                        # exporting an ownership unit is explicitly rejected instead of silently dropping
+                        # ownership on round-trip. Standalone nodes carry their (NULL) ownership columns through
+                        # the archive, which shares the live node model; see `_assert_no_ownership_members`.
+                        _assert_no_ownership_members(backend, ids)
 
                         def transform(row):
                             data = row['entity']
-                            if data.get('node_type', '').startswith('process.'):
+                            if strip_checkpoints and data.get('node_type', '').startswith('process.'):
                                 data['attributes'].pop(orm.ProcessNode.CHECKPOINT_KEY, None)
                             return data
                     else:
@@ -657,6 +662,61 @@ def _stream_repo_files(
             # to-do should we use assume the key here is correct, or always re-compute and check?
             writer.put_object(stream, key=key)
             progress.update()
+
+
+def _assert_no_ownership_members(backend: StorageBackend, node_ids: set[int]) -> None:
+    """Reject archive export of owned data containers.
+
+    Ownership units have no archive representation yet (deferred archive integration per
+    ``orm-container-spec.md`` section 12): exporting them would silently drop ownership on
+    round-trip, so the export is explicitly rejected instead. Uses raw SQL against the
+    backend's session when available; backends without session access are assumed to hold
+    no ownership rows.
+
+    :raises ExportValidationError: if any node is an owner or an owned child.
+    """
+    if not node_ids:
+        return
+    get_session = getattr(backend, 'get_session', None)
+    if get_session is None:
+        return
+    from contextlib import nullcontext
+
+    begin = getattr(backend, 'transaction', None)
+    in_transaction = getattr(backend, 'in_transaction', False)
+    # Never leave an autobegun read transaction behind (SQLite SHARED lock
+    # would block later writes); mirror the QueryBuilder read pattern.
+    txn = nullcontext() if in_transaction or begin is None else begin()
+    try:
+        from sqlalchemy import text
+
+        with txn:
+            session = get_session()
+            ids = list(node_ids)
+            chunk = 1_000
+            for start in range(0, len(ids), chunk):
+                part = ids[start : start + chunk]
+                placeholders = ', '.join(f':id_{index}' for index in range(len(part)))
+                params = {f'id_{index}': pk for index, pk in enumerate(part)}
+                hit = session.execute(
+                    text(
+                        f'SELECT 1 FROM db_dbmembership '
+                        f'WHERE owner_id IN ({placeholders}) OR child_id IN ({placeholders}) LIMIT 1'
+                    ),
+                    params,
+                ).first()
+                if hit is not None:
+                    msg = (
+                        'Cannot export owned data containers: archive round-trip of ownership units '
+                        'is not supported yet (deferred archive integration).'
+                    )
+                    raise ExportValidationError(msg)
+    except ExportValidationError:
+        raise
+    except Exception:
+        # The membership table may not exist (e.g. a storage predating the ownership schema that
+        # has not been migrated); absence of the table means no ownership rows to protect.
+        return
 
 
 def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: int, filter_size: int) -> None:

@@ -147,6 +147,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return aiida.storage.psql_dos.models.node.DbLink
 
     @property
+    def Membership(self):
+        import aiida.storage.psql_dos.models.node
+
+        return aiida.storage.psql_dos.models.node.DbMembership
+
+    @property
     def Computer(self):
         import aiida.storage.psql_dos.models.computer
 

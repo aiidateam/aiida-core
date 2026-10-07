@@ -200,8 +200,12 @@ class TestAutoGroups:
                 }
             }
 
-            node1 = KpointsData().store()
-            node2 = ArrayData().store()
+            node1 = KpointsData()
+            node1.set_kpoints_mesh([1, 1, 1])
+            node1.store()
+
+            node2 = ArrayData.from_arrays(arrays={'dummy': [1, 2, 3]}).store()
+
             node3 = Int(value=3).store()
             node4 = CalculationNode().store()
             node5 = WorkflowNode().store()

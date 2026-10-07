@@ -109,7 +109,9 @@ def populate_restapi_database():
 
     orm.CifData.from_ase(struct_forcif.get_ase()).store()
 
-    orm.KpointsData().store()
+    node = orm.KpointsData()
+    node.set_kpoints_mesh([1, 1, 1])
+    node.store()
 
     orm.FolderData().store()
 

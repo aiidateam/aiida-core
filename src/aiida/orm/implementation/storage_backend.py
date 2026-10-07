@@ -16,10 +16,11 @@ from collections.abc import Iterable
 from contextlib import AbstractContextManager
 from pathlib import Path
 
+import pydantic as pdt
+
 from aiida.cmdline.spec import PydanticCliCreateSpec
 from aiida.common.lang import classproperty
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel
 from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore
 
 if t.TYPE_CHECKING:
@@ -70,7 +71,7 @@ class StorageBackend(abc.ABC):
     _CHECKPOINT_CLASSES_DIRNAME: str = 'checkpoint_classes'
     """Directory name for digest-referenced checkpoint class files."""
 
-    class CliModel(AiiDABaseModel): ...
+    class Model(pdt.BaseModel): ...
 
     @classmethod
     @abc.abstractmethod
@@ -393,7 +394,7 @@ class StorageBackend(abc.ABC):
     @classproperty
     def cli_spec(cls: type[StorageBackend]) -> PydanticCliCreateSpec:  # noqa: N805
         """Return the CLI creation specification for this storage backend."""
-        return PydanticCliCreateSpec(cls.CliModel)
+        return PydanticCliCreateSpec(cls.Model)
 
     def _backup(
         self,

@@ -107,7 +107,10 @@ class User(entities.Entity['BackendUser', UserCollection]):
     def email(self, email: str) -> None:
         self._backend_entity.email = email
 
-    @column(model_field_info=pdt.fields.FieldInfo(default=''))
+    @column(
+        updatable=True,
+        model_field_info=pdt.fields.FieldInfo(default=''),
+    )
     def first_name(self) -> str:
         """The first name of the user."""
         return self._backend_entity.first_name
@@ -116,7 +119,10 @@ class User(entities.Entity['BackendUser', UserCollection]):
     def first_name(self, first_name: str) -> None:
         self._backend_entity.first_name = first_name
 
-    @column(model_field_info=pdt.fields.FieldInfo(default=''))
+    @column(
+        updatable=True,
+        model_field_info=pdt.fields.FieldInfo(default=''),
+    )
     def last_name(self) -> str:
         """The last name of the user."""
         return self._backend_entity.last_name
@@ -125,7 +131,10 @@ class User(entities.Entity['BackendUser', UserCollection]):
     def last_name(self, last_name: str) -> None:
         self._backend_entity.last_name = last_name
 
-    @column(model_field_info=pdt.fields.FieldInfo(default=''))
+    @column(
+        updatable=True,
+        model_field_info=pdt.fields.FieldInfo(default=''),
+    )
     def institution(self) -> str:
         """The institution of the user."""
         return self._backend_entity.institution

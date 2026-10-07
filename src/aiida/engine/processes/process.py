@@ -203,6 +203,25 @@ class Process(ProcessBase):
             self.logger.warning('Disabling persistence, runner does not have a persister')
             self._enable_persistence = False
 
+    def _detach_owned_inputs(self, inputs: dict[str, t.Any] | None) -> dict[str, t.Any] | None:
+        """Replace owned container children in process inputs with standalone copies (spec §7).
+
+        The process executes with the returned copies and records those same
+        copies as its provenance inputs. Copying is recursive for nested
+        containers; standalone nodes (including standalone containers) pass
+        through untouched with their identity preserved. Created copies are
+        remembered on ``self._owned_input_copies`` so the output boundary
+        can avoid closing a provenance cycle over them.
+        """
+        if inputs is None:
+            self._owned_input_copies: list[orm.Data] = []
+            return None
+        from aiida.orm.nodes.data.container import detach_owned_inputs_and_copies
+
+        detached, copies = detach_owned_inputs_and_copies(inputs)
+        self._owned_input_copies = copies
+        return detached
+
     def init(self) -> None:
         super().init()
         if self._logger is None:
@@ -491,6 +510,7 @@ class Process(ProcessBase):
     @override
     def _pre_process_inputs(self, inputs: dict[str, t.Any]) -> AttributesFrozendict:
         """Keep provenance sources separate from the values validated and consumed at runtime."""
+        inputs = self._detach_owned_inputs(inputs)  # type: ignore[assignment]
         prepared = super()._pre_process_inputs(inputs)
         resolved = self.spec().inputs.prepare(prepared)
         namespace = self.spec().inputs
@@ -780,11 +800,67 @@ class Process(ProcessBase):
                 continue
 
             if isinstance(self.node, orm.CalculationNode):
-                output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                # Exposing an owned child creates an independent standalone
+                # copy (recursive for nested containers) and attaches CREATE
+                # to that copy; the exposed output is the object recorded in
+                # provenance. Ordinary CREATE validation applies.
+                exposed = self._detach_owned_output(output)
+                if exposed is not output:
+                    # Keep the exposed handle in sync with the recorded copy so callers
+                    # observing process outputs see the standalone copy, not the pre-copy handle.
+                    self.out(link_label, exposed)
+                exposed.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+                exposed.store()
             elif isinstance(self.node, orm.WorkflowNode):
+                # Workflows may RETURN a whole standalone container but must
+                # never return owned children (including owned nested
+                # containers); outputs are not copied automatically.
+                self._reject_owned_workflow_output(output)
                 output.base.links.add_incoming(self.node, LinkType.RETURN, link_label)
+                output.store()
 
-            output.store()
+    def _detach_owned_output(self, output: t.Any) -> t.Any:
+        """Return the recordable calculation output for ``output`` (spec §7).
+
+        Calculation-output boundary: exposing an owned container child copies
+        it (new identity, no ownership or provenance links, recursive for
+        nested containers); standalone containers link directly with their
+        descendants remaining owned by them. If the output is one of the
+        standalone copies created at the input boundary, it is copied again:
+        returning a recorded input as-is would close a provenance cycle, and
+        that cycle would otherwise only be an artefact of the input copy the
+        engine itself introduced (returning an input unchanged remains a
+        cycle error for ordinary nodes).
+        """
+        from aiida.orm.nodes.data.container import ensure_standalone, is_owned
+
+        if not isinstance(output, orm.Data):
+            return output
+        if is_owned(output):
+            return ensure_standalone(output)
+        detached = getattr(self, '_owned_input_copies', ())
+        if any(output is candidate or output.uuid == candidate.uuid for candidate in detached):
+            return output.clone()
+        return output
+
+    @staticmethod
+    def _reject_owned_workflow_output(output: t.Any) -> None:
+        """Reject a workflow output that is an owned container child (spec §7).
+
+        Workflows may return a whole standalone container under ordinary
+        RETURN validation; separately returning owned children — including
+        owned nested containers — is rejected without automatic copying.
+
+        :raises aiida.common.exceptions.InvalidOperation: if ``output`` is owned.
+        """
+        from aiida.orm.nodes.data.container import is_owned
+
+        if isinstance(output, orm.Data) and is_owned(output):
+            msg = (
+                'workflow processes cannot return an owned container child'
+                f'({output!r}); return the whole standalone container instead'
+            )
+            raise exceptions.InvalidOperation(msg)
 
     def _build_process_label(self) -> str:
         """Construct the process label that should be set on ``ProcessNode`` instances for this process class.

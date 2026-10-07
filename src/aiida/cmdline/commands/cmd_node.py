@@ -405,7 +405,9 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         return not click.confirm('Shall I continue?', abort=True)
 
     def _perform_delete():
-        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        _, was_deleted = delete_nodes(
+            pks, dry_run=dry_run or _dry_run_callback, allow_ownership_expansion=force, **traversal_rules
+        )
         if was_deleted:
             echo.echo_success('Finished deletion.')
 

@@ -24,10 +24,57 @@ __all__ = ('delete_group_nodes', 'delete_nodes')
 DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
 
+def _expand_ownership_for_deletion(
+    backend: StorageBackend,
+    pks_set_to_delete: set[int],
+    *,
+    dry_run: bool | Callable[[set[int]], bool],
+    allow_ownership_expansion: bool,
+) -> set[int]:
+    """Expand a provenance deletion set to complete ownership units, with explicit approval.
+
+    Follows stored owner references upward to the ownership root(s) and collects every owned
+    descendant, so deleting a container includes its complete subtree (subject to ordinary
+    provenance deletion safeguards) and owned children are never deleted independently.
+
+    - If no expansion is needed, the set is returned unchanged.
+    - If expansion is needed, the expanded set is presented for confirmation or explicit
+      approval: ``dry_run=True`` (or a declining callback) returns the expanded set without
+      deleting; ``dry_run=False`` requires ``allow_ownership_expansion`` and raises otherwise.
+    - At execution, ``backend.delete_nodes_and_connections`` revalidates the approved set
+      without enlarging it and fails if it became invalid.
+
+    :raises aiida.common.exceptions.InvalidOperation: if expansion needs approval that was not given.
+    """
+    from aiida.common import exceptions
+    from aiida.orm.nodes.data.container import expand_ownership_unit
+
+    expanded = expand_ownership_unit(backend, pks_set_to_delete)
+    if expanded == set(pks_set_to_delete):
+        return pks_set_to_delete
+    added = sorted(expanded - set(pks_set_to_delete))
+    DELETE_LOGGER.report(
+        'Ownership expansion: the deletion set targets container member(s); expanding to the complete '
+        f'ownership unit(s), adding node(s): {added}'
+    )
+    if dry_run is True or not allow_ownership_expansion:
+        if dry_run is False and not allow_ownership_expansion:
+            msg = (
+                'Cannot delete container member(s) without explicit ownership-expansion approval: '
+                f'ownership expansion requires nodes {added}. Present the expanded set for '
+                'confirmation (dry run) or pass `allow_ownership_expansion=True` (CLI `--force`); '
+                '`dry_run=False` alone is not approval.'
+            )
+            raise exceptions.InvalidOperation(msg)
+        return expanded
+    return expanded
+
+
 def delete_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
+    allow_ownership_expansion: bool = False,
     **traversal_rules: bool,
 ) -> tuple[set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
@@ -58,7 +105,10 @@ def delete_nodes(
         If True, return the pks to delete without deleting anything.
         If False, delete the pks without confirmation
         If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
-
+    :param allow_ownership_expansion: explicitly approve expanding the deletion set to complete
+        ownership units (ownership root plus full subtree) when an owned child or a container is
+        targeted. ``dry_run=False`` alone is not approval: without this flag, targeting an
+        ownership member raises instead of deleting. The CLI ``--force`` flag sets this.
     :param traversal_rules: graph traversal rules.
         See :const:`aiida.common.links.GraphTraversalRules` for what rule names
         are toggleable and what the defaults are.
@@ -72,9 +122,28 @@ def delete_nodes(
         for _pk in _pks:
             DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
 
-    pks_set_to_delete = get_nodes_delete(
-        pks, get_links=False, missing_callback=_missing_callback, backend=backend, **traversal_rules
-    )['nodes']
+    # Ownership closure (spec §8) integrated into deletion planning: alternate ownership
+    # expansion (child-targeted request -> ownership root + complete subtree) and ordinary
+    # provenance deletion rules until a fixpoint, since provenance traversal of an expanded
+    # set may pull in further ownership members. The final expanded set is presented for
+    # confirmation or explicit approval; at execution it is revalidated without enlarging it.
+    from aiida.orm.nodes.data.container import expand_ownership_unit
+
+    pks_set_to_delete = expand_ownership_unit(backend, set(pks))
+    while True:
+        traversed = get_nodes_delete(
+            pks_set_to_delete,
+            get_links=False,
+            missing_callback=_missing_callback,
+            backend=backend,
+            **traversal_rules,
+        )['nodes']
+        expanded = _expand_ownership_for_deletion(
+            backend, traversed, dry_run=dry_run, allow_ownership_expansion=allow_ownership_expansion
+        )
+        if expanded == pks_set_to_delete:
+            break
+        pks_set_to_delete = expanded
 
     DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
 
@@ -114,6 +183,7 @@ def delete_group_nodes(
     pks: Iterable[int],
     dry_run: bool | Callable[[set[int]], bool] = True,
     backend: StorageBackend | None = None,
+    allow_ownership_expansion: bool = False,
     **traversal_rules: bool,
 ) -> tuple[set[int], bool]:
     """Delete nodes contained in a list of groups (not the groups themselves!).
@@ -143,7 +213,8 @@ def delete_group_nodes(
         If True, return the pks to delete without deleting anything.
         If False, delete the pks without confirmation
         If callable, a function that return True/False, based on the pks, e.g. ``dry_run=lambda pks: True``
-
+    :param allow_ownership_expansion: explicitly approve expanding the deletion set to complete
+        ownership units; ``dry_run=False`` alone is not approval (see :func:`delete_nodes`).
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
         are toggleable and what the defaults are.
 
@@ -161,4 +232,10 @@ def delete_group_nodes(
     )
     group_node_query.distinct()
     node_pks = group_node_query.all(flat=True)
-    return delete_nodes(node_pks, dry_run=dry_run, backend=backend, **traversal_rules)
+    return delete_nodes(
+        node_pks,
+        dry_run=dry_run,
+        backend=backend,
+        allow_ownership_expansion=allow_ownership_expansion,
+        **traversal_rules,
+    )

@@ -344,7 +344,13 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         :note: all the nodes *and* the group itself have to be stored.
 
+        A group contains a complete ownership unit or none of it: adding a
+        container root adds the root and every descendant (explicit rows, so
+        ordinary group iteration and queries include all nodes). Child-targeted
+        requests are rejected; pass the ownership root instead.
+
         :param nodes: a single `Node` or a list of `Nodes`
+        :raises aiida.common.exceptions.ModificationNotAllowed: if a node is an owned container child.
         """
         from aiida.orm.nodes import Node
 
@@ -358,14 +364,18 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         for node in nodes:
             type_check(node, Node)
 
-        self._backend_entity.add_nodes([node.backend_entity for node in nodes])
+        self._backend_entity.add_nodes(self._group_membership_entities(nodes, operation='add'))
 
     def remove_nodes(self, nodes: Node | Sequence[Node]) -> None:
         """Remove a node or a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
 
+        Removing a container root removes the whole ownership unit atomically;
+        child-targeted requests are rejected, pass the ownership root instead.
+
         :param nodes: a single `Node` or a list of `Nodes`
+        :raises aiida.common.exceptions.ModificationNotAllowed: if a node is an owned container child.
         """
         from aiida.orm.nodes import Node
 
@@ -379,7 +389,45 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         for node in nodes:
             type_check(node, Node)
 
-        self._backend_entity.remove_nodes([node.backend_entity for node in nodes])
+        self._backend_entity.remove_nodes(self._group_membership_entities(nodes, operation='remove'))
+
+    def _group_membership_entities(self, nodes: Sequence[Node], *, operation: str) -> list:
+        """Resolve group membership changes to backend entities covering complete ownership units.
+
+        Child-targeted requests are rejected (the ownership root is required); container roots
+        expand to the root plus every owned descendant so the backend stores explicit membership
+        rows for the whole unit and the change applies atomically. Standalone nodes pass through
+        unchanged. Unstored nodes are left for the backend to reject as before.
+        """
+        from aiida.orm.nodes.data.container import expand_ownership_unit, is_owned, stored_ownership_root_pk
+
+        requested = {node.pk for node in nodes}
+        for node in nodes:
+            pk = node.pk
+            if pk is None:
+                if is_owned(node):
+                    msg = (
+                        f'cannot {operation} unstored node<{node.uuid}> to a group: it is an owned '
+                        'container child. Groups contain a complete ownership unit or none of it; '
+                        'store the ownership root and pass it instead.'
+                    )
+                    raise exceptions.ModificationNotAllowed(msg)
+                continue
+            if is_owned(node):
+                root_pk = stored_ownership_root_pk(node.backend, pk)
+                if root_pk not in requested:
+                    msg = (
+                        f'cannot {operation} node<{pk}> to a group: it is an owned container '
+                        f'child (ownership root is node<{root_pk}>). Groups contain a complete '
+                        'ownership unit or none of it; pass the ownership root instead.'
+                    )
+                    raise exceptions.ModificationNotAllowed(msg)
+        entities = [node.backend_entity for node in nodes]
+        stored_pks = [pk for pk in (node.pk for node in nodes) if pk is not None]
+        unit_pks = expand_ownership_unit(self.backend, stored_pks)
+        for extra_pk in sorted(unit_pks - set(stored_pks)):
+            entities.append(self.backend.nodes.get(pk=extra_pk))
+        return entities
 
     def is_user_defined(self) -> bool:
         """:return: True if the group is user defined, False otherwise"""

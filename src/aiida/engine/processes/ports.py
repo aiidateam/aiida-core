@@ -15,10 +15,11 @@ import typing as t
 import warnings
 from collections.abc import Callable, Mapping, Sequence
 
+from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.orm import Data, Node, to_aiida_type
+from aiida.orm import Data, Node, from_aiida_type, to_aiida_type
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -163,10 +164,23 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
         if not isinstance(valid_type, (tuple, list)):
             valid_type = [valid_type]
 
-        if not kwargs.get('required', True) and valid_type:
+        if not kwargs.get('required', True) and valid_type and type(None) not in valid_type:
             kwargs['valid_type'] = tuple(valid_type) + (type(None),)
 
+        if isinstance(kwargs.get('valid_type'), tuple):
+            kwargs['valid_type'] = tuple(dict.fromkeys(kwargs['valid_type']))
+
         super().__init__(*args, **kwargs)
+
+    def prepare(self, value: t.Any) -> t.Any:
+        """Adapt an input to its declared runtime type without coercing unrelated values.
+
+        :param value: the incoming input value.
+        :return: the runtime value, ready for validation.
+        """
+        if self.valid_type is None:
+            return self.serialize(value)
+        return _runtime_value(self.valid_type, value, self.serialize)
 
     def get_description(self) -> dict[str, str]:
         """Return a description of the InputPort, which will be a dictionary of its attributes
@@ -262,6 +276,38 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             msg = f'invalid port name `{port_name}`: more than two consecutive underscores'
             raise ValueError(msg)
 
+    def _passes_through(self, item: t.Any) -> bool:
+        """Return whether a dynamic leaf skips provenance serialization."""
+        return item is None or self.valid_type is None or self.is_metadata or self.non_db
+
+    def prepare(self, mapping: Mapping[str, t.Any]) -> AttributesFrozendict:
+        """Convert filled inputs to runtime values without changing the supplied mapping.
+
+        Filling (defaults, shape checks, missing aggregation) happens before
+        this step, in `PortNamespace.pre_process` or the graph input resolver.
+
+        :param mapping: inputs with defaults already applied.
+        :return: runtime inputs ready for validation.
+        """
+        if not isinstance(mapping, Mapping):
+            msg = f'port namespace `{self.name}` received `{type(mapping)}` instead of a dictionary'  # type: ignore[unreachable]
+            raise TypeError(msg)
+
+        def dynamic(value: t.Any) -> t.Any:
+            if isinstance(value, Mapping):
+                return {key: dynamic(item) for key, item in value.items()}
+            return _runtime_value(self.valid_type, value)
+
+        result = {}
+        for name, value in mapping.items():
+            if name in self:
+                port = self[name]
+                assert isinstance(port, (InputPort, PortNamespace))
+                result[name] = port.prepare(value)
+            else:
+                result[name] = dynamic(value)
+        return AttributesFrozendict(result)
+
     def serialize(self, mapping: dict[str, t.Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, t.Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.
 
@@ -281,6 +327,13 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             msg = f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary'
             raise TypeError(msg)
 
+        def dynamic(item: t.Any) -> t.Any:
+            if isinstance(item, Mapping):
+                return {key: dynamic(leaf) for key, leaf in item.items()}
+            if self._passes_through(item):
+                return item
+            return item if isinstance(item, Node) else to_aiida_type(item)
+
         result: dict[str, t.Any] = {}
 
         for name, value in mapping.items():
@@ -294,6 +347,23 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                     msg = f'port does not have a serialize method: {port}'
                     raise AssertionError(msg)
             else:
-                result[name] = value
+                result[name] = dynamic(value)
 
         return result
+
+
+def _runtime_value(
+    valid_type: type | tuple[type, ...] | None,
+    value: t.Any,
+    serializer: Callable[[t.Any], t.Any] | None = None,
+) -> t.Any:
+    """Preserve accepted nodes and unwrap only values matching the runtime declaration."""
+    if not valid_type or isinstance(value, valid_type):
+        return value
+    if isinstance(value, Data):
+        converted = from_aiida_type(value)
+        return converted if isinstance(converted, valid_type) else value
+    types = valid_type if isinstance(valid_type, tuple) else (valid_type,)
+    if serializer is not None and any(issubclass(kind, Node) for kind in types):
+        return serializer(value)
+    return value

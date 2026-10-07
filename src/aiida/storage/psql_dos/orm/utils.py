@@ -21,7 +21,9 @@ from aiida.common import exceptions
 if t.TYPE_CHECKING:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
 
-IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
+# Stored ownership references cannot be changed in place (backend-contract immutability), so the wrapper must
+# neither auto-flush nor refresh-away in-memory changes to them: backend guards observe and reject such mutations.
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type', 'owner_id', 'container_element_type'}
 
 
 class ModelWrapper:

@@ -287,6 +287,12 @@ class SqliteDosStorage(PsqlDosBackend):
         with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile()
 
+    def _ownership_models(self) -> tuple[t.Any, t.Any]:
+        """Return the ``(DbNode, DbMembership)`` model classes for the SQLite backend."""
+        from aiida.storage.sqlite_zip.models import DbMembership, DbNode
+
+        return DbNode, DbMembership
+
     def query(self) -> orm.SqliteQueryBuilder:
         return orm.SqliteQueryBuilder(self)
 

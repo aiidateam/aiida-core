@@ -318,6 +318,25 @@ class SqliteTempBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
+    def _ownership_models(self) -> tuple[t.Any, t.Any]:
+        """Return the ``(DbNode, DbMembership)`` model classes for this backend."""
+        from aiida.storage.sqlite_zip.models import DbMembership, DbNode
+
+        return DbNode, DbMembership
+
+    def create_container_membership(
+        self, owner_id: int, members: list[dict[str, t.Any]], assert_element_type: str | None = None
+    ) -> str | None:
+        """Atomically persist ownership edges for one container.
+
+        Minimal hook for the ORM container iteration; shares the backend-contract validation in
+        :mod:`aiida.storage.ownership` with the other SQL backends. See
+        :meth:`aiida.storage.psql_dos.backend.PsqlDosBackend.create_container_membership`.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.attach_membership(self, owner_id, members, assert_element_type)
+
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
@@ -325,6 +344,18 @@ class SqliteTempBackend(StorageBackend):
         if entity_type in (EntityTypes.COMPUTER, EntityTypes.LOG, EntityTypes.AUTHINFO):
             for row in rows:
                 row['_metadata'] = row.pop('metadata')
+        if entity_type is EntityTypes.NODE:
+            from aiida.storage import ownership as ownership_contract
+
+            # Ownership columns default to standalone for rows predating them; existing standalone
+            # nodes remain standalone through migration.
+            ownership_contract.default_bulk_node_rows(rows)
+            ownership_contract.validate_bulk_node_insert(rows)
+        if entity_type is EntityTypes.LINK:
+            from aiida.storage import ownership as ownership_contract
+
+            node_model, _ = self._ownership_models()
+            ownership_contract.validate_link_rows(self.get_session(), node_model, rows)
         if allow_defaults:
             for row in rows:
                 if not keys.issuperset(row):
@@ -351,6 +382,12 @@ class SqliteTempBackend(StorageBackend):
             if not keys.issuperset(row):
                 msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
                 raise IntegrityError(msg)
+        if entity_type is EntityTypes.NODE:
+            # Stored ownership and membership cannot be changed in place (no triggers; the backend
+            # contract is the enforcement boundary).
+            from aiida.storage import ownership as ownership_contract
+
+            ownership_contract.validate_bulk_node_update(rows)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)

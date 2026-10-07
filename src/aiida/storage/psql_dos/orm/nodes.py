@@ -34,6 +34,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     USER_CLASS = SqlaUser
     COMPUTER_CLASS = SqlaComputer
     LINK_CLASS = models.DbLink
+    MEMBERSHIP_CLASS = models.DbMembership
 
     def __init__(
         self,
@@ -199,7 +200,19 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     def _add_link(self, source, link_type, link_label):
         """Add a single link"""
+        from aiida.storage import ownership as ownership_contract
+
         session = self.backend.get_session()
+
+        # Membership rows are containment edges, not provenance: direct low-level provenance links to owned
+        # children are rejected at the backend contract level (automatic copying belongs at the deferred
+        # process-boundary integration).
+        ownership_contract.assert_no_provenance_link_to_owned(
+            session, self.MODEL_CLASS, endpoint_id=source.pk, role='source'
+        )
+        ownership_contract.assert_no_provenance_link_to_owned(
+            session, self.MODEL_CLASS, endpoint_id=self.pk, role='target'
+        )
 
         try:
             with session.begin_nested():
@@ -215,6 +228,19 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     def store(self, links=None, clean=True):
         session = self.backend.get_session()
+
+        if getattr(self.model, 'owner_id', None) is not None:
+            msg = (
+                'Cannot store an owned node independently: ownership references are created atomically '
+                'with membership rows via `create_container_membership`.'
+            )
+            raise exceptions.IntegrityError(msg)
+        if getattr(self.model, 'container_element_type', None) is not None:
+            msg = (
+                'Cannot store a locked element type independently: container element-type metadata is '
+                'written atomically with membership rows via `create_container_membership`.'
+            )
+            raise exceptions.IntegrityError(msg)
 
         if clean:
             self.clean_values()
@@ -329,10 +355,48 @@ class SqlaNodeCollection(BackendNodeCollection):
             raise exceptions.NotExistent(msg) from NoResultFound
 
     def delete(self, pk):
+        from aiida.storage import ownership as ownership_contract
+
         session = self.backend.get_session()
+        get_models = getattr(self.backend, '_ownership_models', None)
 
         try:
             row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+        except NoResultFound:
+            msg = f"Node with pk '{pk}' not found"
+            raise exceptions.NotExistent(msg) from NoResultFound
+        node_models = get_models() if get_models is not None else None
+        if node_models is None:
+            # Backends without the ownership schema cannot hold containers; keep historical behavior.
+            try:
+                session.delete(row)
+                session.commit()
+            except NoResultFound:
+                msg = f"Node with pk '{pk}' not found"
+                raise exceptions.NotExistent(msg) from NoResultFound
+            return
+        node_model, membership_model = node_models
+        owned_by = getattr(row, 'owner_id', None)
+        if owned_by is not None:
+            msg = (
+                f'Cannot delete node {pk} directly: it is an owned container child (owned by '
+                f'{owned_by}). Expand the request to the full ownership unit '
+                '(ownership root plus complete subtree) and delete it with explicit approval; '
+                'owned children cannot be deleted independently.'
+            )
+            raise exceptions.IntegrityError(msg)
+        members = session.query(membership_model).filter(membership_model.owner_id == pk).count()
+        if members:
+            msg = (
+                f'Cannot delete node {pk} directly: it owns a container subtree ({members} '
+                'membership row(s)). Expand the request to the full ownership unit (root plus '
+                'complete subtree) and delete it with explicit approval; database cascades alone '
+                'are not sufficient.'
+            )
+            raise exceptions.IntegrityError(msg)
+        # Re-validate closure at execution: the set must still be ownership-closed.
+        ownership_contract.validate_deletion_set(session, node_model, membership_model, [pk])
+        try:
             session.delete(row)
             session.commit()
         except NoResultFound:

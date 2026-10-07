@@ -141,6 +141,14 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             )
             return instance
 
+        if data_class is orm.DataList:
+            instance = data_class([orm.Int(1), orm.Int(2)])
+            return instance
+
+        if data_class is orm.DataDict:
+            instance = data_class({'a': orm.Int(1)})
+            return instance
+
         if data_class is orm.ContainerizedCode:
             return orm.ContainerizedCode(
                 label='test_containerized_code',

@@ -850,6 +850,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             already stored, will be automatically stored. The others will remain unstored.
         """
         if not self.is_stored:
+            # Owned container children cannot be frozen independently of their ownership root.
+            if getattr(self, '_container_owner', None) is not None:
+                msg = 'owned container children cannot be stored independently; store the ownership root instead'
+                raise exceptions.ModificationNotAllowed(msg)
             # Call `_validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
             self._validate_storability()
             self._validate()

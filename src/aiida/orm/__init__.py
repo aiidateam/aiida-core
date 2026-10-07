@@ -51,6 +51,8 @@ __all__ = (
     'ComputerEntityLoader',
     'ContainerizedCode',
     'Data',
+    'DataDict',
+    'DataList',
     'Dict',
     'Entity',
     'EntityExtras',

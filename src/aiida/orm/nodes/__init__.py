@@ -30,6 +30,8 @@ __all__ = (
     'Code',
     'ContainerizedCode',
     'Data',
+    'DataDict',
+    'DataList',
     'Dict',
     'EntryPointData',
     'EnumData',

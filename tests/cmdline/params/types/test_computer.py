@@ -36,7 +36,7 @@ def setup_computers():
         'hostname': 'localhost',
         'transport_type': 'core.local',
         'scheduler_type': 'core.direct',
-        'workdir': '/tmp/aiida',
+        'metadata': {'workdir': '/tmp/aiida'},
     }
 
     entity_01 = orm.Computer(label=f'computer-{uuid.uuid4().hex}', **kwargs).store()
@@ -53,7 +53,7 @@ def test_shell_complete(setup_computers, parameter_type):
         'hostname': 'localhost',
         'transport_type': 'core.local',
         'scheduler_type': 'core.direct',
-        'workdir': '/tmp/aiida',
+        'metadata': {'workdir': '/tmp/aiida'},
     }
     entity_01, entity_02, entity_03 = setup_computers
     entity_04 = orm.Computer(label='xavier', **kwargs).store()

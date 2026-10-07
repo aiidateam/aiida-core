@@ -421,7 +421,7 @@ def test_metadata_computer(code_type, aiida_computer_local, tmp_path):
         filepath_executable = tmp_path / 'echo.sh'
         filepath_executable.write_text('#!/bin/bash\necho "$@"\n')
         filepath_executable.chmod(0o755)
-        command = PortableCode.from_directory(filepath_executable='echo.sh', filepath_files=tmp_path).store()
+        command = PortableCode.from_directory(filepath_executable='echo.sh', directory=tmp_path).store()
 
     results, node = launch_shell_job(command, arguments=['hello'], metadata={'computer': computer})
     assert node.is_finished_ok

@@ -877,7 +877,7 @@ class TestQueryBuilderCornerCases:
             'core.code.portable',
             label='portable-code',
             filepath_executable='fake_exec',
-            filepath_files=tmp_path,
+            directory=tmp_path,
         )
         data = orm.Data().store()
 

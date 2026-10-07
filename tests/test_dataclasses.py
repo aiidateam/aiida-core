@@ -123,7 +123,7 @@ class TestCifData:
             a = CifData.from_path(filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
 
         # Key 'db_kind' is not allowed in source description:
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError):
             a.source = {'db_kind': 'small molecule'}
 
         the_uuid = a.uuid

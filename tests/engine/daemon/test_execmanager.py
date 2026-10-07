@@ -640,7 +640,7 @@ async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_i
 
     code = PortableCode.from_directory(
         filepath_executable='bash',
-        filepath_files=tmp_path,
+        directory=tmp_path,
     ).store()
 
     node, calc_info = node_and_calc_info

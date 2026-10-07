@@ -51,7 +51,7 @@ class RemoteData(Data):
         if self.backend_entity.computer is None:
             raise AttributeError('The computer is not set.')
 
-        return Computer.from_backend_entity(self.backend_entity.computer)
+        return Computer._from_backend_entity(self.backend_entity.computer)
 
     @computer.setter
     def computer(self, computer: Computer) -> None:

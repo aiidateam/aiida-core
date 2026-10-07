@@ -138,7 +138,7 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             instance = data_class.from_directory(
                 label='test_portable_code',
                 filepath_executable=filepath_executable,
-                filepath_files=tmp_path,
+                directory=tmp_path,
             )
             return instance
 
@@ -182,6 +182,19 @@ def test_constructor():
     node = orm.Data(source=source)
     assert isinstance(node, orm.Data)
     assert node.source == source
+
+
+def test_source_default_is_not_persisted_unless_explicitly_provided():
+    """Test that Data.source stays absent by default but explicit None is preserved."""
+    node = orm.Data.models.create().to_entity()
+
+    assert node.source is None
+    assert 'source' not in node.base.attributes.all
+
+    node = orm.Data.models.create(attributes={'source': None}).to_entity()
+
+    assert node.source is None
+    assert node.base.attributes.all['source'] is None
 
 
 def test_data_exporters(data_plugin, generate_class_instance, tmp_path):

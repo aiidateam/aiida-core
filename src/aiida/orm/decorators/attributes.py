@@ -38,10 +38,14 @@ __all__ = (
 class NodeAttributeConfig(BaseFieldConfig):
     """Unresolved configuration of a Node attribute."""
 
+    persist_default: bool = True
+
 
 @dataclasses.dataclass(frozen=True)
 class NodeAttributeSpec(BaseFieldSpec):
     """Canonical semantic description of a typed Node attribute."""
+
+    persist_default: bool
 
 
 class PossiblyUpdatableOnceStored(Storable, t.Protocol):
@@ -90,6 +94,10 @@ class NodeAttribute(
 
     def _immutable_once_stored(self, instance: _NodeT) -> bool:
         return instance.is_stored and self._name not in instance._updatable_attributes
+
+    def _build_spec(self, **kwargs: t.Any) -> NodeAttributeSpec:
+        """Resolve the attribute structure into its canonical specification."""
+        return super()._build_spec(persist_default=self._config.persist_default, **kwargs)
 
     def _get_attribute_qb_field(self) -> _QbFieldT:
         """Return the lazily constructed QueryBuilder attribute field."""
@@ -275,6 +283,7 @@ class NodeAttributeDecorator(
         model_field_info: pdt.fields.FieldInfo | None = None,
         model_metadata: tuple[t.Any, ...] = (),
         model_adapter: ModelAdapter[_AdaptedEntityT, _AdaptedModelT, _QbFieldT],
+        persist_default: bool = True,
         cli_exclude: bool = False,
         cli_field_info: CliFieldInfo | None = None,
         cli_adapter: CliAdapter[t.Any, t.Any] | None = None,
@@ -289,6 +298,7 @@ class NodeAttributeDecorator(
         model_field_info: pdt.fields.FieldInfo | None = None,
         model_metadata: tuple[t.Any, ...] = (),
         model_adapter: None = None,
+        persist_default: bool = True,
         cli_exclude: bool = False,
         cli_field_info: CliFieldInfo | None = None,
         cli_adapter: CliAdapter[t.Any, t.Any] | None = None,

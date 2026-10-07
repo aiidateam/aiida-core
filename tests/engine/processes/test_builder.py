@@ -77,10 +77,6 @@ class NestedNamespaceProcess(Process):
 class MappingData(Mapping, orm.Data):  # type: ignore[misc]
     """Data sub class that is also a `Mapping`."""
 
-    def initialize(self) -> None:
-        super().initialize()
-        self._data = self.base.attributes.get('data', {})
-
     def __getitem__(self, key):
         return self._data[key]
 
@@ -89,6 +85,10 @@ class MappingData(Mapping, orm.Data):  # type: ignore[misc]
 
     def __len__(self):
         return len(self._data)
+
+    def _initialize(self) -> None:
+        super()._initialize()
+        self._data = self.base.attributes.get('data', {})
 
 
 @pytest.fixture()

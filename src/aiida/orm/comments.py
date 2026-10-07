@@ -95,7 +95,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
             user=user.backend_entity,
             content=content,
         )
-        self.finalize()
+        self._finalize()
 
     def __str__(self) -> str:
         arguments = [self.uuid, self.node.pk, self.user.email, self.content]
@@ -136,7 +136,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         """The user associated with this comment."""
         from aiida.orm.users import User
 
-        return User.from_backend_entity(self._backend_entity.user)
+        return User._from_backend_entity(self._backend_entity.user)
 
     @user.setter
     def user(self, value: User) -> None:

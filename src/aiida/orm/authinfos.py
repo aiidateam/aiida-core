@@ -75,7 +75,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
             auth_params=auth_params or {},
             metadata=metadata or {},
         )
-        self.finalize()
+        self._finalize()
 
     def __str__(self) -> str:
         if self.enabled:
@@ -112,7 +112,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         """The computer associated with this instance."""
         from aiida.orm import Computer
 
-        return Computer.from_backend_entity(self._backend_entity.computer)
+        return Computer._from_backend_entity(self._backend_entity.computer)
 
     @column(
         model_adapter=EntityPkAdapter(User),
@@ -121,7 +121,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         """The user associated with this instance."""
         from aiida.orm import User
 
-        return User.from_backend_entity(self._backend_entity.user)
+        return User._from_backend_entity(self._backend_entity.user)
 
     @column
     def auth_params(self) -> dict[str, t.Any]:

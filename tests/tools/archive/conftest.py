@@ -44,8 +44,8 @@ def aiida_localhost_factory(tmp_path):
                 hostname=label,
                 transport_type='core.local',
                 scheduler_type='core.direct',
+                metadata={'workdir': str(tmp_path)},
             )
-            computer.set_workdir(str(tmp_path))
             computer.store()
             computer.set_minimum_job_poll_interval(0.0)
             computer.configure()

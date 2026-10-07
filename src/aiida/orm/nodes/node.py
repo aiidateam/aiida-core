@@ -265,7 +265,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         self._validate_and_attach_files(files, repository_metadata)
 
-        self.finalize()
+        self._finalize()
+
+        self._set_attribute_defaults()
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -286,38 +288,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return True
         return super().__eq__(other)
 
-    def finalize(self) -> None:
-        """Finalize initialization and persist defaults for declared attributes."""
-        super().finalize()
-
-        # `finalize` is also called during `Entity` reconstruction in `Entity.from_backend_entity`.
-        # In this case, we do not want to re-persist default attributes.
-        if self.is_stored:
-            return
-
-        attributes = self.base.attributes.all.copy()
-        defaults: dict[str, t.Any] = {}
-
-        for name, attribute in iter_attributes(type(self)).items():
-            if name in attributes:
-                continue
-
-            value = attribute.get_default(validated_data=attributes)
-            if value is PydanticUndefined:
-                continue
-
-            defaults[name] = value
-            attributes[name] = value
-
-        if defaults:
-            self.base.attributes.set_many(defaults)
-
     def __hash__(self) -> int:
         """Python-Hash: Implementation that is compatible with __eq__"""
         return int(UUID(self.uuid))
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}: {self!s}>'
+        return f'<{type(self).__name__}: {self!s}>'
 
     def __str__(self) -> str:
         if not self.is_stored:
@@ -439,7 +415,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def computer(self) -> Computer | None:
         """The computer associated with the node."""
         if self._backend_entity.computer:
-            return Computer.from_backend_entity(self._backend_entity.computer)
+            return Computer._from_backend_entity(self._backend_entity.computer)
 
         return None
 
@@ -450,7 +426,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     )
     def user(self) -> User:
         """The user associated with the node."""
-        return User.from_backend_entity(self._backend_entity.user)
+        return User._from_backend_entity(self._backend_entity.user)
 
     @cached_property
     def base(self) -> NodeBase:
@@ -565,6 +541,32 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         config = cls.__dict__.get('_attributes_model_config')
         return config is not None and config.get('extra') == 'allow'
 
+    def _finalize(self) -> None:
+        """Finalize initialization."""
+        super()._finalize()
+
+    def _set_attribute_defaults(self) -> None:
+        """Persist defaults for declared attributes that remain unset after initialization."""
+        attributes = self.base.attributes.all.copy()
+        defaults: dict[str, t.Any] = {}
+
+        for name, attribute in iter_attributes(type(self)).items():
+            if name in attributes:
+                continue
+
+            if not attribute.spec.persist_default:
+                continue
+
+            value = attribute.get_default(validated_data=attributes)
+            if value is PydanticUndefined:
+                continue
+
+            defaults[name] = value
+            attributes[name] = value
+
+        if defaults:
+            self.base.attributes.set_many(defaults)
+
     @classmethod
     def _validate_attributes(
         cls,
@@ -590,9 +592,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 invalid_list = '\n'.join(f'  - {name}' for name in invalid)
                 allowed_list = '\n'.join(f'  - {name}' for name in sorted(cls._declared_attributes))
                 msg = (
-                    f'{cls.__name__} got unexpected attributes:\n'
-                    f'{invalid_list}\n'
-                    f'Allowed attributes are:\n'
+                    f'\n\n{cls.__name__} got unexpected attributes:\n'
+                    f'{invalid_list}'
+                    f'\n\nAllowed attributes:\n'
                     f'{allowed_list}'
                 )
                 raise TypeError(msg)
@@ -671,9 +673,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if not self._storable:
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
-        if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
+        if not is_registered_entry_point(self.__module__, type(self).__name__, groups=('aiida.node', 'aiida.data')):
             msg = (
-                f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
+                f'class `{self.__module__}:{type(self).__name__}` does not have a registered entry point. '
                 'Check that the corresponding plugin is installed '
                 'and that the entry point shows up in `verdi plugin list`.'
             )

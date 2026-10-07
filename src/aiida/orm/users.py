@@ -87,7 +87,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
             last_name=last_name,
             institution=institution,
         )
-        self.finalize()
+        self._finalize()
 
     def __str__(self) -> str:
         return self.email

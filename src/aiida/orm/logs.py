@@ -180,7 +180,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             metadata=metadata,
         )
 
-        self.finalize()
+        self._finalize()
 
         self.store()  # Logs are immutable and automatically stored
 

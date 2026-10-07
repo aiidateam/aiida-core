@@ -73,42 +73,42 @@ def _(backend_entity):
     from aiida.orm.groups import load_group_class
 
     group_class = load_group_class(backend_entity.type_string)
-    return group_class.from_backend_entity(backend_entity)
+    return group_class._from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendComputer)
 def _(backend_entity):
     from aiida.orm import Computer
 
-    return Computer.from_backend_entity(backend_entity)
+    return Computer._from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendUser)
 def _(backend_entity):
     from aiida.orm import User
 
-    return User.from_backend_entity(backend_entity)
+    return User._from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendAuthInfo)
 def _(backend_entity):
     from aiida.orm import AuthInfo
 
-    return AuthInfo.from_backend_entity(backend_entity)
+    return AuthInfo._from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendLog)
 def _(backend_entity):
     from aiida.orm import Log
 
-    return Log.from_backend_entity(backend_entity)
+    return Log._from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendComment)
 def _(backend_entity):
     from aiida.orm import Comment
 
-    return Comment.from_backend_entity(backend_entity)
+    return Comment._from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendNode)
@@ -116,7 +116,7 @@ def _(backend_entity):
     from aiida.orm.utils.node import load_node_class
 
     node_class = load_node_class(backend_entity.node_type)
-    return node_class.from_backend_entity(backend_entity)
+    return node_class._from_backend_entity(backend_entity)
 
 
 class ConvertIterator(Iterator, Sized):

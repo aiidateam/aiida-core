@@ -269,8 +269,8 @@ def prepare_localhost():
             description='Localhost automatically created by `verdi devel launch-add`',
             transport_type='core.local',
             scheduler_type='core.direct',
+            metadata={'workdir': tempfile.gettempdir()},
         )
-        computer.set_workdir(tempfile.gettempdir())
         computer.store()
         computer.configure(safe_interval=0.0)
         computer.set_minimum_job_poll_interval(0.0)

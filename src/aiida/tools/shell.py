@@ -251,8 +251,8 @@ def prepare_computer(computer: Computer | None = None) -> Computer:
                 description='Localhost automatically created by `aiida.tools.launch_shell_job`',
                 transport_type='core.local',
                 scheduler_type='core.direct',
+                metadata={'workdir': str(pathlib.Path(tempfile.gettempdir()) / 'aiida_shell_scratch')},
             )
-            computer.set_workdir(str(pathlib.Path(tempfile.gettempdir()) / 'aiida_shell_scratch'))
             computer.store()
             computer.configure(safe_interval=0.0)
             computer.set_minimum_job_poll_interval(0.0)

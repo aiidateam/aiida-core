@@ -167,7 +167,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         if extras is not None:
             self.base.extras.set_many(extras)
 
-        self.finalize()
+        self._finalize()
 
     def __repr__(self) -> str:
         return (
@@ -223,7 +223,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     )
     def user(self) -> User:
         """The user of the group."""
-        return User.from_backend_entity(self._backend_entity.user)
+        return User._from_backend_entity(self._backend_entity.user)
 
     @column(
         updatable=True,

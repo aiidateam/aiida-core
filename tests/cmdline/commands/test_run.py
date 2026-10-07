@@ -178,8 +178,8 @@ class TestAutoGroups:
                 description='my computer',
                 transport_type='core.local',
                 scheduler_type='core.direct',
+                metadata={'workdir': '/tmp'},
             ).store()
-            computer.set_workdir('/tmp')
             computer.configure()
 
             code = InstalledCode(

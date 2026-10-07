@@ -29,8 +29,8 @@ class TestComputer:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
+            metadata={'workdir': '/tmp/aiida'},
         )
-        new_comp.set_workdir('/tmp/aiida')
         new_comp.store()
 
         # Configure the computer - no parameters for local transport
@@ -53,8 +53,8 @@ class TestComputer:
             hostname='aaa',
             transport_type='core.local',
             scheduler_type='core.pbspro',
+            metadata={'workdir': '/tmp/aiida'},
         )
-        new_comp.set_workdir('/tmp/aiida')
         new_comp.store()
 
         comp_pk = new_comp.pk

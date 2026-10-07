@@ -61,10 +61,6 @@ class JsonableData(Data):
 
         return instance
 
-    def initialize(self) -> None:
-        super().initialize()
-        self._obj: JsonSerializableProtocol | None = None
-
     @attribute(
         readonly=True,
         model_field_info=pdt.fields.FieldInfo(
@@ -101,6 +97,10 @@ class JsonableData(Data):
 
         """
         return self._get_object()
+
+    def _initialize(self) -> None:
+        super()._initialize()
+        self._obj: JsonSerializableProtocol | None = None
 
     @classmethod
     def _deserialize_float_constants(cls, data: t.Any) -> t.Any:

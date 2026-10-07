@@ -591,7 +591,7 @@ PortableCode
 The :class:`~aiida.orm.nodes.data.code.portable.PortableCode` class is a subclass of :class:`~aiida.orm.Code` that represents an executable code stored in AiiDA's storage.
 This plugin should be used for executables that are not already installed on the target computer, but instead are available on the machine where AiiDA is running.
 The plugin assumes that the code is self-contained by a single directory containing all the necessary files, including a main executable.
-When constructing a ``PortableCode``, passing the absolute filepath as ``filepath_files`` will make sure that all the files contained within are uploaded to AiiDA's storage.
+When constructing a ``PortableCode``, passing the absolute filepath as ``directory`` will make sure that all the files contained within are uploaded to AiiDA's storage.
 The ``filepath_executable`` should indicate the filename of the executable within that directory.
 Each time a :class:`~aiida.engine.CalcJob` is run using a ``PortableCode``, the uploaded files will be automatically copied to the working directory on the selected computer and the executable will be run there.
 Example of creating an ``PortableCode``:
@@ -602,7 +602,7 @@ Example of creating an ``PortableCode``:
     from aiida.orm import PortableCode
     code = PortableCode.from_directory(
         label='some-label',
-        filepath_files=Path('/some/path/code'),
+        directory=Path('/some/path/code'),
         filepath_executable='executable.exe'
     )
 

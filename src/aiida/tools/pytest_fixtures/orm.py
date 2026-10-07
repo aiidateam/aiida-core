@@ -102,8 +102,8 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
                 hostname=hostname,
                 transport_type=transport_type,
                 scheduler_type=scheduler_type,
+                metadata={'workdir': str(tmp_path)},
             )
-            computer.set_workdir(str(tmp_path))
             return computer
 
         # Atomic get-or-create using UNIQUE as the serializer (try get → on miss, store → on UNIQUE

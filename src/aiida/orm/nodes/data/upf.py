@@ -306,10 +306,6 @@ class UpfData(SinglefileData):
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
 
-    def initialize(self) -> None:
-        super().initialize()
-        emit_deprecation()
-
     @attribute(
         readonly=True,
         required_once_stored=True,
@@ -471,26 +467,9 @@ class UpfData(SinglefileData):
         query.append(UpfData, filters={'id': {'==': self.pk}}, with_group='group')
         return query.all(flat=True)
 
-    def _parse_repository_file(self) -> tuple[str, str]:
-        """Parse the repository file and return its element and MD5 checksum."""
-        from aiida.common.exceptions import ParsingError
-        from aiida.common.files import md5_from_filelike
-
-        # The repository only provides a handle and not the original absolute path, so filename validation cannot be
-        # performed here. It is performed when going through `set_file`.
-        with self.open(mode='r') as handle:
-            parsed_data = parse_upf(handle, check_filename=False)
-
-        with self.open(mode='rb') as handle:
-            md5 = md5_from_filelike(handle)
-
-        try:
-            element = str(parsed_data['element'])
-        except KeyError:
-            msg = f'Could not parse the element from the UPF file {self.filename}'
-            raise ParsingError(msg)
-
-        return element, md5
+    def _initialize(self) -> None:
+        super()._initialize()
+        emit_deprecation()
 
     def _validate(self) -> None:
         """Validate the UPF potential file stored for this node."""
@@ -516,6 +495,27 @@ class UpfData(SinglefileData):
         if self.md5 != md5:
             msg_0 = f"Attribute 'md5' says '{self.md5}' but '{md5}' was parsed instead."
             raise ValidationError(msg_0)
+
+    def _parse_repository_file(self) -> tuple[str, str]:
+        """Parse the repository file and return its element and MD5 checksum."""
+        from aiida.common.exceptions import ParsingError
+        from aiida.common.files import md5_from_filelike
+
+        # The repository only provides a handle and not the original absolute path, so filename validation cannot be
+        # performed here. It is performed when going through `set_file`.
+        with self.open(mode='r') as handle:
+            parsed_data = parse_upf(handle, check_filename=False)
+
+        with self.open(mode='rb') as handle:
+            md5 = md5_from_filelike(handle)
+
+        try:
+            element = str(parsed_data['element'])
+        except KeyError:
+            msg = f'Could not parse the element from the UPF file {self.filename}'
+            raise ParsingError(msg)
+
+        return element, md5
 
     def _prepare_upf(self, main_file_name: str = '') -> tuple[bytes, dict[str, t.Any]]:
         """Return UPF content."""

@@ -195,10 +195,6 @@ class ArrayData(Data):
 
         return node
 
-    def initialize(self) -> None:
-        super().initialize()
-        self._cached_arrays: dict[str, np.ndarray] = {}
-
     @repo_source(
         cli_inputs=(
             RepoSourceCliInput(
@@ -360,6 +356,10 @@ class ArrayData(Data):
         base = name.removesuffix('.npy')
         array = np.load(fileobj, allow_pickle=False)
         self.set_array(base, array)
+
+    def _initialize(self) -> None:
+        super()._initialize()
+        self._cached_arrays: dict[str, np.ndarray] = {}
 
     def _arraynames_from_files(self) -> list[str]:
         """Return a list of all arrays stored in the node, listing the files (and

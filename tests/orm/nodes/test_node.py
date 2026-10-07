@@ -62,8 +62,21 @@ class TestNode:
 
     def test_declared_attribute_defaults_are_set(self):
         """Test defaults declared for node attributes are persisted on initialization."""
-        assert Data().store().base.attributes.get('source') is None
         assert Int().store().base.attributes.get('value') == 0
+        assert List().store().base.attributes.get('value') == []
+
+    def test_clone_does_not_restore_deleted_attribute_defaults(self):
+        """Test cloning preserves missing attributes instead of applying construction defaults."""
+        node = Int()
+        node.base.attributes.delete('value')
+
+        clone = node.clone()
+
+        with pytest.raises(AttributeError):
+            _ = node.value
+
+        with pytest.raises(AttributeError):
+            _ = clone.value
 
     def test_declared_attribute_default_factory_is_set(self):
         """Test default factories are evaluated independently for each node."""

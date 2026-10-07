@@ -38,7 +38,7 @@ class CalculationNode(ProcessNode):
     def computer(self) -> Computer | None:
         """The computer associated with the calculation node."""
         if self._backend_entity.computer:
-            return Computer.from_backend_entity(self._backend_entity.computer)
+            return Computer._from_backend_entity(self._backend_entity.computer)
 
         return None
 

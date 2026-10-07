@@ -24,10 +24,6 @@ class ShellCode(InstalledCode):
     calculation job as well.
     """
 
-    def initialize(self) -> None:
-        super().initialize()
-        self.validate_default_calc_job_plugin(self.default_calc_job_plugin)
-
     @attribute
     def default_calc_job_plugin(self) -> str:
         return super().default_calc_job_plugin
@@ -48,3 +44,7 @@ class ShellCode(InstalledCode):
         if default_calc_job_plugin != 'core.shell':
             msg = f'`default_calc_job_plugin` has to be `core.shell`, but got: {default_calc_job_plugin}'
             raise ValueError(msg)
+
+    def _initialize(self) -> None:
+        super()._initialize()
+        self.validate_default_calc_job_plugin(self.default_calc_job_plugin)

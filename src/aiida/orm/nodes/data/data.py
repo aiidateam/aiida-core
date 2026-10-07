@@ -69,21 +69,10 @@ class Data(Node):
         """
         return self.clone()
 
-    def clone(self):
-        """Create a clone of the Data node.
-
-        :returns: an unstored clone of this Data node
-        """
-        import copy
-
-        backend_clone = self.backend_entity.clone()
-        clone = self.__class__.from_backend_entity(backend_clone)
-        clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
-        clone.base.repository._clone(self.base.repository)
-
-        return clone
-
-    @attribute(cli_exclude=True)
+    @attribute(
+        cli_exclude=True,
+        persist_default=False,
+    )
     def source(self) -> dict | None:
         """The dictionary describing the source of the data.
 
@@ -101,7 +90,7 @@ class Data(Node):
 
         .. note:: some limitations for setting the data source exist, see ``_validate`` method.
         """
-        return self.base.attributes.get('source')
+        return self.base.attributes.get('source', None)
 
     @source.setter
     def source(self, source: dict | None) -> None:
@@ -110,8 +99,8 @@ class Data(Node):
                 raise ValueError('Source must be supplied as a dictionary')
             unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
             if unknown_attrs:
-                unknown = '\n'.join(f'- {attr}' for attr in unknown_attrs)
-                allowed = '\n'.join(f'- {attr}' for attr in self._source_attributes)
+                unknown = '\n'.join(f'  - {attr}' for attr in unknown_attrs)
+                allowed = '\n'.join(f'  - {attr}' for attr in self._source_attributes)
                 msg = f'\n\nUnknown source parameters:\n{unknown}\n\nAllowed source parameters:\n{allowed}'
                 raise ValueError(msg)
 
@@ -126,6 +115,20 @@ class Data(Node):
             return link.node
 
         return None
+
+    def clone(self):
+        """Create a clone of the Data node.
+
+        :returns: an unstored clone of this Data node
+        """
+        import copy
+
+        backend_clone = self.backend_entity.clone()
+        clone = type(self)._from_backend_entity(backend_clone)
+        clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
+        clone.base.repository._clone(self.base.repository)
+
+        return clone
 
     @override
     def export(self, path, fileformat=None, overwrite=False, **kwargs):
@@ -211,12 +214,12 @@ class Data(Node):
             if importers.keys():
                 raise ValueError(
                     'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
-                        fileformat, self.__class__.__name__, ','.join(importers.keys())
+                        fileformat, type(self).__name__, ','.join(importers.keys())
                     )
                 )
             else:
                 msg = (
-                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    f'The format {fileformat} is not implemented for {type(self).__name__}. '
                     'No formats are implemented yet.'
                 )
                 raise ValueError(msg)
@@ -255,12 +258,12 @@ class Data(Node):
             if converters.keys():
                 raise ValueError(
                     'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
-                        object_format, self.__class__.__name__, ','.join(converters.keys())
+                        object_format, type(self).__name__, ','.join(converters.keys())
                     )
                 )
             else:
                 msg = (
-                    f'The format {object_format} is not implemented for {self.__class__.__name__}. '
+                    f'The format {object_format} is not implemented for {type(self).__name__}. '
                     'No formats are implemented yet.'
                 )
                 raise ValueError(msg)
@@ -295,18 +298,20 @@ class Data(Node):
             if exporters.keys():
                 raise ValueError(
                     'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
-                        fileformat, self.__class__.__name__, ','.join(exporters.keys())
+                        fileformat, type(self).__name__, ','.join(exporters.keys())
                     )
                 )
             else:
                 msg = (
-                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    f'The format {fileformat} is not implemented for {type(self).__name__}. '
                     'No formats are implemented yet.'
                 )
                 raise ValueError(msg)
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
-        assert isinstance(string, bytes), 'export function `{}` did not return the content as a byte string.'
+        assert isinstance(string, bytes), (
+            f'export function for format `{fileformat}` did not return the content as a byte string.'
+        )
 
         return string, dictionary
 

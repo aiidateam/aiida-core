@@ -205,43 +205,12 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
 
     _backend_entity: _BackendEntityT
 
-    @classmethod
-    def from_backend_entity(cls, backend_entity: _BackendEntityT) -> Self:
-        """Construct an entity from a backend entity instance
-
-        :param backend_entity: the backend entity
-
-        :return: an AiiDA entity instance
-        """
-        from aiida.orm.implementation.entities import BackendEntity
-
-        type_check(backend_entity, BackendEntity)
-        entity = cls.__new__(cls)
-        entity._backend_entity = backend_entity
-        entity.finalize()
-        return entity
-
-    @super_check
-    def initialize(self) -> None:
-        """Initialize instance attributes.
-
-        This will be called after the constructor is called or an entity is created from an existing backend entity.
-        """
-
-    def finalize(self) -> None:
-        """Finalize the entity after initialization.
-
-        This calls the internal :py:meth:`_initialize` hook, which subclasses can implement to perform
-        post-construction logic (e.g., instance register initialization, validation, etc.).
-        """
-        call_with_super_check(self.initialize)
-
     def __eq__(self, other: t.Any) -> bool:
-        if not isinstance(other, self.__class__):
+        if type(self) is not type(other):
             return False
 
         if hasattr(self, 'uuid'):
-            return self.uuid == other.uuid  # type: ignore[attr-defined]
+            return self.uuid == other.uuid
 
         return super().__eq__(other)
 
@@ -347,7 +316,7 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
         :return: A dictionary that can be serialized to JSON.
         :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
         """
-        models = self.__class__.models
+        models = type(self).models
         model: type[EntityModel] = models.read if self.is_stored else models.create
         if minimal:
             model = model.minimize()
@@ -360,3 +329,34 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
             exclude_unset=exclude_unset,
             exclude_none=exclude_none,
         )
+
+    @classmethod
+    def _from_backend_entity(cls, backend_entity: _BackendEntityT) -> Self:
+        """Construct an entity from a backend entity instance
+
+        :param backend_entity: the backend entity
+
+        :return: an AiiDA entity instance
+        """
+        from aiida.orm.implementation.entities import BackendEntity
+
+        type_check(backend_entity, BackendEntity)
+        entity = cls.__new__(cls)
+        entity._backend_entity = backend_entity
+        entity._finalize()
+        return entity
+
+    @super_check
+    def _initialize(self) -> None:
+        """Initialize instance attributes.
+
+        This will be called after the constructor is called or an entity is created from an existing backend entity.
+        """
+
+    def _finalize(self) -> None:
+        """Finalize the entity after initialization.
+
+        This calls the internal :py:meth:`_initialize` hook, which subclasses can implement to perform
+        post-construction logic (e.g., instance register initialization, validation, etc.).
+        """
+        call_with_super_check(self._initialize)

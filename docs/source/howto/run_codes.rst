@@ -270,7 +270,7 @@ The type of code is specified as the first argument and the rest of the informat
 
             verdi code create core.code.portable \
                 --label portable-code \
-                --filepath-files /path/to/directory \
+                --directory /path/to/directory \
                 --filepath-executable executable.py
 
         Any other files that are part of ``/path/to/directory`` will also be stored by the code plugin.

@@ -455,7 +455,7 @@ def test_portable_code(tmp_path, aiida_localhost):
 
     code = orm.PortableCode.from_directory(
         filepath_executable='bash',
-        filepath_files=tmp_path,
+        directory=tmp_path,
     ).store()
 
     inputs = {
@@ -498,7 +498,7 @@ class TestCalcJob:
         assert Process.current() is None
         self.computer = aiida_localhost
         self.remote_code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/bash').store()
-        self.local_code = orm.PortableCode.from_directory(filepath_executable='bash', filepath_files=tmp_path).store()
+        self.local_code = orm.PortableCode.from_directory(filepath_executable='bash', directory=tmp_path).store()
         self.inputs = {'x': orm.Int(value=1), 'y': orm.Int(value=2), 'metadata': {'options': {}}}
         yield
         assert Process.current() is None

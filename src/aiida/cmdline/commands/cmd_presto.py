@@ -287,8 +287,8 @@ def verdi_presto(
         description='Localhost automatically created by `verdi presto`',
         transport_type='core.local',
         scheduler_type='core.direct',
+        metadata={'workdir': str(filepath_scratch)},
     )
-    computer.set_workdir(str(filepath_scratch))
     computer.store()
     computer.configure(safe_interval=0)
     computer.set_minimum_job_poll_interval(1)

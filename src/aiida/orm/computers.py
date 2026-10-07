@@ -111,7 +111,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             scheduler_type=scheduler_type,
             metadata=metadata,
         )
-        self.finalize()
+        self._finalize()
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
@@ -201,7 +201,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     def copy(self) -> Computer:
         """Return a copy of the current object to work with, not stored yet."""
-        return Computer.from_backend_entity(self._backend_entity.copy())
+        return Computer._from_backend_entity(self._backend_entity.copy())
 
     def store(self) -> Computer:
         """Store the computer in the DB.

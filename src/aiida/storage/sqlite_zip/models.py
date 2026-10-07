@@ -127,6 +127,7 @@ DbGroupNodes = create_orm_cls(group.DbGroupNode)
 DbComment = create_orm_cls(comment.DbComment)
 DbLog = create_orm_cls(log.DbLog)
 DbLink = create_orm_cls(node.DbLink)
+DbMembership = create_orm_cls(node.DbMembership)
 
 # to-do ideally these relationships should be auto-generated in `create_orm_cls`, but this proved difficult
 DbAuthInfo.aiidauser = sa_orm.relationship(  # type: ignore[attr-defined]

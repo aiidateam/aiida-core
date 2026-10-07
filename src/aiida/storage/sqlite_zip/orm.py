@@ -134,6 +134,7 @@ class SqliteNode(SqliteEntityOverride, nodes.SqlaNode):
     USER_CLASS = SqliteUser
     COMPUTER_CLASS = SqliteComputer
     LINK_CLASS = models.DbLink
+    MEMBERSHIP_CLASS = models.DbMembership
 
 
 class SqliteNodeCollection(nodes.SqlaNodeCollection):
@@ -150,6 +151,10 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     @property
     def Link(self):
         return models.DbLink
+
+    @property
+    def Membership(self):
+        return models.DbMembership
 
     @property
     def Computer(self):

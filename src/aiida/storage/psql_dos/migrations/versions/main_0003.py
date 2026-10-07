@@ -13,6 +13,10 @@ Migration steps:
    asynchronous ``core.ssh`` transport plugin.
 2. :func:`_migrate_legacy_codes`: migrate the deprecated ``Code`` data plugin.
 3. :func:`_migrate_code_hidden_extra`: rename the visibility extra on built-in Code nodes.
+4. Owned data containers: add ``db_dbnode.owner_id`` (indexed, nullable self-FK, deferred),
+   ``db_dbnode.container_element_type``, and the ``db_dbmembership`` table, per
+   ``orm-container-spec.md`` sections 2-3. Membership rows are containment edges, never
+   provenance links. Existing nodes remain standalone: no owner, unset element type.
 
 The legacy paramiko-based ``core.ssh`` transport plugin was removed in v3.0, and the asynchronous plugin (formerly
 ``core.ssh_async``) took over its entry point name. Consequently:
@@ -34,6 +38,7 @@ Revises: main_0002
 Create Date: 2026-09-07
 """
 
+import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import text
 
@@ -132,7 +137,43 @@ def upgrade():
     migrate_ssh_transports(conn)
     _migrate_legacy_codes(conn)
     _migrate_code_hidden_extra(conn)
+    op.add_column('db_dbnode', sa.Column('owner_id', sa.Integer(), nullable=True))
+    op.add_column('db_dbnode', sa.Column('container_element_type', sa.String(length=255), nullable=True))
+    op.create_index('ix_db_dbnode_db_dbnode_owner_id', 'db_dbnode', ['owner_id'], unique=False)
+    op.create_index(
+        'ix_db_dbnode_db_dbnode_container_element_type', 'db_dbnode', ['container_element_type'], unique=False
+    )
+    op.create_foreign_key(
+        'fk_db_dbnode_owner_id_db_dbnode',
+        'db_dbnode',
+        'db_dbnode',
+        ['owner_id'],
+        ['id'],
+        deferrable=True,
+        initially='DEFERRED',
+    )
+    op.create_table(
+        'db_dbmembership',
+        sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
+        sa.Column('owner_id', sa.Integer(), nullable=False, index=True),
+        sa.Column('child_id', sa.Integer(), nullable=False, index=True),
+        sa.Column('position', sa.Integer(), nullable=False),
+        sa.Column('key', sa.String(length=255), nullable=True, index=True),
+        sa.ForeignKeyConstraint(['owner_id'], ['db_dbnode.id'], deferrable=True, initially='DEFERRED'),
+        sa.ForeignKeyConstraint(['child_id'], ['db_dbnode.id'], deferrable=True, initially='DEFERRED'),
+        sa.UniqueConstraint('child_id', name='uq_db_dbmembership_child_id'),
+        sa.UniqueConstraint('owner_id', 'position', name='uq_db_dbmembership_owner_id_position'),
+        sa.UniqueConstraint('owner_id', 'key', name='uq_db_dbmembership_owner_id_key'),
+        sa.CheckConstraint('position >= 0', name='ck_db_dbmembership_position_nonnegative'),
+        sa.CheckConstraint('owner_id != child_id', name='ck_db_dbmembership_no_self_ownership'),
+    )
 
 
 def downgrade():
     """Migrations for the downgrade."""
+    op.drop_table('db_dbmembership')
+    op.drop_constraint('fk_db_dbnode_owner_id_db_dbnode', 'db_dbnode', type_='foreignkey')
+    op.drop_index('ix_db_dbnode_db_dbnode_container_element_type', table_name='db_dbnode')
+    op.drop_index('ix_db_dbnode_db_dbnode_owner_id', table_name='db_dbnode')
+    op.drop_column('db_dbnode', 'container_element_type')
+    op.drop_column('db_dbnode', 'owner_id')

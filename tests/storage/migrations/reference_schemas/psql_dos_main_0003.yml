@@ -191,6 +191,27 @@ columns:
     name: metadata
     nullable: false
     type: JSONB
+  db_dbmembership:
+  - default: nextval('db_dbmembership_id_seq'::regclass)
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: owner_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: child_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: position
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: key
+    nullable: true
+    type: VARCHAR(255)
   db_dbnode:
   - default: nextval('db_dbnode_id_seq'::regclass)
     name: id
@@ -244,6 +265,14 @@ columns:
     name: user_id
     nullable: false
     type: INTEGER
+  - default: null
+    name: owner_id
+    nullable: true
+    type: INTEGER
+  - default: null
+    name: container_element_type
+    nullable: true
+    type: VARCHAR(255)
   db_dbsetting:
   - default: nextval('db_dbsetting_id_seq'::regclass)
     name: id
@@ -296,6 +325,13 @@ constraints:
     db_dbgroup_dbnodes: []
     db_dblink: []
     db_dblog: []
+    db_dbmembership:
+    - comment: null
+      name: ck_db_dbmembership_ck_db_dbmembership_no_self_ownership
+      sqltext: owner_id <> child_id
+    - comment: null
+      name: ck_db_dbmembership_ck_db_dbmembership_position_nonnegative
+      sqltext: '"position" >= 0'
     db_dbnode: []
     db_dbsetting: []
     db_dbuser: []
@@ -356,6 +392,13 @@ constraints:
       dialect_options:
         postgresql_include: []
       name: db_dblog_pkey
+    db_dbmembership:
+      comment: null
+      constrained_columns:
+      - id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbmembership_pkey
     db_dbnode:
       comment: null
       constrained_columns:
@@ -445,6 +488,30 @@ constraints:
         postgresql_include: []
         postgresql_nulls_not_distinct: false
       name: uq_db_dblog_uuid
+    db_dbmembership:
+    - column_names:
+      - child_id
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbmembership_child_id
+    - column_names:
+      - owner_id
+      - key
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbmembership_owner_id_key
+    - column_names:
+      - owner_id
+      - position
+      comment: null
+      dialect_options:
+        postgresql_include: []
+        postgresql_nulls_not_distinct: false
+      name: uq_db_dbmembership_owner_id_position
     db_dbnode:
     - column_names:
       - uuid
@@ -595,6 +662,29 @@ foreign_keys:
     - id
     referred_schema: null
     referred_table: db_dbnode
+  db_dbmembership:
+  - comment: null
+    constrained_columns:
+    - child_id
+    name: fk_db_dbmembership_child_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  - comment: null
+    constrained_columns:
+    - owner_id
+    name: fk_db_dbmembership_owner_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
   db_dbnode:
   - comment: null
     constrained_columns:
@@ -608,6 +698,17 @@ foreign_keys:
     - id
     referred_schema: null
     referred_table: db_dbcomputer
+  - comment: null
+    constrained_columns:
+    - owner_id
+    name: fk_db_dbnode_owner_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
   - comment: null
     constrained_columns:
     - user_id
@@ -842,7 +943,55 @@ indexes:
     duplicates_constraint: uq_db_dblog_uuid
     name: uq_db_dblog_uuid
     unique: true
+  db_dbmembership:
+  - column_names:
+    - child_id
+    dialect_options:
+      postgresql_include: []
+    name: ix_db_dbmembership_db_dbmembership_child_id
+    unique: false
+  - column_names:
+    - key
+    dialect_options:
+      postgresql_include: []
+    name: ix_db_dbmembership_db_dbmembership_key
+    unique: false
+  - column_names:
+    - owner_id
+    dialect_options:
+      postgresql_include: []
+    name: ix_db_dbmembership_db_dbmembership_owner_id
+    unique: false
+  - column_names:
+    - child_id
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbmembership_child_id
+    name: uq_db_dbmembership_child_id
+    unique: true
+  - column_names:
+    - owner_id
+    - key
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbmembership_owner_id_key
+    name: uq_db_dbmembership_owner_id_key
+    unique: true
+  - column_names:
+    - owner_id
+    - position
+    dialect_options:
+      postgresql_include: []
+    duplicates_constraint: uq_db_dbmembership_owner_id_position
+    name: uq_db_dbmembership_owner_id_position
+    unique: true
   db_dbnode:
+  - column_names:
+    - container_element_type
+    dialect_options:
+      postgresql_include: []
+    name: ix_db_dbnode_db_dbnode_container_element_type
+    unique: false
   - column_names:
     - ctime
     dialect_options:
@@ -872,6 +1021,12 @@ indexes:
     dialect_options:
       postgresql_include: []
     name: ix_db_dbnode_db_dbnode_node_type
+    unique: false
+  - column_names:
+    - owner_id
+    dialect_options:
+      postgresql_include: []
+    name: ix_db_dbnode_db_dbnode_owner_id
     unique: false
   - column_names:
     - process_type

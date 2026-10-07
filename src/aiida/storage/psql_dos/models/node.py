@@ -10,7 +10,7 @@
 
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
-from sqlalchemy.schema import Column
+from sqlalchemy.schema import CheckConstraint, Column, UniqueConstraint
 from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
@@ -32,6 +32,19 @@ class DbNode(Base):
       and are set before storing the node and can't be modified afterwards.
     - ``extras``, on the other hand,
       can be added and removed after the node has been stored and are usually set by the user.
+
+    Ownership (owned data containers, ``orm-container-spec.md`` sections 2-3):
+
+    - ``owner_id`` is an indexed, nullable FK to ``db_dbnode.id``. NULL
+      means a standalone node; non-null means an exclusively owned node.
+      There is no separate ownership-mode flag.
+    - ``container_element_type`` stores the container's locked element
+      ``node_type`` identifier, or NULL when unset (a container that never
+      held an element, which may still be stored). Once established it
+      stays locked, including after removing every element.
+    - Membership edges live in ``db_dbmembership`` and must agree with
+      ``owner_id``; both are created atomically in one transaction and
+      are immutable once stored.
 
     """
 
@@ -60,6 +73,17 @@ class DbNode(Base):
         nullable=False,
         index=True,
     )
+    # NOTE: the default NO ACTION (not RESTRICT) is deliberate. RESTRICT cannot be deferred: SQLite processes
+    # RESTRICT immediately even for deferred constraints and PostgreSQL forbids deferring it, which would make
+    # whole-subtree single-statement deletes impossible. NO ACTION keeps the same safeguard (deleting a referenced
+    # row while referencers remain fails) with end-of-transaction timing under the deferred constraint.
+    owner_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        nullable=True,
+        index=True,
+    )
+    container_element_type = Column(String(255), nullable=True, index=True)
 
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
@@ -198,3 +222,64 @@ class DbLink(Base):
             self.output.get_simple_name(invalid_result='Unknown node'),
             self.output.pk,
         )
+
+
+class DbMembership(Base):
+    """Database model for owned-data-container membership edges.
+
+    Each row is a containment edge from an immediate owner container
+    (``owner_id``) to one exclusively owned child node (``child_id``).
+    ``position`` persists element order for both lists and dictionaries;
+    database row order is not meaningful. ``key`` persists the string
+    dictionary key and stays NULL for ordered-list entries.
+
+    Quantities, layout, and constraints:
+
+    - ``owner_id``: FK to ``db_dbnode.id``, NOT NULL, indexed, default
+      NO ACTION (deferred; RESTRICT is unusable here, see the note on
+      ``DbNode.owner_id``). Deletion planning must expand to the full
+      ownership unit explicitly; database cascades alone are not sufficient.
+    - ``child_id``: FK to ``db_dbnode.id``, NOT NULL, indexed, unique
+      (exactly one membership row per owned child), default NO ACTION (deferred).
+    - ``position``: integer ``>= 0`` (CHECK), unique per owner.
+    - ``key``: nullable string; uniqueness per owner applies to non-null
+      keys (NULL entries never collide under the unique constraint).
+      Non-string keys are rejected in Python, never coerced.
+    - ``owner_id != child_id`` (CHECK); longer cycles are rejected by
+      transactional validation in ``aiida.storage.ownership`` since
+      recursive constraints cannot be expressed declaratively.
+    - The matching ``db_dbnode.owner_id`` reference on the child row must
+      agree with this edge; both are written atomically in one transaction.
+    - Stored rows are immutable: updates are rejected at the backend
+      contract level (no triggers). Element-type homogeneity is enforced
+      by exact ``node_type`` string comparison without loading plugins.
+    """
+
+    __tablename__ = 'db_dbmembership'
+
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        nullable=False,
+        index=True,
+    )
+    child_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        nullable=False,
+        index=True,
+    )
+    position = Column(Integer, nullable=False)
+    key = Column(String(255), nullable=True, index=True)
+
+    __table_args__ = (
+        UniqueConstraint('child_id', name='uq_db_dbmembership_child_id'),
+        UniqueConstraint('owner_id', 'position', name='uq_db_dbmembership_owner_id_position'),
+        UniqueConstraint('owner_id', 'key', name='uq_db_dbmembership_owner_id_key'),
+        CheckConstraint('position >= 0', name='ck_db_dbmembership_position_nonnegative'),
+        CheckConstraint('owner_id != child_id', name='ck_db_dbmembership_no_self_ownership'),
+    )
+
+    def __str__(self):
+        return f'membership owner={self.owner_id} -> child={self.child_id} position={self.position} key={self.key}'

@@ -67,7 +67,6 @@ def test_nested_transaction_inner_failure_caught_by_outer(backend):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.xfail(reason='nested transaction() commits the outer transaction early', strict=True)
 def test_nested_transaction_outer_failure_rolls_back_inner(backend):
     """A successful nested transaction must still roll back if the outer transaction fails."""
     outer = orm.Data()
@@ -182,7 +181,6 @@ def test_unreferenced_cleanup_preserves_live_content(backend):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.xfail(reason='backend link creation commits instead of joining the ambient transaction', strict=True)
 def test_add_incoming_joins_ambient_transaction(backend):
     """Creating a link inside a transaction must roll back together with the transaction.
 
@@ -202,7 +200,6 @@ def test_add_incoming_joins_ambient_transaction(backend):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.xfail(reason='store_all stores inputs sequentially without a transaction', strict=True)
 def test_store_all_is_atomic(backend, monkeypatch):
     """`Node.store_all` must not leave partially stored inputs behind when a later store fails."""
     parent = orm.Data()

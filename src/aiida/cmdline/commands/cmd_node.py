@@ -71,7 +71,13 @@ def node_list(entry_point, subclassing, project, past_days, order_by, order_dir,
         subclassing=subclassing,
         order_by=[{order_by: order_dir}],
     )
-    echo_tabulate(query.all(), headers=project if not raw else [], tablefmt='plain' if raw else None)
+    if raw:
+        # Raw output is meant for machine consumption: disable numeric parsing so values print
+        # exactly as returned, without the right-alignment padding that tabulate otherwise applies
+        # to columns of mixed-width numbers (e.g. node pks spanning digit widths).
+        echo_tabulate(query.all(), headers=[], tablefmt='plain', disable_numparse=True)
+    else:
+        echo_tabulate(query.all(), headers=project)
 
 
 @verdi_node.group('repo')

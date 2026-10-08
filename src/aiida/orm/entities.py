@@ -13,7 +13,7 @@ from __future__ import annotations
 import abc
 import typing as t
 from enum import Enum
-from functools import lru_cache
+from functools import lru_cache, partial
 
 import pydantic as pdt
 from typing_extensions import Self
@@ -23,9 +23,9 @@ from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import call_with_super_check, classproperty, super_check, type_check
 from aiida.manage import get_manager
 from aiida.orm.cli import EntityCliCreateSpec
-from aiida.orm.decorators import column
+from aiida.orm.decorators import column, iter_columns
 from aiida.orm.models.entity import EntityModel, ModelsNamespace
-from aiida.orm.qb_fields import QbField
+from aiida.orm.qb_fields import QbField, QbFields
 
 if t.TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -202,6 +202,7 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
     _entity_model_config: pdt.ConfigDict
 
     _cli_spec: t.ClassVar[EntityCliCreateSpec | None] = None
+    _fields: t.ClassVar[QbFields | None] = None
 
     _backend_entity: _BackendEntityT
 
@@ -273,11 +274,20 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classproperty
+    def qb_fields(cls: type[_EntityT]) -> QbFields:  # noqa: N805
+        """Return the QueryBuilder fields for this entity."""
+        fields = cls.__dict__.get('_fields')
+
+        if fields is None:
+            fields = QbFields(factories=cls._get_qb_field_factories())
+            cls._fields = fields
+
+        return fields
+
+    @classproperty
     def projections(cls: type[_EntityT]) -> dict[str, QbField]:  # noqa: N805
         """Return the projections for this entity."""
-        from aiida.orm.decorators.columns import iter_columns
-
-        return {key: getattr(cls, key) for key in iter_columns(cls).keys()}
+        return cls.qb_fields._dict
 
     @classmethod
     def get_collection(cls, backend: StorageBackend) -> _CollectionT:
@@ -360,3 +370,8 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _CollectionT]):
         post-construction logic (e.g., instance register initialization, validation, etc.).
         """
         call_with_super_check(self._initialize)
+
+    @classmethod
+    def _get_qb_field_factories(cls: type[_EntityT]) -> dict[str, t.Callable[[], QbField]]:
+        """Return factories for the QueryBuilder fields declared by this entity class."""
+        return {key: partial(column._build_column_qb_field, owner=cls) for key, column in iter_columns(cls).items()}

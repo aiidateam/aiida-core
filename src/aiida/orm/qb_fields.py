@@ -278,16 +278,23 @@ class QbDictField(QbField):
 
     def __getattr__(self, key: str) -> QbField:
         """Return a new `QbField` with a nested key."""
+        if key.startswith('__') and key.endswith('__'):
+            raise AttributeError(key)
+
+        return self._get_subfield(key)
+
+    def __getitem__(self, key: str) -> QbField:
+        """Return a new `QbField` with a nested key."""
+        return self._get_subfield(key)
+
+    def _get_subfield(self, key: str) -> QbField:
+        """Build a field for a nested key."""
         return QbAnyField(
             key=f'{self.key}.{key}',
             alias=f'{self._backend_key}.{key}' if self._is_attribute else None,
             dtype=t.Any,
             is_attribute=self._is_attribute,
         )
-
-    def __getitem__(self, key: str) -> QbField:
-        """Return a new `QbField` with a nested key."""
-        return self.__getattr__(key)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}({self.backend_key}[...]) -> {self._dtype}'
@@ -329,7 +336,7 @@ class QbAttributesField(QbDictField):
             return self._typed_children[key]
         except KeyError:
             if self._allow_extra:
-                return super().__getattr__(key)
+                return super().__getitem__(key)
 
         raise KeyError(key)
 
@@ -461,50 +468,63 @@ class QbFields:
 
     __isabstractmethod__ = False
 
-    def __init__(self, fields: dict[str, QbField] | None = None):
+    def __init__(
+        self,
+        fields: dict[str, QbField] | None = None,
+        *,
+        factories: dict[str, t.Callable[[], QbField]] | None = None,
+    ):
         self._fields = fields or {}
+        self._factories = factories or {}
 
     def keys(self) -> list[str]:
         """Return the field keys, sorted, prefixed with 'attribute.' if field is an attribute."""
-        return sorted([field.backend_key for field in self._fields.values()])
+        return sorted([self[key].backend_key for key in self])
 
     def __repr__(self) -> str:
-        return pformat({key: repr(value) for key, value in self._fields.items()}, width=500)
+        return pformat({key: repr(self[key]) for key in self}, width=500)
 
     def __str__(self) -> str:
-        return str({key: str(value) for key, value in self._fields.items()})
+        return str({key: str(self[key]) for key in self})
 
     def __getitem__(self, key: str) -> QbField:
         """Return an QbField by key."""
+        if key not in self._fields:
+            try:
+                factory = self._factories[key]
+            except KeyError:
+                raise KeyError(key) from None
+            self._fields[key] = factory()
+
         return self._fields[key]
 
     def __getattr__(self, key: str) -> QbField:
         """Return an QbField by key."""
         try:
-            return self._fields[key]
+            return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     def __contains__(self, key: str) -> bool:
         """Return if the field key exists"""
-        return key in self._fields
+        return key in self._fields or key in self._factories
 
     def __len__(self) -> int:
         """Return the number of fields"""
-        return len(self._fields)
+        return len(set(self._fields) | set(self._factories))
 
-    def __iter__(self):
+    def __iter__(self) -> t.Iterator[str]:
         """Iterate through the field keys"""
-        return iter(self._fields)
+        return iter(dict.fromkeys((*self._factories, *self._fields)))
 
     def __dir__(self):
         """Return keys for tab competion."""
-        return list(self._fields) + ['_dict']
+        return list(self) + ['_dict']
 
     @property
-    def _dict(self):
+    def _dict(self) -> dict[str, QbField]:
         """Return a copy of the internal mapping"""
-        return deepcopy(self._fields)
+        return deepcopy({key: self[key] for key in self})
 
 
 class QbFieldArguments(t.TypedDict):

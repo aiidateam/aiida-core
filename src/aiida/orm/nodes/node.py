@@ -450,12 +450,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
-    @classproperty
-    def projections(cls: type[_NodeT]) -> dict[str, QbField]:  # noqa: N805
-        """Return the projections for this node."""
-        from aiida.orm.decorators.attributes import iter_attributes
+    @classmethod
+    def _get_qb_field_factories(cls: type[_NodeT]) -> dict[str, t.Callable[[], QbField]]:
+        """Return factories for the QueryBuilder fields declared by this node class."""
 
-        return super().projections | {key: getattr(cls, key) for key in iter_attributes(cls).keys()}
+        factories = super()._get_qb_field_factories()
+        factories.update({key: attribute._build_attribute_qb_field for key, attribute in iter_attributes(cls).items()})
+        return factories
 
     def store(self) -> Self:
         """Store the node in the database while saving its attributes and repository directory.
@@ -741,9 +742,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     def _add_outputs_from_cache(self, cache_node: Node) -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
+        from aiida.orm import Data
+
         for entry in cache_node.base.links.get_outgoing(link_type=LinkType.CREATE):
-            # TODO Node has no clone method, but Data does. Are we only expecting Data here?
-            new_node = entry.node.clone()  # type: ignore[attr-defined]
+            assert isinstance(entry.node, Data)
+            new_node = entry.node.clone()
             new_node.base.links.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
             new_node.store()
 

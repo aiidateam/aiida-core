@@ -87,7 +87,7 @@ class Column(
             if owner is None:
                 raise AttributeError('ORM column must be accessed through an entity class')
 
-            return self._get_column_qb_field(owner)
+            return self._get_qb_field(self.spec.name, owner=owner)
 
         return self.fget(instance)
 
@@ -115,9 +115,9 @@ class Column(
 
         return spec
 
-    def _get_column_qb_field(self, owner: type[_EntityT]) -> _QbFieldT:
-        """Return the lazily constructed QueryBuilder column."""
-        return self._get_qb_field(self.spec.backend_key, is_attribute=False)
+    def _build_column_qb_field(self, *, owner: type[_EntityT]) -> _QbFieldT:
+        """Build the QueryBuilder representation of this column."""
+        return self._build_qb_field(self.spec.backend_key, owner=owner)
 
 
 _ConfiguredQbFieldT = t.TypeVar('_ConfiguredQbFieldT', bound=qb_fields.QbField)

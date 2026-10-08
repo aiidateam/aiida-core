@@ -6,7 +6,7 @@ import typing as t
 from collections.abc import Callable, Mapping, Sequence
 
 import pydantic as pdt
-from typing_extensions import Self
+from typing_extensions import Self, override
 
 from aiida.common.lang import classproperty
 from aiida.orm import qb_fields
@@ -87,10 +87,7 @@ class NodeAttribute(
         if owner is None:
             raise AttributeError('Node attribute must be accessed through a Node class')
 
-        attributes = getattr(owner, 'attributes')
-        attribute = getattr(attributes, self.spec.name)
-
-        return t.cast(_QbFieldT, attribute)
+        return self._get_attribute_qb_field(owner)
 
     def _immutable_once_stored(self, instance: _NodeT) -> bool:
         return instance.is_stored and self._name not in instance._updatable_attributes
@@ -99,9 +96,13 @@ class NodeAttribute(
         """Resolve the attribute structure into its canonical specification."""
         return super()._build_spec(persist_default=self._config.persist_default, **kwargs)
 
-    def _get_attribute_qb_field(self) -> _QbFieldT:
-        """Return the lazily constructed QueryBuilder attribute field."""
-        return self._get_qb_field(self.spec.name, is_attribute=True)
+    def _get_attribute_qb_field(self, owner: type[_NodeT]) -> _QbFieldT:
+        """Return the QueryBuilder attribute cached on the owning node class."""
+        return self._get_qb_field(self.spec.name, owner=owner)
+
+    def _build_attribute_qb_field(self) -> _QbFieldT:
+        """Build the QueryBuilder representation of this attribute."""
+        return self._build_qb_field(self.spec.name, is_attribute=True)
 
 
 _ConfiguredQbFieldT = t.TypeVar('_ConfiguredQbFieldT', bound=qb_fields.QbField)
@@ -343,23 +344,26 @@ class NodeAttributesColumn(
             ),
         )
 
-        self._qb_fields: dict[type[_NodeT], qb_fields.QbAttributesField] = {}
+    @override
+    def _build_qb_field(
+        self,
+        key: str,
+        *,
+        is_attribute: bool = False,
+        owner: type[_NodeT] | None = None,
+    ) -> qb_fields.QbAttributesField:
+        """Build the attributes field specialized for a concrete Node class."""
+        if owner is None:
+            raise RuntimeError('the owner class is required to build the attributes field')
 
-    def _get_column_qb_field(self, owner: type[_NodeT]) -> qb_fields.QbAttributesField:
-        """Return the attributes field specialized for a concrete Node class."""
-        if qb_field := self._qb_fields.get(owner):
-            return qb_field
-
-        qb_field = self._build_qb_field(self.spec.backend_key, is_attribute=False)
+        qb_field = super()._build_qb_field(key, is_attribute=is_attribute, owner=owner)
 
         qb_field._typed_children = {
-            name: attribute._get_attribute_qb_field() for name, attribute in iter_attributes(owner).items()
+            name: attribute._get_attribute_qb_field(owner) for name, attribute in iter_attributes(owner).items()
         }
 
         attributes_config = t.cast(dict, owner.__dict__.get('_attributes_model_config') or {})
         qb_field._allow_extra = attributes_config.get('extra') == 'allow'
-
-        self._qb_fields[owner] = qb_field
 
         return qb_field
 

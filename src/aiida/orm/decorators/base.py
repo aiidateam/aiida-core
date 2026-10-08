@@ -10,7 +10,8 @@ from pydantic_core import PydanticUndefined
 from typing_extensions import Self
 
 from aiida.common import exceptions
-from aiida.common.utils import is_nullable, make_nullable
+from aiida.common.lang import classproperty
+from aiida.common.utils import is_nullable, make_nullable, make_required
 from aiida.orm import qb_fields
 from aiida.orm.cli.utils import CliFieldInfo
 
@@ -63,6 +64,9 @@ class Storable(t.Protocol):
     @property
     def is_stored(self) -> bool: ...
 
+    @classproperty
+    def qb_fields(cls) -> qb_fields.QbFields: ...  # noqa: N805
+
 
 _OwnerT = t.TypeVar('_OwnerT', bound=Storable)
 _ValueT = t.TypeVar('_ValueT')
@@ -104,7 +108,6 @@ class BaseField(
         self._owner: type[_OwnerT] | None = None
         self._config = config
         self._spec: _SpecT | None = None
-        self._qb_field: _QbFieldT | None = None
 
     def __set_name__(self, owner: type[_OwnerT], name: str) -> None:
         self._name = name
@@ -166,9 +169,17 @@ class BaseField(
     def adapted_type(self) -> t.Any:
         """Return the model-adapted representation type."""
         if self.model_adapter is not None:
-            return self.model_adapter.model_type
+            adapted_type = self.model_adapter.model_type
+        else:
+            adapted_type = self.spec.value_type
 
-        return self.spec.value_type
+        if self.spec.required_once_stored:
+            return make_required(adapted_type)
+
+        if is_nullable(self.spec.value_type):
+            return make_nullable(adapted_type)
+
+        return adapted_type
 
     @property
     def cli_exclude(self) -> bool:
@@ -198,7 +209,6 @@ class BaseField(
         self.fget = fget
         self.__doc__ = getattr(fget, '__doc__', None)
         self._spec = None
-        self._qb_field = None
         return self
 
     def setter(self, fset: Callable[[_OwnerT, _ValueT], None], /) -> Self:
@@ -322,7 +332,13 @@ class BaseField(
 
         return model_type
 
-    def _build_qb_field(self, key: str, *, is_attribute: bool) -> _QbFieldT:
+    def _build_qb_field(
+        self,
+        key: str,
+        *,
+        is_attribute: bool = False,
+        owner: type[_OwnerT] | None = None,
+    ) -> _QbFieldT:
         """Build the QueryBuilder representation of this field."""
         return t.cast(
             _QbFieldT,
@@ -334,12 +350,9 @@ class BaseField(
             ),
         )
 
-    def _get_qb_field(self, key: str, *, is_attribute: bool) -> _QbFieldT:
-        """Return the lazily constructed QueryBuilder field."""
-        if self._qb_field is None:
-            self._qb_field = self._build_qb_field(key, is_attribute=is_attribute)
-
-        return self._qb_field
+    def _get_qb_field(self, key: str, *, owner: type[_OwnerT]) -> _QbFieldT:
+        """Return the QueryBuilder field cached on the owning entity class."""
+        return t.cast(_QbFieldT, owner.qb_fields[key])
 
 
 _FieldT = t.TypeVar('_FieldT', bound=BaseField)

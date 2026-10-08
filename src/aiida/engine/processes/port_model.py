@@ -15,7 +15,16 @@ import typing as t
 
 from typing_extensions import Self, dataclass_transform
 
-__all__ = ('Field', 'PortField', 'PortModel', 'as_dict', 'fields_of', 'is_structured', 'without_marks')
+__all__ = (
+    'Field',
+    'PortField',
+    'PortModel',
+    'as_dict',
+    'fields_of',
+    'is_structured',
+    'port_help',
+    'without_marks',
+)
 
 UNSPECIFIED = object()
 
@@ -106,7 +115,7 @@ def fields_of(annotation: t.Any) -> tuple[Field, ...] | None:
         else:
             default = UNSPECIFIED
         hint = hints.get(field.name)
-        fields.append(Field(name=field.name, annotation=without_marks(hint), default=default, help=_port_help(hint)))
+        fields.append(Field(name=field.name, annotation=without_marks(hint), default=default, help=port_help(hint)))
     return tuple(fields)
 
 
@@ -138,7 +147,8 @@ def build(container: type[M], values: t.Mapping[str, t.Any]) -> M:
     return container.from_dict(values)
 
 
-def _port_help(annotation: t.Any) -> str | None:
+def port_help(annotation: t.Any) -> str | None:
+    """Return the help text of a `PortField` mark, if the annotation carries one."""
     while t.get_origin(annotation) is t.Annotated:
         args = t.get_args(annotation)
         for mark in args[1:]:

@@ -17,6 +17,7 @@ from aiida.engine.processes.calcjobs import *
 from aiida.engine.processes.exit_code import *
 from aiida.engine.processes.functions import *
 from aiida.engine.processes.futures import *
+from aiida.engine.processes.graphs import *
 from aiida.engine.processes.port_model import PortField, PortModel
 from aiida.engine.processes.ports import *
 from aiida.engine.processes.process import *
@@ -33,9 +34,14 @@ __all__ = (
     'CalcJobImporter',
     'CalcJobOutputPort',
     'CalcJobProcessSpec',
+    'Dependency',
+    'Endpoint',
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',
+    'GraphHandle',
+    'GraphProcess',
+    'GraphSpec',
     'InputPort',
     'JobManager',
     'JobsList',
@@ -50,17 +56,24 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'TaskHandle',
+    'TaskProcess',
+    'TaskSpec',
     'ToContext',
+    'UnsupportedSyntax',
     'WithNonDb',
     'WithSerialize',
     'WorkChain',
     'append_',
     'assign_',
+    'build_from_source',
     'calcfunction',
     'construct_awaitable',
+    'graph',
     'if_',
     'process_handler',
     'return_',
+    'task',
     'while_',
     'workfunction',
 )

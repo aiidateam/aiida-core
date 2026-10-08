@@ -271,7 +271,7 @@ class BandsData(KpointsData):
         # checks bands and occupations
         the_bands, the_occupations, the_labels = self._validate_bands_occupations(bands, occupations, labels)
         # set bands and their units
-        self.set_array('bands', the_bands)
+        self.set_array(array=the_bands, name='bands')
         self.units = units
 
         if the_labels is not None:
@@ -279,7 +279,7 @@ class BandsData(KpointsData):
 
         if the_occupations is not None:
             # set occupations
-            self.set_array('occupations', the_occupations)
+            self.set_array(array=the_occupations, name='occupations')
 
     def get_bands(self, also_occupations=False, also_labels=False):
         """Returns an array (nkpoints x num_bands or nspins x nkpoints x num_bands)

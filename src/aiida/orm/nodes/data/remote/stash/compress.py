@@ -24,6 +24,13 @@ __all__ = ('RemoteStashCompressedData',)
 class RemoteStashCompressedData(RemoteStashData):
     """Data plugin that models a compressed stashed file on a remote computer."""
 
+    _valid_modes = [
+        StashMode.COMPRESS_TAR,
+        StashMode.COMPRESS_TARBZ2,
+        StashMode.COMPRESS_TARGZ,
+        StashMode.COMPRESS_TARXZ,
+    ]
+
     _storable = True
 
     @attribute

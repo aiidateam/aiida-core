@@ -126,7 +126,7 @@ def test_reexport(aiida_profile_clean, tmp_path):
     for key, value in trial_dict.items():
         calc.base.attributes.set(str(int(key) + np.random.randint(10)), value)
     array = orm.ArrayData()
-    array.set_array('array', nparr)
+    array.set_array(array=nparr, name='array')
     array.store()
     # LINKS
     # the calculation has input the parameters-instance

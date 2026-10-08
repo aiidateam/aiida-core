@@ -63,35 +63,35 @@ class List(Data, MutableSequence[t.Any]):
         data = self.list
         data.append(value)
         if not self._using_list_reference():
-            self.list(data)
+            self.list = data
 
     def extend(self, value: t.Iterable[t.Any]) -> None:
         """Extend the list by appending all the items from the iterable."""
         data = self.list
         data.extend(value)
         if not self._using_list_reference():
-            self.list(data)
+            self.list = data
 
     def insert(self, i: int, value: t.Any) -> None:
         """Insert value at index i."""
         data = self.list
         data.insert(i, value)
         if not self._using_list_reference():
-            self.list(data)
+            self.list = data
 
     def remove(self, value: t.Any) -> None:
         """Remove first occurrence of value."""
         data = self.list
         data.remove(value)
         if not self._using_list_reference():
-            self.list(data)
+            self.list = data
 
     def pop(self, index: int = -1) -> t.Any:
         """Remove and return item at index (default last)."""
         data = self.list
         item = data.pop(index)
         if not self._using_list_reference():
-            self.list(data)
+            self.list = data
         return item
 
     def index(self, value: t.Any, start: int = 0, stop: int | None = None) -> int:
@@ -109,14 +109,14 @@ class List(Data, MutableSequence[t.Any]):
         data = self.list
         data.sort(key=key, reverse=reverse)
         if not self._using_list_reference():
-            self.list(data)
+            self.list = data
 
     def reverse(self) -> None:
         """Reverse the list in place."""
         data = self.list
         data.reverse()
         if not self._using_list_reference():
-            self.list(data)
+            self.list = data
 
     def _using_list_reference(self) -> bool:
         """This function tells the class if we are using a list reference. This

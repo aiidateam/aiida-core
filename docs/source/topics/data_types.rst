@@ -234,13 +234,13 @@ Each array is assigned to a name specified by the user using the :py:meth:`~aiid
 
   In [2]: array = ArrayData()
 
-  In [3]: array.set_array('matrix', np.array([[1, 2], [3, 4]]))
+  In [3]: array.set_array(array=np.array([[1, 2], [3, 4]]), name='matrix')
 
 Note that one :py:class:`~aiida.orm.ArrayData` instance can store multiple arrays under different names:
 
 .. code-block:: ipython
 
-  In [4]: array.set_array('vector', np.array([[1, 2, 3, 4]]))
+  In [4]: array.set_array(array=np.array([[1, 2, 3, 4]]), name='vector')
 
 To see the list of array names stored in the :py:class:`~aiida.orm.ArrayData` instance, you can use the :py:meth:`~aiida.orm.ArrayData.get_arraynames()` method:
 

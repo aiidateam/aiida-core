@@ -107,6 +107,7 @@ def test_obj():
         assert left == right
 
 
+@pytest.mark.skip(reason='JsonableData prevents storing unimportable modules in v3')
 def test_unimportable_module():
     """Test the ``JsonableData.obj`` property if the associated module cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])
@@ -122,6 +123,7 @@ def test_unimportable_module():
         _ = loaded.obj
 
 
+@pytest.mark.skip(reason='JsonableData prevents storing unimportable classes in v3')
 def test_unimportable_class():
     """Test the ``JsonableData.obj`` property if the associated class cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])

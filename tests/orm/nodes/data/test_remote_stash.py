@@ -11,17 +11,15 @@
 import pytest
 
 from aiida.common.datastructures import StashMode
-from aiida.common.exceptions import StoringNotAllowed
 from aiida.orm import RemoteStashCompressedData, RemoteStashData, RemoteStashFolderData
 
 
 def test_base_class():
-    """Verify that base class cannot be stored."""
+    """Verify that base class cannot be instantiated, as it defines no valid stash modes."""
+    from aiida.orm.nodes.data.remote.stash.base import InvalidStashModeError
 
-    node = RemoteStashData(stash_mode=StashMode.COPY)
-
-    with pytest.raises(StoringNotAllowed):
-        node.store()
+    with pytest.raises(InvalidStashModeError):
+        RemoteStashData(stash_mode=StashMode.COPY)
 
 
 @pytest.mark.parametrize('store', (False, True))
@@ -32,7 +30,11 @@ def test_constructor_folder(store):
     target_basepath = '/absolute/path'
     source_list = ['relative/folder', 'relative/file']
 
-    data = RemoteStashFolderData(stash_mode, target_basepath, source_list)
+    data = RemoteStashFolderData(
+        stash_mode=stash_mode,
+        target_basepath=target_basepath,
+        source_list=source_list,
+    )
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath
@@ -72,7 +74,12 @@ def test_constructor_invalid_folder(argument, value):
 @pytest.mark.parametrize('store', (False, True))
 @pytest.mark.parametrize(
     'stash_mode',
-    [StashMode.COMPRESS_TAR, StashMode.COMPRESS_TARBZ2, StashMode.COMPRESS_TARGZ, StashMode.COMPRESS_TARXZ],
+    [
+        StashMode.COMPRESS_TAR,
+        StashMode.COMPRESS_TARBZ2,
+        StashMode.COMPRESS_TARGZ,
+        StashMode.COMPRESS_TARXZ,
+    ],
 )
 @pytest.mark.parametrize('dereference', (False, True))
 def test_constructor_compressed(store, stash_mode, dereference):
@@ -81,7 +88,12 @@ def test_constructor_compressed(store, stash_mode, dereference):
     target_basepath = '/absolute/path/foo.tar.gz'
     source_list = ['relative/folder', 'relative/file']
 
-    data = RemoteStashCompressedData(stash_mode, target_basepath, source_list, dereference)
+    data = RemoteStashCompressedData(
+        stash_mode=stash_mode,
+        target_basepath=target_basepath,
+        source_list=source_list,
+        dereference=dereference,
+    )
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath
@@ -127,7 +139,12 @@ def test_constructor_invalid_compressed(argument, value):
         (RemoteStashFolderData, [StashMode.COPY]),
         (
             RemoteStashCompressedData,
-            [StashMode.COMPRESS_TAR, StashMode.COMPRESS_TARBZ2, StashMode.COMPRESS_TARGZ, StashMode.COMPRESS_TARXZ],
+            [
+                StashMode.COMPRESS_TAR,
+                StashMode.COMPRESS_TARBZ2,
+                StashMode.COMPRESS_TARGZ,
+                StashMode.COMPRESS_TARXZ,
+            ],
         ),
     ),
 )

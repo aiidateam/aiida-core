@@ -2598,13 +2598,13 @@ class TestArrayData:
         # Create a node with two arrays
         n = ArrayData()
         first = np.random.rand(2, 3, 4)
-        n.set_array('first', first)
+        n.set_array(array=first, name='first')
 
         second = np.arange(10)
-        n.set_array('second', second)
+        n.set_array(array=second, name='second')
 
         third = np.random.rand(6, 6)
-        n.set_array('third', third)
+        n.set_array(array=third, name='third')
 
         # Check if the arrays are there
         assert {'first', 'second', 'third'} == set(n.get_arraynames())
@@ -2625,7 +2625,7 @@ class TestArrayData:
 
         # Overwrite an array
         first = np.random.rand(4, 5, 6)
-        n.set_array('first', first)
+        n.set_array(array=first, name='first')
 
         # Check if the arrays are there, and if I am getting the new one
         assert {'first', 'second'} == set(n.get_arraynames())
@@ -2670,7 +2670,7 @@ class TestArrayData:
         with pytest.raises(ModificationNotAllowed):
             n.delete_array('first')
         with pytest.raises(ModificationNotAllowed):
-            n.set_array('second', first)
+            n.set_array(array=first, name='second')
 
         # Again same checks, to verify that the attempts to delete/overwrite
         # arrays did not damage the node content
@@ -2685,13 +2685,13 @@ class TestArrayData:
         # Create a node with two arrays
         n = ArrayData()
         first = np.random.rand(2, 3, 4)
-        n.set_array('first', first)
+        n.set_array(array=first, name='first')
 
         second = np.arange(10)
-        n.set_array('second', second)
+        n.set_array(array=second, name='second')
 
         third = np.random.rand(6, 6)
-        n.set_array('third', third)
+        n.set_array(array=third, name='third')
 
         for name, array in n.get_iterarrays():
             if name == 'first':

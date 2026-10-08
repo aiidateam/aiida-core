@@ -27,7 +27,7 @@ from aiida.orm.nodes.data.data import Data
 
 __all__ = ('ArrayData',)
 
-_ArrayLike = Sequence[t.Any] | np.ndarray
+ArrayLike = Sequence[t.Any] | np.ndarray
 
 
 class _InlineArrayCliAdapter(CliAdapter[tuple[str, str], tuple[str, np.ndarray]]):
@@ -174,24 +174,21 @@ class ArrayData(Data):
     _requires_array = True
 
     @classmethod
-    def from_arrays(cls, arrays: _ArrayLike | Mapping[str, _ArrayLike], **kwargs: t.Any) -> Self:
+    def from_arrays(cls, arrays: Mapping[str, ArrayLike], **kwargs: t.Any) -> Self:
         """Construct a new instance and set one or multiple numpy arrays.
 
         :param arrays: a single numpy array or sequence, or a mapping of arrays to store.
         """
         node = cls(**kwargs)
 
-        if isinstance(arrays, (Sequence, np.ndarray)):
-            arrays = {cls.default_array_name: arrays}
-
         if not isinstance(arrays, Mapping):
-            raise TypeError('`arrays` should be a single sequence or mapping of sequences')
+            raise TypeError('`arrays` should be mapping of sequences, e.g., {"array": [1, 2, 3]}')
 
         if any(not isinstance(array, (Sequence, np.ndarray)) for array in arrays.values()):
             raise TypeError('`arrays` should be a single sequence or mapping of sequences')
 
         for name, array in arrays.items():
-            node.set_array(name, np.asarray(array))
+            node.set_array(array=np.asarray(array), name=name)
 
         return node
 
@@ -317,19 +314,21 @@ class ArrayData(Data):
         """
         self._cached_arrays: dict[str, np.ndarray] = {}
 
-    def set_array(self, name: str, array: np.ndarray) -> None:
+    def set_array(self, *, array: np.ndarray, name: str | None = None) -> None:
         """Store a new numpy array inside the node. Possibly overwrite the array
         if it already existed.
 
         Internally, it stores a name.npy file in numpy format.
 
-        :param name: The name of the array.
         :param array: The numpy array to store.
+        :param name: The name of the array, defaults to the value of :attr:`default_array_name` if not specified.
         """
         import tempfile
 
         if not isinstance(array, np.ndarray):
             raise TypeError('ArrayData can only store numpy arrays. Convert the object to an array first')
+
+        name = name or self.default_array_name
 
         self._validate_array_name(name)
 
@@ -355,7 +354,7 @@ class ArrayData(Data):
 
         base = name.removesuffix('.npy')
         array = np.load(fileobj, allow_pickle=False)
-        self.set_array(base, array)
+        self.set_array(array=array, name=base)
 
     def _initialize(self) -> None:
         super()._initialize()

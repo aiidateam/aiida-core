@@ -14,7 +14,6 @@ import pytest
 from click.testing import CliRunner
 
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import ArrayData, load_node
 
 
@@ -22,7 +21,7 @@ def test_read_stored():
     """Test reading an array from an ``ArrayData`` after storing and loading it."""
     array = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
     node = ArrayData()
-    node.set_array('array', array)
+    node.set_array(array=array, name='array')
 
     assert numpy.array_equal(node.get_array('array'), array)
 
@@ -183,22 +182,3 @@ def test_get_array():
 
     node = ArrayData.from_arrays(numpy.array([1, 2]))
     assert (node.get_array() == numpy.array([1, 2])).all()
-
-
-def test_save_and_load_arrays():
-    """Test :meth:`aiida.orm.ArrayData.save_arrays` and ``load_arrays``."""
-    arrays = {
-        'a': numpy.array([1, 2, 3]),
-        'b': numpy.array([[1.0, 2.0], [3.0, 4.0]]),
-    }
-
-    with pytest.warns(AiidaDeprecationWarning, match='ArrayData.save_arrays'):
-        serialized = ArrayData.save_arrays(arrays)
-    assert set(serialized) == {'a', 'b'}
-    assert all(isinstance(value, bytes) for value in serialized.values())
-
-    with pytest.warns(AiidaDeprecationWarning, match='ArrayData.load_arrays'):
-        deserialized = ArrayData.load_arrays(serialized)
-    assert set(deserialized) == {'a', 'b'}
-    assert numpy.array_equal(deserialized['a'], arrays['a'])
-    assert numpy.array_equal(deserialized['b'], arrays['b'])

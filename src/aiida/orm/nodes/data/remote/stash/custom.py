@@ -22,6 +22,8 @@ __all__ = ('RemoteStashCustomData',)
 class RemoteStashCustomData(RemoteStashData):
     """Data plugin that models stashed data on a remote computer, which was done via a custom script."""
 
+    _valid_modes = [StashMode.COPY]
+
     _storable = True
 
     @attribute

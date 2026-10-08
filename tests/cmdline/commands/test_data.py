@@ -230,7 +230,7 @@ class TestVerdiDataArray:
     def init_profile(self, aiida_profile_clean, run_cli_command):
         """Initialize the profile."""
         self.arr = ArrayData()
-        self.arr.set_array('test_array', np.array([0, 1, 3]))
+        self.arr.set_array(array=np.array([0, 1, 3]), name='test_array')
         self.arr.store()
         self.cli_runner = run_cli_command
 

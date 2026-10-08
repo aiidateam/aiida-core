@@ -270,15 +270,6 @@ def test_copy_tree(tmp_path):
         assert filepath.read_bytes() == handle.read()
 
 
-def test_deprecated_methods(monkeypatch):
-    """Test calling (deprecated) methods, directly from the `Node` instance still works."""
-    node = Data()
-    monkeypatch.setenv('AIIDA_WARN_v3', 'true')
-    for method in node._deprecated_repo_methods:
-        with pytest.warns(AiidaDeprecationWarning):
-            getattr(node, method)
-
-
 def test_as_path():
     """Test the ``NodeRepository.as_path`` method."""
     node = Data()

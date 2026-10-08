@@ -154,7 +154,7 @@ def test_calc_job_monitors_monitors(monitors, expected):
     for key, value in monitors.items():
         monitors_full[key] = value
         monitors_full[key]['entry_point'] = 'core.always_kill'
-        monitors_full[key] = Dict(monitors_full[key])
+        monitors_full[key] = Dict(**monitors_full[key])
 
     assert list(CalcJobMonitors(monitors_full).monitors.keys()) == expected
 

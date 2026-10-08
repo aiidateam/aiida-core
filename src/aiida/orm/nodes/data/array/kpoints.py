@@ -419,10 +419,10 @@ class KpointsData(ArrayData):
         if self.mesh is not None:
             raise ModificationNotAllowed('KpointsData has already a mesh stored')
 
-        self.set_array('kpoints', the_kpoints)
+        self.set_array(array=the_kpoints, name='kpoints')
 
         if the_weights is not None:
-            self.set_array('weights', the_weights)
+            self.set_array(array=the_weights, name='weights')
 
         if labels is not None:
             self.set_labels(labels)

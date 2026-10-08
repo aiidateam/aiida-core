@@ -263,7 +263,7 @@ class TestAiidaCheckpointPersister:
         process = DummyProcess()
 
         self.persister.save_checkpoint(process)
-        assert isinstance(process.node.checkpoint, str)
+        assert isinstance(process.node.checkpoints, str)
 
         self.persister.delete_checkpoint(process.pid)
         assert process.node.checkpoint is None

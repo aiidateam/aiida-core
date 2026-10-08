@@ -14,14 +14,14 @@ on them.
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 
 from aiida.common import exceptions
 from aiida.common.exceptions import NotExistent
 from aiida.orm.decorators import attribute
-from aiida.orm.nodes.data.array.array import ArrayData
+from aiida.orm.nodes.data.array.array import ArrayData, ArrayLike
 
 __all__ = ('XyData',)
 
@@ -74,25 +74,73 @@ class XyData(ArrayData):
 
     _attributes_model_config = ArrayData._attributes_model_config
 
-    @attribute(readonly=True)
+    @classmethod
+    def from_arrays(
+        cls,
+        arrays: Mapping[str, ArrayLike],
+        x_name: str | None = None,
+        x_units: str | None = None,
+        y_units: Sequence[str] | None = None,
+        **kwargs: t.Any,
+    ):
+        instance = cls(**kwargs)
+
+        if 'x_array' not in arrays:
+            raise ValueError('The input arrays must contain an "x_array" key.')
+
+        for key in ('x_name', 'x_units', 'y_units'):
+            if locals()[key] is None:
+                msg = f'{key} must be provided.'
+                raise ValueError(msg)
+
+        x_array = arrays.pop('x_array')
+
+        if not arrays:
+            raise ValueError('No Y arrays provided.')
+
+        instance.set_x(x_array, x_name, x_units)
+
+        y_arrays = list(arrays.values())
+        y_names = list(arrays.keys())
+        instance.set_y(y_arrays, y_names, y_units)
+
+        return instance
+
+    @attribute
     def x_name(self) -> str:
         """The name of the x array."""
         return self.base.attributes.get('x_name')
 
-    @attribute(readonly=True)
+    @x_name.setter
+    def x_name(self, value: str) -> None:
+        raise AttributeError('Setting x_name directly is not allowed. Use set_x method instead.')
+
+    @attribute
     def x_units(self) -> str:
         """The units of the x array."""
         return self.base.attributes.get('x_units')
 
-    @attribute(readonly=True)
+    @x_units.setter
+    def x_units(self, value: str) -> None:
+        raise AttributeError('Setting x_units directly is not allowed. Use set_x method instead.')
+
+    @attribute
     def y_names(self) -> list[str]:
         """The names of the y arrays."""
         return self.base.attributes.get('y_names')
 
-    @attribute(readonly=True)
+    @y_names.setter
+    def y_names(self, value: list[str]) -> None:
+        raise AttributeError('Setting y_names directly is not allowed. Use set_y method instead.')
+
+    @attribute
     def y_units(self) -> list[str]:
         """The units of the y arrays."""
         return self.base.attributes.get('y_units')
+
+    @y_units.setter
+    def y_units(self, value: list[str]) -> None:
+        raise AttributeError('Setting y_units directly is not allowed. Use set_y method instead.')
 
     def set_x(self, x_array: np.ndarray, x_name: str, x_units: str) -> None:
         """Sets the array and the name for the x values.
@@ -104,7 +152,7 @@ class XyData(ArrayData):
         self._arrayandname_validator(x_array, x_name, x_units)
         self.base.attributes.set('x_name', x_name)
         self.base.attributes.set('x_units', x_units)
-        self.set_array('x_array', x_array)
+        self.set_array(array=x_array, name='x_array')
 
     def set_y(
         self,
@@ -141,7 +189,7 @@ class XyData(ArrayData):
                 msg = f'y_array {y_name} does not have the same shape as x_array!'
                 raise ValueError(msg)
 
-            self.set_array(f'y_array_{index}', y_array)
+            self.set_array(array=y_array, name=f'y_array_{index}')
 
         self.base.attributes.set('y_names', list(y_names))
         self.base.attributes.set('y_units', list(y_units))

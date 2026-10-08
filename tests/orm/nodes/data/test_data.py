@@ -64,8 +64,8 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
         if data_class is orm.ArrayData:
             instance = data_class()
             array_data = numpy.identity(3)
-            instance.set_array('data', array_data)
-            instance.set_array('contains_nan_inf', numpy.array([float('NaN'), float('Inf')]))
+            instance.set_array(array=array_data, name='data')
+            instance.set_array(array=numpy.array([float('NaN'), float('Inf')]), name='contains_nan_inf')
             return instance
 
         if data_class is orm.KpointsData:
@@ -184,17 +184,21 @@ def test_constructor():
     assert node.source == source
 
 
-def test_source_default_is_not_persisted_unless_explicitly_provided():
-    """Test that Data.source stays absent by default but explicit None is preserved."""
-    node = orm.Data.models.create().to_entity()
+def test_null_source_setting_makes_it_absent():
+    """Test that Data.source stays absent when not explicitly set or provided as None.
 
+    Note that the getter provides `None` as a default even when the attribute is absent.
+    """
+
+    # By default
+    node = orm.Data()
     assert node.source is None
     assert 'source' not in node.base.attributes.all
 
-    node = orm.Data.models.create(attributes={'source': None}).to_entity()
-
+    # When explicitly set to None
+    node = orm.Data(source=None)
     assert node.source is None
-    assert node.base.attributes.all['source'] is None
+    assert 'source' not in node.base.attributes.all
 
 
 def test_data_exporters(data_plugin, generate_class_instance, tmp_path):

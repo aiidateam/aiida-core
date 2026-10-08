@@ -1475,7 +1475,7 @@ class TestImport:
         with open(filepath, 'w', encoding='utf8') as handle:
             handle.write(f'{expected_sum}\n')
 
-        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        remote = orm.RemoteData(remote_path=str(tmp_path), computer=self.computer).store()
         inputs = deepcopy(self.inputs)
         inputs['remote_folder'] = remote
 
@@ -1504,7 +1504,7 @@ class TestImport:
         with open(filepath, 'w', encoding='utf8') as handle:
             handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
 
-        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        remote = orm.RemoteData(remote_path=str(tmp_path), computer=self.computer).store()
         inputs = deepcopy(self.inputs)
         inputs['remote_folder'] = remote
 
@@ -1535,7 +1535,7 @@ class TestImport:
         with open(filepath, 'w', encoding='utf8') as handle:
             handle.write(f'{expected_sum}\n')
 
-        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        remote = orm.RemoteData(remote_path=str(tmp_path), computer=self.computer).store()
         inputs = deepcopy(self.inputs)
         inputs['remote_folder'] = remote
         inputs['metadata']['options']['output_filename'] = output_filename

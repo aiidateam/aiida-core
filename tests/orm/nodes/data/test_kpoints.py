@@ -51,6 +51,12 @@ class TestKpoints:
         kpt = KpointsData()
         kpt.set_cell_from_structure(self.structure)
 
+        kpoints = [
+            [0.0, 0.0, 0.0],
+            [0.5, 0.5, 0.5],
+        ]
+        kpt.set_kpoints(kpoints)  # only to allow storing
+
         assert np.abs(kpt.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.0
 
         # Check also after storing

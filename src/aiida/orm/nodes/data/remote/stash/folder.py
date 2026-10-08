@@ -26,6 +26,8 @@ class RemoteStashFolderData(RemoteStashData):
     This data plugin can and should be used to stash files if and only if the stash mode is `StashMode.COPY`.
     """
 
+    _valid_modes = [StashMode.COPY]
+
     _storable = True
 
     @attribute

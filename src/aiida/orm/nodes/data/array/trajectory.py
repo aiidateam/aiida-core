@@ -153,15 +153,15 @@ class TrajectoryData(ArrayData):
         self.base.attributes.set('symbols', list(symbols))
         self.base.attributes.set('pbc', tuple(pbc))
 
-        self.set_array('positions', positions)
+        self.set_array(array=positions, name='positions')
 
         if stepids is not None:
-            self.set_array('steps', stepids)
+            self.set_array(array=stepids, name='steps')
         else:
-            self.set_array('steps', numpy.arange(positions.shape[0]))
+            self.set_array(array=numpy.arange(positions.shape[0]), name='steps')
 
         if cells is not None:
-            self.set_array('cells', cells)
+            self.set_array(array=cells, name='cells')
         else:
             try:
                 self.delete_array('cells')
@@ -169,7 +169,7 @@ class TrajectoryData(ArrayData):
                 pass
 
         if times is not None:
-            self.set_array('times', times)
+            self.set_array(array=times, name='times')
         else:
             try:
                 self.delete_array('times')
@@ -177,7 +177,7 @@ class TrajectoryData(ArrayData):
                 pass
 
         if velocities is not None:
-            self.set_array('velocities', velocities)
+            self.set_array(array=velocities, name='velocities')
         else:
             try:
                 self.delete_array('velocities')
@@ -837,8 +837,8 @@ class TrajectoryData(ArrayData):
 
             t = TrajectoryData()
             # get sites and number of timesteps
-            t.set_array('steps', arange(ntimesteps))
-            t.set_array('symbols', array([site.kind for site in s.sites]))
+            t.set_array(array=arange(ntimesteps), name='steps')
+            t.set_array(array=array([site.kind for site in s.sites]), name='symbols')
             t.importfile('some-calc/AIIDA-PROJECT-pos-1.xyz', 'xyz_pos')
         """
         from numpy import array
@@ -868,7 +868,7 @@ class TrajectoryData(ArrayData):
             )
             raise ValueError(msg)
 
-        self.set_array('positions', positions)
+        self.set_array(array=positions, name='positions')
 
     def _parse_xyz_vel(self, inputstring: str) -> None:
         """Load velocities from a XYZ file.
@@ -904,7 +904,7 @@ class TrajectoryData(ArrayData):
             )
             raise ValueError(msg)
 
-        self.set_array('velocities', velocities)
+        self.set_array(array=velocities, name='velocities')
 
 
 def plot_positions_XYZ(  # noqa: N802

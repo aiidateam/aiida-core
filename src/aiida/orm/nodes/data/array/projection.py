@@ -242,7 +242,7 @@ class ProjectionData(OrbitalData, ArrayData):
                 if bands_check:
                     self._check_projections_bands(projection)
 
-                self.set_array(f'proj_{array_name}', projection)
+                self.set_array(array=projection, name=f'proj_{array_name}')
 
         if list_of_pdos:
             list_of_pdos = single_to_list(list_of_pdos)
@@ -254,8 +254,8 @@ class ProjectionData(OrbitalData, ArrayData):
             for index, pdos in enumerate(list_of_pdos):
                 energy = list_of_energy[index]
                 array_name = self._from_index_to_arrayname(index)
-                self.set_array(f'pdos_{array_name}', pdos)
-                self.set_array(f'energy_{array_name}', energy)
+                self.set_array(array=pdos, name=f'pdos_{array_name}')
+                self.set_array(array=energy, name=f'energy_{array_name}')
 
         if tags is not None:
             try:

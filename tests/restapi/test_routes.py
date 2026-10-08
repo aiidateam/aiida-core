@@ -144,8 +144,14 @@ class TestRestApi:
 
         # Setting array data for the tests
         array = orm.ArrayData()
-        array.set_array('array_clean', np.asarray([[4, 5, 7], [9, 5, 1], [3, 4, 4]]))
-        array.set_array('array_dirty', np.asarray([[4, 5, np.nan], [9, np.inf, -1 * np.inf], [np.nan, 4, 4]]))
+        array.set_array(
+            array=np.asarray([[4, 5, 7], [9, 5, 1], [3, 4, 4]]),
+            name='array_clean',
+        )
+        array.set_array(
+            array=np.asarray([[4, 5, np.nan], [9, np.inf, -1 * np.inf], [np.nan, 4, 4]]),
+            name='array_dirty',
+        )
         array.store()
 
         # Prepare typical REST responses

@@ -19,6 +19,13 @@ from aiida.orm.nodes.data.data import Data
 __all__ = ('RemoteStashData',)
 
 
+# TODO Should this be elevated to the common exceptions module?
+# TODO Alternatively, should ORM have its own exceptions module? Maybe all AiiDA packages should?
+# TODO ORM has its own utils...
+class InvalidStashModeError(ValueError):
+    """Exception raised when an invalid stash mode is used."""
+
+
 class RemoteStashData(Data):
     """Data plugin that models an archived folder on a remote computer.
 
@@ -36,6 +43,8 @@ class RemoteStashData(Data):
     methods of the class will only be available or function properly based on the ``stash_mode``.
     """
 
+    _valid_modes: list[StashMode] = []
+
     _storable = False
 
     @attribute(model_adapter=EnumStrAdapter(StashMode))
@@ -46,4 +55,8 @@ class RemoteStashData(Data):
     @stash_mode.setter
     def stash_mode(self, value: StashMode) -> None:
         type_check(value, StashMode)
+        if value not in self._valid_modes:
+            valid_modes = ', '.join(f'{mode.name}' for mode in self._valid_modes)
+            msg = f'`{type(self).__name__}` can only be used with the following stash modes: {valid_modes}'
+            raise InvalidStashModeError(msg)
         self.base.attributes.set('stash_mode', value.value)

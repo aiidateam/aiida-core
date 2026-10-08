@@ -14,12 +14,14 @@ import re
 import typing as t
 import warnings
 from collections.abc import Callable, Mapping, Sequence
+from types import UnionType
 
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.orm import Data, Node, from_aiida_type, to_aiida_type
+from aiida.engine.processes.port_model import as_dict, is_a_plain_class, is_structured, without_marks
+from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -280,6 +282,20 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         """Return whether a dynamic leaf skips provenance serialization."""
         return item is None or self.valid_type is None or self.is_metadata or self.non_db
 
+    def _as_mapping(self, value: t.Any) -> Mapping[str, t.Any]:
+        """Return model instances as mappings, rejecting other non-mappings."""
+        converted = as_dict(value)
+        if converted is not None:
+            return converted
+        if not isinstance(value, Mapping):
+            msg = f'port namespace `{self.name}` received `{type(value)}` instead of a dictionary'
+            raise TypeError(msg)
+        return value
+
+    def pre_process(self, port_values: t.Any) -> AttributesFrozendict:
+        """Accept model instances as namespace mappings before applying defaults."""
+        return super().pre_process(dict(self._as_mapping(port_values)))
+
     def prepare(self, mapping: Mapping[str, t.Any]) -> AttributesFrozendict:
         """Convert filled inputs to runtime values without changing the supplied mapping.
 
@@ -289,9 +305,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         :param mapping: inputs with defaults already applied.
         :return: runtime inputs ready for validation.
         """
-        if not isinstance(mapping, Mapping):
-            msg = f'port namespace `{self.name}` received `{type(mapping)}` instead of a dictionary'  # type: ignore[unreachable]
-            raise TypeError(msg)
+        mapping = self._as_mapping(mapping)
 
         def dynamic(value: t.Any) -> t.Any:
             if isinstance(value, Mapping):
@@ -352,6 +366,39 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         return result
 
 
+def is_storable(annotation: t.Any) -> bool:
+    """Return whether values of an annotation can reach provenance storage.
+
+    Structured models are stored as namespaces, declared nodes pass through, and plain values store through
+    ``to_aiida_type``. Anything else has no storage representation.
+
+    :param annotation: a model field annotation.
+    """
+    annotation = without_marks(annotation)
+    if annotation is None or annotation is t.Any or annotation is type(None):
+        return True
+    if is_structured(annotation):
+        return True
+    if isinstance(annotation, type):
+        return issubclass(annotation, Data) or _has_conversion(annotation)
+    return _origin_storable(t.get_origin(annotation), annotation)
+
+
+def _has_conversion(annotation: type) -> bool:
+    """Return whether `to_aiida_type` resolves a real converter for a class."""
+    # `dispatch` walks the MRO, so resolving to the `object` registration means no conversion exists.
+    return to_aiida_type.dispatch(annotation) is not to_aiida_type.dispatch(object)
+
+
+def _origin_storable(origin: t.Any, annotation: t.Any) -> bool:
+    """Return whether a generic alias stores through its origin or its members."""
+    if origin in (list, dict):
+        return True
+    if origin is t.Union or origin is UnionType:
+        return all(is_storable(argument) for argument in t.get_args(annotation))
+    return False
+
+
 def _runtime_value(
     valid_type: type | tuple[type, ...] | None,
     value: t.Any,
@@ -367,3 +414,55 @@ def _runtime_value(
     if serializer is not None and any(issubclass(kind, Node) for kind in types):
         return serializer(value)
     return value
+
+
+def infer_valid_type_from_type_annotation(annotation: t.Any, *, stored: bool = True) -> tuple[t.Any, ...]:
+    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
+
+    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :param stored: infer ORM types for legacy function inputs and outputs; disable for runtime input types.
+    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
+        tuple is returned.
+    """
+
+    annotation = without_marks(annotation)
+    origin = t.get_origin(annotation)
+    inferred_valid_type: tuple[t.Any, ...] = ()
+
+    if is_a_plain_class(annotation) or origin in (list, dict):
+        inferred_valid_type = (_type_from_annotation(annotation, stored=stored),)
+    elif origin is t.Union or origin is UnionType:
+        inferred_valid_type = tuple(
+            _type_from_annotation(valid_type, stored=stored) for valid_type in t.get_args(annotation)
+        )
+
+    return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
+
+
+_VALID_TYPE_MAP: dict[t.Any, t.Any] = {
+    bool: Bool,
+    dict: Dict,
+    t.Dict: Dict,  # noqa: UP006 - support legacy annotation spelling
+    float: Float,
+    int: Int,
+    list: List,
+    t.List: List,  # noqa: UP006 - support legacy annotation spelling
+    str: Str,
+    type(None): type(None),
+}
+
+
+def _type_from_annotation(annotation: t.Any, *, stored: bool) -> t.Any | None:
+    """Return the valid type for one annotation, or None when it declares none."""
+    if annotation is t.Any:
+        return None
+    origin = t.get_origin(annotation)
+    if not stored and origin in (list, dict):
+        annotation = origin
+
+    if is_a_plain_class(annotation):
+        if not stored or issubclass(annotation, Data):
+            return annotation
+        return _VALID_TYPE_MAP.get(annotation)
+
+    return _VALID_TYPE_MAP.get(annotation) if stored else None

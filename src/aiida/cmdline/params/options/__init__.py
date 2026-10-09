@@ -39,6 +39,7 @@ __all__ = (
     'COMPUTER',
     'COMPUTERS',
     'CONFIG_FILE',
+    'CONFIG_FILES',
     'DATA',
     'DATUM',
     'DB_BACKEND',

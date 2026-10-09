@@ -17,6 +17,7 @@ while the `_OpenSSH` class uses the `ssh` command line client.
 
 import abc
 import asyncio
+import errno
 import logging
 import posixpath
 import re
@@ -31,6 +32,7 @@ from aiida.transports.transport import (
     TransportInternalError,
     has_magic,
 )
+from aiida.transports.util import run_file_io
 
 
 def get_openssh_version() -> int | None:
@@ -95,6 +97,10 @@ class _AsynchronousSSHBackend(abc.ABC):
 
         :raises OSError: If failed for whatever reason
         """
+
+    @abc.abstractmethod
+    async def putfilelike(self, handle: t.BinaryIO, remotepath: str) -> None:
+        """Stream bytes to a remote file without a temporary local copy."""
 
     @abc.abstractmethod
     async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
@@ -294,6 +300,14 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         except asyncssh.Error as exc:
             raise OSError from exc
 
+    async def putfilelike(self, handle: t.BinaryIO, remotepath: str) -> None:
+        try:
+            async with self._sftp.open(remotepath, 'wb') as destination:
+                while chunk := await run_file_io(handle.read, 524288):
+                    await destination.write(chunk)
+        except asyncssh.Error as exc:
+            raise OSError from exc
+
     async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         result = await self._conn.run(
             self.bash_command + escape_for_bash(command),
@@ -306,7 +320,12 @@ class _AsyncSSH(_AsynchronousSSHBackend):
 
     async def lstat(self, path: str):
         # The return object from asyncssh is compatible with `class::Stat`
-        return await self._sftp.lstat(path)
+        try:
+            return await self._sftp.lstat(path)
+        except (asyncssh.SFTPNoSuchFile, asyncssh.SFTPNoSuchPath) as exception:
+            raise FileNotFoundError(errno.ENOENT, str(exception), path) from exception
+        except asyncssh.SFTPPermissionDenied as exception:
+            raise PermissionError(errno.EACCES, str(exception), path) from exception
 
     async def isdir(self, path: str):
         return await self._sftp.isdir(path)
@@ -351,7 +370,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
         # if that's the case, we can get rid of the isfile check
         # https://github.com/aiidateam/aiida-core/issues/6719
-        if await self.isdir(path):
+        if await self.isdir(path) and not await self._sftp.islink(path):
             msg = f'The path {path} is a directory'
             raise OSError(msg)
         else:
@@ -703,7 +722,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         No magic is allowed in source or destination.
         """
 
-        commands = self.ssh_command_generator('ln -s {} {}', paths=[source, destination])
+        commands = self.ssh_command_generator('ln -s -- {} {}', paths=[source, destination])
         returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
@@ -774,7 +793,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
 
     async def lstat(self, path: str):
         # order of stat matters
-        commands = self.ssh_command_generator("stat -c '%s %u %g %a %X %Y' {}", paths=[path])
+        commands = self.ssh_command_generator("stat -c '%s %u %g %f %X %Y' {}", paths=[path])
         _returncode, stdout, _stderr = await self.openssh_execute(commands)
 
         stdout = stdout.strip()
@@ -783,6 +802,34 @@ class _OpenSSH(_AsynchronousSSHBackend):
 
         # order matters
         return Stat(*stdout.split())
+
+    async def putfilelike(self, handle: t.BinaryIO, remotepath: str) -> None:
+        commands = self.ssh_command_generator('cat > {}', paths=[remotepath])
+        commands[1] = self.data_machine
+        process = await asyncio.create_subprocess_exec(
+            *commands,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
+        )
+        assert process.stderr is not None and process.stdin is not None
+        stderr_task = asyncio.create_task(process.stderr.read())
+        try:
+            while chunk := await run_file_io(handle.read, 524288):
+                process.stdin.write(chunk)
+                await process.stdin.drain()
+            process.stdin.close()
+            await process.wait()
+            stderr = await stderr_task
+            if process.returncode:
+                msg = f'Could not upload to {remotepath}: {stderr.decode(errors="replace")}'
+                raise OSError(msg)
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+            await stderr_task
 
     async def run(self, command: str, stdin: str | None = None, timeout: float | None = None):
         commands = self.ssh_command_generator(command)
@@ -896,7 +943,7 @@ class Stat:
         self.size = int(size)
         self.uid = int(uid)
         self.gid = int(gid)
-        # convert the octal permissions to decimal
-        self.permissions = int(permissions, 8)
+        # GNU stat's hexadecimal mode includes the file type, just like SFTP and os.lstat.
+        self.permissions = int(permissions, 16)
         self.atime = int(atime)
         self.mtime = int(mtime)

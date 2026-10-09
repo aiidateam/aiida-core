@@ -13,13 +13,18 @@ import asyncio
 import fnmatch
 import os
 import re
+import shutil
 import sys
+import typing as t
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
+from tempfile import NamedTemporaryFile
 
+from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
+from aiida.transports.util import run_file_io
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
@@ -67,6 +72,74 @@ class Transport(abc.ABC):
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
     DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10.0
+
+    async def get_file_checksum_async(self, path: TransportPath) -> str:
+        """Return the SHA-256 digest of a remote file, without downloading it.
+
+        :param path: file to read (symbolic links are followed).
+        :raises OSError: if the file cannot be read or no checksum utility is available.
+        """
+        command = 'if command -v sha256sum >/dev/null 2>&1; then sha256sum; else shasum -a 256; fi'
+        status, stdout, stderr = await self.exec_command_wait_async(f'({command}) < {escape_for_bash(str(path))}')
+        digest = stdout.split()[0] if stdout.split() else ''
+        if status or re.fullmatch('[0-9a-fA-F]{64}', digest) is None:
+            msg = f'Could not compute SHA-256 for {path}: {stderr}'
+            raise OSError(msg)
+        return digest.lower()
+
+    async def readlink_async(self, path: TransportPath) -> str:
+        """Return the stored target of a symbolic link, without resolving it.
+
+        :param path: symbolic link to read.
+        :raises OSError: if the link cannot be read.
+        """
+        path = str(path)
+        if not path.startswith('/'):
+            path = f'./{path}'
+        status, stdout, stderr = await self.exec_command_wait_async(f'readlink {escape_for_bash(path)}')
+        if status:
+            msg = f'Could not read symbolic link {path}: {stderr}'
+            raise OSError(msg)
+        return stdout.removesuffix('\n')
+
+    async def putfilelike_async(self, handle: t.BinaryIO, remotepath: TransportPath) -> None:
+        """Upload bytes from the current position of an open binary stream.
+
+        Plugins can override this compatibility implementation to stream directly, avoiding a temporary local copy.
+
+        :param handle: binary stream, which remains open after the upload.
+        :param remotepath: destination file, whose parent directory must exist.
+        """
+        with NamedTemporaryFile() as temporary:
+            await run_file_io(shutil.copyfileobj, handle, temporary)
+            await run_file_io(temporary.flush)
+            await self.putfile_async(temporary.name, remotepath)
+
+    async def symlink_literal_async(self, source: TransportPath, destination: TransportPath) -> None:
+        """Create a symbolic link without expanding wildcard characters in its stored target.
+
+        :param source: literal link target, which need not exist.
+        :param destination: path of the new link.
+        :raises OSError: if the link cannot be created.
+        """
+        command = f'ln -s -- {escape_for_bash(str(source))} {escape_for_bash(str(destination))}'
+        status, _, stderr = await self.exec_command_wait_async(command)
+        if status:
+            msg = f'Could not create symbolic link {destination}: {stderr}'
+            raise OSError(msg)
+
+    async def copyfile_literal_async(self, source: TransportPath, destination: TransportPath) -> None:
+        """Copy a single remote file, following source symlinks and treating both paths literally.
+
+        :param source: file to copy, without wildcard expansion.
+        :param destination: destination file, whose parent must exist.
+        :raises OSError: if the file cannot be copied.
+        """
+        command = f'cp -L -- {escape_for_bash(str(source))} {escape_for_bash(str(destination))}'
+        status, _, stderr = await self.exec_command_wait_async(command)
+        if status:
+            msg = f'Could not copy {source} to {destination}: {stderr}'
+            raise OSError(msg)
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate

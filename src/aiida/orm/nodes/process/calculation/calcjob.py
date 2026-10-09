@@ -63,6 +63,7 @@ class CalcJobNode(CalculationNode):
     RETRIEVE_LIST_KEY = 'retrieve_list'
     RETRIEVE_TEMPORARY_LIST_KEY = 'retrieve_temporary_list'
     SCHEDULER_JOB_ID_KEY = 'job_id'
+    UPLOAD_MANIFEST_KEY = 'upload_manifest'
     SCHEDULER_STATE_KEY = 'scheduler_state'
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
@@ -166,6 +167,7 @@ class CalcJobNode(CalculationNode):
             cls.CALC_JOB_STATE_KEY,
             cls.IMMIGRATED_KEY,
             cls.REMOTE_WORKDIR_KEY,
+            cls.UPLOAD_MANIFEST_KEY,
             cls.RETRIEVE_LIST_KEY,
             cls.RETRIEVE_TEMPORARY_LIST_KEY,
             cls.SCHEDULER_JOB_ID_KEY,

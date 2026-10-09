@@ -14,6 +14,7 @@ import json
 import os
 import pathlib
 import tempfile
+import time
 import uuid
 from copy import deepcopy
 from functools import partial
@@ -1419,6 +1420,88 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
     _, node = launch.run_get_node(builder)
     assert node.is_failed, (node.process_state, node.exit_status)
     assert node.exit_status == 418
+
+
+@pytest.mark.requires_broker
+def test_upload_resume_after_daemon_restart(
+    get_calcjob_builder, runner, daemon_client, aiida_config, aiida_profile, run_cli_command, manager
+):
+    """Exhaust upload retries, restart the daemon, and resume the same work directory with ``verdi process play``."""
+    from aiida.brokers.exceptions import DeliveryFailed, TimeoutError
+    from aiida.cmdline.commands.cmd_process import process_play
+    from aiida.common.folders import SandboxFolder
+
+    if os.geteuid() == 0:
+        pytest.skip('Root bypasses the filesystem permissions used to interrupt the upload.')
+
+    options = {'transport.task_maximum_attempts': 2, 'transport.task_retry_initial_interval': 0}
+    original_options = {key: aiida_config.get_option(key, scope=aiida_profile.name) for key in options}
+    for key, value in options.items():
+        aiida_config.set_option(key, value, scope=aiida_profile.name)
+    aiida_config.store()
+
+    process = instantiate_process(runner, get_calcjob_builder())
+    uuid = process.node.uuid
+    computer = process.node.computer
+    with computer.get_transport() as transport:
+        root = pathlib.Path(computer.get_workdir().format(username=transport.whoami()))
+    workdir = root / uuid[:2] / uuid[2:4] / uuid[4:]
+    workdir.mkdir(parents=True)
+    (workdir / '.aiida').mkdir()
+    process.node.set_remote_workdir(str(workdir))
+    with SandboxFolder() as sandbox:
+        process.presubmit(sandbox)
+        script = process.node.get_option('submit_script_filename')
+        (workdir / script).write_bytes(pathlib.Path(sandbox.get_abs_path(script)).read_bytes())
+    uploaded = (workdir / script).stat()
+    workdir.chmod(0o555)
+
+    def wait_until(condition):
+        deadline = time.monotonic() + 30
+        while not condition():
+            if time.monotonic() > deadline:
+                pytest.fail(f'Process {uuid} did not reach the expected state: {orm.load_node(uuid).process_status}')
+            time.sleep(0.1)
+
+    try:
+        daemon_client.start_daemon()
+        launch.submit(process)
+        wait_until(lambda: orm.load_node(uuid).paused)
+        assert orm.load_node(uuid).get_job_id() is None
+        assert 'failed 2 times' in orm.load_node(uuid).process_status
+        assert orm.load_node(uuid).base.attributes.get(orm.CalcJobNode.UPLOAD_MANIFEST_KEY)['verified']
+
+        daemon_client.restart_daemon(wait=True)
+        workdir.chmod(0o755)
+
+        def process_reloaded():
+            try:
+                manager.get_process_controller().get_status(orm.load_node(uuid).pk).result(timeout=1)
+            except (DeliveryFailed, TimeoutError):
+                return False
+            except Exception as exception:
+                # ZeroMQ currently serializes an absent RPC subscriber as a plain Exception.
+                if str(exception) == f'Recipient not found: {orm.load_node(uuid).pk}':
+                    return False
+                raise
+            return True
+
+        wait_until(process_reloaded)
+        result = run_cli_command(process_play, [uuid, '--timeout', '10'])
+        assert 'processed' in result.output, result.output
+        wait_until(lambda: orm.load_node(uuid).is_terminated)
+        node = orm.load_node(uuid)
+        assert node.is_finished_ok, (node.exit_status, node.exception)
+        assert node.outputs.sum.value == 2
+        assert node.get_remote_workdir() == str(workdir)
+        assert (workdir / script).stat().st_mtime_ns == uploaded.st_mtime_ns
+        assert (workdir / script).stat().st_ino == uploaded.st_ino
+        assert not (root / 'lost+found').exists()
+    finally:
+        workdir.chmod(0o755)
+        for key, value in original_options.items():
+            aiida_config.set_option(key, value, scope=aiida_profile.name)
+        aiida_config.store()
 
 
 @pytest.mark.requires_broker

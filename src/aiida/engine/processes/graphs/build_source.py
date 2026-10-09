@@ -86,6 +86,7 @@ def task(function: Callable[..., t.Any] | None = None, *, outputs: tuple[str, ..
     """
 
     def decorator(function: Callable[..., t.Any]) -> t.Any:
+        """Register the task source without executing its body."""
         _key(function)
         try:
             inspect.get_annotations(function, eval_str=True)
@@ -135,6 +136,7 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
     """
 
     def decorator(function: Callable[..., t.Any]) -> GraphHandle:
+        """Register the graph source without executing its body."""
         _SOURCE_REGISTRY.register(function, kind='graph')
         return GraphHandle(function, identifier=identifier)
 
@@ -155,6 +157,8 @@ class _Reference:
 
 @dataclass
 class _LoweringState:
+    """The placements, wirings, and references collected while lowering one graph body."""
+
     definition: _SourceDefinition
     stack: tuple[str, ...]
     tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl] = field(default_factory=list)
@@ -165,6 +169,7 @@ class _LoweringState:
 
     @property
     def key(self) -> str:
+        """Return the registry key of the lowered graph."""
         return self.definition.key
 
 

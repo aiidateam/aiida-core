@@ -54,13 +54,17 @@ class Start:
 
 @dataclass
 class Step:
+    """The dispatches and notes decided by one scheduling step."""
+
     starts: list[Start] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any], body: GraphSpec | None = None) -> None:
+        """Record the dispatch of one task instance within this step."""
         self.starts.append(Start(instance=instance, task=task, inputs=inputs, body=body))
 
     def note(self, text: str) -> None:
+        """Record a human-readable scheduling decision within this step."""
         self.notes.append(text)
 
 
@@ -89,10 +93,12 @@ class GraphRun:
 
     @property
     def pending(self) -> dict[str, int]:
+        """Return the dispatched instances that have not completed yet."""
         return {instance: pk for instance, pk in self.dispatched.items() if instance not in self.done}
 
     @property
     def finished(self) -> set[str]:
+        """Return the tasks whose instances all completed or passed state through."""
         return {
             name
             for name, runs in self.instances.items()
@@ -105,6 +111,7 @@ class GraphRun:
 
     @property
     def succeeded(self) -> set[str]:
+        """Return the finished tasks whose outputs all finished successfully."""
         return {
             name
             for name in self.finished
@@ -114,17 +121,21 @@ class GraphRun:
 
     @property
     def failed(self) -> list[str]:
+        """Return the finished tasks with at least one unsuccessful output, in graph order."""
         return [name for name in self.graph.task_names if name in self.finished and name not in self.succeeded]
 
     @property
     def settled(self) -> set[str]:
+        """Return the tasks that need no further scheduling."""
         return self.succeeded | self.skipped
 
     @property
     def decided(self) -> set[str]:
+        """Return the tasks with instances, plus the skipped ones."""
         return set(self.instances) | self.skipped
 
     def step(self) -> Step:
+        """Advance scheduling: continue loops, then dispatch every ready task."""
         step = Step()
         for task in self.graph.tasks:
             if isinstance(task, LoopControl) and task.name in self.instances:
@@ -135,12 +146,15 @@ class GraphRun:
         return step
 
     def started(self, instance: str, pk: int) -> None:
+        """Record the node dispatched for one task instance."""
         self.dispatched[instance] = pk
 
     def completed(self, instance: str, pk: int) -> None:
+        """Record the node produced by one task instance."""
         self.done[instance] = pk
 
     def outputs(self) -> dict[str, t.Any]:
+        """Collect the graph outputs from passthrough inputs and task results."""
         produced = {}
         for output, source in self.graph.outputs.items():
             if source.task is None:
@@ -152,6 +166,7 @@ class GraphRun:
         return produced
 
     def to_dict(self) -> GraphRunState:
+        """Return the checkpointable scheduling progress, without the graph or inputs."""
         return {
             'version': STATE_VERSION,
             'instances': {name: list(runs) for name, runs in self.instances.items()},
@@ -176,6 +191,7 @@ class GraphRun:
         )
 
     def _begin(self, name: str, step: Step) -> None:
+        """Dispatch one ready task, skipping it when a predecessor was skipped."""
         missing = sorted(self.graph.predecessors(name) & self.skipped)
         if missing:
             step.note(f'task `{name}` will not run, since `{missing[0]}` did not')
@@ -215,6 +231,7 @@ class GraphRun:
         self.passed[task.name] = {name: inputs[name] for name in task.body.outputs if name in inputs}
 
     def _continue_loop(self, task: LoopControl, step: Step) -> None:
+        """Dispatch the next iteration once the previous one finished successfully."""
         runs = self.instances[task.name]
         if not runs or any(instance not in self.done for instance in runs):
             return
@@ -227,6 +244,7 @@ class GraphRun:
         self._begin_iteration(task, {**self._inputs_for(task), **returned(last)}, step)
 
     def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
+        """Dispatch one numbered loop iteration over the loop body."""
         instance = f'{task.name}_iteration_{len(self.instances[task.name])}'
         self.instances[task.name].append(instance)
         step.begin(
@@ -234,6 +252,8 @@ class GraphRun:
         )
 
     def _inputs_for(self, task: GraphTask) -> dict[str, t.Any]:
+        """Wire graph inputs and dependency outputs into one task's declared inputs."""
+
         # Namespace dictionaries are mutable during wiring; never mutate the saved declaration.
         def copy(value: t.Any) -> t.Any:
             return {name: copy(item) for name, item in value.items()} if isinstance(value, dict) else value

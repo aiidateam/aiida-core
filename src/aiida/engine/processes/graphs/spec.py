@@ -76,6 +76,7 @@ class ExecutorReference:
     name: str
 
     def load(self) -> type[Process]:
+        """Return the task process class loaded from its importable reference."""
         loaded = get_object_loader().load_object(f'{self.module}:{self.name}')
         if getattr(loaded, 'is_process_function', False):
             return loaded.process_class
@@ -85,10 +86,12 @@ class ExecutorReference:
         raise ImportError(msg)
 
     def to_dict(self) -> dict[str, str]:
+        """Return the executor reference without the live process class."""
         return {'module': self.module, 'name': self.name}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, str]) -> ExecutorReference:
+        """Rebuild an executor reference from its serialized form."""
         return cls(module=data['module'], name=data['name'])
 
 
@@ -102,20 +105,24 @@ class TaskSpec:
 
     @classmethod
     def from_process(cls, process: t.Callable[..., t.Any]) -> TaskSpec:
+        """Reference an importable decorated task function."""
         return cls(identifier=process.__name__, executor=ExecutorReference(process.__module__, process.__name__))
 
     @property
     def process_class(self) -> type[Process]:
+        """Return the task process class loaded from its executor reference."""
         return self.executor.load()
 
     @property
     def inputs(self) -> PortNamespace:
+        """Return the fixed input ports of the task process."""
         ports = self.process_class.spec().inputs
         fixed_inputs(ports)
         return ports
 
     @property
     def outputs(self) -> PortNamespace:
+        """Return the static leaf output ports of the task process."""
         ports = self.process_class.spec().outputs
         if ports.dynamic or any(isinstance(port, PortNamespace) for port in ports.values()):
             msg = 'graph tasks require static leaf outputs, not dynamic outputs or output namespaces.'
@@ -124,25 +131,30 @@ class TaskSpec:
 
     @property
     def result_port(self) -> str:
+        """Return the single output port, or an empty string for multiple outputs."""
         return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
 
     @property
     def input_shape(self) -> NamespaceShape:
+        """Return the fixed input contracts as nested shapes."""
         shape = shape_from_port(self.inputs, defaults=False)
         assert isinstance(shape, NamespaceShape)
         return shape
 
     @property
     def result_shape(self) -> Shape:
+        """Return the result port contracts, or the whole outputs namespace."""
         selected = self.outputs[self.result_port] if self.result_port else self.outputs
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
         return shape_from_port(selected, defaults=False)
 
     def to_dict(self) -> dict[str, t.Any]:
+        """Return the task declaration without the live process class."""
         return {'identifier': self.identifier, 'executor': self.executor.to_dict(), 'version': self.version}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> TaskSpec:
+        """Rebuild a task declaration from its serialized form."""
         return cls(
             identifier=data['identifier'],
             executor=ExecutorReference.from_dict(data['executor']),
@@ -165,10 +177,12 @@ class Endpoint:
     task: str | None = None
 
     def to_dict(self) -> dict[str, str | None]:
+        """Return the endpoint as a task name and port pair."""
         return {'task': self.task, 'port': self.port}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> Endpoint:
+        """Rebuild an endpoint from its serialized form."""
         return cls(task=data['task'], port=data['port'])
 
 
@@ -188,11 +202,13 @@ class Dependency:
 
     @property
     def carried_between(self) -> tuple[str, str] | None:
+        """Return the valued ports, or `None` for an ordering dependency."""
         if self.source_port is None or self.target_port is None:
             return None
         return self.source_port, self.target_port
 
     def to_dict(self) -> dict[str, str | None]:
+        """Return the dependency as task names with optional ports."""
         return {
             'source': self.source,
             'target': self.target,
@@ -202,6 +218,7 @@ class Dependency:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> Dependency:
+        """Rebuild a dependency from its serialized form."""
         return cls(**data)
 
 
@@ -215,6 +232,7 @@ class GraphTask(abc.ABC):
 
     @property
     def kind(self) -> TaskKind:
+        """Return the placement kind stored for this task."""
         return self.KIND
 
     @abc.abstractmethod
@@ -226,10 +244,12 @@ class GraphTask(abc.ABC):
         """Return the static outputs produced by this placement."""
 
     def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement without its kind-specific declaration."""
         return {'name': self.name, 'kind': self.kind, 'inputs': deepcopy(self.inputs)}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphTask:
+        """Rebuild the placement matching the stored kind."""
         common = {'name': data['name'], 'inputs': data.get('inputs', {})}
         kind = data.get('kind')
         if kind == 'process':
@@ -260,37 +280,49 @@ class GraphTask(abc.ABC):
 
 @dataclass(frozen=True, kw_only=True)
 class BodyTask(GraphTask):
+    """A placement whose executor is a nested graph template."""
+
     body: GraphSpec
 
     def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the input contracts of the nested template."""
         return (self.body.input_spec(),)
 
     def output_ports(self) -> PortNamespace:
+        """Return the output contracts of the nested template."""
         return self.body.output_spec()
 
     def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its nested template."""
         return {**super().to_dict(), 'body': self.body.to_dict()}
 
 
 @dataclass(frozen=True, kw_only=True)
 class SubgraphTask(BodyTask):
+    """A nested graph dispatched once as a child process."""
+
     KIND: t.ClassVar[TaskKind] = 'graph'
 
 
 @dataclass(frozen=True, kw_only=True)
 class BranchControl(BodyTask):
+    """A condition dispatching exactly one of two nested templates."""
+
     KIND: t.ClassVar[TaskKind] = 'branch'
     condition_port: str = CONDITION_PORT
     otherwise: GraphSpec | None = None
 
     @property
     def branches(self) -> tuple[GraphSpec, ...]:
+        """Return the taken-first side templates."""
         return (self.body,) if self.otherwise is None else (self.body, self.otherwise)
 
     def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the input contracts of each side template."""
         return tuple(branch.input_spec() for branch in self.branches)
 
     def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with both side templates and the condition port."""
         return {
             **super().to_dict(),
             'condition_port': self.condition_port,
@@ -300,6 +332,8 @@ class BranchControl(BodyTask):
 
 @dataclass(frozen=True, kw_only=True)
 class LoopControl(BodyTask):
+    """A condition iterating one nested template with numbered child runs."""
+
     KIND: t.ClassVar[TaskKind] = 'loop'
     condition_port: str = CONDITION_PORT
     max_iterations: int = 1000
@@ -310,16 +344,21 @@ class LoopControl(BodyTask):
 
 @dataclass(frozen=True, kw_only=True)
 class ProcessTask(GraphTask):
+    """A decorated task function dispatched as one child process."""
+
     KIND: t.ClassVar[TaskKind] = 'process'
     spec: TaskSpec
 
     def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the fixed input contracts of the task process."""
         return (self.spec.inputs,)
 
     def output_ports(self) -> PortNamespace:
+        """Return the static leaf outputs of the task process."""
         return self.spec.outputs
 
     def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its task declaration."""
         return {**super().to_dict(), 'spec': self.spec.to_dict()}
 
 
@@ -356,9 +395,11 @@ class GraphSpec:
 
     @property
     def task_names(self) -> tuple[str, ...]:
+        """Return the placement names in declaration order."""
         return tuple(task.name for task in self.tasks)
 
     def task(self, name: str) -> GraphTask:
+        """Return the placement with one name, or raise `KeyError`."""
         for task in self.tasks:
             if task.name == name:
                 return task
@@ -366,6 +407,7 @@ class GraphSpec:
         raise KeyError(msg)
 
     def input_spec(self) -> PortNamespace:
+        """Return the boundary inputs, declared or derived from the consumers."""
         if self.input_namespace is not None:
             namespace = port_for_shape('inputs', load_shape(self.input_namespace))
             if not isinstance(namespace, PortNamespace) or namespace.keys() != {
@@ -391,12 +433,14 @@ class GraphSpec:
 
     @property
     def input_shape(self) -> NamespaceShape:
+        """Return the boundary input contracts as nested shapes."""
         shape = shape_from_port(self.input_spec())
         assert isinstance(shape, NamespaceShape)
         return shape
 
     @property
     def result_port(self) -> str:
+        """Return the result path, the single output, or an empty string."""
         return (
             self.result_path
             if self.result_path is not None
@@ -407,12 +451,14 @@ class GraphSpec:
 
     @property
     def result_shape(self) -> Shape:
+        """Return the result port contracts, or the whole outputs namespace."""
         namespace = self.output_spec()
         selected = namespace[self.result_port] if self.result_port else namespace
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
         return shape_from_port(selected, defaults=False)
 
     def output_spec(self) -> PortNamespace:
+        """Return the named leaf outputs with their stored types."""
         namespace = PortNamespace('outputs')
         for name, source in self.outputs.items():
             if source.task is None:
@@ -438,9 +484,11 @@ class GraphSpec:
         return origin.valid_type
 
     def prepare_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:
+        """Convert the graph inputs to runtime values without storing provenance."""
         return prepare_inputs(self.input_spec(), inputs, self.identifier)
 
     def serialize_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:
+        """Prepare the graph inputs and validate them against every consumer."""
         namespace = self.input_spec()
         prepared = self.prepare_inputs(inputs)
         serialized = namespace.serialize(prepared)
@@ -467,9 +515,11 @@ class GraphSpec:
         return [port for namespace in task.input_ports() if (port := port_at(namespace, path)) is not None]
 
     def predecessors(self, name: str) -> set[str]:
+        """Return the tasks one placement directly depends on."""
         return {edge.source for edge in self.dependencies if edge.target == name}
 
     def ready(self, done: t.Container[str], dispatched: t.Container[str]) -> list[str]:
+        """Return the undispatched placements whose predecessors all finished."""
         return [
             task.name
             for task in self.tasks
@@ -506,6 +556,7 @@ class GraphSpec:
                 raise ValueError(msg)
 
     def validate(self) -> None:
+        """Check names, inputs, dependencies, regions, outputs, and acyclicity."""
         if len(set(self.task_names)) != len(self.task_names):
             msg = 'task names must be unique.'
             raise ValueError(msg)
@@ -597,6 +648,7 @@ class GraphSpec:
                 del remaining[name]
 
     def to_dict(self) -> dict[str, t.Any]:
+        """Return the graph template without live classes."""
         return {
             'tasks': [task.to_dict() for task in self.tasks],
             'dependencies': [edge.to_dict() for edge in self.dependencies],
@@ -614,6 +666,7 @@ class GraphSpec:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphSpec:
+        """Rebuild a graph template from its serialized form."""
         return cls(
             tasks=tuple(GraphTask.from_dict(task) for task in data['tasks']),
             dependencies=tuple(Dependency.from_dict(edge) for edge in data.get('dependencies', ())),

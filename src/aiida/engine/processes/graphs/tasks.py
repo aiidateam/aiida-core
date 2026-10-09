@@ -151,9 +151,11 @@ class TaskHandle(t.Generic[P, R]):
 
     @property
     def node_class(self) -> type[CalcFunctionNode]:
+        """Return the provenance node class of task runs."""
         return CalcFunctionNode
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
+        """Validate the task inputs through the decorated function."""
         return self._function.get_launch_inputs(**inputs)
 
     def spec(self) -> ProcessSpec:
@@ -173,6 +175,7 @@ class TaskHandle(t.Generic[P, R]):
         return self._function.run_get_pk(*args, **kwargs)
 
     def recreate_from(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+        """Recreate the task node from cached inputs through the decorated function."""
         return self._function.recreate_from(*args, **kwargs)
 
 

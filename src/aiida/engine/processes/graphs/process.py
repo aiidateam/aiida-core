@@ -38,6 +38,7 @@ class GraphProcess(Process):
 
     @classmethod
     def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
+        """Declare the stored graph and its per-instance inputs namespace."""
         super().define(spec)
         spec.input(cls._GRAPH, valid_type=Dict)
         # The stored graph supplies the fixed contract for these per-instance ports.
@@ -68,10 +69,12 @@ class GraphProcess(Process):
     @property
     @override
     def output_ports(self) -> PortNamespace:
+        """Return the static outputs declared by the stored graph."""
         return self.graph.output_spec()
 
     @property
     def run_state(self) -> GraphRun:
+        """Return the scheduling progress, rebuilt from the checkpoint when needed."""
         if self._run is None:
             graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
             self._run = GraphRun.from_dict(
@@ -83,10 +86,12 @@ class GraphProcess(Process):
 
     @property
     def graph(self) -> GraphSpec:
+        """Return the static graph this process executes."""
         return self.run_state.graph
 
     @override
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
+        """Checkpoint the scheduling progress and the graph input sources."""
         super().save_instance_state(out_state, save_context)
         out_state['run'] = self.run_state.to_dict()
         out_state['graph_input_sources'] = self._encode_input_args(
@@ -95,6 +100,7 @@ class GraphProcess(Process):
 
     @override
     def load_instance_state(self, saved_state: MutableMapping[str, t.Any], load_context: t.Any) -> None:
+        """Restore the scheduling progress and the graph input sources."""
         super().load_instance_state(saved_state, load_context)
         self._run = None
         self._saved = t.cast(GraphRunState, dict(saved_state.get('run', {})))
@@ -111,9 +117,11 @@ class GraphProcess(Process):
 
     @override
     async def run(self) -> t.Any:
+        """Dispatch one scheduling step; the engine resumes this until no tasks pend."""
         return self._do_step()
 
     def _do_step(self) -> t.Any:
+        """Dispatch the ready tasks, then wait for them or finish the graph."""
         step = self.run_state.step()
         for note in step.notes:
             self.report(note)
@@ -124,6 +132,7 @@ class GraphProcess(Process):
         return self._finish()
 
     def _submit(self, start: Start) -> None:
+        """Submit one task instance as a child process with an explicit call link."""
         process_class: type[Process]
         if start.body is not None:
             process_class, inputs = GraphProcess, self.launch_inputs(start.body, start.inputs)
@@ -140,6 +149,7 @@ class GraphProcess(Process):
 
     @override
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:
+        """Resume this process when any dispatched task finishes."""
         super().on_wait(awaitables)
         for instance, pk in self.run_state.pending.items():
             self.runner.call_on_process_finish(
@@ -147,11 +157,13 @@ class GraphProcess(Process):
             )
 
     def _on_task_finished(self, instance: str, pk: int) -> None:
+        """Record one finished task instance and resume a waiting graph."""
         self.run_state.completed(instance, pk)
         if self.state == ProcessState.WAITING:
             self.resume()
 
     def _finish(self) -> ExitCode | None:
+        """Return the task failure exit code, or expose the graph outputs."""
         state = self.run_state
         if state.failed:
             return self.exit_codes.ERROR_TASK_FAILED.format(task=state.failed[0])

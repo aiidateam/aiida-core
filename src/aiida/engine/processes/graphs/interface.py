@@ -43,6 +43,7 @@ class GraphHandle:
 
     @property
     def process_class(self) -> type[GraphProcess]:
+        """Return the process class executing lowered graphs."""
         return GraphProcess
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:

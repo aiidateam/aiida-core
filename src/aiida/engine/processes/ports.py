@@ -14,11 +14,14 @@ import re
 import typing as t
 import warnings
 from collections.abc import Callable, Mapping, Sequence
+from types import UnionType
 
+from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.orm import Data, Node, to_aiida_type
+from aiida.engine.processes.port_model import as_dict, is_a_plain_class, without_marks
+from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -163,10 +166,23 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
         if not isinstance(valid_type, (tuple, list)):
             valid_type = [valid_type]
 
-        if not kwargs.get('required', True) and valid_type:
+        if not kwargs.get('required', True) and valid_type and type(None) not in valid_type:
             kwargs['valid_type'] = tuple(valid_type) + (type(None),)
 
+        if isinstance(kwargs.get('valid_type'), tuple):
+            kwargs['valid_type'] = tuple(dict.fromkeys(kwargs['valid_type']))
+
         super().__init__(*args, **kwargs)
+
+    def prepare(self, value: t.Any) -> t.Any:
+        """Adapt an input to its declared runtime type without coercing unrelated values.
+
+        :param value: the incoming input value.
+        :return: the runtime value, ready for validation.
+        """
+        if self.valid_type is None:
+            return self.serialize(value)
+        return _runtime_value(self.valid_type, value, self.serialize)
 
     def get_description(self) -> dict[str, str]:
         """Return a description of the InputPort, which will be a dictionary of its attributes
@@ -197,6 +213,16 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
     """Subclass of :class:`aiida.engine.processes.generic.ports.PortNamespace` supporting automatic recursive
     serialization of a given mapping onto the ports of the PortNamespace.
     """
+
+    def pre_process(self, port_values: t.Any) -> AttributesFrozendict:
+        """Accept model instances as namespace mappings before applying defaults."""
+        held = as_dict(port_values)
+        if held is not None:
+            port_values = held
+        if not isinstance(port_values, Mapping):
+            msg = f'port namespace `{self.name}` received `{type(port_values)}` instead of a dictionary'
+            raise TypeError(msg)
+        return super().pre_process(dict(port_values))
 
     def __setitem__(self, key: str, port: ports.Port) -> None:
         """Ensure that a `Port` being added inherits the `non_db` attribute if not explicitly defined at construction.
@@ -262,6 +288,31 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             msg = f'invalid port name `{port_name}`: more than two consecutive underscores'
             raise ValueError(msg)
 
+    def prepare(self, mapping: Mapping[str, t.Any]) -> AttributesFrozendict:
+        """Adapt namespace leaves to runtime types without changing the supplied mapping.
+
+        :param mapping: inputs with defaults already applied.
+        :return: runtime inputs ready for validation.
+        """
+        if not isinstance(mapping, Mapping):
+            msg = f'port namespace `{self.name}` received `{type(mapping)}` instead of a dictionary'  # type: ignore[unreachable]
+            raise TypeError(msg)
+
+        def dynamic(value: t.Any) -> t.Any:
+            if isinstance(value, Mapping):
+                return {key: dynamic(item) for key, item in value.items()}
+            return _runtime_value(self.valid_type, value)
+
+        result = {}
+        for name, value in mapping.items():
+            if name in self:
+                port = self[name]
+                assert isinstance(port, (InputPort, PortNamespace))
+                result[name] = port.prepare(value)
+            else:
+                result[name] = dynamic(value)
+        return AttributesFrozendict(result)
+
     def serialize(self, mapping: dict[str, t.Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, t.Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.
 
@@ -281,6 +332,13 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             msg = f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary'
             raise TypeError(msg)
 
+        def dynamic(item: t.Any) -> t.Any:
+            if isinstance(item, Mapping):
+                return {key: dynamic(leaf) for key, leaf in item.items()}
+            if self.is_metadata or self.non_db or self.valid_type is None or item is None:
+                return item
+            return item if isinstance(item, Node) else to_aiida_type(item)
+
         result: dict[str, t.Any] = {}
 
         for name, value in mapping.items():
@@ -294,6 +352,71 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                     msg = f'port does not have a serialize method: {port}'
                     raise AssertionError(msg)
             else:
-                result[name] = value
+                result[name] = dynamic(value)
 
         return result
+
+
+def _runtime_value(
+    valid_type: type | tuple[type, ...] | None,
+    value: t.Any,
+    serializer: Callable[[t.Any], t.Any] | None = None,
+) -> t.Any:
+    """Preserve accepted nodes and unwrap only values matching the runtime declaration."""
+    if not valid_type or isinstance(value, valid_type):
+        return value
+    if isinstance(value, Data):
+        converted = from_aiida_type(value)
+        return converted if isinstance(converted, valid_type) else value
+    types = valid_type if isinstance(valid_type, tuple) else (valid_type,)
+    if serializer is not None and any(issubclass(kind, Node) for kind in types):
+        return serializer(value)
+    return value
+
+
+def infer_valid_type_from_type_annotation(annotation: t.Any, *, stored: bool = True) -> tuple[t.Any, ...]:
+    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
+
+    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :param stored: infer ORM types for legacy function inputs and outputs; disable for runtime input types.
+    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
+        tuple is returned.
+    """
+
+    def get_type_from_annotation(annotation):
+        if annotation is t.Any:
+            return None
+        origin = t.get_origin(annotation)
+        if not stored and origin in (list, dict):
+            annotation = origin
+
+        valid_type_map = {
+            bool: Bool,
+            dict: Dict,
+            t.Dict: Dict,  # noqa: UP006 - support legacy annotation spelling
+            float: Float,
+            int: Int,
+            list: List,
+            t.List: List,  # noqa: UP006 - support legacy annotation spelling
+            str: Str,
+            type(None): type(None),
+        }
+
+        if is_a_plain_class(annotation):
+            if not stored or issubclass(annotation, Data):
+                return annotation
+            return valid_type_map.get(annotation)
+
+        return valid_type_map.get(annotation) if stored else None
+
+    annotation = without_marks(annotation)
+    inferred_valid_type: tuple[t.Any, ...] = ()
+
+    if is_a_plain_class(annotation) or t.get_origin(annotation) in (list, dict):
+        inferred_valid_type = (get_type_from_annotation(annotation),)
+    elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
+        inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
+    elif t.get_origin(annotation) is t.Optional:
+        inferred_valid_type = (t.get_args(annotation),)
+
+    return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)

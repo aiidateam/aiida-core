@@ -43,6 +43,33 @@ The namespaces can be arbitrarily nested with ports and so are called *port name
 The port and port namespace are implemented by the :py:class:`~aiida.engine.processes.generic.ports.Port` and :py:class:`~aiida.engine.processes.ports.PortNamespace` class, respectively.
 
 
+Structured namespace declarations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A ``PortModel`` declares a fixed namespace of ports without introducing a second validation system:
+
+.. code:: python
+
+    from typing import Annotated
+    from aiida.engine import PortField, PortModel
+
+    class Settings(PortModel):
+        count: Annotated[int, PortField(help='Iteration count.')] = 10
+        label: str
+        nullable: int | None
+
+    spec.input_namespace_from('settings', Settings)
+    spec.outputs_from(Settings)
+
+Models are frozen, keyword-only dataclasses. Nested models declare nested namespaces.
+A field is required unless it has a default; allowing ``None`` does not make its key optional.
+``PortField`` supplies help text through ``Annotated``.
+Inputs can be namespace mappings or model instances, but processes receive attribute-accessible namespace mappings, not reconstructed models.
+Python-typed input fields receive Python values, while ORM-typed fields receive nodes.
+Compatible ORM inputs are unwrapped for runtime validation without losing the original provenance links.
+Output fields declare ORM types and do not apply input defaults.
+Legacy process-function annotations still declare ORM inputs.
+
+
 .. _topics:processes:usage:ports_portnamespaces:
 
 Ports and Port namespaces

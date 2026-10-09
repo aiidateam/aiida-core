@@ -23,8 +23,21 @@ def test_constructor_tree(tmp_path):
     }
     for filename, content in tree.items():
         tmp_path.joinpath(filename).write_text(content, encoding='utf8')
-    node = FolderData(tree=str(tmp_path))
+    node = FolderData.from_tree(str(tmp_path))
     assert sorted(node.base.repository.list_object_names()) == sorted(tree.keys())
+
+
+def test_cli_repo_source_tree(tmp_path):
+    """Test that the CLI tree input maps to relative repository paths."""
+    nested = tmp_path / 'nested'
+    nested.mkdir()
+    (nested / 'file.txt').write_text('tree content', encoding='utf8')
+
+    model = FolderData.cli_spec.validate({'tree': tmp_path})
+    node = model.to_entity()
+
+    assert node.base.repository.list_object_names('nested') == ['file.txt']
+    assert node.base.repository.get_object_content('nested/file.txt') == 'tree content'
 
 
 @pytest.mark.parametrize(

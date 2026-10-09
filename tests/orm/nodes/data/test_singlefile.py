@@ -61,6 +61,62 @@ def check_singlefile_content_with_store(check_singlefile_content):
     return inner
 
 
+def test_create_model_with_file_without_attributes(check_singlefile_content):
+    """Test that a SinglefileData create model defaults its attributes to empty."""
+    content = b'single file content'
+    node = SinglefileData.models.create(files={'example.txt': lambda: io.BytesIO(content)}).to_entity()
+    assert node.filename == 'example.txt'
+    check_singlefile_content(
+        node=node,
+        content_reference=content,
+        filename='example.txt',
+        open_mode='rb',
+    )
+
+
+def test_cli_repo_source(tmp_path, check_singlefile_content):
+    """Test creating a SinglefileData through its CLI creation specification."""
+    content = b'cli single-file content'
+    filepath = tmp_path / 'input.txt'
+    filepath.write_bytes(content)
+
+    model = SinglefileData.cli_spec.validate({'filepath': filepath})
+    node = model.to_entity()
+
+    assert node.singlefile == pathlib.PurePath('input.txt')
+    check_singlefile_content(node, content, 'input.txt', open_mode='rb')
+
+
+def test_cli_repo_source_custom_filename(tmp_path):
+    """Test that the optional filename CLI attribute renames the repository entry."""
+    filepath = tmp_path / 'input.txt'
+    filepath.write_bytes(b'content')
+
+    filename_parameter = next(
+        parameter for parameter in SinglefileData.cli_spec.parameters() if parameter.name == 'filename'
+    )
+    assert not filename_parameter.required
+    assert filename_parameter.prompt is False
+    assert 'Optional.' in filename_parameter.help
+
+    model = SinglefileData.cli_spec.validate({'filepath': filepath, 'filename': 'custom.txt'})
+    node = model.to_entity()
+
+    assert node.filename == 'custom.txt'
+    assert node.base.repository.list_object_names() == ['custom.txt']
+
+
+def test_cli_repo_source_rejects_multiple_files():
+    """Test that a SinglefileData source rejects a files mapping with multiple entries."""
+    with pytest.raises(ValueError, match='at most 1 repository file'):
+        SinglefileData.models.create(
+            files={
+                'first.txt': lambda: io.BytesIO(b'first'),
+                'second.txt': lambda: io.BytesIO(b'second'),
+            }
+        ).to_entity()
+
+
 def test_reload_singlefile_data(check_singlefile_content_with_store, check_singlefile_content):
     """Test writing and reloading a `SinglefileData` instance."""
     content_original = 'some text ABCDE'
@@ -70,7 +126,7 @@ def test_reload_singlefile_data(check_singlefile_content_with_store, check_singl
         basename = os.path.basename(filepath)
         handle.write(content_original)
         handle.flush()
-        node = SinglefileData(file=filepath)
+        node = SinglefileData.from_path(filepath)
 
     check_singlefile_content_with_store(
         node=node,
@@ -102,7 +158,7 @@ def test_construct_from_filelike(check_singlefile_content_with_store):
         handle.write(content_original.encode('utf-8'))
         handle.flush()
         handle.seek(0)
-        node = SinglefileData(file=handle)
+        node = SinglefileData.from_filelike(handle)
 
     check_singlefile_content_with_store(
         node=node,
@@ -116,7 +172,7 @@ def test_construct_from_string(check_singlefile_content_with_store):
     content_original = 'some testing text\nwith a newline'
 
     with io.BytesIO(content_original.encode('utf-8')) as handle:
-        node = SinglefileData(file=handle)
+        node = SinglefileData.from_filelike(handle)
 
     check_singlefile_content_with_store(
         node=node,
@@ -134,7 +190,7 @@ def test_construct_with_path(check_singlefile_content_with_store):
         filename = filepath.name
         handle.write(content_original)
         handle.flush()
-        node = SinglefileData(file=filepath)
+        node = SinglefileData.from_path(filepath)
 
     check_singlefile_content_with_store(
         node=node,
@@ -150,7 +206,7 @@ def test_construct_with_filename(check_singlefile_content_with_store, filename):
 
     # test creating from string
     with io.BytesIO(content_original.encode('utf-8')) as handle:
-        node = SinglefileData(file=handle, filename=filename)
+        node = SinglefileData.from_filelike(handle, filename=filename)
 
     check_singlefile_content_with_store(node=node, content_reference=content_original, filename=filename)
 
@@ -159,7 +215,7 @@ def test_construct_with_filename(check_singlefile_content_with_store, filename):
         handle.write(content_original.encode('utf-8'))
         handle.flush()
         handle.seek(0)
-        node = SinglefileData(file=handle, filename=filename)
+        node = SinglefileData.from_filelike(handle, filename=filename)
 
     check_singlefile_content_with_store(node=node, content_reference=content_original, filename=filename)
 
@@ -174,7 +230,7 @@ def test_binary_file(check_singlefile_content_with_store):
         handle.write(bytearray(content_binary))
         handle.flush()
         handle.seek(0)
-        node = SinglefileData(handle.name)
+        node = SinglefileData.from_path(handle.name)
 
     check_singlefile_content_with_store(
         node=node,

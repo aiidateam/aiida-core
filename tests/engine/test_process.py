@@ -64,7 +64,7 @@ class TestProcessNamespace:
         """Test that inputs in nested namespaces are properly validated and the link labels
         are properly formatted by connecting the namespaces with underscores.
         """
-        proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': orm.Int(5)}}}})
+        proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': orm.Int(value=5)}}}})
 
         # Test that the namespaced inputs are AttributesFrozenDicts
         assert isinstance(proc.inputs, AttributesFrozendict)
@@ -136,7 +136,7 @@ class TestProcess:
         """Test input link creation."""
         dummy_inputs = ['a', 'b', 'c', 'd']
 
-        inputs = {string: orm.Str(string) for string in dummy_inputs}
+        inputs = {string: orm.Str(value=string) for string in dummy_inputs}
         inputs['metadata'] = {'store_provenance': True}
         process = test_processes.DummyProcess(inputs)
 
@@ -160,7 +160,9 @@ class TestProcess:
         process = test_processes.DummyProcess()
 
         with pytest.raises(ValueError):
-            process.node.base.links.add_incoming(orm.Int(1), link_type=LinkType.INPUT_WORK, link_label='illegal_link')
+            process.node.base.links.add_incoming(
+                orm.Int(value=1), link_type=LinkType.INPUT_WORK, link_label='illegal_link'
+            )
 
     def test_seal(self):
         _, p_k = run_get_pk(test_processes.DummyProcess)
@@ -232,7 +234,7 @@ class TestProcess:
     def test_save_instance_state_with_outputs():
         """Test save/load roundtrip preserves outputs."""
         proc = test_processes.DummyProcess()
-        proc.out('result', orm.Int(5).store())
+        proc.out('result', orm.Int(value=5).store())
         payload = CheckpointPayload.from_object(proc)
         proc.close()
         loaded = payload.decode()
@@ -261,14 +263,14 @@ class TestProcess:
         """
         # Sanity check that caching works when the exit code is not returned.
         with enable_caching():
-            _, node1 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
-            _, node2 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
+            _, node1 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(value=False))
+            _, node2 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(value=False))
             assert node1.base.extras.get('_aiida_hash') == node2.base.extras.get('_aiida_hash')
             assert NodeCaching.CACHED_FROM_KEY in node2.base.extras
 
         with enable_caching():
-            _, node3 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
-            _, node4 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
+            _, node3 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(value=True))
+            _, node4 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(value=True))
             assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
             assert NodeCaching.CACHED_FROM_KEY not in node4.base.extras
 
@@ -284,8 +286,8 @@ class TestProcess:
             assert NodeCaching.CACHED_FROM_KEY in node2.base.extras
 
         with enable_caching():
-            _, node3 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
-            _, node4 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
+            _, node3 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(value=True))
+            _, node4 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(value=True))
             assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
             assert NodeCaching.CACHED_FROM_KEY not in node4.base.extras
 
@@ -294,8 +296,8 @@ class TestProcess:
         from aiida.orm import InstalledCode
 
         code = InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
-        parameters = orm.Dict(dict={})
-        template = orm.Dict(dict={})
+        parameters = orm.Dict()
+        template = orm.Dict()
         options = {
             'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1},
             'max_wallclock_seconds': 1,
@@ -350,11 +352,11 @@ class TestProcess:
             async def run(self):
                 self.out('namespace', self.inputs.namespace)
 
-        results, node = run_get_node(TestProcess1, namespace={'alpha': orm.Int(1), 'beta': orm.Int(2)})
+        results, node = run_get_node(TestProcess1, namespace={'alpha': orm.Int(value=1), 'beta': orm.Int(value=2)})
 
         assert node.is_finished_ok
-        assert results['namespace']['alpha'] == orm.Int(1)
-        assert results['namespace']['beta'] == orm.Int(2)
+        assert results['namespace']['alpha'] == orm.Int(value=1)
+        assert results['namespace']['beta'] == orm.Int(value=2)
 
     def test_output_validation_error(self):
         """Test that a process is marked as failed if its output namespace validation fails."""
@@ -367,14 +369,14 @@ class TestProcess:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.input('add_outputs', valid_type=orm.Bool, default=lambda: orm.Bool(False))
+                spec.input('add_outputs', valid_type=orm.Bool, default=lambda: orm.Bool(value=False))
                 spec.output_namespace('integer.namespace', valid_type=orm.Int, dynamic=True)
                 spec.output('required_string', valid_type=orm.Str, required=True)
 
             async def run(self):
                 if self.inputs.add_outputs:
-                    self.out('required_string', orm.Str('testing').store())
-                    self.out('integer.namespace.two', orm.Int(2).store())
+                    self.out('required_string', orm.Str(value='testing').store())
+                    self.out('integer.namespace.two', orm.Int(value=2).store())
 
         _, node = run_get_node(TestProcess1)
 
@@ -386,7 +388,7 @@ class TestProcess:
         assert node.exit_message == TestProcess1.exit_codes.ERROR_MISSING_OUTPUT.message
 
         # When settings `add_outputs` to True, the outputs should be added and validation should pass
-        _, node = run_get_node(TestProcess1, add_outputs=orm.Bool(True))
+        _, node = run_get_node(TestProcess1, add_outputs=orm.Bool(value=True))
         assert node.is_finished
         assert node.is_finished_ok
         assert node.exit_status == 0
@@ -424,12 +426,12 @@ class TestProcess:
                 spec.expose_outputs(ChildProcess)
 
         node_child = orm.WorkflowNode().store()
-        node_output = orm.Int(1).store()
+        node_output = orm.Int(value=1).store()
         node_output.base.links.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
-        node_name_space = orm.Int(1).store()
+        node_name_space = orm.Int(value=1).store()
         node_name_space.base.links.add_incoming(node_child, link_label='name__space', link_type=LinkType.RETURN)
 
-        process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
+        process = instantiate_process(runner, ParentProcess, input=orm.Int(value=1))
         exposed_outputs = process.exposed_outputs(node_child, ChildProcess)
 
         expected = AttributeDict(
@@ -474,12 +476,12 @@ class TestProcess:
                 spec.expose_outputs(ChildProcess, namespace='child')
 
         node_child = orm.WorkflowNode().store()
-        node_output = orm.Int(1).store()
+        node_output = orm.Int(value=1).store()
         node_output.base.links.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
-        node_name_space = orm.Int(1).store()
+        node_name_space = orm.Int(value=1).store()
         node_name_space.base.links.add_incoming(node_child, link_label='name__space', link_type=LinkType.RETURN)
 
-        process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
+        process = instantiate_process(runner, ParentProcess, input=orm.Int(value=1))
 
         # If the ``namespace`` does not exist, for example because it is slightly misspelled, a ``KeyError`` is raised
         with pytest.raises(KeyError):
@@ -571,9 +573,11 @@ def test_not_required_accepts_none():
     assert process.inputs.valid_type is None
     assert process.inputs.any_type is None
 
-    process = instantiate_process(runner, TestNotRequiredNoneProcess, valid_type=orm.Int(1), any_type=orm.Bool(True))
-    assert process.inputs.valid_type == orm.Int(1)
-    assert process.inputs.any_type == orm.Bool(True)
+    process = instantiate_process(
+        runner, TestNotRequiredNoneProcess, valid_type=orm.Int(value=1), any_type=orm.Bool(value=True)
+    )
+    assert process.inputs.valid_type == orm.Int(value=1)
+    assert process.inputs.any_type == orm.Bool(value=True)
 
 
 class TestMetadataInputsProcess(Process):

@@ -66,7 +66,7 @@ def multiply(x, y):
     return x * y
 
 
-result = multiply(add(orm.Int(1), orm.Int(2)), orm.Int(3))
+result = multiply(add(orm.Int(value=1), orm.Int(value=2)), orm.Int(value=3))
 archive_path = Path.cwd().parents[1] / 'build' / 'howto-inspect-archive.aiida'
 if not archive_path.exists():
     create_archive([result], filename=archive_path, overwrite=True)

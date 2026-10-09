@@ -276,7 +276,7 @@ class CifEntry(DbEntry):
         with tempfile.NamedTemporaryFile(mode='w+') as handle:
             handle.write(self.cif)
             handle.flush()
-            cifnode = CifData(file=handle.name, source=self.source, parse_policy=parse_policy)
+            cifnode = CifData.from_path(handle.name, source=self.source, parse_policy=parse_policy)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.
@@ -318,7 +318,7 @@ class UpfEntry(DbEntry):
         with tempfile.NamedTemporaryFile(mode='w+b', prefix=self.source['id']) as handle:
             handle.write(self.contents.encode('utf-8'))
             handle.flush()
-            upfnode = UpfData(file=handle.name, source=self.source)
+            upfnode = UpfData.from_path(handle.name, source=self.source)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.

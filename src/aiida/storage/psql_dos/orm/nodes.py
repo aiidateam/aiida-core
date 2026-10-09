@@ -10,6 +10,7 @@
 
 import typing as t
 from collections.abc import Iterable
+from copy import deepcopy
 from datetime import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -96,8 +97,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             'dbcomputer': self.model.dbcomputer,
             'label': self.model.label,
             'description': self.model.description,
-            'attributes': self.model.attributes,
-            'extras': self.model.extras,
+            'attributes': deepcopy(self.model.attributes),
+            'extras': deepcopy(self.model.extras),
         }
 
         clone = self.__class__.__new__(self.__class__)

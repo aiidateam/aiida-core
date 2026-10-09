@@ -637,7 +637,7 @@ class Config:
                 )
                 raise TypeError(msg)
 
-        storage_config = storage_cls.CliModel(**(storage_config or {})).model_dump()
+        storage_config = storage_cls.Model(**(storage_config or {})).model_dump()
 
         if broker_backend is not None:
             try:

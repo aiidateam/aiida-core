@@ -71,7 +71,7 @@ class TestVerdiCalculation:
                 self.VAL_TWO = 'val_two'
 
                 output_parameters = orm.Dict(
-                    dict={
+                    **{
                         self.KEY_ONE: self.VAL_ONE,
                         self.KEY_TWO: self.VAL_TWO,
                     }

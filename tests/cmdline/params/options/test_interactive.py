@@ -14,7 +14,7 @@ import click
 import pytest
 
 from aiida.cmdline.params.options import NON_INTERACTIVE
-from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options.interactive import BooleanInteractiveOption, InteractiveOption
 from aiida.cmdline.params.types.plugin import PluginParamType
 
 
@@ -168,6 +168,29 @@ def test_default(run_cli_command, options, user_input, expected):
     cmd = create_command(default='default-value')
     result = run_cli_command(cmd, options, user_input=user_input)
     assert result.output_lines[-1].strip() == expected
+
+
+@pytest.mark.parametrize(
+    ('user_input', 'expected'),
+    (
+        ('True\n', 'True'),
+        ('False\n', 'False'),
+        ('\n', 'False'),
+    ),
+)
+def test_boolean_interactive_option(run_cli_command, user_input, expected):
+    """Test boolean flags prompt with explicit True/False values and a False default."""
+
+    @click.command()
+    @click.option('--value/--no-value', default=False, prompt='Value', cls=BooleanInteractiveOption)
+    def command(value):
+        click.echo(str(value))
+
+    result = run_cli_command(command, user_input=user_input)
+
+    assert 'Value (True/False) [False]:' in result.output
+    assert '[y/N]' not in result.output
+    assert result.output_lines[-1] == expected
 
 
 def test_help_string(run_cli_command):

@@ -24,7 +24,7 @@ def multiply(x, y):
 @calcfunction
 def is_even(number):
     """Check if a number is even."""
-    return Bool(number % 2 == 0)
+    return Bool(value=number % 2 == 0)
 
 
 class MultiplyAddWorkChain(WorkChain):

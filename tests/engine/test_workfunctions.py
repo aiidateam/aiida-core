@@ -27,7 +27,7 @@ class TestWorkFunction:
     def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
-        self.default_int = Int(256)
+        self.default_int = Int(value=256)
 
         @workfunction
         def test_workfunction(data):
@@ -55,7 +55,7 @@ class TestWorkFunction:
 
         @workfunction
         def test_workfunction():
-            return Int(2)
+            return Int(value=2)
 
         with pytest.raises(ValueError):
             test_workfunction.run_get_node()

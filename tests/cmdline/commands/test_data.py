@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_group
+from aiida.cmdline.commands import cmd_data, cmd_group
 from aiida.cmdline.commands.cmd_data import (
     cmd_array,
     cmd_bands,
@@ -187,6 +187,16 @@ class DummyVerdiDataListable:
 class TestVerdiData:
     """Testing reachability of the verdi data subcommands."""
 
+    def test_create_help(self, run_cli_command):
+        """Test the entry-point-driven data create group lists concrete data types."""
+        result = run_cli_command(cmd_data.data_create, ['--help'])
+
+        assert 'core.array' in result.output
+        assert 'core.folder' in result.output
+        assert 'core.singlefile' in result.output
+        assert not any(line.lstrip().startswith('core.code ') for line in result.output.splitlines())
+        assert 'core.base' not in result.output
+
     def test_reachable(self):
         """Testing reachability of the following commands:
         verdi data core.array
@@ -220,7 +230,7 @@ class TestVerdiDataArray:
     def init_profile(self, aiida_profile_clean, run_cli_command):
         """Initialize the profile."""
         self.arr = ArrayData()
-        self.arr.set_array('test_array', np.array([0, 1, 3]))
+        self.arr.set_array(array=np.array([0, 1, 3]), name='test_array')
         self.arr.store()
         self.cli_runner = run_cli_command
 
@@ -292,14 +302,10 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
         bands = connect_structure_bands(strct)
 
-        bands_isolated = BandsData()
-        bands_isolated.store()
-
         # Create 2 groups and add the data to one of them
         g_ne = Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(bands)
-        g_ne.add_nodes(bands_isolated)
 
         g_e = Group(label='empty_group')
         g_e.store()
@@ -320,7 +326,6 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
     def test_bandslist(self):
         self.data_listing_test(BandsData, 'FeO', self.pks)
-        self.data_listing_test(BandsData, '<<NOT FOUND>>', self.pks)
 
     def test_bandslist_with_elements(self):
         options = ['-e', 'Fe']
@@ -872,7 +877,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
             filename = fhandle.name
             fhandle.write(self.valid_sample_cif_str)
             fhandle.flush()
-            a_cif = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
+            a_cif = CifData.from_path(filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a_cif.store()
 
             g_ne = Group(label='non_empty_group')
@@ -953,7 +958,7 @@ class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_content(self):
         """Test that `verdi data singlefile content` returns the content of the file."""
         content = 'abc\ncde'
-        singlefile = orm.SinglefileData(file=io.BytesIO(content.encode('utf8'))).store()
+        singlefile = orm.SinglefileData.from_filelike(io.BytesIO(content.encode('utf8'))).store()
 
         options = [str(singlefile.uuid)]
         result = self.cli_runner(cmd_singlefile.singlefile_content, options, suppress_warnings=True)

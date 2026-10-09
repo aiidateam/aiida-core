@@ -123,7 +123,7 @@ def test_code_list_also_no_computer(run_cli_command, code, tmp_path):
     filepath = tmp_path / 'script.sh'
     filepath.write_text('fake script')
 
-    code_portable = PortableCode(filepath_executable='script.sh', filepath_files=tmp_path)
+    code_portable = PortableCode.from_directory(filepath_executable='script.sh', directory=tmp_path)
     code_portable.label = 'code_portable'
     code_portable.store()
 
@@ -279,7 +279,7 @@ def test_code_show(run_cli_command, aiida_localhost, tmp_path, bash_path, aiida_
             description='Test portable code',
             default_calc_job_plugin='core.arithmetic.add',
             filepath_executable=filepath_executable,
-            filepath_files=tmp_path,
+            directory=tmp_path,
             prepend_text='text to prepend',
             append_text='text to append',
         )
@@ -616,7 +616,7 @@ def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_
     filepath.write_text('fake bash')
 
     label = 'some-label'
-    code = PortableCode(filepath_executable='bash', filepath_files=tmp_path)
+    code = PortableCode.from_directory(filepath_executable='bash', directory=tmp_path)
     code.label = label
     code.store()
     assert isinstance(load_code(label), PortableCode)
@@ -634,7 +634,7 @@ def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command, 
     tmp_bin_dir = tmp_path / 'bin'
     tmp_bin_dir.mkdir()
     (tmp_bin_dir / 'bash').touch()
-    code = PortableCode(filepath_executable='bash', filepath_files=tmp_bin_dir)
+    code = PortableCode.from_directory(filepath_executable='bash', directory=tmp_bin_dir)
     code.label = label
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'bash')
     code.store()
@@ -705,12 +705,12 @@ def command_options(request, aiida_localhost, tmp_path, bash_path):
     options = [request.param, '-n', '--label', str(uuid.uuid4())]
 
     if 'installed' in request.param:
-        options.extend(['--computer', str(aiida_localhost.pk), '--filepath-executable', '/usr/bin/bash'])
+        options.extend(['--computer', aiida_localhost.label, '--filepath-executable', '/usr/bin/bash'])
 
     if 'portable' in request.param:
         filepath_executable = 'bash'
         (tmp_path / filepath_executable).touch()
-        options.extend(['--filepath-executable', filepath_executable, '--filepath-files', tmp_path])
+        options.extend(['--filepath-executable', filepath_executable, '--directory', tmp_path])
 
     if 'containerized' in request.param:
         engine_command = 'singularity exec --bind $PWD:$PWD {image_name}'
@@ -718,7 +718,7 @@ def command_options(request, aiida_localhost, tmp_path, bash_path):
         options.extend(
             [
                 '--computer',
-                str(aiida_localhost.pk),
+                aiida_localhost.label,
                 '--filepath-executable',
                 str(bash_path.absolute()),
                 '--engine-command',
@@ -750,3 +750,5 @@ def test_code_create(run_cli_command, command_options, non_interactive_editor):
     assert f'Success: Created {cls.__name__}' in result.output
     code = QueryBuilder().append(Code).one()[0]
     assert code.entry_point.name == entry_point
+    if entry_point == 'core.code.portable':
+        assert code.base.repository.list_object_names() == ['bash']

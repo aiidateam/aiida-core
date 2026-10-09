@@ -29,8 +29,9 @@ class TestComputer:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida',
-        ).store()
+            metadata={'workdir': '/tmp/aiida'},
+        )
+        new_comp.store()
 
         # Configure the computer - no parameters for local transport
         authinfo = AuthInfo(computer=new_comp, user=User.collection.get_default())
@@ -48,8 +49,13 @@ class TestComputer:
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
         new_comp = Computer(
-            label='aaa', hostname='aaa', transport_type='core.local', scheduler_type='core.pbspro', workdir='/tmp/aiida'
-        ).store()
+            label='aaa',
+            hostname='aaa',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
+            metadata={'workdir': '/tmp/aiida'},
+        )
+        new_comp.store()
 
         comp_pk = new_comp.pk
 
@@ -150,6 +156,6 @@ class TestComputerConfigure:
 
         assert str(comp.pk) in str(exc)
         assert comp.label in str(exc)
-        assert self.user.get_short_name() in str(exc)
+        assert self.user.short_name in str(exc)
         assert str(self.user.pk) in str(exc)
         assert 'verdi computer configure' in str(exc)

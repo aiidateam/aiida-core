@@ -23,16 +23,16 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
 
     def _generate_class_instance(data_class):
         if data_class is orm.CifData:
-            instance = data_class(file=os.path.join(STATIC_DIR, 'data', 'Si.cif'))
+            instance = data_class.from_path(os.path.join(STATIC_DIR, 'data', 'Si.cif'))
             return instance
 
         if data_class is orm.UpfData:
             filename = os.path.join(STATIC_DIR, 'pseudos', 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
-            instance = data_class(file=filename)
+            instance = data_class.from_path(filename)
             return instance
 
         if data_class is orm.StructureData:
-            instance = orm.CifData(file=os.path.join(STATIC_DIR, 'data', 'Si.cif')).get_structure()
+            instance = orm.CifData.from_path(os.path.join(STATIC_DIR, 'data', 'Si.cif')).get_structure()
             return instance
 
         if data_class is orm.BandsData:
@@ -64,8 +64,8 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
         if data_class is orm.ArrayData:
             instance = data_class()
             array_data = numpy.identity(3)
-            instance.set_array('data', array_data)
-            instance.set_array('contains_nan_inf', numpy.array([float('NaN'), float('Inf')]))
+            instance.set_array(array=array_data, name='data')
+            instance.set_array(array=numpy.array([float('NaN'), float('Inf')]), name='contains_nan_inf')
             return instance
 
         if data_class is orm.KpointsData:
@@ -128,16 +128,17 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
                 label='test_shell_code',
                 computer=aiida_localhost,
                 filepath_executable='/bin/cat',
+                default_calc_job_plugin='core.shell',
             )
             return instance
 
         if data_class is orm.PortableCode:
             (tmp_path / 'bash').touch()
             filepath_executable = 'bash'
-            instance = data_class(
+            instance = data_class.from_directory(
                 label='test_portable_code',
                 filepath_executable=filepath_executable,
-                filepath_files=tmp_path,
+                directory=tmp_path,
             )
             return instance
 
@@ -181,6 +182,23 @@ def test_constructor():
     node = orm.Data(source=source)
     assert isinstance(node, orm.Data)
     assert node.source == source
+
+
+def test_null_source_setting_makes_it_absent():
+    """Test that Data.source stays absent when not explicitly set or provided as None.
+
+    Note that the getter provides `None` as a default even when the attribute is absent.
+    """
+
+    # By default
+    node = orm.Data()
+    assert node.source is None
+    assert 'source' not in node.base.attributes.all
+
+    # When explicitly set to None
+    node = orm.Data(source=None)
+    assert node.source is None
+    assert 'source' not in node.base.attributes.all
 
 
 def test_data_exporters(data_plugin, generate_class_instance, tmp_path):

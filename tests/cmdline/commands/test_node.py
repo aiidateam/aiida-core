@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for verdi node"""
 
-import datetime
 import errno
 import gzip
 import io
@@ -22,7 +21,6 @@ import pytest
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode
-from aiida.common import timezone
 from aiida.common.exceptions import NotExistent
 from aiida.common.links import LinkType
 from aiida.orm import CalcJobNode, RemoteData, WorkflowNode
@@ -190,7 +188,7 @@ class TestVerdiNode:
 
         Here the relative path argument should be optional and the command should determine it automatically.
         """
-        node = orm.SinglefileData(io.BytesIO(b'content')).store()
+        node = orm.SinglefileData.from_filelike(io.BytesIO(b'content')).store()
         options = [str(node.pk)]
         result = run_cli_command(cmd_node.repo_cat, options)
         assert result.stdout_bytes == b'content'
@@ -468,10 +466,10 @@ class TestVerdiUserCommand:
 def create_nodes(aiida_profile_clean_class):
     return [
         orm.Data().store(),
-        orm.Bool(True).store(),
-        orm.Bool(False).store(),
-        orm.Float(1.0).store(),
-        orm.Int(1).store(),
+        orm.Bool(value=True).store(),
+        orm.Bool(value=False).store(),
+        orm.Float(value=1.0).store(),
+        orm.Int(value=1).store(),
     ]
 
 
@@ -878,23 +876,24 @@ class TestVerdiDelete:
 def create_nodes_verdi_node_list(aiida_profile_clean_class):
     return (
         orm.Data().store(),
-        orm.Int(0).store(),
-        orm.Int(1).store(),
-        orm.Int(2).store(),
-        orm.ArrayData().store(),
-        orm.KpointsData().store(),
-        orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),
+        orm.Int(value=0).store(),
+        orm.Int(value=1).store(),
+        orm.Int(value=2).store(),
+        orm.ArrayData.from_arrays([1, 2, 3]).store(),
+        orm.KpointsData.from_arrays({'kpoints': [[0.0, 0.0, 0.0]]}).store(),
+        # TODO ctime is read-only, so we need another way to test time-based filters
+        # orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),
     )
 
 
 @pytest.mark.usefixtures('create_nodes_verdi_node_list')
 class TestNodeList:
-    """Tests for the ``verdi node rehash`` command."""
+    """Tests for the ``verdi node list`` command."""
 
     @pytest.mark.parametrize(
         'options, expected_nodes',
         (
-            ([], [6, 0, 1, 2, 3, 4, 5]),
+            ([], [0, 1, 2, 3, 4, 5]),
             (['-e', 'core.int'], [1, 2, 3]),
             (['-e', 'core.int', '--limit', '1'], [1]),
             (['-e', 'core.int', '--order-direction', 'desc'], [3, 2, 1]),

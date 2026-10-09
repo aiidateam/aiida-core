@@ -92,7 +92,7 @@ Each of these classes can most often be used in a similar way as their correspon
 
 .. code-block:: ipython
 
-  In [1]: total = Int(2) + Int(3)
+  In [1]: total = Int(value=2) + Int(value=3)
 
 If you need to access the bare value and not the whole AiiDA class, use the ``.value`` property:
 
@@ -121,7 +121,7 @@ For example, you can create a dictionary where a value is a list of dictionaries
 
 .. code-block:: ipython
 
-  In [2]: d = Dict(dict={'k': 0.1, 'l': [{'m': 0.2}, {'n': 0.3}]})
+  In [2]: d = Dict(**{'k': 0.1, 'l': [{'m': 0.2}, {'n': 0.3}]})
 
 To obtain the Python ``list`` or ``dictionary`` from a :py:class:`~aiida.orm.nodes.data.list.List` or :py:class:`~aiida.orm.nodes.data.dict.Dict` instance, you have to use the :py:meth:`~aiida.orm.nodes.data.list.List.get_list()` or :py:meth:`~aiida.orm.nodes.data.dict.Dict.get_dict()` methods:
 
@@ -178,7 +178,7 @@ An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm
        ...: GREEN = 2
 
     In [2]: from aiida.orm import EnumData
-       ...: color = EnumData(Color.RED)
+       ...: color = EnumData.from_member(Color.RED)
 
     In [3]: color.name
     Out[3]: 'RED'
@@ -215,7 +215,7 @@ To deserialize it should also implement a ``from_dict`` method, which takes the 
        ...:         return cls(d['a'], d['b'])
        ...:
        ...: my_object = MyClass(1, 2)
-       ...: my_jsonable = JsonableData(my_object)
+       ...: my_jsonable = JsonableData.from_object(my_object)
        ...: str(my_jsonable.obj)
     Out[1]: 'MyClass(1, 2)'
 
@@ -234,13 +234,13 @@ Each array is assigned to a name specified by the user using the :py:meth:`~aiid
 
   In [2]: array = ArrayData()
 
-  In [3]: array.set_array('matrix', np.array([[1, 2], [3, 4]]))
+  In [3]: array.set_array(array=np.array([[1, 2], [3, 4]]), name='matrix')
 
 Note that one :py:class:`~aiida.orm.ArrayData` instance can store multiple arrays under different names:
 
 .. code-block:: ipython
 
-  In [4]: array.set_array('vector', np.array([[1, 2, 3, 4]]))
+  In [4]: array.set_array(array=np.array([[1, 2, 3, 4]]), name='vector')
 
 To see the list of array names stored in the :py:class:`~aiida.orm.ArrayData` instance, you can use the :py:meth:`~aiida.orm.ArrayData.get_arraynames()` method:
 
@@ -342,7 +342,7 @@ This class can be initialized via the **absolute** path to the file you want to 
 
   In [1]: SinglefileData = DataFactory('core.singlefile')
 
-  In [2]: single_file = SinglefileData('/absolute/path/to/file')
+  In [2]: single_file = SinglefileData.from_path('/absolute/path/to/file')
 
 When storing the node, the filename is stored in the database and the file itself is copied to the repository.
 The contents of the file in string format can be obtained using the :py:meth:`~aiida.orm.nodes.data.singlefile.SinglefileData.get_content()` method:
@@ -402,7 +402,7 @@ To store a complete directory, simply use the ``tree`` keyword:
 
     In [1]: FolderData = DataFactory('core.folder')
 
-    In [2]: folder = FolderData(tree='/absolute/path/to/directory')
+    In [2]: folder = FolderData.from_tree('/absolute/path/to/directory')
 
 Alternatively, you can construct the node first and then use the various repository methods to add objects from directory and file paths:
 
@@ -591,7 +591,7 @@ PortableCode
 The :class:`~aiida.orm.nodes.data.code.portable.PortableCode` class is a subclass of :class:`~aiida.orm.Code` that represents an executable code stored in AiiDA's storage.
 This plugin should be used for executables that are not already installed on the target computer, but instead are available on the machine where AiiDA is running.
 The plugin assumes that the code is self-contained by a single directory containing all the necessary files, including a main executable.
-When constructing a ``PortableCode``, passing the absolute filepath as ``filepath_files`` will make sure that all the files contained within are uploaded to AiiDA's storage.
+When constructing a ``PortableCode``, passing the absolute filepath as ``directory`` will make sure that all the files contained within are uploaded to AiiDA's storage.
 The ``filepath_executable`` should indicate the filename of the executable within that directory.
 Each time a :class:`~aiida.engine.CalcJob` is run using a ``PortableCode``, the uploaded files will be automatically copied to the working directory on the selected computer and the executable will be run there.
 Example of creating an ``PortableCode``:
@@ -600,9 +600,9 @@ Example of creating an ``PortableCode``:
 
     from pathlib import Path
     from aiida.orm import PortableCode
-    code = PortableCode(
+    code = PortableCode.from_directory(
         label='some-label',
-        filepath_files=Path('/some/path/code'),
+        directory=Path('/some/path/code'),
         filepath_executable='executable.exe'
     )
 
@@ -891,17 +891,19 @@ For example, to create a simple two-step trajectory from a list of structures:
 
   # Create step 1
   cell = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-  structure1 = orm.StructureData(cell=cell, pbc=(True, True, False))
+  structure1 = orm.StructureData(cell=cell)
+  structure1.set_pbc((True, True, False))
   structure1.append_atom(position=(0.0, 0.0, 0.0), symbols='H')
   structure1.append_atom(position=(0.5, 0.5, 0.5), symbols='H')
 
   # Create step 2
-  structure2 = orm.StructureData(cell=cell, pbc=(True, True, False))
+  structure2 = orm.StructureData(cell=cell)
+  structure2.set_pbc((True, True, False))
   structure2.append_atom(position=(0.1, 0.0, 0.0), symbols='H')
   structure2.append_atom(position=(0.6, 0.5, 0.5), symbols='H')
 
   # Create the trajectory from the structure list
-  trajectory = orm.TrajectoryData([structure1, structure2])
+  trajectory = orm.TrajectoryData.from_structure_list([structure1, structure2])
 
 Alternatively, you can create a trajectory by directly setting the arrays using the :py:meth:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData.set_trajectory` method:
 
@@ -947,7 +949,7 @@ When creating a trajectory from structure lists, the periodic boundary condition
 
 .. code-block:: python
 
-  trajectory = TrajectoryData(structure_list)
+  trajectory = TrajectoryData.from_structure_list(structure_list)
   trajectory.pbc  # Extracted from the StructureData instances
   # (True, True, False)
 
@@ -1022,9 +1024,9 @@ In this case, you can also associate labels to (some of the) points, which is ve
 
 .. code-block:: ipython
 
-  In [3]: kpoints_list.labels = [[0, "G"]]
+  In [3]: kpoints_list.set_labels([[0, "G"]])
 
-  In [4]: kpoints_list.labels
+  In [4]: kpoints_list.get_labels()
   Out[4]: [(0, 'G')]
 
 .. _topics:data_types:materials:kpoints:automatic:
@@ -1169,7 +1171,7 @@ The dropdown panels below explain some expanded use cases on how to create a :py
               (6, 'X'),
               (11, 'U')]
 
-    bands_data.labels = labels
+    bands_data.set_labels(labels)
     bands_data.show_mpl() # to visualize the bands
 
   The resulting band structure will look as follows
@@ -1185,16 +1187,16 @@ The dropdown panels below explain some expanded use cases on how to create a :py
 
   .. code-block:: python
 
-      bands_data.labels = [(0, 'GAMMA'),
+      bands_data.set_labels([(0, 'GAMMA'),
                 (5, 'X'),
                 (6, 'Y'),
-                (11, 'U')]
+                (11, 'U')])
       bands_data.show_mpl()
 
-      bands_data.labels = [(0, 'GAMMA'),
+      bands_data.set_labels([(0, 'GAMMA'),
                 (5, 'X'),
                 (7, 'Y'),
-                (11, 'U')]
+                (11, 'U')])
       bands_data.show_mpl()
 
   In the first case two neighboring kpoints with ``X`` and ``Y`` labels will look like ``X|Y``, while in the second case they will be separated by a certain distance.
@@ -1473,96 +1475,7 @@ Models
 
 .. versionadded:: 2.9
 
-.. note::
-
-   Further details can be found on the original AiiDA Enhancement Proposal (AEP) `here <https://github.com/aiidateam/AEP/blob/983a645c9285ba65c7cf07fe6064c23e7e994c06/010_orm_schema/readme.md>`_.
-
-The schema of a data type can be explicitly defined via one or more Pydantic models, facilitating its validation, serialization, and deserialization.
-A new data type inherits much of its fields from its base ``Data`` class.
-The model system is leveraged in ``serialize`` and ``from_serialized`` respectively for serialization and deserialization of data types.
-Below we describe a series of models that *may* be defined on a new data type to gain the added functionality.
-
-AttributesModel
-^^^^^^^^^^^^^^^
-
-The ``AttributesModel`` defines the schema of the storable/queryable attributes of the new data type.
-
-.. code-block:: python
-
-    from aiida.orm.pydantic import OrmMetadataField
-
-    class NewData(Data):
-        ...
-
-        class AttributesModel(Data.AttributesModel):
-            some_new_field: str = OrmMetadataField(
-                ...
-            )
-
-.. tip::
-
-   The ``AttributesModel`` is used internally for attributes-based node creation (optionally including repository files).
-
-ConstructorArgsModel
-^^^^^^^^^^^^^^^^^^^^
-
-The ``ConstructorArgsModel`` defines the schema of the arguments that can be passed to the constructor of the new data type.
-
-.. code-block:: python
-
-    from aiida.orm.pydantic import OrmMetadataField, OrmModel
-
-    class NewData(Data):
-        ...
-
-        class ConstructorArgsModel(OrmModel):
-            some_constructor_arg: str = OrmMetadataField(
-                ...,
-            )
-
-        ...
-
-        def __init__(self, some_constructor_arg, **kwargs):
-            super().__init__(**kwargs)
-            ...
-
-If defined, the ``ConstructorArgsModel`` is automatically assigned to the new data type's ``ConstructorModel``:
-
-.. code-block:: python
-
-    class ConstructorModel(BaseNodeModel):
-        args: ConstructorArgsModel = OrmMetadataField(
-            description='The arguments to create the node with',
-            write_only=True,
-        )
-
-.. tip::
-
-   The ``ConstructorModel`` is used internally for constructor-based node creation.
-
-.. attention::
-
-   ``ConstructorArgsModel`` is **never used directly!**
-
-CliModel
-^^^^^^^^
-
-.. attention::
-
-   ``CliModel`` is **not defined explicitly**.
-
-The ``CliModel`` is used to define the schema of the arguments that can be passed to the CLI command to create a new instance of the data type.
-In the present version, it is used exclusively to support ``Code`` creation and is derived automatically from the ``ConstructorArgsModel`` of ``Code`` subclasses.
-
-Controlling model behavior
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In addition to the arguments of Pydantic's ``Field`` function (https://pydantic.dev/docs/validation/latest/api/pydantic/fields/), to control serialization/deserialization behavior, one often would provide the following ``OrmMetadataField`` arguments:
-
-- ``orm_to_model``: a function that transforms the data stored in the database (ORM) to the format expected by the model.
-- ``model_to_orm``: a function that transforms the data from the model to the format expected by the database (ORM).
-
-Furthermore, to customize serialization/deserialization, developers can override the ``serialize`` and ``from_serialized`` methods of the new data type, the ``to_model`` and ``from_model`` methods, which the prior two methods leverage respectively, as well as the ``to_model_field_values`` method for fine control over how model values are converted during serialization.
+To be written once the details of the new model system for data types are finalized.
 
 Fields
 ------

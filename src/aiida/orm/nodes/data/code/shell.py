@@ -10,8 +10,7 @@
 
 from __future__ import annotations
 
-import typing as t
-
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.code.installed import InstalledCode
 
 __all__ = ('ShellCode',)
@@ -25,10 +24,14 @@ class ShellCode(InstalledCode):
     calculation job as well.
     """
 
-    def __init__(self, *args: t.Any, default_calc_job_plugin: str = 'core.shell', **kwargs: t.Any) -> None:
-        """Construct a new instance."""
-        self.validate_default_calc_job_plugin(default_calc_job_plugin)
-        super().__init__(*args, default_calc_job_plugin=default_calc_job_plugin, **kwargs)
+    @attribute
+    def default_calc_job_plugin(self) -> str:
+        return super().default_calc_job_plugin
+
+    @default_calc_job_plugin.setter
+    def default_calc_job_plugin(self, value: str) -> None:
+        self.validate_default_calc_job_plugin(value)
+        self.base.attributes.set(self.KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, value)
 
     @staticmethod
     def validate_default_calc_job_plugin(default_calc_job_plugin: str) -> None:
@@ -41,3 +44,7 @@ class ShellCode(InstalledCode):
         if default_calc_job_plugin != 'core.shell':
             msg = f'`default_calc_job_plugin` has to be `core.shell`, but got: {default_calc_job_plugin}'
             raise ValueError(msg)
+
+    def _initialize(self) -> None:
+        super()._initialize()
+        self.validate_default_calc_job_plugin(self.default_calc_job_plugin)

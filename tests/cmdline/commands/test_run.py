@@ -178,7 +178,7 @@ class TestAutoGroups:
                 description='my computer',
                 transport_type='core.local',
                 scheduler_type='core.direct',
-                workdir='/tmp'
+                metadata={'workdir': '/tmp'},
             ).store()
             computer.configure()
 
@@ -187,8 +187,8 @@ class TestAutoGroups:
                 computer=computer,
                 filepath_executable='/bin/true').store()
             inputs = {
-                'x': Int(1),
-                'y': Int(2),
+                'x': Int(value=1),
+                'y': Int(value=2),
                 'code': code,
                 'metadata': {
                     'options': {
@@ -200,9 +200,13 @@ class TestAutoGroups:
                 }
             }
 
-            node1 = KpointsData().store()
-            node2 = ArrayData().store()
-            node3 = Int(3).store()
+            node1 = KpointsData()
+            node1.set_kpoints_mesh([1, 1, 1])
+            node1.store()
+
+            node2 = ArrayData.from_arrays(arrays={'dummy': [1, 2, 3]}).store()
+
+            node3 = Int(value=3).store()
             node4 = CalculationNode().store()
             node5 = WorkflowNode().store()
             _, node6 = run_get_node(ArithmeticAdd, **inputs)

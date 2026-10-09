@@ -1030,8 +1030,8 @@ def generate_calculation_node_add(aiida_localhost):
         arithmetic_add = CalculationFactory('core.arithmetic.add')
 
         add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
+            'x': Int(value=1),
+            'y': Int(value=2),
             'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         }
 
@@ -1070,8 +1070,8 @@ def _build_add_node_unstored(x: int = 1, y: int = 2):
     from aiida.orm import CalcJobNode, InstalledCode, Int
 
     computer = _get_mock_computer()
-    x_node = Int(x).store()
-    y_node = Int(y).store()
+    x_node = Int(value=x).store()
+    y_node = Int(value=y).store()
     code_node = InstalledCode(computer=computer, filepath_executable='/bin/bash').store()
     calc_node = CalcJobNode(computer=computer)
     calc_node.base.repository.put_object_from_bytes(f'echo $(({x} + {y}))\n'.encode(), 'aiida.in')
@@ -1158,7 +1158,7 @@ def _finalize_add_node(calc_node, x: int, y: int):
     retrieved_folder.base.repository.put_object_from_bytes(b'\n', '_scheduler-stderr.txt')
     retrieved_folder.store()
     retrieved_folder.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='retrieved')
-    output_node = Int(x + y).store()
+    output_node = Int(value=x + y).store()
     output_node.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='sum')
     calc_node.seal()
     return calc_node
@@ -1214,8 +1214,8 @@ def construct_workchain_multiply_add():
         wc_node.set_process_state('finished')
         wc_node.set_process_label('MultiplyAddWorkChain')
         wc_node.set_process_type('aiida.workflows:core.arithmetic.multiply_add')
-        x_node = Int(1).store()
-        y_node = Int(2).store()
+        x_node = Int(value=1).store()
+        y_node = Int(value=2).store()
         multiply_node = _build_multiply_node_unstored(x_node, y_node)
         add_node, add_x, add_y = _build_add_node_unstored()
         multiply_node.base.links.add_incoming(wc_node, link_type=LinkType.CALL_CALC, link_label='multiply')
@@ -1243,9 +1243,9 @@ def generate_workchain_multiply_add(aiida_localhost):
         multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
 
         multiply_add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
-            'z': Int(3),
+            'x': Int(value=1),
+            'y': Int(value=2),
+            'z': Int(value=3),
             'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         }
 
@@ -1354,7 +1354,7 @@ def generate_calculation_node_io(generate_calculation_node, tmp_path):
         # ? Use instance for folderdata
         folderdata = FolderData()
         folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]
-        arraydata_input = ArrayData(arrays=np.ones(3))
+        arraydata_input = ArrayData.from_arrays(np.ones(3))
 
         # Create calculation inputs, outputs
         calculation_node_inputs = {
@@ -1429,7 +1429,7 @@ def generate_workchain_node_io():
 def setup_no_process_group() -> orm.Group:
     no_process_group, _ = orm.Group.collection.get_or_create(label='no-process-group')
     if no_process_group.is_empty:
-        int_node = orm.Int(1).store()
+        int_node = orm.Int(value=1).store()
         no_process_group.add_nodes([int_node])
     return no_process_group
 

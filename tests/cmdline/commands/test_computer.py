@@ -784,7 +784,7 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida',
+            metadata={'workdir': '/tmp'},
         )
         computer_temp.store()
         computer_temp.configure(safe_interval=0)
@@ -797,7 +797,7 @@ class TestVerdiComputerCommands:
             filepath_executable='/remote/abs/path',
         ).store()
 
-        # A successul delete, including all associated nodes
+        # A successful delete, including all associated nodes
         self.cli_runner(computer_delete, [label], user_input=user_input)
 
         with pytest.raises(NotExistent):
@@ -823,11 +823,11 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida',
+            metadata={'workdir': '/tmp'},
         )
         computer_temp.store()
 
-        # A successul delete, including all associated nodes
+        # A successful delete, including all associated nodes
         self.cli_runner(computer_delete, [label])
 
         with pytest.raises(NotExistent):
@@ -846,7 +846,7 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida',
+            metadata={'workdir': '/tmp/aiida'},
         )
         computer_temp.store()
         computer_temp.configure(safe_interval=0)

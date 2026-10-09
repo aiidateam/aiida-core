@@ -84,7 +84,7 @@ def get_explicit_kpoints_path(structure, parameters):
     kpoints.set_cell_from_structure(primitive_structure)
     kpoints.set_kpoints(kpoints_abs, cartesian=True, labels=labels)
 
-    result['parameters'] = Dict(rawdict)
+    result['parameters'] = Dict(**rawdict)
     result['explicit_kpoints'] = kpoints
     result['primitive_structure'] = primitive_structure
     result['conv_structure'] = conv_structure
@@ -133,7 +133,7 @@ def get_kpoints_path(structure, parameters):
     result = {}
     rawdict = seekpath.get_path(structure=structure_tuple, **parameters)
 
-    result['parameters'] = Dict(rawdict)
+    result['parameters'] = Dict(**rawdict)
 
     # Replace conv structure with AiiDA StructureData
     conv_lattice = rawdict.pop('conv_lattice')

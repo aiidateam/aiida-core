@@ -110,8 +110,8 @@ def test_revive(monkeypatch, aiida_code_installed, submit_and_await):
     """Test :func:`aiida.engine.processes.control.revive_processes`."""
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
-    builder.x = Int(1)
-    builder.y = Int(1)
+    builder.x = Int(value=1)
+    builder.y = Int(value=1)
     builder.metadata.options.resources = {'num_machines': 1}
 
     # Temporarily patch the ``RemoteProcessThreadController.continue_process`` method to do nothing and just return a

@@ -10,7 +10,7 @@ def test_parse_remote_data(tmp_path, aiida_localhost):
         handle.write('echo $((4 + 12))')
         handle.flush()
 
-        remote_data = RemoteData(tmp_path, computer=aiida_localhost)
+        remote_data = RemoteData(remote_path=tmp_path, computer=aiida_localhost)
         inputs = ArithmeticAddCalculationImporter.parse_remote_data(remote_data)
 
         assert list(inputs.keys()) == ['x', 'y']

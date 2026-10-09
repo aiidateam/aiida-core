@@ -42,9 +42,7 @@ class TestOrbitalData:
         orbital = RealHydrogen(**self.my_real_hydrogen_dict)
         orbitaldata = OrbitalData()
 
-        # Check that there is a failure if get_orbital is called for setting orbitals
-        with pytest.raises(AttributeError):
-            orbitaldata.get_orbitals()
+        assert orbitaldata.get_orbitals() == []
 
         # Check that only one orbital has been assiigned
         orbitaldata.set_orbitals(orbitals=orbital)
@@ -57,7 +55,7 @@ class TestOrbitalData:
 
         # Check that a corrupted OribtalData fails on get_orbitals
         corrupted_orbitaldata = copy.deepcopy(orbitaldata)
-        del corrupted_orbitaldata.base.attributes.get('orbital_dicts')[0]['_orbital_type']
+        del corrupted_orbitaldata.base.attributes.get('orbitals')[0]['_orbital_type']
         with pytest.raises(ValidationError):
             corrupted_orbitaldata.get_orbitals()
 

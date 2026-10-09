@@ -97,13 +97,14 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
         label = label or f'test-computer-{uuid.uuid4().hex}'
 
         def _build() -> Computer:
-            return Computer(
+            computer = Computer(
                 label=label,
                 hostname=hostname,
-                workdir=str(tmp_path),
                 transport_type=transport_type,
                 scheduler_type=scheduler_type,
+                metadata={'workdir': str(tmp_path)},
             )
+            return computer
 
         # Atomic get-or-create using UNIQUE as the serializer (try get → on miss, store → on UNIQUE
         # violation, re-query). A user-space lock (``threading.Lock``, ``filelock``, etc.) would be
@@ -271,7 +272,7 @@ def aiida_code():
         import uuid
 
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
-        from aiida.orm import QueryBuilder
+        from aiida.orm import PortableCode, QueryBuilder
         from aiida.plugins import DataFactory
 
         cls = DataFactory(entry_point)
@@ -280,7 +281,11 @@ def aiida_code():
         try:
             code = QueryBuilder().append(cls, filters={'label': label}).one()[0]
         except (MultipleObjectsError, NotExistent):
-            code = cls(label=label, **kwargs).store()
+            if cls is PortableCode:
+                code = PortableCode.from_directory(label=label, **kwargs)
+            else:
+                code = cls(label=label, **kwargs)
+            code.store()
 
         return code
 

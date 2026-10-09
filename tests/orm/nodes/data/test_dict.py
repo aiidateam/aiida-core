@@ -20,32 +20,32 @@ def dictionary():
 
 def test_keys(dictionary):
     """Test the ``keys`` method."""
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
     assert sorted(node.keys()) == sorted(dictionary.keys())
 
 
 def test_items(dictionary):
     """Test the ``items`` method."""
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
     assert sorted(node.items()) == sorted(dictionary.items())
 
 
 def test_get_dict(dictionary):
     """Test the ``get_dict`` method."""
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
     assert node.get_dict() == dictionary
 
 
 def test_dict_property(dictionary):
     """Test the ``dict`` property."""
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
     assert node.dict.value == dictionary['value']
     assert node.dict.nested == dictionary['nested']
 
 
 def test_get(dictionary):
     """Test the ``get`` method."""
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
     assert node.get('invalid') is None
     assert node.get('invalid', 'default') == 'default'
     assert node.get('value') == dictionary['value']
@@ -54,7 +54,7 @@ def test_get(dictionary):
 
 def test_get_item(dictionary):
     """Test the ``__getitem__`` method."""
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
     assert node['value'] == dictionary['value']
     assert node['nested'] == dictionary['nested']
 
@@ -65,7 +65,7 @@ def test_set_item(dictionary):
     * ``__setitem__`` directly on the node
     * ``__setattr__`` through the ``AttributeManager`` returned by the ``dict`` property
     """
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
 
     node['value'] = 2
     assert node['value'] == 2
@@ -77,7 +77,7 @@ def test_set_item(dictionary):
 @pytest.mark.parametrize('key, expected', (('value', True), ('non-existing', False)))
 def test_contains(dictionary, key, expected):
     """Test the ``__contains__`` implementation."""
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
     assert (key in dictionary) is expected
     assert (key in node) is expected
 
@@ -91,7 +91,7 @@ def test_correct_raises(dictionary):
     * ``node['inexistent']`` should raise ``KeyError``
     * ``node.dict.inexistent`` should raise ``AttributeError``
     """
-    node = Dict(dictionary)
+    node = Dict(**dictionary)
 
     with pytest.raises(KeyError):
         _ = node['inexistent_key']
@@ -114,9 +114,9 @@ def test_equality(dictionary):
     https://github.com/aiidateam/aiida-core/discussions/5187
     """
     different_dict = {'I': {'am': 'different'}}
-    node = Dict(dictionary)
-    different_node = Dict(different_dict)
-    clone = Dict(dictionary)
+    node = Dict(**dictionary)
+    different_node = Dict(**different_dict)
+    clone = Dict(**dictionary)
 
     # Test equality comparison with Python base type
     assert node == dictionary
@@ -130,5 +130,5 @@ def test_equality(dictionary):
 
 def test_initialise_with_dict_kwarg(dictionary):
     """Test that the ``Dict`` node can be initialized with the ``dict`` keyword argument for backwards compatibility."""
-    node = Dict(dict=dictionary)
+    node = Dict(**dictionary)
     assert sorted(node.keys()) == sorted(dictionary.keys())

@@ -19,7 +19,9 @@ def test_read_stored():
     """Test reading an array from an ``XyData`` after storing and loading it."""
     x_array = numpy.array([1, 2])
     y_array = numpy.array([3, 4])
-    node = XyData(x_array, y_array, x_name='x_name', x_units='x_unit', y_names='y_name', y_units='y_units')
+    node = XyData()
+    node.set_x(x_array, 'x_name', 'x_unit')
+    node.set_y([y_array], ['y_name'], ['y_units'])
 
     assert numpy.array_equal(node.get_x()[1], x_array)
     assert numpy.array_equal(node.get_y()[0][1], y_array)
@@ -35,9 +37,6 @@ def test_read_stored():
 
 def test_constructor():
     """Test the various construction options."""
-    with pytest.raises(TypeError):
-        node = XyData(numpy.array([1, 2]))
-
     node = XyData()
 
     with pytest.raises(NotExistent):
@@ -48,7 +47,17 @@ def test_constructor():
 
     x_array = numpy.array([1, 2])
     y_array = numpy.array([3, 4])
-    node = XyData(x_array, y_array, x_name='x_name', x_units='x_unit', y_names='y_name', y_units='y_units')
+
+    node = XyData.from_arrays(
+        arrays={
+            'x_array': x_array,
+            'y_array': y_array,
+        },
+        x_name='x_name',
+        x_units='x_unit',
+        y_units='y_units',
+    )
+
     assert numpy.array_equal(node.get_x()[1], x_array)
     assert numpy.array_equal(node.get_y()[0][1], y_array)
 

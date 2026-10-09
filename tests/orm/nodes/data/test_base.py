@@ -29,7 +29,7 @@ def test_create(node_type, default, value):
     node = node_type()
     assert node.value == default
 
-    node = node_type(value)
+    node = node_type(value=value)
     assert node.value == value
 
 
@@ -44,8 +44,8 @@ def test_store_load(node_type):
 
 def test_modulo():
     """Test ``Int`` modulus operation."""
-    term_a = Int(12)
-    term_b = Int(10)
+    term_a = Int(value=12)
+    term_b = Int(value=10)
 
     assert term_a % term_b == 2
     assert isinstance(term_a % term_b, NumericType)
@@ -64,8 +64,8 @@ def test_modulo():
 )
 def test_add(node_type, a, b):
     """Test addition for ``Int`` and ``Float`` nodes."""
-    node_a = node_type(a)
-    node_b = node_type(b)
+    node_a = node_type(value=a)
+    node_b = node_type(value=b)
 
     result = node_a + node_b
     assert isinstance(result, node_type)
@@ -81,7 +81,7 @@ def test_add(node_type, a, b):
     assert result.value == a + b
 
     # Inplace
-    result = node_type(a)
+    result = node_type(value=a)
     result += node_b
     assert isinstance(result, node_type)
     assert result.value == a + b
@@ -96,8 +96,8 @@ def test_add(node_type, a, b):
 )
 def test_multiplication(node_type, a, b):
     """Test floats multiplication."""
-    node_a = node_type(a)
-    node_b = node_type(b)
+    node_a = node_type(value=a)
+    node_b = node_type(value=b)
 
     # Check multiplication
     result = node_a * node_b
@@ -114,7 +114,7 @@ def test_multiplication(node_type, a, b):
     assert result.value == a * b
 
     # Inplace
-    result = node_type(a)
+    result = node_type(value=a)
     result *= node_b
     assert isinstance(result, node_type)
     assert result.value == a * b
@@ -129,8 +129,8 @@ def test_multiplication(node_type, a, b):
 )
 def test_division(node_type, a, b):
     """Test the ``BaseType`` normal division operator."""
-    node_a = node_type(a)
-    node_b = node_type(b)
+    node_a = node_type(value=a)
+    node_b = node_type(value=b)
 
     result = node_a / node_b
     assert result == a / b
@@ -146,8 +146,8 @@ def test_division(node_type, a, b):
 )
 def test_division_integer(node_type, a, b):
     """Test the ``Int`` integer division operator."""
-    node_a = node_type(a)
-    node_b = node_type(b)
+    node_a = node_type(value=a)
+    node_b = node_type(value=b)
 
     result = node_a // node_b
     assert result == a // b
@@ -163,8 +163,8 @@ def test_division_integer(node_type, a, b):
 )
 def test_power(node_type, base, power):
     """Test power operator."""
-    node_base = node_type(base)
-    node_power = node_type(power)
+    node_base = node_type(value=base)
+    node_power = node_type(value=power)
 
     result = node_base**node_power
     assert result == base**power
@@ -180,8 +180,8 @@ def test_power(node_type, base, power):
 )
 def test_modulus(node_type, a, b):
     """Test modulus operator."""
-    node_a = node_type(a)
-    node_b = node_type(b)
+    node_a = node_type(value=a)
+    node_b = node_type(value=b)
 
     assert node_a % node_b == a % b
     assert isinstance(node_a % node_b, node_type)
@@ -209,8 +209,8 @@ def test_modulus(node_type, a, b):
 )
 def test_operator(opera):
     """Test operations between Int and Float objects."""
-    node_a = Float(2.2)
-    node_b = Int(3)
+    node_a = Float(value=2.2)
+    node_b = Int(value=3)
 
     for node_x, node_y in [(node_a, node_b), (node_b, node_a)]:
         res = opera(node_x, node_y)
@@ -230,9 +230,9 @@ def test_operator(opera):
 )
 def test_equality(node_type, a, b):
     """Test equality comparison for the base types."""
-    node_a = node_type(a)
-    node_a_clone = node_type(a)
-    node_b = node_type(b)
+    node_a = node_type(value=a)
+    node_a_clone = node_type(value=a)
+    node_b = node_type(value=b)
 
     # Test equality comparison with Python base types
     assert node_a == a
@@ -246,8 +246,8 @@ def test_equality(node_type, a, b):
 @pytest.mark.parametrize('numeric_type', (Float, Int))
 def test_unary_pos(numeric_type):
     """Test the ``__pos__`` unary operator for all ``NumericType`` subclasses."""
-    node_positive = numeric_type(1)
-    node_negative = numeric_type(-1)
+    node_positive = numeric_type(value=1)
+    node_negative = numeric_type(value=-1)
 
     assert +node_positive == node_positive
     assert +node_negative == node_negative
@@ -256,8 +256,8 @@ def test_unary_pos(numeric_type):
 @pytest.mark.parametrize('numeric_type', (Float, Int))
 def test_unary_neg(numeric_type):
     """Test the ``__neg__`` unary operator for all ``NumericType`` subclasses."""
-    node_positive = numeric_type(1)
-    node_negative = numeric_type(-1)
+    node_positive = numeric_type(value=1)
+    node_negative = numeric_type(value=-1)
 
     assert -node_positive != node_positive
     assert -node_negative != node_negative
@@ -269,8 +269,8 @@ def test_unary_neg(numeric_type):
 @pytest.mark.parametrize('numeric_type', (Float, Int))
 def test_unary_abs(numeric_type):
     """Test the ``__abs__`` unary operator for all ``NumericType`` subclasses"""
-    node_positive = numeric_type(1)
-    node_negative = numeric_type(-1)
+    node_positive = numeric_type(value=1)
+    node_negative = numeric_type(value=-1)
 
     # Test positive number
     abs_positive = abs(node_positive)

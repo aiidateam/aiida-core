@@ -62,6 +62,6 @@ class TemplatereplacerParser(Parser):
                 output_dict['retrieved_temporary_files'].append((retrieved_file, parsed_value))
 
         label = self.node.process_class.spec().default_output_node  # type: ignore[attr-defined]
-        self.out(label, Dict(dict=output_dict))
+        self.out(label, Dict(**output_dict))
 
         return

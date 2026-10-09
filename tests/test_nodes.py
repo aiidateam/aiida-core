@@ -177,7 +177,7 @@ class TestQueryWithAiidaObjects:
         a1.base.extras.set(extra_name, True)
         a3 = orm.Data().store()
         a3.base.extras.set(extra_name, True)
-        a4 = Dict(dict={'a': 'b'}).store()
+        a4 = Dict(**{'a': 'b'}).store()
         a4.base.extras.set(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
@@ -863,7 +863,7 @@ class TestNodeBasic:
         l2.store()
 
         # Manages to store, and value is converted to its base type
-        p = orm.Dict(dict={'b': orm.Str('sometext'), 'c': l1})
+        p = orm.Dict(**{'b': orm.Str(value='sometext'), 'c': l1})
         p.store()
         assert p.base.attributes.get('b') == 'sometext'
         assert isinstance(p.base.attributes.get('b'), str)
@@ -872,7 +872,7 @@ class TestNodeBasic:
 
         # Check also before storing
         n = orm.Data()
-        n.base.attributes.set('a', orm.Str('sometext2'))
+        n.base.attributes.set('a', orm.Str(value='sometext2'))
         n.base.attributes.set('b', l2)
         assert n.base.attributes.get('a').value == 'sometext2'
         assert isinstance(n.base.attributes.get('a'), orm.Str)
@@ -881,7 +881,7 @@ class TestNodeBasic:
 
         # Check also deep in a dictionary/list
         n = orm.Data()
-        n.base.attributes.set('a', {'b': [orm.Str('sometext3')]})
+        n.base.attributes.set('a', {'b': [orm.Str(value='sometext3')]})
         assert n.base.attributes.get('a')['b'][0].value == 'sometext3'
         assert isinstance(n.base.attributes.get('a')['b'][0], orm.Str)
         n.store()
@@ -902,7 +902,7 @@ class TestNodeBasic:
         # Check also before storing
         n = orm.Data()
         n.store()
-        n.base.extras.set('a', orm.Str('sometext2'))
+        n.base.extras.set('a', orm.Str(value='sometext2'))
         n.base.extras.set('c', l1)
         n.base.extras.set('d', l2)
         assert n.base.extras.get('a') == 'sometext2'
@@ -915,7 +915,7 @@ class TestNodeBasic:
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.store()
-        n.base.extras.set('a', {'b': [orm.Str('sometext3')]})
+        n.base.extras.set('a', {'b': [orm.Str(value='sometext3')]})
         assert n.base.extras.get('a')['b'][0] == 'sometext3'
         assert isinstance(n.base.extras.get('a')['b'][0], str)
 
@@ -1205,7 +1205,7 @@ class TestSubNodesAndLinks:
         # I create some objects
         d1 = orm.Data().store()
         with tempfile.NamedTemporaryFile('w+') as handle:
-            d2 = SinglefileData(file=handle).store()
+            d2 = SinglefileData.from_filelike(handle).store()
 
         unsavedcomputer = orm.Computer(
             label='localhost2', hostname='localhost', scheduler_type='core.direct', transport_type='core.local'

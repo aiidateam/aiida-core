@@ -200,6 +200,9 @@ Below is a list with all available subcommands.
                                       Set the verbosity of the output.
       --help                          Show this message and exit.
 
+    Commands:
+      create  Create a data node from an entry point.
+
 
 .. _reference:command-line:verdi-devel:
 

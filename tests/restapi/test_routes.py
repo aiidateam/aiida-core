@@ -48,13 +48,13 @@ class TestRestApi:
         structure.base.comments.add('This is test comment.')
         structure.base.comments.add('Add another comment.')
 
-        cif = orm.CifData(ase=structure.get_ase())
+        cif = orm.CifData.from_ase(structure.get_ase())
         cif.store()
 
-        parameter1 = orm.Dict(dict={'a': 1, 'b': 2})
+        parameter1 = orm.Dict(**{'a': 1, 'b': 2})
         parameter1.store()
 
-        parameter2 = orm.Dict(dict={'c': 3, 'd': 4})
+        parameter2 = orm.Dict(**{'c': 3, 'd': 4})
         parameter2.store()
 
         kpoint = orm.KpointsData()
@@ -144,8 +144,14 @@ class TestRestApi:
 
         # Setting array data for the tests
         array = orm.ArrayData()
-        array.set_array('array_clean', np.asarray([[4, 5, 7], [9, 5, 1], [3, 4, 4]]))
-        array.set_array('array_dirty', np.asarray([[4, 5, np.nan], [9, np.inf, -1 * np.inf], [np.nan, 4, 4]]))
+        array.set_array(
+            array=np.asarray([[4, 5, 7], [9, 5, 1], [3, 4, 4]]),
+            name='array_clean',
+        )
+        array.set_array(
+            array=np.asarray([[4, 5, np.nan], [9, np.inf, -1 * np.inf], [np.nan, 4, 4]]),
+            name='array_dirty',
+        )
         array.store()
 
         # Prepare typical REST responses

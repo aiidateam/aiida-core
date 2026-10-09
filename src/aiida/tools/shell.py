@@ -212,7 +212,10 @@ def prepare_code(command: str, computer: Computer | None = None, resolve_command
             executable = command
 
         code = ShellCode(
-            label=command, computer=computer, filepath_executable=executable, default_calc_job_plugin='core.shell'
+            label=command,
+            computer=computer,
+            filepath_executable=executable,
+            default_calc_job_plugin='core.shell',
         ).store()
 
     return code
@@ -248,8 +251,9 @@ def prepare_computer(computer: Computer | None = None) -> Computer:
                 description='Localhost automatically created by `aiida.tools.launch_shell_job`',
                 transport_type='core.local',
                 scheduler_type='core.direct',
-                workdir=str(pathlib.Path(tempfile.gettempdir()) / 'aiida_shell_scratch'),
-            ).store()
+                metadata={'workdir': str(pathlib.Path(tempfile.gettempdir()) / 'aiida_shell_scratch')},
+            )
+            computer.store()
             computer.configure(safe_interval=0.0)
             computer.set_minimum_job_poll_interval(0.0)
             computer.set_default_mpiprocs_per_machine(1)

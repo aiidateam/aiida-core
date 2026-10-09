@@ -626,7 +626,7 @@ That's it. Let's now open the ``launch.py`` script and pass along our command li
 .. code:: python
 
    ...
-   builder.parameters = orm.Dict(dict={'ignore-case': True})
+   builder.parameters = orm.Dict(**{'ignore-case': True})
    ...
 
 Change the capitalization of one of the characters in the first line of ``file1.txt``.

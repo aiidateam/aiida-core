@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import typing as t
 from collections.abc import Mapping
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from uuid import uuid4
 
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
@@ -30,6 +32,7 @@ from aiida.common.datastructures import CalcInfo, FileCopyOperation, JobState
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
+from aiida.engine.daemon import upload
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
@@ -92,7 +95,7 @@ async def upload_calculation(
     computer = node.computer
 
     codes_info = calc_info.codes_info
-    input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
+    input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info] if dry_run else []
 
     logger_extra = get_dblogger_extra(node)
     transport.set_logger_extra(logger_extra)
@@ -109,6 +112,9 @@ async def upload_calculation(
     if dry_run:
         workdir = Path(folder.abspath)
     else:
+        if node.get_job_id() is not None:
+            msg = f'refusing to replace the work directory of submitted calculation {node.pk}'
+            raise exceptions.InvalidOperation(msg)
         remote_user = await transport.whoami_async()
         remote_working_directory = computer.get_workdir().format(username=remote_user)
         if not remote_working_directory.strip():
@@ -141,32 +147,31 @@ async def upload_calculation(
         workdir = Path(remote_working_directory).joinpath(calc_info.uuid[:2], calc_info.uuid[2:4])
         await transport.makedirs_async(workdir, ignore_existing=True)
 
+        workdir = workdir.joinpath(calc_info.uuid[4:])
+        if node.get_remote_workdir() not in (None, str(workdir)):
+            msg = 'The upload work directory changed since the first attempt.'
+            raise exceptions.InvalidOperation(msg)
+        manifest = await upload.prepare_manifest(
+            node, transport, calc_info, Path(folder.abspath), workdir, logger, inputs
+        )
         try:
-            # The final directory may already exist, most likely because this function was already executed once, but
-            # failed and as a result was rescheduled by the engine. In this case it would be fine to delete the folder
-            # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
-            # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
-            await transport.mkdir_async(workdir.joinpath(calc_info.uuid[4:]))
-        except OSError:
-            # Move the existing directory to lost+found, log a warning and create a clean directory anyway
-            path_existing = os.path.join(str(workdir), calc_info.uuid[4:])
-            path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
-            path_target = os.path.join(path_lost_found, calc_info.uuid)
-            logger.warning(
-                f'tried to create path {path_existing} but it already exists, moving the entire folder to {path_target}'
-            )
-
-            # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
-            await transport.mkdir_async(path_lost_found, ignore_existing=True)
-            await transport.copytree_async(path_existing, path_target)
-            await transport.rmtree_async(path_existing)
-
-            # Now we can create a clean folder for this calculation
-            await transport.mkdir_async(workdir.joinpath(calc_info.uuid[4:]))
-        finally:
-            workdir = workdir.joinpath(calc_info.uuid[4:])
-
+            mode = (await transport.get_attribute_async(workdir))['st_mode']
+        except FileNotFoundError:
+            mode = None
+        if mode is not None:
+            if not stat.S_ISDIR(mode):
+                raise NotADirectoryError(str(workdir))
+            if node.get_remote_workdir() is None and await transport.listdir_async(workdir):
+                path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
+                path_target = os.path.join(path_lost_found, f'{calc_info.uuid}-{uuid4()}')
+                logger.warning(
+                    f'Unexpected existing work directory {workdir}; moving the entire folder to {path_target}'
+                )
+                await transport.mkdir_async(path_lost_found, ignore_existing=True)
+                await transport.rename_async(workdir, path_target)
+        # Record ownership before mkdir: a lost acknowledgement must not turn our directory into an orphan.
         node.set_remote_workdir(str(workdir))
+        await upload.reconcile(node, transport, manifest, Path(folder.abspath), workdir, inputs)
 
     # I first create the code files, so that the code can put
     # default files to be overwritten by the plugin itself.
@@ -210,7 +215,7 @@ async def upload_calculation(
         FileCopyOperation.REMOTE,
     ]
 
-    for file_copy_operation in file_copy_operation_order:
+    for file_copy_operation in file_copy_operation_order if dry_run else []:
         if file_copy_operation is FileCopyOperation.LOCAL:
             await _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
         elif file_copy_operation is FileCopyOperation.REMOTE:

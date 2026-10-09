@@ -174,15 +174,22 @@ class ArrayData(Data):
     _requires_array = True
 
     @classmethod
-    def from_arrays(cls, arrays: Mapping[str, ArrayLike], **kwargs: t.Any) -> Self:
+    def from_arrays(cls, arrays: ArrayLike | Mapping[str, ArrayLike], **kwargs: t.Any) -> Self:
         """Construct a new instance and set one or multiple numpy arrays.
+
+        If a single array is provided, it will be stored under the default array name.
 
         :param arrays: a single numpy array or sequence, or a mapping of arrays to store.
         """
         node = cls(**kwargs)
 
+        if isinstance(arrays, (Sequence, np.ndarray)):
+            arrays = {cls.default_array_name: arrays}
+
         if not isinstance(arrays, Mapping):
-            raise TypeError('`arrays` should be mapping of sequences, e.g., {"array": [1, 2, 3]}')
+            raise TypeError(
+                '`arrays` should be a single sequence or mapping of sequences, e.g., [1, 2, 3] or {"array": [1, 2, 3]}'
+            )
 
         if any(not isinstance(array, (Sequence, np.ndarray)) for array in arrays.values()):
             raise TypeError('`arrays` should be a single sequence or mapping of sequences')

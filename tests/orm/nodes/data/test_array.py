@@ -37,10 +37,10 @@ def test_constructor():
     node = ArrayData()
     assert node.get_arraynames() == []
 
-    arrays = numpy.array([1, 2])
-    node = ArrayData.from_arrays(arrays)
+    array = numpy.array([1, 2])
+    node = ArrayData.from_arrays(array)
     assert node.get_arraynames() == [ArrayData.default_array_name]
-    assert (node.get_array(ArrayData.default_array_name) == arrays).all()
+    assert (node.get_array(ArrayData.default_array_name) == array).all()
 
     arrays = {'a': numpy.array([1, 2]), 'b': numpy.array([3, 4])}
     node = ArrayData.from_arrays(arrays)

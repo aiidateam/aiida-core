@@ -77,23 +77,41 @@ class XyData(ArrayData):
     @classmethod
     def from_arrays(
         cls,
-        arrays: Mapping[str, ArrayLike],
+        arrays: ArrayLike | Mapping[str, ArrayLike],
         x_name: str | None = None,
         x_units: str | None = None,
         y_units: Sequence[str] | None = None,
         **kwargs: t.Any,
     ):
+        """Construct a new XyData instance from arrays.
+
+        The arrays dictionary must contain at least one X array and one Y array, with the former identified by `x_name`.
+
+        :param arrays: a dictionary containing the X array and one or more Y arrays.
+        :param x_name: the key in the dictionary corresponding to the X array.
+        :param x_units: the units of the X array.
+        :param y_units: the units of the Y arrays, in the same order as they appear in the dictionary.
+        :param kwargs: additional keyword arguments passed to the constructor.
+        :return: an instance of XyData with the arrays set.
+        """
         instance = cls(**kwargs)
 
-        if 'x_array' not in arrays:
-            raise ValueError('The input arrays must contain an "x_array" key.')
+        if not isinstance(arrays, dict):
+            raise ValueError(
+                '`XyData` arrays must be provided as a dictionary with at least one X array and one Y array, '
+                'with the X array identified by the key "x_name"'
+            )
 
-        for key in ('x_name', 'x_units', 'y_units'):
-            if locals()[key] is None:
-                msg = f'{key} must be provided.'
-                raise ValueError(msg)
+        if x_name is None:
+            raise ValueError('`x_name` must be provided.')
 
-        x_array = arrays.pop('x_array')
+        if x_units is None:
+            raise ValueError('`x_units` must be provided.')
+
+        if y_units is None:
+            raise ValueError('`y_units` must be provided.')
+
+        x_array = arrays.pop(x_name)
 
         if not arrays:
             raise ValueError('No Y arrays provided.')

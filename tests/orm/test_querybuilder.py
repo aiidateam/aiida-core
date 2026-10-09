@@ -1763,7 +1763,7 @@ class TestDoubleStar:
 class TestJsonFilters:
     @staticmethod
     def assert_match(data, filters, is_match):
-        orm.Dict(data).store()
+        orm.Dict(**data).store()
         qb = orm.QueryBuilder().append(orm.Dict, filters=filters)
         assert qb.count() in {0, 1}
         found = qb.count() == 1
@@ -2078,7 +2078,7 @@ class TestJsonFilters:
     def test_json_filters(self, filters, matches):
         """Test QueryBuilder filtering for JSON fields."""
         orm.Dict(
-            {
+            **{
                 'text': 'abcXYZ',
                 'text2': 'abc_XYZ',
                 'integer': 1,
@@ -2114,7 +2114,7 @@ class TestJsonFilters:
     def test_column_filters(self, filters, matches):
         """Test querying directly those stored in the columns"""
         dict1 = orm.Dict(
-            {
+            **{
                 'text2': 'abc_XYZ',
             }
         ).store()
@@ -2137,21 +2137,21 @@ class TestJsonFilters:
     def test_json_order_by(self, key, cast_type):
         """Test QueryBuilder ordering by JSON field keys."""
         dict1 = orm.Dict(
-            {
+            **{
                 'text': 'b',
                 'integer': 2,
                 'float': 2.2,
             }
         ).store()
         dict2 = orm.Dict(
-            {
+            **{
                 'text': 'a',
                 'integer': 1,
                 'float': 1.1,
             }
         ).store()
         dict3 = orm.Dict(
-            {
+            **{
                 'text': 'c',
                 'integer': 3,
                 'float': 3.3,

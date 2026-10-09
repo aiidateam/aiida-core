@@ -608,3 +608,27 @@ def test_create_profile(config_with_profile):
 
     config.create_profile(profile_name, 'core.sqlite_temp', {})
     assert profile_name in config.profile_names
+
+
+def test_validate_profile_names_the_config_folder(empty_config, profile_factory):
+    """Test that a missing profile is reported together with where it was looked for.
+
+    A profile that exists in one configuration folder and not in another is the common case, since ``AIIDA_PATH``
+    is not inherited by anything the shell did not start, a Jupyter kernel above all. Without the folder in the
+    message there is nothing to suggest that is what happened.
+    """
+    config = empty_config
+    config.add_profile(profile_factory(name='sqlite-tutorial'))
+
+    with pytest.raises(exceptions.ProfileConfigurationError) as exception:
+        config.validate_profile('nothing-like-it')
+
+    assert str(config.dirpath) in str(exception.value)
+    assert 'verdi profile list' in str(exception.value)
+
+    # A near miss is far likelier to be a typo than the wrong folder, so that is what the message answers.
+    with pytest.raises(exceptions.ProfileConfigurationError) as exception:
+        config.validate_profile('sqlite-tutorail')
+
+    assert str(config.dirpath) in str(exception.value)
+    assert '`sqlite-tutorial`' in str(exception.value)

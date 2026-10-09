@@ -1,12 +1,17 @@
 import asyncio
 import os
+import shutil
 import stat
 import subprocess
+import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import asyncssh
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
+from aiida.common.escaping import escape_for_bash
 from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH, get_openssh_version
 from aiida.transports.plugins.ssh import AsyncSshTransport
 
@@ -359,6 +364,49 @@ class TestSshCommandGenerator:
         # Semicolon should be safely quoted, not interpreted as command separator
         assert "'/path;rm -rf /'" in result[2]
         assert "'/dst'" in result[2]
+
+
+FILENAME = st.text(
+    alphabet=st.characters(blacklist_categories=('Cs',), blacklist_characters='/\x00'), min_size=1, max_size=30
+)
+
+SINGLE_LINE_FILENAME = st.text(
+    alphabet=st.characters(blacklist_categories=('Cs', 'Cc'), blacklist_characters='/\x00'),
+    min_size=1,
+    max_size=30,
+)
+
+
+class TestSshCommandGeneratorProperties:
+    """Property tests over generated filenames."""
+
+    @given(SINGLE_LINE_FILENAME)
+    def test_posix_outer_shell_delivers_verbatim(self, name):
+        """A real POSIX outer shell delivers the exact inner command (passes before and after the fix)."""
+        # A fake `bash` first on `PATH` records the arguments the outer shell passes to the inner one.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            probe = os.path.join(tmpdir, 'bash')
+            with open(probe, 'w', encoding='utf-8') as handle:
+                handle.write('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+            os.chmod(probe, 0o755)
+            backend = _TestOpenSSH()
+            path = f'/tmp/{name}'
+            raw_command = f'test -f {escape_for_bash(path)}'
+            remote = backend.ssh_command_generator('test -f {}', paths=[path])[2]
+            env = dict(os.environ, PATH=f'{tmpdir}{os.pathsep}{os.environ["PATH"]}')
+            # Absolute path: `bash` on `PATH` is the probe at this point.
+            completed = subprocess.run(
+                [shutil.which('bash'), '-c', remote], capture_output=True, text=True, env=env, check=True
+            )
+            assert completed.stdout.splitlines() == [*backend.bash_command.split()[1:], raw_command]
+
+    @given(FILENAME)
+    def test_adds_no_backslashes(self, name):
+        """Every backslash in the command comes from the input (fails before the quoting fix)."""
+        backend = _TestOpenSSH()
+        path = f'/tmp/{name}'
+        result = backend.ssh_command_generator('test -f {}', paths=[path])[2]
+        assert result.count('\\') == path.count('\\')
 
 
 def test_escape_for_glob_preserves_wildcards_escapes_dangerous_chars():

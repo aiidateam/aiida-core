@@ -29,7 +29,7 @@ from aiida.engine.code_protocols import CodeExecutionProtocol
 from aiida.engine.processes import states as process_states
 from aiida.engine.processes.calcjobs.importer import CalcJobImporter
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
-from aiida.engine.processes.calcjobs.tasks import UPLOAD_COMMAND, Waiting
+from aiida.engine.processes.calcjobs.tasks import RETRIEVE_COMMAND, UPLOAD_COMMAND, Waiting
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process, ProcessState
@@ -772,7 +772,7 @@ class CalcJob(Process):
 
     def parse(
         self, retrieved_temporary_folder: FilePath | None = None, existing_exit_code: ExitCode | None = None
-    ) -> ExitCode:
+    ) -> ExitCode | process_states.Wait:
         """Parse a retrieved job calculation.
 
         This is called once it's finished waiting for the calculation to be finished and the data has been retrieved.
@@ -780,6 +780,15 @@ class CalcJob(Process):
         :param retrieved_temporary_folder: The path to the temporary folder
 
         """
+        # A parsing checkpoint can outlive worker-local files, including after the parser cleaned them up.
+        if self.node.get_retrieve_temporary_list() and (
+            retrieved_temporary_folder is None or not os.path.isdir(retrieved_temporary_folder)
+        ):
+            return process_states.Wait(
+                msg='Waiting to retrieve temporary files',
+                data={'command': RETRIEVE_COMMAND, 'parse_exit_code': existing_exit_code},
+            )
+
         try:
             retrieved = self.node.outputs.retrieved
         except exceptions.NotExistent:

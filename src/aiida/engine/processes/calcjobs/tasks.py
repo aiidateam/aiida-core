@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import shutil
 import tempfile
 import typing as t
 from collections.abc import Callable
@@ -276,9 +277,8 @@ async def task_monitor_job(
 async def task_retrieve_job(
     process: CalcJob,
     transport_queue: TransportQueue,
-    retrieved_temporary_folder: str,
     cancellable: InterruptableFuture,
-):
+) -> str:
     """Transport task that will attempt to retrieve all files of a completed job calculation.
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
@@ -286,8 +286,8 @@ async def task_retrieve_job(
     If all retries fail, the task will raise a TransportTaskException
     :param process: the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param retrieved_temporary_folder: the absolute path to a directory to store files
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
+    :returns: the temporary retrieval directory, which the parser is responsible for removing
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     node = process.node
@@ -296,13 +296,23 @@ async def task_retrieve_job(
         retrieved_link = node.base.links.get_outgoing(link_label_filter=node.link_label_retrieved).first()
         if retrieved_link is not None:
             process.out(node.link_label_retrieved, retrieved_link.node)
-            logger.warning(f'CalcJob<{node.pk}> already has a retrieved output, skipping task_retrieve_job')
-            return
+            if not node.get_retrieve_temporary_list():
+                logger.warning(f'CalcJob<{node.pk}> already has a retrieved output, skipping task_retrieve_job')
+                return tempfile.mkdtemp()
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
     authinfo = node.get_authinfo()
 
-    async def do_retrieve():
+    async def do_retrieve() -> str:
+        # A retry into a partial directory can nest the complete download beneath stale files.
+        folder = tempfile.mkdtemp()
+        try:
+            return await retrieve(folder)
+        except BaseException:
+            await asyncio.to_thread(shutil.rmtree, folder, ignore_errors=True)
+            raise
+
+    async def retrieve(retrieved_temporary_folder: str) -> str:
         async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
@@ -328,7 +338,7 @@ async def task_retrieve_job(
 
             if retrieved is not None:
                 process.out(node.link_label_retrieved, retrieved)
-            return retrieved
+            return retrieved_temporary_folder
 
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
@@ -613,11 +623,11 @@ class Waiting(states.Waiting):
                 result = self.retrieve(monitor_result=self._monitor_result)
 
             elif self._command == RETRIEVE_COMMAND:
-                temp_folder = tempfile.mkdtemp()
-                await self._launch_task(task_retrieve_job, self.process, transport_queue, temp_folder)
+                temp_folder = await self._launch_task(task_retrieve_job, self.process, transport_queue)
 
                 if not self._monitor_result:
-                    result = self.parse(temp_folder)
+                    exit_code = self.data.get('parse_exit_code') if isinstance(self.data, dict) else None
+                    result = self.parse(temp_folder, exit_code)
 
                 elif self._monitor_result.parse is False:
                     exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=self._monitor_result.message)

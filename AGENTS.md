@@ -15,9 +15,18 @@ It is written in Python (see `pyproject.toml` for supported versions) and uses P
 - **Process/Node duality:** processes (`CalcJob`, `WorkChain`, `calcfunction`, `workfunction`) define *how* to run; process nodes record *that* something ran.
 - **CREATE vs RETURN links:** calculations *create* new data nodes; workflows *return* existing data nodes. Workflows orchestrate but don't create data themselves.
 - **Don't break provenance:** never circumvent the link system or modify stored nodes in ways that would break the DAG.
-- **Public API:** anything importable from a second-level package (e.g., `from aiida.orm import ...`) is public API with deprecation guarantees. Deeper internal modules may change without notice.
+- **API boundary (v3 target):** `aiida._core` will contain the internal implementation; `aiida.<modules>` outside `aiida._core` will contain the user API. User API modules expose only public symbols with deprecation guarantees. Import depth does not define API visibility. The package split is planned for v3 and is not in place yet.
+- **v3 redesign:** `main` targets v3. Breaking changes are acceptable, including ones requiring database, configuration, or other schema migrations, when they improve the design, maintainability, or long-term quality of the code. Ship the required migrations with the change. Record every breaking change in `CHANGELOG.md` under `Unreleased` → `Breaking changes`, naming the old and new import paths or behavior, so the v3 migration notes accumulate with the changes.
 - **Plugin system:** entry points (`pyproject.toml` `[project.entry-points]`) allow extending AiiDA with new calculation types, data types, schedulers, transports, and storage backends.
 - **Daemon signal handling:** the daemon captures `SIGINT`/`SIGTERM` for graceful shutdown. Subprocesses in daemon code must pass `start_new_session=True`.
+
+### Core and user API (v3 target)
+
+* **Dependency direction (v3 target):** user API modules delegate to `aiida._core`; core modules depend on other core modules. Core code must not import or call the user API.
+* **Interface contracts:** core interfaces provide explicit inputs, predictable behavior, and controlled resource lifetimes. User interfaces add convenience, input normalization, and actionable errors through wrappers or adapters.
+* **Shared symbols:** define identical interfaces, such as exceptions, in `aiida._core` and re-export them in the user API. Direct re-exports carry user-facing compatibility guarantees for the exposed interface, including public class members. Use wrappers when the user contract differs or requires a narrower interface.
+* **Core visibility:** `aiida._core` contains both public and private symbols. Public core symbols support collaboration between core modules. Core-only interfaces may change; interfaces exposed through the user API follow its compatibility guarantees.
+* **Python privacy:** underscore-prefixed module-level functions are private to their defining module; private methods are private to their class. Private modules may be imported by sibling modules within the same parent package. Use public core interfaces across these boundaries.
 
 ### Process / Node duality
 

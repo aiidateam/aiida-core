@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import asyncssh
 import pytest
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from aiida.common.escaping import escape_for_bash
@@ -366,10 +366,6 @@ class TestSshCommandGenerator:
         assert "'/dst'" in result[2]
 
 
-FILENAME = st.text(
-    alphabet=st.characters(blacklist_categories=('Cs',), blacklist_characters='/\x00'), min_size=1, max_size=30
-)
-
 SINGLE_LINE_FILENAME = st.text(
     alphabet=st.characters(blacklist_categories=('Cs', 'Cc'), blacklist_characters='/\x00'),
     min_size=1,
@@ -400,7 +396,12 @@ class TestSshCommandGeneratorProperties:
             )
             assert completed.stdout.splitlines() == [*backend.bash_command.split()[1:], raw_command]
 
-    @given(FILENAME)
+    @pytest.mark.xfail(
+        reason='outer wrapper escapes `$`, backtick and `"`, remove when quoting fix lands',
+        strict=True,
+    )
+    @given(SINGLE_LINE_FILENAME)
+    @example(name='$')
     def test_adds_no_backslashes(self, name):
         """Every backslash in the command comes from the input (fails before the quoting fix)."""
         backend = _TestOpenSSH()

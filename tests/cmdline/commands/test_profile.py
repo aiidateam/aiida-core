@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for ``verdi profile``."""
 
+import typing as t
 from unittest.mock import patch
 
 import click
@@ -17,6 +18,7 @@ from pgtest.pgtest import PGTest
 from aiida import orm
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.common import docs
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine.daemon.client import DaemonException, DaemonStalePidException, DaemonTimeoutException
 from aiida.manage import configuration
 from aiida.manage.configuration import profile_context
@@ -397,7 +399,8 @@ def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
     profile_name = 'profile-no-broker'
     options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
 
-    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    with pytest.warns(AiidaDeprecationWarning, match='The `--use-rabbitmq` option is deprecated'):
+        result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert f'Created new profile `{profile_name}`.' in result.output
     assert profile_name in isolated_config.profile_names
     profile = isolated_config.get_profile(profile_name)
@@ -423,7 +426,7 @@ def test_configure_broker_rmq(run_cli_command, isolated_config, monkeypatch):
     profile_name = 'profile'
 
     # First setup a profile without a broker configured
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     profile = isolated_config.get_profile(profile_name)
     assert profile.process_control_backend is None
@@ -446,7 +449,7 @@ def test_configure_broker_zeromq(run_cli_command, isolated_config):
     """Test ``verdi profile configure-broker core.zeromq``."""
     profile_name = 'profile-zeromq'
 
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     profile = isolated_config.get_profile(profile_name)
     assert profile.process_control_backend is None
@@ -465,7 +468,7 @@ def test_configure_broker_zeromq_rejects_rabbitmq_options(run_cli_command, isola
     """Test RabbitMQ options are rejected for the ZeroMQ backend command."""
     profile_name = 'profile-zeromq-ignored-options'
 
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
 
     cli_result = run_cli_command(
@@ -501,7 +504,7 @@ def test_configure_rabbitmq_deprecated(run_cli_command, isolated_config):
     """Test the deprecated ``verdi profile configure-rabbitmq`` command."""
     profile_name = 'profile-deprecated-rmq'
 
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     profile = isolated_config.get_profile(profile_name)
 
@@ -517,7 +520,7 @@ def test_configure_broker_rabbitmq_interactive_defaults_use_detected_config(
     """Test interactive RabbitMQ prompts are seeded from detected connection parameters."""
     profile_name = 'profile-rmq-interactive-defaults'
 
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
 
     detected_config = {
@@ -545,7 +548,7 @@ def test_configure_broker_rmq_non_interactive_failed_validation(run_cli_command,
     """Test ``configure-broker core.rabbitmq`` aborts on failed validation in non-interactive mode."""
     profile_name = 'profile-rmq-non-interactive'
 
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     profile = isolated_config.get_profile(profile_name)
 
@@ -617,7 +620,7 @@ def test_configure_broker_uses_loaded_profile_when_default_profile_is_missing(ru
     """Test ``configure-broker`` falls back to the loaded profile when no default profile is configured."""
     profile_name = 'profile-loaded-profile'
 
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     isolated_config._default_profile = None
 
@@ -803,15 +806,13 @@ class TestVerdiProfileDumpCLI:
 
     def test_dump_user_parsing(self, run_cli_command, tmp_path):
         """Test that user argument is parsed correctly."""
-        from typing import cast
-
         group = orm.Group(label='test_user_group').store()
         node = orm.CalculationNode().store()
         group.add_nodes([node])
         test_path = tmp_path / 'user-test'
 
         default_user = orm.User.collection.get_default()
-        cast(orm.User, default_user)
+        t.cast(orm.User, default_user)
 
         options = ['--path', str(test_path), '--user', default_user.email]
         result = run_cli_command(cmd_profile.profile_dump, options)

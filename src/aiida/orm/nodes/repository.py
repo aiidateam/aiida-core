@@ -207,7 +207,8 @@ class NodeRepository:
         :raises OSError: if the file could not be opened.
         """
         if mode not in ['r', 'rb']:
-            raise ValueError(f'the mode {mode} is not supported.')
+            msg = f'the mode {mode} is not supported.'
+            raise ValueError(msg)
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
@@ -251,6 +252,14 @@ class NodeRepository:
         """
         return self._repository.get_object(path)
 
+    def has_object(self, path: FilePath) -> bool:
+        """Return whether a file or directory exists in the repository metadata.
+
+        :param path: Relative object path, including nested paths.
+        :raises TypeError: If the path is absolute or has an unsupported type.
+        """
+        return self._repository.has_object(path)
+
     @t.overload
     def get_object_content(self, path: str, mode: t.Literal['r']) -> str: ...
 
@@ -267,7 +276,8 @@ class NodeRepository:
         :raises OSError: if the file could not be opened.
         """
         if mode not in ['r', 'rb']:
-            raise ValueError(f'the mode {mode} is not supported.')
+            msg = f'the mode {mode} is not supported.'
+            raise ValueError(msg)
 
         if 'b' not in mode:
             return self._repository.get_object_content(path).decode('utf-8')

@@ -9,7 +9,7 @@
 """Utilities for the implementation of the SqlAlchemy backend."""
 
 import contextlib
-from typing import TYPE_CHECKING
+import typing as t
 
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
@@ -18,7 +18,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from aiida.common import exceptions
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
 
 IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
@@ -93,7 +93,7 @@ class ModelWrapper:
         """
         setattr(self._model, key, value)
         if self.is_saved() and self._is_mutable_model_field(key):
-            fields = set((key,))
+            fields = {key}
             self._flush(fields=fields)
 
     def is_saved(self):

@@ -113,7 +113,8 @@ class Data(Node):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError(f'Unknown source parameters: {", ".join(unknown_attrs)}')
+            msg = f'Unknown source parameters: {", ".join(unknown_attrs)}'
+            raise KeyError(msg)
 
         self.base.attributes.set('source', source)
 
@@ -166,10 +167,11 @@ class Data(Node):
                     )
                 )
             else:
-                raise ValueError(
+                msg = (
                     f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
                     'No formats are implemented yet.'
                 )
+                raise ValueError(msg)
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
         assert isinstance(string, bytes), 'export function `{}` did not return the content as a byte string.'
@@ -194,7 +196,8 @@ class Data(Node):
             raise ValueError('Path not recognized')
 
         if os.path.exists(path) and not overwrite:
-            raise OSError(f'A file was already found at {path}')
+            msg = f'A file was already found at {path}'
+            raise OSError(msg)
 
         if fileformat is None:
             extension = os.path.splitext(path)[1]
@@ -215,10 +218,12 @@ class Data(Node):
         if not overwrite:
             for fname in extra_files:
                 if os.path.exists(fname):
-                    raise OSError(f'The file {fname} already exists, stopping.')
+                    msg = f'The file {fname} already exists, stopping.'
+                    raise OSError(msg)
 
             if os.path.exists(path):
-                raise OSError(f'The file {path} already exists, stopping.')
+                msg = f'The file {path} already exists, stopping.'
+                raise OSError(msg)
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
@@ -273,10 +278,11 @@ class Data(Node):
                     )
                 )
             else:
-                raise ValueError(
+                msg = (
                     f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
                     'No formats are implemented yet.'
                 )
+                raise ValueError(msg)
 
         # func is bound to self by getattr in _get_importers()
         func(inputstring, **kwargs)
@@ -329,10 +335,11 @@ class Data(Node):
                     )
                 )
             else:
-                raise ValueError(
+                msg = (
                     f'The format {object_format} is not implemented for {self.__class__.__name__}. '
                     'No formats are implemented yet.'
                 )
+                raise ValueError(msg)
 
         return func(*args)
 

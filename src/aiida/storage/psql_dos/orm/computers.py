@@ -124,4 +124,5 @@ class SqlaComputerCollection(BackendComputerCollection):
             session.delete(row)
             session.commit()
         except SQLAlchemyError as exc:
-            raise exceptions.InvalidOperation(f'Unable to delete the requested computer: {exc}')
+            msg = f'Unable to delete the requested computer: {exc}'
+            raise exceptions.InvalidOperation(msg)

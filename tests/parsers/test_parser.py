@@ -92,7 +92,6 @@ class TestParser:
 
     def test_parser_get_outputs_for_parsing(self):
         """Make sure that the `get_output_for_parsing` method returns the correct output nodes."""
-        ArithmeticAddCalculation.define = CustomCalcJob.define
         node = orm.CalcJobNode(computer=self.computer, process_type=CustomCalcJob.build_process_type())
         node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         node.set_option('max_wallclock_seconds', 1800)

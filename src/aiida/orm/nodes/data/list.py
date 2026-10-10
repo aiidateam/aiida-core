@@ -10,7 +10,6 @@
 
 import typing as t
 from collections.abc import MutableSequence
-from typing import Any
 
 import pydantic as pdt
 
@@ -93,7 +92,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def pop(self, index: int = -1) -> Any:
+    def pop(self, index: int = -1) -> t.Any:
         """Remove and return item at index (default last)."""
         data = self.get_list()
         item = data.pop(index)
@@ -101,7 +100,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def index(self, value: Any, start: int = 0, stop: int = 0) -> int:
+    def index(self, value: t.Any, start: int = 0, stop: int = 0) -> int:
         """Return first index of value.."""
         return self.get_list().index(value)
 

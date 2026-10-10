@@ -74,7 +74,7 @@ class TestUpfParser:
     """Tests UPF version / element_name parser function."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, tmp_path):
+    def init_profile(self, tmp_path, aiida_profile_clean):
         """Initialize the profile."""
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         self.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
@@ -144,7 +144,7 @@ class TestUpfParser:
 
         # Filter on element and user that should not match anything
         groups = {group.label for group in orm.UpfData.get_upf_groups(filter_elements='Ba', user=user.email)}
-        assert groups == set([])
+        assert groups == set()
 
     def test_upf_version_one(self):
         """Check if parsing for regular UPF file (version 1) succeeds."""

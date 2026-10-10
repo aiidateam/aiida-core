@@ -8,6 +8,7 @@
 ###########################################################################
 """Test for the `CalcJob` process sub class."""
 
+import asyncio
 import io
 import json
 import os
@@ -130,9 +131,9 @@ class MultiCodesCalcJob(CalcJob):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('code_info_with_mpi_none', valid_type=orm.AbstractCode, required=False)
-        spec.input('code_info_with_mpi_true', valid_type=orm.AbstractCode, required=False)
-        spec.input('code_info_with_mpi_false', valid_type=orm.AbstractCode, required=False)
+        spec.input('code_info_with_mpi_none', valid_type=orm.Code, required=False)
+        spec.input('code_info_with_mpi_true', valid_type=orm.Code, required=False)
+        spec.input('code_info_with_mpi_false', valid_type=orm.Code, required=False)
         spec.input('parallel_run', valid_type=orm.Bool, default=lambda: orm.Bool(True))
 
     def prepare_for_submission(self, folder):
@@ -201,7 +202,7 @@ def test_multi_codes_with_mpi(
     """Test the functionality that controls whether the calculation is to be run with MPI.
 
     The value specified by the ``metadata.options.withmpi`` input is the default. This value can be overidden by either
-    the plugin (through the ``CodeInfo.withmpi`` attribute) or the code input (through the ``AbstractCode.with_mpi``
+    the plugin (through the ``CodeInfo.withmpi`` attribute) or the code input (through the ``Code.with_mpi``
     property). If both of these are explicitly defined, i.e. are not ``None``, they have to be equivalent or an
     exception is raised. The parametrization represents the matrix of all possible combinations. If the final value for
     ``with_mpi`` is ``True`` we can check that this is correctly propagated by checking the length of the
@@ -1067,6 +1068,43 @@ def test_parse_exit_code_priority(
 
 
 @pytest.mark.requires_broker
+def test_presubmit_requires_stored_node(arithmetic_add_inputs, fixture_sandbox, monkeypatch, runner):
+    """Test that a non-dry-run calculation has to be stored before submission."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    monkeypatch.setattr(type(process.node), 'is_stored', property(lambda _: False))
+
+    with pytest.raises(exceptions.InvalidOperation, match='calculation node is not stored'):
+        process.presubmit(fixture_sandbox)
+
+
+def test_presubmit_validates_code_computer(arithmetic_add_inputs, fixture_sandbox, monkeypatch, runner):
+    """Test that a code which cannot run on the computer is rejected."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    monkeypatch.setattr(type(process.inputs.code), 'can_run_on_computer', lambda *_: False)
+
+    with pytest.raises(exceptions.InputValidationError, match='cannot run on computer'):
+        process.presubmit(fixture_sandbox)
+
+
+def test_presubmit_joins_scheduler_output_and_error(arithmetic_add_inputs, fixture_sandbox, runner):
+    """Test that identical scheduler output and error paths are joined."""
+    inputs = {
+        **arithmetic_add_inputs,
+        'metadata': {
+            'dry_run': True,
+            'options': {'scheduler_stdout': 'scheduler.out', 'scheduler_stderr': 'scheduler.out'},
+        },
+    }
+    process = instantiate_process(runner, ArithmeticAddCalculation, **inputs)
+
+    process.presubmit(fixture_sandbox)
+
+    with fixture_sandbox.get_subfolder('.aiida').open('job_tmpl.json') as handle:
+        job_template = json.load(handle)
+
+    assert job_template['sched_join_files'] is True
+
+
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
@@ -1319,11 +1357,13 @@ def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
 
 def monitor_disable_self(node, transport, **kwargs):
     """Monitor that will disable itself."""
+    node.base.extras.set('disable_self_monitor_called', True)
     return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF, message='Disable self.')
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures('override_logging')
-def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog):
+async def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog, runner):
     """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
 
     If set to ``CalcJobMonitorAction.DISABLE_SELF``, the calculation should continue running and the monitor should not
@@ -1332,14 +1372,33 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
     The ``override_logging`` fixture is necessary to set the logging level to ``DEBUG`` because the monitor message is
     logged at the ``INFO`` level and so without this change, it would not be captured.
     """
+    from aiida.engine.processes.communications import LocalProcessController
+    from aiida.engine.processes.exceptions import KilledError
+
     entry_points.add(monitor_disable_self, group='aiida.calculations.monitors', name='core.disable_self')
 
     builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 1
+    # Keep the job alive until the monitor has run, then terminate it explicitly below.
+    builder.metadata.options.sleep = 300
     builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
-    _, node = launch.run_get_node(builder)
-    assert node.is_finished_ok
-    assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+
+    process = runner.instantiate_process(builder)
+    controller = LocalProcessController(process, runner.loop)
+    runner.schedule(process)
+
+    async def monitor_called():
+        while not process.node.base.extras.get('disable_self_monitor_called', False):
+            await asyncio.sleep(0.1)
+
+    try:
+        await asyncio.wait_for(monitor_called(), timeout=30)
+        assert not process.has_terminated()
+        assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+    finally:
+        if not process.has_terminated():
+            assert await controller.kill_process(process.pid)
+        with pytest.raises(KilledError):
+            await process.future()
 
 
 def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
@@ -1363,7 +1422,8 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
 
 
 @pytest.mark.requires_broker
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
     """Test that a job can be restarted when it is launched and the daemon is restarted.
 

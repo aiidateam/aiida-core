@@ -79,7 +79,8 @@ class AiidaProcessDirective(SphinxDirective):
         try:
             self.process_spec = self.process.spec()
         except Exception as exc:
-            raise RuntimeError(f"Error while building the spec for process '{self.process_name}': '{exc!r}.'") from exc
+            msg = f"Error while building the spec for process '{self.process_name}': '{exc!r}.'"
+            raise RuntimeError(msg) from exc
 
     def build_node_tree(self):
         """Returns the docutils node tree."""

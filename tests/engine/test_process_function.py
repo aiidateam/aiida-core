@@ -177,6 +177,13 @@ def test_process_type():
     assert node.process_type == process_type
 
 
+def test_node_process_class_is_the_function():
+    """`process_class` returns the decorated function."""
+    _, node = function_return_input.run_get_node(data=orm.Int(DEFAULT_INT))
+
+    assert node.process_class is function_return_input
+
+
 def test_exit_status():
     """A FINISHED process function has to have an exit status of 0"""
     _, node = function_args_with_default.run_get_node()

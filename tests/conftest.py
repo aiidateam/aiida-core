@@ -14,6 +14,7 @@ loaded in this file as well, such that they can also be used for the tests of ``
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import dataclasses
 import logging
@@ -21,6 +22,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import textwrap
 import types
 import typing as t
 import warnings
@@ -47,18 +49,12 @@ import_module('aiida.storage.psql_dos.migrations.versions')
 import_module('aiida.storage.sqlite_dos.migrations.versions')
 import_module('aiida.storage.sqlite_zip.migrations.versions')
 
-try:
-    from typing import ParamSpec
-except ImportError:
-    # Fallback for Python 3.9 and older
-    from typing_extensions import ParamSpec  # type: ignore[assignment]
-
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
-P = ParamSpec('P')
+P = t.ParamSpec('P')
 
 
 class TestDbBackend(Enum):
@@ -266,12 +262,94 @@ def aiida_profile(
         config = config_psql_dos()
     else:
         # This should be unreachable
-        raise ValueError(f'Invalid DB backend {db_backend}')
+        msg = f'Invalid DB backend {db_backend}'
+        raise ValueError(msg)
 
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
         yield profile
+
+
+@pytest.fixture(scope='session', autouse=True)
+def rabbitmq_message_exchange_held(request, aiida_profile):
+    """Hold the RabbitMQ message exchange alive while ``requires_rmq`` tests run.
+
+    All tests share one session profile and so one message-exchange name
+    (``aiida-<uuid>.messages``). Test profiles declare it with ``auto_delete``, so every
+    per-test communicator teardown deletes the exchange and the next setup re-creates it.
+    The server-side delete can land between the next test's ``declare_exchange`` and ``bind``,
+    flaking with ``NOT_FOUND - no exchange '....messages'`` (e.g.
+    ``test_add_broadcast_subscriber`` right after ``test_add_rpc_subscriber``).
+
+    A single session-lived broadcast binding keeps the exchange at >= 1 binding, so it is
+    never auto-deleted mid-suite. Per-test exclusive queues still come and go as before. This
+    mirrors production, where the exchange is long-lived and shared.
+
+    Bound to the collected ``requires_rmq`` mark rather than the profile, so suites that never
+    touch the broker (even with an RMQ profile) pay nothing.
+    """
+    if not any(item.get_closest_marker('requires_rmq') for item in getattr(request.session, 'items', [])):
+        yield
+        return
+    if aiida_profile.process_control_backend != 'core.rabbitmq':
+        yield
+        return
+
+    from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
+    from aiida.brokers.rabbitmq.utils import get_message_exchange_name
+
+    try:
+        holder = RmqThreadCommunicator.connect(
+            connection_params={'url': get_manager().get_broker().get_url()},
+            message_exchange=get_message_exchange_name(f'aiida-{aiida_profile.uuid}'),
+            testing_mode=aiida_profile.is_test_profile,
+        )
+    except Exception:
+        # RabbitMQ unreachable: leave individual tests to fail as before.
+        yield
+        return
+    # A callable no-op: unlike the ``None`` the broker tests pass, this survives any broadcast
+    # (e.g. from daemon tests) delivered to the holder's queue.
+    holder.add_broadcast_subscriber(lambda *args, **kwargs: None)
+    try:
+        yield holder
+    finally:
+        holder.close()
+
+
+@pytest.fixture(scope='session')
+def archive_main_0001():
+    """Return the path of the pinned ``main_0001`` reference archive."""
+    from tests.utils.archives import get_archive_file
+
+    return get_archive_file('export_main_0001_simple.aiida', filepath='export/migrate')
+
+
+@pytest.fixture(scope='session')
+def archive_main_0002(tmp_path_factory, aiida_config_factory, aiida_profile_factory):
+    """Generate the ``main_0002`` reference simple archive on demand."""
+    from tests.utils.archives import generate_archive_main_0002
+
+    with aiida_config_factory(tmp_path_factory.mktemp('gen_archive_main_0002_config')) as config:
+        with aiida_profile_factory(config):
+            return generate_archive_main_0002(tmp_path_factory.mktemp('archive_main_0002'))
+
+
+@pytest.fixture(scope='session')
+def archive_main_head(tmp_path_factory, aiida_config_factory, aiida_profile_factory):
+    """Generate the reference simple archive at the current head version on demand."""
+    from tests.utils.archives import generate_archive_head
+
+    with aiida_config_factory(tmp_path_factory.mktemp('gen_archive_head_config')) as config:
+        with aiida_profile_factory(config):
+            return generate_archive_head(tmp_path_factory.mktemp('archive_main_head'))
+
+
+@pytest.fixture(scope='session')
+def archive_head(archive_main_head):
+    """Return the head archive fixture under its former name."""
+    return archive_main_head
 
 
 @pytest.fixture()
@@ -964,142 +1042,195 @@ def generate_calculation_node_add(aiida_localhost):
     return _generate_calculation_node_add
 
 
-@pytest.fixture(scope='class')
-def construct_calculation_node_add(tmp_path_factory):
-    def _construct_calculation_node_add(x: int = 1, y: int = 2):
-        import json
-        import textwrap
+def _get_mock_computer():
+    """Get or create a lightweight computer for manually built nodes (no ``aiida_localhost`` needed)."""
+    from aiida.orm import Computer
 
-        from aiida.common import LinkType
-        from aiida.orm import CalcJobNode, Computer, FolderData, InstalledCode, Int
+    _, computer = Computer.collection.get_or_create(
+        label='mock_computer',
+        hostname='localhost',
+        transport_type='core.local',
+        scheduler_type='core.direct',
+    )
+    if computer.is_stored is False:
+        computer.store()
+    return computer
 
-        # Create a minimal computer
-        # Not using any of the `aiida_localhost` or `aiida_computer_local` fixtures as they are function-scoped
-        created, computer = Computer.collection.get_or_create(
-            label='mock_computer', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
-        )
-        if created:
-            computer.store()
 
-        # Create the calculation node
-        calc_node = CalcJobNode(computer=computer)
+def _build_add_node_unstored(x: int = 1, y: int = 2):
+    """Build an unstored ``ArithmeticAddCalculation`` node with the real repository layout.
 
-        # Create input nodes
-        x_node = Int(x)
-        y_node = Int(y)
-        code_node = InstalledCode(computer=computer, filepath_executable='/bin/bash')
+    The node is left unstored (and unsealed) so callers can attach ``CALL`` links before storing, e.g. when
+    assembling a parent workflow. Use :func:`_finalize_add_node` to store it and attach outputs.
+    """
+    import json
+    import textwrap
 
-        # Store input nodes
-        x_node.store()
-        y_node.store()
-        code_node.store()
+    from aiida.common import LinkType
+    from aiida.orm import CalcJobNode, InstalledCode, Int
 
-        # Input files
-        input_content = f'echo $(({x} + {y}))\n'
-        calc_node.base.repository.put_object_from_bytes(input_content.encode(), 'aiida.in')
+    computer = _get_mock_computer()
+    x_node = Int(x).store()
+    y_node = Int(y).store()
+    code_node = InstalledCode(computer=computer, filepath_executable='/bin/bash').store()
+    calc_node = CalcJobNode(computer=computer)
+    calc_node.base.repository.put_object_from_bytes(f'echo $(({x} + {y}))\n'.encode(), 'aiida.in')
+    calcinfo_dict = {
+        'codes_info': [{'stdin_name': 'aiida.in', 'stdout_name': 'aiida.out', 'code_uuid': code_node.uuid}],
+        'retrieve_list': ['aiida.out', '_scheduler-stdout.txt', '_scheduler-stderr.txt'],
+        'uuid': calc_node.uuid,
+        'file_copy_operation_order': [2, 0, 1],
+    }
+    job_tmpl_dict = {
+        'submit_as_hold': False,
+        'rerunnable': False,
+        'job_name': 'aiida-42',
+        'sched_output_path': '_scheduler-stdout.txt',
+        'shebang': '#!/bin/bash',
+        'sched_error_path': '_scheduler-stderr.txt',
+        'sched_join_files': False,
+        'prepend_text': '',
+        'append_text': '',
+        'job_resource': {
+            'num_machines': 1,
+            'num_mpiprocs_per_machine': 1,
+            'num_cores_per_machine': None,
+            'num_cores_per_mpiproc': None,
+            'tot_num_mpiprocs': 1,
+        },
+        'codes_info': [
+            {
+                'prepend_cmdline_params': [],
+                'cmdline_params': ['/usr/bin/bash'],
+                'use_double_quotes': [False, False],
+                'wrap_cmdline_params': False,
+                'stdin_name': 'aiida.in',
+                'stdout_name': 'aiida.out',
+                'stderr_name': None,
+                'join_files': False,
+            }
+        ],
+        'codes_run_mode': 0,
+        'import_sys_environment': True,
+        'job_environment': {},
+        'environment_variables_double_quotes': False,
+        'max_memory_kb': None,
+        'max_wallclock_seconds': 3600,
+    }
+    calc_node.base.repository.put_object_from_bytes(
+        json.dumps(calcinfo_dict, indent=4).encode(), '.aiida/calcinfo.json'
+    )
+    calc_node.base.repository.put_object_from_bytes(
+        json.dumps(job_tmpl_dict, indent=4).encode(), '.aiida/job_tmpl.json'
+    )
+    submit_script = textwrap.dedent(
+        """\
+        #!/bin/bash
+        exec > _scheduler-stdout.txt
+        exec 2> _scheduler-stderr.txt
 
-        # .aiida folder content
-        calcinfo_dict = {
-            'codes_info': [{'stdin_name': 'aiida.in', 'stdout_name': 'aiida.out', 'code_uuid': code_node.uuid}],
-            'retrieve_list': ['aiida.out', '_scheduler-stdout.txt', '_scheduler-stderr.txt'],
-            'uuid': calc_node.uuid,
-            'file_copy_operation_order': [2, 0, 1],
-        }
+        '/usr/bin/bash' < 'aiida.in' > 'aiida.out'
+        """
+    )
+    calc_node.base.repository.put_object_from_bytes(submit_script.encode(), '_aiidasubmit.sh')
+    calc_node.base.attributes.set('input_filename', 'aiida.in')
+    calc_node.base.attributes.set('output_filename', 'aiida.out')
+    calc_node.base.links.add_incoming(x_node, link_type=LinkType.INPUT_CALC, link_label='x')
+    calc_node.base.links.add_incoming(y_node, link_type=LinkType.INPUT_CALC, link_label='y')
+    calc_node.base.links.add_incoming(code_node, link_type=LinkType.INPUT_CALC, link_label='code')
+    calc_node.set_process_state('finished')
+    calc_node.set_process_label('ArithmeticAddCalculation')
+    calc_node.set_process_type('aiida.calculations:core.arithmetic.add')
+    calc_node.set_exit_status(0)
+    return calc_node, x, y
 
-        job_tmpl_dict = {
-            'submit_as_hold': False,
-            'rerunnable': False,
-            'job_name': 'aiida-42',
-            'sched_output_path': '_scheduler-stdout.txt',
-            'shebang': '#!/bin/bash',
-            'sched_error_path': '_scheduler-stderr.txt',
-            'sched_join_files': False,
-            'prepend_text': '',
-            'append_text': '',
-            'job_resource': {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1,
-                'num_cores_per_machine': None,
-                'num_cores_per_mpiproc': None,
-                'tot_num_mpiprocs': 1,
-            },
-            'codes_info': [
-                {
-                    'prepend_cmdline_params': [],
-                    'cmdline_params': ['/usr/bin/bash'],
-                    'use_double_quotes': [False, False],
-                    'wrap_cmdline_params': False,
-                    'stdin_name': 'aiida.in',
-                    'stdout_name': 'aiida.out',
-                    'stderr_name': None,
-                    'join_files': False,
-                }
-            ],
-            'codes_run_mode': 0,
-            'import_sys_environment': True,
-            'job_environment': {},
-            'environment_variables_double_quotes': False,
-            'max_memory_kb': None,
-            'max_wallclock_seconds': 3600,
-        }
 
-        calc_node.base.repository.put_object_from_bytes(
-            json.dumps(calcinfo_dict, indent=4).encode(), '.aiida/calcinfo.json'
-        )
-        calc_node.base.repository.put_object_from_bytes(
-            json.dumps(job_tmpl_dict, indent=4).encode(), '.aiida/job_tmpl.json'
-        )
+def _finalize_add_node(calc_node, x: int, y: int):
+    """Store an add node built by ``_build_add_node_unstored`` and attach its outputs."""
+    from aiida.common import LinkType
+    from aiida.orm import FolderData, Int
 
-        # Submit script
-        submit_script = textwrap.dedent("""\
-            #!/bin/bash
-            exec > _scheduler-stdout.txt
-            exec 2> _scheduler-stderr.txt
-
-            '/usr/bin/bash' < 'aiida.in' > 'aiida.out'
-        """)
-
-        calc_node.base.repository.put_object_from_bytes(submit_script.encode(), '_aiidasubmit.sh')
-
-        # Store CalcInfo in node attributes
-        calc_node.base.attributes.set('input_filename', 'aiida.in')
-        calc_node.base.attributes.set('output_filename', 'aiida.out')
-
-        # Add input links
-        calc_node.base.links.add_incoming(x_node, link_type=LinkType.INPUT_CALC, link_label='x')
-        calc_node.base.links.add_incoming(y_node, link_type=LinkType.INPUT_CALC, link_label='y')
-        calc_node.base.links.add_incoming(code_node, link_type=LinkType.INPUT_CALC, link_label='code')
-
-        # Must store CalcjobNode before I can add output files
+    if not calc_node.is_stored:
         calc_node.store()
+    retrieved_folder = FolderData()
+    retrieved_folder.put_object_from_bytes(f'{x + y}\n'.encode(), 'aiida.out')
+    retrieved_folder.base.repository.put_object_from_bytes(b'\n', '_scheduler-stdout.txt')
+    retrieved_folder.base.repository.put_object_from_bytes(b'\n', '_scheduler-stderr.txt')
+    retrieved_folder.store()
+    retrieved_folder.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='retrieved')
+    output_node = Int(x + y).store()
+    output_node.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='sum')
+    calc_node.seal()
+    return calc_node
 
-        # Create FolderData node for retrieved
-        retrieved_folder = FolderData()
-        output_content = f'{x + y}\n'.encode()
-        retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
-        scheduler_stdout = b'\n'
-        scheduler_stderr = b'\n'
-        retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
-        retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
-        retrieved_folder.store()
+def _build_multiply_node_unstored(x_node, y_node):
+    """Build an unstored ``multiply`` ``CalcFunctionNode`` with the same dump footprint as the real one."""
+    from aiida.common import LinkType
+    from aiida.orm import CalcFunctionNode
 
-        retrieved_folder.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='retrieved')
+    multiply_node = CalcFunctionNode()
+    multiply_node.base.repository.put_object_from_bytes(b'# source file placeholder\n', 'source_file')
+    multiply_node.base.links.add_incoming(x_node, link_type=LinkType.INPUT_CALC, link_label='x')
+    multiply_node.base.links.add_incoming(y_node, link_type=LinkType.INPUT_CALC, link_label='y')
+    multiply_node.set_process_state('finished')
+    multiply_node.set_process_label('multiply')
+    multiply_node.set_process_type('aiida.calculations:core.arithmetic.multiply')
+    multiply_node.set_exit_status(0)
+    return multiply_node
 
-        # Create and link output node (sum)
-        output_node = Int(x + y)
-        output_node.store()
-        output_node.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='sum')
 
-        # Set process properties
-        calc_node.set_process_state('finished')
-        calc_node.set_process_label('ArithmeticAddCalculation')
-        calc_node.set_process_type('aiida.calculations:core.arithmetic.add')
-        calc_node.set_exit_status(0)
+@pytest.fixture
+def construct_calculation_node_add():
+    """Manually build a sealed ``ArithmeticAddCalculation`` node without running the engine.
 
-        return calc_node
+    Unlike :func:`generate_calculation_node_add` (which runs ``core.arithmetic.add`` through the engine and
+    spawns ``/bin/bash``), this constructs the node and its repository directly, which is orders of magnitude
+    faster. Suitable for tests that only need the node graph and files, not real execution.
+    """
+
+    def _construct_calculation_node_add(x: int = 1, y: int = 2):
+        calc_node, x_val, y_val = _build_add_node_unstored(x, y)
+        return _finalize_add_node(calc_node, x_val, y_val)
 
     return _construct_calculation_node_add
+
+
+@pytest.fixture
+def construct_workchain_multiply_add():
+    """Manually assemble a sealed ``MultiplyAddWorkChain`` without running the engine.
+
+    Builds a ``multiply`` ``CalcFunctionNode`` and an ``ArithmeticAddCalculation`` node and links them to a
+    parent ``WorkChainNode`` via ``CALL_CALC``. Child link labels match their process labels so dumped directory
+    names (``01-multiply-<pk>``, ``02-ArithmeticAddCalculation-<pk>``) match a real run. ``multiply`` is stored
+    first so ``sorted(pks) == (multiply_pk, add_pk)``.
+    """
+
+    def _construct_workchain_multiply_add():
+        from aiida.common import LinkType
+        from aiida.orm import Int, WorkChainNode
+
+        wc_node = WorkChainNode()
+        wc_node.set_process_state('finished')
+        wc_node.set_process_label('MultiplyAddWorkChain')
+        wc_node.set_process_type('aiida.workflows:core.arithmetic.multiply_add')
+        x_node = Int(1).store()
+        y_node = Int(2).store()
+        multiply_node = _build_multiply_node_unstored(x_node, y_node)
+        add_node, add_x, add_y = _build_add_node_unstored()
+        multiply_node.base.links.add_incoming(wc_node, link_type=LinkType.CALL_CALC, link_label='multiply')
+        add_node.base.links.add_incoming(wc_node, link_type=LinkType.CALL_CALC, link_label='ArithmeticAddCalculation')
+        # Store parent first (as in ``generate_workchain_node_io``), then children in dump order.
+        wc_node.set_exit_status(0)
+        wc_node.store()
+        multiply_node.store()
+        add_node.store()
+        _finalize_add_node(add_node, add_x, add_y)
+        multiply_node.seal()
+        wc_node.seal()
+        return wc_node
+
+    return _construct_workchain_multiply_add
 
 
 @pytest.fixture
@@ -1305,19 +1436,19 @@ def setup_no_process_group() -> orm.Group:
 
 # TODO: Add possibility to parametrize with number of nodes created (make factory?)
 @pytest.fixture()
-def setup_add_group(generate_calculation_node_add) -> orm.Group:
+def setup_add_group(construct_calculation_node_add) -> orm.Group:
     add_group, _ = orm.Group.collection.get_or_create(label='add-group')
     if add_group.is_empty:
-        add_node = generate_calculation_node_add()
+        add_node = construct_calculation_node_add()
         add_group.add_nodes([add_node])
     return add_group
 
 
 @pytest.fixture()
-def setup_multiply_add_group(generate_workchain_multiply_add) -> orm.Group:
+def setup_multiply_add_group(construct_workchain_multiply_add) -> orm.Group:
     multiply_add_group, _ = orm.Group.collection.get_or_create(label='multiply-add-group')
     if multiply_add_group.is_empty:
-        multiply_add_node = generate_workchain_multiply_add()
+        multiply_add_node = construct_workchain_multiply_add()
         multiply_add_group.add_nodes([multiply_add_node])
     return multiply_add_group
 
@@ -1330,3 +1461,29 @@ def setup_duplicate_group():
         return dupl_group
 
     return _setup_duplicate_group
+
+
+@pytest.fixture
+def importable_module(tmp_path: Path) -> t.Iterator[t.Callable[..., types.ModuleType]]:
+    """Yield a module factory backed by `tmp_path`, temporarily added to `sys.path`."""
+    written: list[str] = []
+
+    def factory(name: str, source: str, **alongside: str) -> types.ModuleType:
+        """Write the supplied modules and import the named module."""
+        for module_name, module_source in {name: source, **alongside}.items():
+            (tmp_path / f'{module_name}.py').write_text(textwrap.dedent(module_source))
+            written.append(module_name)
+
+        if str(tmp_path) not in sys.path:
+            sys.path.insert(0, str(tmp_path))
+
+        return import_module(name)
+
+    yield factory
+
+    with contextlib.suppress(ValueError):
+        sys.path.remove(str(tmp_path))
+
+    # A module written alongside is imported by the one under test, so it ends up here too.
+    for module_name in written:
+        sys.modules.pop(module_name, None)

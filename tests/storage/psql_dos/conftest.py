@@ -18,7 +18,8 @@ try:
     if test_profile := os.environ.get('AIIDA_TEST_PROFILE'):
         STORAGE_BACKEND_ENTRY_POINT = get_config().get_profile(test_profile).storage_backend
 except MissingConfigurationError as e:
-    raise ValueError(f"Could not parse configuration of AiiDA test profile '{test_profile}'") from e
+    msg = f"Could not parse configuration of AiiDA test profile '{test_profile}'"
+    raise ValueError(msg) from e
 
 if STORAGE_BACKEND_ENTRY_POINT is not None and STORAGE_BACKEND_ENTRY_POINT != 'core.psql_dos':
     collect_ignore_glob = ['*']

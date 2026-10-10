@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import pytest
 
-from aiida.common.datastructures import CodeRunMode
+from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo, NodeNumberJobResource
 from aiida.plugins import SchedulerFactory, entry_point
 from aiida.schedulers import Scheduler
-from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo, NodeNumberJobResource
 
 
 def get_scheduler_entry_point_names() -> list[str]:

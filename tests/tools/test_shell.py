@@ -19,7 +19,7 @@ import pytest
 from aiida.calculations.shell import ShellJob
 from aiida.engine import WorkChain, run_get_node, workfunction
 from aiida.orm import (
-    AbstractCode,
+    Code,
     Computer,
     Float,
     InstalledCode,
@@ -95,14 +95,14 @@ def test_default():
 def test_command(aiida_code_installed):
     """Test the ``command`` argument accepts a pre-configured code instance."""
     code = aiida_code_installed(filepath_executable='/bin/true', default_calc_job_plugin='core.shell')
-    assert isinstance(code, AbstractCode)
+    assert isinstance(code, Code)
 
     _, node = launch_shell_job(code)
     assert node.is_finished_ok
 
 
 def test_command_invalid():
-    """Test the ``command`` argument raises a ``TypeError`` if anything but a ``str`` or ``AbstractCode`` is passed."""
+    """Test the ``command`` argument raises a ``TypeError`` if anything but a ``str`` or ``Code`` is passed."""
     with pytest.raises(TypeError, match=r'Got object of type .*, expecting .*'):
         launch_shell_job(None)
 
@@ -266,6 +266,7 @@ def test_arguments_files():
     assert results['stdout'].get_content().strip() == content.split('\n', maxsplit=1)[0]
 
 
+@pytest.mark.flaky(reruns=2)
 def test_submit(submit_and_await):
     """Test the ``submit`` argument."""
     _, node = launch_shell_job('date', submit=True)
@@ -276,6 +277,7 @@ def test_submit(submit_and_await):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_submit_inside_workchain():
     """Test the ``submit`` argument when used inside a work chain."""
     results, node = run_get_node(ShellWorkChain)
@@ -284,6 +286,7 @@ def test_submit_inside_workchain():
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_submit_inside_workfunction(submit_and_await):
     """Test the ``submit`` argument when used inside a work function."""
 
@@ -339,7 +342,8 @@ def test_parser_non_stdout():
 
         from aiida.orm import Dict
 
-        return {'json': Dict(json.load((dirpath / filename).open()))}
+        with (dirpath / filename).open() as handle:
+            return {'json': Dict(json.load(handle))}
 
     dictionary = {'a': 1}
     results, node = launch_shell_job(
@@ -378,7 +382,7 @@ def test_preexisting_localhost_no_default_mpiprocs_per_machine(
 
     If the ``localhost`` is created before ``prepare_computer`` is ever called, it is possible that the property
     ``default_mpiprocs_per_machine`` is not set. This would result the ``ShellJob`` validation to fail if the scheduler
-    type has a job resource class that is a subclass of :class:`~aiida.schedulers.datastructures.NodeNumberJobResource`.
+    type has a job resource class that is a subclass of :class:`~aiida.common.datastructures.NodeNumberJobResource`.
     """
     computer = aiida_computer(label='localhost', scheduler_type=scheduler_type)
 

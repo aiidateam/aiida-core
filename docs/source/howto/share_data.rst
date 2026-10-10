@@ -80,69 +80,20 @@ In order to get a quick overview of an archive file *without* importing it into 
 
     $ verdi archive info --detailed test.aiida
     metadata:
-        export_version: main_0001
-        aiida_version: 2.0.0
-        key_format: sha256
-        compression: 6
-        ctime: '2022-03-06T23:50:57.964429'
-        creation_parameters:
-            entities_starting_set:
-            node:
-            - 6af3f8a0-cf0d-4427-8472-f8907acfc87a
-            include_authinfos: false
-            include_comments: true
-            include_logs: true
-            graph_traversal_rules:
-            input_calc_forward: false
-            input_calc_backward: true
-            create_forward: true
-            create_backward: true
-            return_forward: true
-            return_backward: false
-            input_work_forward: false
-            input_work_backward: true
-            call_calc_forward: true
-            call_calc_backward: true
-            call_work_forward: true
-            call_work_backward: true
+        export_version: ...
+        aiida_version: ...
+        ...
     entities:
         Users:
-            count: 1
-            emails:
-            - aiida@epfl.ch
+            count: ...
         Computers:
-            count: 2
-            labels:
-            - computer1
-            - computer2
+            count: ...
         Nodes:
-            count: 53
-            node_types:
-            - data.core.array.trajectory.TrajectoryData.
-            - data.core.cif.CifData.
-            - data.core.code.Code.
-            - data.core.dict.Dict.
-            - data.core.folder.FolderData.
-            - data.core.remote.RemoteData.
-            - data.core.singlefile.SinglefileData.
-            - data.core.structure.StructureData.
-            - process.calculation.calcfunction.CalcFunctionNode.
-            - process.calculation.calcjob.CalcJobNode.
-            process_types:
-            - aiida.calculations:codtools.ciffilter
-            - aiida.calculations:quantumespresso.pw
-        Groups:
-            count: 0
-            type_strings: []
-        Comments:
-            count: 0
-        Logs:
-            count: 0
-        Links:
-            count: 59
+            count: ...
+        ...
     repository:
         objects:
-            count: 71
+            count: ...
 
 You can also use the Python API to inspect the archive file as a profile, see :ref:`how-to:data:share:archive:profile`.
 
@@ -169,7 +120,35 @@ To see what would be imported, before importing, you can use the ``--test-run`` 
 .. tip:: The AiiDA archive format has evolved over time, but you can still import archives created with previous AiiDA versions.
     If an outdated archive version is detected during import, the archive file will be automatically migrated to the newest version (within a temporary folder) and the import retried.
 
-    You can also use ``verdi archive migrate`` to create updated archive files from existing archive files (or update them in place).
+.. _how-to:share:migrate:
+
+Migrating an archive file
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The archive format version is tied to the version of AiiDA that created the archive.
+AiiDA can only read archive files whose version matches the one expected by the installed code, so an archive created by an older version of AiiDA has to be migrated before a newer version can read it.
+
+If you only want to import an outdated archive into your profile, you do not need to migrate it yourself, since ``verdi archive import`` migrates a temporary copy automatically (see the tip above).
+To obtain an updated archive file instead, for example to keep it readable by the current version of AiiDA for long-term storage, use ``verdi archive migrate``:
+
+.. code-block:: console
+
+    $ verdi archive migrate my-calculations.aiida my-calculations-updated.aiida
+
+To migrate the archive file in place, use the ``--in-place`` flag:
+
+.. code-block:: console
+
+    $ verdi archive migrate --in-place my-calculations.aiida
+
+By default, the archive is migrated to the newest version supported by the installed version of AiiDA.
+Use the ``--version`` option to migrate to a specific version instead.
+
+.. warning::
+
+    Migrating an archive is a one-way operation, just like migrating a profile database.
+    Once migrated, the archive file can no longer be read by versions of AiiDA older than the one that performed the migration.
+    Keep a copy of the original archive file if you still need to read it with an older version of AiiDA.
 
 .. _how-to:share:serve:
 

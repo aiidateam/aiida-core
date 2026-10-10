@@ -49,6 +49,18 @@ entities_to_test = tuple(orm_class for orm_class in orm_to_test if not issubclas
 nodes_to_test = tuple(orm_class for orm_class in orm_to_test if issubclass(orm_class, orm.Node))
 
 
+def test_orm_model_datetime_json_serialization():
+    """Datetime fields retain the ISO offset while other fields use Pydantic serialization."""
+
+    class Model(OrmModel):
+        time: datetime.datetime
+        count: int
+
+    model = Model(time=datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc), count=2)
+    assert model.model_dump(mode='json') == {'time': '2020-01-01T00:00:00+00:00', 'count': 2}
+    assert model.model_dump_json() == '{"time":"2020-01-01T00:00:00+00:00","count":2}'
+
+
 class DummyEnum(enum.Enum):
     """Dummy enum for testing."""
 
@@ -93,12 +105,13 @@ class RequiredNodeArguments(t.TypedDict):
 
 @pytest.fixture
 def required_arguments(request, default_user, aiida_localhost, tmp_path):
+    test_name = f'{request.node.module.__name__}.{request.node.originalname}'
+
     if request.param is orm.AuthInfo:
-        random_email = f'user{orm.User.collection.count() + 1}@aiida'
         return {
             'cls': orm.AuthInfo,
             'kwargs': {
-                'user': orm.User(email=random_email).store(),
+                'user': orm.User(email=f'{test_name}-authinfo@aiida').store(),
                 'computer': aiida_localhost,
             },
         }
@@ -142,7 +155,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is orm.User:
         return {
             'cls': orm.User,
-            'kwargs': {'email': 'user42@aiida'},
+            'kwargs': {'email': f'{test_name}-user@aiida'},
         }
     if request.param is orm.ArrayData:
         buffered_array = io.BytesIO()
@@ -591,6 +604,7 @@ def _check_all(serialized: dict, entity: orm.Entity):
         _check(value, field)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     entities_to_test,
@@ -605,6 +619,7 @@ def test_stored_entity_serialization(required_arguments: RequiredEntityArguments
     _check_all(serialized, entity)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     nodes_to_test,
@@ -620,6 +635,7 @@ def test_stored_node_serialization(required_arguments: RequiredNodeArguments):
     _check_all(serialized, node)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'process_generator',
     [
@@ -669,6 +685,7 @@ def _validate_value(value):
 # in the entity tests, we must explicitly specify the `WriteModel` schema.
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     entities_to_test,
@@ -687,6 +704,7 @@ def test_roundtrip_entity_from_model(required_arguments: RequiredEntityArguments
     assert _validate_value(new_model) == _validate_value(model)
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 @pytest.mark.parametrize(
     'required_arguments',
     entities_to_test,

@@ -74,7 +74,8 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
     try:
         index_start, index_end = determine_block_positions(lines, block_start_marker, block_end_marker)
     except RuntimeError as exception:
-        raise RuntimeError(f'problem rewriting file `{filepath}`:: {exception}')
+        msg = f'problem rewriting file `{filepath}`:: {exception}'
+        raise RuntimeError(msg)
 
     lines = replace_line_block(lines, block, index_start, index_end)
 

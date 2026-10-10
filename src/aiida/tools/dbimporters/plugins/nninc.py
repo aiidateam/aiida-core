@@ -17,7 +17,8 @@ class NnincDbImporter(DbImporter):
     def _str_clause(self, key, alias, values):
         """Returns part of HTTP GET query for querying string fields."""
         if not isinstance(values, str):
-            raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
+            msg = f"incorrect value for keyword '{alias}' -- only strings and integers are accepted"
+            raise ValueError(msg)
         return f'{key}={values}'
 
     _keywords = {
@@ -45,7 +46,8 @@ class NnincDbImporter(DbImporter):
                     get_parts.append(value[1](self, value[0], key, values))
 
         if kwargs:
-            raise NotImplementedError(f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}')
+            msg = f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}'
+            raise NotImplementedError(msg)
 
         return f'{self._query_url}?{"&".join(get_parts)}'
 
@@ -73,7 +75,7 @@ class NnincDbImporter(DbImporter):
             for psp in results:
                 for element in elements:
                     if psp.startswith(f'{element}.'):
-                        results_now = results_now | set([psp])
+                        results_now = results_now | {psp}
             results = list(results_now)
 
         return NnincSearchResults([{'id': x} for x in results])

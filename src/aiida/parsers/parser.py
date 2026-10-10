@@ -12,14 +12,14 @@ to allow the reading of the outputs of a calculation.
 
 from __future__ import annotations
 
+import typing as t
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions, extendeddicts, log
 from aiida.engine import ExitCode, ExitCodesNamespace, calcfunction
 from aiida.engine.processes.ports import CalcJobOutputPort
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida import orm
     from aiida.orm import CalcJobNode, Data, FolderData
 
@@ -91,7 +91,8 @@ class Parser(ABC):
         :raises aiida.common.ModificationNotAllowed: if an output node was already registered with the same link label
         """
         if link_label in self._outputs:
-            raise exceptions.ModificationNotAllowed(f'the output {link_label} already exists')
+            msg = f'the output {link_label} already exists'
+            raise exceptions.ModificationNotAllowed(msg)
         self._outputs[link_label] = node
 
     def get_outputs_for_parsing(self):
@@ -118,7 +119,7 @@ class Parser(ABC):
     @classmethod
     def parse_from_node(
         cls, node: CalcJobNode, store_provenance=True, retrieved_temporary_folder=None
-    ) -> tuple[dict[str, Any] | None, orm.CalcFunctionNode]:
+    ) -> tuple[dict[str, t.Any] | None, orm.CalcFunctionNode]:
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.

@@ -14,7 +14,7 @@ def add_calcfunction(data):
 def test_disconnect():
     """Test the communicator disconnect.
 
-    When the dependency ``kiwipy`` was updated to v0.8, it introduced a problem with shutting down the communicator.
+    When the broker communication layer was updated, it introduced a problem with shutting down the communicator.
     After at least one process would have been run, trying to disconnect the communcitor would time out. The problem
     is related to the update of the lower lying libraries ``aio-pika`` and ``aiormq`` to v9.4 and v6.8, respectively.
     After much painstaking debugging the cause could not be determined, nor a solution. This test is added to

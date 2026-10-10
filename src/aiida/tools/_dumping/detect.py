@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -34,7 +34,7 @@ from aiida.tools._dumping.utils import (
     RegistryNameType,
 )
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools._dumping.tracking import DumpTracker
 
 
@@ -140,7 +140,7 @@ class DumpChangeDetector:
         orm_type: type[orm.ProcessNode],
         group_scope: GroupDumpScope,
         group: orm.Group | None,
-        base_filters: dict[str, Any],
+        base_filters: dict[str, t.Any],
     ) -> list[orm.ProcessNode]:
         """Query nodes of a single ORM type with the given scope and filters.
 
@@ -158,7 +158,7 @@ class DumpChangeDetector:
 
         # Build query
         qb = orm.QueryBuilder()
-        relationships: dict[str, Any] = {}
+        relationships: dict[str, t.Any] = {}
 
         # Add group filter for IN_GROUP scope
         if group_scope == GroupDumpScope.IN_GROUP and group:
@@ -435,9 +435,9 @@ class DumpChangeDetector:
 
         return filtered_changes
 
-    def _resolve_time_filters(self) -> dict[str, Any]:
+    def _resolve_time_filters(self) -> dict[str, t.Any]:
         """Create time-based query filters based on dump configuration."""
-        time_filters: dict[str, Any] = {}
+        time_filters: dict[str, t.Any] = {}
         assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
 
         # Skip if no time filters requested

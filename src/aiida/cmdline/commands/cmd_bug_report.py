@@ -14,9 +14,9 @@ import json
 import pathlib
 import platform
 import sys
+import typing as t
 import zipfile
 from datetime import datetime
-from typing import Any
 
 import click
 
@@ -45,7 +45,7 @@ def _is_sensitive_key(key: str) -> bool:
     return key in SENSITIVE_CONFIG_KEYS or any(fragment in lowercase for fragment in SENSITIVE_KEY_FRAGMENTS)
 
 
-def _redact_sensitive_values(value: Any) -> Any:
+def _redact_sensitive_values(value: t.Any) -> t.Any:
     """Redact values that are likely to contain secrets."""
     if isinstance(value, dict):
         redacted = {}
@@ -64,7 +64,7 @@ def _redact_sensitive_values(value: Any) -> Any:
     return value
 
 
-def _check_storage() -> dict[str, Any]:
+def _check_storage() -> dict[str, t.Any]:
     """Return storage connection information."""
     from aiida.manage import get_manager
 
@@ -88,7 +88,7 @@ def _check_storage() -> dict[str, Any]:
     return {'retrieval_error': error, 'status': status}
 
 
-def _check_broker() -> dict[str, Any]:
+def _check_broker() -> dict[str, t.Any]:
     """Return broker connection information for the current profile."""
     from aiida.manage import get_manager
 
@@ -97,7 +97,7 @@ def _check_broker() -> dict[str, Any]:
     # this to avoid resetting a broker that was already loaded before running diagnostics, so use the private cache
     # attribute here and only reset brokers that this check caused to be loaded.
     broker_loaded = manager._broker is not None
-    status: dict[str, Any] | None = None
+    status: dict[str, t.Any] | None = None
 
     try:
         broker = manager.get_broker()
@@ -123,7 +123,7 @@ def _check_broker() -> dict[str, Any]:
     return {'retrieval_error': error, 'status': status}
 
 
-def _check_daemon() -> dict[str, Any]:
+def _check_daemon() -> dict[str, t.Any]:
     """Return daemon connection information for the current profile."""
     from aiida.manage import get_manager
 
@@ -135,7 +135,7 @@ def _check_daemon() -> dict[str, Any]:
     return {'retrieval_error': None, 'status': status}
 
 
-def _collect_python_info() -> dict[str, Any]:
+def _collect_python_info() -> dict[str, t.Any]:
     """Return structured information on the Python interpreter."""
     return {
         'version': platform.python_version(),
@@ -149,7 +149,7 @@ def _collect_python_info() -> dict[str, Any]:
     }
 
 
-def _get_config_data() -> dict[str, Any] | None:
+def _get_config_data() -> dict[str, t.Any] | None:
     """Return the contents of the AiiDA configuration file with secrets redacted."""
     from aiida.manage.configuration import get_config
     from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
@@ -162,7 +162,7 @@ def _get_config_data() -> dict[str, Any] | None:
     return _redact_sensitive_values(json.loads(filepath.read_text(encoding='utf-8')))
 
 
-def _collect_diagnostics() -> dict[str, Any]:
+def _collect_diagnostics() -> dict[str, t.Any]:
     """Collect structured diagnostic information for the bug report."""
     import aiida
     from aiida.manage import get_manager

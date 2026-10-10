@@ -21,12 +21,12 @@ from __future__ import annotations
 import collections
 import json
 import logging
+import typing as t
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, cast
 
 from aiida.engine.processes.generic.ports import InputPort, OutputPort, Port, PortNamespace
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
 
 __all__: tuple[str, ...] = ()
@@ -90,7 +90,7 @@ class ProcessSpec:
         """
         return self._sealed
 
-    def get_description(self) -> dict[str, Any]:
+    def get_description(self) -> dict[str, t.Any]:
         """
         Get a description of this process specification
 
@@ -111,7 +111,7 @@ class ProcessSpec:
 
         :return: the input PortNamespace
         """
-        return cast(PortNamespace, self._ports[self.NAME_INPUTS_PORT_NAMESPACE])
+        return t.cast(PortNamespace, self._ports[self.NAME_INPUTS_PORT_NAMESPACE])
 
     @property
     def outputs(self) -> PortNamespace:
@@ -120,10 +120,10 @@ class ProcessSpec:
 
         :return: the outputs PortNamespace
         """
-        return cast(PortNamespace, self._ports[self.NAME_OUTPUTS_PORT_NAMESPACE])
+        return t.cast(PortNamespace, self._ports[self.NAME_OUTPUTS_PORT_NAMESPACE])
 
     def _create_port(
-        self, port_namespace: PortNamespace, port_class: type[Port | PortNamespace], name: str, **kwargs: Any
+        self, port_namespace: PortNamespace, port_class: type[Port | PortNamespace], name: str, **kwargs: t.Any
     ) -> None:
         """
         Create a new Port of a given class and name in a given PortNamespace
@@ -145,7 +145,7 @@ class ProcessSpec:
 
         port_namespace[port_name] = port_class(port_name, **kwargs)
 
-    def input(self, name: str, **kwargs: Any) -> None:
+    def input(self, name: str, **kwargs: t.Any) -> None:
         """
         Define an input port in the input port namespace
 
@@ -154,7 +154,7 @@ class ProcessSpec:
         """
         self._create_port(self.inputs, self.INPUT_PORT_TYPE, name, **kwargs)
 
-    def output(self, name: str, **kwargs: Any) -> None:
+    def output(self, name: str, **kwargs: t.Any) -> None:
         """
         Define an output port in the output port namespace
 
@@ -163,7 +163,7 @@ class ProcessSpec:
         """
         self._create_port(self.outputs, self.OUTPUT_PORT_TYPE, name, **kwargs)
 
-    def input_namespace(self, name: str, **kwargs: Any) -> None:
+    def input_namespace(self, name: str, **kwargs: t.Any) -> None:
         """
         Create a new PortNamespace in the input port namespace. The keyword arguments will be
         passed to the PortNamespace constructor. Any intermediate port namespaces that need to
@@ -174,7 +174,7 @@ class ProcessSpec:
         """
         self._create_port(self.inputs, self.PORT_NAMESPACE_TYPE, name, **kwargs)
 
-    def output_namespace(self, name: str, **kwargs: Any) -> None:
+    def output_namespace(self, name: str, **kwargs: t.Any) -> None:
         """
         Create a new PortNamespace in the output port namespace. The keyword arguments will be
         passed to the PortNamespace constructor. Any intermediate port namespaces that need to

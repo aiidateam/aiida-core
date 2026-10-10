@@ -7,10 +7,8 @@ import concurrent
 import functools
 import typing as t
 
-import kiwipy
-from kiwipy import communications
-
 from aiida.brokers import Broker
+from aiida.brokers import exceptions as broker_exceptions
 from aiida.common.exceptions import AiidaException
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
@@ -18,6 +16,10 @@ from aiida.engine.processes.generic.futures import unwrap_kiwi_future
 from aiida.manage.manager import get_manager
 from aiida.orm import ProcessNode, QueryBuilder
 from aiida.tools.query.calculation import CalculationQueryBuilder
+
+if t.TYPE_CHECKING:
+    from aiida.brokers.rabbitmq.threadcomms import RmqThreadIncomingTask
+    from aiida.brokers.zeromq.broker import ZeromqIncomingTask
 
 LOGGER = AIIDA_LOGGER.getChild('process_control')
 
@@ -38,7 +40,7 @@ def get_active_processes(paused: bool = False, project: str | list[str] = '*') -
     return builder.all(flat=True)
 
 
-def iterate_process_tasks(broker: Broker) -> collections.abc.Iterator[kiwipy.rmq.RmqIncomingTask]:
+def iterate_process_tasks(broker: Broker) -> collections.abc.Iterator[RmqThreadIncomingTask | ZeromqIncomingTask]:
     """Return the list of process pks that have a process task in the RabbitMQ process queue.
 
     :returns: A list of process pks that have a corresponding process task with RabbitMQ.
@@ -229,7 +231,7 @@ def _perform_actions(
         try:
             future = action(process.pk, **kwargs)
             LOGGER.report(f'Request to {infinitive} Process<{process.pk}> sent.')
-        except communications.UnroutableError:
+        except broker_exceptions.UnroutableError:
             LOGGER.error(f'Process<{process.pk}> is unreachable.')
         else:
             futures[future] = process

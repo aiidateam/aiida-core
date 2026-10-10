@@ -11,13 +11,15 @@
 from __future__ import annotations
 
 import abc
+import typing as t
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
-from typing import TYPE_CHECKING, Any, TypeVar
+from pathlib import Path
 
 from aiida.common.log import AIIDA_LOGGER
+from aiida.orm.implementation.checkpoint_class_store import CheckpointClassStore
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
 
     from aiida.manage.configuration.profile import Profile
@@ -40,7 +42,7 @@ __all__ = ('StorageBackend',)
 
 LOGGER = AIIDA_LOGGER.getChild('orm.implementation.storage_backend')
 
-TransactionType = TypeVar('TransactionType')
+TransactionType = t.TypeVar('TransactionType')
 
 
 class StorageBackend(abc.ABC):
@@ -61,6 +63,9 @@ class StorageBackend(abc.ABC):
     """
 
     read_only = False
+
+    _CHECKPOINT_CLASSES_DIRNAME: str = 'checkpoint_classes'
+    """Directory name for digest-referenced checkpoint class files."""
 
     @classmethod
     @abc.abstractmethod
@@ -151,7 +156,14 @@ class StorageBackend(abc.ABC):
 
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
         """
+        import shutil
+
         from aiida.orm.autogroup import AutogroupManager
+
+        try:
+            shutil.rmtree(path=self.get_checkpoint_classes_dirpath(), ignore_errors=True)
+        except NotImplementedError:
+            pass
 
         self.reset_default_user()
         self._autogroup = AutogroupManager(self)
@@ -217,7 +229,7 @@ class StorageBackend(abc.ABC):
         """Return an instance of a query builder implementation for this backend"""
 
     @abc.abstractmethod
-    def transaction(self) -> AbstractContextManager[Any]:
+    def transaction(self) -> AbstractContextManager[t.Any]:
         """Get a context manager that can be used as a transaction context for a series of backend operations.
         If there is an exception within the context then the changes will be rolled back and the state will
         be as before entering.  Transactions can be nested.
@@ -275,9 +287,69 @@ class StorageBackend(abc.ABC):
     def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""
 
+    @property
+    def checkpoint_class_store(self) -> CheckpointClassStore:
+        """Return the class-file store for this backend."""
+        return CheckpointClassStore(storage=self)
+
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        """Return the shared directory for checkpoint class files.
+
+        :raises NotImplementedError: If this backend does not support class-file persistence.
+        """
+        msg: str = (
+            f'`{self.__class__.__name__}` defines no directory for checkpoint class files, so a process whose '
+            'class travels in its checkpoint cannot be persisted on it: implement '
+            '`get_checkpoint_classes_dirpath`.'
+        )
+        raise NotImplementedError(msg)
+
+    def delete_orphaned_checkpoint_class_files(self, *, only_sealed: bool = True, dry_run: bool = False) -> list[Path]:
+        """Delete class files of sealed nodes, and of deleted nodes unless restricted to sealed owners.
+
+        Unsealed nodes retain all files to protect concurrent checkpoint writes. Files whose owners may be
+        uncommitted elsewhere are retained unless `only_sealed` is `False`.
+
+        :param only_sealed: Collect sealed owners only. `False` additionally collects files with no visible
+            owner, and requires exclusive profile access with no concurrent transactions.
+        :param dry_run: Report eligible files without deleting them.
+        :returns: Deleted paths, or eligible paths for `dry_run`. Transactions defer deletion;
+            removal failures are logged and retained for a later attempt.
+        """
+        from aiida.orm import ProcessNode, QueryBuilder
+
+        owned: dict[Path, str] = dict(self.checkpoint_class_store.iter_files())
+
+        if not owned or self.in_transaction:
+            return []
+
+        uuids: list[str] = sorted(set(owned.values()))
+        existing: set[str] = set()
+        sealed: set[str] = set()
+        for uuid, is_sealed in (
+            QueryBuilder(backend=self)
+            .append(
+                ProcessNode,
+                filters={'uuid': {'in': uuids}},
+                project=['uuid', f'attributes.{ProcessNode.SEALED_KEY}'],
+            )
+            .all()
+        ):
+            existing.add(uuid)
+            if is_sealed:
+                sealed.add(uuid)
+        orphaned: list[Path] = [
+            path for path, uuid in owned.items() if uuid in sealed or (not only_sealed and uuid not in existing)
+        ]
+
+        if dry_run:
+            return orphaned
+
+        return self.checkpoint_class_store.discard_files(paths=orphaned)
+
     @abc.abstractmethod
     def set_global_variable(
-        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
+        self, key: str, value: str | int | float | None, description: str | None = None, overwrite: bool = True
     ) -> None:
         """Set a global variable in the storage.
 
@@ -290,7 +362,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_global_variable(self, key: str) -> None | str | int | float:
+    def get_global_variable(self, key: str) -> str | int | float | None:
         """Return a global variable from the storage.
 
         :param key: the key of the setting
@@ -299,7 +371,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> None:
         """Perform maintenance tasks on the storage.
 
         If `full == True`, then this method may attempt to block the profile associated with the
@@ -365,17 +437,20 @@ class StorageBackend(abc.ABC):
             if backup_manager.check_path_exists(backup_config_path):
                 success, stdout = backup_manager.run_cmd(['cat', str(backup_config_path)])
                 if not success:
-                    raise exceptions.StorageBackupError(f"Couldn't read {backup_config_path!s}.")
+                    msg = f"Couldn't read {backup_config_path!s}."
+                    raise exceptions.StorageBackupError(msg)
                 try:
                     backup_config_existing = json.loads(stdout)
                 except json.decoder.JSONDecodeError as exc:
-                    raise exceptions.StorageBackupError(f'JSON parsing failed for {backup_config_path!s}: {exc.msg}')
+                    msg = f'JSON parsing failed for {backup_config_path!s}: {exc.msg}'
+                    raise exceptions.StorageBackupError(msg)
 
                 # create a temporary config file to access the profile info
                 with tempfile.NamedTemporaryFile() as temp_file:
                     backup_config = Config(temp_file.name, backup_config_existing, validate=False)
                     if len(backup_config.profiles) != 1:
-                        raise exceptions.StorageBackupError(f"{backup_config_path!s} doesn't contain exactly 1 profile")
+                        msg = f"{backup_config_path!s} doesn't contain exactly 1 profile"
+                        raise exceptions.StorageBackupError(msg)
 
                     if (
                         backup_config.profiles[0].uuid != self.profile.uuid
@@ -389,7 +464,8 @@ class StorageBackend(abc.ABC):
                 # make sure the folder is empty
                 success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
                 if not success:
-                    raise exceptions.StorageBackupError(f"Couldn't read {backup_manager.path!s}.")
+                    msg = f"Couldn't read {backup_manager.path!s}."
+                    raise exceptions.StorageBackupError(msg)
                 if stdout:
                     raise exceptions.StorageBackupError("Can't initialize the backup folder, destination is not empty.")
 
@@ -423,7 +499,8 @@ class StorageBackend(abc.ABC):
         try:
             ProfileAccessManager(self._profile).request_access()
         except LockedProfileError as exc:
-            raise StorageBackupError(f'{self._profile} is locked!') from exc
+            msg = f'{self._profile} is locked!'
+            raise StorageBackupError(msg) from exc
 
         backup_manager = self._validate_or_init_backup_folder(dest, keep)
 
@@ -448,7 +525,7 @@ class StorageBackend(abc.ABC):
         STORAGE_LOGGER.report(f'Overwriting the `{DEFAULT_CONFIG_FILE_NAME} file.')
         self._write_backup_config(backup_manager)
 
-    def get_info(self, detailed: bool = False) -> dict[str, Any]:
+    def get_info(self, detailed: bool = False) -> dict[str, t.Any]:
         """Return general information on the storage.
 
         :param detailed: flag to request more detailed information about the content of the storage.
@@ -456,7 +533,7 @@ class StorageBackend(abc.ABC):
         """
         return {'entities': self.get_orm_entities(detailed=detailed)}
 
-    def get_orm_entities(self, detailed: bool = False) -> dict[str, Any]:
+    def get_orm_entities(self, detailed: bool = False) -> dict[str, t.Any]:
         """Return a mapping with an overview of the storage contents regarding ORM entities.
 
         :param detailed: flag to request more detailed information about the content of the storage.
@@ -464,7 +541,7 @@ class StorageBackend(abc.ABC):
         """
         from aiida.orm import Comment, Computer, Group, Log, Node, QueryBuilder, User
 
-        data: dict[str, Any] = {}
+        data: dict[str, t.Any] = {}
 
         query_user = QueryBuilder(self).append(User, project=['email'])
         data['Users'] = {'count': query_user.count()}

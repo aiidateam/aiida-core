@@ -177,8 +177,6 @@ py:class numpy.ndarray
 py:class np.ndarray
 py:class ndarray
 
-py:class paramiko.proxy.ProxyCommand
-
 py:class pydantic.main.BaseModel
 py:class ModelPrivateAttr
 py:class CoreSchema
@@ -202,7 +200,7 @@ py:class State
 py:class Stepper
 py:class utils.AttributesFrozendict
 
-py:class kiwipy.communications.Communicator
+py:class aiida.brokers.communicator.Communicator
 py:class RemoteProcessThreadController
 py:class RmqThreadCommunicator
 

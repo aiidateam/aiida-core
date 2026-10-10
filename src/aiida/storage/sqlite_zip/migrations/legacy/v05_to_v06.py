@@ -57,7 +57,8 @@ def migrate_deserialized_datetime(data, conversion):
         # Since we know that all strings will be UTC, here we are simply reattaching that information.
         ret_data = f'{data}+00:00'
     else:
-        raise StorageMigrationError(f"Unknown convert_type '{conversion}'")
+        msg = f"Unknown convert_type '{conversion}'"
+        raise StorageMigrationError(msg)
 
     return ret_data
 

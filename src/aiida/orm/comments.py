@@ -10,15 +10,15 @@
 
 from __future__ import annotations
 
+import typing as t
 from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar, cast
 from uuid import UUID
 
 from aiida.manage import get_manager
 from aiida.orm import entities
 from aiida.orm.pydantic import OrmMetadataField
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
     from aiida.orm.nodes.node import Node
     from aiida.orm.users import User
@@ -29,7 +29,7 @@ __all__ = ('Comment',)
 class CommentCollection(entities.Collection['Comment']):
     """The collection of Comment entries."""
 
-    collection_type: ClassVar[str] = 'comments'
+    collection_type: t.ClassVar[str] = 'comments'
 
     @staticmethod
     def _entity_base_cls() -> type[Comment]:
@@ -91,13 +91,13 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         node: int = OrmMetadataField(
             description='Node PK that the comment is attached to',
             orm_class='core.node',
-            orm_to_model=lambda comment: cast(Comment, comment).node.pk,
+            orm_to_model=lambda comment: t.cast(Comment, comment).node.pk,
             examples=[42],
         )
         user: int = OrmMetadataField(
             description='User PK that created the comment',
             orm_class='core.user',
-            orm_to_model=lambda comment: cast(Comment, comment).user.pk,
+            orm_to_model=lambda comment: t.cast(Comment, comment).user.pk,
             examples=[7],
         )
         content: str = OrmMetadataField(

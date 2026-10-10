@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
+import typing as t
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
@@ -65,7 +65,7 @@ def _validate_computers_input(value: list[orm.Computer] | list[str] | None) -> l
 
 
 def _validate_codes_input(value: list[orm.Code] | list[str] | None) -> list[orm.Code] | None:
-    """Load Code objects from identifiers."""
+    """Load code objects from identifiers."""
     if not value:
         return None
 
@@ -134,7 +134,7 @@ class BaseDumpConfig(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def _resolve_dump_mode_from_flags(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def _resolve_dump_mode_from_flags(cls, values: dict[str, t.Any]) -> dict[str, t.Any]:
         """Map incoming CLI click options to internal representation."""
         # Convert Dump Mode
 
@@ -177,7 +177,7 @@ class EntityFilterMixin(BaseModel):
     computers: list[orm.Computer] | None = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: list[orm.Code] | None = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
+    codes: list[orm.Code] | None = Field(default=None, description='List of code objects or UUIDs/labels to filter by')
 
     @field_validator('user', mode='before')
     @classmethod

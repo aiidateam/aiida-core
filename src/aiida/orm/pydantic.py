@@ -21,12 +21,14 @@ class OrmModel(AiiDABaseModel):
 
     _AIIDA_MINIMAL_MODEL: type[OrmModel] | None = None
 
-    model_config = pdt.ConfigDict(
-        extra='forbid',
-        json_encoders={
-            datetime.datetime: lambda dt: dt.isoformat().replace('Z', '+00:00'),
-        },
-    )
+    model_config = pdt.ConfigDict(extra='forbid')
+
+    @pdt.field_serializer('*', mode='wrap', when_used='json', check_fields=False)
+    def _serialize_json_field(self, value: t.Any, handler: pdt.SerializerFunctionWrapHandler) -> t.Any:
+        """Preserve the ISO representation of datetimes in ORM JSON models."""
+        if isinstance(value, datetime.datetime):
+            return value.isoformat().replace('Z', '+00:00')
+        return handler(value)
 
     def _to_orm_field_values(self) -> dict[str, t.Any]:
         """Return the field values for ORM instantiation."""
@@ -47,11 +49,13 @@ class OrmModel(AiiDABaseModel):
                     try:
                         orm_class = BaseFactory('aiida.orm', orm_class)
                     except EntryPointError as exception:
-                        raise EntryPointError(f'invalid `orm_class` on `{key}`: {exception}') from exception
+                        msg = f'invalid `orm_class` on `{key}`: {exception}'
+                        raise EntryPointError(msg) from exception
                 try:
                     fields[field_name] = orm_class.collection.get(id=field_value)
                 except NotExistent as exception:
-                    raise NotExistent(f'no `{orm_class}` found with pk={field_value}') from exception
+                    msg = f'no `{orm_class}` found with pk={field_value}'
+                    raise NotExistent(msg) from exception
             elif model_to_orm := get_metadata(field, 'model_to_orm'):
                 fields[field_name] = model_to_orm(self)
             else:
@@ -72,7 +76,8 @@ class OrmModel(AiiDABaseModel):
         try:
             orm_class_name, model_name = cls.__qualname__.split('.')
         except ValueError as exception:
-            raise ValueError(f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'") from exception
+            msg = f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'"
+            raise ValueError(msg) from exception
 
         model_fields: dict[str, t.Any] = {}
         for key, field in cls.model_fields.items():

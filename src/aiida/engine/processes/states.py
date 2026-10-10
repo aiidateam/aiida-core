@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import sys
 import traceback
+import typing as t
 from collections.abc import Awaitable, Callable
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, cast
 
 import yaml
 from yaml.loader import Loader
@@ -37,12 +37,12 @@ from aiida.engine.utils import ensure_coroutine
 
 __all__: tuple[str, ...] = ()
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.generic.process import Process
 
 
 class __NULL:
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: t.Any) -> bool:
         return isinstance(other, self.__class__)
 
 
@@ -92,9 +92,9 @@ class Pause(Command):
 class Wait(Command):
     def __init__(
         self,
-        continue_fn: Callable[..., Any] | None = None,
-        msg: Any | None = None,
-        data: Any | None = None,
+        continue_fn: Callable[..., t.Any] | None = None,
+        msg: t.Any | None = None,
+        data: t.Any | None = None,
     ):
         super().__init__()
         self.continue_fn = continue_fn
@@ -104,7 +104,7 @@ class Wait(Command):
 
 @auto_persist('result')
 class Stop(Command):
-    def __init__(self, result: Any, successful: bool) -> None:
+    def __init__(self, result: t.Any, successful: bool) -> None:
         super().__init__()
         self.result = result
         self.successful = successful
@@ -114,7 +114,7 @@ class Stop(Command):
 class Continue(Command):
     CONTINUE_FN = 'continue_fn'
 
-    def __init__(self, continue_fn: Callable[..., Any], *args: Any, **kwargs: Any):
+    def __init__(self, continue_fn: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any):
         super().__init__()
         self.continue_fn = continue_fn
         self.args = args
@@ -151,7 +151,7 @@ class State(state_machine.State, persistence.CheckpointSerializable):
         super().load_instance_state(saved_state, load_context)
         self.state_machine = load_context.process
 
-    def interrupt(self, reason: Any) -> None:
+    def interrupt(self, reason: t.Any) -> None:
         pass
 
 
@@ -162,7 +162,7 @@ class Created(State):
 
     RUN_FN = 'run_fn'
 
-    def __init__(self, process: Process, run_fn: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
+    def __init__(self, process: Process, run_fn: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> None:
         super().__init__(process)
         assert run_fn is not None
         self.run_fn = run_fn
@@ -196,12 +196,12 @@ class Running(State):
     COMMAND = 'command'  # The key used to store an upcoming command
 
     # Class level defaults
-    _command: None | Kill | Stop | Wait | Continue = None
+    _command: Kill | Stop | Wait | Continue | None = None
     _running: bool = False
     _run_handle = None
 
     def __init__(
-        self, process: Process, run_fn: Callable[..., Awaitable[Any] | Any], *args: Any, **kwargs: Any
+        self, process: Process, run_fn: Callable[..., Awaitable[t.Any] | t.Any], *args: t.Any, **kwargs: t.Any
     ) -> None:
         super().__init__(process)
         assert run_fn is not None
@@ -226,7 +226,7 @@ class Running(State):
         if self.COMMAND in saved_state:
             self._command = persistence.CheckpointSerializable.load(saved_state[self.COMMAND], load_context)  # type: ignore[assignment]
 
-    def interrupt(self, reason: Any) -> None:
+    def interrupt(self, reason: t.Any) -> None:
         pass
 
     async def execute(self) -> State:  # type: ignore[override]
@@ -244,7 +244,7 @@ class Running(State):
                 raise
             except Exception:
                 excepted = self.create_state(ProcessState.EXCEPTED, *sys.exc_info()[1:])
-                return cast(State, excepted)
+                return t.cast(State, excepted)
             else:
                 if not isinstance(result, Command):
                     if isinstance(result, exceptions.UnsuccessfulResult):
@@ -272,7 +272,7 @@ class Running(State):
         else:
             raise ValueError('Unrecognised command')
 
-        return cast(State, state)  # casting from base.State to process.State
+        return t.cast(State, state)  # casting from base.State to process.State
 
 
 @auto_persist('msg', 'data')
@@ -299,9 +299,9 @@ class Waiting(State):
     def __init__(
         self,
         process: Process,
-        done_callback: Callable[..., Any] | None,
+        done_callback: Callable[..., t.Any] | None,
         msg: str | None = None,
-        data: Any | None = None,
+        data: t.Any | None = None,
     ) -> None:
         super().__init__(process)
         self.done_callback = done_callback
@@ -323,7 +323,7 @@ class Waiting(State):
             self.done_callback = None
         self._waiting_future = load_context.process.loop.create_future()
 
-    def interrupt(self, reason: Any) -> None:
+    def interrupt(self, reason: t.Any) -> None:
         # This will cause the future in execute() to raise the exception
         if not self._waiting_future.done():
             self._waiting_future.set_exception(reason)
@@ -344,9 +344,9 @@ class Waiting(State):
         else:
             next_state = self.create_state(ProcessState.RUNNING, self.done_callback, result)
 
-        return cast(State, next_state)  # casting from base.State to process.State
+        return t.cast(State, next_state)  # casting from base.State to process.State
 
-    def resume(self, value: Any = NULL) -> None:
+    def resume(self, value: t.Any = NULL) -> None:
         assert self._waiting_future is not None, 'Not yet waiting'
 
         if self._waiting_future.done():
@@ -424,7 +424,7 @@ class Finished(State):
 
     LABEL = ProcessState.FINISHED
 
-    def __init__(self, process: Process, result: Any, successful: bool) -> None:
+    def __init__(self, process: Process, result: t.Any, successful: bool) -> None:
         super().__init__(process)
         self.result = result
         self.successful = successful

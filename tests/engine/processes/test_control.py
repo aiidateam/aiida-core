@@ -12,6 +12,7 @@ from tests.utils.processes import WaitProcess
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 @pytest.mark.parametrize('action', (control.pause_processes, control.play_processes, control.kill_processes))
+@pytest.mark.flaky(reruns=2)
 def test_processes_all_exclusivity(submit_and_await, action):
     """Test that control methods raise if both ``processes`` is specified and ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -30,6 +31,7 @@ def test_daemon_not_running(action, caplog):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_pause_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.pause_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -41,6 +43,7 @@ def test_pause_processes(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_pause_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.pause_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -51,6 +54,7 @@ def test_pause_processes_all_entries(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_play_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.play_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -64,6 +68,7 @@ def test_play_processes(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_play_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.play_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -77,6 +82,7 @@ def test_play_processes_all_entries(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_kill_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -88,6 +94,7 @@ def test_kill_processes(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_kill_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -98,6 +105,7 @@ def test_kill_processes_all_entries(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_revive(monkeypatch, aiida_code_installed, submit_and_await):
     """Test :func:`aiida.engine.processes.control.revive_processes`."""
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')

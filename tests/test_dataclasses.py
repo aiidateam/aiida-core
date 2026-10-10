@@ -52,7 +52,7 @@ def to_list_of_lists(lofl):
 
     :return: a list of lists
     """
-    return [[el for el in lst] for lst in lofl]
+    return [list(lst) for lst in lofl]
 
 
 def simplify(string):
@@ -993,25 +993,25 @@ class TestStructureDataInit:
         """Single pbc value"""
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell, pbc=True)
-        assert a.pbc == tuple([True, True, True])
+        assert a.pbc == (True, True, True)
 
         a = StructureData(cell=cell, pbc=False)
-        assert a.pbc == tuple([False, False, False])
+        assert a.pbc == (False, False, False)
 
     def test_ok_pbc_2(self):
         """One-element list"""
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell, pbc=[True])
-        assert a.pbc == tuple([True, True, True])
+        assert a.pbc == (True, True, True)
 
         a = StructureData(cell=cell, pbc=[False])
-        assert a.pbc == tuple([False, False, False])
+        assert a.pbc == (False, False, False)
 
     def test_ok_pbc_3(self):
         """Three-element list"""
         cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell, pbc=[True, False, True])
-        assert a.pbc == tuple([True, False, True])
+        assert a.pbc == (True, False, True)
 
 
 class TestStructureData:
@@ -1091,7 +1091,7 @@ class TestStructureData:
 
         assert len(a.kinds) == 2  # I should only have two types
         # I check for the default names of kinds
-        assert set(k.name for k in a.kinds) == set(('Ba', 'Ti'))
+        assert {k.name for k in a.kinds} == {'Ba', 'Ti'}
 
     def test_kind_1_unknown(self):
         """Test the management of kinds (automatic detection of kind of
@@ -1105,7 +1105,7 @@ class TestStructureData:
 
         assert len(a.kinds) == 2  # I should only have two types
         # I check for the default names of kinds
-        assert set(k.name for k in a.kinds) == set(('X', 'Ti'))
+        assert {k.name for k in a.kinds} == {'X', 'Ti'}
 
     def test_kind_2(self):
         """Test the management of kinds (manual specification of kind name)."""
@@ -1117,7 +1117,7 @@ class TestStructureData:
 
         kind_list = a.kinds
         assert len(kind_list) == 3  # I should have now three kinds
-        assert set(k.name for k in kind_list) == set(('Ba1', 'Ba2', 'Ti'))
+        assert {k.name for k in kind_list} == {'Ba1', 'Ba2', 'Ti'}
 
     def test_kind_2_unknown(self):
         """Test the management of kinds (manual specification of kind name),
@@ -1131,7 +1131,7 @@ class TestStructureData:
 
         kind_list = a.kinds
         assert len(kind_list) == 3  # I should have now three kinds
-        assert set(k.name for k in kind_list) == set(('X1', 'X2', 'Ti'))
+        assert {k.name for k in kind_list} == {'X1', 'X2', 'Ti'}
 
     def test_kind_3(self):
         """Test the management of kinds (adding an atom with different mass)."""
@@ -1149,7 +1149,7 @@ class TestStructureData:
 
         assert len(a.kinds) == 3  # I should have now three types
         assert len(a.sites) == 3  # and 3 sites
-        assert set(k.name for k in a.kinds) == set(('Ba', 'Ba2', 'Ti'))
+        assert {k.name for k in a.kinds} == {'Ba', 'Ba2', 'Ti'}
 
     def test_kind_3_unknown(self):
         """Test the management of kinds (adding an atom with different mass),
@@ -1169,7 +1169,7 @@ class TestStructureData:
 
         assert len(a.kinds) == 3  # I should have now three types
         assert len(a.sites) == 3  # and 3 sites
-        assert set(k.name for k in a.kinds) == set(('X', 'X2', 'Ti'))
+        assert {k.name for k in a.kinds} == {'X', 'X2', 'Ti'}
 
     def test_kind_4(self):
         """Test the management of kind (adding an atom with different symbols
@@ -1446,7 +1446,7 @@ class TestStructureData:
         # The name already exists, but the properties are identical => OK
         a.append_atom(position=(0.0, 0.0, 0.0), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.0)
 
-        assert a.get_symbols_set() == set(['Ba', 'Ti', 'O', 'H'])
+        assert a.get_symbols_set() == {'Ba', 'Ti', 'O', 'H'}
 
     def test_kind_7_unknown(self):
         """Test the functions returning the list of kinds, symbols, ...
@@ -1461,7 +1461,7 @@ class TestStructureData:
         # The name already exists, but the properties are identical => OK
         a.append_atom(position=(0.0, 0.0, 0.0), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.0)
 
-        assert a.get_symbols_set() == set(['Ba', 'X', 'O', 'H'])
+        assert a.get_symbols_set() == {'Ba', 'X', 'O', 'H'}
 
     @skip_ase
     @skip_spglib
@@ -2001,7 +2001,7 @@ class TestStructureDataFromAse:
         atoms.set_cell([1, 1, 1])
         s = StructureData(ase=atoms)
         kindnames = {k.name for k in s.kinds}
-        assert kindnames == set(['Fe', 'Fe1', 'Fe4'])
+        assert kindnames == {'Fe', 'Fe1', 'Fe4'}
         # check roundtrip ASE -> StructureData -> ASE
         atoms2 = s.get_ase()
         assert list(atoms2.get_tags()) == list(atoms.get_tags())
@@ -2022,7 +2022,7 @@ class TestStructureDataFromAse:
         atoms.set_cell([1, 1, 1])
         s = StructureData(ase=atoms)
         kindnames = {k.name for k in s.kinds}
-        assert kindnames == set(['Fe', 'Fe1', 'Fe4'])
+        assert kindnames == {'Fe', 'Fe1', 'Fe4'}
         # check roundtrip ASE -> StructureData -> ASE
         atoms2 = s.get_ase()
         assert list(atoms2.get_tags()) == list(atoms.get_tags())
@@ -2420,7 +2420,7 @@ class TestPymatgenFromStructureData:
 
         c = StructureData(pymatgen=b)
         assert c.get_site_kindnames() == ['Cl', 'Cl10', 'Cla', 'cl_x', 'Na1', 'Na2', 'Na_Na', 'Na4']
-        assert c.get_symbols_set() == set(['Cl', 'Na'])
+        assert c.get_symbols_set() == {'Cl', 'Na'}
         assert [s.position for s in c.sites] == [
             (0.0, 0.0, 0.0),
             (2.8, 0, 2.8),
@@ -2490,7 +2490,7 @@ class TestPymatgenFromStructureData:
         a.append_atom(position=(2.0, 1.0, 9.5), symbols='N')
 
         # a few checks on the structure kinds and symbols
-        assert a.get_symbols_set() == set(['Mn', 'Si', 'N'])
+        assert a.get_symbols_set() == {'Mn', 'Si', 'N'}
         assert a.get_site_kindnames() == ['Mn', 'Mn', 'Mn', 'Mn', 'MnX', 'MnX', 'Si', 'Si', 'N', 'N', 'N', 'N']
         assert a.get_formula() == 'Mn4N4Si2{Mn0.80X0.20}2'
 
@@ -2514,7 +2514,7 @@ class TestPymatgenFromStructureData:
         # back to StructureData
         c = StructureData(pymatgen=b)
         assert c.cell == [[4.0, 0.0, 0.0], [-2.0, 3.5, 0.0], [0.0, 0.0, 16.0]]
-        assert c.get_symbols_set() == set(['Mn', 'Si', 'N'])
+        assert c.get_symbols_set() == {'Mn', 'Si', 'N'}
         assert c.get_site_kindnames() == ['Mn', 'Mn', 'Mn', 'Mn', 'MnX', 'MnX', 'Si', 'Si', 'N', 'N', 'N', 'N']
         assert c.get_formula() == 'Mn4N4Si2{Mn0.80X0.20}2'
         testing.assert_allclose(
@@ -2545,7 +2545,7 @@ class TestPymatgenFromStructureData:
         a.append_atom(position=(2, 2, 2), symbols=('Fe', 'Al'), weights=(0.8, 0.2), name='FeAl2')
 
         # a few checks on the structure kinds and symbols
-        assert a.get_symbols_set() == set(['Fe', 'Al'])
+        assert a.get_symbols_set() == {'Fe', 'Al'}
         assert a.get_site_kindnames() == ['FeAl1', 'FeAl2']
         assert a.get_formula() == '{Al0.20Fe0.80}2'
 
@@ -2558,7 +2558,7 @@ class TestPymatgenFromStructureData:
         a.append_atom(position=(2, 2, 2), symbols='Fe', weights=0.8, name='FeX2')
 
         # a few checks on the structure kinds and symbols
-        assert a.get_symbols_set() == set(['Fe'])
+        assert a.get_symbols_set() == {'Fe'}
         assert a.get_site_kindnames() == ['FeX1', 'FeX2']
         assert a.get_formula() == '{Fe0.80X0.20}2'
 
@@ -2585,7 +2585,7 @@ class TestArrayData:
         n.set_array('third', third)
 
         # Check if the arrays are there
-        assert set(['first', 'second', 'third']) == set(n.get_arraynames())
+        assert {'first', 'second', 'third'} == set(n.get_arraynames())
         assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
         assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert round(abs(abs(third - n.get_array('third')).max() - 0.0), 7) == 0
@@ -2606,7 +2606,7 @@ class TestArrayData:
         n.set_array('first', first)
 
         # Check if the arrays are there, and if I am getting the new one
-        assert set(['first', 'second']) == set(n.get_arraynames())
+        assert {'first', 'second'} == set(n.get_arraynames())
         assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
         assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
@@ -2615,14 +2615,14 @@ class TestArrayData:
         n.store()
 
         # Same checks, after storing
-        assert set(['first', 'second']) == set(n.get_arraynames())
+        assert {'first', 'second'} == set(n.get_arraynames())
         assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
         assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
         assert second.shape == n.get_shape('second')
 
         # Same checks, again (this is checking the caching features)
-        assert set(['first', 'second']) == set(n.get_arraynames())
+        assert {'first', 'second'} == set(n.get_arraynames())
         assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
         assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
@@ -2630,7 +2630,7 @@ class TestArrayData:
 
         # Same checks, after reloading
         n2 = load_node(uuid=n.uuid)
-        assert set(['first', 'second']) == set(n2.get_arraynames())
+        assert {'first', 'second'} == set(n2.get_arraynames())
         assert round(abs(abs(first - n2.get_array('first')).max() - 0.0), 7) == 0
         assert round(abs(abs(second - n2.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n2.get_shape('first')
@@ -2638,7 +2638,7 @@ class TestArrayData:
 
         # Same checks, after reloading with UUID
         n2 = load_node(n.uuid, sub_classes=(ArrayData,))
-        assert set(['first', 'second']) == set(n2.get_arraynames())
+        assert {'first', 'second'} == set(n2.get_arraynames())
         assert round(abs(abs(first - n2.get_array('first')).max() - 0.0), 7) == 0
         assert round(abs(abs(second - n2.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n2.get_shape('first')
@@ -2652,7 +2652,7 @@ class TestArrayData:
 
         # Again same checks, to verify that the attempts to delete/overwrite
         # arrays did not damage the node content
-        assert set(['first', 'second']) == set(n.get_arraynames())
+        assert {'first', 'second'} == set(n.get_arraynames())
         assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
         assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')

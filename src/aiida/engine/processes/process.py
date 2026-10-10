@@ -17,19 +17,16 @@ import enum
 import inspect
 import logging
 import traceback
+import typing as t
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    cast,
-)
 from uuid import UUID
 
 from aio_pika.exceptions import ConnectionClosed
-from kiwipy.communications import UnroutableError
 
 from aiida import orm
+from aiida.brokers.exceptions import UnroutableError
+from aiida.common import _callables as callables
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict, AttributesFrozendict
 from aiida.common.lang import classproperty, override
@@ -53,7 +50,7 @@ from aiida.orm.implementation.utils import clean_value
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.orm.utils import serialize
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
 
 __all__ = ('Process', 'ProcessState')
@@ -68,6 +65,9 @@ class Process(ProcessBase):
     _cancelling_scheduler_job: asyncio.Task | None = None
     _node_class = orm.ProcessNode
     _spec_class = ProcessSpec
+
+    _binds_process_class: t.ClassVar[bool] = True
+    """Whether to bind the runtime class to the process's Python node instance."""
 
     SINGLE_OUTPUT_LINKNAME: str = 'result'
 
@@ -148,7 +148,7 @@ class Process(ProcessBase):
 
     def __init__(
         self,
-        inputs: dict[str, Any] | None = None,
+        inputs: dict[str, t.Any] | None = None,
         logger: logging.Logger | None = None,
         runner: Runner | None = None,
         parent_pid: int | None = None,
@@ -275,7 +275,7 @@ class Process(ProcessBase):
 
     @override
     def save_instance_state(
-        self, out_state: MutableMapping[str, Any], save_context: process_persistence.CheckpointContext
+        self, out_state: MutableMapping[str, t.Any], save_context: process_persistence.CheckpointContext
     ) -> None:
         """Save instance state.
 
@@ -297,7 +297,7 @@ class Process(ProcessBase):
 
     @override
     def load_instance_state(
-        self, saved_state: MutableMapping[str, Any], load_context: process_persistence.CheckpointContext | None
+        self, saved_state: MutableMapping[str, t.Any], load_context: process_persistence.CheckpointContext | None
     ) -> None:
         """Load instance state.
 
@@ -317,7 +317,7 @@ class Process(ProcessBase):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore[assignment]
+            self._bind_node(orm.load_node(saved_state[self.SaveKeys.CALC_ID.value]))  # type: ignore[arg-type]
             self._pid = self.node.pk
         else:
             self._pid = self._create_and_setup_db_record()
@@ -370,10 +370,12 @@ class Process(ProcessBase):
                     self.logger.info('no controller available to kill child<%s>', child.pk)
                     continue
                 try:
-                    result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
-                    result = asyncio.wrap_future(result)
-                    if asyncio.isfuture(result):
-                        killing.append(result)
+                    kill_request = self.runner.controller.kill_process(
+                        child.pk, msg_text=f'Killed by parent<{self.node.pk}>'
+                    )
+                    wrapped_kill = asyncio.wrap_future(kill_request)
+                    if asyncio.isfuture(wrapped_kill):
+                        killing.append(wrapped_kill)
                 except ConnectionClosed:
                     self.logger.info('no connection available to kill child<%s>', child.pk)
                 except UnroutableError:
@@ -425,7 +427,7 @@ class Process(ProcessBase):
         await super().step_until_terminated()
 
     @override
-    def out(self, output_port: str, value: Any = None) -> None:
+    def out(self, output_port: str, value: t.Any = None) -> None:
         """Attach output to output port.
 
         The name of the port will be used as the link label.
@@ -441,7 +443,7 @@ class Process(ProcessBase):
 
         return super().out(output_port, value)
 
-    def out_many(self, out_dict: dict[str, Any]) -> None:
+    def out_many(self, out_dict: dict[str, t.Any]) -> None:
         """Attach outputs to multiple output ports.
 
         Keys of the dictionary will be used as output port names, values as outputs.
@@ -512,7 +514,7 @@ class Process(ProcessBase):
             pass
 
     @override
-    def on_except(self, exc_info: tuple[Any, Exception, TracebackType]) -> None:
+    def on_except(self, exc_info: tuple[t.Any, Exception, TracebackType]) -> None:
         """Log the exception by calling the report method with formatted stack trace from exception info object
         and store the exception string as a node attribute
 
@@ -544,9 +546,8 @@ class Process(ProcessBase):
             self.node.set_exit_status(result.status)
             self.node.set_exit_message(result.message)
         else:
-            raise ValueError(
-                f'the result should be an integer, ExitCode or None, got {type(result)} {result} {self.pid}'
-            )
+            msg = f'the result should be an integer, ExitCode or None, got {type(result)} {result} {self.pid}'
+            raise ValueError(msg)
 
     @override
     def on_paused(self, msg: str | None = None) -> None:
@@ -566,7 +567,7 @@ class Process(ProcessBase):
         self.node.unpause()
 
     @override
-    def on_output_emitting(self, output_port: str, value: Any) -> None:
+    def on_output_emitting(self, output_port: str, value: t.Any) -> None:
         """The process has emitted a value on the given output port.
 
         :param output_port: The output port name the value was emitted on
@@ -577,7 +578,8 @@ class Process(ProcessBase):
 
         # Note that `PortNamespaces` should be able to receive non `Data` types such as a normal dictionary
         if isinstance(output_port, OutputPort) and not isinstance(value, orm.Data):
-            raise TypeError(f'Processes can only return `orm.Data` instances as output, got {value.__class__}')
+            msg = f'Processes can only return `orm.Data` instances as output, got {value.__class__}'
+            raise TypeError(msg)
 
     def set_status(self, status: str | None) -> None:
         """The status of the Process is about to be changed, so we reflect this is in node's attribute proxy.
@@ -588,7 +590,7 @@ class Process(ProcessBase):
         super().set_status(status)
         self.node.set_process_status(status)
 
-    def submit(self, process: type[Process], inputs: dict[str, Any] | None = None, **kwargs) -> orm.ProcessNode:
+    def submit(self, process: type[Process], inputs: dict[str, t.Any] | None = None, **kwargs) -> orm.ProcessNode:
         """Submit process for execution.
 
         :param process: The process class.
@@ -637,6 +639,13 @@ class Process(ProcessBase):
 
         return process_type
 
+    def _bind_node(self, node: orm.ProcessNode) -> None:
+        """Attach the node instance and bind the runtime class when enabled."""
+        self._node = node
+
+        if self._binds_process_class:
+            node._bind_process_class(process_class=type(self))
+
     def report(self, msg: str, *args, **kwargs) -> None:
         """Log a message to the logger, which should get saved to the database through the attached DbLogHandler.
 
@@ -656,7 +665,7 @@ class Process(ProcessBase):
         :return: the uuid or pk of the process
 
         """
-        self._node = self.get_or_create_db_record()
+        self._bind_node(self.get_or_create_db_record())
         self._setup_db_record()
         if self.metadata.store_provenance:
             try:
@@ -686,7 +695,7 @@ class Process(ProcessBase):
         return UUID(self.node.uuid)
 
     @override
-    def _encode_input_args(self, inputs: dict[str, Any]) -> str:
+    def _encode_input_args(self, inputs: dict[str, t.Any]) -> str:
         """Encode input arguments such that they may be saved in a CheckpointPayload
 
         :param inputs: A mapping of the inputs as passed to the process
@@ -695,7 +704,7 @@ class Process(ProcessBase):
         return serialize.serialize(inputs)
 
     @override
-    def _decode_input_args(self, encoded: str) -> dict[str, Any]:
+    def _decode_input_args(self, encoded: str) -> dict[str, t.Any]:
         """Decode saved input arguments as they came from the saved instance state CheckpointPayload
 
         :param encoded: encoded (serialized) inputs
@@ -771,13 +780,42 @@ class Process(ProcessBase):
 
         self._setup_metadata(copy.copy(dict(self.inputs.metadata)))
         self._setup_version_info()
+        self._setup_class_record()
         self._setup_inputs()
 
-    def _setup_version_info(self) -> dict[str, Any]:
+    def _setup_version_info(self) -> dict[str, t.Any]:
         """Store relevant plugin version information."""
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
         self.node.base.attributes.set_many(version_info)
         return version_info
+
+    @classmethod
+    def _source_to_record(cls) -> type | t.Callable[..., t.Any]:
+        """Return the process definition for source recording."""
+        return cls
+
+    def _setup_class_record(self) -> None:
+        """Record available source for a process defined in `__main__`.
+
+        The repository retains the source after checkpoint deletion.
+        """
+        # Any other module may or may not be installed where the node is read, which is the situation of every
+        # plugin that was uninstalled, so it is left alone.
+        if self.__class__.__module__ != '__main__':
+            return
+
+        source: str | None = callables.source_of(value=self.__class__._source_to_record())
+
+        # Nothing here is worth failing a run for.
+        if source is None:
+            return
+
+        try:
+            self.node.base.repository.put_object_from_bytes(
+                content=source.encode(encoding='utf-8'), path=orm.ProcessNode.KEY_OBJECT_CLASS_SOURCE
+            )
+        except (OSError, exceptions.ModificationNotAllowed):
+            return
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""
@@ -790,7 +828,8 @@ class Process(ProcessBase):
             elif name == 'description':
                 self.node.description = value
             else:
-                raise RuntimeError(f'unsupported metadata key: {name}')
+                msg = f'unsupported metadata key: {name}'
+                raise RuntimeError(msg)
 
         # Store JSON-serializable values of ``metadata`` ports in the node's attributes. Note that instead of passing in
         # the ``metadata`` inputs directly, the entire namespace of raw inputs is passed. The reason is that although
@@ -818,9 +857,9 @@ class Process(ProcessBase):
 
     def _filter_serializable_metadata(
         self,
-        port: None | InputPort | PortNamespace,
-        port_value: Any,
-    ) -> Any | None:
+        port: InputPort | PortNamespace | None,
+        port_value: t.Any,
+    ) -> t.Any | None:
         """Return the inputs that correspond to ports with ``is_metadata=True`` and that are JSON serializable.
 
         The function is called recursively for any port namespaces.
@@ -860,7 +899,7 @@ class Process(ProcessBase):
 
         return result or None
 
-    def _flat_inputs(self) -> dict[str, Any]:
+    def _flat_inputs(self) -> dict[str, t.Any]:
         """Return a flattened version of the parsed inputs dictionary.
 
         The eventual keys will be a concatenation of the nested keys. Note that the `metadata` dictionary, if present,
@@ -872,7 +911,7 @@ class Process(ProcessBase):
         inputs = {key: value for key, value in self.inputs.items() if key != self.spec().metadata_key}
         return dict(self._flatten_inputs(self.spec().inputs, inputs))
 
-    def _flat_outputs(self) -> dict[str, Any]:
+    def _flat_outputs(self) -> dict[str, t.Any]:
         """Return a flattened version of the registered outputs dictionary.
 
         The eventual keys will be a concatenation of the nested keys.
@@ -883,11 +922,11 @@ class Process(ProcessBase):
 
     def _flatten_inputs(
         self,
-        port: None | InputPort | PortNamespace,
-        port_value: Any,
+        port: InputPort | PortNamespace | None,
+        port_value: t.Any,
         parent_name: str = '',
         separator: str = PORT_NAMESPACE_SEPARATOR,
-    ) -> list[tuple[str, Any]]:
+    ) -> list[tuple[str, t.Any]]:
         """Function that will recursively flatten the inputs dictionary, omitting inputs for ports that
         are marked as being non database storable
 
@@ -909,7 +948,7 @@ class Process(ProcessBase):
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:
-                    nested_port = cast(InputPort | PortNamespace, port[name]) if port else None
+                    nested_port = t.cast(InputPort | PortNamespace, port[name]) if port else None
                 except (KeyError, TypeError):
                     nested_port = None
 
@@ -926,11 +965,11 @@ class Process(ProcessBase):
 
     def _flatten_outputs(
         self,
-        port: None | OutputPort | PortNamespace,
-        port_value: Any,
+        port: OutputPort | PortNamespace | None,
+        port_value: t.Any,
         parent_name: str = '',
         separator: str = PORT_NAMESPACE_SEPARATOR,
-    ) -> list[tuple[str, Any]]:
+    ) -> list[tuple[str, t.Any]]:
         """Function that will recursively flatten the outputs dictionary.
 
         :param port: port against which to map the port value, can be OutputPort or PortNamespace
@@ -950,7 +989,7 @@ class Process(ProcessBase):
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:
-                    nested_port = cast(OutputPort | PortNamespace, port[name]) if port else None
+                    nested_port = t.cast(OutputPort | PortNamespace, port[name]) if port else None
                 except (KeyError, TypeError):
                     nested_port = None
 
@@ -991,7 +1030,8 @@ class Process(ProcessBase):
                 try:
                     port_namespace = self.spec().inputs.get_port(sub_namespace)  # type: ignore[assignment]
                 except KeyError:
-                    raise ValueError(f'this process does not contain the "{sub_namespace}" input namespace')
+                    msg = f'this process does not contain the "{sub_namespace}" input namespace'
+                    raise ValueError(msg)
 
             # Get the list of ports that were exposed for the given Process class in the current sub_namespace
             exposed_inputs_list = self.spec()._exposed_inputs[sub_namespace][process_class]
@@ -1035,7 +1075,8 @@ class Process(ProcessBase):
             # only the top-level key is stored in _exposed_outputs
             for top_name in top_namespace_map:
                 if namespace is not None and namespace not in self.spec()._exposed_outputs:
-                    raise KeyError(f'the namespace `{namespace}` is not an exposed namespace.')
+                    msg = f'the namespace `{namespace}` is not an exposed namespace.'
+                    raise KeyError(msg)
                 if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:
                     output_key_map[top_name] = port_namespace
 

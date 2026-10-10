@@ -12,9 +12,8 @@
 
 from __future__ import annotations
 
-import os
+import typing as t
 from collections.abc import Callable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from graphviz import Digraph
 
@@ -24,16 +23,16 @@ from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.graph.graph_traversers import traverse_graph
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'default_node_sublabels', 'pstate_node_styles')
 
-LinkAnnotateType = Literal[None, 'label', 'type', 'both']
-IdentifierType = Literal['pk', 'uuid', 'label']
+LinkAnnotateType = t.Literal[None, 'label', 'type', 'both']
+IdentifierType = t.Literal['pk', 'uuid', 'label']
 
 
-class LinkStyleFunc(Protocol):
+class LinkStyleFunc(t.Protocol):
     """Protocol for a link style function"""
 
     def __call__(self, link_pair: LinkPair, add_label: bool, add_type: bool) -> dict: ...
@@ -100,13 +99,17 @@ def default_node_styles(node: orm.Node) -> dict:
             'penwidth': 0,
         }
 
+    code_style = {
+        'shape': 'ellipse',
+        'style': 'filled',
+        'fillcolor': '#4ca4b9aa',  # blue
+        'penwidth': 0,
+    }
+
+    if isinstance(node, orm.Code):
+        return code_style
+
     node_type_map = {
-        'data.core.code.Code.': {
-            'shape': 'ellipse',
-            'style': 'filled',
-            'fillcolor': '#4ca4b9aa',  # blue
-            'penwidth': 0,
-        },
         'process.calculation.calcjob.CalcJobNode.': {
             'shape': 'rectangle',
             'style': 'filled',
@@ -223,9 +226,11 @@ def default_node_sublabels(node: orm.Node) -> str:
         sublabel = f'{node.base.attributes.get("value", "")}'
     elif class_node_type == 'data.core.bool.Bool.':
         sublabel = f'{node.base.attributes.get("value", "")}'
-    elif class_node_type == 'data.core.code.Code.':
+    elif isinstance(node, orm.PortableCode):
+        sublabel = str(node.get_executable())
+    elif isinstance(node, orm.Code):
         label = '?' if node.computer is None else node.computer.label
-        sublabel = f'{os.path.basename(node.get_execname())}@{label}'
+        sublabel = f'{node.get_executable().name}@{label}'
     elif class_node_type == 'data.core.singlefile.SinglefileData.':
         sublabel = node.filename
     elif class_node_type == 'data.core.remote.RemoteData.':
@@ -271,7 +276,8 @@ def get_node_id_label(node: orm.Node, id_type: IdentifierType | list[IdentifierT
     try:
         return '|'.join(NODE_IDENTIFIER_TO_LABEL[key](node) for key in id_types)
     except KeyError as exception:
-        raise ValueError(f'`{id_type}` is not a valid `node_id_type`, choose from: pk, uuid, label') from exception
+        msg = f'`{id_type}` is not a valid `node_id_type`, choose from: pk, uuid, label'
+        raise ValueError(msg) from exception
 
 
 def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierType] = 'pk') -> str:
@@ -284,7 +290,8 @@ def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierTyp
             f'({get_node_id_label(node, id_type)})'
         )
     else:
-        raise TypeError(f'Unknown type: {type(node)}')
+        msg = f'Unknown type: {type(node)}'
+        raise TypeError(msg)
 
     return label
 
@@ -294,7 +301,7 @@ def _add_graphviz_node(
     node: orm.Node,
     node_style_func,
     node_sublabel_func,
-    style_override: None | dict = None,
+    style_override: dict | None = None,
     include_sublabels: bool = True,
     id_type: IdentifierType | list[IdentifierType] = 'pk',
 ):
@@ -393,7 +400,7 @@ class Graph:
         """
         self._graph = Digraph(engine=engine, graph_attr=graph_attr)
         self._nodes: set[int] = set()
-        self._edges: set[tuple[int, int, None | LinkPair]] = set()
+        self._edges: set[tuple[int, int, LinkPair | None]] = set()
         self._global_node_style = global_node_style or {}
         self._global_edge_style = global_edge_style or {}
         self._include_sublabels = include_sublabels
@@ -422,7 +429,7 @@ class Graph:
         return self._nodes.copy()
 
     @property
-    def edges(self) -> set[tuple[int, int, None | LinkPair]]:
+    def edges(self) -> set[tuple[int, int, LinkPair | None]]:
         """Return a copy of the edges"""
         return self._edges.copy()
 
@@ -481,10 +488,12 @@ class Graph:
         """
         in_node = self._load_node(in_node)
         if in_node.pk not in self._nodes:
-            raise AssertionError(f'in_node pk={in_node.pk} must have already been added to the graph')
+            msg = f'in_node pk={in_node.pk} must have already been added to the graph'
+            raise AssertionError(msg)
         out_node = self._load_node(out_node)
         if out_node.pk not in self._nodes:
-            raise AssertionError(f'out_node pk={out_node.pk} must have already been added to the graph')
+            msg = f'out_node pk={out_node.pk} must have already been added to the graph'
+            raise AssertionError(msg)
 
         if (in_node.pk, out_node.pk, link_pair) in self._edges and not overwrite:
             return
@@ -497,7 +506,7 @@ class Graph:
 
     @staticmethod
     def _convert_link_types(
-        link_types: None | str | LinkType | Sequence[str] | Sequence[LinkType],
+        link_types: str | LinkType | Sequence[str] | Sequence[LinkType] | None,
     ) -> tuple[LinkType, ...]:
         """Convert link types, which may be strings, to a member of LinkType"""
         link_types_list: Sequence[LinkType] | Sequence[str]
@@ -519,7 +528,7 @@ class Graph:
     def add_incoming(
         self,
         node: int | str | orm.Node,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         return_pks: bool = True,
     ) -> list[int] | list[orm.Node]:
@@ -532,9 +541,8 @@ class Graph:
         :returns: list of nodes or node pks
         """
         if annotate_links not in [None, False, 'label', 'type', 'both']:
-            raise ValueError(
-                f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
-            )
+            msg = f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
+            raise ValueError(msg)
 
         # incoming nodes are found traversing backwards
         node_pk = self._load_node(node).pk
@@ -576,7 +584,7 @@ class Graph:
     def add_outgoing(
         self,
         node: int | str | orm.Node,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         return_pks: bool = True,
     ) -> list[int] | list[orm.Node]:
@@ -589,9 +597,8 @@ class Graph:
         :returns: list of nodes or node pks
         """
         if annotate_links not in [None, False, 'label', 'type', 'both']:
-            raise ValueError(
-                f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
-            )
+            msg = f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
+            raise ValueError(msg)
 
         # outgoing nodes are found traversing forwards
         node_pk = self._load_node(node).pk
@@ -634,11 +641,11 @@ class Graph:
         self,
         origin: int | str | orm.Node,
         depth: int | None = None,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         origin_style: dict | None = None,
         include_process_inputs: bool = False,
-        highlight_classes: None | Sequence[str] = None,
+        highlight_classes: Sequence[str] | None = None,
     ) -> None:
         """Add nodes and edges from an origin recursively,
         following outgoing links
@@ -717,11 +724,11 @@ class Graph:
         self,
         origin: int | str | orm.Node,
         depth: int | None = None,
-        link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
+        link_types: str | Sequence[str] | LinkType | Sequence[LinkType] | None = None,
         annotate_links: LinkAnnotateType = None,
         origin_style: dict | None = None,
         include_process_outputs: bool = False,
-        highlight_classes: None | Sequence[str] = None,
+        highlight_classes: Sequence[str] | None = None,
     ) -> None:
         """Add nodes and edges from an origin recursively,
         following incoming links
@@ -803,7 +810,7 @@ class Graph:
         target_filters: dict | None = None,
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
-        origin_style: Mapping[str, Any] | None = None,
+        origin_style: Mapping[str, t.Any] | None = None,
         annotate_links: LinkAnnotateType = None,
     ) -> None:
         """Add nodes and edges from an origin node to all nodes of a target node class.
@@ -855,7 +862,7 @@ class Graph:
         target_filters: dict | None = None,
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
-        origin_style: Mapping[str, Any] | None = None,
+        origin_style: Mapping[str, t.Any] | None = None,
         annotate_links: LinkAnnotateType = None,
     ) -> None:
         """Add nodes and edges from all nodes of an origin class to all node of a target node class.

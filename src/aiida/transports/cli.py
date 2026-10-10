@@ -18,20 +18,12 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 
-TRANSPORT_PARAMS = []
-
 
 def match_comp_transport(ctx, param, computer, transport_type):
     """Check the computer argument against the transport type."""
     if computer.transport_type != transport_type:
         echo.echo_critical(
             f'Computer {computer.label} has transport of type "{computer.transport_type}", not {transport_type}!'
-        )
-    if transport_type == 'core.ssh':
-        echo.echo_deprecated(
-            'The `core.ssh` transport plugin is deprecated and will be removed in v3.0. '
-            'Use `core.ssh_async` instead, which is significantly faster and provides an '
-            'easier configuration interface.'
         )
     return computer
 
@@ -43,19 +35,14 @@ def configure_computer_main(computer, user, **kwargs):
 
     user = user or orm.User.collection.get_default()
 
+    assert user is not None
+
     echo.echo_report(f'Configuring computer {computer.label} for user {user.email}.')
     if not user.is_default:
         echo.echo_report('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)
     echo.echo_success(f'{computer.label} successfully configured for {user.email}')
-
-
-def common_params(command_func):
-    """Decorate a command function with common click parameters for all transport plugins."""
-    for param in TRANSPORT_PARAMS.copy().reverse():
-        command_func = param(command_func)
-    return command_func
 
 
 def transport_option_default(name, computer):
@@ -94,7 +81,7 @@ def interactive_default(key, also_non_interactive=False):
         user = ctx.params.get('user', None) or orm.User.collection.get_default()
         computer = ctx.params.get('computer', None)
 
-        if computer is None:
+        if computer is None or user is None:
             return None
 
         try:
@@ -104,7 +91,12 @@ def interactive_default(key, also_non_interactive=False):
 
         auth_params = authinfo.get_auth_params()
         suggestion = auth_params.get(key)
-        suggestion = suggestion or transport_option_default(key, computer)
+
+        # Only an unset parameter falls back to the plugin default. A stored ``False`` or ``0`` is a
+        # deliberate choice and must survive a reconfiguration.
+        if suggestion is None or suggestion == '':
+            suggestion = transport_option_default(key, computer)
+
         return suggestion
 
     return get_default
@@ -132,7 +124,7 @@ def create_option(name, spec):
     if existing_option:
         return existing_option(**kwargs)
 
-    return click.option(option_name, **kwargs)
+    return click.option(option_name, **kwargs)  # type: ignore[arg-type]
 
 
 def list_transport_options(transport_type):

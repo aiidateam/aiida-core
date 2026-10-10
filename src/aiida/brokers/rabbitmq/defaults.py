@@ -16,6 +16,43 @@ LOGGER = AIIDA_LOGGER.getChild('brokers.rabbitmq.defaults')
 LAUNCH_QUEUE = 'process.queue'
 MESSAGE_EXCHANGE = 'messages'
 TASK_EXCHANGE = 'tasks'
+TASK_QUEUE = LAUNCH_QUEUE
+
+# Messaging protocol defaults ported from kiwipy.
+SECONDS_TO_MILLISECONDS = 1000
+RPC_TOPIC = '[rpc]'
+BROADCAST_TOPIC = '[broadcast]'
+# MESSAGE_TTL is set to > 65535 because of a bug in aio-pika which fails when using RabbitMQ
+# 3.5 (as present in Ubuntu 16.04) and likely earlier. See:
+# https://github.com/mosquito/aio-pika/issues/165
+MESSAGE_TTL = 66 * SECONDS_TO_MILLISECONDS
+TEST_QUEUE_EXPIRES = 10 * SECONDS_TO_MILLISECONDS
+QUEUE_EXPIRES = 60 * SECONDS_TO_MILLISECONDS
+REPLY_QUEUE_EXPIRES = 60 * SECONDS_TO_MILLISECONDS
+TASK_MESSAGE_TTL = 60 * SECONDS_TO_MILLISECONDS * 60 * 24 * 7  # 7 days
+TASK_PREFETCH_SIZE = 0
+TASK_PREFETCH_COUNT = 0
+TASK_FETCH_TIMEOUT = 5.0
+
+
+def _encode(*args: t.Any, **kwargs: t.Any) -> t.Any:
+    """Encode a message, importing YAML only when a message is sent."""
+    import yaml
+
+    return yaml.dump(*args, encoding='utf-8', **kwargs)
+
+
+def _decode(*args: t.Any, **kwargs: t.Any) -> t.Any:
+    """Decode a message, importing YAML only when a message is received."""
+    import yaml
+
+    kwargs['Loader'] = yaml.FullLoader
+    return yaml.load(*args, **kwargs)
+
+
+ENCODER = _encode
+DECODER = _decode
+
 
 BROKER_DEFAULTS = AttributeDict(
     {

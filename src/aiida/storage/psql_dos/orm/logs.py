@@ -96,7 +96,8 @@ class SqlaLogCollection(BackendLogCollection):
             session.commit()
         except NoResultFound:
             session.rollback()
-            raise exceptions.NotExistent(f"Log with id '{log_id}' not found")
+            msg = f"Log with id '{log_id}' not found"
+            raise exceptions.NotExistent(msg)
 
     def delete_all(self):
         """Delete all Log entries.
@@ -110,7 +111,8 @@ class SqlaLogCollection(BackendLogCollection):
             session.commit()
         except Exception as exc:
             session.rollback()
-            raise exceptions.IntegrityError(f'Could not delete all Logs. Full exception: {exc}')
+            msg = f'Could not delete all Logs. Full exception: {exc}'
+            raise exceptions.IntegrityError(msg)
 
     def delete_many(self, filters):
         """Delete Logs based on ``filters``

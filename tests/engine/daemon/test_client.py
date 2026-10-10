@@ -396,7 +396,8 @@ class TestDaemonEnvInfo:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: Circus can reject the next worker command while completing the preceding asynchronous command.
+@pytest.mark.flaky(reruns=2, reruns_delay=5)
 def test_change_workers_without_wait(started_daemon_client):
     """Test that by default the calls return on acknowledgement, before the workers have been spawned or stopped."""
     client = started_daemon_client
@@ -423,6 +424,7 @@ def test_change_workers_without_wait(started_daemon_client):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.flaky(reruns=2)
 def test_change_workers_with_wait(started_daemon_client):
     """Test that with ``wait=True`` the workers have been spawned or stopped by the time the call returns."""
     number_workers = started_daemon_client.get_numprocesses()['numprocesses']

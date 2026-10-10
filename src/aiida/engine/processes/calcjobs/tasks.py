@@ -14,10 +14,10 @@ import asyncio
 import functools
 import logging
 import tempfile
+import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
 
-from aiida.common.datastructures import CalcJobState
+from aiida.common.datastructures import CalcJobState, JobState
 from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine import utils
@@ -32,9 +32,8 @@ from aiida.engine.transports import TransportQueue
 from aiida.engine.utils import InterruptableFuture, interruptable_task
 from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
-from aiida.schedulers.datastructures import JobState
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.calcjobs.calcjob import CalcJob
 
 UPLOAD_COMMAND = 'upload'
@@ -110,7 +109,8 @@ async def task_upload_job(process: CalcJob, transport_queue: TransportQueue, can
         raise
     except Exception as exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'upload_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'upload_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'uploading CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.UNSTASHING)
@@ -156,7 +156,8 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
         raise
     except Exception as exception:
         logger.warning(f'submitting CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'submit_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'submit_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'submitting CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.WITHSCHEDULER)
@@ -214,7 +215,8 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         raise
     except Exception as exception:
         logger.warning(f'updating CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'update_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'update_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'updating CalcJob<{node.pk}> successful')
         if job_done:
@@ -264,7 +266,8 @@ async def task_monitor_job(
         raise
     except Exception as exception:
         logger.warning(f'monitoring CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'monitor_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'monitor_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'monitoring CalcJob<{node.pk}> successful')
         return monitor_result
@@ -333,7 +336,8 @@ async def task_retrieve_job(
         raise
     except Exception as exception:
         logger.warning(f'retrieving CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'retrieve_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'retrieve_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         node.set_state(CalcJobState.PARSING)
         logger.info(f'retrieving CalcJob<{node.pk}> successful')
@@ -387,7 +391,8 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
         raise
     except Exception as exception:
         logger.warning(f'stashing calculation<{node.pk}> failed')
-        raise TransportTaskException(f'stash_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'stash_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         node.set_state(CalcJobState.RETRIEVING)
         logger.info(f'stashing calculation<{node.pk}> successful')
@@ -423,7 +428,8 @@ async def task_unstash_job(node: CalcJobNode, transport_queue: TransportQueue, c
         raise
     except Exception as exception:
         logger.warning(f'unstashing calculation<{node.pk}> failed')
-        raise TransportTaskException(f'unstash_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'unstash_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         node.set_state(CalcJobState.SUBMITTING)
         logger.info(f'unstashing calculation<{node.pk}> successful')
@@ -465,7 +471,8 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
         raise
     except Exception as exception:
         logger.warning(f'killing CalcJob<{node.pk}> failed')
-        raise TransportTaskException(f'kill_calculation failed {max_attempts} times consecutively') from exception
+        msg = f'kill_calculation failed {max_attempts} times consecutively'
+        raise TransportTaskException(msg) from exception
     else:
         logger.info(f'killing CalcJob<{node.pk}> successful')
         node.set_scheduler_state(JobState.DONE)
@@ -479,9 +486,9 @@ class Waiting(states.Waiting):
     def __init__(
         self,
         process: CalcJob,
-        done_callback: Callable[..., Any] | None,
+        done_callback: Callable[..., t.Any] | None,
         msg: str | None = None,
-        data: Any | None = None,
+        data: t.Any | None = None,
     ):
         """:param process: The process this state belongs to"""
         super().__init__(process, done_callback, msg, data)
@@ -624,7 +631,8 @@ class Waiting(states.Waiting):
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException as exception:
-            raise states.PauseInterruption(f'Pausing after failed transport task: {exception}')
+            msg = f'Pausing after failed transport task: {exception}'
+            raise states.PauseInterruption(msg)
         except StashingError as exception:
             exit_code = self.process.exit_codes.ERROR_STASHING_FAILED.format(message=str(exception))
             return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
@@ -737,7 +745,7 @@ class Waiting(states.Waiting):
             ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder, exit_code
         )
 
-    def interrupt(self, reason: Any) -> futures.Future | None:  # type: ignore[override]
+    def interrupt(self, reason: t.Any) -> futures.Future | None:  # type: ignore[override]
         """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)

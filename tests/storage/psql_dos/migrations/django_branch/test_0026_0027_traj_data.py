@@ -45,15 +45,15 @@ def test_traj_data(perform_migrations: PsqlDosMigrator):
         )
         session.add(user)
         session.commit()
-        kwargs = dict(
-            user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
-            label='test',
-            description='',
-            nodeversion=1,
-            public=True,
-        )
+        kwargs = {
+            'user_id': user.id,
+            'ctime': timezone.now(),
+            'mtime': timezone.now(),
+            'label': 'test',
+            'description': '',
+            'nodeversion': 1,
+            'public': True,
+        }
         node = node_model(uuid=get_new_uuid(), type='node.data.array.trajectory.TrajectoryData.', **kwargs)
         session.add(node)
         session.commit()

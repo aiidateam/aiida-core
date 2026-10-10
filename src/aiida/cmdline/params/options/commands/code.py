@@ -49,9 +49,11 @@ def validate_label_uniqueness(ctx: click.Context, _: None, value: str) -> str:
         except exceptions.NotExistent:
             pass
         except exceptions.MultipleObjectsError:
-            raise click.BadParameter(f'multiple copies of the remote code `{value}` already exist.')
+            msg = f'multiple copies of the remote code `{value}` already exist.'
+            raise click.BadParameter(msg)
         else:
-            raise click.BadParameter(f'the code `{value}` already exists.')
+            msg = f'the code `{value}` already exists.'
+            raise click.BadParameter(msg)
 
     if computer is not None:
         full_label = f'{value}@{computer.label}'
@@ -61,9 +63,11 @@ def validate_label_uniqueness(ctx: click.Context, _: None, value: str) -> str:
         except exceptions.NotExistent:
             pass
         except exceptions.MultipleObjectsError:
-            raise click.BadParameter(f'multiple copies of the local code `{full_label}` already exist.')
+            msg = f'multiple copies of the local code `{full_label}` already exist.'
+            raise click.BadParameter(msg)
         else:
-            raise click.BadParameter(f'the code `{full_label}` already exists.')
+            msg = f'the code `{full_label}` already exists.'
+            raise click.BadParameter(msg)
 
     return value
 

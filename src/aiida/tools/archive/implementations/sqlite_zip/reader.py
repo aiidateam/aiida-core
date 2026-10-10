@@ -8,8 +8,8 @@
 ###########################################################################
 """AiiDA archive reader implementation."""
 
+import typing as t
 from pathlib import Path
-from typing import Any
 
 from aiida.common.exceptions import CorruptStorage
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
@@ -20,7 +20,7 @@ from aiida.tools.archive.abstract import ArchiveReaderAbstract
 class ArchiveReaderSqlZip(ArchiveReaderAbstract):
     """An archive reader for the SQLite format."""
 
-    def __init__(self, path: str | Path, **kwargs: Any):
+    def __init__(self, path: str | Path, **kwargs: t.Any):
         super().__init__(path, **kwargs)
         self._in_context = False
         # we lazily create the storage backend, then clean up on exit
@@ -38,7 +38,7 @@ class ArchiveReaderSqlZip(ArchiveReaderAbstract):
             self._backend = None
         self._in_context = False
 
-    def get_metadata(self) -> dict[str, Any]:
+    def get_metadata(self) -> dict[str, t.Any]:
         try:
             return extract_metadata(self.path)
         except Exception as exc:

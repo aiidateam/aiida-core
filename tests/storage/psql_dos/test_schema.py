@@ -55,7 +55,7 @@ class TestRelationshipsSQLA:
 
         # Check that the result of outputs is correct
         out = {_.pk for _ in n_1.backend_entity.bare_model.outputs}
-        assert out == set([n_2.pk])
+        assert out == {n_2.pk}
 
     def test_inputs_parents_relationship(self):
         """This test checks that the inputs_q, parents_q relationship and the
@@ -82,7 +82,7 @@ class TestRelationshipsSQLA:
 
         # Check that the result of inputs is correct
         out = {_.pk for _ in n_3.backend_entity.bare_model.inputs}
-        assert out == set([n_2.pk])
+        assert out == {n_2.pk}
 
     def test_user_node_1(self):
         """Test that when a user and a node having that user are created,
@@ -94,7 +94,7 @@ class TestRelationshipsSQLA:
         dbu1 = DbUser(email='test1@schema', first_name='spam', last_name='eggs', institution='monty')
 
         # Creat node
-        node_dict = dict(user=dbu1)
+        node_dict = {'user': dbu1}
         dbn_1 = DbNode(**node_dict)
 
         # Check that the two are neither flushed nor committed
@@ -121,7 +121,7 @@ class TestRelationshipsSQLA:
         dbu1 = DbUser(email='test2@schema', first_name='spam', last_name='eggs', institution='monty')
 
         # Creat node
-        node_dict = dict(user=dbu1)
+        node_dict = {'user': dbu1}
         dbn_1 = DbNode(**node_dict)
 
         # Check that the two are neither flushed nor committed
@@ -155,7 +155,7 @@ class TestRelationshipsSQLA:
         dbu1 = DbUser(email='test3@schema', first_name='spam', last_name='eggs', institution='monty')
 
         # Creat node
-        node_dict = dict(user=dbu1)
+        node_dict = {'user': dbu1}
         dbn_1 = DbNode(**node_dict)
         dbn_2 = DbNode(**node_dict)
 

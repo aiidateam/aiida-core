@@ -49,14 +49,14 @@ If a broker is already running for the profile (for example one started by a tes
 Module overview
 ===============
 
-``ZeromqCommunicator`` implements ``kiwipy.Communicator``, the same interface that ``RmqThreadCommunicator`` implements for RabbitMQ.
+``ZeromqCommunicator`` implements ``aiida.brokers.communicator.Communicator``, the same interface that ``RmqThreadCommunicator`` implements for RabbitMQ.
 The AiiDA engine only ever sees this interface; they do not know which broker backend they are talking to.
 
 .. code-block:: text
 
     src/aiida/brokers/zeromq/
     ├── broker.py         ZeromqBroker — the Broker interface for workers
-    ├── communicator.py   ZeromqCommunicator — kiwipy.Communicator over ZeroMQ
+    ├── communicator.py   ZeromqCommunicator — broker ``Communicator`` over ZeroMQ
     ├── server.py         ZeromqBrokerServer — the broker's message router
     ├── service.py        ZeromqBrokerService — process wrapper (PID, signals, status files)
     ├── queue.py          PersistentQueue — file-based durable task queue
@@ -220,7 +220,7 @@ The empty delimiter frame is the standard ZeroMQ convention for ROUTER/DEALER in
 The ROUTER socket prepends the sender's identity on receive and uses the first frame as the routing target on send.
 
 Payload fields like ``body`` and ``result`` are opaque to the broker.
-They are pre-encoded by the sender (typically as YAML strings by the engine/kiwipy) and passed through without inspection.
+They are pre-encoded by the sender (typically as YAML strings by the engine) and passed through without inspection.
 
 
 Message flow: task submission
@@ -268,7 +268,7 @@ Since the ROUTER socket routes by identity, dispatching a task is just picking t
 After dispatching, the broker puts the worker back into the deque without waiting for an ACK if the limit of unacknowledged messages has not been reached.
 A single worker can therefore have several tasks in flight (dispatched but unacknowledged) at once, which is equivalent to AMQP's ``basic.qos`` mechanism.
 How many in flight tasks can be send to a worker is governed by the worker's prefetch limit, the equivalent of AMQP's ``basic.qos``.
-A worker declares it in ``SUBSCRIBE_TASK`` as ``prefetch_count``; the communicator takes the value from ``daemon.worker_process_slots``, the same option the RabbitMQ broker passes to kiwipy as ``task_prefetch_count``.
+A worker declares it in ``SUBSCRIBE_TASK`` as ``prefetch_count``; the communicator takes the value from ``daemon.worker_process_slots``, the same option the RabbitMQ broker passes as ``task_prefetch_count``.
 The broker counts in flight tasks per worker in ``worker_load`` and only returns a worker to the pool while that count is below its limit.
 A worker that declares no limit (``prefetch_count`` of ``None`` or ``0``) is never held back.
 The worker acknowledges tasks once the corresponding AiiDA process has terminated.
@@ -298,8 +298,8 @@ A ``NACK``, and the requeueing of tasks belonging to a worker that died, free th
 Deferred ACK pattern
 ====================
 
-kiwipy allows a task subscriber to return a ``Future`` instead of a result, and the process runner relies on this because AiiDA processes are long-running and asynchronous.
-Any compatible ``kiwipy.Communicator`` has to support it, so ours does too.
+The broker layer allows a task subscriber to return a ``Future`` instead of a result, and the process runner relies on this because AiiDA processes are long-running and asynchronous.
+Any compatible ``aiida.brokers.communicator.Communicator`` has to support it, so ours does too.
 
 When a task subscriber returns, there are two cases:
 

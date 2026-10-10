@@ -6,12 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""ZeroMQ Communicator - client implementing kiwipy Communicator interface.
+"""ZeroMQ Communicator - client implementing the broker communicator interface.
 
 Uses an internal asyncio event loop on a background thread for all ZeroMQ I/O.
 Public methods schedule work onto the loop via ``call_soon_threadsafe``,
 eliminating the need for locks around shared state.  This follows the same
-pattern as kiwipy's ``RmqThreadCommunicator``.
+pattern as the RabbitMQ ``RmqThreadCommunicator``.
 """
 
 from __future__ import annotations
@@ -19,16 +19,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+import typing as t
 import uuid
 from collections.abc import Callable
 from concurrent.futures import Future
 from types import TracebackType
-from typing import Any, TypeVar
 
-import kiwipy
 import zmq
 import zmq.asyncio
 
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers import exceptions as broker_exceptions
+from aiida.brokers import futures as broker_futures
 from aiida.brokers.zeromq.defaults import LOOP_JOIN_TIMEOUT, LOOP_TIMEOUT
 from aiida.brokers.zeromq.protocol import (
     MessageType,
@@ -45,11 +47,11 @@ from aiida.brokers.zeromq.protocol import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_T = TypeVar('_T')
+_T = t.TypeVar('_T')
 
 
-class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
-    """ZeroMQ client implementing kiwipy Communicator interface.
+class ZeromqCommunicator(broker_communicator.Communicator):
+    """ZeroMQ client implementing the broker communicator interface.
 
     Connects to a ZeromqBrokerService to send/receive messages.
 
@@ -87,20 +89,20 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         # message's unique ID.  When the corresponding TASK_RESULT or
         # RPC_RESPONSE arrives, the Future is popped and resolved, delivering
         # the result to the caller.  Only accessed from the loop thread.
-        self._pending_futures: dict[str, Future[Any]] = {}
+        self._pending_futures: dict[str, Future[t.Any]] = {}
         self._timeout_handles: dict[str, asyncio.TimerHandle] = {}
 
         # Subscribers (only accessed from the loop thread)
-        self._task_subscribers: dict[str, Callable[..., Any]] = {}
-        self._rpc_subscribers: dict[str, Callable[..., Any]] = {}
-        self._broadcast_subscribers: dict[str, Callable[..., Any]] = {}
+        self._task_subscribers: dict[str, Callable[..., t.Any]] = {}
+        self._rpc_subscribers: dict[str, Callable[..., t.Any]] = {}
+        self._broadcast_subscribers: dict[str, Callable[..., t.Any]] = {}
 
         # Tasks in progress: task_id -> (Future, no_reply).  We delay the
         # ACK until the Future resolves so the broker can redeliver if we die.
-        self._in_progress_tasks: dict[str, tuple[Future[Any], bool]] = {}
+        self._in_progress_tasks: dict[str, tuple[Future[t.Any], bool]] = {}
 
         # RPCs in progress: rpc_id -> (recipient, Future).
-        self._in_progress_rpcs: dict[str, tuple[str, Future[Any]]] = {}
+        self._in_progress_rpcs: dict[str, tuple[str, Future[t.Any]]] = {}
 
         # Event loop thread
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -282,7 +284,8 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
             self._timeout_handles.pop(msg_id, None)
             future = self._pending_futures.pop(msg_id, None)
             if future and not future.done():
-                future.set_exception(TimeoutError(f'Task/RPC {msg_id} timed out after {self._task_timeout}s'))
+                msg = f'Task/RPC {msg_id} timed out after {self._task_timeout}s'
+                future.set_exception(broker_exceptions.TimeoutError(msg))
 
         handle = self._loop.call_later(self._task_timeout, _on_timeout)
         self._timeout_handles[msg_id] = handle
@@ -321,16 +324,16 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         return gate.result(timeout=LOOP_TIMEOUT)
 
     # ------------------------------------------------------------------
-    # Task operations (kiwipy interface)
+    # Task operations (communicator interface)
     # ------------------------------------------------------------------
 
-    def task_send(self, task: Any, no_reply: bool = False) -> Future[Any] | None:
+    def task_send(self, task: t.Any, no_reply: bool = False) -> Future[t.Any] | None:
         self._ensure_open()
 
-        def _do() -> Future[Any] | None:
+        def _do() -> Future[t.Any] | None:
             msg = make_task_message(task, self._client_id, no_reply)
             task_id = msg['id']
-            pending: Future[Any] | None = None
+            pending: Future[t.Any] | None = None
             if not no_reply:
                 pending = Future()
                 self._pending_futures[task_id] = pending
@@ -341,7 +344,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
         return self._run_on_loop(_do)
 
-    def add_task_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    def add_task_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         self._ensure_open()
 
         def _do() -> str:
@@ -371,16 +374,16 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         self._run_on_loop(_do)
 
     # ------------------------------------------------------------------
-    # RPC operations (kiwipy interface)
+    # RPC operations (communicator interface)
     # ------------------------------------------------------------------
 
-    def rpc_send(self, recipient_id: str, msg: Any) -> Future[Any]:
+    def rpc_send(self, recipient_id: str, msg: t.Any) -> Future[t.Any]:
         self._ensure_open()
 
-        def _do() -> Future[Any]:
+        def _do() -> Future[t.Any]:
             rpc_msg = make_rpc_message(recipient_id, msg, self._client_id)
             rpc_id = rpc_msg['id']
-            future: Future[Any] = Future()
+            future: Future[t.Any] = Future()
             self._pending_futures[rpc_id] = future
             self._schedule_timeout(rpc_id)
             self._send(rpc_msg)
@@ -389,13 +392,14 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
         return self._run_on_loop(_do)
 
-    def add_rpc_subscriber(self, subscriber: Callable[..., Any], identifier: str | None = None) -> str:
+    def add_rpc_subscriber(self, subscriber: Callable[..., t.Any], identifier: str | None = None) -> str:
         self._ensure_open()
 
         def _do() -> str:
             ident = identifier or f'rpc-{uuid.uuid4().hex[:8]}'
             if ident in self._rpc_subscribers:
-                raise kiwipy.DuplicateSubscriberIdentifier(f"RPC identifier '{ident}'")
+                error_msg = f"RPC identifier '{ident}'"
+                raise broker_exceptions.DuplicateSubscriberIdentifier(error_msg)
             self._rpc_subscribers[ident] = subscriber
             msg = make_subscribe_message(MessageType.SUBSCRIBE_RPC, self._client_id, ident)
             self._send(msg)
@@ -416,12 +420,12 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         self._run_on_loop(_do)
 
     # ------------------------------------------------------------------
-    # Broadcast operations (kiwipy interface)
+    # Broadcast operations (communicator interface)
     # ------------------------------------------------------------------
 
     def broadcast_send(
         self,
-        body: Any,
+        body: t.Any,
         sender: str | None = None,
         subject: str | None = None,
         correlation_id: str | None = None,
@@ -438,7 +442,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
     def add_broadcast_subscriber(
         self,
-        subscriber: Callable[..., Any],
+        subscriber: Callable[..., t.Any],
         identifier: str | None = None,
     ) -> str:
         def _do() -> str:
@@ -463,9 +467,9 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
     def _ensure_open(self) -> None:
         if self._closed:
-            raise RuntimeError('Communicator is closed')
+            raise broker_exceptions.CommunicatorClosed
 
-    def _send(self, msg: dict[str, Any]) -> None:
+    def _send(self, msg: dict[str, t.Any]) -> None:
         """Send a message to the broker.  MUST be called from the loop thread."""
         if not self._dealer:
             raise RuntimeError('Communicator not connected')
@@ -499,7 +503,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
     # Internal — message dispatch
     # ------------------------------------------------------------------
 
-    def _dispatch_dealer_message(self, msg: dict[str, Any]) -> None:
+    def _dispatch_dealer_message(self, msg: dict[str, t.Any]) -> None:
         msg_type = msg.get('type')
         _LOGGER.debug('Received from broker: %s', msg_type)
 
@@ -520,7 +524,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
     # --- Tasks ---
 
-    def _handle_task(self, msg: dict[str, Any]) -> None:
+    def _handle_task(self, msg: dict[str, t.Any]) -> None:
         task_id = msg['id']
         body = msg.get('body')
         no_reply = msg.get('no_reply', False)
@@ -536,7 +540,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                     loop = self._loop
                     assert loop is not None
 
-                    def _on_task_done(fut: Future[Any], _tid: str = task_id, _nr: bool = no_reply) -> None:
+                    def _on_task_done(fut: Future[t.Any], _tid: str = task_id, _nr: bool = no_reply) -> None:
                         loop.call_soon_threadsafe(self._finalize_task, _tid, fut, _nr)
 
                     result.add_done_callback(_on_task_done)
@@ -557,7 +561,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         nack_msg = make_task_nack(task_id, self._client_id)
         self._send(nack_msg)
 
-    def _finalize_task(self, task_id: str, future: Future[Any], no_reply: bool) -> None:
+    def _finalize_task(self, task_id: str, future: Future[t.Any], no_reply: bool) -> None:
         """Called on the loop thread when a deferred task completes."""
         if task_id not in self._in_progress_tasks:
             return
@@ -576,7 +580,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         except Exception:
             _LOGGER.exception('Failed to finalise task %s', task_id)
 
-    def _send_task_result(self, task_id: str, result: Any) -> None:
+    def _send_task_result(self, task_id: str, result: t.Any) -> None:
         """Send a task response, resolving chained Futures if needed."""
         if isinstance(result, Future):
             if result.done():
@@ -589,7 +593,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                 loop = self._loop
                 assert loop is not None
 
-                def _on_result_done(fut: Future[Any], _tid: str = task_id) -> None:
+                def _on_result_done(fut: Future[t.Any], _tid: str = task_id) -> None:
                     loop.call_soon_threadsafe(self._send_task_result, _tid, fut)
 
                 result.add_done_callback(_on_result_done)
@@ -597,7 +601,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
             response = make_task_response(task_id, self._client_id, result=result)
             self._send(response)
 
-    def _handle_task_response(self, msg: dict[str, Any]) -> None:
+    def _handle_task_response(self, msg: dict[str, t.Any]) -> None:
         task_id = msg.get('task_id')
         if not task_id:
             return
@@ -610,13 +614,13 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
             if error:
                 future.set_exception(Exception(error))
             else:
-                result_future = kiwipy.Future()
+                result_future: broker_futures.Future[t.Any] = broker_futures.Future()
                 result_future.set_result(msg.get('result'))
                 future.set_result(result_future)
 
     # --- RPCs ---
 
-    def _handle_rpc(self, msg: dict[str, Any]) -> None:
+    def _handle_rpc(self, msg: dict[str, t.Any]) -> None:
         rpc_id = msg['id']
         body = msg.get('body')
         recipient = str(msg['recipient']) if 'recipient' in msg else None
@@ -640,7 +644,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                 loop = self._loop
                 assert loop is not None
 
-                def _on_rpc_done(fut: Future[Any], _rid: str = rpc_id, _rec: str = rpc_recipient) -> None:
+                def _on_rpc_done(fut: Future[t.Any], _rid: str = rpc_id, _rec: str = rpc_recipient) -> None:
                     loop.call_soon_threadsafe(self._finalize_rpc, _rid, _rec, fut)
 
                 result.add_done_callback(_on_rpc_done)
@@ -655,7 +659,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
             response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
             self._send(response)
 
-    def _finalize_rpc(self, rpc_id: str, recipient: str, future: Future[Any]) -> None:
+    def _finalize_rpc(self, rpc_id: str, recipient: str, future: Future[t.Any]) -> None:
         """Called on the loop thread when a deferred RPC completes."""
         if rpc_id not in self._in_progress_rpcs:
             return
@@ -675,7 +679,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                 loop = self._loop
                 assert loop is not None
 
-                def _on_rpc_retry(fut: Future[Any], _rid: str = rpc_id, _rec: str = recipient) -> None:
+                def _on_rpc_retry(fut: Future[t.Any], _rid: str = rpc_id, _rec: str = recipient) -> None:
                     loop.call_soon_threadsafe(self._finalize_rpc, _rid, _rec, fut)
 
                 result.add_done_callback(_on_rpc_retry)
@@ -686,7 +690,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
             response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
             self._send(response)
 
-    def _handle_rpc_response(self, msg: dict[str, Any]) -> None:
+    def _handle_rpc_response(self, msg: dict[str, t.Any]) -> None:
         rpc_id = msg.get('rpc_id')
         if not rpc_id:
             return
@@ -703,7 +707,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
     # --- Broadcasts ---
 
-    def _handle_broadcast(self, msg: dict[str, Any]) -> None:
+    def _handle_broadcast(self, msg: dict[str, t.Any]) -> None:
         body = msg.get('body')
         sender = msg.get('sender')
         subject = msg.get('subject')

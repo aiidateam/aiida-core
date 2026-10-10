@@ -465,7 +465,7 @@ def process_watch(broker, processes, most_recent_node):
 
     from time import sleep
 
-    from kiwipy import BroadcastFilter
+    from aiida.brokers.filters import BroadcastFilter
 
     def _print(communicator, body, sender, subject, correlation_id):
         """Format the incoming broadcast data into a message and echo it to stdout."""
@@ -566,7 +566,7 @@ def process_repair(manager, broker, dry_run, force):
     if len(process_tasks) != len(set_process_tasks):
         state_inconsistent = True
         echo.echo_warning('There are duplicates process tasks: ', nl=False)
-        echo.echo(set(x for x in process_tasks if process_tasks.count(x) > 1))
+        echo.echo({x for x in process_tasks if process_tasks.count(x) > 1})
 
     if set_process_tasks.difference(set_active_processes):
         state_inconsistent = True

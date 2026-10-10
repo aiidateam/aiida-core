@@ -38,9 +38,8 @@ def convert_nodes_single_file_data(nodes: t.Mapping[str, str | pathlib.Path | Da
             filepath = value
 
         if not isinstance(filepath, pathlib.Path):
-            raise TypeError(
-                f'received type {type(filepath)} for `{key}` in `nodes`. Should be `Data`, `str`, or `Path`.'
-            )
+            msg = f'received type {type(filepath)} for `{key}` in `nodes`. Should be `Data`, `str`, or `Path`.'  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         filepath.resolve()
 

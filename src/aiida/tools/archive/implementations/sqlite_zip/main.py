@@ -8,8 +8,8 @@
 ###########################################################################
 """The file format implementation"""
 
+import typing as t
 from pathlib import Path
-from typing import Any, Literal, overload
 
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from aiida.storage.sqlite_zip.utils import read_version
@@ -44,23 +44,23 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
     def key_format(self) -> str:
         return 'sha256'
 
-    @overload
+    @t.overload
     def open(
-        self, path: str | Path, mode: Literal['r'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['r'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveReaderSqlZip: ...
 
-    @overload
+    @t.overload
     def open(
-        self, path: str | Path, mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['x', 'w'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveWriterSqlZip: ...
 
-    @overload
+    @t.overload
     def open(
-        self, path: str | Path, mode: Literal['a'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['a'], *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveAppenderSqlZip: ...
 
     def open(
-        self, path: str | Path, mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: t.Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: t.Any
     ) -> ArchiveReaderSqlZip | ArchiveWriterSqlZip | ArchiveAppenderSqlZip:
         if mode == 'r':
             return ArchiveReaderSqlZip(path, **kwargs)

@@ -227,10 +227,12 @@ def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> 
     try:
         log_level = value.upper()
     except AttributeError:
-        raise click.BadParameter(f'`{value}` is not a string.')
+        msg = f'`{value}` is not a string.'
+        raise click.BadParameter(msg)
 
     if log_level not in LOG_LEVELS:
-        raise click.BadParameter(f'`{log_level}` is not a valid log level.')
+        msg = f'`{log_level}` is not a valid log level.'
+        raise click.BadParameter(msg)
 
     log.CLI_LOG_LEVEL = log_level
 

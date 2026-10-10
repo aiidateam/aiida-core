@@ -10,6 +10,6 @@ Run with MPI
 Wrap command line parameters  False
 Prepend script                text to prepend
 Append script                 text to append
-Filepath executable           /usr/bin/bash
+Filepath executable           <FILEPATH_EXECUTABLE>
 Engine command                singularity exec --bind $PWD:$PWD {image_name}
 Image name                    ubuntu

@@ -12,19 +12,11 @@
 
 # fmt: off
 
-from aiida.schedulers.datastructures import *
 from aiida.schedulers.plugins import *
 from aiida.schedulers.scheduler import *
 
 __all__ = (
     'BashCliScheduler',
-    'JobInfo',
-    'JobResource',
-    'JobState',
-    'JobTemplate',
-    'MachineInfo',
-    'NodeNumberJobResource',
-    'ParEnvJobResource',
     'Scheduler',
     'SchedulerError',
     'SchedulerParsingError',

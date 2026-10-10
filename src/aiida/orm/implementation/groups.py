@@ -10,19 +10,19 @@
 
 import abc
 import datetime
+import typing as t
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Protocol
 
 from aiida.orm.implementation.entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 from aiida.orm.implementation.nodes import BackendNode
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('BackendGroup', 'BackendGroupCollection')
 
 
-class NodeIterator(Protocol):
+class NodeIterator(t.Protocol):
     """Protocol for iterating over nodes in a group"""
 
     def __iter__(self) -> 'NodeIterator':
@@ -128,7 +128,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any(not isinstance(node, BackendNode) for node in nodes):
-            raise TypeError(f'nodes have to be of type {BackendNode}')
+            msg = f'nodes have to be of type {BackendNode}'
+            raise TypeError(msg)
 
     def remove_nodes(self, nodes: Sequence[BackendNode]) -> None:
         """Remove a set of nodes from the group.
@@ -144,7 +145,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any(not isinstance(node, BackendNode) for node in nodes):
-            raise TypeError(f'nodes have to be of type {BackendNode}')
+            msg = f'nodes have to be of type {BackendNode}'
+            raise TypeError(msg)
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'

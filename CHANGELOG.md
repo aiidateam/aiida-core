@@ -4,10 +4,16 @@
 
 ### Breaking changes
 
+`Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
+
+Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.
+
 Process checkpoints created with earlier releases cannot be continued after upgrading because process state classes are now provided in-tree instead of by `plumpy`.
 Finish or terminate all active processes before upgrading.
 The `logging.plumpy_loglevel` configuration option is removed because the Plumpy implementation is now part of aiida-core.
 Explicit values are migrated to `logging.aiida_core_loglevel` unless that option is already set, and all loggers under `aiida.engine` are governed by the aiida-core log level.
+The `logging.kiwipy_loglevel` configuration option is removed because the Kiwipy implementation is now part of aiida-core.
+Explicit values are migrated to `logging.aiida_core_loglevel` unless that option is already set, and all loggers under `aiida.brokers` are governed by the aiida-core log level.
 The process persistence primitives have been replaced with explicit checkpoint concepts:
 
 - `Bundle` is replaced by `CheckpointPayload`.
@@ -24,7 +30,29 @@ pytest_plugins = 'aiida.tools.pytest_fixtures'
 ```
 Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
 
+#### `Code`: the deprecated data plugin has been removed
+
+The `Code` class, deprecated since `aiida-core==2.1`, and its `core.code` entry point have been removed.
+`InstalledCode` and `PortableCode` now derive from the renamed `AbstractCode` base class, `Code`, without the legacy plugin's deprecated methods, such as `get_execname`, `can_run_on` and `hide`.
+
+`AbstractCode` and its `core.code.abstract` entry point have been removed. Use the abstract `Code` base class for type hints, `isinstance` checks and `QueryBuilder` queries.
+Note that `aiida.orm.load_code`, the `CodeParamType` and `verdi code` already resolve any code plugin and need no changes.
+
+Stored nodes are migrated automatically: `verdi storage migrate` rewrites `data.core.code.Code.` nodes to `InstalledCode` (if `is_local` was false) or `PortableCode` (if it was true), renaming the `remote_exec_path`/`local_executable` attribute to `filepath_executable`.
+The migration invalidates the hashes of the migrated nodes, so run `verdi node rehash` afterwards if you rely on caching.
+Loading a node whose storage has not been migrated now raises `IncompatibleStorageSchema` instead of silently falling back to the `Data` class.
+
 ### New features
+
+#### Processes defined in a notebook cell
+
+A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter notebook, or in any script run as `__main__`, can now be submitted to the daemon.
+Such a class belongs to a module that resolves to something different in every interpreter, so the worker used to fail with `ImportError: object 'MyWorkChain' from identifier '__main__:MyWorkChain' could not be loaded`.
+Now, the checkpoint carries the class itself whenever no identifier reaches the class or the identifier points at `__main__`.
+What the class refers to travels as a reference, so the worker has to be able to import it: a helper module beside the notebook, on the kernel's `sys.path` only, has to be installed or put on the `PYTHONPATH` the daemon is started with.
+
+In addition, `ProcessNode.class_source` records the source of a class that has no name to resolve later, since the checkpoint carrying it is deleted once the node seals.
+It is stored under `ProcessNode.KEY_OBJECT_CLASS_SOURCE` in the node's repository, which is `.aiida/class_source.py`. For a node that has recorded source, `verdi node show` points at the command that prints it.
 
 #### `ShellJob`: run any command without writing a plugin
 
@@ -46,10 +74,17 @@ Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import
 
 ### Behavior changes
 
+#### Checkpoint class files
+
+Serialized process classes are stored as `<node uuid>-<digest>.pkl` in the profile's `checkpoint_classes` directory, with digest references in node checkpoints.
+Backups must include this directory; storage plugins provide its location through `StorageBackend.get_checkpoint_classes_dirpath`.
+
+`verdi storage maintain` deletes class files of sealed nodes.
+`verdi storage maintain --full` also deletes files whose nodes were deleted.
+
 ### Fixes
 
 ### Deprecations
-
 
 ## v2.9.1 - 2026-08-27
 

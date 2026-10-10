@@ -11,21 +11,21 @@
 from __future__ import annotations
 
 import abc
+import typing as t
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('BackendCollection', 'BackendEntity', 'BackendEntityExtrasMixin', 'EntityType')
 
-EntityType = TypeVar('EntityType', bound='BackendEntity')
+EntityType = t.TypeVar('EntityType', bound='BackendEntity')
 
 
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
-    def __init__(self, backend: StorageBackend, **kwargs: Any):
+    def __init__(self, backend: StorageBackend, **kwargs: t.Any):
         self._backend = backend
 
     @property
@@ -72,10 +72,10 @@ class BackendEntity(abc.ABC):
         """
 
 
-class BackendCollection(Generic[EntityType]):
+class BackendCollection(t.Generic[EntityType]):
     """Container class that represents a collection of entries of a particular backend entity."""
 
-    ENTITY_CLASS: ClassVar[type[EntityType]]
+    ENTITY_CLASS: t.ClassVar[type[EntityType]]
 
     def __init__(self, backend: StorageBackend):
         """:param backend: the backend this collection belongs to"""
@@ -87,7 +87,7 @@ class BackendCollection(Generic[EntityType]):
         """Return the backend."""
         return self._backend
 
-    def create(self, **kwargs: Any) -> EntityType:
+    def create(self, **kwargs: t.Any) -> EntityType:
         """Create new a entry and set the attributes to those specified in the keyword arguments
 
         :return: the newly created entry of type ENTITY_CLASS
@@ -100,7 +100,7 @@ class BackendEntityExtrasMixin(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def extras(self) -> dict[str, Any]:
+    def extras(self) -> dict[str, t.Any]:
         """Return the complete extras dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -115,7 +115,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_extra(self, key: str) -> Any:
+    def get_extra(self, key: str) -> t.Any:
         """Return the value of an extra.
 
         .. warning:: While the entity is unstored, this will return a reference of the extra on the database model,
@@ -129,7 +129,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         :raises AttributeError: if the extra does not exist
         """
 
-    def get_extra_many(self, keys: Iterable[str]) -> list[Any]:
+    def get_extra_many(self, keys: Iterable[str]) -> list[t.Any]:
         """Return the values of multiple extras.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -147,14 +147,14 @@ class BackendEntityExtrasMixin(abc.ABC):
         return [self.get_extra(key) for key in keys]
 
     @abc.abstractmethod
-    def set_extra(self, key: str, value: Any) -> None:
+    def set_extra(self, key: str, value: t.Any) -> None:
         """Set an extra to the given value.
 
         :param key: name of the extra
         :param value: value of the extra
         """
 
-    def set_extra_many(self, extras: dict[str, Any]) -> None:
+    def set_extra_many(self, extras: dict[str, t.Any]) -> None:
         """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
@@ -165,7 +165,7 @@ class BackendEntityExtrasMixin(abc.ABC):
             self.set_extra(key, value)
 
     @abc.abstractmethod
-    def reset_extras(self, extras: dict[str, Any]) -> None:
+    def reset_extras(self, extras: dict[str, t.Any]) -> None:
         """Reset the extras.
 
         .. note:: This will completely clear any existing extras and replace them with the new dictionary.
@@ -195,7 +195,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         """Delete all extras."""
 
     @abc.abstractmethod
-    def extras_items(self) -> Iterable[tuple[str, Any]]:
+    def extras_items(self) -> Iterable[tuple[str, t.Any]]:
         """Return an iterator over the extras key/value pairs."""
 
     @abc.abstractmethod

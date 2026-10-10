@@ -8,14 +8,14 @@
 ###########################################################################
 """Module with `Node` sub class for calculation function processes."""
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from aiida.common.links import LinkType
 from aiida.orm.nodes.process.calculation.calculation import CalculationNode
 from aiida.orm.nodes.process.process import ProcessNodeLinks
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Node
 
 __all__ = ('CalcFunctionNode',)

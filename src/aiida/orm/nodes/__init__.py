@@ -19,7 +19,6 @@ from aiida.orm.nodes.process import *
 from aiida.orm.nodes.repository import *
 
 __all__ = (
-    'AbstractCode',
     'ArrayData',
     'BandsData',
     'BaseType',

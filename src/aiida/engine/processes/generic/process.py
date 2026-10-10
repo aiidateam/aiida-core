@@ -26,22 +26,20 @@ import logging
 import re
 import sys
 import time
+import typing as t
 import uuid
 import warnings
 from collections.abc import Awaitable, Callable, Generator, Hashable, Sequence
 from contextvars import ContextVar
 from types import TracebackType
-from typing import (
-    Any,
-    Optional,
-    TypeVar,
-    cast,
-)
 
-import kiwipy
 import yaml
 from aio_pika.exceptions import ChannelInvalidStateError, ConnectionClosed
 
+from aiida.brokers import communicator as broker_communicator
+from aiida.brokers import exceptions as broker_exceptions
+from aiida.brokers import futures as broker_futures
+from aiida.brokers.filters import BroadcastFilter
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import call_with_super_check, super_check
 from aiida.common.processes import ProcessState
@@ -58,7 +56,7 @@ from aiida.engine.processes.persistence import PID_TYPE, SAVED_STATE_TYPE
 from aiida.engine.processes.state_machine import StateEntryFailed, StateMachine, event
 from aiida.engine.utils import ensure_coroutine
 
-T = TypeVar('T')
+T = t.TypeVar('T')
 
 __all__: tuple[str, ...] = ()
 
@@ -91,11 +89,11 @@ yaml.representer.Representer.add_representer(
 )
 
 
-def ensure_not_closed(func: Callable[..., Any]) -> Callable[..., Any]:
+def ensure_not_closed(func: Callable[..., t.Any]) -> Callable[..., t.Any]:
     """Decorator to check that the process is not closed before running the method."""
 
     @functools.wraps(func)
-    def func_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+    def func_wrapper(self: t.Any, *args: t.Any, **kwargs: t.Any) -> t.Any:
         if self._closed:
             raise exceptions.ClosedError('Process is closed')
         return func(self, *args, **kwargs)
@@ -164,7 +162,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
     __called: bool = False
 
     @classmethod
-    def current(cls) -> Optional['Process']:
+    def current(cls) -> t.Optional['Process']:
         """
         Get the currently running process i.e. the one at the top of the stack
 
@@ -230,14 +228,14 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         cls.__called = True
 
     @classmethod
-    def get_description(cls) -> dict[str, Any]:
+    def get_description(cls) -> dict[str, t.Any]:
         """
         Get a human readable description of what this :class:`Process` does.
 
         :return: The description.
 
         """
-        description: dict[str, Any] = {}
+        description: dict[str, t.Any] = {}
 
         if cls.__doc__:
             description['description'] = cls.__doc__.strip()
@@ -263,7 +261,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         :return: An instance of the object with its state loaded from the save state.
 
         """
-        process = cast(Process, super().recreate_from(saved_state, load_context))
+        process = t.cast(Process, super().recreate_from(saved_state, load_context))
         call_with_super_check(process.init)
         return process
 
@@ -273,7 +271,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         pid: PID_TYPE | None = None,
         logger: logging.Logger | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        communicator: kiwipy.Communicator | None = None,
+        communicator: broker_communicator.Communicator | None = None,
     ) -> None:
         """
         The signature of the constructor should not be changed by subclassing processes.
@@ -304,7 +302,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         self._raw_inputs = None if inputs is None else AttributesFrozendict(inputs)
         self._pid = pid
         self._parsed_inputs: AttributesFrozendict | None = None
-        self._outputs: dict[str, Any] = {}
+        self._outputs: dict[str, t.Any] = {}
         self._uuid: uuid.UUID | None = None
         self._creation_time: float | None = None
 
@@ -313,7 +311,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         self._event_helper = EventHelper(ProcessListener)
         self._logger = logger
         self._communicator = communicator
-        self._tasks: set[asyncio.Task[Any]] = set()
+        self._tasks: set[asyncio.Task[t.Any]] = set()
 
     @super_check
     def init(self) -> None:
@@ -327,15 +325,15 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             try:
                 identifier = self._communicator.add_rpc_subscriber(self.message_receive, identifier=str(self.pid))
                 self.add_cleanup(functools.partial(self._communicator.remove_rpc_subscriber, identifier))
-            except kiwipy.TimeoutError:
+            except broker_exceptions.TimeoutError:
                 self.logger.exception('Process<%s>: failed to register as an RPC subscriber', self.pid)
 
             try:
                 # filter out state change broadcasts
-                subscriber = kiwipy.BroadcastFilter(self.broadcast_receive, subject=re.compile(r'^(?!state_changed).*'))
+                subscriber = BroadcastFilter(self.broadcast_receive, subject=re.compile(r'^(?!state_changed).*'))
                 identifier = self._communicator.add_broadcast_subscriber(subscriber, identifier=str(self.pid))
                 self.add_cleanup(functools.partial(self._communicator.remove_broadcast_subscriber, identifier))
-            except kiwipy.TimeoutError:
+            except broker_exceptions.TimeoutError:
                 self.logger.exception(
                     'Process<%s>: failed to register as a broadcast subscriber',
                     self.pid,
@@ -357,10 +355,10 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         """Set the event hooks to process, when it is created or loaded(recreated)."""
         event_hooks = {
             state_machine.StateEventHook.ENTERING_STATE: lambda _s, _h, state: self.on_entering(
-                cast(process_states.State, state)
+                t.cast(process_states.State, state)
             ),
             state_machine.StateEventHook.ENTERED_STATE: lambda _s, _h, from_state: self.on_entered(
-                cast(process_states.State | None, from_state)
+                t.cast(process_states.State | None, from_state)
             ),
             state_machine.StateEventHook.EXITING_STATE: lambda _s, _h, _state: self.on_exiting(),
         }
@@ -396,7 +394,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         return self._parsed_inputs
 
     @property
-    def outputs(self) -> dict[str, Any]:
+    def outputs(self) -> dict[str, t.Any]:
         """
         Get the current outputs emitted by the Process.  These may grow over
         time as the process runs.
@@ -471,7 +469,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         """Return whether the process was terminated."""
         return self._state.is_terminal()
 
-    def result(self) -> Any:
+    def result(self) -> t.Any:
         """
         Get the result from the process if it is finished.
         If the process was killed then a KilledError will be raise.
@@ -553,7 +551,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         """Return the event loop of the process."""
         return self._loop
 
-    def call_soon(self, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> events.ProcessCallback:
+    def call_soon(self, callback: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> events.ProcessCallback:
         """
         Schedule a callback to what is considered an internal process function
         (this needn't be a method).
@@ -568,7 +566,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
     def callback_excepted(
         self,
-        _callback: Callable[..., Any],
+        _callback: Callable[..., t.Any],
         exception: BaseException | None,
         trace: TracebackType | None,
     ) -> None:
@@ -596,7 +594,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             stack_copy.pop()
             PROCESS_STACK.set(stack_copy)
 
-    async def _run_task(self, callback: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    async def _run_task(self, callback: Callable[..., T], *args: t.Any, **kwargs: t.Any) -> T:
         """
         This method should be used to run all Process related functions and coroutines.
         If there is an exception the process will enter the EXCEPTED state.
@@ -752,7 +750,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             call_with_super_check(self.on_killed)
 
         if self._communicator and isinstance(self.state, enum.Enum):
-            from_label = cast(enum.Enum, from_state.LABEL).value if from_state is not None else None
+            from_label = t.cast(enum.Enum, from_state.LABEL).value if from_state is not None else None
             subject = f'state_changed.{from_label}.{self.state.value}'
             self.logger.info('Process<%s>: Broadcasting state change: %s', self.pid, subject)
             try:
@@ -760,7 +758,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             except (ConnectionClosed, ChannelInvalidStateError):
                 message = 'Process<%s>: no connection available to broadcast state change from %s to %s'
                 self.logger.warning(message, self.pid, from_label, self.state.value)
-            except kiwipy.TimeoutError:
+            except broker_exceptions.TimeoutError:
                 message = 'Process<%s>: sending broadcast of state change from %s to %s timed out'
                 self.logger.warning(message, self.pid, from_label, self.state.value)
 
@@ -776,7 +774,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         """Entering the CREATED state."""
         self._creation_time = time.time()
 
-        def recursively_copy_dictionaries(value: Any) -> Any:
+        def recursively_copy_dictionaries(value: t.Any) -> t.Any:
             """Recursively copy the mapping but only create copies of the dictionaries not the values."""
             if isinstance(value, dict):
                 return {key: recursively_copy_dictionaries(subvalue) for key, subvalue in value.items()}
@@ -816,10 +814,10 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         """Entered the RUNNING state."""
         self._fire_event(ProcessListener.on_process_running)
 
-    def on_output_emitting(self, output_port: str, value: Any) -> None:
+    def on_output_emitting(self, output_port: str, value: t.Any) -> None:
         """Output is about to be emitted."""
 
-    def on_output_emitted(self, output_port: str, value: Any, dynamic: bool) -> None:
+    def on_output_emitted(self, output_port: str, value: t.Any, dynamic: bool) -> None:
         self._event_helper.fire_event(ProcessListener.on_output_emitted, self, output_port, value, dynamic)
 
     @super_check
@@ -864,7 +862,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         self._fire_event(ProcessListener.on_process_played)
 
     @super_check
-    def on_finish(self, result: Any, successful: bool) -> None:
+    def on_finish(self, result: t.Any, successful: bool) -> None:
         """Entering the FINISHED state."""
         if successful:
             validation_error = self.spec().outputs.validate(self.outputs)
@@ -881,7 +879,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         self._fire_event(ProcessListener.on_process_finished, self.future().result())
 
     @super_check
-    def on_except(self, exc_info: tuple[Any, Exception, TracebackType]) -> None:
+    def on_except(self, exc_info: tuple[t.Any, Exception, TracebackType]) -> None:
         """Entering the EXCEPTED state."""
         exception = exc_info[1]
         exception.__traceback__ = exc_info[2]
@@ -939,14 +937,14 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             self._event_callbacks = {}
             self._closed = True
 
-    def _fire_event(self, evt: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
+    def _fire_event(self, evt: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> None:
         self._event_helper.fire_event(evt, self, *args, **kwargs)
 
     # endregion
 
     # region Communication
 
-    def message_receive(self, _comm: kiwipy.Communicator, msg: MessageType) -> Any:
+    def message_receive(self, _comm: broker_communicator.Communicator, msg: MessageType) -> t.Any:
         """
         Coroutine called when the process receives a message from the communicator
 
@@ -973,7 +971,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             force_kill = msg.get(process_comms.FORCE_KILL_KEY, default_message.get(FORCE_KILL_KEY))
             return self._schedule_rpc(self.kill, msg_text=text, force_kill=force_kill)
         if intent == process_comms.Intent.STATUS:
-            status_info: dict[str, Any] = {}
+            status_info: dict[str, t.Any] = {}
             self.get_status_info(status_info)
             return status_info
 
@@ -981,8 +979,13 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         raise RuntimeError('Unknown intent')
 
     def broadcast_receive(
-        self, _comm: kiwipy.Communicator, msg: MessageType, sender: Any, subject: Any, correlation_id: Any
-    ) -> kiwipy.Future | None:
+        self,
+        _comm: broker_communicator.Communicator,
+        msg: MessageType,
+        sender: t.Any,
+        subject: t.Any,
+        correlation_id: t.Any,
+    ) -> broker_futures.Future | None:
         """
         Coroutine called when the process receives a message from the communicator
 
@@ -1007,7 +1010,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             return self._schedule_rpc(self.kill, msg_text=msg.get(process_comms.MESSAGE_TEXT_KEY, None))
         return None
 
-    def _schedule_rpc(self, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> kiwipy.Future:
+    def _schedule_rpc(self, callback: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> broker_futures.Future:
         """
         Schedule a call to a callback as a result of an RPC communication call, this will return
         a future that resolves to the final result (even after one or more layer of futures being
@@ -1022,10 +1025,10 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         :return: a kiwi future that resolves to the outcome of the callback
 
         """
-        kiwi_future = kiwipy.Future()
+        kiwi_future: broker_futures.Future[t.Any] = broker_futures.Future()
 
         async def run_callback() -> None:
-            with kiwipy.capture_exceptions(kiwi_future):
+            with broker_futures.capture_exceptions(kiwi_future):
                 try:
                     result = await run_with_portal(callback, *args, **kwargs)
                 except Exception:
@@ -1110,7 +1113,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             self._pausing = self._interrupt_action
             # Try to interrupt the state
             self._state.interrupt(interrupt_exception)
-            return cast(futures.CancellableAction, self._interrupt_action)
+            return t.cast(futures.CancellableAction, self._interrupt_action)
 
         msg = MessageBuilder.pause(msg_text)
         return self._do_pause(state_msg=msg)
@@ -1147,7 +1150,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
         if isinstance(exception, process_states.KillInterruption):
 
-            def do_kill(_next_state: process_states.State) -> Any:
+            def do_kill(_next_state: process_states.State) -> t.Any:
                 try:
                     new_state = self._create_state_instance(ProcessState.KILLED, msg=exception.msg)
                     self.transition_to(new_state)
@@ -1157,7 +1160,8 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
             return futures.CancellableAction(do_kill, cookie=exception, loop=self.loop)
 
-        raise ValueError(f"Got unknown interruption type '{type(exception)}'")
+        msg = f"Got unknown interruption type '{type(exception)}'"
+        raise ValueError(msg)
 
     def _set_interrupt_action(self, new_action: futures.CancellableAction | None) -> None:
         """
@@ -1191,7 +1195,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         return True
 
     @event(from_states=process_states.Waiting)
-    def resume(self, *args: Any) -> None:
+    def resume(self, *args: t.Any) -> None:
         """Start running the process again."""
         return self._state.resume(*args)  # type: ignore[attr-defined]
 
@@ -1235,7 +1239,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
             self._set_interrupt_action_from_exception(interrupt_exception)
             self._killing = self._interrupt_action
             self._state.interrupt(interrupt_exception)
-            return cast(futures.CancellableAction, self._interrupt_action)
+            return t.cast(futures.CancellableAction, self._interrupt_action)
 
         msg = MessageBuilder.kill(text=msg_text, force_kill=force_kill)
         new_state = self._create_state_instance(ProcessState.KILLED, msg=msg)
@@ -1256,7 +1260,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
         :return: A Created state
         """
-        return cast(
+        return t.cast(
             process_states.State,
             self.get_state_class(ProcessState.CREATED)(self, self.run),
         )
@@ -1269,19 +1273,19 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         :return: An instance of the object with its state loaded from the save state.
         """
         load_context = persistence.CheckpointContext(process=self)
-        return cast(process_states.State, persistence.CheckpointSerializable.load(saved_state, load_context))
+        return t.cast(process_states.State, persistence.CheckpointSerializable.load(saved_state, load_context))
 
     # endregion
 
     # region Execution related methods
 
-    async def run(self) -> Any:
+    async def run(self) -> t.Any:
         """This function will be run when the process is triggered.
         It should be overridden by a subclass.
         """
 
     @ensure_not_closed
-    def execute(self) -> dict[str, Any] | None:
+    def execute(self) -> dict[str, t.Any] | None:
         """Execute the process synchronously.
 
         :return: None if not terminated, otherwise `self.outputs`
@@ -1354,7 +1358,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
     # endregion
 
     @ensure_not_closed
-    def out(self, output_port: str, value: Any) -> None:
+    def out(self, output_port: str, value: t.Any) -> None:
         """
         Record an output value for a specific output port. If the output port matches an
         explicitly defined Port it will be validated against that. If not it will be validated
@@ -1387,16 +1391,14 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
 
             if namespace_name not in port_namespace:
                 if not port_namespace.dynamic:
-                    raise ValueError(
-                        f"port '{namespace_name}' does not exist in port namespace '{port_namespace.name}'"
-                    )
+                    msg = f"port '{namespace_name}' does not exist in port namespace '{port_namespace.name}'"
+                    raise ValueError(msg)
                 break
 
             port = port_namespace[namespace_name]
             if not isinstance(port, ports.PortNamespace):
-                raise ValueError(
-                    f"port '{namespace_name}' in port namespace '{port_namespace.name}' is not a namespace"
-                )
+                msg = f"port '{namespace_name}' in port namespace '{port_namespace.name}' is not a namespace"
+                raise ValueError(msg)
 
             port_namespace = port
             unresolved_path.pop(0)
@@ -1422,7 +1424,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         output_namespace[port_name] = value
         self.on_output_emitted(output_port, value, is_dynamic_output)
 
-    def _encode_input_args(self, inputs: Any) -> Any:
+    def _encode_input_args(self, inputs: t.Any) -> t.Any:
         """
         Encode input arguments such that they may be saved in a checkpoint payload.
         The encoded inputs should contain no reference to the inputs that were passed in.
@@ -1433,7 +1435,7 @@ class Process(StateMachine, persistence.CheckpointSerializable, metaclass=Proces
         """
         return copy.deepcopy(inputs)
 
-    def _decode_input_args(self, encoded: Any) -> Any:
+    def _decode_input_args(self, encoded: t.Any) -> t.Any:
         """
         Decode saved input arguments as they came from the saved instance state
         :class:`aiida.engine.processes.persistence.CheckpointPayload`.

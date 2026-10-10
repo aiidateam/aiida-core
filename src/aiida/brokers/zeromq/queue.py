@@ -13,9 +13,9 @@ from __future__ import annotations
 import json
 import logging
 import time
+import typing as t
 from collections import deque
 from pathlib import Path
-from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class PersistentQueue:
         # Format: {timestamp}_{task_id}.json
         return filename.rsplit('.', 1)[0].split('_', 1)[1]
 
-    def push(self, task_id: str, task: dict[str, Any]) -> None:
+    def push(self, task_id: str, task: dict[str, t.Any]) -> None:
         """Add a task to the queue.
 
         The task is immediately persisted to disk using minified JSON for efficiency.
@@ -102,7 +102,7 @@ class PersistentQueue:
         self._pending.append(filename)
         _LOGGER.debug('Queued task %s', task_id)
 
-    def pop(self) -> tuple[str, dict[str, Any]] | None:
+    def pop(self) -> tuple[str, dict[str, t.Any]] | None:
         """Get the next task from the queue.
 
         The task is moved to the processing state until acked or nacked.
@@ -131,7 +131,7 @@ class PersistentQueue:
 
         return None
 
-    def peek(self) -> tuple[str, dict[str, Any]] | None:
+    def peek(self) -> tuple[str, dict[str, t.Any]] | None:
         """Peek at the next task without removing it.
 
         :return: Tuple of (task_id, task_data) or None if queue is empty
@@ -240,7 +240,7 @@ class PersistentQueue:
                 return True
         return False
 
-    def get_all_pending(self) -> list[tuple[str, dict[str, Any]]]:
+    def get_all_pending(self) -> list[tuple[str, dict[str, t.Any]]]:
         """Get all pending tasks without removing them.
 
         :return: List of (task_id, task_data) tuples
@@ -256,7 +256,7 @@ class PersistentQueue:
                 continue
         return tasks
 
-    def get_all_processing(self) -> list[tuple[str, dict[str, Any]]]:
+    def get_all_processing(self) -> list[tuple[str, dict[str, t.Any]]]:
         """Get all tasks currently being processed.
 
         :return: List of (task_id, task_data) tuples

@@ -329,10 +329,11 @@ def get_remote_and_path(calcjob: orm.CalcJobNode, path: str | None = None) -> tu
     try:
         process_class = calcjob.process_class
     except ValueError as exception:
-        raise ValueError(
+        msg = (
             f'The process class of `CalcJobNode<{calcjob.pk}>` cannot be loaded and so the default output filename '
             'cannot be determined.\nPlease specify a path explicitly.'
-        ) from exception
+        )
+        raise ValueError(msg) from exception
 
     # Try to get the default output filename from the node's associated process class spec
     port = process_class.spec_options.get('output_filename')  # type: ignore[attr-defined]
@@ -342,8 +343,9 @@ def get_remote_and_path(calcjob: orm.CalcJobNode, path: str | None = None) -> tu
     if path is not None:
         return remote_folder, path
 
-    raise ValueError(
+    msg = (
         f'`CalcJobNode<{calcjob.pk}>` does not define a default output file (option "output_filename" not found) '
         f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
         'Please specify a path explicitly.'
     )
+    raise ValueError(msg)

@@ -11,9 +11,9 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.daemon.client import DaemonClient, DaemonEnvInfo, PackageVersionInfo, PackageVersionSnapshot
 
 

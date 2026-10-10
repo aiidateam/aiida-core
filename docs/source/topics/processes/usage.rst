@@ -357,8 +357,14 @@ For example, when we want to run an instance of the :py:class:`~aiida.calculatio
 
 The function will submit the calculation to the daemon and immediately return control to the interpreter, returning the node that is used to represent the process in the provenance graph.
 
-.. warning::
-    For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
+Workers reconstruct submitted processes from their checkpoints.
+Importable process classes require their :ref:`entry point<how-to:plugin-codes:entry-points>` or :ref:`module path<how-to:faq:process-not-importable-daemon>` to be available in the worker environment.
+Classes defined in notebook cells, scripts run as ``__main__``, or local function scopes can be recorded by value in their checkpoints, provided `cloudpickle` serializes them.
+
+Imported helper modules and importable functions remain references that workers must be able to import.
+Install these helpers or include their directories in the ``PYTHONPATH`` used to start the workers.
+Captured local values are serialized with the class and must be picklable.
+Pass AiiDA nodes as process inputs, and create open connections, locks and generators inside the methods that use them: anything captured at definition time must pickle into the checkpoint, and these never do.
 
 .. versionadded:: 2.5
     Waiting on a process
@@ -451,7 +457,7 @@ In an interactive shell, you can get this information to display as follows::
         "name": "code",
         "required": "True"
         "non_db": "False"
-        "valid_type": "<class 'aiida.orm.nodes.data.code.abstract.AbstractCode'>"
+        "valid_type": "<class 'aiida.orm.nodes.data.code.Code'>"
         "help": "The Code to use for this job.",
 
 In the ``Docstring`` you will see a ``help`` string that contains more detailed information about the input port.

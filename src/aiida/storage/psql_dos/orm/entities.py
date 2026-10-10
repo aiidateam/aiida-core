@@ -8,17 +8,17 @@
 ###########################################################################
 """Classes and methods for Django specific backend entities"""
 
-from typing import Generic, TypeVar
+import typing as t
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.models.base import Base
 from aiida.storage.psql_dos.orm import utils
 
-ModelType = TypeVar('ModelType')
-SelfType = TypeVar('SelfType', bound='SqlaModelEntity')
+ModelType = t.TypeVar('ModelType')
+SelfType = t.TypeVar('SelfType', bound='SqlaModelEntity')
 
 
-class SqlaModelEntity(Generic[ModelType]):
+class SqlaModelEntity(t.Generic[ModelType]):
     """A mixin that adds some common SQLA backend entity methods"""
 
     MODEL_CLASS = None

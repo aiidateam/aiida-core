@@ -8,7 +8,7 @@
 ###########################################################################
 """Utilities for testing components from the workflow engine"""
 
-from aiida.engine import Process
+from aiida.engine import Process, calcfunction
 from aiida.engine.processes.states import Wait
 from aiida.orm import Bool, CalcJobNode, Data, WorkflowNode
 
@@ -114,3 +114,9 @@ class IsValidCacheHook(Process):
     @classmethod
     def is_valid_cache(cls, node):
         return super().is_valid_cache(node) and not node.inputs.not_valid_cache.value
+
+
+@calcfunction
+def notebook_add(x):
+    """Increment an integer node."""
+    return x + 1

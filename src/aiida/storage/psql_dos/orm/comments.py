@@ -129,7 +129,8 @@ class SqlaCommentCollection(BackendCommentCollection):
             session.commit()
         except NoResultFound:
             session.rollback()
-            raise exceptions.NotExistent(f"Comment with id '{comment_id}' not found")
+            msg = f"Comment with id '{comment_id}' not found"
+            raise exceptions.NotExistent(msg)
 
     def delete_all(self):
         """Delete all Comment entries.
@@ -143,7 +144,8 @@ class SqlaCommentCollection(BackendCommentCollection):
             session.commit()
         except Exception as exc:
             session.rollback()
-            raise exceptions.IntegrityError(f'Could not delete all Comments. Full exception: {exc}')
+            msg = f'Could not delete all Comments. Full exception: {exc}'
+            raise exceptions.IntegrityError(msg)
 
     def delete_many(self, filters):
         """Delete Comments based on ``filters``

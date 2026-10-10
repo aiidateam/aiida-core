@@ -112,7 +112,8 @@ class EnumData(Data):
         try:
             return get_object_loader().load_object(identifier)
         except ValueError as exc:
-            raise ImportError(f'Could not reconstruct enum class because `{identifier}` could not be loaded.') from exc
+            msg = f'Could not reconstruct enum class because `{identifier}` could not be loaded.'
+            raise ImportError(msg) from exc
 
     def get_member(self) -> EnumType:  # type: ignore[type-var]
         """Return the enum member reconstructed from the serialized data stored in the database.
@@ -130,10 +131,11 @@ class EnumData(Data):
         try:
             return enum(value)
         except ValueError as exc:
-            raise ValueError(
+            msg = (
                 f'The stored value `{value}` is no longer a valid value for the enum `{enum}`. The definition must '
                 'have changed since storing the node.'
-            ) from exc
+            )
+            raise ValueError(msg) from exc
 
     def __eq__(self, other: t.Any) -> bool:
         """Return whether the other object is equivalent to ourselves."""

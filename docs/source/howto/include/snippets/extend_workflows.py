@@ -10,7 +10,7 @@
 """Code snippets for the "How to extend workflows" section."""
 
 from aiida.engine import ToContext, WorkChain, calcfunction
-from aiida.orm import AbstractCode, Bool, Int
+from aiida.orm import Bool, Code, Int
 from aiida.plugins.factories import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
@@ -37,7 +37,7 @@ class MultiplyAddWorkChain(WorkChain):
         spec.input('x', valid_type=Int)
         spec.input('y', valid_type=Int)
         spec.input('z', valid_type=Int)
-        spec.input('code', valid_type=AbstractCode)
+        spec.input('code', valid_type=Code)
         spec.outline(
             cls.multiply,
             cls.add,
@@ -80,7 +80,7 @@ class BadMultiplyAddIsEvenWorkChain(WorkChain):
         spec.input('x', valid_type=Int)
         spec.input('y', valid_type=Int)
         spec.input('z', valid_type=Int)
-        spec.input('code', valid_type=AbstractCode)
+        spec.input('code', valid_type=Code)
         spec.outline(
             cls.multiply,
             cls.add,
@@ -125,7 +125,7 @@ class BetterMultiplyAddIsEvenWorkChain(WorkChain):
         spec.input('x', valid_type=Int)
         spec.input('y', valid_type=Int)
         spec.input('z', valid_type=Int)
-        spec.input('code', valid_type=AbstractCode)
+        spec.input('code', valid_type=Code)
         spec.outline(
             cls.multiply_add,
             cls.is_even,

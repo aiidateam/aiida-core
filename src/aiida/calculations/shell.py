@@ -155,7 +155,8 @@ class ShellJob(CalcJob):
         if isinstance(arguments, list):
             return List(arguments)  # type: ignore[no-untyped-call]
 
-        raise TypeError(f'`arguments` should be a string or a list of strings but got: {type(value)}')
+        msg = f'`arguments` should be a string or a list of strings but got: {type(value)}'  # type: ignore[unreachable]
+        raise TypeError(msg)
 
     @classmethod
     def serialize_parser(cls, value: t.Any) -> EntryPointData | PickledData:

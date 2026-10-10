@@ -31,4 +31,5 @@ def verify_uuid_uniqueness(table: str, connection):
     """Check whether database table contains rows with duplicate UUIDS."""
     duplicates = _get_duplicate_uuids(table=table, connection=connection)
     if duplicates.rowcount > 0:
-        raise exceptions.IntegrityError(f'Table {table} contains rows with duplicate UUIDS')
+        msg = f'Table {table} contains rows with duplicate UUIDS'
+        raise exceptions.IntegrityError(msg)

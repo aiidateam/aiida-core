@@ -112,7 +112,8 @@ def _make_hash(object_to_hash: t.Any, **_: t.Any) -> list[bytes]:
     """Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
-    raise HashingError(f'Value of type {type(object_to_hash)} cannot be hashed')
+    msg = f'Value of type {type(object_to_hash)} cannot be hashed'
+    raise HashingError(msg)
 
 
 def _single_digest(obj_type: str, obj_bytes: bytes = b'') -> bytes:

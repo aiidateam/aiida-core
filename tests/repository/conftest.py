@@ -2,13 +2,13 @@
 
 import os
 import pathlib
-import typing
+import typing as t
 
 import pytest
 
 
 @pytest.fixture
-def generate_directory(tmp_path: pathlib.Path) -> typing.Callable:
+def generate_directory(tmp_path: pathlib.Path) -> t.Callable:
     """Construct a temporary directory with some arbitrary file hierarchy in it."""
 
     def _generate_directory(metadata: dict | None = None) -> pathlib.Path:

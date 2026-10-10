@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
@@ -20,7 +20,7 @@ from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.executors.group')
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools._dumping.config import GroupDumpConfig
     from aiida.tools._dumping.executors import ProcessDumpExecutor
     from aiida.tools._dumping.mapping import GroupNodeMapping

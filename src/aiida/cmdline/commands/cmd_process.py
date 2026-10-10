@@ -86,6 +86,7 @@ def verdi_process():
 @options.FAILED()
 @options.PAST_DAYS()
 @options.LIMIT()
+@options.ONLY_ROOTS()
 @options.RAW()
 @click.pass_context
 @decorators.with_dbenv()
@@ -100,6 +101,7 @@ def process_list(
     failed,
     past_days,
     limit,
+    only_roots,
     project,
     raw,
     order_by,
@@ -125,7 +127,9 @@ def process_list(
         relationships['with_node'] = group
 
     builder = CalculationQueryBuilder()
-    filters = builder.get_filters(all_entries, process_state, process_label, paused, exit_status, failed)
+    filters = builder.get_filters(
+        all_entries, process_state, process_label, paused, exit_status, failed, only_roots=only_roots
+    )
     query_set = builder.get_query_set(
         relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit
     )

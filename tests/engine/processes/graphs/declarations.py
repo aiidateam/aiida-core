@@ -141,19 +141,19 @@ def fail_always(x: int) -> int:
 @task
 def mistyped_output(x: int) -> int:
     """Return a mistyped value, rejected at runtime."""
-    return 'wrong'  # pyright: ignore[reportReturnType] - rejected at runtime
+    return 'wrong'  # rejected at runtime
 
 
 @task
 def mistyped_list(x: int) -> list[int]:
     """Return a mistyped collection, rejected at runtime."""
-    return {'value': x}  # pyright: ignore[reportReturnType] - rejected at runtime
+    return {'value': x}  # rejected at runtime
 
 
 @task
 def mistyped_dict(x: int) -> dict[str, int]:
     """Return a mistyped mapping, rejected at runtime."""
-    return [x]  # pyright: ignore[reportReturnType] - rejected at runtime
+    return [x]  # rejected at runtime
 
 
 @task
@@ -494,7 +494,7 @@ def fanout(values: list[int]) -> int:  # why does fail, is it not just the rebin
     """
     for value in values:
         result = add(x=value, y=1)
-    return result  # pyright: ignore[reportPossiblyUnboundVariable] - rejected at lowering
+    return result  # rejected at lowering
 
 
 @graph
@@ -537,7 +537,6 @@ def namespace_return(config: Configuration) -> Configuration:
     return config
 
 
-# TODO: check
 @graph
 def nested_outputs(x: int) -> dict[str, dict[str, int]]:
     """Return nested outputs; outputs are flat leaves.
@@ -554,7 +553,7 @@ def nested_outputs(x: int) -> dict[str, dict[str, int]]:
 
 
 @graph
-def missing_final_return(value: int) -> int:  # pyright: ignore[reportReturnType] - rejected at lowering
+def missing_final_return(value: int) -> int:  # rejected at lowering
     """End without a return; graphs declare their outputs explicitly.
 
     Declare the output instead:
@@ -603,4 +602,4 @@ def unbound(value: int) -> int:
     >>>     total = add(x=x, y=1)
     >>>     return add(x=total, y=1)
     """
-    return add(x=value, y=missing)  # pyright: ignore[reportUndefinedVariable]  # noqa: F821 - unbound names must fail at lowering
+    return add(x=value, y=missing)  # noqa: F821 - unbound names must fail at lowering

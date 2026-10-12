@@ -124,10 +124,14 @@ class GraphProcess(Process):
         return self._finish()
 
     def _submit(self, start: Start) -> None:
-        if not isinstance(start.task, ProcessTask):
+        process_class: type[Process]
+        if start.body is not None:
+            process_class, inputs = GraphProcess, self.launch_inputs(start.body, start.inputs)
+        elif isinstance(start.task, ProcessTask):
+            process_class, inputs = start.task.spec.process_class, start.inputs
+        else:
             msg = f'unsupported task `{start.task.name}`.'
             raise ValueError(msg)
-        process_class, inputs = start.task.spec.process_class, start.inputs
         metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
         node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None

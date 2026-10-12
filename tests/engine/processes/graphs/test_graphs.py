@@ -9,15 +9,23 @@
 """Execution contracts for straight-line source graphs."""
 
 import json
+import typing as t
 
 import pytest
 
 from aiida.common.exceptions import MissingRequiredInputsError
 from aiida.common.links import LinkType
-from aiida.engine import GraphProcess, GraphSpec, run_get_node
+from aiida.engine.launch import run_get_node
+from aiida.engine.processes.graphs.interface import GraphHandle
+from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.run import GraphRun
-from aiida.orm import Dict, GraphNode, Int
-from tests.engine.processes.graphs import cases
+from aiida.engine.processes.graphs.spec import GraphSpec
+from aiida.engine.processes.graphs.tasks import TaskHandle
+from aiida.orm.nodes.data.dict import Dict
+from aiida.orm.nodes.data.int import Int
+from aiida.orm.nodes.process.process import ProcessNode
+from aiida.orm.nodes.process.workflow.graph import GraphNode
+from tests.engine.processes.graphs import declarations
 
 pytestmark = pytest.mark.presto
 
@@ -26,23 +34,30 @@ pytestmark = pytest.mark.presto
 @pytest.mark.parametrize(
     'declaration, inputs, expected',
     [
-        pytest.param(cases.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
-        pytest.param(cases.diamond, {'x': 2}, {'result': 7}, id='diamond'),
-        pytest.param(cases.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
+        pytest.param(declarations.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
+        pytest.param(declarations.diamond, {'x': 2}, {'result': 7}, id='diamond'),
+        pytest.param(declarations.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
         pytest.param(
-            cases.selected,
+            declarations.selected,
             {'config': {'settings': {'count': 2, 'nullable': None}}},
             {'result': 3},
             id='namespace-field',
         ),
-        pytest.param(cases.dictionary_input, {'values': {'answer': 42}}, {'result': 42}, id='dictionary-leaf'),
-        pytest.param(cases.ordered, {'x': 2}, {'result': 3}, id='ordering-without-output'),
-        pytest.param(cases.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
+        pytest.param(declarations.dictionary_input, {'values': {'answer': 42}}, {'result': 42}, id='dictionary-leaf'),
+        pytest.param(declarations.ordered, {'x': 2}, {'result': 3}, id='ordering-without-output'),
+        pytest.param(declarations.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
+        pytest.param(
+            declarations.summarize,
+            {'values': [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]},
+            {'mean': 5.0, 'stdev': 2.0},
+            id='plain-python-body',
+        ),
+        pytest.param(declarations.input_passthrough, {'value': 4}, {'value': 4}, id='input-passthrough'),
     ],
 )
 @pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])
 def test_supported_graph_syntax_executes(
-    declaration, inputs: dict[str, object], expected: dict[str, int], serialized: bool
+    declaration: GraphHandle, inputs: dict[str, t.Any], expected: dict[str, int], serialized: bool
 ) -> None:
     """Supported declarations and their JSON representations return exact named values."""
     if serialized:
@@ -56,20 +71,65 @@ def test_supported_graph_syntax_executes(
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_orm_typed_inputs_arrive_as_nodes() -> None:
-    outputs, node = run_get_node(cases.orm_passthrough, value=Int(4))
+    outputs, node = run_get_node(declarations.orm_passthrough, value=Int(4))
     assert node.is_finished_ok
     assert outputs['result'].value == 4
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_task_body_runs_plain_python() -> None:
+    """Task bodies execute with imports, loops, and comprehensions; only graph bodies lower."""
+    outputs, node = run_get_node(declarations.statistics, values=[2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])
+    assert node.is_finished_ok
+    assert outputs['mean'].value == 5.0
+    assert outputs['stdev'].value == 2.0
+
+
+def test_task_after_kwarg_rejected_outside_graphs() -> None:
+    """`after` orders graph placements; direct task calls reject it."""
+    with pytest.raises(TypeError, match='after'):
+        declarations.add(x=1, y=1, after='x')
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, inputs, expected',
+    [
+        pytest.param(declarations.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested'),
+    ],
+)
+def test_composition_executes(declaration: GraphHandle, inputs: dict[str, t.Any], expected: dict[str, int]) -> None:
+    """Nested graph calls return exact values."""
+    outputs, node = run_get_node(declaration, **inputs)
+    assert node.is_finished_ok
+    assert {name: value.value for name, value in outputs.items()} == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_graph_has_child_workflow_provenance() -> None:
+    """A nested declaration executes as a child graph with its own task calls."""
+    outputs, node = run_get_node(declarations.nested_multiply_add, x=2, y=3, z=4)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 11
+    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(calls) == {'multiply_add'}
+    child = calls['multiply_add']
+    assert isinstance(child, GraphNode)
+    assert child.is_finished_ok
+    assert child.outputs.result.value == 10
+    children: dict[str, ProcessNode] = child.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert set(children) == {'multiply', 'add'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_multiply_add_preserves_named_outputs_and_original_input() -> None:
     """The arithmetic graph retains input identity and returns the addition output."""
     original: Int = Int(2)
-    outputs, node = run_get_node(cases.multiply_add, x=original, y=3, z=4)
+    outputs, node = run_get_node(declarations.multiply_add, x=original, y=3, z=4)
     assert node.is_finished_ok
     assert set(outputs) == {'result'}
     assert outputs['result'].value == 10
-    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
     assert set(calls) == {'multiply', 'add'}
     assert node.inputs.graph_inputs.x.uuid == original.uuid
     assert calls['multiply'].inputs.x.uuid == original.uuid
@@ -81,7 +141,7 @@ def test_multiply_add_preserves_named_outputs_and_original_input() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_chain_has_no_created_outputs() -> None:
     """Graphs return existing nodes instead of creating data."""
-    outputs, node = run_get_node(cases.chain, x=2, y=3)
+    outputs, node = run_get_node(declarations.chain, x=2, y=3)
     assert node.is_finished_ok
     assert outputs['result'].value == 8
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
@@ -90,7 +150,7 @@ def test_chain_has_no_created_outputs() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_dictionary_leaf_is_a_single_node() -> None:
     """Dictionary leaves store as one node shared by caller and task."""
-    outputs, node = run_get_node(cases.dictionary_input, values={'answer': 42})
+    outputs, node = run_get_node(declarations.dictionary_input, values={'answer': 42})
     assert outputs['result'].value == 42
     linked = node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('graph_inputs__values')
     assert isinstance(linked, Dict)
@@ -101,21 +161,21 @@ def test_dictionary_leaf_is_a_single_node() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_missing_inputs_are_aggregated() -> None:
     with pytest.raises(MissingRequiredInputsError) as caught:
-        cases.whole.get_launch_inputs(config={'settings': {}})
+        declarations.whole.get_launch_inputs(config={'settings': {}})
     assert 'config.settings.nullable' in str(caught.value)
     with pytest.raises(MissingRequiredInputsError):
-        cases.chain.get_launch_inputs()
+        declarations.chain.get_launch_inputs()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_unexpected_inputs_are_rejected() -> None:
     with pytest.raises(TypeError, match='unexpected keyword argument'):
-        cases.chain.get_launch_inputs(x=1, y=2, surprise=3)
+        declarations.chain.get_launch_inputs(x=1, y=2, surprise=3)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_task_failure_does_not_dispatch_downstream() -> None:
-    outputs, node = run_get_node(cases.failed, x=2)
+    outputs, node = run_get_node(declarations.failed, x=2)
     assert node.exit_status == 400
     assert outputs == {}
     assert len(node.called) == 1
@@ -123,9 +183,10 @@ def test_task_failure_does_not_dispatch_downstream() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_ordering_is_a_scheduler_dependency() -> None:
-    state = GraphRun(cases.ordered.build(), given={'x': Int(2)})
+    state = GraphRun(declarations.ordered.build(), given={'x': Int(2)})
     assert [start.instance for start in state.step().starts] == ['prepare']
-    _, completed = cases.prepare.run_get_node(value=2)
+    _, completed = declarations.prepare.run_get_node(value=2)
+    assert completed.pk is not None
     state.started('prepare', completed.pk)
     state.completed('prepare', completed.pk)
     assert [start.instance for start in state.step().starts] == ['add']
@@ -134,13 +195,13 @@ def test_ordering_is_a_scheduler_dependency() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_raw_graph_launch_uses_fixed_boundary_contract() -> None:
     outputs, node = run_get_node(
-        GraphProcess, graph=Dict(dict=cases.chain.build().to_dict()), graph_inputs={'x': 2, 'y': 3}
+        GraphProcess, graph=Dict(dict=declarations.chain.build().to_dict()), graph_inputs={'x': 2, 'y': 3}
     )
     assert node.is_finished_ok
     assert outputs['result'].value == 8
     assert isinstance(node, GraphNode)
     with pytest.raises(MissingRequiredInputsError):
-        GraphProcess(inputs={'graph': Dict(dict=cases.chain.build().to_dict()), 'graph_inputs': {'x': 2}})
+        GraphProcess(inputs={'graph': Dict(dict=declarations.chain.build().to_dict()), 'graph_inputs': {'x': 2}})
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -148,13 +209,14 @@ def test_checkpoint_preserves_boundary_node_and_runtime_values() -> None:
     from aiida.engine.processes.persistence import CheckpointPayload
 
     original = Int(2)
-    process = GraphProcess(inputs=cases.chain.get_launch_inputs(x=original, y=3))
+    process = GraphProcess(inputs=declarations.chain.get_launch_inputs(x=original, y=3))
     restored = None
     try:
         assert process.inputs.graph_inputs.x == 2
         checkpoint = CheckpointPayload.from_object(process)
         process.close()
         restored = checkpoint.decode()
+        assert isinstance(restored, GraphProcess)
         assert restored.inputs.graph_inputs.x == 2
         assert restored.run_state.given['x'].uuid == original.uuid
         assert restored.run_state.to_dict() == process.run_state.to_dict()
@@ -169,9 +231,10 @@ def test_checkpoint_preserves_boundary_node_and_runtime_values() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_checkpointed_scheduler_does_not_repeat_completed_tasks() -> None:
-    state = GraphRun(cases.chain.build(), given={'x': Int(2), 'y': Int(3)})
+    state = GraphRun(declarations.chain.build(), given={'x': Int(2), 'y': Int(3)})
     assert [start.instance for start in state.step().starts] == ['add']
-    _, completed = cases.add.run_get_node(x=2, y=3)
+    _, completed = declarations.add.run_get_node(x=2, y=3)
+    assert completed.pk is not None
     state.started('add', completed.pk)
     state.completed('add', completed.pk)
     restored = GraphRun.from_dict(state.graph, state.given, state.to_dict())
@@ -183,8 +246,8 @@ def test_run_state_versions_its_checkpoints() -> None:
     """Scheduler checkpoints carry a version; unknown ones fail loudly, old ones load."""
     from aiida.engine.processes.graphs.run import STATE_VERSION
 
-    state = GraphRun(cases.chain.build(), given={'x': Int(2), 'y': Int(3)})
-    assert state.to_dict()['version'] == STATE_VERSION
+    state = GraphRun(declarations.chain.build(), given={'x': Int(2), 'y': Int(3)})
+    assert state.to_dict().get('version') == STATE_VERSION
     saved = state.to_dict()
     GraphRun.from_dict(state.graph, state.given, {key: value for key, value in saved.items() if key != 'version'})
     with pytest.raises(ValueError, match='graph run'):
@@ -196,8 +259,8 @@ def test_tasks_are_cached() -> None:
     from aiida.manage.caching import enable_caching
 
     with enable_caching(identifier='*'):
-        _, first = run_get_node(cases.chain, x=11, y=2)
-        outputs, again = run_get_node(cases.chain, x=11, y=2)
+        _, first = run_get_node(declarations.chain, x=11, y=2)
+        outputs, again = run_get_node(declarations.chain, x=11, y=2)
     assert first.is_finished_ok and again.is_finished_ok
     assert outputs['result'].value == 15
     assert all(not child.base.caching.is_created_from_cache for child in first.called)
@@ -206,9 +269,13 @@ def test_tasks_are_cached() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
-    'function', [pytest.param(cases.wrong_list, id='list'), pytest.param(cases.wrong_dict, id='dict')]
+    'function',
+    [
+        pytest.param(declarations.mistyped_list, id='list'),
+        pytest.param(declarations.mistyped_dict, id='dict'),
+    ],
 )
-def test_parameterized_output_annotation_rejects_other_container(function) -> None:
+def test_parameterized_output_annotation_rejects_other_container(function: TaskHandle[t.Any, t.Any]) -> None:
     with pytest.raises(ValueError, match='not of the right type'):
         run_get_node(function, x=3)
 
@@ -216,4 +283,4 @@ def test_parameterized_output_annotation_rejects_other_container(function) -> No
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_invalid_output_is_rejected_at_runtime() -> None:
     with pytest.raises(ValueError, match='not of the right type'):
-        run_get_node(cases.wrong_output, x=1)
+        run_get_node(declarations.mistyped_output, x=1)

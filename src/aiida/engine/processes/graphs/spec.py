@@ -23,12 +23,18 @@ from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, i
 from aiida.engine.processes.process import Process
 from aiida.orm import Data
 
-__all__ = ('Dependency', 'Endpoint', 'GraphSpec', 'ProcessTask', 'TaskSpec')
+__all__ = (
+    'Dependency',
+    'Endpoint',
+    'GraphSpec',
+    'ProcessTask',
+    'SubgraphTask',
+    'TaskSpec',
+)
 
 SPEC_VERSION = '0.1'
 TASK_SPEC_VERSION = '0.1'
-CONDITION_PORT = 'condition'
-TaskKind = t.Literal['process']
+TaskKind = t.Literal['process', 'graph']
 
 
 def readable_version(version: object, supported: str, what: str) -> str:
@@ -225,8 +231,31 @@ class GraphTask(abc.ABC):
         kind = data.get('kind')
         if kind == 'process':
             return ProcessTask(spec=TaskSpec.from_dict(data['spec']), **common)
+        body = GraphSpec.from_dict(data['body']) if kind == 'graph' else None
+        if kind == 'graph':
+            assert body is not None
+            return SubgraphTask(body=body, **common)
         msg = f'unsupported graph task kind `{kind}`.'
         raise ValueError(msg)
+
+
+@dataclass(frozen=True, kw_only=True)
+class BodyTask(GraphTask):
+    body: GraphSpec
+
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        return (self.body.input_spec(),)
+
+    def output_ports(self) -> PortNamespace:
+        return self.body.output_spec()
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {**super().to_dict(), 'body': self.body.to_dict()}
+
+
+@dataclass(frozen=True, kw_only=True)
+class SubgraphTask(BodyTask):
+    KIND: t.ClassVar[TaskKind] = 'graph'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -352,11 +381,10 @@ class GraphSpec:
         if hint:
             return tuple(kind for declared in hint for kind in infer_valid_type_from_type_annotation(declared))
         if isinstance(origin, InputPort):
-            return tuple(
-                kind
-                for declared in (origin.valid_type or ())
-                for kind in infer_valid_type_from_type_annotation(declared)
-            )
+            kinds = origin.valid_type or ()
+            if isinstance(kinds, type):
+                kinds = (kinds,)
+            return tuple(kind for declared in kinds for kind in infer_valid_type_from_type_annotation(declared))
         return origin.valid_type
 
     def prepare_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:
@@ -402,12 +430,7 @@ class GraphSpec:
             if not isinstance(source, PortNamespace) or not isinstance(target, PortNamespace):
                 msg = f'{context} has incompatible value and namespace shapes.'
                 raise ValueError(msg)
-            for name, child in target.items():
-                if name in source:
-                    GraphSpec._check_types(source[name], child, context)
-                elif child.required:
-                    msg = f'{context} is missing required field `{name}`.'
-                    raise ValueError(msg)
+            GraphSpec._check_namespaces(source, target, context)
             return
 
         produced, accepted = _stored_types(source), _stored_types(target)
@@ -419,6 +442,16 @@ class GraphSpec:
         ):
             msg = f'{context} has incompatible types: {produced} cannot feed {accepted}.'
             raise ValueError(msg)
+
+    @staticmethod
+    def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str) -> None:
+        """Check that shared fields agree and required fields exist."""
+        for name, child in target.items():
+            if name in source:
+                GraphSpec._check_types(source[name], child, context)
+            elif child.required:
+                msg = f'{context} is missing required field `{name}`.'
+                raise ValueError(msg)
 
     def validate(self) -> None:
         if len(set(self.task_names)) != len(self.task_names):
@@ -436,31 +469,40 @@ class GraphSpec:
     def _validate_inputs(self, boundary: PortNamespace) -> None:
         """Check that routed graph inputs name known task inputs of compatible types."""
         for name, targets in self.inputs.items():
-            origin = port_at(boundary, name)
-            for task_name, path in targets:
-                task = self.task(task_name)
-                ports = self._input_ports_at(task, path)
-                if not ports:
-                    msg = f'input `{name}` refers to unknown input `{task_name}.{path}`.'
-                    raise ValueError(msg)
-                for target in ports:
-                    self._check_types(origin, target, f'graph input `{name}`')
+            for route in targets:
+                self._validate_routed_input(boundary, name, route)
+
+    def _validate_routed_input(self, boundary: PortNamespace, name: str, route: Route) -> None:
+        """Check that one routed graph input names a known task input of compatible type."""
+        task = self.task(route.task)
+        ports = self._input_ports_at(task, route.port)
+        if not ports:
+            msg = f'input `{name}` refers to unknown input `{route.task}.{route.port}`.'
+            raise ValueError(msg)
+        origin = port_at(boundary, name)
+        for target in ports:
+            self._check_types(origin, target, f'graph input `{name}`')
 
     def _validate_dependencies(self) -> None:
         """Check that valued dependencies connect known outputs to compatible inputs."""
         for edge in self.dependencies:
-            source, target = self.task(edge.source), self.task(edge.target)
-            if edge.carried_between is not None:
-                origin = port_at(source.output_ports(), edge.source_port or '')
-                ports = self._input_ports_at(target, edge.target_port or '')
-                if origin is None or isinstance(origin, PortNamespace):
-                    msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
-                    raise ValueError(msg)
-                if not ports:
-                    msg = f'dependency refers to unknown input `{edge.target}.{edge.target_port}`.'
-                    raise ValueError(msg)
-                for port in ports:
-                    self._check_types(origin, port, f'dependency `{edge.source}` to `{edge.target}`')
+            self._validate_edge(edge)
+
+    def _validate_edge(self, edge: Dependency) -> None:
+        """Check that one valued dependency connects a known output to compatible inputs."""
+        source, target = self.task(edge.source), self.task(edge.target)
+        if edge.carried_between is None:
+            return
+        origin = port_at(source.output_ports(), edge.source_port or '')
+        ports = self._input_ports_at(target, edge.target_port or '')
+        if origin is None or isinstance(origin, PortNamespace):
+            msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
+            raise ValueError(msg)
+        if not ports:
+            msg = f'dependency refers to unknown input `{edge.target}.{edge.target_port}`.'
+            raise ValueError(msg)
+        for port in ports:
+            self._check_types(origin, port, f'dependency `{edge.source}` to `{edge.target}`')
 
     def _validate_outputs(self, boundary: PortNamespace) -> None:
         """Check that graph outputs reference declared leaves of compatible types."""

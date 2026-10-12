@@ -92,9 +92,17 @@ def shape_for_annotation(
     return LeafShape(types=types, **options)
 
 
-def shape_for_annotations(hints: Mapping[str, object], names: tuple[str, ...]) -> NamespaceShape:
+def shape_for_annotations(
+    hints: Mapping[str, object], names: tuple[str, ...], defaults: Mapping[str, object] | None = None
+) -> NamespaceShape:
     """Capture the named inputs of a source graph."""
-    return NamespaceShape(fields=tuple((name, shape_for_annotation(hints.get(name))) for name in names))
+    given = defaults or {}
+    return NamespaceShape(fields=tuple((name, _shaped(hints.get(name), name, given)) for name in names))
+
+
+def _shaped(hint: object, name: str, given: Mapping[str, object]) -> Shape:
+    """Capture one named input with its literal default, if any."""
+    return shape_for_annotation(hint, required=name not in given, default=given.get(name, UNSPECIFIED))
 
 
 def json_default(value: object) -> object:

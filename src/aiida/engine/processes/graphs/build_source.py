@@ -19,7 +19,7 @@ import inspect
 import typing as t
 from collections import Counter
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from aiida.common.exceptions import UnsupportedSyntax
 from aiida.engine.processes.graphs.inputs import place
@@ -28,10 +28,19 @@ from aiida.engine.processes.graphs.shapes import (
     NamespaceShape,
     Shape,
     dump_shape,
+    json_default,
     shape_for_annotation,
     shape_for_annotations,
 )
-from aiida.engine.processes.graphs.spec import Dependency, Endpoint, GraphSpec, ProcessTask, Route, TaskSpec
+from aiida.engine.processes.graphs.spec import (
+    Dependency,
+    Endpoint,
+    GraphSpec,
+    ProcessTask,
+    Route,
+    SubgraphTask,
+    TaskSpec,
+)
 from aiida.engine.processes.graphs.tasks import (
     _SOURCE_REGISTRY,
     TaskHandle,
@@ -64,8 +73,6 @@ def task(function: Callable[P, R]) -> TaskHandle[P, R]: ...
 def task(
     function: None = None, *, outputs: tuple[str, ...] | None = None
 ) -> Callable[[Callable[P, R]], TaskHandle[P, R]]: ...
-
-
 def task(function: Callable[..., t.Any] | None = None, *, outputs: tuple[str, ...] | None = None) -> t.Any:
     """Register an importable task with static outputs and fixed input namespaces.
 
@@ -146,7 +153,7 @@ class _Reference:
 class _LoweringState:
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask] = field(default_factory=list)
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -167,18 +174,40 @@ def _parse_function(definition: _SourceDefinition) -> ast.FunctionDef:
 
 def _check_signature(state: _LoweringState, function: ast.FunctionDef) -> None:
     """Reject parameter kinds the graph compiler cannot represent."""
-    if function.args.posonlyargs or function.args.kwonlyargs or function.args.vararg or function.args.kwarg:
-        msg = f'{state.key}: only ordinary positional parameters are supported'
-        raise UnsupportedSyntax(msg)
-    if function.args.defaults or any(default is not None for default in function.args.kw_defaults):
-        msg = f'{state.key}: parameter defaults are not supported'
-        raise UnsupportedSyntax(msg)
+    if function.args.vararg or function.args.kwarg:
+        _reject(state, function, 'variadic parameters are not supported')
+
+
+def _parameter_defaults(state: _LoweringState, function: ast.FunctionDef) -> dict[str, t.Any]:
+    """Read literal parameter defaults, like the explicit model defaults."""
+    positional = [*function.args.posonlyargs, *function.args.args]
+    parameters = [*positional, *function.args.kwonlyargs]
+    leading = len(positional) - len(function.args.defaults)
+    raw: list[ast.expr | None] = [None] * leading
+    raw.extend(function.args.defaults)
+    raw.extend(function.args.kw_defaults)
+    defaults: dict[str, t.Any] = {}
+    for parameter, default in zip(parameters, raw):
+        if default is None:
+            continue
+        try:
+            value = ast.literal_eval(default)
+        except (ValueError, TypeError, SyntaxError):
+            _reject(state, default, f'parameter default for `{parameter.arg}` must be a literal')
+        try:
+            json_default(value)
+        except TypeError:
+            _reject(state, default, f'parameter default for `{parameter.arg}` must be a finite JSON value')
+        defaults[parameter.arg] = value
+    return defaults
 
 
 def _declare_graph_inputs(state: _LoweringState, function: ast.FunctionDef) -> NamespaceShape:
     """Route every graph parameter to its input shape."""
-    boundary = shape_for_annotations(state.definition.hints, tuple(arg.arg for arg in function.args.args))
-    for arg in function.args.args:
+    parameters = [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
+    defaults = _parameter_defaults(state, function)
+    boundary = shape_for_annotations(state.definition.hints, tuple(arg.arg for arg in parameters), defaults=defaults)
+    for arg in parameters:
         state.inputs[arg.arg] = []
         shape = boundary.select(arg.arg)
         state.names[arg.arg] = _Reference(None, arg.arg, shape)
@@ -197,10 +226,16 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
         msg = f'{state.key}: graph must end in a return'
         raise UnsupportedSyntax(msg)
     for statement in statements[:-1]:
-        if isinstance(statement, ast.If):
-            _reject(state, statement, 'conditional branches are not supported')
-        elif isinstance(statement, ast.While):
-            _reject(state, statement, 'loops are not supported')
+        if isinstance(statement, (ast.For, ast.AsyncFor)):
+            _reject(state, statement, 'for loops are not supported; unroll the placements or use a while loop')
+        elif isinstance(statement, (ast.Import, ast.ImportFrom)):
+            _reject(state, statement, 'imports are not supported in graph bodies; import inside task bodies instead')
+        elif (
+            isinstance(statement, ast.Assign)
+            and len(statement.targets) == 1
+            and isinstance(statement.targets[0], ast.Tuple)
+        ):
+            _lower_unpack(state, statement)
         else:
             _lower_assignment(state, statement)
     result = statements[-1].value
@@ -252,50 +287,102 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
 
 
 def _lower_assignment(state: _LoweringState, statement: ast.stmt) -> str:
-    if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
+    if not isinstance(statement, ast.Assign) or not statement.targets:
         _reject(state, statement, 'only single-name assignments are supported')
-    target = statement.targets[0]
-    if not isinstance(target, ast.Name) or target.id in state.names:
-        _reject(state, statement, 'assignment must bind a new name')
+    names = [target.id for target in statement.targets if isinstance(target, ast.Name)]
+    if len(names) != len(statement.targets):
+        _reject(state, statement, 'only single-name assignments are supported')
+    for name in names:
+        if name in state.names:
+            _reject(state, statement, 'assignment must bind a new name')
     if not isinstance(statement.value, ast.Call):
         _reject(state, statement.value, 'graph assignments must call a registered task or graph')
-    state.names[target.id] = _lower_call(state, statement.value)
-    return target.id
+    ref = _lower_call(state, statement.value)
+    for name in names:
+        state.names[name] = ref
+    return names[0]
+
+
+def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
+    """Bind each tuple element to one output of a multi-output call."""
+    target = statement.targets[0]
+    assert isinstance(target, ast.Tuple)
+    names = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
+    if not names or len(names) != len(target.elts) or any(name in state.names for name in names):
+        _reject(state, statement, 'tuple assignment must bind new names')
+    if not isinstance(statement.value, ast.Call):
+        _reject(state, statement.value, 'graph assignments must call a registered task or graph')
+    ref = _lower_call(state, statement.value)
+    if not isinstance(ref.shape, NamespaceShape):
+        if len(names) == 1:
+            state.names[names[0]] = ref
+            return
+        _reject(state, statement.value, 'tuple assignment needs multiple outputs')
+    fields = ref.shape.fields
+    if len(names) != len(fields):
+        _reject(state, statement, f'tuple assignment needs exactly {len(fields)} names for {len(fields)} outputs')
+    for name, (field_name, field_shape) in zip(names, fields):
+        state.names[name] = _Reference(ref.task, field_name, field_shape)
 
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     if not isinstance(expression, ast.Call) or not isinstance(expression.func, ast.Name):
         _reject(state, expression, 'only direct calls to registered tasks or graphs are supported')
-    if expression.args or any(keyword.arg is None for keyword in expression.keywords):
-        _reject(state, expression, 'calls require named arguments without unpacking')
     name = expression.func.id
     if name in state.names:
         _reject(state, expression, f'call target {name!r} is shadowed')
     target = _resolve_binding(state.definition.function, name)
-    if isinstance(target, GraphHandle):
-        _reject(state, expression, 'nested graphs are not supported')
     spec = _task_spec_for(target)
-    if spec is None:
+    if spec is None and not isinstance(target, GraphHandle):
         _reject(state, expression, f'unregistered call {name!r}')
-    assert spec is not None
-    inputs = spec.input_shape
-    result_port = spec.result_port
-    result_shape = spec.result_shape
     state.used[name] += 1
     count = state.used[name]
     instance = name if count == 1 else f'{name}_{count}'
-    taken = {task.name for task in state.tasks}
+    taken = {placed.name for placed in state.tasks}
     while instance in taken:
         count += 1
         instance = f'{name}_{count}'
     state.used[name] = count
+    inputs: NamespaceShape
+    result_port: str
+    result_shape: Shape
+    if isinstance(target, GraphHandle):
+        body = _lower_registered_graph(_key(target._function), state.stack)
+        inputs = body.input_shape
+        result_port = body.result_port
+        result_shape = body.result_shape
+        task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
+    else:
+        assert spec is not None
+        inputs = spec.input_shape
+        result_port = spec.result_port
+        result_shape = spec.result_shape
+        task = ProcessTask(name=instance, inputs={}, spec=spec)
 
-    given = _lower_keywords(state, instance, name, inputs, expression.keywords)
-    missing = _required_missing(state, instance, inputs, given)
+    keywords = _named_keywords(state, expression, name, inputs)
+    task = replace(task, inputs=_lower_keywords(state, instance, name, inputs, keywords))
+    missing = _required_missing(state, instance, inputs, task.inputs)
     if missing:
         _reject(state, expression, f'task {name!r} is missing required inputs: {missing}')
-    state.tasks.append(ProcessTask(name=instance, inputs=given, spec=spec))
+    state.tasks.append(task)
     return _Reference(instance, result_port, result_shape)
+
+
+def _named_keywords(
+    state: _LoweringState, expression: ast.Call, name: str, inputs: NamespaceShape
+) -> list[ast.keyword]:
+    """Bind positional arguments through declared input order, like the explicit keywords."""
+    if not expression.args:
+        keywords = list(expression.keywords)
+    else:
+        order = [field for field, _ in inputs.fields]
+        if len(expression.args) > len(order):
+            _reject(state, expression, f'too many positional arguments for `{name}`')
+        keywords = [ast.keyword(arg=field, value=arg) for field, arg in zip(order, expression.args)]
+        keywords.extend(expression.keywords)
+    if any(keyword.arg is None for keyword in keywords):
+        _reject(state, expression, 'calls require named arguments without unpacking')
+    return keywords
 
 
 def _lower_keywords(

@@ -47,5 +47,11 @@ class GraphHandle:
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
         """Validate graph arguments and prepare the declaration and provenance inputs."""
-        bound = inspect.signature(self._function).bind_partial(**inputs)
+        parameters = [
+            parameter.replace(kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.KEYWORD_ONLY)
+            else parameter
+            for parameter in inspect.signature(self._function).parameters.values()
+        ]
+        bound = inspect.Signature(parameters).bind_partial(**inputs)
         return GraphProcess.launch_inputs(self.build(), dict(bound.arguments))

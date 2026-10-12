@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from aiida.engine.processes.graphs.inputs import at, place
-from aiida.engine.processes.graphs.spec import GraphSpec, GraphTask, readable_version
+from aiida.engine.processes.graphs.spec import GraphSpec, GraphTask, SubgraphTask, readable_version
 from aiida.orm import Node, load_node
 
 __all__ = ('GraphRun',)
@@ -33,6 +33,7 @@ class Start:
     instance: str
     task: GraphTask
     inputs: dict[str, t.Any]
+    body: GraphSpec | None = None
 
 
 @dataclass
@@ -40,8 +41,8 @@ class Step:
     starts: list[Start] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
-    def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any]) -> None:
-        self.starts.append(Start(instance=instance, task=task, inputs=inputs))
+    def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any], body: GraphSpec | None = None) -> None:
+        self.starts.append(Start(instance=instance, task=task, inputs=inputs, body=body))
 
     def note(self, text: str) -> None:
         self.notes.append(text)
@@ -151,8 +152,9 @@ class GraphRun:
             self.skipped.add(name)
             return
         task = self.graph.task(name)
+        inputs = self._inputs_for(task)
         self.instances[name] = [name]
-        step.begin(name, task, self._inputs_for(task))
+        step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
 
     def _inputs_for(self, task: GraphTask) -> dict[str, t.Any]:
         # Namespace dictionaries are mutable during wiring; never mutate the saved declaration.

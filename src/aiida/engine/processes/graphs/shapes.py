@@ -54,17 +54,11 @@ class NamespaceShape(ValueShape):
 Shape: t.TypeAlias = LeafShape | NamespaceShape
 
 
-class _Options(t.TypedDict):
-    required: bool
-    help: str | None
-    default: object
-
-
 def shape_for_annotation(
     annotation: object, *, required: bool = True, default: object = UNSPECIFIED, help: str | None = None
 ) -> Shape:
     """Capture a Python declaration without constructing engine input or output ports."""
-    options: _Options = {'required': required, 'default': default, 'help': help or port_help(annotation)}
+    resolved_help = help or port_help(annotation)
     annotation = without_marks(annotation)
     fields = fields_of(annotation)
     if fields is not None:
@@ -78,7 +72,9 @@ def shape_for_annotation(
                 )
                 for field in fields
             ),
-            **options,
+            required=required,
+            default=default,
+            help=resolved_help,
         )
     origin = t.get_origin(annotation)
     types = None
@@ -90,7 +86,7 @@ def shape_for_annotation(
             types = (origin,)
         elif isinstance(annotation, type):
             types = (annotation,)
-    return LeafShape(types=types, **options)
+    return LeafShape(types=types, required=required, default=default, help=resolved_help)
 
 
 def shape_for_annotations(
@@ -146,18 +142,16 @@ def load_shape(data: Mapping[str, t.Any]) -> Shape:
     if not isinstance(required, bool) or (help is not None and not isinstance(help, str)):
         msg = 'shape declarations require boolean requiredness and string help.'
         raise TypeError(msg)
-    options: _Options = {
-        'required': required,
-        'help': help,
-        'default': json_default(data['default']) if 'default' in data else UNSPECIFIED,
-    }
+    default = json_default(data['default']) if 'default' in data else UNSPECIFIED
     if data['kind'] == 'leaf':
         types = data.get('types')
         return LeafShape(
             types=None
             if types is None
             else tuple(type(None) if kind is None else get_object_loader().load_object(kind) for kind in types),
-            **options,
+            required=required,
+            help=help,
+            default=default,
         )
     if data['kind'] == 'namespace':
         if 'extra' in data:
@@ -165,7 +159,9 @@ def load_shape(data: Mapping[str, t.Any]) -> Shape:
             raise ValueError(msg)
         return NamespaceShape(
             fields=tuple((name, load_shape(field)) for name, field in data['fields'].items()),
-            **options,
+            required=required,
+            help=help,
+            default=default,
         )
     msg = f'Unknown graph value shape `{data["kind"]}`.'
     raise ValueError(msg)

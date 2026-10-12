@@ -33,6 +33,8 @@ from aiida.engine.processes.graphs.shapes import (
     shape_for_annotations,
 )
 from aiida.engine.processes.graphs.spec import (
+    CONDITION_PORT,
+    BranchControl,
     Dependency,
     Endpoint,
     GraphSpec,
@@ -153,7 +155,7 @@ class _Reference:
 class _LoweringState:
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl] = field(default_factory=list)
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -226,7 +228,9 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
         msg = f'{state.key}: graph must end in a return'
         raise UnsupportedSyntax(msg)
     for statement in statements[:-1]:
-        if isinstance(statement, (ast.For, ast.AsyncFor)):
+        if isinstance(statement, ast.If):
+            _lower_branch(state, statement)
+        elif isinstance(statement, (ast.For, ast.AsyncFor)):
             _reject(state, statement, 'for loops are not supported; unroll the placements or use a while loop')
         elif isinstance(statement, (ast.Import, ast.ImportFrom)):
             _reject(state, statement, 'imports are not supported in graph bodies; import inside task bodies instead')
@@ -323,6 +327,101 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
         _reject(state, statement, f'tuple assignment needs exactly {len(fields)} names for {len(fields)} outputs')
     for name, (field_name, field_shape) in zip(names, fields):
         state.names[name] = _Reference(ref.task, field_name, field_shape)
+
+
+def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
+    """Snapshot region boundaries only when routing a declared namespace field."""
+    if not any('.' in path for path in state.inputs):
+        return None
+    names = tuple(name for name in state.inputs if '.' not in name)
+    return dump_shape(NamespaceShape(fields=tuple((name, state.names[name].shape) for name in names)))
+
+
+def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
+    if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
+        msg = 'control-flow outputs must be static leaves, not namespaces.'
+        raise UnsupportedSyntax(msg)
+    endpoints = {name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()}
+    return GraphSpec(
+        tasks=tuple(state.tasks),
+        dependencies=tuple(state.dependencies),
+        inputs={name: tuple(targets) for name, targets in state.inputs.items()},
+        outputs=endpoints,
+        input_namespace=_region_input_namespace(state),
+    )
+
+
+def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
+    # Names read in the body become inputs of the nested graph. Calls are not values.
+    assigned = {
+        target.id
+        for stmt in statements
+        if isinstance(stmt, ast.Assign)
+        for target in stmt.targets
+        if isinstance(target, ast.Name)
+    }
+    callees = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
+    reads = {
+        node.id
+        for stmt in statements
+        for node in ast.walk(stmt)
+        if isinstance(node, ast.Name)
+        and isinstance(node.ctx, ast.Load)
+        and node.id not in assigned
+        and id(node) not in callees
+    }
+    names = reads
+    child = _LoweringState(state.definition, state.stack)
+    for name in sorted(names):
+        if name not in state.names:
+            _reject(state, statements[0], f'unbound name {name!r}')
+        child.inputs[name] = []
+        shape = state.names[name].shape
+        child.names[name] = _Reference(None, name, shape)
+    return child
+
+
+def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
+    """Lower a call condition to a fresh binding, like its explicit assignment form."""
+    if not isinstance(test, ast.Call):
+        return None
+    name = 'condition'
+    count = 2
+    while name in state.names:
+        name = f'condition_{count}'
+        count += 1
+    bound = ast.Assign(targets=[ast.Name(id=name)], value=test)
+    ast.copy_location(bound, test)
+    ast.copy_location(bound.targets[0], test)
+    _lower_assignment(state, bound)
+    return ast.Name(id=name)
+
+
+def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
+    bound = _bind_condition(state, statement.test)
+    if bound is not None:
+        statement.test = bound
+    if not statement.orelse or len(statement.body) != 1 or len(statement.orelse) != 1:
+        _reject(state, statement, 'if requires one assignment to the same name on each side')
+    sides = []
+    for statements in (statement.body, statement.orelse):
+        child = _region(state, statements)
+        name = _lower_assignment(child, statements[0])
+        reference = child.names[name]
+        body = _body(child, {reference.port: reference})
+        sides.append((name, child, body))
+    if sides[0][0] != sides[1][0] or sides[0][0] in state.names:
+        _reject(state, statement, 'if requires one new name shared by both sides')
+    if CONDITION_PORT in sides[0][2].inputs or CONDITION_PORT in sides[1][2].inputs:
+        _reject(state, statement, 'condition conflicts with a branch input')
+    instance = f'branch_{len(state.tasks) + 1}'
+    given: dict[str, t.Any] = {}
+    _wire(state, instance, CONDITION_PORT, _lower_value(state, statement.test), given)
+    for name in sorted({path.split('.')[0] for _, child, _ in sides for path in child.inputs}):
+        _wire(state, instance, name, state.names[name], given)
+    state.tasks.append(BranchControl(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
+    selected = sides[0][1].names[sides[0][0]]
+    state.names[sides[0][0]] = _Reference(instance, selected.port, selected.shape)
 
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:

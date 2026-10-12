@@ -37,6 +37,16 @@ pytestmark = pytest.mark.presto
         pytest.param(declarations.dictionary_input, {'values': {'answer': 42}}, {'result': 42}, id='dictionary-leaf'),
         pytest.param(declarations.ordered_named, {'value': 2}, {'sum': 3}, id='ordering-without-output'),
         pytest.param(declarations.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
+        pytest.param(
+            declarations.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-choice-true'
+        ),
+        pytest.param(
+            declarations.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-choice-false'
+        ),
+        pytest.param(declarations.computed_choice, {'value': 2}, {'result': 3}, id='computed-choice-true'),
+        pytest.param(declarations.computed_choice, {'value': -2}, {'result': 0}, id='computed-choice-false'),
+        pytest.param(declarations.inline_condition, {'value': 2}, {'result': 3}, id='inline-choice-true'),
+        pytest.param(declarations.inline_condition, {'value': -2}, {'result': 0}, id='inline-choice-false'),
         pytest.param(declarations.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
         pytest.param(declarations.tuple_assignment, {'x': 2, 'y': 3}, {'result': 11}, id='tuple-unpacking'),
         pytest.param(declarations.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),

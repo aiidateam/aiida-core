@@ -24,6 +24,7 @@ from aiida.engine.processes.process import Process
 from aiida.orm import Data
 
 __all__ = (
+    'BranchControl',
     'Dependency',
     'Endpoint',
     'GraphSpec',
@@ -34,7 +35,8 @@ __all__ = (
 
 SPEC_VERSION = '0.1'
 TASK_SPEC_VERSION = '0.1'
-TaskKind = t.Literal['process', 'graph']
+CONDITION_PORT = 'condition'
+TaskKind = t.Literal['process', 'graph', 'branch']
 
 
 def readable_version(version: object, supported: str, what: str) -> str:
@@ -231,10 +233,18 @@ class GraphTask(abc.ABC):
         kind = data.get('kind')
         if kind == 'process':
             return ProcessTask(spec=TaskSpec.from_dict(data['spec']), **common)
-        body = GraphSpec.from_dict(data['body']) if kind == 'graph' else None
+        body = GraphSpec.from_dict(data['body']) if kind in ('graph', 'branch') else None
         if kind == 'graph':
             assert body is not None
             return SubgraphTask(body=body, **common)
+        if kind == 'branch':
+            assert body is not None
+            return BranchControl(
+                body=body,
+                otherwise=GraphSpec.from_dict(data['otherwise']) if data.get('otherwise') is not None else None,
+                condition_port=data.get('condition_port', CONDITION_PORT),
+                **common,
+            )
         msg = f'unsupported graph task kind `{kind}`.'
         raise ValueError(msg)
 
@@ -256,6 +266,27 @@ class BodyTask(GraphTask):
 @dataclass(frozen=True, kw_only=True)
 class SubgraphTask(BodyTask):
     KIND: t.ClassVar[TaskKind] = 'graph'
+
+
+@dataclass(frozen=True, kw_only=True)
+class BranchControl(BodyTask):
+    KIND: t.ClassVar[TaskKind] = 'branch'
+    condition_port: str = CONDITION_PORT
+    otherwise: GraphSpec | None = None
+
+    @property
+    def branches(self) -> tuple[GraphSpec, ...]:
+        return (self.body,) if self.otherwise is None else (self.body, self.otherwise)
+
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        return tuple(branch.input_spec() for branch in self.branches)
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {
+            **super().to_dict(),
+            'condition_port': self.condition_port,
+            'otherwise': None if self.otherwise is None else self.otherwise.to_dict(),
+        }
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -412,6 +443,8 @@ class GraphSpec:
 
     @staticmethod
     def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
+        if isinstance(task, BranchControl) and path == task.condition_port:
+            return []
         return [port for namespace in task.input_ports() if (port := port_at(namespace, path)) is not None]
 
     def predecessors(self, name: str) -> set[str]:
@@ -463,6 +496,7 @@ class GraphSpec:
         for task in self.tasks:
             task.input_ports()
             task.output_ports()
+            self._validate_region(task)
         self._validate_outputs(boundary)
         self._validate_acyclic()
 
@@ -476,7 +510,7 @@ class GraphSpec:
         """Check that one routed graph input names a known task input of compatible type."""
         task = self.task(route.task)
         ports = self._input_ports_at(task, route.port)
-        if not ports:
+        if not ports and not (isinstance(task, BranchControl) and route.port == task.condition_port):
             msg = f'input `{name}` refers to unknown input `{route.task}.{route.port}`.'
             raise ValueError(msg)
         origin = port_at(boundary, name)
@@ -498,11 +532,23 @@ class GraphSpec:
         if origin is None or isinstance(origin, PortNamespace):
             msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
             raise ValueError(msg)
-        if not ports:
+        if not ports and not (isinstance(target, BranchControl) and edge.target_port == target.condition_port):
             msg = f'dependency refers to unknown input `{edge.target}.{edge.target_port}`.'
             raise ValueError(msg)
         for port in ports:
             self._check_types(origin, port, f'dependency `{edge.source}` to `{edge.target}`')
+
+    def _validate_region(self, task: GraphTask) -> None:
+        """Check that control-flow bodies agree on their condition and outputs."""
+        if isinstance(task, BranchControl) and task.otherwise is not None:
+            if task.condition_port in task.body.inputs or task.condition_port in task.otherwise.inputs:
+                msg = 'branch condition conflicts with a body input.'
+                raise ValueError(msg)
+            if task.body.outputs.keys() != task.otherwise.outputs.keys():
+                msg = 'both branches must return the same outputs.'
+                raise ValueError(msg)
+            self._check_types(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
+            self._check_types(task.otherwise.output_spec(), task.body.output_spec(), 'branch outputs')
 
     def _validate_outputs(self, boundary: PortNamespace) -> None:
         """Check that graph outputs reference declared leaves of compatible types."""

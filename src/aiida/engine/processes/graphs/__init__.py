@@ -13,6 +13,7 @@ from aiida.engine.processes.graphs.build_source import build_from_source, graph,
 from aiida.engine.processes.graphs.interface import GraphHandle
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.spec import (
+    BranchControl,
     Dependency,
     Endpoint,
     GraphSpec,
@@ -22,6 +23,7 @@ from aiida.engine.processes.graphs.spec import (
 from aiida.engine.processes.graphs.tasks import TaskHandle, TaskProcess
 
 __all__ = (
+    'BranchControl',
     'Dependency',
     'Endpoint',
     'GraphHandle',

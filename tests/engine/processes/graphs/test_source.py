@@ -118,9 +118,32 @@ def test_nested_graph_builds_subgraph_task() -> None:
     assert spec.tasks[0].body.identifier == 'multiply_add'
 
 
+def test_branches_build_control_tasks() -> None:
+    from aiida.engine.processes.graphs.spec import BranchControl
+
+    spec = declarations.external_choice.build()
+    assert isinstance(spec.tasks[0], BranchControl)
+    assert set(spec.tasks[0].body.outputs) == {'result'}
+    assert set(spec.tasks[0].otherwise.outputs) == {'result'}
+
+
 def test_recursive_call_fails_during_build() -> None:
     with pytest.raises(UnsupportedSyntax, match='Recursive graph call'):
         declarations.recursive_call.build()
+
+
+def test_inline_condition_matches_bound_form() -> None:
+    """An inline predicate call lowers like its explicit assignment form."""
+    inline = declarations.inline_condition.build().to_dict()
+    bound = declarations.computed_choice.build().to_dict()
+    inline.pop('identifier')
+    bound.pop('identifier')
+    assert inline == bound
+
+
+def test_mismatched_branch_outputs_fail_during_build() -> None:
+    with pytest.raises(ValueError, match='same outputs'):
+        declarations.mismatched_branches.build()
 
 
 def test_incompatible_boundary_types_fail_during_build() -> None:

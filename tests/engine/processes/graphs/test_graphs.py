@@ -96,10 +96,16 @@ def test_task_after_kwarg_rejected_outside_graphs() -> None:
     'declaration, inputs, expected',
     [
         pytest.param(declarations.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested'),
+        pytest.param(declarations.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
+        pytest.param(
+            declarations.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'
+        ),
+        pytest.param(declarations.computed_choice, {'value': 2}, {'result': 3}, id='computed-true'),
+        pytest.param(declarations.computed_choice, {'value': -2}, {'result': 0}, id='computed-false'),
     ],
 )
 def test_composition_executes(declaration: GraphHandle, inputs: dict[str, t.Any], expected: dict[str, int]) -> None:
-    """Nested graph calls return exact values."""
+    """Nested graphs and both branch outcomes return exact values."""
     outputs, node = run_get_node(declaration, **inputs)
     assert node.is_finished_ok
     assert {name: value.value for name, value in outputs.items()} == expected

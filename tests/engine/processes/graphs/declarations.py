@@ -89,6 +89,12 @@ def read_orm_node(value: Int) -> int:
     return value.value
 
 
+@task
+def is_positive(value: int) -> bool:
+    """Decide whether a value is positive."""
+    return value > 0
+
+
 @task(outputs=('mean', 'stdev'))
 def statistics(values: list[float]) -> tuple[float, float]:
     """Summarize samples; bodies run as plain Python and are never lowered."""
@@ -100,6 +106,18 @@ def statistics(values: list[float]) -> tuple[float, float]:
     mean = total / len(values)
     variance = sum((sample - mean) ** 2 for sample in values) / len(values)
     return mean, math.sqrt(variance)
+
+
+@task(outputs=('alpha',))
+def mismatched_alpha(value: int) -> int:
+    """Return its input under the `alpha` output."""
+    return value
+
+
+@task(outputs=('beta',))
+def mismatched_beta(value: int) -> int:
+    """Return its input under the `beta` output."""
+    return value
 
 
 @task
@@ -299,10 +317,51 @@ def nested_multiply_add(x: int, y: int, z: int) -> int:
 
 
 @graph
+def external_choice(value: int, condition: bool) -> int:
+    """Branch on an input flag."""
+    if condition:
+        selected_branch = add(x=value, y=1)
+    else:
+        selected_branch = add(x=value, y=2)
+    return selected_branch
+
+
+@graph
+def computed_choice(value: int) -> int:
+    """Branch on a task-computed condition."""
+    condition = is_positive(value=value)
+    if condition:
+        selected_branch = add(x=value, y=1)
+    else:
+        selected_branch = add(x=value, y=2)
+    return selected_branch
+
+
+@graph
+def inline_condition(value: int) -> int:
+    """Branch on an inline predicate call, bound like the explicit form."""
+    if is_positive(value=value):
+        selected_branch = add(x=value, y=1)
+    else:
+        selected_branch = add(x=value, y=2)
+    return selected_branch
+
+
+@graph
 def summarize(values: list[float]):
     """Expose summary statistics computed by plain Python."""
     stats = statistics(values=values)
     return {'mean': stats.mean, 'stdev': stats.stdev}
+
+
+@graph
+def mismatched_branches(value: int, condition: bool) -> int:
+    """Return different outputs per side, rejected."""
+    if condition:
+        selected_branch = mismatched_alpha(value=value)
+    else:
+        selected_branch = mismatched_beta(value=value)
+    return selected_branch
 
 
 # Flexible spellings, desugared to the explicit forms.

@@ -430,6 +430,7 @@ def positional_only_parameter(value: int, /) -> int:
 
 # Rejected declarations.
 # TODO: Good error messages (verify)
+# -> yes, we will still do
 
 
 @graph
@@ -476,10 +477,10 @@ def reassigned_name(value: int) -> int:
 
 
 # NOTE: we could internally represent `for`-loops as `while`
+# -> defer for follow-up
 # did XW have `for` construct?
 # reassignment could just be copying the object? unrolled for-loop in db?
 # if not in db, for loop in task
-# NOTE: only our language constructs inside `@graph`
 @graph
 def fanout(values: list[int]) -> int:  # why does fail, is it not just the rebinding?
     """Loop over inputs, rebinding each round; fan-out over runtime collections is not supported.
@@ -524,6 +525,7 @@ def literal_return() -> int:
 
 
 # TODO: PortModel as return type should def be supported
+# -> yes, we will still do
 @graph
 def namespace_return(config: Configuration) -> Configuration:
     """Return a whole namespace; outputs are flat leaves.

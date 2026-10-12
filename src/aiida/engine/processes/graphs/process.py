@@ -59,6 +59,7 @@ class GraphProcess(Process):
         self._parsed_inputs = AttributesFrozendict(
             {**self.inputs, self._GRAPH_INPUTS: graph.input_spec().prepare(stored).runtime}
         )
+        self._run = GraphRun.from_dict(graph=graph, given=graph.serialize_inputs(dict(stored)), data=self._saved)
         return super()._create_and_setup_db_record()
 
     @classmethod

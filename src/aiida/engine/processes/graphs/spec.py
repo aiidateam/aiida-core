@@ -362,6 +362,11 @@ class ProcessTask(GraphTask):
         return {**super().to_dict(), 'spec': self.spec.to_dict()}
 
 
+def _accepts_condition(task: GraphTask, port: str | None) -> bool:
+    """Return whether a control task wires its condition outside declared inputs."""
+    return isinstance(task, (BranchControl, LoopControl)) and port == task.condition_port
+
+
 def _stored_types(port: t.Any) -> tuple[type, ...]:
     """Return the stored types a port accepts, without nullability."""
     kinds = port.valid_type or ()
@@ -546,6 +551,12 @@ class GraphSpec:
             raise ValueError(msg)
 
     @staticmethod
+    def _check_compatible(first: PortNamespace, second: PortNamespace, context: str) -> None:
+        """Check that two output contracts accept each other."""
+        GraphSpec._check_types(first, second, context)
+        GraphSpec._check_types(second, first, context)
+
+    @staticmethod
     def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str) -> None:
         """Check that shared fields agree and required fields exist."""
         for name, child in target.items():
@@ -564,6 +575,7 @@ class GraphSpec:
         self._validate_inputs(boundary)
         self._validate_dependencies()
         for task in self.tasks:
+            # Touch the port views: they raise on dynamic or namespaced outputs the spec cannot represent.
             task.input_ports()
             task.output_ports()
             self._validate_region(task)
@@ -580,7 +592,7 @@ class GraphSpec:
         """Check that one routed graph input names a known task input of compatible type."""
         task = self.task(route.task)
         ports = self._input_ports_at(task, route.port)
-        if not ports and not (isinstance(task, (BranchControl, LoopControl)) and route.port == task.condition_port):
+        if not ports and not _accepts_condition(task, route.port):
             msg = f'input `{name}` refers to unknown input `{route.task}.{route.port}`.'
             raise ValueError(msg)
         origin = port_at(boundary, name)
@@ -602,9 +614,7 @@ class GraphSpec:
         if origin is None or isinstance(origin, PortNamespace):
             msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
             raise ValueError(msg)
-        if not ports and not (
-            isinstance(target, (BranchControl, LoopControl)) and edge.target_port == target.condition_port
-        ):
+        if not ports and not _accepts_condition(target, edge.target_port):
             msg = f'dependency refers to unknown input `{edge.target}.{edge.target_port}`.'
             raise ValueError(msg)
         for port in ports:
@@ -619,22 +629,21 @@ class GraphSpec:
             if task.body.outputs.keys() != task.otherwise.outputs.keys():
                 msg = 'both branches must return the same outputs.'
                 raise ValueError(msg)
-            self._check_types(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
-            self._check_types(task.otherwise.output_spec(), task.body.output_spec(), 'branch outputs')
+            self._check_compatible(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
         if isinstance(task, LoopControl) and (task.condition_port not in task.body.outputs or task.max_iterations < 1):
             msg = 'a loop must return its condition and allow at least one iteration.'
             raise ValueError(msg)
 
     def _validate_outputs(self, boundary: PortNamespace) -> None:
         """Check that graph outputs reference declared leaves of compatible types."""
-        self.output_spec()
+        outputs = self.output_spec()
         for name, endpoint in self.outputs.items():
             origin = (
                 port_at(boundary, endpoint.port)
                 if endpoint.task is None
                 else port_at(self.task(endpoint.task).output_ports(), endpoint.port)
             )
-            self._check_types(origin, self.output_spec()[name], f'graph output `{name}`')
+            self._check_types(origin, outputs[name], f'graph output `{name}`')
 
     def _validate_acyclic(self) -> None:
         """Check that the dependencies order every task."""

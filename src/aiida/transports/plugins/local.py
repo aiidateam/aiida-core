@@ -8,18 +8,23 @@
 ###########################################################################
 """Local transport"""
 
+import asyncio
 import contextlib
 import errno
 import glob
+import hashlib
 import io
 import os
 import shutil
 import subprocess
 import sys
+import typing as t
 
+from aiida.common.hashing import chunked_file_hash
 from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
+from aiida.transports.util import run_file_io
 
 
 # refactor or raise the limit: issue #1784
@@ -33,6 +38,33 @@ class LocalTransport(BlockingTransport):
     """
 
     _valid_auth_options = []
+
+    async def get_file_checksum_async(self, path: TransportPath) -> str:
+        """Return SHA-256 without blocking the daemon while reading the file."""
+
+        def checksum() -> str:
+            with open(os.path.join(self.curdir, path), 'rb') as handle:
+                return chunked_file_hash(handle, hashlib.sha256)
+
+        return await run_file_io(checksum)
+
+    async def readlink_async(self, path: TransportPath) -> str:
+        """Return the link target without resolving it."""
+        return await asyncio.to_thread(os.readlink, os.path.join(self.curdir, path))
+
+    async def symlink_literal_async(self, source: TransportPath, destination: TransportPath) -> None:
+        """Preserve the literal target, including wildcard characters and relative paths."""
+        await run_file_io(os.symlink, str(source), os.path.join(self.curdir, destination))
+
+    async def copyfile_literal_async(self, source: TransportPath, destination: TransportPath) -> None:
+        """Copy a literal file path and its permissions, matching ``copy`` for a regular file."""
+        await run_file_io(shutil.copy, os.path.join(self.curdir, source), os.path.join(self.curdir, destination))
+
+    async def putfilelike_async(self, handle: t.BinaryIO, remotepath: TransportPath) -> None:
+        """Stream an open binary file directly to its destination."""
+        with open(os.path.join(self.curdir, remotepath), 'wb') as destination:
+            while chunk := await run_file_io(handle.read, 524288):
+                await run_file_io(destination.write, chunk)
 
     # There is no real limit on how fast you can safely connect to a localhost, unlike often the case with SSH transport
     # where the remote computer will rate limit the number of connections.

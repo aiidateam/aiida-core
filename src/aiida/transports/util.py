@@ -8,7 +8,23 @@
 ###########################################################################
 """General utilities for Transport classes."""
 
+import asyncio
+import typing as t
+
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
+
+P = t.ParamSpec('P')
+R = t.TypeVar('R')
+
+
+async def run_file_io(function: t.Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
+    """Offload file I/O, waiting for an outstanding operation before cancellation closes its handles."""
+    task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        await asyncio.gather(task, return_exceptions=True)
+        raise
 
 
 class FileAttribute(FixedFieldsAttributeDict):

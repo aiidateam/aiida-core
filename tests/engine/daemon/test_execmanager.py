@@ -10,14 +10,15 @@
 
 import io
 import pathlib
+import stat
 
 import pytest
 
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
-from aiida.common.exceptions import StashingError
+from aiida.common.exceptions import InvalidOperation, StashingError
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
-from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
+from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData, load_node
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -628,6 +629,447 @@ async def test_upload_combinations(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('upload_failures', [0, 1, 2, 3, 20])
+async def test_upload_calculation_retries(fixture_sandbox, node_and_calc_info, monkeypatch, upload_failures):
+    """Repair partial files after arbitrarily many attempts, without recopying completed files."""
+    node, calc_info = node_and_calc_info
+    uuid = node.uuid
+    for filename in ('a-complete.txt', 'b-interrupted.txt'):
+        pathlib.Path(fixture_sandbox.get_abs_path(filename)).write_text('unchanged input')
+    transferred = []
+    failures = upload_failures
+
+    async with node.computer.get_transport() as transport:
+        putfile_async = transport.putfile_async
+
+        async def interrupted_put(source, destination, *args, **kwargs):
+            nonlocal failures
+            transferred.append(pathlib.Path(destination).name)
+            await putfile_async(source, destination, *args, **kwargs)
+            if pathlib.Path(destination).name == 'b-interrupted.txt' and failures:
+                failures -= 1
+                pathlib.Path(destination).write_text('partial')
+                msg = 'Temporary upload interruption'
+                raise OSError(msg)
+
+        monkeypatch.setattr(transport, 'putfile_async', interrupted_put)
+
+        for _ in range(upload_failures):
+            with pytest.raises(OSError, match='Temporary upload interruption'):
+                await execmanager.upload_calculation(load_node(uuid), transport, calc_info, fixture_sandbox)
+
+        remote_folder = await execmanager.upload_calculation(load_node(uuid), transport, calc_info, fixture_sandbox)
+
+    node = load_node(uuid)
+    workdir = pathlib.Path(node.get_remote_workdir())
+    assert remote_folder.get_remote_path() == str(workdir)
+    assert sorted(path.name for path in workdir.iterdir()) == ['a-complete.txt', 'b-interrupted.txt']
+    for filename in ('a-complete.txt', 'b-interrupted.txt'):
+        assert (workdir / filename).read_text() == 'unchanged input'
+        assert node.base.repository.get_object_content(filename) == 'unchanged input'
+    assert transferred.count('a-complete.txt') == 1
+    assert transferred.count('b-interrupted.txt') == upload_failures + 1
+
+    lost_found = workdir.parents[2] / execmanager.REMOTE_WORK_DIRECTORY_LOST_FOUND
+    assert not lost_found.exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('known_workdir', [False, True])
+async def test_upload_calculation_retry_existing_backup(
+    fixture_sandbox, node_and_calc_info, create_file_hierarchy, serialize_file_hierarchy, known_workdir
+):
+    """Existing backups from earlier versions must not block recovery or be overwritten."""
+    node, calc_info = node_and_calc_info
+    create_file_hierarchy({'input.txt': 'successful upload'}, fixture_sandbox)
+    previous_backup = {'input.txt': 'first attempt', node.uuid[4:]: {'input.txt': 'second attempt'}}
+
+    async with node.computer.get_transport() as transport:
+        root = pathlib.Path(node.computer.get_workdir().format(username=await transport.whoami_async()))
+        workdir = root / node.uuid[:2] / node.uuid[2:4] / node.uuid[4:]
+        lost_found = root / execmanager.REMOTE_WORK_DIRECTORY_LOST_FOUND
+        legacy_backup = lost_found / node.uuid
+        create_file_hierarchy(previous_backup, legacy_backup)
+        create_file_hierarchy({'input.txt': 'third attempt'}, workdir)
+        if known_workdir:
+            node.set_remote_workdir(str(workdir))
+
+        remote_folder = await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+
+    assert remote_folder.get_remote_path() == str(workdir)
+    assert serialize_file_hierarchy(workdir, read_bytes=False) == {'input.txt': 'successful upload'}
+    assert serialize_file_hierarchy(legacy_backup, read_bytes=False) == previous_backup
+    new_backups = [path for path in lost_found.iterdir() if path != legacy_backup]
+    if known_workdir:
+        assert new_backups == []
+    else:
+        assert len(new_backups) == 1
+        assert serialize_file_hierarchy(new_backups[0], read_bytes=False) == {'input.txt': 'third attempt'}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('submitted', [False, True])
+async def test_upload_calculation_retry_owned_workdir(
+    fixture_sandbox, node_and_calc_info, tmp_path, create_file_hierarchy, serialize_file_hierarchy, submitted
+):
+    """Repair must preserve symlink targets and refuse to replace a submitted job's directory."""
+    node, calc_info = node_and_calc_info
+    create_file_hierarchy({'input.txt': 'successful upload', 'source': {'new.txt': 'new input'}}, fixture_sandbox)
+    source = tmp_path / 'source'
+    create_file_hierarchy({'source.txt': 'original source data'}, source)
+
+    async with node.computer.get_transport() as transport:
+        root = pathlib.Path(node.computer.get_workdir().format(username=await transport.whoami_async()))
+        workdir = root / node.uuid[:2] / node.uuid[2:4] / node.uuid[4:]
+        create_file_hierarchy({'input.txt': 'incomplete upload'}, workdir)
+        (workdir / 'source').symlink_to(source, target_is_directory=True)
+        node.set_remote_workdir(str(workdir))
+
+        if submitted:
+            node.set_job_id('123')
+            with pytest.raises(InvalidOperation, match='refusing to replace the work directory'):
+                await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+            assert (workdir / 'input.txt').read_text() == 'incomplete upload'
+            assert (workdir / 'source').is_symlink()
+        else:
+            await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+            assert serialize_file_hierarchy(workdir, read_bytes=False) == {
+                'input.txt': 'successful upload',
+                'source': {'new.txt': 'new input'},
+            }
+
+    assert serialize_file_hierarchy(source, read_bytes=False) == {'source.txt': 'original source data'}
+    assert not (root / execmanager.REMOTE_WORK_DIRECTORY_LOST_FOUND).exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('existing_destination', [False, True])
+@pytest.mark.parametrize('source_directories', [False, True])
+async def test_upload_remote_glob_requires_directory(
+    fixture_sandbox,
+    node_and_calc_info,
+    tmp_path,
+    existing_destination,
+    source_directories,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
+):
+    """Multiple remote matches require a destination directory, as in the existing transport API."""
+    node, calc_info = node_and_calc_info
+    hierarchy = {name: {'input': name} if source_directories else name for name in ('a.dat', 'b.dat')}
+    source = tmp_path / 'sources'
+    create_file_hierarchy(hierarchy, source)
+    pattern = str(source / '*.dat')
+    previous_destination = tmp_path / 'previous-target'
+    if existing_destination:
+        previous_destination.write_text('keep')
+        pathlib.Path(fixture_sandbox.get_abs_path('target')).write_text('keep')
+    calc_info.remote_copy_list = [(node.computer.uuid, pattern, 'target')]
+
+    async with node.computer.get_transport() as transport:
+        with pytest.raises(OSError):
+            await transport.copy_async(pattern, previous_destination)
+        with pytest.raises(OSError, match="Can't copy more than one file in the same destination file"):
+            await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+
+    assert serialize_file_hierarchy(source, read_bytes=False) == hierarchy
+    if existing_destination:
+        assert previous_destination.read_text() == 'keep'
+        assert pathlib.Path(fixture_sandbox.get_abs_path('target')).read_text() == 'keep'
+    else:
+        assert not previous_destination.exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    'pattern, destination, expected',
+    [
+        ('*.dat', 'target', {'target': {'a.dat': 'first', 'b.dat': 'second'}}),
+        ('*.dat', '.', {'a.dat': 'first', 'b.dat': 'second'}),
+        ('a*.dat', 'renamed', {'renamed': 'first'}),
+        ('a*.dat', 'target', {'target': {'a.dat': 'first'}}),
+        ('missing*.dat', 'renamed', {}),
+        ('dir*', 'target', {'target': {'dir-a': {'input': 'first'}, 'dir-b': {'input': 'second'}}}),
+    ],
+)
+async def test_upload_remote_glob(
+    fixture_sandbox,
+    node_and_calc_info,
+    tmp_path,
+    pattern,
+    destination,
+    expected,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
+):
+    """Valid remote wildcard copies retain all matches and survive a repeated upload."""
+    node, calc_info = node_and_calc_info
+    source = tmp_path / 'sources'
+    create_file_hierarchy(
+        {'a.dat': 'first', 'b.dat': 'second', 'dir-a': {'input': 'first'}, 'dir-b': {'input': 'second'}},
+        source,
+    )
+    create_file_hierarchy({'target': {}}, fixture_sandbox)
+    calc_info.remote_copy_list = [(node.computer.uuid, str(source / pattern), destination)]
+
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        await execmanager.upload_calculation(load_node(node.uuid), transport, calc_info, fixture_sandbox)
+
+    workdir = pathlib.Path(node.get_remote_workdir())
+    assert (workdir / 'target').is_dir()
+    assert serialize_file_hierarchy(workdir, read_bytes=False) == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('permissions', [0o751, 0o640])
+async def test_upload_remote_file_permissions(fixture_sandbox, node_and_calc_info, tmp_path, permissions):
+    """Remote files retain their modes, including nested files and repair of a wrong-mode hardlink."""
+    node, calc_info = node_and_calc_info
+    source = tmp_path / 'source'
+    source.mkdir()
+    executable = source / 'helper.sh'
+    executable.write_text('#!/bin/sh\nexit 0\n')
+    executable.chmod(permissions)
+    calc_info.remote_copy_list = [
+        (node.computer.uuid, str(executable), 'helper.sh'),
+        (node.computer.uuid, str(source), 'nested'),
+    ]
+    unrelated = tmp_path / 'unrelated.sh'
+    unrelated.write_bytes(executable.read_bytes())
+    unrelated.chmod(0o600)
+
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        workdir = pathlib.Path(node.get_remote_workdir())
+        destination = workdir / 'helper.sh'
+        nested = workdir / 'nested' / 'helper.sh'
+        assert stat.S_IMODE(destination.stat().st_mode) == permissions
+        assert stat.S_IMODE(nested.stat().st_mode) == permissions
+        untouched = nested.stat()
+
+        destination.unlink()
+        destination.hardlink_to(unrelated)
+        await execmanager.upload_calculation(load_node(node.uuid), transport, calc_info, fixture_sandbox)
+        assert destination.read_bytes() == executable.read_bytes()
+        assert stat.S_IMODE(destination.stat().st_mode) == permissions
+        assert stat.S_IMODE(executable.stat().st_mode) == permissions
+        assert stat.S_IMODE(unrelated.stat().st_mode) == 0o600
+        assert destination.stat().st_ino != unrelated.stat().st_ino
+        assert nested.stat().st_ino == untouched.st_ino
+        assert nested.stat().st_mtime_ns == untouched.st_mtime_ns
+
+
+@pytest.mark.asyncio
+async def test_upload_literal_tree_paths(fixture_sandbox, node_and_calc_info, tmp_path):
+    """Expanding a directory must preserve literal filenames and stored symbolic-link targets."""
+    node, calc_info = node_and_calc_info
+    pathlib.Path(fixture_sandbox.get_abs_path('input[1].txt')).write_text('sandbox')
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / 'value[1].dat').write_text('remote')
+    (source / 'link').symlink_to('value[1].dat')
+    calc_info.remote_copy_list = [(node.computer.uuid, str(source), 'data')]
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        await execmanager.upload_calculation(load_node(node.uuid), transport, calc_info, fixture_sandbox)
+    workdir = pathlib.Path(node.get_remote_workdir())
+    assert (workdir / 'input[1].txt').read_text() == 'sandbox'
+    assert (workdir / 'data' / 'value[1].dat').read_text() == 'remote'
+    assert (workdir / 'data' / 'link').readlink() == pathlib.Path('value[1].dat')
+
+
+@pytest.mark.asyncio
+async def test_upload_retry_before_directory_creation(fixture_sandbox, node_and_calc_info, monkeypatch):
+    """A persisted manifest and workdir path must also recover when mkdir never reached the remote machine."""
+    node, calc_info = node_and_calc_info
+    uuid = node.uuid
+    pathlib.Path(fixture_sandbox.get_abs_path('input')).write_text('original')
+    async with node.computer.get_transport() as transport:
+        mkdir = transport.mkdir_async
+
+        async def disconnected_mkdir(path, *args, **kwargs):
+            if pathlib.Path(path).name == uuid[4:]:
+                msg = 'Disconnected before mkdir'
+                raise OSError(msg)
+            return await mkdir(path, *args, **kwargs)
+
+        monkeypatch.setattr(transport, 'mkdir_async', disconnected_mkdir)
+        with pytest.raises(OSError, match='Disconnected before mkdir'):
+            await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        assert not pathlib.Path(node.get_remote_workdir()).exists()
+        monkeypatch.setattr(transport, 'mkdir_async', mkdir)
+        await execmanager.upload_calculation(load_node(uuid), transport, calc_info, fixture_sandbox)
+    assert (pathlib.Path(node.get_remote_workdir()) / 'input').read_text() == 'original'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('last', list(FileCopyOperation))
+async def test_upload_retry_overlapping_sources(fixture_sandbox, node_and_calc_info, tmp_path, monkeypatch, last):
+    """A retry must not restore an earlier source over the already correct final contents."""
+    node, calc_info = node_and_calc_info
+    uuid = node.uuid
+    pathlib.Path(fixture_sandbox.get_abs_path('input')).write_text('sandbox')
+    repository_uuid = SinglefileData(io.BytesIO(b'repository'), filename='data').store().uuid
+    source = tmp_path / 'source'
+    source.write_text('remote')
+    calc_info.local_copy_list = [(repository_uuid, 'data', 'input')]
+    calc_info.remote_copy_list = [(node.computer.uuid, str(source), 'input')]
+    calc_info.file_copy_operation_order = [operation for operation in FileCopyOperation if operation != last] + [last]
+    expected = {
+        FileCopyOperation.SANDBOX: 'sandbox',
+        FileCopyOperation.LOCAL: 'repository',
+        FileCopyOperation.REMOTE: 'remote',
+    }
+
+    async def unexpected_transfer(*args, **kwargs):
+        pytest.fail('A correctly populated destination was transferred again')
+
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        for method in ('putfile_async', 'putfilelike_async', 'copyfile_literal_async'):
+            monkeypatch.setattr(transport, method, unexpected_transfer)
+        with SandboxFolder() as regenerated:
+            pathlib.Path(regenerated.get_abs_path('input')).write_text('sandbox')
+            await execmanager.upload_calculation(load_node(uuid), transport, calc_info, regenerated)
+    assert (pathlib.Path(node.get_remote_workdir()) / 'input').read_text() == expected[last]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    'operation',
+    ['mkdir_async', 'putfile_async', 'putfilelike_async', 'copyfile_literal_async', 'symlink_literal_async'],
+)
+async def test_upload_lost_acknowledgement(fixture_sandbox, node_and_calc_info, tmp_path, monkeypatch, operation):
+    """An operation completed before disconnection must be recognized after reloading the node."""
+    node, calc_info = node_and_calc_info
+    uuid = node.uuid
+    pathlib.Path(fixture_sandbox.get_abs_path('input')).write_text('sandbox input')
+    source = tmp_path / 'source'
+    source.write_text('remote input')
+    repository_uuid = SinglefileData(io.BytesIO(b'repository input'), filename='data').store().uuid
+    calc_info.local_copy_list = [(repository_uuid, 'data', 'repository')]
+    calc_info.remote_copy_list = [(node.computer.uuid, str(source), 'remote')]
+    calc_info.remote_symlink_list = [(node.computer.uuid, str(source), 'link')]
+    completed = []
+
+    async with node.computer.get_transport() as transport:
+        original = getattr(transport, operation)
+
+        async def lose_acknowledgement(*args, **kwargs):
+            result = await original(*args, **kwargs)
+            destination = str(args[0] if operation == 'mkdir_async' else args[1])
+            if operation != 'mkdir_async' or pathlib.Path(destination).name == uuid[4:]:
+                completed.append(destination)
+                msg = 'Lost acknowledgement'
+                raise OSError(msg)
+            return result
+
+        monkeypatch.setattr(transport, operation, lose_acknowledgement)
+        with pytest.raises(OSError, match='Lost acknowledgement'):
+            await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        assert len(completed) == 1
+
+        # Leave the fault active: repeating the completed operation would fail this retry.
+        await execmanager.upload_calculation(load_node(uuid), transport, calc_info, fixture_sandbox)
+        assert len(completed) == 1
+
+    workdir = pathlib.Path(load_node(uuid).get_remote_workdir())
+    assert (workdir / 'input').read_text() == 'sandbox input'
+    assert (workdir / 'repository').read_text() == 'repository input'
+    assert (workdir / 'remote').read_text() == 'remote input'
+    assert (workdir / 'link').readlink() == source
+    assert not (workdir.parents[2] / 'lost+found').exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('damage', ['sandbox', 'repository', 'remote', 'link', 'directory', 'hardlink', 'missing'])
+async def test_upload_repairs_verified_inputs(fixture_sandbox, node_and_calc_info, tmp_path, monkeypatch, damage):
+    """Stored completion hints must not conceal corruption, including same-size content and wrong link targets."""
+    node, calc_info = node_and_calc_info
+    uuid = node.uuid
+    pathlib.Path(fixture_sandbox.get_abs_path('sandbox')).write_text('original')
+    pathlib.Path(fixture_sandbox.get_abs_path('untouched')).write_text('keep this')
+    pathlib.Path(fixture_sandbox.get_abs_path('directory')).mkdir()
+    source = tmp_path / 'source'
+    source.write_text('original')
+    wrong_source = tmp_path / 'wrong'
+    wrong_source.write_text('external')
+    repository_uuid = SinglefileData(io.BytesIO(b'original'), filename='data').store().uuid
+    calc_info.local_copy_list = [(repository_uuid, 'data', 'repository')]
+    calc_info.remote_copy_list = [(node.computer.uuid, str(source), 'remote')]
+    calc_info.remote_symlink_list = [(node.computer.uuid, str(source), 'link')]
+
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        workdir = pathlib.Path(node.get_remote_workdir())
+        untouched = (workdir / 'untouched').stat()
+        if damage == 'link':
+            (workdir / 'link').unlink()
+            (workdir / 'link').symlink_to(wrong_source)
+        elif damage == 'directory':
+            (workdir / 'directory').rmdir()
+            (workdir / 'directory').symlink_to(tmp_path, target_is_directory=True)
+        elif damage == 'hardlink':
+            (workdir / 'sandbox').unlink()
+            (workdir / 'sandbox').hardlink_to(wrong_source)
+        elif damage == 'missing':
+            (workdir / 'sandbox').unlink()
+        else:
+            (workdir / damage).write_text('tampered')  # Same size as the correct input.
+
+        await execmanager.upload_calculation(load_node(uuid), transport, calc_info, fixture_sandbox)
+        for filename in ('sandbox', 'repository', 'remote'):
+            assert (workdir / filename).read_text() == 'original'
+        assert (workdir / 'link').readlink() == source
+        assert not (workdir / 'directory').is_symlink()
+        assert list((workdir / 'directory').iterdir()) == []
+        assert (workdir / 'untouched').stat().st_mtime_ns == untouched.st_mtime_ns
+        assert (workdir / 'untouched').stat().st_ino == untouched.st_ino
+    assert wrong_source.read_text() == 'external'
+    assert source.read_text() == 'original'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('changed_source', ['sandbox', 'remote'])
+async def test_upload_changed_source(fixture_sandbox, node_and_calc_info, tmp_path, changed_source):
+    """A retry must not silently change the frozen input set."""
+    node, calc_info = node_and_calc_info
+    sandbox = pathlib.Path(fixture_sandbox.get_abs_path('input'))
+    sandbox.write_text('original')
+    source = tmp_path / 'source'
+    source.write_text('original')
+    calc_info.remote_copy_list = [(node.computer.uuid, str(source), 'remote')]
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        workdir = pathlib.Path(node.get_remote_workdir())
+        if changed_source == 'sandbox':
+            sandbox.write_text('new input')
+        else:
+            source.write_text('new input')
+            (workdir / 'remote').write_text('partial')
+        with pytest.raises(InvalidOperation, match='changed since the first attempt'):
+            await execmanager.upload_calculation(load_node(node.uuid), transport, calc_info, fixture_sandbox)
+        assert (workdir / 'input').read_text() == 'original'
+        if changed_source == 'remote':
+            assert (workdir / 'remote').read_text() == 'partial'
+
+
+@pytest.mark.asyncio
+async def test_upload_does_not_need_completed_remote_source(fixture_sandbox, node_and_calc_info, tmp_path):
+    """The persisted checksum suffices when a correctly copied source is no longer available."""
+    node, calc_info = node_and_calc_info
+    source = tmp_path / 'source'
+    source.write_text('original')
+    calc_info.remote_copy_list = [(node.computer.uuid, str(source), 'remote')]
+    async with node.computer.get_transport() as transport:
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        source.unlink()
+        await execmanager.upload_calculation(load_node(node.uuid), transport, calc_info, fixture_sandbox)
+    assert (pathlib.Path(node.get_remote_workdir()) / 'remote').read_text() == 'original'
+
+
+@pytest.mark.asyncio
 async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, tmp_path):
     """Test ``upload_calculation`` with a ``PortableCode`` for different transports.
 
@@ -655,6 +1097,16 @@ async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_i
             calc_info,
             fixture_sandbox,
         )
+        executable = pathlib.Path(node.get_remote_workdir()) / 'bash'
+        assert executable.stat().st_mode & 0o777 == 0o755
+        executable.unlink()
+        original = tmp_path / 'bash'
+        original.chmod(0o600)
+        executable.hardlink_to(original)
+        await execmanager.upload_calculation(load_node(node.uuid), transport, calc_info, fixture_sandbox)
+        assert executable.stat().st_mode & 0o777 == 0o755
+        assert original.stat().st_mode & 0o777 == 0o600
+        assert executable.stat().st_ino != original.stat().st_ino
 
 
 @pytest.mark.parametrize(

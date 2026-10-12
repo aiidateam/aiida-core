@@ -11,6 +11,8 @@ pass.
 Plugin specific tests will be written in the corresponding test file.
 """
 
+import asyncio
+import hashlib
 import io
 import os
 import re
@@ -19,6 +21,7 @@ import signal
 import stat
 import sys
 import tempfile
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -96,6 +99,120 @@ def test_is_open(custom_transport):
         assert custom_transport.is_open
 
     assert not custom_transport.is_open
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('permissions', [0o751, 0o640])
+@pytest.mark.parametrize('use_symlink', [False, True])
+async def test_literal_copy_file_permissions(custom_transport, tmp_path_remote, permissions, use_symlink):
+    """Copying literal paths preserves file permissions, including through a source symlink."""
+    source = tmp_path_remote / 'helper[1].sh'
+    source.write_text('#!/bin/sh\nexit 0\n')
+    source.chmod(permissions)
+    link = tmp_path_remote / 'link[1].sh'
+    link.symlink_to(source.name)
+    destination = tmp_path_remote / 'copy[1].sh'
+    async with custom_transport as transport:
+        await transport.copyfile_literal_async(link if use_symlink else source, destination)
+    assert not destination.is_symlink()
+    assert destination.read_bytes() == source.read_bytes()
+    assert stat.S_IMODE(destination.stat().st_mode) == permissions
+    assert stat.S_IMODE(source.stat().st_mode) == permissions
+
+
+@pytest.mark.asyncio
+async def test_stream_and_checksum(custom_transport, tmp_path_remote):
+    """Binary repository streams must remain bounded and intact, even with shell metacharacters in paths."""
+    content = bytes(range(256)) * 8193
+
+    class BoundedReader(io.BytesIO):
+        def read(self, size=-1):
+            assert 0 < size <= 524288
+            return super().read(size)
+
+    path = tmp_path_remote / "input ' $() ; `quoted`\n.bin"
+    async with custom_transport as transport:
+        with BoundedReader(content) as source:
+            await transport.putfilelike_async(source, path)
+            assert not source.closed
+        assert await transport.get_file_checksum_async(path) == hashlib.sha256(content).hexdigest()
+        assert path.read_bytes() == content
+        with pytest.raises(OSError):
+            await transport.get_file_checksum_async(tmp_path_remote / 'absent')
+
+
+@pytest.mark.asyncio
+async def test_stream_cancellation(custom_transport, tmp_path_remote):
+    """Cancelling a transfer must finish its pending read before the caller can close the source or retry."""
+    reading = threading.Event()
+    release = threading.Event()
+
+    class DelayedReader(io.BytesIO):
+        def read(self, size=-1):
+            reading.set()
+            assert release.wait(timeout=10)
+            return super().read(size)
+
+    path = tmp_path_remote / 'cancelled'
+    async with custom_transport as transport:
+        with DelayedReader(b'old content') as source:
+            task = asyncio.create_task(transport.putfilelike_async(source, path))
+            try:
+                assert await asyncio.to_thread(reading.wait, 10)
+                task.cancel()
+                await asyncio.sleep(0)
+                assert not task.done()
+            finally:
+                release.set()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        await transport.putfilelike_async(io.BytesIO(b'retry content'), path)
+        assert path.read_bytes() == b'retry content'
+
+
+@pytest.mark.asyncio
+async def test_attributes_include_file_type(custom_transport, tmp_path_remote):
+    """Attributes must distinguish files, directories and dangling symlinks without following links."""
+    regular = tmp_path_remote / 'regular'
+    regular.write_text('content')
+    link = tmp_path_remote / 'link'
+    link.symlink_to(tmp_path_remote / 'absent')
+    async with custom_transport as transport:
+        assert stat.S_ISREG((await transport.get_attribute_async(regular))['st_mode'])
+        assert stat.S_ISDIR((await transport.get_attribute_async(tmp_path_remote))['st_mode'])
+        assert stat.S_ISLNK((await transport.get_attribute_async(link))['st_mode'])
+        with pytest.raises(FileNotFoundError):
+            await transport.get_attribute_async(tmp_path_remote / 'absent')
+
+
+@pytest.mark.asyncio
+async def test_remove_directory_symlink(custom_transport, tmp_path_remote):
+    """Removing a directory link must unlink it and preserve the referenced directory and files."""
+    source = tmp_path_remote / 'source'
+    source.mkdir()
+    (source / 'input').write_text('original')
+    link = tmp_path_remote / 'link'
+    link.symlink_to(source, target_is_directory=True)
+    async with custom_transport as transport:
+        await transport.remove_async(link)
+        assert not link.is_symlink()
+        assert (source / 'input').read_text() == 'original'
+        with pytest.raises(OSError):
+            await transport.remove_async(source)
+
+
+@pytest.mark.asyncio
+async def test_readlink_preserves_target(custom_transport, tmp_path_remote):
+    """Read the stored target of even a dangling link, preserving a trailing newline."""
+    link = tmp_path_remote / "link ' $() ; `quoted`"
+    target = "../missing ' $() ; `quoted`\n"
+    async with custom_transport as transport:
+        await transport.symlink_literal_async(target, link)
+        assert await transport.readlink_async(link) == target
+
+        wildcard_link = tmp_path_remote / 'wildcard'
+        await transport.symlink_literal_async('-missing [*]?.dat', wildcard_link)
+        assert await transport.readlink_async(wildcard_link) == '-missing [*]?.dat'
 
 
 def test_makedirs(custom_transport, tmpdir):

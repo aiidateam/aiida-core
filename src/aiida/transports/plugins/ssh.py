@@ -578,6 +578,16 @@ class AsyncSshTransport(AsyncTransport):
             msg = f'The local path {localpath} does not exist'
             raise OSError(msg)
 
+    async def putfilelike_async(self, handle: t.BinaryIO, remotepath: TransportPath) -> None:
+        """Stream an open binary file directly to the remote destination."""
+        async with self._semaphore:
+            await self.async_backend.putfilelike(handle, str(remotepath))
+
+    async def symlink_literal_async(self, source: TransportPath, destination: TransportPath) -> None:
+        """Create a link without the glob expansion performed by ``symlink_async``."""
+        async with self._semaphore:
+            await self.async_backend.symlink(str(source), str(destination))
+
     async def putfile_async(
         self,
         localpath: TransportPath,

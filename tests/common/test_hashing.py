@@ -17,6 +17,8 @@ from decimal import Decimal
 
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from aiida.common.exceptions import HashingError
 from aiida.common.folders import SandboxFolder
@@ -265,6 +267,47 @@ class TestCheckDBRoundTrip:
             recomputed_hash = node.base.caching.get_hash()
 
             assert first_hash == recomputed_hash
+
+
+HASHABLE_LEAVES = st.integers() | st.text() | st.booleans() | st.none()
+
+NESTED = st.recursive(
+    HASHABLE_LEAVES,
+    lambda children: (
+        st.lists(children, max_size=4) | st.dictionaries(keys=st.text() | st.integers(), values=children, max_size=4)
+    ),
+    max_leaves=10,
+)
+
+
+class TestMakeHashProperties:
+    """Property tests for `make_hash` over generated nested structures."""
+
+    @given(NESTED)
+    def test_deterministic(self, value):
+        assert make_hash(value) == make_hash(value)
+
+    @given(st.dictionaries(keys=st.text() | st.integers(), values=NESTED, min_size=2, max_size=5))
+    def test_mapping_ignores_insertion_order(self, mapping):
+        assert make_hash(mapping) == make_hash(dict(reversed(list(mapping.items()))))
+
+    @given(st.dictionaries(keys=st.text() | st.integers(), values=NESTED, min_size=2, max_size=5))
+    def test_ordered_dict_respects_insertion_order(self, mapping):
+        ordered = collections.OrderedDict(mapping)
+        assert make_hash(ordered) != make_hash(collections.OrderedDict(reversed(list(mapping.items()))))
+
+    @given(st.lists(HASHABLE_LEAVES, unique=True, min_size=1, max_size=5))
+    def test_set_frozenset_equivalent(self, elements):
+        assert make_hash(set(elements)) == make_hash(frozenset(elements))
+
+    @given(st.lists(HASHABLE_LEAVES, unique=True, min_size=1, max_size=5))
+    def test_append_changes_list_hash(self, elements):
+        assert make_hash(elements) != make_hash([*elements, elements[0]])
+
+    @given(st.integers())
+    def test_distinct_types_hash_differently(self, value):
+        assert make_hash(value) != make_hash(str(value))
+        assert make_hash(True) != make_hash(1)
 
 
 def test_chunked_file_hash(tmp_path):

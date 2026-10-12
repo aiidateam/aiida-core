@@ -23,6 +23,7 @@ from inspect import get_annotations
 import docstring_parser
 
 from aiida.common.lang import override
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import as_dict, is_structured, port_help, without_marks
 from aiida.engine.processes.ports import InputPort, infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
@@ -304,8 +305,6 @@ def _declare_parameter(
     stored: bool,
 ) -> None:
     """Declare one function parameter as an input port or namespace."""
-    from aiida.engine.processes.generic.ports import UNSPECIFIED
-
     annotation = annotations.get(parameter.name)
     valid_type = infer_valid_type_from_type_annotation(annotation, stored=stored) or (Data,)
     help_string = port_help(annotation)
@@ -331,7 +330,7 @@ def _declare_parameter(
     # done lazily using a lambda, just as any port defaults should not define node instances directly as is
     # also checked by the ``spec.input`` call.
     indirect_default: t.Any
-    if default is not None and default != UNSPECIFIED and not isinstance(default, Data) and not callable(default):
+    if default is not None and default is not UNSPECIFIED and not isinstance(default, Data) and not callable(default):
 
         def indirect_default(value=default):
             return to_aiida_type(value) if stored else copy.deepcopy(value)

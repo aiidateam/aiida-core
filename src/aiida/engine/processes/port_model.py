@@ -15,6 +15,8 @@ import typing as t
 
 from typing_extensions import Self, dataclass_transform
 
+from aiida.engine.processes.generic.ports import UNSPECIFIED
+
 __all__ = (
     'Field',
     'PortField',
@@ -25,8 +27,6 @@ __all__ = (
     'port_help',
     'without_marks',
 )
-
-UNSPECIFIED = object()
 
 M = t.TypeVar('M', bound='PortModel')
 

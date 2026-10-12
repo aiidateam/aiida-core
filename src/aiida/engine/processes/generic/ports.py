@@ -43,7 +43,7 @@ def is_mutable_property(cls: t.Any, attribute: str) -> bool:
 
 
 _LOGGER = logging.getLogger(__name__)
-UNSPECIFIED = ()
+UNSPECIFIED = object()
 
 VALIDATOR_SIGNATURE_DEPRECATION_WARNING = """the validator `{}` has a signature that only takes a single argument.
     This has been deprecated and the new signature is `validator(value, port)` where the `port` argument will be the
@@ -445,7 +445,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         """
         description = {
             '_attrs': {
-                'default': self.default,
+                'default': f'{self.default}',
                 'dynamic': self.dynamic,
                 'valid_type': str(self.valid_type),
                 'required': str(self.required),
@@ -655,7 +655,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         breadcrumbs_local = (*breadcrumbs, self.name)
         message: str | None
 
-        if not port_values:
+        if port_values is None or port_values is UNSPECIFIED:
             port_values = {}
 
         if not isinstance(port_values, collections.abc.Mapping):

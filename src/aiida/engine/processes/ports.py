@@ -21,7 +21,7 @@ from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.engine.processes.port_model import as_dict, is_a_plain_class, is_structured, without_marks
+from aiida.engine.processes.port_model import _namespace_value, is_a_plain_class, is_structured, without_marks
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
@@ -313,9 +313,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
     def _as_mapping(self, value: t.Any) -> Mapping[str, t.Any]:
         """Return model instances as mappings, rejecting other non-mappings."""
-        converted = as_dict(value)
-        if converted is not None:
-            return converted
+        value = _namespace_value(value)
         if not isinstance(value, Mapping):
             msg = f'port namespace `{self.name}` received `{type(value)}` instead of a dictionary'
             raise TypeError(msg)

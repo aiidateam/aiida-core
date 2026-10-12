@@ -28,8 +28,6 @@ __all__ = (
     'without_marks',
 )
 
-M = t.TypeVar('M', bound='PortModel')
-
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class PortField:
@@ -135,26 +133,22 @@ def _rebuild_model_value(field: Field | None, value: t.Any) -> t.Any:
     """Rebuild a nested model value, passing other values through."""
     if field is None or not isinstance(value, t.Mapping) or not is_structured(field.annotation):
         return value
-    return build(field.annotation, value)
+    return field.annotation.from_dict(value)
 
 
-def build(container: type[M], values: t.Mapping[str, t.Any]) -> M:
-    """Reconstruct a model from namespace values.
-
-    :param container: the model class.
-    :param values: supplied field values.
-    """
-    return container.from_dict(values)
+def _marks(annotation: t.Any) -> t.Iterator[t.Any]:
+    """Yield the metadata marks of a possibly annotated annotation."""
+    while t.get_origin(annotation) is t.Annotated:
+        args = t.get_args(annotation)
+        yield from args[1:]
+        annotation = args[0]
 
 
 def port_help(annotation: t.Any) -> str | None:
     """Return the help text of a `PortField` mark, if the annotation carries one."""
-    while t.get_origin(annotation) is t.Annotated:
-        args = t.get_args(annotation)
-        for mark in args[1:]:
-            if isinstance(mark, PortField):
-                return mark.help
-        annotation = args[0]
+    for mark in _marks(annotation):
+        if isinstance(mark, PortField):
+            return mark.help
     return None
 
 

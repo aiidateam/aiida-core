@@ -17,7 +17,8 @@ from dataclasses import dataclass
 from types import UnionType
 
 from aiida.common.loaders import get_object_loader
-from aiida.engine.processes.port_model import UNSPECIFIED, as_dict, fields_of, port_help, without_marks
+from aiida.engine.processes.generic.ports import UNSPECIFIED
+from aiida.engine.processes.port_model import _namespace_value, fields_of, port_help, without_marks
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -107,9 +108,7 @@ def _shaped(hint: object, name: str, given: Mapping[str, object]) -> Shape:
 
 def json_default(value: object) -> object:
     """Copy finite JSON defaults, rejecting identities and executable values."""
-    converted = as_dict(value)
-    if converted is not None:
-        value = converted
+    value = _namespace_value(value)
     if value is None or isinstance(value, (bool, int, str)):
         return value
     if isinstance(value, float) and math.isfinite(value):

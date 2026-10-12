@@ -16,8 +16,9 @@ from collections.abc import Mapping
 from functools import partial
 
 from aiida.common.exceptions import MissingInput, MissingRequiredInputsError
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, json_default
-from aiida.engine.processes.port_model import UNSPECIFIED, as_dict
+from aiida.engine.processes.port_model import _namespace_value
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace
 
 
@@ -132,8 +133,7 @@ class _InputResolver:
 
     def _checked_mapping(self, port: PortNamespace, value: t.Any, path: str) -> Mapping[str, t.Any]:
         """Return namespace values as a mapping, rejecting mistyped and unknown inputs."""
-        converted = as_dict(value)
-        value = value if converted is None else converted
+        value = _namespace_value(value)
         if not isinstance(value, Mapping):
             msg = f'graph input `{path}` must be a namespace mapping, not `{type(value).__name__}`.'
             raise TypeError(msg)

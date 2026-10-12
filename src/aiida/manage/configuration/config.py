@@ -569,7 +569,18 @@ class Config:
         from aiida.common import exceptions
 
         if name not in self.profile_names:
-            msg = f'profile `{name}` does not exist'
+            import difflib
+
+            # The folder is what identifies the mistake: `AIIDA_PATH` reaches only what the shell started, so a
+            # profile that works in a terminal is absent in a Jupyter kernel or a cron job, for no visible reason.
+            matches = difflib.get_close_matches(name, self.profile_names, cutoff=0.5)
+            suggestion = ', '.join(f'`{match}`' for match in sorted(matches))
+            hint = (
+                f'The most similar ones are: {suggestion}.'
+                if matches
+                else 'Run `verdi profile list` to see the ones it does define.'
+            )
+            msg = f'profile `{name}` does not exist in `{self.dirpath}`. {hint}'
             raise exceptions.ProfileConfigurationError(msg)
 
     def get_profile(self, name: str | None = None) -> Profile:

@@ -137,6 +137,17 @@ You should now be able to start a Jupyter notebook server:
 
     jupyter notebook
 
+A kernel is started by the Jupyter server, so it inherits neither the virtual environment that is active in the shell nor the ``AIIDA_PATH`` variable that selects the configuration directory.
+A profile that works in the terminal is therefore missing in a notebook whenever either of those differs from the default.
+Registering a kernel writes both into its specification:
+
+.. code-block:: console
+
+    verdi notebook install
+
+Select the kernel it reports in the notebook to read the same configuration as ``verdi``.
+Reinstalling keeps any other variables in the kernel specification and asks before overwriting a kernel registered under the same name.
+
 To use AiiDA's Python API in a notebook, first a profile has to be loaded:
 
 .. code-block:: ipython

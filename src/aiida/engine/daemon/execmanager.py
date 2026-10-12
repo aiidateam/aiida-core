@@ -21,6 +21,7 @@ from collections.abc import Mapping
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from uuid import uuid4
 
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
@@ -158,6 +159,9 @@ async def upload_calculation(
 
             # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
             await transport.mkdir_async(path_lost_found, ignore_existing=True)
+            # Preserve an earlier backup without copying into or overwriting it on subsequent retries.
+            if await transport.path_exists_async(path_target):
+                await transport.rename_async(path_target, f'{path_target}-{uuid4()}')
             await transport.copytree_async(path_existing, path_target)
             await transport.rmtree_async(path_existing)
 

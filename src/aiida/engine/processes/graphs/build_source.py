@@ -266,7 +266,7 @@ def _parameter_defaults(state: _LoweringState, function: ast.FunctionDef) -> dic
         if default is None:
             continue
         try:
-            value = ast.literal_eval(default)
+            value: t.Any = ast.literal_eval(default)
         except (ValueError, TypeError, SyntaxError):
             _reject(state, default, f'parameter default for `{parameter.arg}` must be a literal')
         try:
@@ -318,7 +318,7 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
             _lower_unpack(state, statement)
         else:
             _lower_assignment(state, statement)
-    result = statements[-1].value
+    result: ast.expr | None = statements[-1].value
     if result is None:
         _reject(state, statements[-1], 'return must name a task or graph input')
     outputs, output_typehints = _lower_outputs(state, result)
@@ -372,7 +372,7 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
     """Bind a call result to new placement names."""
     if not isinstance(statement, ast.Assign) or not statement.targets:
         _reject(state, statement, 'only single-name assignments are supported')
-    names = [target.id for target in statement.targets if isinstance(target, ast.Name)]
+    names: list[str] = [target.id for target in statement.targets if isinstance(target, ast.Name)]
     if len(names) != len(statement.targets):
         _reject(state, statement, 'only single-name assignments are supported')
     for name in names:
@@ -380,7 +380,7 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
             _reject(state, statement, 'assignment must bind a new name')
     if not isinstance(statement.value, ast.Call):
         _reject(state, statement.value, 'graph assignments must call a registered task or graph')
-    ref = _lower_call(state, statement.value)
+    ref: _Reference = _lower_call(state, statement.value)
     for name in names:
         state.names[name] = ref
     return names[0]
@@ -388,20 +388,20 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
 
 def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
     """Bind each tuple element to one output of a multi-output call."""
-    target = statement.targets[0]
+    target: ast.expr = statement.targets[0]
     assert isinstance(target, ast.Tuple)
-    names = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
+    names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
     if not names or len(names) != len(target.elts) or any(name in state.names for name in names):
         _reject(state, statement, 'tuple assignment must bind new names')
     if not isinstance(statement.value, ast.Call):
         _reject(state, statement.value, 'graph assignments must call a registered task or graph')
-    ref = _lower_call(state, statement.value)
+    ref: _Reference = _lower_call(state, statement.value)
     if not isinstance(ref.shape, NamespaceShape):
         if len(names) == 1:
             state.names[names[0]] = ref
             return
         _reject(state, statement.value, 'tuple assignment needs multiple outputs')
-    fields = ref.shape.fields
+    fields: tuple[tuple[str, Shape], ...] = ref.shape.fields
     if len(names) != len(fields):
         _reject(state, statement, f'tuple assignment needs exactly {len(fields)} names for {len(fields)} outputs')
     for name, (field_name, field_shape) in zip(names, fields):
@@ -421,7 +421,9 @@ def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
     if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
         msg = 'control-flow outputs must be static leaves, not namespaces.'
         raise UnsupportedSyntax(msg)
-    endpoints = {name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()}
+    endpoints: dict[str, Endpoint] = {
+        name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()
+    }
     return GraphSpec(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
@@ -503,7 +505,7 @@ def _lower_side(state: _LoweringState, statements: list[ast.stmt]) -> _Side:
 def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     """Lower an if statement to a branch control task."""
     bound = _bind_condition(state, statement.test)
-    test = bound if bound is not None else statement.test
+    test: ast.expr = bound if bound is not None else statement.test
     if not statement.orelse or len(statement.body) != 1 or len(statement.orelse) != 1:
         _reject(state, statement, 'if requires one assignment to the same name on each side')
     first, second = (_lower_side(state, statements) for statements in (statement.body, statement.orelse))
@@ -530,7 +532,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
         body.append(update)
-    test = bound if bound is not None else statement.test
+    test: ast.expr = bound if bound is not None else statement.test
     if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
         _reject(state, statement, 'while requires a bound condition name and no else')
     condition = test.id
@@ -593,18 +595,18 @@ def _claim_instance(state: _LoweringState, name: str) -> str:
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     """Place a task or graph call with wired inputs."""
-    name = _called_name(state, expression)
+    name: str = _called_name(state, expression)
     assert isinstance(expression, ast.Call)
-    target = _registered_target(state, expression, name)
-    instance = _claim_instance(state, name)
+    target: TaskHandle | GraphHandle = _registered_target(state, expression, name)
+    instance: str = _claim_instance(state, name)
     if isinstance(target, GraphHandle):
-        body = _lower_registered_graph(_key(target.function), state.stack)
+        body: GraphSpec = _lower_registered_graph(_key(target.function), state.stack)
         task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
-        inputs = body.input_shape
-        result_port = body.result_port
-        result_shape = body.result_shape
+        inputs: NamespaceShape = body.input_shape
+        result_port: str = body.result_port
+        result_shape: Shape = body.result_shape
     else:
-        spec = _task_spec_for(target)
+        spec: TaskSpec | None = _task_spec_for(target)
         assert spec is not None
         task = ProcessTask(name=instance, inputs={}, spec=spec)
         inputs = spec.input_shape
@@ -612,7 +614,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         result_shape = spec.result_shape
     keywords: list[ast.keyword] = _named_keywords(state, expression, name, inputs)
     task = replace(task, inputs=_lower_keywords(state, instance, name, inputs, keywords))
-    missing = _required_missing(state, instance, inputs, task.inputs)
+    missing: list[str] = _required_missing(state, instance, inputs, task.inputs)
     if missing:
         _reject(state, expression, f'task {name!r} is missing required inputs: {missing}')
     state.tasks.append(task)
@@ -720,7 +722,7 @@ def _lower_input(
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
                 _reject(state, expression, 'namespace keys must be string literals without unpacking')
-            name = key.value
+            name: str = key.value
             if name in seen:
                 _reject(state, expression, f'duplicate or unknown namespace input {name!r}')
             try:
@@ -781,8 +783,8 @@ def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
     """Point at the offending node in the original file, not just the extracted function."""
     source = state.definition.source.splitlines()
     location = state.definition
-    line = getattr(node, 'lineno', None)
-    column = getattr(node, 'col_offset', None)
+    line: int | None = getattr(node, 'lineno', None)
+    column: int | None = getattr(node, 'col_offset', None)
     if line is None or column is None or line > len(source):
         msg = f'{location.filename}: {state.key}: {reason}: {ast.unparse(node)}'
         raise UnsupportedSyntax(msg)

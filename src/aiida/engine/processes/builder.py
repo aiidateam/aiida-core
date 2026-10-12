@@ -36,15 +36,6 @@ class PrettyEncoder(json.JSONEncoder):
             return o.get_description()
 
 
-def _preserve_nodes(original: t.Any, prepared: t.Any) -> t.Any:
-    """Keep supplied nodes in prepared inputs so provenance retains their identities."""
-    if isinstance(original, Node):
-        return original
-    if isinstance(original, Mapping) and isinstance(prepared, Mapping):
-        return {key: _preserve_nodes(original[key], prepared[key]) for key in original}
-    return prepared
-
-
 class ProcessBuilderNamespace(MutableMapping):
     """Input namespace for the `ProcessBuilder`.
 
@@ -122,12 +113,12 @@ class ProcessBuilderNamespace(MutableMapping):
                     raise AttributeError(msg) from exception
                 port = None
             else:
-                prepared = port.prepare(value)  # type: ignore[union-attr]
-                validation_error = port.validate(prepared)  # type: ignore[union-attr]
+                resolved = port.prepare(value)  # type: ignore[union-attr]
+                validation_error = port.validate(resolved.runtime)  # type: ignore[union-attr]
                 if validation_error:
                     msg = f'invalid attribute value {validation_error.message}'
                     raise ValueError(msg)
-                value = _preserve_nodes(value, prepared)
+                value = resolved.sources
 
             # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
             # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become

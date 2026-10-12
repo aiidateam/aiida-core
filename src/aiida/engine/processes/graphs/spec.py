@@ -493,7 +493,7 @@ class GraphSpec:
         prepared = self.prepare_inputs(inputs)
         serialized = namespace.serialize(prepared)
         assert serialized is not None
-        error = namespace.validate(namespace.prepare(serialized))
+        error = namespace.validate(namespace.prepare(serialized).runtime)
         if error is not None:
             raise ValueError(error)
         for name, targets in self.inputs.items():
@@ -503,7 +503,7 @@ class GraphSpec:
                 continue
             for task, path in targets:
                 for port in self._input_ports_at(self.task(task), path):
-                    error = port.validate(port.prepare(value))
+                    error = port.validate(port.prepare(value).runtime)
                     if error is not None:
                         raise ValueError(error)
         return serialized

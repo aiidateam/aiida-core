@@ -20,15 +20,15 @@ pytestmark = pytest.mark.presto
 def test_prepare_keeps_plain_values() -> None:
     """Values matching the declared runtime type pass through preparation."""
     port = InputPort('count', valid_type=int)
-    assert port.prepare(2) == 2
-    assert port.prepare(2) is not None
+    assert port.prepare(2).runtime == 2
+    assert port.prepare(2).runtime is not None
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_prepare_unwraps_matching_nodes() -> None:
     """Nodes convertible to the declared runtime type arrive as plain values."""
     port = InputPort('count', valid_type=int)
-    assert port.prepare(orm.Int(2)) == 2
+    assert port.prepare(orm.Int(2)).runtime == 2
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -36,7 +36,9 @@ def test_prepare_keeps_nodes_for_node_ports() -> None:
     """Nodes matching a node-typed port are preserved for provenance."""
     port = InputPort('count', valid_type=orm.Int)
     node: orm.Int = orm.Int(2)
-    assert port.prepare(node) is node
+    resolved = port.prepare(node)
+    assert resolved.runtime is node
+    assert resolved.sources is node
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -44,7 +46,7 @@ def test_prepare_keeps_unconvertible_values_for_validation() -> None:
     """Unconvertible values pass through preparation and fail validation."""
     port = InputPort('count', valid_type=int)
     node: orm.Str = orm.Str('wrong')
-    assert port.prepare(node) is node
+    assert port.prepare(node).runtime is node
     assert port.validate(node) is not None
 
 
@@ -56,9 +58,19 @@ def test_namespace_prepare_returns_new_mapping() -> None:
     node: orm.Int = orm.Int(2)
     mapping: dict[str, object] = {'count': node}
     prepared = namespace.prepare(mapping)
-    assert isinstance(prepared, AttributesFrozendict)
-    assert prepared['count'] == 2
+    assert isinstance(prepared.runtime, AttributesFrozendict)
+    assert prepared.runtime['count'] == 2
+    assert prepared.sources['count'] is node
     assert mapping == {'count': node}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_prepare_reports_converted_sources() -> None:
+    """Converted values source from themselves; supplied nodes source from themselves."""
+    port = InputPort('count', valid_type=int)
+    node: orm.Int = orm.Int(2)
+    resolved = port.prepare(node)
+    assert (resolved.runtime, resolved.sources) == (2, node)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

@@ -57,7 +57,7 @@ class GraphProcess(Process):
         stored = graph.serialize_inputs(dict(self.inputs.get(self._GRAPH_INPUTS, {})))
         self._input_sources = AttributesFrozendict({**self._input_sources, self._GRAPH_INPUTS: stored})
         self._parsed_inputs = AttributesFrozendict(
-            {**self.inputs, self._GRAPH_INPUTS: graph.input_spec().prepare(stored)}
+            {**self.inputs, self._GRAPH_INPUTS: graph.input_spec().prepare(stored).runtime}
         )
         return super()._create_and_setup_db_record()
 
@@ -111,7 +111,7 @@ class GraphProcess(Process):
         self._parsed_inputs = AttributesFrozendict(
             {
                 **self.inputs,
-                self._GRAPH_INPUTS: self.graph.input_spec().prepare(self._input_sources[self._GRAPH_INPUTS]),
+                self._GRAPH_INPUTS: self.graph.input_spec().prepare(self._input_sources[self._GRAPH_INPUTS]).runtime,
             }
         )
 

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import typing as t
 import warnings
@@ -29,6 +30,7 @@ __all__ = (
     'InputPort',
     'OutputPort',
     'PortNamespace',
+    'PreparedInputs',
     'WithNonDb',
     'WithSerialize',
 )
@@ -37,6 +39,31 @@ OutputPort = ports.OutputPort
 
 PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1
 PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label
+
+
+@dataclasses.dataclass(frozen=True)
+class PreparedInputs:
+    """Runtime values beside the provenance sources they were converted from.
+
+    Both trees share one shape: converting never adds or drops keys, so each
+    runtime leaf has its source at the same path.
+    """
+
+    runtime: t.Any
+    sources: t.Any
+
+
+def _source_tree(original: t.Any, runtime: t.Any) -> t.Any:
+    """Return the nodes converted values were sourced from, else the converted values.
+
+    A supplied node always survives conversion identically, so the supplied
+    side alone decides: a supplied node is its own source.
+    """
+    if isinstance(original, Node):
+        return original
+    if isinstance(original, Mapping) and isinstance(runtime, Mapping):
+        return {key: _source_tree(value, runtime[key]) for key, value in original.items()}
+    return runtime
 
 
 class WithNonDb:
@@ -174,15 +201,17 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
 
         super().__init__(*args, **kwargs)
 
-    def prepare(self, value: t.Any) -> t.Any:
-        """Adapt an input to its declared runtime type without coercing unrelated values.
+    def prepare(self, value: t.Any) -> PreparedInputs:
+        """Convert a filled input to its runtime type without coercing unrelated values.
 
         :param value: the incoming input value.
-        :return: the runtime value, ready for validation.
+        :return: the runtime value beside its provenance source.
         """
         if self.valid_type is None:
-            return self.serialize(value)
-        return _runtime_value(self.valid_type, value, self.serialize)
+            runtime = self.serialize(value)
+        else:
+            runtime = _runtime_value(self.valid_type, value, self.serialize)
+        return PreparedInputs(runtime, value if isinstance(value, Node) else runtime)
 
     def get_description(self) -> dict[str, str]:
         """Return a description of the InputPort, which will be a dictionary of its attributes
@@ -296,14 +325,14 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         """Accept model instances as namespace mappings before applying defaults."""
         return super().pre_process(dict(self._as_mapping(port_values)))
 
-    def prepare(self, mapping: Mapping[str, t.Any]) -> AttributesFrozendict:
-        """Convert filled inputs to runtime values without changing the supplied mapping.
+    def prepare(self, mapping: Mapping[str, t.Any]) -> PreparedInputs:
+        """Convert filled inputs to runtime values, keeping sources for provenance.
 
         Filling (defaults, shape checks, missing aggregation) happens before
         this step, in `PortNamespace.pre_process` or the graph input resolver.
 
         :param mapping: inputs with defaults already applied.
-        :return: runtime inputs ready for validation.
+        :return: the runtime inputs beside their provenance sources.
         """
         mapping = self._as_mapping(mapping)
 
@@ -312,15 +341,19 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
                 return {key: dynamic(item) for key, item in value.items()}
             return _runtime_value(self.valid_type, value)
 
-        result = {}
+        runtime: dict[str, t.Any] = {}
+        sources: dict[str, t.Any] = {}
         for name, value in mapping.items():
             if name in self:
                 port = self[name]
                 assert isinstance(port, (InputPort, PortNamespace))
-                result[name] = port.prepare(value)
+                resolved = port.prepare(value)
+                runtime[name] = resolved.runtime
+                sources[name] = resolved.sources
             else:
-                result[name] = dynamic(value)
-        return AttributesFrozendict(result)
+                runtime[name] = dynamic(value)
+                sources[name] = _source_tree(value, runtime[name])
+        return PreparedInputs(AttributesFrozendict(runtime), AttributesFrozendict(sources))
 
     def serialize(self, mapping: dict[str, t.Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, t.Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.

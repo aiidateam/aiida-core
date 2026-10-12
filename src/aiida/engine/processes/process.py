@@ -56,58 +56,17 @@ if t.TYPE_CHECKING:
 __all__ = ('Process', 'ProcessState')
 
 
-def _zip_input_trees(
-    port: InputPort | PortNamespace | None,
-    original: t.Any,
-    runtime: t.Any,
-    select: t.Callable[[t.Any, t.Any], t.Any],
-    *,
-    follow_original: bool,
-) -> t.Any:
-    """Rebuild one input tree shape holding leaves chosen from two parallel trees.
-
-    :param port: the spec node describing this level, if the key is declared.
-    :param original: the supplied (provenance) tree.
-    :param runtime: the prepared (consumed) tree.
-    :param select: leaf choice given `(original_leaf, runtime_leaf)`.
-    :param follow_original: follow the supplied key space, else the prepared one.
-        Prepared trees may hold injected defaults absent from the supplied inputs;
-        following the wrong space leaks those into raw inputs or drops them from provenance.
-    :return: a frozen mapping where both sides nest, else the selected leaf.
-    """
-    if not isinstance(port, InputPort) and isinstance(original, Mapping) and isinstance(runtime, Mapping):
-        space = original if follow_original else runtime
-        return AttributesFrozendict(
-            {
-                key: _zip_input_trees(
-                    port.get(key) if port is not None else None,
-                    original[key] if key in original else runtime[key],
-                    runtime[key] if key in runtime else original[key],
-                    select,
-                    follow_original=follow_original,
-                )
-                for key in space
-            }
-        )
-    return select(original, runtime)
-
-
 def _with_runtime_values(port: InputPort | PortNamespace | None, original: t.Any, runtime: t.Any) -> t.Any:
-    """Rebuild an original mapping shape holding runtime values."""
-    return _zip_input_trees(port, original, runtime, lambda _original, runtime_leaf: runtime_leaf, follow_original=True)
+    """Rebuild a supplied mapping shape holding runtime values.
 
-
-def _provenance_sources(port: InputPort | PortNamespace | None, original: t.Any, value: t.Any) -> t.Any:
-    """Freeze namespaces while retaining original nodes and ordinary dictionary-valued leaves."""
-
-    def select(original_leaf: t.Any, runtime_leaf: t.Any) -> t.Any:
-        if isinstance(runtime_leaf, orm.Node):
-            return runtime_leaf
-        if isinstance(original_leaf, orm.Node):
-            return original_leaf
-        return runtime_leaf
-
-    return _zip_input_trees(port, original, value, select, follow_original=False)
+    Prepared trees may hold injected defaults absent from the supplied inputs;
+    following the supplied space keeps those out of the raw inputs.
+    """
+    if isinstance(port, PortNamespace) and isinstance(original, Mapping) and isinstance(runtime, Mapping):
+        return AttributesFrozendict(
+            {key: _with_runtime_values(port.get(key), original[key], runtime[key]) for key in original}
+        )
+    return runtime
 
 
 @process_persistence.auto_persist('_parent_pid', '_enable_persistence')
@@ -378,7 +337,7 @@ class Process(ProcessBase):
         load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
         super().load_instance_state(saved_state, load_context)
         self._input_sources = self.raw_inputs or self.inputs
-        self._parsed_inputs = self.spec().inputs.prepare(self.inputs)
+        self._parsed_inputs = self.spec().inputs.prepare(self.inputs).runtime
         self._provenance_inputs = (
             serialize.deserialize_unsafe(saved_state['provenance_inputs'])
             if 'provenance_inputs' in saved_state
@@ -527,12 +486,12 @@ class Process(ProcessBase):
     def _pre_process_inputs(self, inputs: dict[str, t.Any]) -> AttributesFrozendict:
         """Keep provenance sources separate from the values validated and consumed at runtime."""
         prepared = super()._pre_process_inputs(inputs)
-        runtime = self.spec().inputs.prepare(prepared)
+        resolved = self.spec().inputs.prepare(prepared)
         namespace = self.spec().inputs
-        self._input_sources = _provenance_sources(namespace, prepared, runtime)
-        self._raw_inputs = _with_runtime_values(namespace, self.raw_inputs or {}, runtime)
+        self._input_sources = resolved.sources
+        self._raw_inputs = _with_runtime_values(namespace, self.raw_inputs or {}, resolved.runtime)
         self._provenance_inputs = None
-        return runtime
+        return resolved.runtime
 
     def on_create(self) -> None:
         """Called when a Process is created."""
@@ -917,7 +876,7 @@ class Process(ProcessBase):
         # within the ``metadata`` port namespace, this may not always be the case. The ``_filter_serializable_metadata``
         # method will filter out all ports that set ``is_metadata=True`` no matter where in the namespace they are
         # defined so this approach is more robust for the future.
-        provided = self.spec().inputs.prepare(self.raw_inputs or {})
+        provided = self.spec().inputs.prepare(self.raw_inputs or {}).runtime
         serializable_inputs = self._filter_serializable_metadata(self.spec().inputs, provided)
         pruned = prune_mapping(serializable_inputs)
         self.node.set_metadata_inputs(pruned)
@@ -990,8 +949,7 @@ class Process(ProcessBase):
 
         """
         if self._provenance_inputs is None:
-            sources = _provenance_sources(self.spec().inputs, self._input_sources, self.inputs)
-            inputs = self.spec().inputs.serialize(dict(sources))
+            inputs = self.spec().inputs.serialize(dict(self._input_sources))
             self._provenance_inputs = dict(self._flatten_inputs(self.spec().inputs, inputs))
         return dict(self._provenance_inputs)
 

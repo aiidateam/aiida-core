@@ -127,6 +127,17 @@ def test_branches_build_control_tasks() -> None:
     assert set(spec.tasks[0].otherwise.outputs) == {'result'}
 
 
+def test_loops_build_control_tasks() -> None:
+    from aiida.engine.processes.graphs.spec import LoopControl
+
+    spec = declarations.countdown.build()
+    assert isinstance(spec.tasks[0], LoopControl)
+    assert set(spec.tasks[0].body.outputs) == {'value', 'condition'}
+    called = declarations.countdown_call.build()
+    assert isinstance(called.tasks[1], LoopControl)
+    assert set(called.tasks[1].body.outputs) == {'value', 'condition'}
+
+
 def test_recursive_call_fails_during_build() -> None:
     with pytest.raises(UnsupportedSyntax, match='Recursive graph call'):
         declarations.recursive_call.build()

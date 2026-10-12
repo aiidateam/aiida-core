@@ -102,13 +102,22 @@ def test_task_after_kwarg_rejected_outside_graphs() -> None:
         ),
         pytest.param(declarations.computed_choice, {'value': 2}, {'result': 3}, id='computed-true'),
         pytest.param(declarations.computed_choice, {'value': -2}, {'result': 0}, id='computed-false'),
+        pytest.param(declarations.countdown, {'value': 3, 'condition': True}, {'value': 0}, id='loop'),
     ],
 )
 def test_composition_executes(declaration: GraphHandle, inputs: dict[str, t.Any], expected: dict[str, int]) -> None:
-    """Nested graphs and both branch outcomes return exact values."""
+    """Nested graphs, both branch outcomes, and loop iterations return exact values."""
     outputs, node = run_get_node(declaration, **inputs)
     assert node.is_finished_ok
     assert {name: value.value for name, value in outputs.items()} == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_zero_iteration_loop_returns_initial_state() -> None:
+    """A never-entered loop returns its initial state like the equivalent Python loop."""
+    outputs, node = run_get_node(declarations.countdown, value=3, condition=False)
+    assert node.is_finished_ok
+    assert outputs['value'].value == 3
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

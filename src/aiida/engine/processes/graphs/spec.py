@@ -28,6 +28,7 @@ __all__ = (
     'Dependency',
     'Endpoint',
     'GraphSpec',
+    'LoopControl',
     'ProcessTask',
     'SubgraphTask',
     'TaskSpec',
@@ -36,7 +37,7 @@ __all__ = (
 SPEC_VERSION = '0.1'
 TASK_SPEC_VERSION = '0.1'
 CONDITION_PORT = 'condition'
-TaskKind = t.Literal['process', 'graph', 'branch']
+TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
 
 
 def readable_version(version: object, supported: str, what: str) -> str:
@@ -233,7 +234,7 @@ class GraphTask(abc.ABC):
         kind = data.get('kind')
         if kind == 'process':
             return ProcessTask(spec=TaskSpec.from_dict(data['spec']), **common)
-        body = GraphSpec.from_dict(data['body']) if kind in ('graph', 'branch') else None
+        body = GraphSpec.from_dict(data['body']) if kind in ('graph', 'branch', 'loop') else None
         if kind == 'graph':
             assert body is not None
             return SubgraphTask(body=body, **common)
@@ -243,6 +244,14 @@ class GraphTask(abc.ABC):
                 body=body,
                 otherwise=GraphSpec.from_dict(data['otherwise']) if data.get('otherwise') is not None else None,
                 condition_port=data.get('condition_port', CONDITION_PORT),
+                **common,
+            )
+        if kind == 'loop':
+            assert body is not None
+            return LoopControl(
+                body=body,
+                condition_port=data.get('condition_port', CONDITION_PORT),
+                max_iterations=data['max_iterations'],
                 **common,
             )
         msg = f'unsupported graph task kind `{kind}`.'
@@ -287,6 +296,16 @@ class BranchControl(BodyTask):
             'condition_port': self.condition_port,
             'otherwise': None if self.otherwise is None else self.otherwise.to_dict(),
         }
+
+
+@dataclass(frozen=True, kw_only=True)
+class LoopControl(BodyTask):
+    KIND: t.ClassVar[TaskKind] = 'loop'
+    condition_port: str = CONDITION_PORT
+    max_iterations: int = 1000
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {**super().to_dict(), 'condition_port': self.condition_port, 'max_iterations': self.max_iterations}
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -443,7 +462,7 @@ class GraphSpec:
 
     @staticmethod
     def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
-        if isinstance(task, BranchControl) and path == task.condition_port:
+        if isinstance(task, (BranchControl, LoopControl)) and path == task.condition_port:
             return []
         return [port for namespace in task.input_ports() if (port := port_at(namespace, path)) is not None]
 
@@ -510,7 +529,7 @@ class GraphSpec:
         """Check that one routed graph input names a known task input of compatible type."""
         task = self.task(route.task)
         ports = self._input_ports_at(task, route.port)
-        if not ports and not (isinstance(task, BranchControl) and route.port == task.condition_port):
+        if not ports and not (isinstance(task, (BranchControl, LoopControl)) and route.port == task.condition_port):
             msg = f'input `{name}` refers to unknown input `{route.task}.{route.port}`.'
             raise ValueError(msg)
         origin = port_at(boundary, name)
@@ -532,7 +551,9 @@ class GraphSpec:
         if origin is None or isinstance(origin, PortNamespace):
             msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
             raise ValueError(msg)
-        if not ports and not (isinstance(target, BranchControl) and edge.target_port == target.condition_port):
+        if not ports and not (
+            isinstance(target, (BranchControl, LoopControl)) and edge.target_port == target.condition_port
+        ):
             msg = f'dependency refers to unknown input `{edge.target}.{edge.target_port}`.'
             raise ValueError(msg)
         for port in ports:
@@ -549,6 +570,9 @@ class GraphSpec:
                 raise ValueError(msg)
             self._check_types(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
             self._check_types(task.otherwise.output_spec(), task.body.output_spec(), 'branch outputs')
+        if isinstance(task, LoopControl) and (task.condition_port not in task.body.outputs or task.max_iterations < 1):
+            msg = 'a loop must return its condition and allow at least one iteration.'
+            raise ValueError(msg)
 
     def _validate_outputs(self, boundary: PortNamespace) -> None:
         """Check that graph outputs reference declared leaves of compatible types."""

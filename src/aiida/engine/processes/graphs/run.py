@@ -14,8 +14,16 @@ import typing as t
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from aiida.common.links import LinkType
 from aiida.engine.processes.graphs.inputs import at, place
-from aiida.engine.processes.graphs.spec import BranchControl, GraphSpec, GraphTask, SubgraphTask, readable_version
+from aiida.engine.processes.graphs.spec import (
+    BranchControl,
+    GraphSpec,
+    GraphTask,
+    LoopControl,
+    SubgraphTask,
+    readable_version,
+)
 from aiida.orm import Node, load_node
 from aiida.orm.nodes.data.base import BaseType
 
@@ -27,6 +35,11 @@ STATE_VERSION = '0.1'
 def holds(condition: t.Any) -> bool:
     """Evaluate the value of a condition node rather than the node's identity."""
     return bool(condition.value if isinstance(condition, BaseType) else condition)
+
+
+def returned(node: Node) -> dict[str, t.Any]:
+    """Read the leaf outputs of one graph iteration."""
+    return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
 
 
 @dataclass(frozen=True)
@@ -59,6 +72,7 @@ class GraphRunState(t.TypedDict, total=False):
     dispatched: dict[str, int]
     done: dict[str, int]
     skipped: list[str]
+    passed: dict[str, dict[str, t.Any]]
 
 
 @dataclass
@@ -71,6 +85,7 @@ class GraphRun:
     dispatched: dict[str, int] = field(default_factory=dict)
     done: dict[str, int] = field(default_factory=dict)
     skipped: set[str] = field(default_factory=set)
+    passed: dict[str, dict[str, t.Any]] = field(default_factory=dict)
 
     @property
     def pending(self) -> dict[str, int]:
@@ -78,7 +93,11 @@ class GraphRun:
 
     @property
     def finished(self) -> set[str]:
-        return {name for name, runs in self.instances.items() if all(instance in self.done for instance in runs)}
+        return {
+            name
+            for name, runs in self.instances.items()
+            if name in self.passed or all(instance in self.done for instance in runs)
+        }
 
     @staticmethod
     def _is_finished_ok(pk: int) -> bool:
@@ -89,7 +108,8 @@ class GraphRun:
         return {
             name
             for name in self.finished
-            if all(self._is_finished_ok(self.done[instance]) for instance in self.instances[name])
+            if name in self.passed
+            or all(self._is_finished_ok(self.done[instance]) for instance in self.instances[name])
         }
 
     @property
@@ -106,6 +126,9 @@ class GraphRun:
 
     def step(self) -> Step:
         step = Step()
+        for task in self.graph.tasks:
+            if isinstance(task, LoopControl) and task.name in self.instances:
+                self._continue_loop(task, step)
         while ready := self.graph.ready(self.settled, self.decided):
             for name in ready:
                 self._begin(name, step)
@@ -122,6 +145,8 @@ class GraphRun:
         for output, source in self.graph.outputs.items():
             if source.task is None:
                 produced[output] = at(self.given, source.port)
+            elif source.task in self.passed:
+                produced[output] = at(self.passed[source.task], source.port)
             elif source.task not in self.skipped:
                 produced[output] = at(self._produced_by(source.task).outputs, source.port)
         return produced
@@ -133,6 +158,7 @@ class GraphRun:
             'dispatched': dict(self.dispatched),
             'done': dict(self.done),
             'skipped': sorted(self.skipped),
+            'passed': {name: dict(outputs) for name, outputs in self.passed.items()},
         }
 
     @classmethod
@@ -146,6 +172,7 @@ class GraphRun:
             dispatched=dict(data.get('dispatched', {})),
             done=dict(data.get('done', {})),
             skipped=set(data.get('skipped', ())),
+            passed={name: dict(outputs) for name, outputs in data.get('passed', {}).items()},
         )
 
     def _begin(self, name: str, step: Step) -> None:
@@ -158,9 +185,11 @@ class GraphRun:
         inputs = self._inputs_for(task)
         if isinstance(task, BranchControl):
             self._begin_branch(task, inputs, step)
-            return
-        self.instances[name] = [name]
-        step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
+        elif isinstance(task, LoopControl):
+            self._begin_loop(task, inputs, step)
+        else:
+            self.instances[name] = [name]
+            step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
 
     def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Dispatch the taken side of a branch, skipping when it has no body."""
@@ -171,6 +200,38 @@ class GraphRun:
         self.instances[task.name] = [task.name]
         # Each side may consume a different subset of the enclosing inputs.
         step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
+
+    def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
+        """Start iterating a loop, or pass through never-entered initial state."""
+        if not holds(inputs.get(task.condition_port, True)):
+            self._pass_initial_state(task, inputs)
+            return
+        self.instances[task.name] = []
+        self._begin_iteration(task, inputs, step)
+
+    def _pass_initial_state(self, task: LoopControl, inputs: dict[str, t.Any]) -> None:
+        """Complete a never-entered loop with its initial state, like Python would."""
+        self.instances[task.name] = [task.name]
+        self.passed[task.name] = {name: inputs[name] for name in task.body.outputs if name in inputs}
+
+    def _continue_loop(self, task: LoopControl, step: Step) -> None:
+        runs = self.instances[task.name]
+        if not runs or any(instance not in self.done for instance in runs):
+            return
+        last = load_node(self.done[runs[-1]])
+        if not last.is_finished_ok or not holds(returned(last).get(task.condition_port)):
+            return
+        if len(runs) >= task.max_iterations:
+            msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations with its condition still true.'
+            raise RuntimeError(msg)
+        self._begin_iteration(task, {**self._inputs_for(task), **returned(last)}, step)
+
+    def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
+        instance = f'{task.name}_iteration_{len(self.instances[task.name])}'
+        self.instances[task.name].append(instance)
+        step.begin(
+            instance, task, {name: value for name, value in inputs.items() if name in task.body.inputs}, task.body
+        )
 
     def _inputs_for(self, task: GraphTask) -> dict[str, t.Any]:
         # Namespace dictionaries are mutable during wiring; never mutate the saved declaration.

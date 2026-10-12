@@ -15,6 +15,7 @@ Graph bodies are never executed.
 from __future__ import annotations
 
 import ast
+import copy
 import inspect
 import typing as t
 from collections import Counter
@@ -38,6 +39,7 @@ from aiida.engine.processes.graphs.spec import (
     Dependency,
     Endpoint,
     GraphSpec,
+    LoopControl,
     ProcessTask,
     Route,
     SubgraphTask,
@@ -155,7 +157,7 @@ class _Reference:
 class _LoweringState:
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask | BranchControl] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl] = field(default_factory=list)
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -230,6 +232,8 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
     for statement in statements[:-1]:
         if isinstance(statement, ast.If):
             _lower_branch(state, statement)
+        elif isinstance(statement, ast.While):
+            _lower_loop(state, statement)
         elif isinstance(statement, (ast.For, ast.AsyncFor)):
             _reject(state, statement, 'for loops are not supported; unroll the placements or use a while loop')
         elif isinstance(statement, (ast.Import, ast.ImportFrom)):
@@ -290,14 +294,14 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
     return {reference.port.split('.')[-1]: reference}
 
 
-def _lower_assignment(state: _LoweringState, statement: ast.stmt) -> str:
+def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
     if not isinstance(statement, ast.Assign) or not statement.targets:
         _reject(state, statement, 'only single-name assignments are supported')
     names = [target.id for target in statement.targets if isinstance(target, ast.Name)]
     if len(names) != len(statement.targets):
         _reject(state, statement, 'only single-name assignments are supported')
     for name in names:
-        if name in state.names:
+        if name in state.names and not rebind:
             _reject(state, statement, 'assignment must bind a new name')
     if not isinstance(statement.value, ast.Call):
         _reject(state, statement.value, 'graph assignments must call a registered task or graph')
@@ -381,6 +385,12 @@ def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState
     return child
 
 
+def _place(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, t.Any]) -> None:
+    for name in child.inputs:
+        if name in state.names:
+            _wire(state, instance, name, state.names[name], given)
+
+
 def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
     """Lower a call condition to a fresh binding, like its explicit assignment form."""
     if not isinstance(test, ast.Call):
@@ -422,6 +432,43 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     state.tasks.append(BranchControl(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
     selected = sides[0][1].names[sides[0][0]]
     state.names[sides[0][0]] = _Reference(instance, selected.port, selected.shape)
+
+
+def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
+    bound = _bind_condition(state, statement.test)
+    if bound is not None:
+        update = ast.Assign(targets=[ast.Name(id=bound.id)], value=copy.deepcopy(statement.test))
+        ast.copy_location(update, statement.test)
+        ast.copy_location(update.targets[0], statement.test)
+        statement.body.append(update)
+        statement.test = bound
+    if statement.orelse or not isinstance(statement.test, ast.Name) or statement.test.id not in state.names:
+        _reject(state, statement, 'while requires a bound condition name and no else')
+    condition = statement.test.id
+    child = _region(state, statement.body)
+    # Loop state is read from the previous iteration, including values rebound in the body.
+    assigned = {
+        node.targets[0].id
+        for node in statement.body
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+    }
+    for name in assigned:
+        if name not in state.names:
+            _reject(state, statement, f'loop state {name!r} must be initialized before the loop')
+        child.inputs.setdefault(name, [])
+        child.names[name] = _Reference(None, name, state.names[name].shape)
+    if condition not in assigned:
+        _reject(state, statement, 'while body must update its condition')
+    for node in statement.body:
+        _lower_assignment(child, node, rebind=True)
+    outputs = {name: child.names[name] for name in assigned}
+    body = _body(child, outputs)
+    instance = f'loop_{len(state.tasks) + 1}'
+    given: dict[str, t.Any] = {}
+    _place(state, child, instance, given)
+    state.tasks.append(LoopControl(name=instance, inputs=given, body=body, condition_port=condition))
+    for name in assigned:
+        state.names[name] = _Reference(instance, name, child.names[name].shape)
 
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:

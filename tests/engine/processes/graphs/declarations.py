@@ -95,6 +95,12 @@ def is_positive(value: int) -> bool:
     return value > 0
 
 
+@task
+def decrement(value: int) -> int:
+    """Subtract one."""
+    return value - 1
+
+
 @task(outputs=('mean', 'stdev'))
 def statistics(values: list[float]) -> tuple[float, float]:
     """Summarize samples; bodies run as plain Python and are never lowered."""
@@ -345,6 +351,23 @@ def inline_condition(value: int) -> int:
     else:
         selected_branch = add(x=value, y=2)
     return selected_branch
+
+
+@graph
+def countdown(value: int, condition: bool) -> int:
+    """Loop until a task-computed condition clears."""
+    while condition:
+        value = decrement(value=value)
+        condition = is_positive(value=value)
+    return value
+
+
+@graph
+def countdown_call(value: int) -> int:
+    """Loop on an inline predicate call, re-evaluated every iteration."""
+    while is_positive(value=value):
+        value = decrement(value=value)
+    return value
 
 
 @graph

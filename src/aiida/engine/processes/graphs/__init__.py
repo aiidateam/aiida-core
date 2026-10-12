@@ -17,6 +17,7 @@ from aiida.engine.processes.graphs.spec import (
     Dependency,
     Endpoint,
     GraphSpec,
+    LoopControl,
     SubgraphTask,
     TaskSpec,
 )
@@ -29,6 +30,7 @@ __all__ = (
     'GraphHandle',
     'GraphProcess',
     'GraphSpec',
+    'LoopControl',
     'SubgraphTask',
     'TaskHandle',
     'TaskProcess',

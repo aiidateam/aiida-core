@@ -561,7 +561,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     result_port: str
     result_shape: Shape
     if isinstance(target, GraphHandle):
-        body = _lower_registered_graph(_key(target._function), state.stack)
+        body = _lower_registered_graph(_key(target.function), state.stack)
         inputs = body.input_shape
         result_port = body.result_port
         result_shape = body.result_shape
@@ -762,8 +762,7 @@ def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
     return _lower_function(_LoweringState(definition, (*stack, key)))
 
 
-def build_from_source(function: Callable[..., t.Any]) -> GraphSpec:
+def build_from_source(function: GraphHandle | Callable[..., t.Any]) -> GraphSpec:
     """Build a GraphSpec from a registered graph's source and its registered callees."""
-    if isinstance(function, GraphHandle):
-        function = function._function
-    return _lower_registered_graph(_key(function), ())
+    target = function.function if isinstance(function, GraphHandle) else function
+    return _lower_registered_graph(_key(target), ())

@@ -34,12 +34,17 @@ class GraphHandle:
         msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`, or inspect `.build()`.'
         raise TypeError(msg)
 
+    @property
+    def function(self) -> Callable[..., t.Any]:
+        """Return the declared function for the lowering pipeline."""
+        return self._function
+
     def build(self) -> GraphSpec:
         """Return the graph that the function declares, lowered from its registered source."""
         # Deferred: that module imports this one at top level.
         from aiida.engine.processes.graphs.build_source import build_from_source
 
-        return replace(build_from_source(self._function), identifier=self.identifier)
+        return replace(build_from_source(self.function), identifier=self.identifier)
 
     @property
     def process_class(self) -> type[GraphProcess]:

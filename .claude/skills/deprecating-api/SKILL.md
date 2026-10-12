@@ -1,57 +1,43 @@
 ---
 name: deprecating-api
-description: Use when deprecating a public Python API or `verdi` CLI command in aiida-core.
+description: Use when deprecating public Python APIs or `verdi` commands.
 ---
 
-# Deprecating API in aiida-core
+# Deprecating API
 
-Public API is anything importable from a second-level package (`from aiida.orm import ...`, `from aiida.engine import ...`).
-Public API must go through a deprecation cycle before removal.
-Data created with older AiiDA versions is guaranteed to work with newer versions (database migrations are applied automatically), so backwards compatibility matters.
+* API boundary and compatibility: `AGENTS.md`.
+* Deprecate public API before removal; preserve older data through migrations.
 
-## Python API
+## Python
 
-Use the `warn_deprecation` helper, which handles `stacklevel=2` and respects the user's deprecation-visibility config:
+`warn_deprecation` (`src/aiida/common/warnings.py`) uses `stacklevel=2` and configured warning visibility.
+Record replacement and removal major version:
 
 ```python
 from aiida.common.warnings import warn_deprecation
 
 def old_function(x):
-    warn_deprecation('`old_function` is deprecated, use `new_function` instead.', version=3)
+    """Perform the operation.
+
+    .. deprecated:: 2.7
+       Use :func:`new_function` instead. Removal in 3.0.
+    """
+    warn_deprecation('`old_function` is deprecated; use `new_function`.', version=3)
     return new_function(x)
 ```
 
-Add a `.. deprecated::` note to the docstring with replacement guidance:
+## CLI
+
+Use the command's `deprecated` argument; `deprecated_command` is deprecated:
 
 ```python
-def old_function(x):
-    """Do the thing.
-
-    .. deprecated:: 2.7
-       Use :func:`new_function` instead. Will be removed in 3.0.
-    """
-```
-
-## CLI commands
-
-Use `@decorators.deprecated_command()` from `aiida.cmdline.utils.decorators`:
-
-```python
-from aiida.cmdline.utils import decorators
-
-@verdi_group.command('old-command')
-@decorators.deprecated_command('Use `verdi new-command` instead.')
+@verdi_group.command('old-command', deprecated='Use `verdi new-command` instead.')
 def old_command():
     ...
 ```
 
-## Removal timeline
+## Timeline
 
-- Minor release: add the deprecation warning, update docstrings and user-facing docs.
-- Next major release: remove the deprecated API.
-- Users can surface all pending deprecation warnings by setting `AIIDA_WARN_v3=1`.
-
-## Relevant source
-
-- Warning classes: `src/aiida/common/warnings.py`
-- CLI deprecation decorator: `src/aiida/cmdline/utils/decorators.py`
+* Minor release: warnings, docstrings, user docs.
+* Next major: removal.
+* `AIIDA_WARN_v3=1`: pending v3 warnings.

@@ -1,55 +1,39 @@
 ---
 name: writing-tests
-description: Use when writing new pytest tests, fixtures, or regression tests for aiida-core.
+description: Use for pytest tests, fixtures, and regression tests.
 ---
 
-# Writing tests for aiida-core
+# Writing tests
 
-Tests live under `tests/` and mirror the source layout in `src/aiida/`.
-Reusable fixtures live in `tests/conftest.py` and per-subtree `conftest.py` files.
+## Layout
 
-## Philosophy
+* Mirror `src/aiida/` in `tests/`; new test modules require a corresponding source module/package.
+* Place regression and cross-module tests with the source behavior they verify; no unmatched bug/issue/feature modules. For genuinely cross-module coverage, place with the primary asserting package and name the collaborators in the test module docstring.
+* Reuse fixtures from `tests/conftest.py` and subtree `conftest.py` before adding setup.
 
-- **Prefer real objects over mocks.** Use fixtures to create real nodes, processes, computers, etc.
-  Mocks should only be used for genuinely external dependencies (network, SSH), cases where setup would be prohibitively complex, or when you need to force an exception that would not otherwise appear naturally.
-- **Don't chase coverage with shallow tests.** A test that mocks everything tests nothing.
-- **Test the contract, not the implementation.** Assert observable outcomes, not internal method calls.
-- **Make assertions as strong as possible.** `assert result == expected_value`, not `assert result is not None`.
-  Check exact values, types, and lengths.
-- **Regression tests for bugs.** First write a test that reproduces the bug, then fix the code.
-- **Test edge cases and failure paths.** Don't just test the happy path. Test boundary values, empty inputs, invalid arguments, and expected exceptions.
-- **One behavior per test.** Each test must be independent, deterministic, and must not test framework behavior (Python, SQLAlchemy, Click).
+## Design
 
-## Marker conventions
-
-- `@pytest.mark.presto`: runs against `SqliteTempBackend` (in-memory, no PostgreSQL / RabbitMQ).
-  Prefer `presto`-compatible tests where possible: they are much faster and runnable in any environment.
-- `@pytest.mark.requires_rmq`: requires a running RabbitMQ instance.
-- `@pytest.mark.requires_psql`: requires a running PostgreSQL instance.
-- `@pytest.mark.nightly`: long-running tests, only executed in nightly CI.
-- Transport tests require passwordless SSH to localhost.
-
-## Parametrization
-
-Use `pytest.mark.parametrize` instead of duplicating test bodies:
+* Real collaborators; mocks only for external dependencies, prohibitive setup, or unreachable exception paths.
+* Observable contracts; exact values, types, lengths.
+* Regressions: run the reproducer before the fix.
+* Boundaries, empty inputs, invalid arguments, failures.
+* Independent, deterministic tests; one behavior each.
+* No shallow coverage or tests of Python, SQLAlchemy, or Click behavior.
+* Parametrize repeated cases; use `pytest.param(..., id='name')` for large parametrizations:
 
 ```python
 import pytest
 
-@pytest.mark.parametrize('value,expected', [
-    (1, 2),
-    (2, 4),
-    (3, 6),
-])
+@pytest.mark.parametrize('value,expected', [(1, 2), (2, 4), (3, 6)])
 def test_double(value, expected):
     assert double(value) == expected
 ```
 
-## Fixtures
+## Markers (`@pytest.mark.<name>`)
 
-Check `tests/conftest.py` before writing ad-hoc setup.
-If you find yourself reinventing a fixture, it probably already exists.
+* `presto`: prefer where possible; no external services; SQLite/ZeroMQ fixtures.
+* `requires_rmq`: RabbitMQ; `requires_psql`: PostgreSQL.
+* `nightly`: nightly CI only.
+* Transport tests require passwordless SSH to localhost.
 
-## Running the tests
-
-See the `running-tests` skill for the full `uv run pytest` cheatsheet.
+Commands and infrastructure: see `running-tests`.

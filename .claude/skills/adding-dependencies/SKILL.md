@@ -1,17 +1,14 @@
 ---
 name: adding-dependencies
-description: Use when adding a new third-party dependency to aiida-core's `pyproject.toml`.
+description: Use when adding third-party dependencies to `pyproject.toml`.
 ---
 
-# Adding dependencies to aiida-core
+# Adding dependencies
 
-Before adding a new dependency to `pyproject.toml`, ensure it:
+* Substantial gap that existing code cannot readily fill.
+* Active maintenance; all project Python versions supported.
+* Available on [PyPI](https://pypi.org/) and [conda-forge](https://conda-forge.org/).
+* MIT-compatible license: MIT, BSD, Apache, LGPL. GPL excluded.
 
-- Fills a non-trivial feature gap not easily resolved otherwise
-- Is actively maintained
-- Supports all Python versions supported by aiida-core
-- Is available on both [PyPI](https://pypi.org/) and [conda-forge](https://conda-forge.org/)
-- Uses an MIT-compatible license (MIT, BSD, Apache, LGPL — **not** GPL)
-
-After modifying `pyproject.toml`, the `uv-lock` and `generate-conda-environment` pre-commit hooks will automatically update `uv.lock` and `environment.yml` to stay in sync.
-Run `uv run pre-commit` to trigger them.
+Edit `pyproject.toml`; run `uv run pre-commit`.
+Hooks `uv-lock` and `generate-conda-environment` update `uv.lock` and `environment.yml`.

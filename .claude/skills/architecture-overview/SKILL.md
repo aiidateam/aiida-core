@@ -1,82 +1,69 @@
 ---
 name: architecture-overview
-description: Use when exploring the aiida-core codebase structure, looking for key files, or understanding how packages relate to each other.
+description: Use for codebase navigation, key files, package relationships, and plugin interfaces.
 ---
 
-# AiiDA Core Architecture
+# Architecture
 
-## Source layout
+## Packages under `src/aiida/`
 
-The source code lives under `src/aiida/` with these main packages:
+* `brokers/`: messaging, including RabbitMQ support.
+* `calculations/`, `parsers/`, `workflows/`: built-in plugins.
+* `cmdline/`: Click-based `verdi` CLI.
+* `common/`: utilities, exceptions, warnings, constants.
+* `engine/`: runner, daemon, persistence, transport tasks.
+* `manage/`: configuration and manager singleton.
+* `orm/`: nodes, groups, users, computers, provenance queries.
+* `plugins/`: entry points and factories.
+* `repository/`: file repository abstraction.
+* `restapi/`: Flask REST API; planned replacement is `aiida-restapi`.
+* `schedulers/`: HPC schedulers (SLURM, PBS, SGE, LSF).
+* `storage/`: PostgreSQL (`psql_dos`) and SQLite (`sqlite_dos`) backends.
+* `tools/`: graphs, archives, data dumping, utilities.
+* `transports/`: SSH and local transports.
 
-| Package | Purpose |
-|---------|---------|
-| `brokers/` | Message broker interface (RabbitMQ via [`kiwipy`](https://github.com/aiidateam/kiwipy)) |
-| `calculations/` | Built-in calculations |
-| `cmdline/` | CLI (`verdi` command) built with `click` |
-| `common/` | Shared utilities, exceptions, warnings, constants |
-| `engine/` | Workflow engine: process runner, daemon, persistence, transport tasks (with [`plumpy`](https://github.com/aiidateam/plumpy) dependency) |
-| `manage/` | Configuration management, manager singleton |
-| `orm/` | Object-relational mapping: nodes, groups, users, computers, querybuilder |
-| `parsers/` | Built-in parser plugins |
-| `plugins/` | Plugin entry point system and factories |
-| `repository/` | File repository abstraction layer |
-| `restapi/` | Flask-based REST API (soon to be replaced by `aiida-restapi`) |
-| `schedulers/` | Built-in HPC scheduler plugins (SLURM, PBS, SGE, LSF, etc.) |
-| `storage/` | Storage backends (primarily `psql_dos` (`sqlite_dos`) for PostgreSQL (SQLite) + disk-objectstore) |
-| `tools/` | Utility tools (graph visualization, archive operations, data dumping, etc.) |
-| `transports/` | Built-in Transport plugins (SSH, local) |
-| `workflows/` | Built-in workflows |
+## Key files relative to `src/aiida/`
 
-## Key entry points
+* `engine/processes/process.py`: `Process`.
+* `engine/processes/calcjobs/calcjob.py`: `CalcJob`.
+* `engine/processes/workchains/workchain.py`: `WorkChain`.
+* `engine/processes/builder.py`: `ProcessBuilder`.
+* `engine/runners.py`: `Runner`.
+* `engine/daemon/execmanager.py`: copying, submission, retrieval.
+* `engine/daemon/client.py`: `DaemonClient`.
+* `orm/nodes/node.py`: `Node`.
+* `orm/querybuilder.py`: `QueryBuilder`.
+* `orm/computers.py`: `Computer`.
+* `plugins/factories.py`: `DataFactory`, `CalculationFactory`, other factories.
+* `manage/configuration/{config,profile}.py`: `Config`, `Profile`.
+* `manage/manager.py`: `Manager`.
+* `storage/psql_dos/backend.py`: PostgreSQL backend.
+* `brokers/rabbitmq/broker.py`: `RabbitmqBroker`.
+* `repository/repository.py`: `Repository`.
 
-| Area | Key file(s) | Purpose |
-|------|------------|---------|
-| Engine core | `src/aiida/engine/processes/process.py` | Base `Process` class |
-| CalcJob | `src/aiida/engine/processes/calcjobs/calcjob.py` | `CalcJob` implementation |
-| CalcJob file ops | `src/aiida/engine/daemon/execmanager.py` | File copying, job submission, retrieval |
-| WorkChain | `src/aiida/engine/processes/workchains/workchain.py` | `WorkChain` implementation |
-| ORM node | `src/aiida/orm/nodes/node.py` | Base `Node` class |
-| QueryBuilder | `src/aiida/orm/querybuilder.py` | Query interface for the provenance graph |
-| Process runner | `src/aiida/engine/runners.py` | `Runner` executes and submits processes |
-| Plugin factories | `src/aiida/plugins/factories.py` | `DataFactory`, `CalculationFactory`, etc. |
-| Storage ABC | `src/aiida/orm/implementation/storage_backend.py` | `StorageBackend` abstract base class |
-| Transport ABC | `src/aiida/transports/transport.py` | `Transport`, `BlockingTransport`, `AsyncTransport` |
-| Scheduler ABC | `src/aiida/schedulers/scheduler.py` | `Scheduler` base class |
+## Storage and plugins
 
-Other notable files: `ProcessBuilder` (`engine/processes/builder.py`), `Computer` (`orm/computers.py`), `Config` (`manage/configuration/config.py`), `Manager` (`manage/manager.py`), `DaemonClient` (`engine/daemon/client.py`), `Profile` (`manage/configuration/profile.py`), `psql_dos` backend (`storage/psql_dos/backend.py`), `RabbitmqBroker` (`brokers/rabbitmq/broker.py`), `Repository` (`repository/repository.py`).
+SQLAlchemy metadata; `disk-objectstore` files; Alembic migrations in `src/aiida/storage/psql_dos/migrations/`.
+Plugins implement the ABC and register its entry point (module, entry-point group):
 
-## Database and file storage
+* `Transport`: `aiida.transports.transport`, `aiida.transports`; includes `BlockingTransport` and `AsyncTransport`.
+* `Scheduler`: `aiida.schedulers.scheduler`, `aiida.schedulers`.
+* `Parser`: `aiida.parsers.parser`, `aiida.parsers`.
+* `StorageBackend`: `aiida.orm.implementation.storage_backend`, `aiida.storage`.
+* `Code`: `aiida.orm.nodes.data.code`, `aiida.data`.
+* `CalcJobImporter`: `aiida.engine.processes.calcjobs.importer`, `aiida.calculations.importers`.
 
-- ORM: SQLAlchemy. File storage: disk-objectstore. Migrations: Alembic (under `src/aiida/storage/psql_dos/migrations/`).
-- Main backend: `psql_dos` (PostgreSQL + disk-objectstore). Lightweight: `sqlite_dos` (SQLite + disk-objectstore).
+## API stubs
 
-## Abstract base classes (ABCs)
-
-AiiDA defines ABCs for extensible components.
-To create a plugin, implement the corresponding ABC and register it as an entry point.
-
-| ABC | Location | Purpose | Entry point |
-|-----|----------|---------|-------------|
-| `Transport` | `aiida.transports.transport` | File transfer and remote command execution | `aiida.transports` |
-| `Scheduler` | `aiida.schedulers.scheduler` | HPC job scheduler interface | `aiida.schedulers` |
-| `Parser` | `aiida.parsers.parser` | Parse calculation outputs | `aiida.parsers` |
-| `StorageBackend` | `aiida.orm.implementation.storage_backend` | Database and file storage | `aiida.storage` |
-| `Code` | `aiida.orm.nodes.data.code` | Code/executable representation | `aiida.data` |
-| `CalcJobImporter` | `aiida.engine.processes.calcjobs.importer` | Import existing calculation results | `aiida.calculations.importers` |
-
-## Quick API overview via stubs
-
-To get a compact view of a module's public API without reading the full source (which can pollute context), generate type stubs:
+Signatures, classes, annotations (`stubgen` ships with `mypy`, in the `pre-commit` extra; install with `uv sync --extra pre-commit`):
 
 ```bash
-uv run stubgen -p aiida.orm -o /tmp/stubs             # public API only
-uv run stubgen -p aiida.orm -o /tmp/stubs --include-private  # include _private members
+uv run stubgen -p aiida.orm -o /tmp/stubs
+uv run stubgen -p aiida.orm -o /tmp/stubs --include-private
 ```
 
-The generated `.pyi` files show only signatures, classes, and type annotations, useful for understanding an API surface quickly.
-`stubgen` ships with `mypy`, which is part of the `pre-commit` optional dependencies (`uv sync --extra pre-commit` or just `uv sync` if already installed).
 
-## Project configuration
+## Configuration
 
-`pyproject.toml` (dependencies, entry points, ruff/mypy config), `uv.lock`, `.pre-commit-config.yaml`, `.readthedocs.yml`, `.github/workflows/`, `.docker/`.
+`pyproject.toml`: dependencies, entry points, Ruff/mypy.
+Other configuration: `uv.lock`, `.pre-commit-config.yaml`, `.readthedocs.yml`, `.github/workflows/`, `.docker/`.

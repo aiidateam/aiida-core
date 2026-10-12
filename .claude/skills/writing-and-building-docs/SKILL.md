@@ -1,24 +1,21 @@
 ---
 name: writing-and-building-docs
-description: Use when writing, editing, or building documentation files (`.md`, `.rst`) under `docs/`.
+description: Use for writing or building `.md` and `.rst` documentation under `docs/`.
 ---
 
-# Writing and building documentation for aiida-core
+# Documentation
 
-When writing or editing `.md` or `.rst` files under `docs/`:
+* One sentence per line; no manual prose wrapping.
+* Paths: lowercase alphanumeric with underscores; headings: sentence case.
+* [Divio](https://www.divio.com/blog/documentation/): tutorials (learning), how-to guides (goals), topics (understanding), reference (information).
 
-- Write **one sentence per line** (no manual line wrapping): makes diffs easy to review.
-- File/directory names: alphanumeric, lowercase, underscores as separators.
-- Headers in **sentence case** (e.g., "Entry points", not "Entry Points").
-- Documentation follows the [Divio documentation system](https://www.divio.com/blog/documentation/): tutorials (learning-oriented), how-to guides (goal-oriented), topics (understanding-oriented), reference (information-oriented).
-
-## Building the docs
+## Build
 
 ```bash
 uv run sphinx-build -b html docs/source docs/build/html
 ```
 
-For live-reloading during development, use `sphinx-autobuild` (not a project dependency, install manually):
+Live reload (`sphinx-autobuild` is outside project dependencies):
 
 ```bash
 uv pip install sphinx-autobuild

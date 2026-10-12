@@ -1,75 +1,56 @@
 ---
 name: debugging-processes
-description: Use when diagnosing failed, stuck, or misbehaving AiiDA processes or the daemon.
+description: Use for failed, stuck, or misbehaving AiiDA processes and daemon workers.
 ---
 
-# Debugging processes and the daemon
+# Debugging processes
 
-## Inspecting a single process
-
-```bash
-verdi process status <PK>       # call stack and where execution stopped
-verdi process report <PK>       # log messages emitted during execution
-verdi process show <PK>         # inputs, outputs, exit code
-verdi node show <PK>            # node attributes and extras
-```
-
-For a full provenance dump including input/output files:
+## Process inspection
 
 ```bash
-verdi process dump <PK>         # dump a process and its provenance
+verdi process status <PK>  # call stack and stopped execution
+verdi process report <PK>  # execution logs
+verdi process show <PK>    # inputs, outputs, exit code
+verdi node show <PK>       # node summary and provenance
+verdi node attributes <PK> # attributes
+verdi node extras <PK>     # extras
+verdi process dump <PK>    # provenance, including input/output files
+verdi calcjob gotocomputer <PK>  # remote working directory; requires SSH
 ```
 
-For CalcJobs specifically, jump to the remote working directory on the HPC (requires SSH access, which may not be available for sandboxed agents):
+## Daemon inspection
 
 ```bash
-verdi calcjob gotocomputer <PK>
+verdi status          # storage, daemon, broker if configured
+verdi daemon logshow  # live logs; one worker avoids interleaved output
+verdi process repair  # requeue; stop daemon first
 ```
 
-## Inspecting the daemon
-
-```bash
-# storage (PostgreSQL or SQLite) + daemon & broker (RabbitMQ, if configured):
-verdi status
-# tail daemon logs in real-time
-# best with a single daemon worker, multiple workers garble output:
-verdi daemon logshow
-# requeue processes stuck after a daemon crash (stop the daemon first):
-verdi process repair
-```
-
-## Common failure modes
-
-- **Process stuck in `waiting`** : usually means the daemon lost track of it after a crash or restart. Run `verdi process repair` to requeue.
-- **Process state inconsistent with node attributes** : check whether `seal()` has been called; only `_updatable_attributes` can change on a stored `ProcessNode` before sealing.
-- **`presto`-marked test failures** : these use an in-memory `SqliteTempBackend`, so the bug is in the code, not in service configuration.
-- **Daemon subprocess killed on shutdown** : daemon-launched subprocesses must pass `start_new_session=True` or they inherit the daemon's signal handling and die with it.
+* Stuck `waiting` after crash/restart: daemon may have lost the process; use the repair sequence above.
+* Inconsistent state: check `seal()`; stored `ProcessNode` updates are limited to `_updatable_attributes` before sealing.
+* `presto` failures: no external services; inspect code first.
+* Daemon subprocesses: `start_new_session=True` for signal isolation during shutdown.
 
 ## Interactive inspection
 
 ```bash
-verdi shell                       # interactive IPython shell with AiiDA loaded
-verdi devel run-sql "SELECT ..."  # run raw SQL against the profile database (USE WITH CAUTION)
+verdi shell                     # IPython with AiiDA loaded
+verdi devel run-sql "SELECT ..." # PostgreSQL only; use with caution
 ```
-
-Useful patterns inside `verdi shell`:
 
 ```python
-from aiida.orm import QueryBuilder, Node, load_node
+from aiida.orm import Node, QueryBuilder, load_node
 
-# Find nodes by type
 qb = QueryBuilder().append(Node, filters={'node_type': {'like': 'data.core.dict.%'}})
-
-# Inspect a specific node
-node = load_node(<PK>)
-node.base.attributes.all   # all stored attributes
-node.base.extras.all        # all extras (mutable even after storing)
-node.base.repository.list_object_names()  # files in the node's repository
+node = load_node(123)  # replace with the node PK
+node.base.attributes.all
+node.base.extras.all  # mutable after storing
+node.base.repository.list_object_names()
 ```
 
-## Related source
+## Source
 
-- Process runner: `src/aiida/engine/runners.py`
-- Daemon client: `src/aiida/engine/daemon/client.py`
-- CalcJob exec manager (file copying, job submission, retrieval): `src/aiida/engine/daemon/execmanager.py`
-- Transport tasks (submit, update, retrieve): `src/aiida/engine/processes/calcjobs/tasks.py`
+* Runner: `src/aiida/engine/runners.py`
+* Daemon: `src/aiida/engine/daemon/client.py`
+* File/job operations: `src/aiida/engine/daemon/execmanager.py`
+* Transport tasks: `src/aiida/engine/processes/calcjobs/tasks.py`

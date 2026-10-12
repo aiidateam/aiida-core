@@ -1,75 +1,45 @@
 ---
 name: commit-conventions
-description: Use when making commits, creating branches, or preparing pull requests for aiida-core.
+description: Use for commits, branch names, and pull requests.
 ---
 
-# Commit and PR conventions for aiida-core
+# Commit and PR conventions
 
-## Branching and versioning
+## Branches and versions
 
-- All development happens on `main` through pull requests.
-- Recommended branch naming convention: `<prefix>/<issue>/<short_description>`
-  - Prefixes: `feature/`, `fix/`, `docs/`, `ci/`, `refactor/`
-  - Example: `fix/1234/querybuilder-improvements`
-- The `main` branch uses a `.post0` version suffix to indicate development after the last release (e.g., `2.6.0.post0` = development after `2.6.0`).
-- Versioning follows [SemVer](https://semver.org/) (major.minor.patch).
+* Develop through PRs against `main`.
+* Branches: `<prefix>/<issue>/<short-description>`, e.g. `fix/1234/querybuilder-improvements`.
+* [SemVer](https://semver.org/); post-release `main` uses `.dev0`, e.g. `2.10.0.dev0`.
 
-## Commit style (not enforced)
+## Messages (not enforced)
 
-Follow the **50/72 rule**:
-
-- Subject line: max 50 characters, imperative mood ("Add feature", not "Added feature"), capitalized, no period
-- Body: wrap at 72 characters, explain *what* and *why* (the code shows *how*)
-- Merged PRs (via squash) append the PR number: `Fix bug in QueryBuilder (#1234)` (GH web UI automatically appends on squash-merge)
-- Some contributors use emoji prefixes as a semantic type indicator (see below)
-
-```
-Short summary in imperative mood (50 chars)
-
-More detailed explanation wrapped at 72 characters. Focus on
-why the change was made, not how.
-```
-
-Guidelines:
-
-- One issue per commit, self-contained changes: makes bisecting and reverting safe
-- Link GitHub issues either via the PR description or the GH web UI.
+* Subject: at most 50 characters, imperative, capitalized, no final period.
+* Body: blank line after subject, 72-column wrapping, what and why.
+* One issue per self-contained commit; supports bisecting and reverting.
+* Issue links in PR description or GitHub UI; squash merges append `(#1234)`.
 
 ## Emoji prefixes (up for discussion)
 
-The following practices are used by some contributors but not consistently adopted.
-They may be formalized or dropped in the future.
+Optional type prefixes; omit redundant labels such as `Fix:`.
+May be formalized or dropped. Adapted from [MyST-Parser](https://github.com/executablebooks/MyST-Parser/blob/master/AGENTS.md#commit-message-format).
 
-Some contributors use emojis as a one-character semantic type prefix.
-The emoji *is* the type indicator, so the message after it should be just the description: write `🐛 QueryBuilder crashes on empty filter`, not `🐛 Fix: QueryBuilder crashes on empty filter`.
-Emoji selection is adapted from [MyST-Parser](https://github.com/executablebooks/MyST-Parser/blob/master/AGENTS.md#commit-message-format):
+* `✨` New feature: `feature/`
+* `🐛` Bug fix: `fix/`
+* `👌` Improvement (no breaking changes): `improve/`
+* `💥` Breaking change: `breaking/`
+* `📚` Documentation: `docs/`
+* `🧹` Maintenance and fixes: `chore/`
+* `🧪` Tests: `test/`
+* `🔧` CI: `ci/`
+* `♻️` Refactoring: `refactor/`
+* `📦` Dependencies: `deps/`
+* `🚀` Release: `release/`
+* `❌` Deprecation: `deprecate/`
+* `⏪` Revert: `revert/`
 
-| Emoji | Meaning | Branch Prefix |
-|-------|---------|---------------|
-| `✨` | New feature | `feature/` |
-| `🐛` | Bug fix | `fix/` |
-| `🚑` | Hotfix (urgent production fix) | `hotfix/` |
-| `👌` | Improvement (no breaking changes) | `improve/` |
-| `‼️` | Breaking change | `breaking/` |
-| `📚` | Documentation | `docs/` |
-| `🔧` | Maintenance (typos, etc.) | `chore/` |
-| `🧪` | Tests or CI changes only | `test/` |
-| `♻️` | Refactoring | `refactor/` |
-| `⬆️` | Dependency upgrade | `deps/` |
-| `🔖` | Release | `release/` |
+## Pull requests
 
-## Pull request requirements
-
-When submitting changes:
-
-1. **Description**: Include a meaningful description explaining the change and link to related issues
-2. **Tests**: Include test cases for new functionality or bug fixes
-3. **Documentation**: Update docs if behavior changes or new features are added
-4. **Code quality**: Ensure `uv run pre-commit` passes
-
-Merging (maintainers): **Squash and merge** for single-issue PRs, **rebase and merge** for multi-commit PRs with individually significant commits.
-
-## Git tooling
-
-The `.git-blame-ignore-revs` file lists commits that should be ignored by `git blame` (e.g., bulk reformatting).
-When landing a large-scale formatting-only commit, add its SHA to this file.
+* Description and issue links; tests for features/fixes; docs for features/behavior changes.
+* Passing `uv run pre-commit`.
+* Merge: squash single-issue PRs; rebase individually significant multi-commit PRs.
+* Bulk formatting: landed SHA in `.git-blame-ignore-revs`.

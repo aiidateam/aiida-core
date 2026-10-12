@@ -1,5 +1,8 @@
 # <img src="https://raw.githubusercontent.com/aiidateam/aiida-core/main/docs/source/images/aiida-logo.svg" alt="AiiDA" width="200"/>
 
+> [!WARNING]
+> `main` targets the next major version (v3) and is under active development: expect breaking changes without deprecation. Stable documentation follows the [released versions](https://aiida.readthedocs.io/projects/aiida-core/en/latest/); executable tutorials live on [`support/v3-tutorial`](https://aiida.readthedocs.io/projects/aiida-core/en/support-v3-tutorial/).
+
 AiiDA (www.aiida.net) is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.
 
 |    | |

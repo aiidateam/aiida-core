@@ -19,12 +19,12 @@ repos:
     exclude: *exclude_pre_commit_hooks
 
 - repo: https://github.com/python-jsonschema/check-jsonschema
-  rev: 0.38.0
+  rev: 0.38.2
   hooks:
   - id: check-github-workflows
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.16.7
+  rev: v0.16.10
   hooks:
   - id: ruff-format
     # v0.16 added Markdown to this hook's default file types, which reformats fenced
@@ -50,7 +50,7 @@ repos:
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.12.13
+  rev: 0.12.22
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
@@ -68,8 +68,8 @@ repos:
   - id: mypy
     name: mypy
     entry: mypy
-    args: [--config-file=pyproject.toml, --pretty]
-    language: python
+    args: [--config-file=pyproject.toml, --pretty, --num-workers=2]
+    language: system
     types: [python]
     require_serial: true
     pass_filenames: true

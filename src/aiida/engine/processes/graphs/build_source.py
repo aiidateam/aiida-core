@@ -251,7 +251,7 @@ def _check_signature(state: _LoweringState, function: ast.FunctionDef) -> None:
 
 
 def _parameter_defaults(state: _LoweringState, function: ast.FunctionDef) -> dict[str, t.Any]:
-    """Read literal parameter defaults, like the explicit model defaults."""
+    """Read literal parameter defaults; only finite JSON values travel, as with model defaults."""
     positional = [*function.args.posonlyargs, *function.args.args]
     parameters = [*positional, *function.args.kwonlyargs]
     leading = len(positional) - len(function.args.defaults)
@@ -287,6 +287,7 @@ def _declare_graph_inputs(state: _LoweringState, function: ast.FunctionDef) -> N
 
 
 def _lower_function(state: _LoweringState) -> GraphSpec:
+    """Lower one registered graph definition to a static template."""
     function = _parse_function(state.definition)
     _check_signature(state, function)
     boundary = _declare_graph_inputs(state, function)
@@ -363,6 +364,7 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
 
 
 def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
+    """Bind a call result to new placement names."""
     if not isinstance(statement, ast.Assign) or not statement.targets:
         _reject(state, statement, 'only single-name assignments are supported')
     names = [target.id for target in statement.targets if isinstance(target, ast.Name)]
@@ -423,7 +425,16 @@ def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
     )
 
 
+class _Side(t.NamedTuple):
+    """One lowered conditional side with its region state."""
+
+    name: str
+    child: _LoweringState
+    body: GraphSpec
+
+
 def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
+    """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
     assigned = {
         target.id
@@ -433,7 +444,7 @@ def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState
         if isinstance(target, ast.Name)
     }
     callees = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
-    reads = {
+    names = {
         node.id
         for stmt in statements
         for node in ast.walk(stmt)
@@ -442,7 +453,6 @@ def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState
         and node.id not in assigned
         and id(node) not in callees
     }
-    names = reads
     child = _LoweringState(state.definition, state.stack)
     for name in sorted(names):
         if name not in state.names:
@@ -453,7 +463,8 @@ def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState
     return child
 
 
-def _place(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, t.Any]) -> None:
+def _route_region(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, t.Any]) -> None:
+    """Route the enclosing values a nested region reads."""
     for name in child.inputs:
         if name in state.names:
             _wire(state, instance, name, state.names[name], given)
@@ -475,49 +486,53 @@ def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
     return ast.Name(id=name)
 
 
+def _lower_side(state: _LoweringState, statements: list[ast.stmt]) -> _Side:
+    """Lower one conditional side to a named region body."""
+    child = _region(state, statements)
+    name = _lower_assignment(child, statements[0])
+    reference = child.names[name]
+    return _Side(name, child, _body(child, {reference.port: reference}))
+
+
 def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
+    """Lower an if statement to a branch control task."""
     bound = _bind_condition(state, statement.test)
-    if bound is not None:
-        statement.test = bound
+    test = bound if bound is not None else statement.test
     if not statement.orelse or len(statement.body) != 1 or len(statement.orelse) != 1:
         _reject(state, statement, 'if requires one assignment to the same name on each side')
-    sides = []
-    for statements in (statement.body, statement.orelse):
-        child = _region(state, statements)
-        name = _lower_assignment(child, statements[0])
-        reference = child.names[name]
-        body = _body(child, {reference.port: reference})
-        sides.append((name, child, body))
-    if sides[0][0] != sides[1][0] or sides[0][0] in state.names:
+    first, second = (_lower_side(state, statements) for statements in (statement.body, statement.orelse))
+    if first.name != second.name or first.name in state.names:
         _reject(state, statement, 'if requires one new name shared by both sides')
-    if CONDITION_PORT in sides[0][2].inputs or CONDITION_PORT in sides[1][2].inputs:
+    if CONDITION_PORT in first.body.inputs or CONDITION_PORT in second.body.inputs:
         _reject(state, statement, 'condition conflicts with a branch input')
     instance = f'branch_{len(state.tasks) + 1}'
     given: dict[str, t.Any] = {}
-    _wire(state, instance, CONDITION_PORT, _lower_value(state, statement.test), given)
-    for name in sorted({path.split('.')[0] for _, child, _ in sides for path in child.inputs}):
+    _wire(state, instance, CONDITION_PORT, _lower_value(state, test), given)
+    for name in sorted({path.split('.')[0] for side in (first, second) for path in side.child.inputs}):
         _wire(state, instance, name, state.names[name], given)
-    state.tasks.append(BranchControl(name=instance, inputs=given, body=sides[0][2], otherwise=sides[1][2]))
-    selected = sides[0][1].names[sides[0][0]]
-    state.names[sides[0][0]] = _Reference(instance, selected.port, selected.shape)
+    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    selected = first.child.names[first.name]
+    state.names[first.name] = _Reference(instance, selected.port, selected.shape)
 
 
 def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
+    """Lower a while statement to a resumable loop control task."""
     bound = _bind_condition(state, statement.test)
+    body = list(statement.body)
     if bound is not None:
         update = ast.Assign(targets=[ast.Name(id=bound.id)], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
-        statement.body.append(update)
-        statement.test = bound
-    if statement.orelse or not isinstance(statement.test, ast.Name) or statement.test.id not in state.names:
+        body.append(update)
+    test = bound if bound is not None else statement.test
+    if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
         _reject(state, statement, 'while requires a bound condition name and no else')
-    condition = statement.test.id
-    child = _region(state, statement.body)
+    condition = test.id
+    child = _region(state, body)
     # Loop state is read from the previous iteration, including values rebound in the body.
     assigned = {
         node.targets[0].id
-        for node in statement.body
+        for node in body
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
     }
     for name in assigned:
@@ -527,52 +542,68 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         child.names[name] = _Reference(None, name, state.names[name].shape)
     if condition not in assigned:
         _reject(state, statement, 'while body must update its condition')
-    for node in statement.body:
+    for node in body:
         _lower_assignment(child, node, rebind=True)
     outputs = {name: child.names[name] for name in assigned}
-    body = _body(child, outputs)
+    body_spec = _body(child, outputs)
     instance = f'loop_{len(state.tasks) + 1}'
     given: dict[str, t.Any] = {}
-    _place(state, child, instance, given)
-    state.tasks.append(LoopControl(name=instance, inputs=given, body=body, condition_port=condition))
+    _route_region(state, child, instance, given)
+    state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
     for name in assigned:
         state.names[name] = _Reference(instance, name, child.names[name].shape)
 
 
-def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
+def _called_name(state: _LoweringState, expression: ast.expr) -> str:
+    """Return the target of a direct call, rejecting shadowed or indirect calls."""
     if not isinstance(expression, ast.Call) or not isinstance(expression.func, ast.Name):
         _reject(state, expression, 'only direct calls to registered tasks or graphs are supported')
-    name = expression.func.id
-    if name in state.names:
-        _reject(state, expression, f'call target {name!r} is shadowed')
+    if expression.func.id in state.names:
+        _reject(state, expression, f'call target {expression.func.id!r} is shadowed')
+    return expression.func.id
+
+
+def _registered_target(state: _LoweringState, expression: ast.expr, name: str) -> TaskHandle | GraphHandle:
+    """Return the task handle or graph behind a call target."""
     target = _resolve_binding(state.definition.function, name)
-    spec = _task_spec_for(target)
-    if spec is None and not isinstance(target, GraphHandle):
+    if _task_spec_for(target) is None and not isinstance(target, GraphHandle):
         _reject(state, expression, f'unregistered call {name!r}')
+    assert isinstance(target, (TaskHandle, GraphHandle))
+    return target
+
+
+def _claim_instance(state: _LoweringState, name: str) -> str:
+    """Return a placement name unused by earlier placements."""
     state.used[name] += 1
     count = state.used[name]
-    instance = name if count == 1 else f'{name}_{count}'
     taken = {placed.name for placed in state.tasks}
+    instance = name if count == 1 else f'{name}_{count}'
     while instance in taken:
         count += 1
         instance = f'{name}_{count}'
     state.used[name] = count
-    inputs: NamespaceShape
-    result_port: str
-    result_shape: Shape
+    return instance
+
+
+def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
+    """Place a task or graph call with wired inputs."""
+    name = _called_name(state, expression)
+    assert isinstance(expression, ast.Call)
+    target = _registered_target(state, expression, name)
+    instance = _claim_instance(state, name)
     if isinstance(target, GraphHandle):
         body = _lower_registered_graph(_key(target.function), state.stack)
+        task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
         inputs = body.input_shape
         result_port = body.result_port
         result_shape = body.result_shape
-        task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
     else:
+        spec = _task_spec_for(target)
         assert spec is not None
+        task = ProcessTask(name=instance, inputs={}, spec=spec)
         inputs = spec.input_shape
         result_port = spec.result_port
         result_shape = spec.result_shape
-        task = ProcessTask(name=instance, inputs={}, spec=spec)
-
     keywords = _named_keywords(state, expression, name, inputs)
     task = replace(task, inputs=_lower_keywords(state, instance, name, inputs, keywords))
     missing = _required_missing(state, instance, inputs, task.inputs)
@@ -599,6 +630,16 @@ def _named_keywords(
     return keywords
 
 
+def _wire_after(state: _LoweringState, instance: str, keyword: ast.keyword) -> None:
+    """Wire ordering edges from an `after` argument."""
+    ordered = keyword.value.elts if isinstance(keyword.value, (ast.Tuple, ast.List)) else [keyword.value]
+    for predecessor in ordered:
+        reference = _lower_value(state, predecessor)
+        if not isinstance(reference, _Reference) or reference.task is None:
+            _reject(state, predecessor, 'after must name a previously placed task')
+        state.dependencies.append(Dependency(reference.task, instance))
+
+
 def _lower_keywords(
     state: _LoweringState, instance: str, name: str, inputs: NamespaceShape, keywords: list[ast.keyword]
 ) -> dict[str, t.Any]:
@@ -612,15 +653,8 @@ def _lower_keywords(
             _reject(state, keyword, f'duplicate input {port!r}')
         seen.add(port)
         if port == 'after':
-            ordered = keyword.value.elts if isinstance(keyword.value, (ast.Tuple, ast.List)) else [keyword.value]
-            for predecessor in ordered:
-                reference = _lower_value(state, predecessor)
-                if not isinstance(reference, _Reference) or reference.task is None:
-                    _reject(state, predecessor, 'after must name a previously placed task')
-                state.dependencies.append(Dependency(reference.task, instance))
+            _wire_after(state, instance, keyword)
             continue
-        if port in given:
-            _reject(state, keyword, f'duplicate or unknown input {port!r} of {name!r}')
         try:
             shape = inputs.select(port)
         except KeyError:
@@ -659,6 +693,7 @@ def _wire(
     value: _Reference | int | float | str | bool | None,
     given: dict[str, t.Any],
 ) -> None:
+    """Route a literal, input, or task output into a placement."""
     if not isinstance(value, _Reference):
         place(given, port, value)
     elif value.task is None:

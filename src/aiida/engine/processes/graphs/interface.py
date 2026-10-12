@@ -28,7 +28,8 @@ class GraphHandle:
     def __init__(self, function: Callable[..., t.Any], identifier: str | None = None) -> None:
         self._function = function
         self.identifier = identifier or function.__name__
-        functools.update_wrapper(self, function)
+        # Copy name and docstring, not the function state: the handle owns its identifier.
+        functools.update_wrapper(self, function, updated=())
 
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.NoReturn:
         msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`, or inspect `.build()`.'
@@ -53,6 +54,7 @@ class GraphHandle:
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
         """Validate graph arguments and prepare the declaration and provenance inputs."""
+        # Launching binds by name, so positional-only parameters accept keywords at launch.
         parameters = [
             parameter.replace(kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
             if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.KEYWORD_ONLY)

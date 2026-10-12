@@ -39,7 +39,7 @@ class TrajectoryData(ArrayData):
             description='Periodic boundary conditions',
         )
 
-    def __init__(self, structurelist: list[StructureData] | None = None, **kwargs: t.Any) -> None:
+    def __init__(self, structurelist: t.Sequence[StructureData] | None = None, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
 
         if structurelist is not None:
@@ -218,11 +218,11 @@ class TrajectoryData(ArrayData):
             except KeyError:
                 pass
 
-    def set_structurelist(self, structurelist: list[StructureData]) -> None:
+    def set_structurelist(self, structurelist: t.Sequence[StructureData]) -> None:
         """Create trajectory from the list of
         :py:class:`aiida.orm.nodes.data.structure.StructureData` instances.
 
-        :param structurelist: a list of
+        :param structurelist: a sequence of
             :py:class:`aiida.orm.nodes.data.structure.StructureData` instances.
 
         :raises ValueError: if symbol lists of supplied structures are
@@ -233,7 +233,7 @@ class TrajectoryData(ArrayData):
         stepids = numpy.arange(len(structurelist))
         cells = numpy.array([x.cell for x in structurelist])
         symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
-        for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites] for i in stepids]:
+        for symbols_now in [[str(s.kind_name) for s in structurelist[int(i)].sites] for i in stepids]:
             if symbols_first != symbols_now:
                 raise ValueError('Symbol lists have to be the same for all of the supplied structures')
         symbols = list(symbols_first)

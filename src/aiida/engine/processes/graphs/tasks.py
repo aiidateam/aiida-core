@@ -12,13 +12,9 @@ from __future__ import annotations
 
 import functools
 import inspect
-import textwrap
 import typing as t
-from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
-from types import MappingProxyType
+from collections.abc import Callable, Sequence
 
-from aiida.common.exceptions import UnsupportedSyntax
 from aiida.common.lang import override
 from aiida.engine.processes.functions import FunctionProcess, P, ProcessFunctionType, process_function
 from aiida.engine.processes.graphs.spec import TaskSpec, fixed_inputs
@@ -52,73 +48,6 @@ class TaskProcess(FunctionProcess):
             for name, value in zip(names, values, strict=True)
         }
         super()._out_result(stored)
-
-
-def _key(function: Callable[..., t.Any]) -> str:
-    """Return the registry key of a declaration, rejecting nested functions."""
-    if not inspect.isfunction(function):
-        raise UnsupportedSyntax('Registered declarations must be Python functions, not process classes or builders')
-    if function.__qualname__ != function.__name__:
-        raise UnsupportedSyntax('Registered functions must be defined at module scope, not nested in other code')
-    if function.__module__ == '__main__':
-        msg = 'Graph declarations require an importable module; save the function in a Python module.'
-        raise UnsupportedSyntax(msg)
-    return f'{function.__module__}:{function.__name__}'
-
-
-@dataclass(frozen=True)
-class _SourceDefinition:
-    """A source decorator's captured definition, owned independently of registry lookups."""
-
-    key: str
-    kind: t.Literal['graph', 'task']
-    function: Callable[..., t.Any]
-    source: str
-    filename: str
-    first_line: int
-    hints: Mapping[str, t.Any]
-
-
-class _SourceRegistry:
-    """Own definitions captured by the graph and task decorators."""
-
-    def __init__(self) -> None:
-        self._definitions: dict[str, _SourceDefinition] = {}
-
-    def register(self, function: Callable[..., t.Any], *, kind: t.Literal['graph', 'task']) -> _SourceDefinition:
-        """Capture a definition atomically, without executing its body."""
-        key = _key(function)
-        if key in self._definitions:
-            msg = f'Duplicate registered function {key}'
-            raise UnsupportedSyntax(msg)
-        try:
-            lines, first_line = inspect.getsourcelines(function)
-        except OSError as exception:
-            msg = f'Cannot read the source of {key}: definitions need retrievable source.'
-            raise UnsupportedSyntax(msg) from exception
-        definition = _SourceDefinition(
-            key=key,
-            kind=kind,
-            function=function,
-            source=textwrap.dedent(''.join(lines)),
-            filename=inspect.getsourcefile(function) or '<unknown>',
-            first_line=first_line,
-            hints=MappingProxyType(t.get_type_hints(function, include_extras=True)),
-        )
-        self._definitions[key] = definition
-        return definition
-
-    def get_graph(self, key: str) -> _SourceDefinition:
-        """Retrieve a source graph once, at the entry to its lowering pipeline."""
-        definition = self._definitions.get(key)
-        if definition is None or definition.kind != 'graph':
-            msg = f'Graph {key} is not registered'
-            raise UnsupportedSyntax(msg)
-        return definition
-
-
-_SOURCE_REGISTRY = _SourceRegistry()
-"""The single registry owning live source definitions."""
 
 
 class TaskHandle(t.Generic[P, R]):

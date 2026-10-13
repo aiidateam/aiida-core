@@ -23,12 +23,12 @@ import docstring_parser
 
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import field_from_annotation
-from aiida.engine.processes.ports import coerce_model_values, infer_valid_type_from_type_annotation
+from aiida.engine.processes.port_model import is_structured, port_help, without_marks
+from aiida.engine.processes.ports import InputPort, coerce_model_values, infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.manage import get_manager
-from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode
+from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 if t.TYPE_CHECKING:
@@ -39,7 +39,6 @@ __all__ = (
     'FunctionProcessBase',
     'calcfunction',
     'declare_output_ports',
-    'declare_parameter',
     'workfunction',
 )
 
@@ -294,27 +293,6 @@ def _signature_names(
         if parameter.kind is parameter.VAR_KEYWORD:
             var_keyword = key
     return args, var_positional, var_keyword
-
-
-def declare_parameter(
-    spec: ProcessSpec,
-    parameter: inspect.Parameter,
-    annotations: dict[str, t.Any],
-    param_help_string: dict[str, str | None],
-    *,
-    stored: bool,
-) -> None:
-    """Declare one function parameter as an input port or namespace."""
-    spec.input_from_field(
-        parameter.name,
-        field_from_annotation(
-            parameter.name,
-            annotations.get(parameter.name),
-            parameter.default if parameter.default is not parameter.empty else UNSPECIFIED,
-            param_help_string.get(parameter.name, None),
-        ),
-        node_types=stored,
-    )
 
 
 def declare_output_ports(outputs: t.Sequence[str] | None, return_annotation: t.Any, spec: ProcessSpec) -> bool:
@@ -654,7 +632,62 @@ class FunctionProcess(FunctionProcessBase):
         annotations: dict[str, t.Any],
         param_help_string: dict[str, str | None],
     ) -> None:
-        declare_parameter(spec, parameter, annotations, param_help_string, stored=True)
+        """Declare one function parameter as a node-valued input port or namespace."""
+        annotation = annotations.get(parameter.name)
+        valid_type = infer_valid_type_from_type_annotation(annotation, stored=True) or (Data,)
+        help_string = port_help(annotation)
+        if help_string is None:
+            help_string = param_help_string.get(parameter.name, None)
+
+        default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
+
+        # If the keyword was already specified, simply override the default
+        if spec.has_input(parameter.name):
+            port = spec.inputs[parameter.name]
+            assert isinstance(port, InputPort)
+            port.default = default
+            return
+
+        # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
+        # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
+        # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
+        if default is None and type(None) not in valid_type:
+            valid_type += (type(None),)
+
+        # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
+        # done lazily using a lambda, just as any port defaults should not define node instances directly as is
+        # also checked by the ``spec.input`` call.
+        indirect_default: t.Any
+        if (
+            default is not None
+            and default is not UNSPECIFIED
+            and not isinstance(default, Data)
+            and not callable(default)
+        ):
+
+            def indirect_default(value=default):
+                return to_aiida_type(value)
+
+        else:
+            indirect_default = default
+
+        if is_structured(without_marks(annotation)):
+            spec.input_namespace_from(
+                parameter.name,
+                without_marks(annotation),
+                node_types=True,
+                required=default is UNSPECIFIED,
+                help=help_string,
+            )
+            return
+
+        spec.input(
+            parameter.name,
+            valid_type=valid_type,
+            default=indirect_default,
+            serializer=to_aiida_type,
+            help=help_string,
+        )
 
     @classmethod
     @override

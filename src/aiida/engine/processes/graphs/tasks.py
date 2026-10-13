@@ -21,13 +21,13 @@ from aiida.engine.processes.functions import (
     P,
     ProcessFunctionType,
     declare_output_ports,
-    declare_parameter,
     process_function,
 )
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.spec import TaskSpec, fixed_inputs
-from aiida.engine.processes.port_model import is_structured
+from aiida.engine.processes.port_model import field_from_annotation, is_structured
 from aiida.engine.processes.ports import PortNamespace
-from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.orm import CalcFunctionNode, Data, to_aiida_type
 
 __all__ = ('TaskHandle', 'TaskProcess')
@@ -38,6 +38,8 @@ R = t.TypeVar('R')
 class TaskProcess(FunctionProcessBase):
     """Task process with plain Python inputs and static leaf outputs."""
 
+    _spec_class = GraphProcessSpec
+
     @classmethod
     @override
     def _declare_input(
@@ -47,7 +49,16 @@ class TaskProcess(FunctionProcessBase):
         annotations: dict[str, t.Any],
         param_help_string: dict[str, str | None],
     ) -> None:
-        declare_parameter(spec, parameter, annotations, param_help_string, stored=False)
+        assert isinstance(spec, GraphProcessSpec)
+        spec.input_from_field(
+            parameter.name,
+            field_from_annotation(
+                parameter.name,
+                annotations.get(parameter.name),
+                parameter.default if parameter.default is not parameter.empty else UNSPECIFIED,
+                param_help_string.get(parameter.name, None),
+            ),
+        )
 
     @classmethod
     @override

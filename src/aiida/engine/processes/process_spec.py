@@ -27,7 +27,7 @@ from aiida.engine.processes.ports import (
 )
 from aiida.orm import Data, Dict, to_aiida_type
 
-__all__ = ('CalcJobProcessSpec', 'ProcessSpec')
+__all__ = ('CalcJobProcessSpec', 'GraphProcessSpec', 'ProcessSpec')
 
 
 def _require_storable(field: Field) -> None:
@@ -152,47 +152,6 @@ class ProcessSpec(spec.ProcessSpec):
         for field in _with_defaults(fields, defaults):
             self._declare_field(f'{name}{self.namespace_separator}{field.name}', field, node_types=node_types)
 
-    def input_from_field(self, name: str, field: Field, *, node_types: bool = False) -> None:
-        """Convert one extracted :class:`Field` to an input port or namespace.
-
-        Structured annotations become a namespace via :meth:`input_namespace_from`; all other
-        annotations become a leaf :class:`InputPort`.
-
-        :param name: the port or namespace to declare (dotted for nested fields).
-        :param field: the extracted field carrying the stripped annotation, default and help.
-        :param node_types: translate Python field types to ORM types for legacy declarations.
-        """
-        valid_type = infer_valid_type_from_type_annotation(field.annotation, stored=node_types) or (Data,)
-
-        if self.has_input(name):
-            port = self.inputs[name]
-            assert isinstance(port, InputPort)
-            port.default = field.default
-            return
-
-        if field.default is None and type(None) not in valid_type:
-            valid_type += (type(None),)
-
-        if fields_of(field.annotation) is not None:
-            self.input_namespace_from(
-                name,
-                field.annotation,
-                node_types=node_types,
-                required=field.required,
-                help=field.help,
-            )
-            return
-
-        self.input(
-            name,
-            valid_type=valid_type,
-            default=_lazily(field.default, node_types=node_types)
-            if field.default is not UNSPECIFIED
-            else UNSPECIFIED,
-            serializer=to_aiida_type,
-            help=field.help,
-        )
-
     def _declare_field(self, name: str, field: Field, *, node_types: bool) -> None:
         """Declare one model field as a port or a nested namespace."""
         if fields_of(field.annotation) is not None:
@@ -307,6 +266,54 @@ class ProcessSpec(spec.ProcessSpec):
     @property
     def outputs(self) -> PortNamespace:
         return super().outputs  # type: ignore[return-value]
+
+
+class GraphProcessSpec(ProcessSpec):
+    """Process spec for graph tasks and graph processes, declaring runtime-typed inputs.
+
+    The ``Field``-based declaration path lives here so plain processes never see it:
+    annotations convert to plain Python runtime types, with provenance serialization
+    happening after runtime validation.
+    """
+
+    def input_from_field(self, name: str, field: Field) -> None:
+        """Convert one extracted :class:`Field` to an input port or namespace.
+
+        Structured annotations become a namespace via :meth:`input_namespace_from`; all other
+        annotations become a leaf :class:`InputPort`.
+
+        :param name: the port or namespace to declare (dotted for nested fields).
+        :param field: the extracted field carrying the stripped annotation, default and help.
+        """
+        valid_type = infer_valid_type_from_type_annotation(field.annotation, stored=False) or (Data,)
+
+        if self.has_input(name):
+            port = self.inputs[name]
+            assert isinstance(port, InputPort)
+            port.default = field.default
+            return
+
+        if field.default is None and type(None) not in valid_type:
+            valid_type += (type(None),)
+
+        if fields_of(field.annotation) is not None:
+            self.input_namespace_from(
+                name,
+                field.annotation,
+                required=field.required,
+                help=field.help,
+            )
+            return
+
+        self.input(
+            name,
+            valid_type=valid_type,
+            default=_lazily(field.default, node_types=False)
+            if field.default is not UNSPECIFIED
+            else UNSPECIFIED,
+            serializer=to_aiida_type,
+            help=field.help,
+        )
 
 
 class CalcJobProcessSpec(ProcessSpec):

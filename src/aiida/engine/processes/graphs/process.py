@@ -22,7 +22,7 @@ from aiida.engine.processes.graphs.run import GraphRun, GraphRunState, Start
 from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.states import Wait
 from aiida.orm import Dict, GraphNode
 
@@ -33,6 +33,7 @@ class GraphProcess(Process):
     """Dispatch the runs chosen by GraphRun and return their existing data nodes."""
 
     _node_class = GraphNode
+    _spec_class = GraphProcessSpec
     _GRAPH = 'graph'
     _GRAPH_INPUTS = 'graph_inputs'
 

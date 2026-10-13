@@ -361,18 +361,34 @@ class PsqlDosBackend(StorageBackend):
 
         return DbNode, DbMembership
 
+    def _container_models(self) -> tuple[t.Any, t.Any, t.Any]:
+        """Return the ``(DbContainer, DbListContainer, DbDictContainer)`` model classes.
+
+        Overridden by the SQLite backend, which uses converted model copies.
+        """
+        from aiida.storage.psql_dos.models.node import DbContainer, DbDictContainer, DbListContainer
+
+        return DbContainer, DbListContainer, DbDictContainer
+
     def create_container_membership(
-        self, owner_id: int, members: list[dict[str, t.Any]], assert_element_type: str | None = None
+        self,
+        owner_id: int,
+        members: list[dict[str, t.Any]],
+        assert_element_type: str | None = None,
+        *,
+        kind: t.Literal['list', 'dict'] | None = None,
+        assert_layout: str | None = None,
     ) -> str | None:
         """Atomically persist ownership edges for one container.
 
-        Validates the complete ownership graph transactionally (eligibility,
-        homogeneity, exclusivity, acyclicity, owner/membership agreement) and
-        then, in a single transaction (joining an enclosing transaction when
-        present), sets the children's ``owner_id`` references, locks the
-        owner's ``container_element_type``, and inserts the membership rows.
-        No provenance links are created or consulted: membership rows are
-        containment edges, not provenance.
+        Validates the complete ownership graph transactionally (eligibility, list-vs-dict key
+        discipline, homogeneity, exclusivity, acyclicity, owner/membership agreement) and then, in
+        a single transaction (joining an enclosing transaction when present), creates the
+        ``DbContainer`` + kind-subtype rows (atomic base+extension writes), sets the children's
+        ``owner_id`` references, locks the container's ``element_type``/``layout``, and inserts the
+        membership rows. ``key`` must be NULL for lists and a NOT NULL string for dicts; ``kind``
+        is inferred from the owner's ``node_type`` when omitted. No provenance links are created or
+        consulted: membership rows are containment edges, not provenance.
 
         Minimal hook for the ORM container iteration: the ORM stores the
         owner and children as standalone nodes first, then calls this to
@@ -386,12 +402,40 @@ class PsqlDosBackend(StorageBackend):
         :param assert_element_type: pre-locked element type established before storage (a container
             that held an element and was then emptied keeps its lock); must agree with the stored
             lock and every child, and is persisted even when ``members`` is empty.
+        :param kind: ``'list'``/``'dict'``; inferred from the owner's ``node_type`` when omitted.
+        :param assert_layout: pre-locked layout; defaults to ``'row'``.
         :returns: the resolved (possibly newly locked) element type.
         :raises IntegrityError: on any ownership-invariant violation.
         """
         from aiida.storage import ownership as ownership_contract
 
-        return ownership_contract.attach_membership(self, owner_id, members, assert_element_type)
+        return ownership_contract.attach_membership(
+            self, owner_id, members, assert_element_type, kind=kind, assert_layout=assert_layout
+        )
+
+    def create_list_membership(
+        self, owner_id: int, members: list[dict[str, t.Any]], assert_element_type: str | None = None
+    ) -> str | None:
+        """Attach ordered members to a list container (every ``key`` must be NULL).
+
+        Asserts the ``DbListContainer`` extension row; cross-kind access fails. See
+        :meth:`create_container_membership`.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.attach_list_membership(self, owner_id, members, assert_element_type)
+
+    def create_dict_membership(
+        self, owner_id: int, members: list[dict[str, t.Any]], assert_element_type: str | None = None
+    ) -> str | None:
+        """Attach keyed members to a dict container (every ``key`` must be a NOT NULL string).
+
+        Asserts the ``DbDictContainer`` extension row; cross-kind access fails. See
+        :meth:`create_container_membership`.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.attach_dict_membership(self, owner_id, members, assert_element_type)
 
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
@@ -402,10 +446,10 @@ class PsqlDosBackend(StorageBackend):
                 row['_metadata'] = row.pop('metadata')
         if entity_type is EntityTypes.NODE:
             # Ownership columns default to standalone for rows predating them (old archives, existing callers).
-            # Existing standalone nodes remain standalone through migration.
+            # Existing standalone nodes remain standalone through migration. Container state lives in
+            # `db_dbcontainer` and is written atomically with membership rows, never bulk-inserted.
             for row in rows:
                 row.setdefault('owner_id', None)
-                row.setdefault('container_element_type', None)
             self._validate_bulk_node_insert(rows)
         if entity_type is EntityTypes.LINK:
             self._validate_bulk_link_insert(rows)
@@ -500,6 +544,7 @@ class PsqlDosBackend(StorageBackend):
 
         session = self.get_session()
         node_model, membership_model = self._ownership_models()
+        container_model, list_model, dict_model = self._container_models()
         # Ownership closure: deletion sets must contain complete ownership units. Targeting an owned
         # child without its root, or a container without its full subtree, is rejected so the caller
         # expands the set explicitly with approval instead of relying on database cascades alone.
@@ -510,6 +555,14 @@ class PsqlDosBackend(StorageBackend):
         ).delete(synchronize_session='fetch')
         session.query(membership_model).filter(
             _create_smarter_in_clause(session=session, column=membership_model.child_id, values=pks)
+        ).delete(synchronize_session='fetch')
+        # Delete container state (kind markers before the shared container row, which the node FK targets).
+        for kind_model in (list_model, dict_model):
+            session.query(kind_model).filter(
+                _create_smarter_in_clause(session=session, column=kind_model.node_id, values=pks)
+            ).delete(synchronize_session='fetch')
+        session.query(container_model).filter(
+            _create_smarter_in_clause(session=session, column=container_model.node_id, values=pks)
         ).delete(synchronize_session='fetch')
         # Delete the membership of these nodes to groups.
         session.query(DbGroupNode).filter(

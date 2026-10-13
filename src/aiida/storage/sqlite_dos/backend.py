@@ -293,6 +293,12 @@ class SqliteDosStorage(PsqlDosBackend):
 
         return DbNode, DbMembership
 
+    def _container_models(self) -> tuple[t.Any, t.Any, t.Any]:
+        """Return the ``(DbContainer, DbListContainer, DbDictContainer)`` model classes."""
+        from aiida.storage.sqlite_zip.models import DbContainer, DbDictContainer, DbListContainer
+
+        return DbContainer, DbListContainer, DbDictContainer
+
     def query(self) -> orm.SqliteQueryBuilder:
         return orm.SqliteQueryBuilder(self)
 

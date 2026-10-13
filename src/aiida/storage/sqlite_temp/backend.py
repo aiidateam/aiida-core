@@ -324,8 +324,20 @@ class SqliteTempBackend(StorageBackend):
 
         return DbNode, DbMembership
 
+    def _container_models(self) -> tuple[t.Any, t.Any, t.Any]:
+        """Return the ``(DbContainer, DbListContainer, DbDictContainer)`` model classes."""
+        from aiida.storage.sqlite_zip.models import DbContainer, DbDictContainer, DbListContainer
+
+        return DbContainer, DbListContainer, DbDictContainer
+
     def create_container_membership(
-        self, owner_id: int, members: list[dict[str, t.Any]], assert_element_type: str | None = None
+        self,
+        owner_id: int,
+        members: list[dict[str, t.Any]],
+        assert_element_type: str | None = None,
+        *,
+        kind: t.Literal['list', 'dict'] | None = None,
+        assert_layout: str | None = None,
     ) -> str | None:
         """Atomically persist ownership edges for one container.
 
@@ -335,7 +347,9 @@ class SqliteTempBackend(StorageBackend):
         """
         from aiida.storage import ownership as ownership_contract
 
-        return ownership_contract.attach_membership(self, owner_id, members, assert_element_type)
+        return ownership_contract.attach_membership(
+            self, owner_id, members, assert_element_type, kind=kind, assert_layout=assert_layout
+        )
 
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)

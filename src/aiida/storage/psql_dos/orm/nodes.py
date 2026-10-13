@@ -235,12 +235,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
                 'with membership rows via `create_container_membership`.'
             )
             raise exceptions.IntegrityError(msg)
-        if getattr(self.model, 'container_element_type', None) is not None:
-            msg = (
-                'Cannot store a locked element type independently: container element-type metadata is '
-                'written atomically with membership rows via `create_container_membership`.'
-            )
-            raise exceptions.IntegrityError(msg)
 
         if clean:
             self.clean_values()

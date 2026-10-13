@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from aiida.common.exceptions import UnsupportedSyntax
+from aiida.common.exceptions import GraphError, GraphTypeCheckError, UnsupportedSyntax
 from aiida.engine.processes.graphs.build_source import build_from_source
 from aiida.engine.processes.graphs.interface import GraphHandle
 from aiida.engine.processes.graphs.shapes import load_shape
@@ -39,7 +39,7 @@ def test_public_api_is_source_only() -> None:
     ):
         assert not hasattr(engine, excluded)
     assert isinstance(declarations.chain, GraphHandle)
-    with pytest.raises(TypeError, match='launch'):
+    with pytest.raises(GraphError, match='launch'):
         declarations.chain(x=1, y=2)
 
 
@@ -76,7 +76,7 @@ def test_task_alias_does_not_collide_with_generated_name() -> None:
 
 
 def test_missing_task_input_fails_during_build() -> None:
-    with pytest.raises(ValueError, match='y'):
+    with pytest.raises(UnsupportedSyntax, match='y'):
         declarations.missing_task_input.build()
 
 
@@ -153,12 +153,12 @@ def test_inline_condition_matches_bound_form() -> None:
 
 
 def test_mismatched_branch_outputs_fail_during_build() -> None:
-    with pytest.raises(ValueError, match='same outputs'):
+    with pytest.raises(GraphTypeCheckError, match='same outputs'):
         declarations.mismatched_branches.build()
 
 
 def test_incompatible_boundary_types_fail_during_build() -> None:
-    with pytest.raises(ValueError, match='incompatible types'):
+    with pytest.raises(GraphTypeCheckError, match='incompatible types'):
         declarations.wrong_type.build()
 
 
@@ -173,17 +173,17 @@ def test_rejection_carries_source_location() -> None:
 def test_spec_version_and_unknown_task_kind_rejection() -> None:
     data = declarations.chain.build().to_dict()
     data['version'] = '99'
-    with pytest.raises(ValueError, match='version'):
+    with pytest.raises(GraphTypeCheckError, match='version'):
         GraphSpec.from_dict(data)
     task_data = declarations.add.task_spec.to_dict()
     task_data['version'] = '99'
-    with pytest.raises(ValueError, match='version'):
+    with pytest.raises(GraphTypeCheckError, match='version'):
         TaskSpec.from_dict(task_data)
     data = declarations.chain.build().to_dict()
     data['tasks'][0]['kind'] = 'map'
-    with pytest.raises(ValueError, match='unsupported graph task kind'):
+    with pytest.raises(GraphTypeCheckError, match='unsupported graph task kind'):
         GraphSpec.from_dict(data)
-    with pytest.raises(ValueError, match='Unknown graph value shape'):
+    with pytest.raises(GraphTypeCheckError, match='Unknown graph value shape'):
         load_shape({'kind': 'many', 'required': True})
 
 
@@ -191,9 +191,9 @@ def test_cyclic_and_invalid_ordering_dependencies() -> None:
     from dataclasses import replace
 
     spec = declarations.chain.build()
-    with pytest.raises(ValueError, match='cycle'):
+    with pytest.raises(GraphTypeCheckError, match='cycle'):
         replace(spec, dependencies=(*spec.dependencies, Dependency('add_2', 'add')))
-    with pytest.raises(ValueError, match='both ports'):
+    with pytest.raises(GraphTypeCheckError, match='both ports'):
         Dependency('add', 'add_2', source_port='result')
 
 
@@ -203,9 +203,9 @@ def test_task_registration_rejects_excluded_contracts() -> None:
     def local_function(x: int) -> int:
         return x
 
-    with pytest.raises(TypeError, match='return annotation'):
+    with pytest.raises(GraphTypeCheckError, match='return annotation'):
         task(declarations.unannotated_function)
-    with pytest.raises(TypeError, match='fixed inputs'):
+    with pytest.raises(GraphTypeCheckError, match='fixed inputs'):
         task(declarations.kwargs_function)
     with pytest.raises(UnsupportedSyntax, match='module scope'):
         task(local_function)

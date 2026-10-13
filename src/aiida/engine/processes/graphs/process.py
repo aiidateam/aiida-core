@@ -14,6 +14,7 @@ import functools
 import typing as t
 from collections.abc import MutableMapping
 
+from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
@@ -142,7 +143,7 @@ class GraphProcess(Process):
             process_class, inputs = start.task.spec.process_class, start.inputs
         else:
             msg = f'unsupported task `{start.task.name}`.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
         metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
         node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None

@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
 
+from aiida.common.exceptions import GraphTypeCheckError, GraphValidationError
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.graphs.inputs import at, port_for_shape, prepare_inputs, shape_from_port
 from aiida.engine.processes.graphs.shapes import NamespaceShape, Shape, load_shape
@@ -44,7 +45,7 @@ def readable_version(version: object, supported: str, what: str) -> str:
     """Reject declarations whose format this implementation cannot read."""
     if version != supported:
         msg = f'cannot read a {what} declaration of version `{version}`; supported version is `{supported}`.'
-        raise ValueError(msg)
+        raise GraphTypeCheckError(msg)
     return supported
 
 
@@ -62,7 +63,7 @@ def fixed_inputs(ports: PortNamespace) -> None:
     """Reject dynamic scientific inputs, but permit the engine's metadata options."""
     if ports.dynamic:
         msg = f'graph tasks require fixed inputs; namespace `{ports.name}` is dynamic.'
-        raise TypeError(msg)
+        raise GraphTypeCheckError(msg)
     for child in ports.values():
         if isinstance(child, PortNamespace) and not child.is_metadata:
             fixed_inputs(child)
@@ -126,7 +127,7 @@ class TaskSpec:
         ports = self.process_class.spec().outputs
         if ports.dynamic or any(isinstance(port, PortNamespace) for port in ports.values()):
             msg = 'graph tasks require static leaf outputs, not dynamic outputs or output namespaces.'
-            raise TypeError(msg)
+            raise GraphTypeCheckError(msg)
         return ports
 
     @property
@@ -198,7 +199,7 @@ class Dependency:
     def __post_init__(self) -> None:
         if (self.source_port is None) != (self.target_port is None):
             msg = 'a dependency must name both ports, or neither port for explicit ordering.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
 
     @property
     def carried_between(self) -> tuple[str, str] | None:
@@ -275,7 +276,7 @@ class GraphTask(abc.ABC):
                 **common,
             )
         msg = f'unsupported graph task kind `{kind}`.'
-        raise ValueError(msg)
+        raise GraphTypeCheckError(msg)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -419,13 +420,13 @@ class GraphSpec:
                 name.split('.')[0] for name in self.inputs
             }:
                 msg = 'the graph boundary namespace must declare exactly the graph inputs.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
             return namespace
         namespace = PortNamespace('inputs')
         for name in self.inputs:
             if '.' in name:
                 msg = f'graph input path `{name}` requires a declared namespace.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
             consumers = [
                 port for task, path in self.inputs[name] for port in self._input_ports_at(self.task(task), path)
             ]
@@ -472,7 +473,7 @@ class GraphSpec:
                 origin = port_at(self.task(source.task).output_ports(), source.port)
             if origin is None or isinstance(origin, PortNamespace):
                 msg = f'graph output `{name}` must reference a declared leaf.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
             namespace[name] = OutputPort(name, valid_type=self._output_types(name, origin) or (Data,))
         return namespace
 
@@ -500,7 +501,7 @@ class GraphSpec:
         assert serialized is not None
         error = namespace.validate(namespace.prepare(serialized).runtime)
         if error is not None:
-            raise ValueError(error)
+            raise GraphValidationError(error)
         for name, targets in self.inputs.items():
             try:
                 value = at(serialized, name)
@@ -510,7 +511,7 @@ class GraphSpec:
                 for port in self._input_ports_at(self.task(task), path):
                     error = port.validate(port.prepare(value).runtime)
                     if error is not None:
-                        raise ValueError(error)
+                        raise GraphValidationError(error)
         return serialized
 
     @staticmethod
@@ -536,7 +537,7 @@ class GraphSpec:
         if isinstance(source, PortNamespace) or isinstance(target, PortNamespace):
             if not isinstance(source, PortNamespace) or not isinstance(target, PortNamespace):
                 msg = f'{context} has incompatible value and namespace shapes.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
             GraphSpec._check_namespaces(source, target, context)
             return
 
@@ -548,7 +549,7 @@ class GraphSpec:
             and not all(any(issubclass(kind, expected) for expected in accepted) for kind in produced)
         ):
             msg = f'{context} has incompatible types: {produced} cannot feed {accepted}.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
 
     @staticmethod
     def _check_compatible(first: PortNamespace, second: PortNamespace, context: str) -> None:
@@ -564,13 +565,13 @@ class GraphSpec:
                 GraphSpec._check_types(source[name], child, context)
             elif child.required:
                 msg = f'{context} is missing required field `{name}`.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
 
     def validate(self) -> None:
         """Check names, inputs, dependencies, regions, outputs, and acyclicity."""
         if len(set(self.task_names)) != len(self.task_names):
             msg = 'task names must be unique.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
         boundary = self.input_spec()
         self._validate_inputs(boundary)
         self._validate_dependencies()
@@ -594,7 +595,7 @@ class GraphSpec:
         ports = self._input_ports_at(task, route.port)
         if not ports and not _accepts_condition(task, route.port):
             msg = f'input `{name}` refers to unknown input `{route.task}.{route.port}`.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
         origin = port_at(boundary, name)
         for target in ports:
             self._check_types(origin, target, f'graph input `{name}`')
@@ -613,10 +614,10 @@ class GraphSpec:
         ports = self._input_ports_at(target, edge.target_port or '')
         if origin is None or isinstance(origin, PortNamespace):
             msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
         if not ports and not _accepts_condition(target, edge.target_port):
             msg = f'dependency refers to unknown input `{edge.target}.{edge.target_port}`.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
         for port in ports:
             self._check_types(origin, port, f'dependency `{edge.source}` to `{edge.target}`')
 
@@ -625,14 +626,14 @@ class GraphSpec:
         if isinstance(task, BranchControl) and task.otherwise is not None:
             if task.condition_port in task.body.inputs or task.condition_port in task.otherwise.inputs:
                 msg = 'branch condition conflicts with a body input.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
             if task.body.outputs.keys() != task.otherwise.outputs.keys():
                 msg = 'both branches must return the same outputs.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
             self._check_compatible(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
         if isinstance(task, LoopControl) and (task.condition_port not in task.body.outputs or task.max_iterations < 1):
             msg = 'a loop must return its condition and allow at least one iteration.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
 
     def _validate_outputs(self, boundary: PortNamespace) -> None:
         """Check that graph outputs reference declared leaves of compatible types."""
@@ -652,7 +653,7 @@ class GraphSpec:
             free = [name for name, waiting in remaining.items() if not waiting & remaining.keys()]
             if not free:
                 msg = f'the dependencies contain a cycle between {sorted(remaining)}.'
-                raise ValueError(msg)
+                raise GraphTypeCheckError(msg)
             for name in free:
                 del remaining[name]
 

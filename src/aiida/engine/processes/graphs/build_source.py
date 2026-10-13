@@ -101,7 +101,7 @@ class _SourceRegistry:
             hints = t.get_type_hints(function, include_extras=True)
         except (NameError, AttributeError) as exception:
             msg = f'Cannot resolve type hints for {key}: {exception}'
-            raise TypeError(msg) from exception
+            raise UnsupportedSyntax(msg) from exception
         definition = _SourceDefinition(
             key=key,
             kind=kind,

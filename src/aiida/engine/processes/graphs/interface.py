@@ -16,6 +16,7 @@ import typing as t
 from collections.abc import Callable
 from dataclasses import replace
 
+from aiida.common.exceptions import GraphError
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.spec import GraphSpec
 
@@ -33,7 +34,7 @@ class GraphHandle:
 
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.NoReturn:
         msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`, or inspect `.build()`.'
-        raise TypeError(msg)
+        raise GraphError(msg)
 
     @property
     def function(self) -> Callable[..., t.Any]:

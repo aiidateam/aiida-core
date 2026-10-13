@@ -22,6 +22,9 @@ __all__ = (
     'FailedError',
     'FeatureDisabled',
     'FeatureNotAvailable',
+    'GraphError',
+    'GraphTypeCheckError',
+    'GraphValidationError',
     'HashingError',
     'IncompatibleStorageSchema',
     'InputValidationError',
@@ -79,7 +82,25 @@ class MissingInput:
     required: bool
 
 
-class MissingRequiredInputsError(AiidaException):
+class ValidationError(AiidaException):
+    """Error raised when there is an error during the validation phase
+    of a property.
+    """
+
+
+class GraphError(AiidaException):
+    """Base for graph errors, also used directly for graph API misuse."""
+
+
+class GraphTypeCheckError(GraphError):
+    """A graph template violates the type checking stage: contracts, wiring, shapes, or structure."""
+
+
+class GraphValidationError(GraphError, ValidationError):
+    """Launch inputs or execution results violate the graph contract: the input checking stage."""
+
+
+class MissingRequiredInputsError(GraphValidationError):
     """Required graph inputs are missing.
 
     :param missing: the missing inputs, in deterministic path order.
@@ -99,7 +120,7 @@ class NotExistent(AiidaException):
     """Raised when the required entity does not exist."""
 
 
-class UnsupportedSyntax(ValueError):  # noqa: N818 - keep the prototype's exception name
+class UnsupportedSyntax(GraphError):  # noqa: N818 - keep the established exception name
     """A registered graph contains syntax the source parser cannot represent."""
 
 
@@ -194,12 +215,6 @@ class InternalError(AiidaException):
 class PluginInternalError(InternalError):
     """Error raised when there is an internal error which is due to a plugin
     and not to the AiiDA infrastructure.
-    """
-
-
-class ValidationError(AiidaException):
-    """Error raised when there is an error during the validation phase
-    of a property.
     """
 
 

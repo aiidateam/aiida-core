@@ -13,7 +13,7 @@ import typing as t
 
 import pytest
 
-from aiida.common.exceptions import MissingRequiredInputsError
+from aiida.common.exceptions import GraphError, GraphTypeCheckError, MissingRequiredInputsError
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.interface import GraphHandle
@@ -87,7 +87,7 @@ def test_task_body_runs_plain_python() -> None:
 
 def test_task_after_kwarg_rejected_outside_graphs() -> None:
     """`after` orders graph placements; direct task calls reject it."""
-    with pytest.raises(TypeError, match='after'):
+    with pytest.raises(GraphError, match='after'):
         declarations.add(x=1, y=1, after='x')
 
 
@@ -265,7 +265,7 @@ def test_run_state_versions_its_checkpoints() -> None:
     assert state.to_dict().get('version') == STATE_VERSION
     saved = state.to_dict()
     GraphRun.from_dict(state.graph, state.given, {key: value for key, value in saved.items() if key != 'version'})
-    with pytest.raises(ValueError, match='graph run'):
+    with pytest.raises(GraphTypeCheckError, match='graph run'):
         GraphRun.from_dict(state.graph, state.given, {**saved, 'version': '0.0'})
 
 

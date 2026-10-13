@@ -15,6 +15,7 @@ import inspect
 import typing as t
 from collections.abc import Callable, Sequence
 
+from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.lang import override
 from aiida.engine.processes.functions import (
     FunctionProcessBase,
@@ -79,7 +80,7 @@ class TaskProcess(FunctionProcessBase):
             return
         if len(values) != len(names):
             msg = f'task declares {len(names)} outputs {names} but returned {len(values)} values.'
-            raise ValueError(msg)
+            raise GraphValidationError(msg)
         stored = {
             name: value if isinstance(value, Data) else to_aiida_type(value)
             for name, value in zip(names, values, strict=True)
@@ -107,7 +108,7 @@ class TaskHandle(t.Generic[P, R]):
     def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
         if after is not None:
             msg = '`after` orders placements in a `@graph` body; it is not a task input.'
-            raise TypeError(msg)
+            raise GraphError(msg)
         return self._function(*args, **kwargs)
 
     @property
@@ -151,16 +152,16 @@ def _check_task_contract(function: Callable[..., t.Any], outputs: Sequence[str] 
     signature = inspect.signature(function)
     if 'after' in signature.parameters:
         msg = '`after` is reserved for source graph ordering dependencies.'
-        raise TypeError(msg)
+        raise GraphError(msg)
     hints = t.get_type_hints(function, include_extras=True)
     annotation = hints.get('return', inspect.Signature.empty)
     if is_structured(annotation):
         msg = 'task output namespaces are not supported; declare leaf outputs instead.'
-        raise TypeError(msg)
+        raise GraphTypeCheckError(msg)
     if outputs is None:
         if annotation is inspect.Signature.empty:
             msg = 'tasks require a return annotation or explicit static output names.'
-            raise TypeError(msg)
+            raise GraphTypeCheckError(msg)
         if annotation is type(None):
             outputs = ()
     if outputs is not None:
@@ -170,7 +171,7 @@ def _check_task_contract(function: Callable[..., t.Any], outputs: Sequence[str] 
             or len(set(outputs)) != len(outputs)
         ):
             msg = 'task outputs must be unique identifier names.'
-            raise TypeError(msg)
+            raise GraphTypeCheckError(msg)
     return outputs
 
 
@@ -183,5 +184,5 @@ def build_task(function: Callable[P, R], *, outputs: Sequence[str] | None = None
     fixed_inputs(spec.inputs)
     if spec.outputs.dynamic or any(isinstance(port, PortNamespace) for port in spec.outputs.values()):
         msg = 'tasks require static leaf outputs.'
-        raise TypeError(msg)
+        raise GraphTypeCheckError(msg)
     return handle

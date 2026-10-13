@@ -15,7 +15,7 @@ import typing as t
 from collections.abc import Mapping
 from functools import partial
 
-from aiida.common.exceptions import MissingInput, MissingRequiredInputsError
+from aiida.common.exceptions import GraphValidationError, MissingInput, MissingRequiredInputsError
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, json_default
 from aiida.engine.processes.port_model import _namespace_value
@@ -37,7 +37,7 @@ def place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
         target = target.setdefault(namespace, {})
         if not isinstance(target, dict):
             msg = f'`{path}` puts an input inside a value rather than a namespace.'
-            raise ValueError(msg)
+            raise GraphValidationError(msg)
     target[name] = value
 
 
@@ -136,11 +136,11 @@ class _InputResolver:
         value = _namespace_value(value)
         if not isinstance(value, Mapping):
             msg = f'graph input `{path}` must be a namespace mapping, not `{type(value).__name__}`.'
-            raise TypeError(msg)
+            raise GraphValidationError(msg)
         unknown = value.keys() - port.keys()
         if unknown:
             msg = f'unexpected graph inputs under `{path}`: {sorted(unknown)}.'
-            raise TypeError(msg)
+            raise GraphValidationError(msg)
         return value
 
 

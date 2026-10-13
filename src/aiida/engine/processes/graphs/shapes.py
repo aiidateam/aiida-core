@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import UnionType
 
+from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import _namespace_value, fields_of, port_help, without_marks
@@ -114,7 +115,7 @@ def json_default(value: object) -> object:
     if isinstance(value, Mapping) and all(isinstance(key, str) for key in value):
         return {key: json_default(item) for key, item in value.items()}
     msg = f'graph default of type `{type(value).__name__}` is not a finite JSON value.'
-    raise TypeError(msg)
+    raise GraphTypeCheckError(msg)
 
 
 def dump_shape(shape: Shape, *, defaults: bool = True) -> dict[str, t.Any]:
@@ -141,7 +142,7 @@ def load_shape(data: Mapping[str, t.Any]) -> Shape:
     required, help = data['required'], data.get('help')
     if not isinstance(required, bool) or (help is not None and not isinstance(help, str)):
         msg = 'shape declarations require boolean requiredness and string help.'
-        raise TypeError(msg)
+        raise GraphTypeCheckError(msg)
     default = json_default(data['default']) if 'default' in data else UNSPECIFIED
     if data['kind'] == 'leaf':
         types = data.get('types')
@@ -156,7 +157,7 @@ def load_shape(data: Mapping[str, t.Any]) -> Shape:
     if data['kind'] == 'namespace':
         if 'extra' in data:
             msg = 'dynamic graph namespaces are not supported.'
-            raise ValueError(msg)
+            raise GraphTypeCheckError(msg)
         return NamespaceShape(
             fields=tuple((name, load_shape(field)) for name, field in data['fields'].items()),
             required=required,
@@ -164,4 +165,4 @@ def load_shape(data: Mapping[str, t.Any]) -> Shape:
             default=default,
         )
     msg = f'Unknown graph value shape `{data["kind"]}`.'
-    raise ValueError(msg)
+    raise GraphTypeCheckError(msg)

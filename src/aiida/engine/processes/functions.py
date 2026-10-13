@@ -28,7 +28,7 @@ from aiida.engine.processes.ports import (
     InputPort,
     PortNamespace,
     coerce_model_values,
-    infer_valid_type_from_type_annotation,
+    infer_node_types,
 )
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
@@ -325,7 +325,7 @@ def declare_output_ports(outputs: t.Sequence[str] | None, return_annotation: t.A
             annotation = annotations[index] if len(annotations) == len(outputs) else None
             if t.get_origin(annotation) in (list, dict):
                 annotation = t.get_origin(annotation)
-            spec.output(name, valid_type=infer_valid_type_from_type_annotation(annotation) or (Data,))
+            spec.output(name, valid_type=infer_node_types(annotation) or (Data,))
 
         return True
 
@@ -336,7 +336,7 @@ def declare_output_ports(outputs: t.Sequence[str] | None, return_annotation: t.A
         return_annotation = t.get_origin(return_annotation)
     spec.output(
         Process.SINGLE_OUTPUT_LINKNAME,
-        valid_type=infer_valid_type_from_type_annotation(return_annotation) or (Data,),
+        valid_type=infer_node_types(return_annotation) or (Data,),
     )
 
     return True
@@ -639,7 +639,7 @@ class FunctionProcess(FunctionProcessBase):
     ) -> None:
         """Declare one function parameter as a node-valued input port or namespace."""
         annotation = annotations.get(parameter.name)
-        valid_type = infer_valid_type_from_type_annotation(annotation, stored=True) or (Data,)
+        valid_type = infer_node_types(annotation) or (Data,)
         help_string = port_help(annotation)
         if help_string is None:
             help_string = param_help_string.get(parameter.name, None)

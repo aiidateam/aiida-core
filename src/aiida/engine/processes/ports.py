@@ -464,27 +464,42 @@ def _runtime_value(
     return value
 
 
-def infer_valid_type_from_type_annotation(annotation: t.Any, *, stored: bool = True) -> tuple[t.Any, ...]:
-    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
+def infer_node_types(annotation: t.Any) -> tuple[t.Any, ...]:
+    """Infer ORM valid types for stored declarations: legacy function ports and output checks.
 
     :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
-    :param stored: infer ORM types for legacy function inputs and outputs; disable for runtime input types.
     :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
         tuple is returned.
     """
-
     annotation = without_marks(annotation)
     origin = t.get_origin(annotation)
-    inferred_valid_type: tuple[t.Any, ...] = ()
+    inferred: tuple[t.Any, ...] = ()
 
     if is_a_plain_class(annotation) or origin in (list, dict):
-        inferred_valid_type = (_type_from_annotation(annotation, stored=stored),)
+        inferred = (_node_type(annotation),)
     elif origin is t.Union or origin is UnionType:
-        inferred_valid_type = tuple(
-            _type_from_annotation(valid_type, stored=stored) for valid_type in t.get_args(annotation)
-        )
+        inferred = tuple(_node_type(item) for item in t.get_args(annotation))
 
-    return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
+    return tuple(kind for kind in inferred if kind is not None)
+
+
+def infer_runtime_types(annotation: t.Any) -> tuple[t.Any, ...]:
+    """Infer Python valid types for runtime declarations: graph inputs declare what tasks consume.
+
+    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
+        tuple is returned.
+    """
+    annotation = without_marks(annotation)
+    origin = t.get_origin(annotation)
+    inferred: tuple[t.Any, ...] = ()
+
+    if is_a_plain_class(annotation) or origin in (list, dict):
+        inferred = (_runtime_type(annotation),)
+    elif origin is t.Union or origin is UnionType:
+        inferred = tuple(_runtime_type(item) for item in t.get_args(annotation))
+
+    return tuple(kind for kind in inferred if kind is not None)
 
 
 _VALID_TYPE_MAP: dict[t.Any, t.Any] = {
@@ -500,17 +515,21 @@ _VALID_TYPE_MAP: dict[t.Any, t.Any] = {
 }
 
 
-def _type_from_annotation(annotation: t.Any, *, stored: bool) -> t.Any | None:
-    """Return the valid type for one annotation, or None when it declares none."""
+def _node_type(annotation: t.Any) -> t.Any | None:
+    """Return the stored type for one annotation, or None when it declares none."""
     if annotation is t.Any:
         return None
-    origin = t.get_origin(annotation)
-    if not stored and origin in (list, dict):
-        annotation = origin
-
     if is_a_plain_class(annotation):
-        if not stored or issubclass(annotation, Data):
-            return annotation
-        return _VALID_TYPE_MAP.get(annotation)
+        return annotation if issubclass(annotation, Data) else _VALID_TYPE_MAP.get(annotation)
+    return _VALID_TYPE_MAP.get(annotation)
 
-    return _VALID_TYPE_MAP.get(annotation) if stored else None
+
+def _runtime_type(annotation: t.Any) -> t.Any | None:
+    """Return the runtime type for one annotation, or None when it declares none."""
+    if annotation is t.Any:
+        return None
+    if t.get_origin(annotation) in (list, dict):
+        return t.get_origin(annotation)
+    if is_a_plain_class(annotation):
+        return annotation
+    return None

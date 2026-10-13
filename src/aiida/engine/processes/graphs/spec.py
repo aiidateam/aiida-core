@@ -20,7 +20,7 @@ from aiida.common.exceptions import GraphTypeCheckError, GraphValidationError
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.graphs.inputs import at, port_for_shape, prepare_inputs, shape_from_port
 from aiida.engine.processes.graphs.shapes import NamespaceShape, Shape, load_shape
-from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_node_types
 from aiida.engine.processes.process import Process
 from aiida.orm import Data
 
@@ -372,12 +372,7 @@ def _stored_types(port: t.Any) -> tuple[type, ...]:
     """Return the stored types a port accepts, without nullability."""
     kinds = port.valid_type or ()
     kinds = (kinds,) if isinstance(kinds, type) else kinds
-    return tuple(
-        kind
-        for declared in kinds
-        if declared is not type(None)
-        for kind in infer_valid_type_from_type_annotation(declared)
-    )
+    return tuple(kind for declared in kinds if declared is not type(None) for kind in infer_node_types(declared))
 
 
 @dataclass(frozen=True)
@@ -481,12 +476,12 @@ class GraphSpec:
         """Return the stored types of a graph output, normalizing runtime declarations."""
         hint = self.output_typehints.get(name)
         if hint:
-            return tuple(kind for declared in hint for kind in infer_valid_type_from_type_annotation(declared))
+            return tuple(kind for declared in hint for kind in infer_node_types(declared))
         if isinstance(origin, InputPort):
             kinds = origin.valid_type or ()
             if isinstance(kinds, type):
                 kinds = (kinds,)
-            return tuple(kind for declared in kinds for kind in infer_valid_type_from_type_annotation(declared))
+            return tuple(kind for declared in kinds for kind in infer_node_types(declared))
         return origin.valid_type
 
     def prepare_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:

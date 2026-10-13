@@ -22,7 +22,8 @@ from aiida.engine.processes.ports import (
     CalcJobOutputPort,
     InputPort,
     PortNamespace,
-    infer_valid_type_from_type_annotation,
+    infer_node_types,
+    infer_runtime_types,
     is_storable,
 )
 from aiida.orm import Data, Dict, to_aiida_type
@@ -42,7 +43,7 @@ def _require_storable(field: Field) -> None:
 def _as_a_port(field: Field, *, node_types: bool = False) -> dict[str, t.Any]:
     """Return how one model field is declared as a port."""
     _require_storable(field)
-    declared = infer_valid_type_from_type_annotation(field.annotation, stored=node_types)
+    declared = infer_node_types(field.annotation) if node_types else infer_runtime_types(field.annotation)
     # Non-nullable fields stay required so no `None` type is added; a default still applies through the port.
     required = field.required or type(None) not in declared
     options: dict[str, t.Any] = {'required': required, 'help': field.help}
@@ -60,7 +61,7 @@ def _as_an_output_port(field: Field) -> dict[str, t.Any]:
     value is a node by the time it is attached.
     """
     _require_storable(field)
-    declared = infer_valid_type_from_type_annotation(field.annotation)
+    declared = infer_node_types(field.annotation)
 
     return {'required': field.required, 'help': field.help, 'valid_type': declared or (Data,)}
 
@@ -285,7 +286,7 @@ class GraphProcessSpec(ProcessSpec):
         :param name: the port or namespace to declare (dotted for nested fields).
         :param field: the extracted field carrying the stripped annotation, default and help.
         """
-        valid_type = infer_valid_type_from_type_annotation(field.annotation, stored=False) or (Data,)
+        valid_type = infer_runtime_types(field.annotation) or (Data,)
 
         if self.has_input(name):
             port = self.inputs[name]
@@ -308,9 +309,7 @@ class GraphProcessSpec(ProcessSpec):
         self.input(
             name,
             valid_type=valid_type,
-            default=_lazily(field.default, node_types=False)
-            if field.default is not UNSPECIFIED
-            else UNSPECIFIED,
+            default=_lazily(field.default, node_types=False) if field.default is not UNSPECIFIED else UNSPECIFIED,
             serializer=to_aiida_type,
             help=field.help,
         )

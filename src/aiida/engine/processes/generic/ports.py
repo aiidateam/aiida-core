@@ -43,7 +43,32 @@ def is_mutable_property(cls: t.Any, attribute: str) -> bool:
 
 
 _LOGGER = logging.getLogger(__name__)
-UNSPECIFIED = object()
+
+
+class _Unspecified:
+    """Sentinel for absent port values, stable under copying.
+
+    Exposed ports are deep-copied, so a bare ``object()`` would lose
+    identity and leak into values as an unknown default. This singleton
+    survives copying, pickling, and reads in tracebacks.
+    """
+
+    __slots__ = ()
+
+    def __copy__(self) -> _Unspecified:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, t.Any]) -> _Unspecified:
+        return self
+
+    def __reduce__(self) -> str:
+        return 'UNSPECIFIED'
+
+    def __repr__(self) -> str:
+        return 'UNSPECIFIED'
+
+
+UNSPECIFIED = _Unspecified()
 
 VALIDATOR_SIGNATURE_DEPRECATION_WARNING = """the validator `{}` has a signature that only takes a single argument.
     This has been deprecated and the new signature is `validator(value, port)` where the `port` argument will be the
@@ -443,7 +468,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
 
         :returns: a dictionary of descriptions of the Ports contained within this PortNamespace
         """
-        description = {
+        description: dict[str, dict[str, t.Any]] = {
             '_attrs': {
                 'default': f'{self.default}',
                 'dynamic': self.dynamic,

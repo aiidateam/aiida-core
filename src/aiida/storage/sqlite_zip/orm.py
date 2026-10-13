@@ -157,6 +157,18 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         return models.DbMembership
 
     @property
+    def Container(self):
+        return models.DbContainer
+
+    @property
+    def ListContainer(self):
+        return models.DbListContainer
+
+    @property
+    def DictContainer(self):
+        return models.DbDictContainer
+
+    @property
     def Computer(self):
         return models.DbComputer
 

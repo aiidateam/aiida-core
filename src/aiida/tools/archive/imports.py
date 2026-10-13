@@ -522,11 +522,13 @@ def _validate_ownership_agreement(
 ) -> None:
     """Validate ownership agreement between archive nodes and stored nodes sharing a UUID (spec §11).
 
-    Archives carry the node-level ownership columns (``owner_id`` is archive-local, hence compared
-    by presence; ``container_element_type`` by value). Membership edges have no archive
-    representation, so any ownership information in the archive cannot round-trip: archive rows
-    carrying ownership are rejected outright. Otherwise, UUID reuse requires agreement — a stored
-    node is reused only when both sides are standalone; any ownership/membership/type mismatch
+    Container state lives in ``db_dbcontainer`` (+ kind markers) with membership edges in
+    ``db_dbmembership`` (``orm-container-adr-01.md`` §3); ``db_dbnode`` carries only the
+    ``owner_id`` reference. Archives carry the node-level ``owner_id`` (archive-local, hence
+    compared by presence); container/membership rows have no archive representation, so any
+    ownership information in the archive cannot round-trip: archive rows carrying ownership are
+    rejected outright. Otherwise, UUID reuse requires agreement — a stored node is reused only
+    when both sides are standalone with no container state; any ownership/membership/type mismatch
     under one UUID is an integrity error. Runs before any import write, so rejection rolls back
     trivially (nothing was written). Existing standalone nodes remain standalone through migration.
 
@@ -534,7 +536,7 @@ def _validate_ownership_agreement(
     """
     archive_rows = (
         orm.QueryBuilder(backend=backend_from)
-        .append(orm.Node, project=['uuid', 'node_type', 'owner_id', 'container_element_type'], tag='node')
+        .append(orm.Node, project=['uuid', 'node_type', 'owner_id'], tag='node')
         .iterdict(batch_size=batch_size)
     )
     archive_by_uuid: dict[str, dict] = {}
@@ -546,15 +548,12 @@ def _validate_ownership_agreement(
         # Storages predating the ownership schema (old archives) lack the ownership columns; their
         # rows predate owned containers and are all standalone, so only the stored-side check applies.
         archive_by_uuid = {uuid: {'uuid': uuid} for uuid in set(input_id_uuid.values())}
-    owned_in_archive = sorted(
-        uuid
-        for uuid, entity in archive_by_uuid.items()
-        if entity.get('owner_id') is not None or entity.get('container_element_type') is not None
-    )
-    if owned_in_archive:
-        shown = ', '.join(owned_in_archive[:5])
+    owned_in_archive = sorted(uuid for uuid, entity in archive_by_uuid.items() if entity.get('owner_id') is not None)
+    container_tables = _archive_container_tables(backend_from)
+    if owned_in_archive or container_tables:
+        shown = ', '.join(owned_in_archive[:5]) or f'{len(container_tables)} container/membership row(s)'
         msg = (
-            'Archive contains owned data containers (or locked element types) without a membership '
+            'Archive contains owned data containers (or container state) without a membership '
             'representation (e.g. node(s) with UUID(s) '
             f'{shown}); refusing import rather than dropping ownership on round-trip.'
         )
@@ -567,26 +566,67 @@ def _validate_ownership_agreement(
         .append(
             orm.Node,
             filters={'uuid': {'in': reused}},
-            project=['uuid', 'owner_id', 'container_element_type'],
+            project=['uuid', 'owner_id'],
             tag='node',
         )
         .iterdict(batch_size=batch_size)
     )
-    disagreements = sorted(
-        row['node']['uuid']
-        for row in stored_rows
-        if row['node'].get('owner_id') is not None or row['node'].get('container_element_type') is not None
-    )
+    disagreements = sorted(row['node']['uuid'] for row in stored_rows if row['node'].get('owner_id') is not None)
+    disagreements += sorted(_stored_container_uuids(backend_to, reused) - set(disagreements))
     if disagreements:
         shown = ', '.join(disagreements[:5])
         msg = (
             'Archive UUID(s) '
             f'{shown} match stored node(s) with conflicting ownership (stored node is owned or '
-            'has a locked element type while the archive row is standalone). Reuse requires '
+            'has container state while the archive row is standalone). Reuse requires '
             'ownership, membership, positions, keys and element types to agree; refusing import '
             'rather than detaching nodes or regenerating UUIDs.'
         )
         raise ImportValidationError(msg)
+
+
+def _archive_container_tables(backend_from: StorageBackend) -> list[str]:
+    """Return the names of non-empty container/membership tables in the source archive."""
+    get_session = getattr(backend_from, 'get_session', None)
+    if get_session is None:
+        return []
+    try:
+        from sqlalchemy import text
+
+        session = get_session()
+        non_empty = []
+        for table in ('db_dbcontainer', 'db_dblistcontainer', 'db_dbdictcontainer', 'db_dbmembership'):
+            try:
+                hit = session.execute(text(f'SELECT 1 FROM {table} LIMIT 1')).first()
+            except Exception:
+                continue  # table absent (archive predating the ownership schema): no rows to protect
+            if hit is not None:
+                non_empty.append(table)
+        return non_empty
+    except Exception:
+        return []
+
+
+def _stored_container_uuids(backend_to: StorageBackend, uuids: list[str]) -> set[str]:
+    """Return the subset of ``uuids`` whose stored nodes carry container state."""
+    get_models = getattr(backend_to, '_container_models', None)
+    get_session = getattr(backend_to, 'get_session', None)
+    get_ownership = getattr(backend_to, '_ownership_models', None)
+    if get_models is None or get_session is None or get_ownership is None:
+        return set()
+    try:
+        node_model, _ = get_ownership()
+        container_model, _, _ = get_models()
+        session = get_session()
+        rows = (
+            session.query(node_model.uuid)
+            .join(container_model, container_model.node_id == node_model.id)
+            .filter(node_model.uuid.in_(uuids))
+            .all()
+        )
+        return {str(uuid) for (uuid,) in rows}
+    except Exception:
+        return set()
 
 
 class NodeTransform:

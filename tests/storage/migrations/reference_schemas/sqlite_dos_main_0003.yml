@@ -91,6 +91,24 @@ columns:
     name: metadata
     nullable: false
     type: JSON
+  db_dbcontainer:
+  - default: null
+    name: node_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: element_type
+    nullable: true
+    type: VARCHAR(255)
+  - default: '''row'''
+    name: layout
+    nullable: false
+    type: VARCHAR(32)
+  db_dbdictcontainer:
+  - default: null
+    name: node_id
+    nullable: false
+    type: INTEGER
   db_dbgroup:
   - default: null
     name: id
@@ -158,6 +176,11 @@ columns:
     name: type
     nullable: false
     type: VARCHAR(255)
+  db_dblistcontainer:
+  - default: null
+    name: node_id
+    nullable: false
+    type: INTEGER
   db_dblog:
   - default: null
     name: id
@@ -269,10 +292,6 @@ columns:
     name: owner_id
     nullable: true
     type: INTEGER
-  - default: null
-    name: container_element_type
-    nullable: true
-    type: VARCHAR(255)
   db_dbsetting:
   - default: null
     name: id
@@ -321,9 +340,12 @@ constraints:
     db_dbauthinfo: []
     db_dbcomment: []
     db_dbcomputer: []
+    db_dbcontainer: []
+    db_dbdictcontainer: []
     db_dbgroup: []
     db_dbgroup_dbnodes: []
     db_dblink: []
+    db_dblistcontainer: []
     db_dblog: []
     db_dbmembership:
     - name: ck_db_dbmembership_ck_db_dbmembership_no_self_ownership
@@ -350,6 +372,14 @@ constraints:
       constrained_columns:
       - id
       name: db_dbcomputer_pkey
+    db_dbcontainer:
+      constrained_columns:
+      - node_id
+      name: db_dbcontainer_pkey
+    db_dbdictcontainer:
+      constrained_columns:
+      - node_id
+      name: db_dbdictcontainer_pkey
     db_dbgroup:
       constrained_columns:
       - id
@@ -362,6 +392,10 @@ constraints:
       constrained_columns:
       - id
       name: db_dblink_pkey
+    db_dblistcontainer:
+      constrained_columns:
+      - node_id
+      name: db_dblistcontainer_pkey
     db_dblog:
       constrained_columns:
       - id
@@ -400,6 +434,8 @@ constraints:
     - column_names:
       - uuid
       name: uq_db_dbcomputer_uuid
+    db_dbcontainer: []
+    db_dbdictcontainer: []
     db_dbgroup:
     - column_names:
       - label
@@ -414,6 +450,7 @@ constraints:
       - dbnode_id
       name: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
     db_dblink: []
+    db_dblistcontainer: []
     db_dblog:
     - column_names:
       - uuid
@@ -491,6 +528,28 @@ foreign_keys:
     referred_schema: null
     referred_table: db_dbuser
   db_dbcomputer: []
+  db_dbcontainer:
+  - constrained_columns:
+    - node_id
+    name: fk_db_dbcontainer_node_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dbdictcontainer:
+  - constrained_columns:
+    - node_id
+    name: fk_db_dbdictcontainer_node_id_db_dbcontainer
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - node_id
+    referred_schema: null
+    referred_table: db_dbcontainer
   db_dbgroup:
   - constrained_columns:
     - user_id
@@ -546,6 +605,17 @@ foreign_keys:
     - id
     referred_schema: null
     referred_table: db_dbnode
+  db_dblistcontainer:
+  - constrained_columns:
+    - node_id
+    name: fk_db_dblistcontainer_node_id_db_dbcontainer
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - node_id
+    referred_schema: null
+    referred_table: db_dbcontainer
   db_dblog:
   - constrained_columns:
     - dbnode_id
@@ -571,14 +641,14 @@ foreign_keys:
     referred_table: db_dbnode
   - constrained_columns:
     - owner_id
-    name: fk_db_dbmembership_owner_id_db_dbnode
+    name: fk_db_dbmembership_owner_id_db_dbcontainer
     options:
       deferrable: true
       initially: DEFERRED
     referred_columns:
-    - id
+    - node_id
     referred_schema: null
-    referred_table: db_dbnode
+    referred_table: db_dbcontainer
   db_dbnode:
   - constrained_columns:
     - dbcomputer_id
@@ -639,6 +709,18 @@ indexes:
     name: ix_db_dbcomment_db_dbcomment_user_id
     unique: 0
   db_dbcomputer: []
+  db_dbcontainer:
+  - column_names:
+    - element_type
+    dialect_options: {}
+    name: ix_db_dbcontainer_db_dbcontainer_element_type
+    unique: 0
+  - column_names:
+    - layout
+    dialect_options: {}
+    name: ix_db_dbcontainer_db_dbcontainer_layout
+    unique: 0
+  db_dbdictcontainer: []
   db_dbgroup:
   - column_names:
     - label
@@ -687,6 +769,7 @@ indexes:
     dialect_options: {}
     name: ix_db_dblink_db_dblink_type
     unique: 0
+  db_dblistcontainer: []
   db_dblog:
   - column_names:
     - dbnode_id
@@ -720,11 +803,6 @@ indexes:
     name: ix_db_dbmembership_db_dbmembership_owner_id
     unique: 0
   db_dbnode:
-  - column_names:
-    - container_element_type
-    dialect_options: {}
-    name: ix_db_dbnode_db_dbnode_container_element_type
-    unique: 0
   - column_names:
     - ctime
     dialect_options: {}

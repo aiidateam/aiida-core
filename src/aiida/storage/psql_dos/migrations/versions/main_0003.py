@@ -14,9 +14,11 @@ Migration steps:
 2. :func:`_migrate_legacy_codes`: migrate the deprecated ``Code`` data plugin.
 3. :func:`_migrate_code_hidden_extra`: rename the visibility extra on built-in Code nodes.
 4. Owned data containers: add ``db_dbnode.owner_id`` (indexed, nullable self-FK, deferred),
-   ``db_dbnode.container_element_type``, and the ``db_dbmembership`` table, per
-   ``orm-container-spec.md`` sections 2-3. Membership rows are containment edges, never
-   provenance links. Existing nodes remain standalone: no owner, unset element type.
+   the ``db_dbcontainer`` table (``node_id`` PK/FK to ``db_dbnode``, ``element_type``, ``layout``)
+   with the ``db_dblistcontainer``/``db_dbdictcontainer`` kind markers, and the ``db_dbmembership``
+   table (``owner_id`` FK to ``db_dbcontainer``), per ``orm-container-spec.md`` sections 2-3 and
+   ``orm-container-adr-01.md`` §3. Membership rows are containment edges, never
+   provenance links. Existing nodes remain standalone: no owner, no container rows.
 
 The legacy paramiko-based ``core.ssh`` transport plugin was removed in v3.0, and the asynchronous plugin (formerly
 ``core.ssh_async``) took over its entry point name. Consequently:
@@ -138,11 +140,7 @@ def upgrade():
     _migrate_legacy_codes(conn)
     _migrate_code_hidden_extra(conn)
     op.add_column('db_dbnode', sa.Column('owner_id', sa.Integer(), nullable=True))
-    op.add_column('db_dbnode', sa.Column('container_element_type', sa.String(length=255), nullable=True))
     op.create_index('ix_db_dbnode_db_dbnode_owner_id', 'db_dbnode', ['owner_id'], unique=False)
-    op.create_index(
-        'ix_db_dbnode_db_dbnode_container_element_type', 'db_dbnode', ['container_element_type'], unique=False
-    )
     op.create_foreign_key(
         'fk_db_dbnode_owner_id_db_dbnode',
         'db_dbnode',
@@ -153,13 +151,30 @@ def upgrade():
         initially='DEFERRED',
     )
     op.create_table(
+        'db_dbcontainer',
+        sa.Column('node_id', sa.Integer(), nullable=False, primary_key=True),
+        sa.Column('element_type', sa.String(length=255), nullable=True, index=True),
+        sa.Column('layout', sa.String(length=32), nullable=False, server_default='row', index=True),
+        sa.ForeignKeyConstraint(['node_id'], ['db_dbnode.id'], deferrable=True, initially='DEFERRED'),
+    )
+    op.create_table(
+        'db_dblistcontainer',
+        sa.Column('node_id', sa.Integer(), nullable=False, primary_key=True),
+        sa.ForeignKeyConstraint(['node_id'], ['db_dbcontainer.node_id'], deferrable=True, initially='DEFERRED'),
+    )
+    op.create_table(
+        'db_dbdictcontainer',
+        sa.Column('node_id', sa.Integer(), nullable=False, primary_key=True),
+        sa.ForeignKeyConstraint(['node_id'], ['db_dbcontainer.node_id'], deferrable=True, initially='DEFERRED'),
+    )
+    op.create_table(
         'db_dbmembership',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
         sa.Column('owner_id', sa.Integer(), nullable=False, index=True),
         sa.Column('child_id', sa.Integer(), nullable=False, index=True),
         sa.Column('position', sa.Integer(), nullable=False),
         sa.Column('key', sa.String(length=255), nullable=True, index=True),
-        sa.ForeignKeyConstraint(['owner_id'], ['db_dbnode.id'], deferrable=True, initially='DEFERRED'),
+        sa.ForeignKeyConstraint(['owner_id'], ['db_dbcontainer.node_id'], deferrable=True, initially='DEFERRED'),
         sa.ForeignKeyConstraint(['child_id'], ['db_dbnode.id'], deferrable=True, initially='DEFERRED'),
         sa.UniqueConstraint('child_id', name='uq_db_dbmembership_child_id'),
         sa.UniqueConstraint('owner_id', 'position', name='uq_db_dbmembership_owner_id_position'),
@@ -172,8 +187,9 @@ def upgrade():
 def downgrade():
     """Migrations for the downgrade."""
     op.drop_table('db_dbmembership')
+    op.drop_table('db_dbdictcontainer')
+    op.drop_table('db_dblistcontainer')
+    op.drop_table('db_dbcontainer')
     op.drop_constraint('fk_db_dbnode_owner_id_db_dbnode', 'db_dbnode', type_='foreignkey')
-    op.drop_index('ix_db_dbnode_db_dbnode_container_element_type', table_name='db_dbnode')
     op.drop_index('ix_db_dbnode_db_dbnode_owner_id', table_name='db_dbnode')
-    op.drop_column('db_dbnode', 'container_element_type')
     op.drop_column('db_dbnode', 'owner_id')

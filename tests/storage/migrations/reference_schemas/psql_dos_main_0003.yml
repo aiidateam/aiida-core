@@ -91,6 +91,24 @@ columns:
     name: metadata
     nullable: false
     type: JSONB
+  db_dbcontainer:
+  - default: null
+    name: node_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: element_type
+    nullable: true
+    type: VARCHAR(255)
+  - default: '''row''::character varying'
+    name: layout
+    nullable: false
+    type: VARCHAR(32)
+  db_dbdictcontainer:
+  - default: null
+    name: node_id
+    nullable: false
+    type: INTEGER
   db_dbgroup:
   - default: nextval('db_dbgroup_id_seq'::regclass)
     name: id
@@ -158,6 +176,11 @@ columns:
     name: type
     nullable: false
     type: VARCHAR(255)
+  db_dblistcontainer:
+  - default: null
+    name: node_id
+    nullable: false
+    type: INTEGER
   db_dblog:
   - default: nextval('db_dblog_id_seq'::regclass)
     name: id
@@ -269,10 +292,6 @@ columns:
     name: owner_id
     nullable: true
     type: INTEGER
-  - default: null
-    name: container_element_type
-    nullable: true
-    type: VARCHAR(255)
   db_dbsetting:
   - default: nextval('db_dbsetting_id_seq'::regclass)
     name: id
@@ -321,9 +340,12 @@ constraints:
     db_dbauthinfo: []
     db_dbcomment: []
     db_dbcomputer: []
+    db_dbcontainer: []
+    db_dbdictcontainer: []
     db_dbgroup: []
     db_dbgroup_dbnodes: []
     db_dblink: []
+    db_dblistcontainer: []
     db_dblog: []
     db_dbmembership:
     - comment: null
@@ -364,6 +386,20 @@ constraints:
       dialect_options:
         postgresql_include: []
       name: db_dbcomputer_pkey
+    db_dbcontainer:
+      comment: null
+      constrained_columns:
+      - node_id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbcontainer_pkey
+    db_dbdictcontainer:
+      comment: null
+      constrained_columns:
+      - node_id
+      dialect_options:
+        postgresql_include: []
+      name: db_dbdictcontainer_pkey
     db_dbgroup:
       comment: null
       constrained_columns:
@@ -385,6 +421,13 @@ constraints:
       dialect_options:
         postgresql_include: []
       name: db_dblink_pkey
+    db_dblistcontainer:
+      comment: null
+      constrained_columns:
+      - node_id
+      dialect_options:
+        postgresql_include: []
+      name: db_dblistcontainer_pkey
     db_dblog:
       comment: null
       constrained_columns:
@@ -454,6 +497,8 @@ constraints:
         postgresql_include: []
         postgresql_nulls_not_distinct: false
       name: uq_db_dbcomputer_uuid
+    db_dbcontainer: []
+    db_dbdictcontainer: []
     db_dbgroup:
     - column_names:
       - label
@@ -480,6 +525,7 @@ constraints:
         postgresql_nulls_not_distinct: false
       name: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
     db_dblink: []
+    db_dblistcontainer: []
     db_dblog:
     - column_names:
       - uuid
@@ -589,6 +635,30 @@ foreign_keys:
     referred_schema: null
     referred_table: db_dbuser
   db_dbcomputer: []
+  db_dbcontainer:
+  - comment: null
+    constrained_columns:
+    - node_id
+    name: fk_db_dbcontainer_node_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dbdictcontainer:
+  - comment: null
+    constrained_columns:
+    - node_id
+    name: fk_db_dbdictcontainer_node_id_db_dbcontainer
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - node_id
+    referred_schema: null
+    referred_table: db_dbcontainer
   db_dbgroup:
   - comment: null
     constrained_columns:
@@ -649,6 +719,18 @@ foreign_keys:
     - id
     referred_schema: null
     referred_table: db_dbnode
+  db_dblistcontainer:
+  - comment: null
+    constrained_columns:
+    - node_id
+    name: fk_db_dblistcontainer_node_id_db_dbcontainer
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - node_id
+    referred_schema: null
+    referred_table: db_dbcontainer
   db_dblog:
   - comment: null
     constrained_columns:
@@ -677,14 +759,14 @@ foreign_keys:
   - comment: null
     constrained_columns:
     - owner_id
-    name: fk_db_dbmembership_owner_id_db_dbnode
+    name: fk_db_dbmembership_owner_id_db_dbcontainer
     options:
       deferrable: true
       initially: DEFERRED
     referred_columns:
-    - id
+    - node_id
     referred_schema: null
-    referred_table: db_dbnode
+    referred_table: db_dbcontainer
   db_dbnode:
   - comment: null
     constrained_columns:
@@ -789,6 +871,20 @@ indexes:
     duplicates_constraint: uq_db_dbcomputer_uuid
     name: uq_db_dbcomputer_uuid
     unique: true
+  db_dbcontainer:
+  - column_names:
+    - element_type
+    dialect_options:
+      postgresql_include: []
+    name: ix_db_dbcontainer_db_dbcontainer_element_type
+    unique: false
+  - column_names:
+    - layout
+    dialect_options:
+      postgresql_include: []
+    name: ix_db_dbcontainer_db_dbcontainer_layout
+    unique: false
+  db_dbdictcontainer: []
   db_dbgroup:
   - column_names:
     - label
@@ -901,6 +997,7 @@ indexes:
         type: varchar_pattern_ops
     name: ix_pat_db_dblink_type
     unique: false
+  db_dblistcontainer: []
   db_dblog:
   - column_names:
     - dbnode_id
@@ -986,12 +1083,6 @@ indexes:
     name: uq_db_dbmembership_owner_id_position
     unique: true
   db_dbnode:
-  - column_names:
-    - container_element_type
-    dialect_options:
-      postgresql_include: []
-    name: ix_db_dbnode_db_dbnode_container_element_type
-    unique: false
   - column_names:
     - ctime
     dialect_options:

@@ -198,8 +198,8 @@ class TestModelParity:
         from aiida.storage.psql_dos.migrator import PsqlDosMigrator
         from aiida.storage.sqlite_dos.backend import SqliteDosMigrator
 
-        assert PsqlDosMigrator.get_schema_version_head() == 'main_0004'
-        assert SqliteDosMigrator.get_schema_version_head() == 'main_0004'
+        assert PsqlDosMigrator.get_schema_version_head() == 'main_0003'
+        assert SqliteDosMigrator.get_schema_version_head() == 'main_0003'
 
 
 @pytest.fixture

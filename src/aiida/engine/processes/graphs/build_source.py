@@ -528,11 +528,11 @@ def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
     while name in state.names:
         name = f'condition_{count}'
         count += 1
-    bound = ast.Assign(targets=[ast.Name(id=name)], value=test)
+    bound = ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())], value=test)
     ast.copy_location(bound, test)
     ast.copy_location(bound.targets[0], test)
     _lower_assignment(state, bound)
-    return ast.Name(id=name)
+    return ast.Name(id=name, ctx=ast.Load())
 
 
 def _lower_side(state: _LoweringState, statements: list[ast.stmt]) -> _Side:
@@ -569,7 +569,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     bound = _bind_condition(state, statement.test)
     body: list[ast.stmt] = list(statement.body)
     if bound is not None:
-        update = ast.Assign(targets=[ast.Name(id=bound.id)], value=copy.deepcopy(statement.test))
+        update = ast.Assign(targets=[ast.Name(id=bound.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
         body.append(update)

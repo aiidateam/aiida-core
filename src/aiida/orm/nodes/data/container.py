@@ -41,19 +41,22 @@ Contract summary:
   supported. Equality and hashing follow base :class:`~aiida.orm.Node` identity (UUID) behavior; independent copies
   are unequal even when their content matches.
 
-Storage representation (relational, ``orm-container-spec.md`` §§2-3):
+Storage representation (relational, ``orm-container-spec.md`` §§2-3, ``orm-container-adr-01.md`` §3):
 
 * Containment lives in the dedicated membership table (one row per owned
-  child: immediate owner, child, integer ``position``, nullable string
-  ``key``), not in node attributes or provenance links.
+  child: immediate owner container, child, integer ``position``, nullable string
+  ``key``), not in node attributes or provenance links. ``owner_id`` FKs point at the
+  container row (``db_dbcontainer``), not the node subtype.
 * Each owned child carries an indexed ``owner_id`` reference to its
   immediate owner (NULL means standalone); every membership row agrees
-  with the child's reference and both are written atomically via
-  ``backend.create_container_membership``.
-* The locked element-type identifier lives in the dedicated relational
-  container metadata (``container_element_type``, NULL when unset), never
-  in node attributes. Comparisons use exact stored ``node_type`` strings
-  without loading element plugins.
+  with the child's reference and container, subtype and membership rows are written
+  atomically via ``backend.create_container_membership``.
+* The locked element-type identifier and layout discriminator live in the dedicated
+  relational container row (``db_dbcontainer.element_type``/``layout``, NULL element type when
+  unset), never in node attributes. Comparisons use exact stored ``node_type`` strings
+  without loading element plugins. List reads join ``db_dblistcontainer`` and dict reads join
+  ``db_dbdictcontainer`` so cross-kind access fails instead of returning ambiguously-interpreted
+  rows.
 """
 
 from __future__ import annotations
@@ -291,6 +294,7 @@ class ContainerCaching(NodeCaching):
         assert isinstance(node, _ContainerBase)
         node._ensure_materialized()
         objects['container_element_type'] = node._container_element_type
+        objects['container_layout'] = node._container_layout
         objects['members'] = node._hashable_members()
         return objects
 
@@ -329,8 +333,14 @@ class _ContainerBase(Data):
         self._container_owner: _ContainerBase | None = None
         self._container_materialized = False
         self._container_element_type: str | None = None
+        self._container_layout: str = 'row'
         self._container_guard_armed = False
         self._container_recovery_snapshot: dict[str, dict[str, t.Any]] | None = None
+
+    @property
+    def _container_kind(self) -> t.Literal['list', 'dict']:
+        """Return the membership kind of this container (``'list'``/``'dict'``)."""
+        raise NotImplementedError
 
     # -- in-memory membership primitives (implemented by subclasses) --
 
@@ -369,15 +379,20 @@ class _ContainerBase(Data):
 
     # -- loading / materialization --
 
-    def _read_storage_records(self) -> tuple[str | None, list[tuple[int, str | None, int, str]]] | None:
-        """Read persisted ``(element_type, membership)`` records for this stored container.
+    def _read_storage_records(self) -> tuple[str | None, str, list[tuple[int, str | None, int, str]]] | None:
+        """Read persisted ``(element_type, layout, membership)`` records for this stored container.
 
-        Returns ``(element_type, edges)`` where ``edges`` is a list of
+        Kind-scoped: list containers join ``DbListContainer`` and dict containers join
+        ``DbDictContainer``, so cross-kind access raises instead of returning an
+        ambiguously-interpreted row. Dict ``position`` is ``ORDER BY``-only, never a lookup.
+
+        Returns ``(element_type, layout, edges)`` where ``edges`` is a list of
         ``(position, key, child_id, child_node_type)`` ordered by persisted
         position (record order itself is meaningless). Returns ``None`` on
         backends without the ownership schema, where no containers can exist.
         """
         get_models = getattr(self.backend, '_ownership_models', None)
+        get_containers = getattr(self.backend, '_container_models', None)
         get_session = getattr(self.backend, 'get_session', None)
         if get_models is None or get_session is None:
             return None
@@ -388,7 +403,15 @@ class _ContainerBase(Data):
             if owner_row is None:
                 msg = f'container node with pk {self.pk} has no stored row'
                 raise exceptions.NotExistent(msg)
-            element_type = getattr(owner_row, 'container_element_type', None)
+            if get_containers is None:
+                msg = 'structural storage inspection requires a backend with container support'
+                raise exceptions.InvalidOperation(msg)
+            from aiida.storage import ownership as ownership_contract
+
+            assert self.pk is not None  # stored containers have a pk; `_ensure_materialized` guards `is_stored`
+            element_type, layout = ownership_contract.require_container_kind(
+                session, get_containers(), self.pk, self._container_kind
+            )
             edge_rows = (
                 session.query(membership_model)
                 .filter(membership_model.owner_id == self.pk)
@@ -405,7 +428,7 @@ class _ContainerBase(Data):
                 msg = f'membership edge of container {self.pk} references missing child {edge.child_id}'
                 raise exceptions.IntegrityError(msg)
             edges.append((edge.position, edge.key, edge.child_id, child_row.node_type))
-        return element_type, edges
+        return element_type, layout, edges
 
     @staticmethod
     def _require_element_plugin(child_node_type: str) -> None:
@@ -471,8 +494,9 @@ class _ContainerBase(Data):
         records = self._read_storage_records()
         if records is None:
             return
-        element_type, edges = records
+        element_type, layout, edges = records
         self._container_element_type = element_type
+        self._container_layout = layout
         for _position, key, child_id, child_node_type in edges:
             child = self._load_stored_child(child_id, child_node_type)
             child._container_owner = self  # type: ignore[attr-defined]
@@ -492,7 +516,7 @@ class _ContainerBase(Data):
         if records is None:
             msg = 'structural storage inspection requires a backend with ownership support'
             raise exceptions.InvalidOperation(msg)
-        yield from records[1]
+        yield from records[2]
 
     def _container_root(self) -> _ContainerBase:
         """Return the outermost in-memory owner of this container (itself if standalone)."""
@@ -542,6 +566,12 @@ class _ContainerBase(Data):
         """Return the locked element ``node_type`` identifier, or ``None`` if no element was ever inserted."""
         self._ensure_materialized()
         return self._container_element_type
+
+    @property
+    def layout(self) -> str:
+        """Return the locked storage-layout discriminator (``'row'`` in this iteration)."""
+        self._ensure_materialized()
+        return self._container_layout
 
     # -- insertion / copy --
 
@@ -595,6 +625,7 @@ class _ContainerBase(Data):
         cloned = super().clone()
         cloned._container_owner = None
         cloned._container_element_type = self._container_element_type
+        cloned._container_layout = self._container_layout
         cloned._container_materialized = True
         cloned._container_guard_armed = False
         cloned._container_recovery_snapshot = None
@@ -663,7 +694,7 @@ class _ContainerBase(Data):
         snapshot: dict[str, dict[str, t.Any]] = {}
         for node in subtree:
             bare_model = t.cast(t.Any, node.backend_entity).bare_model
-            snapshot[node.uuid] = {
+            entry: dict[str, t.Any] = {
                 'attributes': copy.deepcopy(node.base.attributes.all),
                 'extras': copy.deepcopy(node.base.extras.all),
                 'repository_metadata': copy.deepcopy(node.backend_entity.repository_metadata),
@@ -671,8 +702,13 @@ class _ContainerBase(Data):
                 'label': node.label,
                 'description': node.description,
                 'owner_id': getattr(bare_model, 'owner_id', None),
-                'container_element_type': getattr(bare_model, 'container_element_type', None),
             }
+            if isinstance(node, _ContainerBase):
+                # Container state lives in `db_dbcontainer`, locked at first-element time alongside
+                # the element type; snapshot the in-memory locks so recovery restores them.
+                entry['container_element_type'] = node._container_element_type
+                entry['container_layout'] = node._container_layout
+            snapshot[node.uuid] = entry
         return snapshot
 
     def _iter_positioned(self) -> Iterator[tuple[str | None, Data]]:
@@ -695,12 +731,12 @@ class _ContainerBase(Data):
         ]
 
     def _attach_storage_membership(self) -> None:
-        """Persist owner references, membership rows and element-type metadata relationally.
+        """Persist owner references, membership rows and container state relationally.
 
         Calls ``backend.create_container_membership`` for every container of
         the subtree (nested containers first so parent edges reference
         already-owned children) so backend-contract validation
-        (eligibility/homogeneity/exclusivity/acyclicity) runs at the backend
+        (eligibility/kind-discipline/homogeneity/exclusivity/acyclicity) runs at the backend
         level, joining the enclosing transaction. The resolved (possibly
         newly locked) element type is stored back in memory.
         """
@@ -723,7 +759,13 @@ class _ContainerBase(Data):
 
         visit(self)
         for container in ordered:
-            resolved = create(container.pk, container._membership_specs(), container._container_element_type)
+            resolved = create(
+                container.pk,
+                container._membership_specs(),
+                container._container_element_type,
+                kind=container._container_kind,
+                assert_layout=container._container_layout,
+            )
             container._container_element_type = resolved
 
     def _recover_subtree(self, subtree: list[Data], snapshot: dict[str, dict[str, t.Any]]) -> None:
@@ -756,15 +798,18 @@ class _ContainerBase(Data):
                     pass
             try:
                 bare_model.id = None
-                # Ownership columns are set in memory by `create_container_membership`; a rolled-back
+                # Ownership references are set in memory by `create_container_membership`; a rolled-back
                 # attach leaves them populated on the retained models, so restore the snapshotted
-                # (pre-store, standalone) references to keep the subtree retryable.
+                # (pre-store, standalone) references to keep the subtree retryable. Container rows
+                # (`db_dbcontainer` + kind markers) vanish with the database rollback; the in-memory
+                # element-type/layout locks below survive on the retained objects.
                 if hasattr(bare_model, 'owner_id'):
                     bare_model.owner_id = state.get('owner_id')
-                if hasattr(bare_model, 'container_element_type'):
-                    bare_model.container_element_type = state.get('container_element_type')
             except Exception:
                 pass
+            if isinstance(node, _ContainerBase):
+                node._container_element_type = state.get('container_element_type')
+                node._container_layout = state.get('container_layout', 'row')
             node.base.attributes.reset(copy.deepcopy(state['attributes']))
             node.base.extras.reset(copy.deepcopy(state['extras']))
             try:
@@ -842,6 +887,12 @@ class DataList(_ContainerBase):
     iteration in persisted position order; slicing is not supported. Positions are persisted explicitly. Equality
     and hashing are UUID identity based: independent copies are unequal even when their content matches.
     """
+
+    @property
+    @override
+    def _container_kind(self) -> t.Literal['list', 'dict']:
+        """Return the membership kind of this container (``'list'``)."""
+        return 'list'
 
     def __init__(self, value: t.Iterable[Data] | None = None, **kwargs: t.Any) -> None:
         """Initialize the node, copying each element of ``value`` as an owned child."""
@@ -973,6 +1024,12 @@ class DataDict(_ContainerBase):
     persisted position order. Equality and hashing are UUID identity based: independent copies are unequal even
     when their content matches.
     """
+
+    @property
+    @override
+    def _container_kind(self) -> t.Literal['list', 'dict']:
+        """Return the membership kind of this container (``'dict'``)."""
+        return 'dict'
 
     def __init__(self, value: Mapping[str, Data] | t.Iterable[tuple[str, Data]] | None = None, **kwargs: t.Any) -> None:
         """Initialize the node, copying each entry of ``value`` as an owned child."""

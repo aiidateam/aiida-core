@@ -426,7 +426,8 @@ def is_storable(annotation: t.Any) -> bool:
         return True
     if is_structured(annotation):
         return True
-    if isinstance(annotation, type):
+    # `is_a_plain_class`, not `isinstance(., type)`: parametrized generics pass the latter on some versions.
+    if is_a_plain_class(annotation):
         return issubclass(annotation, Data) or _has_conversion(annotation)
     return _origin_storable(t.get_origin(annotation), annotation)
 

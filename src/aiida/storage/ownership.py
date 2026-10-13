@@ -14,21 +14,28 @@ not in the ORM. Both SQL backends (``psql_dos`` and ``sqlite_dos``) share
 these helpers; the SQLite models are converted copies of the PostgreSQL
 models, so the same table/column layout applies to both.
 
-Relational layout (see ``aiida.storage.psql_dos.models.node``):
+Relational layout (see ``aiida.storage.psql_dos.models.node``, ``orm-container-adr-01.md`` §3):
 
 - ``db_dbnode.owner_id``: indexed, nullable foreign key to ``db_dbnode.id``.
   Null means a standalone node; non-null means an exclusively owned node.
   No separate ownership-mode flag exists.
+- ``db_dbcontainer``: shared container state, one row per container
+  (``node_id`` PK/FK to ``db_dbnode``). ``element_type`` is the nullable
+  stored ``node_type`` identifier of the container's element type (NULL
+  means unset — a container that never held an element, which may still be
+  stored; locked after the first element, including after emptying).
+  ``layout`` is the storage-layout discriminator, default ``'row'``,
+  locked at first-element time alongside ``element_type``.
+- ``db_dblistcontainer`` / ``db_dbdictcontainer``: kind markers
+  (``node_id`` PK/FK to ``db_dbcontainer``); future kind-only columns
+  belong there.
 - ``db_dbmembership``: dedicated membership table. Each row references its
-  immediate owner (``owner_id``) and child (``child_id``) through foreign
-  keys and persists ``position`` (integer, both lists and dicts) and, for
-  dictionary entries, a nullable string ``key``. Database row order is not
+  immediate owner container (``owner_id`` FK to ``db_dbcontainer``) and
+  child (``child_id`` FK to ``db_dbnode``) and persists ``position``
+  (persisted iteration ordinal for both kinds — semantic order for lists,
+  explicit insertion order for dicts) and, for keyed kinds only, a string
+  ``key`` (NULL for lists, NOT NULL for dicts). Database row order is not
   meaningful; ORM iteration follows persisted positions after reloading.
-- ``db_dbnode.container_element_type``: nullable stored ``node_type``
-  identifier of the container's element type. NULL means unset (a container
-  that never held an element, which may still be stored). Once established
-  by the first element it remains locked, including after removing every
-  element.
 
 Conventions and tolerances:
 
@@ -71,14 +78,24 @@ import typing as t
 from aiida.common.exceptions import IntegrityError
 
 __all__ = (
+    'CONTAINER_KINDS',
     'CONTAINER_NODE_TYPES',
+    'DICT_NODE_TYPE',
+    'LAYOUT_ROW',
+    'LIST_NODE_TYPE',
     'OWNERSHIP_INTEGRATION_NOTES',
     'assert_no_provenance_link_to_owned',
+    'attach_dict_membership',
+    'attach_list_membership',
     'attach_membership',
+    'container_kind_for',
     'default_bulk_node_rows',
+    'ensure_container_rows',
     'expand_ownership_closure',
     'is_container_node_type',
     'is_data_node_type',
+    'read_container_state',
+    'require_container_kind',
     'resolve_element_type',
     'validate_bulk_node_insert',
     'validate_bulk_node_update',
@@ -100,6 +117,18 @@ CONTAINER_NODE_TYPES: frozenset[str] = frozenset(
         'data.core.data_dict.DataDict.',
     }
 )
+
+#: Exact ``node_type`` of the ordered container.
+LIST_NODE_TYPE: str = 'data.core.data_list.DataList.'
+#: Exact ``node_type`` of the keyed container.
+DICT_NODE_TYPE: str = 'data.core.data_dict.DataDict.'
+#: Mapping of container ``node_type`` to its membership kind (``'list'``/``'dict'``).
+CONTAINER_KINDS: dict[str, str] = {LIST_NODE_TYPE: 'list', DICT_NODE_TYPE: 'dict'}
+#: The only storage layout approved by ``orm-container-adr-01.md``: row-per-element.
+LAYOUT_ROW: str = 'row'
+
+#: Membership kind: ``'list'`` (ordered, ``key IS NULL``) or ``'dict'`` (keyed, ``key IS NOT NULL``).
+ContainerKind = t.Literal['list', 'dict']
 
 #: Integration work that must preserve these invariants but is deferred
 #: past the storage-first iteration. Recorded here so backend callers do
@@ -135,6 +164,128 @@ def is_container_node_type(node_type: str | None) -> bool:
     return node_type in CONTAINER_NODE_TYPES
 
 
+def container_kind_for(owner_node_type: str | None) -> ContainerKind | None:
+    """Return the membership kind (``'list'``/``'dict'``) for a container ``node_type``.
+
+    Returns ``None`` for non-container types. Comparison is exact string
+    equality, never plugin loading.
+    """
+    if owner_node_type is None:
+        return None
+    kind = CONTAINER_KINDS.get(owner_node_type)
+    return t.cast('ContainerKind | None', kind)
+
+
+def _container_row(session, container_model, owner_id: int):
+    """Return the stored ``DbContainer`` row for ``owner_id`` or ``None``."""
+    return session.query(container_model).filter(container_model.node_id == owner_id).one_or_none()
+
+
+def ensure_container_rows(
+    session,
+    container_models,
+    owner_id: int,
+    kind: ContainerKind,
+    element_type: t.Any,
+    layout: t.Any = None,
+) -> tuple[str | None, str]:
+    """Get-or-create the ``DbContainer`` + kind-subtype rows for ``owner_id`` atomically.
+
+    Locks ``element_type``/``layout`` at first-element time: a missing container row is created with
+    the given values (``layout`` defaults to :data:`LAYOUT_ROW`); an existing row must agree on both
+    and on the kind marker, since stored container state is immutable. Only :data:`LAYOUT_ROW` is
+    approved; any other layout is rejected.
+
+    :param container_models: ``(DbContainer, DbListContainer, DbDictContainer)`` model classes.
+    :returns: the locked ``(element_type, layout)``.
+    :raises IntegrityError: on kind mismatch or lock disagreement.
+    """
+    container_model, list_model, dict_model = container_models
+    if layout is None:
+        layout = LAYOUT_ROW
+    if not isinstance(layout, str) or layout != LAYOUT_ROW:
+        msg = f'Unsupported container layout: {layout!r}. Only {LAYOUT_ROW!r} is approved.'
+        raise IntegrityError(msg)
+    if element_type is not None and not isinstance(element_type, str):
+        msg = f'Invalid container element type: {element_type!r}. Must be a node_type string or NULL.'
+        raise IntegrityError(msg)
+    row = _container_row(session, container_model, owner_id)
+    if row is None:
+        row = container_model(node_id=owner_id, element_type=element_type, layout=layout)
+        session.add(row)
+        session.flush()
+        session.add((list_model if kind == 'list' else dict_model)(node_id=owner_id))
+        session.flush()
+        return element_type, layout
+    if row.element_type != element_type:
+        msg = (
+            f'Element-type lock disagreement: stored lock is {row.element_type!r} but asserted '
+            f'type is {element_type!r}. Stored locks cannot be changed in place.'
+        )
+        raise IntegrityError(msg)
+    if row.layout != layout:
+        msg = (
+            f'Layout lock disagreement: stored layout is {row.layout!r} but asserted '
+            f'layout is {layout!r}. Stored locks cannot be changed in place.'
+        )
+        raise IntegrityError(msg)
+    subtype = list_model if kind == 'list' else dict_model
+    marker = session.query(subtype).filter(subtype.node_id == owner_id).one_or_none()
+    if marker is None:
+        other = 'dict' if kind == 'list' else 'list'
+        msg = (
+            f'Container-kind mismatch: node {owner_id} is stored as a {other} container '
+            f'but accessed as {kind}. Cross-kind access never returns ambiguously-interpreted rows.'
+        )
+        raise IntegrityError(msg)
+    return row.element_type, row.layout
+
+
+def require_container_kind(session, container_models, owner_id: int, kind: ContainerKind) -> tuple[str | None, str]:
+    """Kind-scoped read of a container's locked ``(element_type, layout)``.
+
+    List paths join ``DbListContainer`` and dict paths join ``DbDictContainer``: cross-kind access
+    raises instead of returning an ambiguously-interpreted row. Dict ``position`` stays ``ORDER
+    BY``-only and is never a lookup here.
+
+    :raises IntegrityError: if the container row or the kind marker is missing.
+    """
+    container_model, list_model, dict_model = container_models
+    row = _container_row(session, container_model, owner_id)
+    if row is None:
+        msg = f'Container node {owner_id} has no stored container row.'
+        raise IntegrityError(msg)
+    subtype = list_model if kind == 'list' else dict_model
+    marker = session.query(subtype).filter(subtype.node_id == owner_id).one_or_none()
+    if marker is None:
+        other = 'dict' if kind == 'list' else 'list'
+        msg = (
+            f'Container-kind mismatch: node {owner_id} is stored as a {other} container '
+            f'but accessed as {kind}. Cross-kind access never returns ambiguously-interpreted rows.'
+        )
+        raise IntegrityError(msg)
+    return row.element_type, row.layout
+
+
+def read_container_state(session, container_models, owner_id: int) -> tuple[str | None, str, ContainerKind | None]:
+    """Read a container's ``(element_type, layout, kind)`` without enforcing a kind.
+
+    Structural inspection helper: ``kind`` is ``None`` when no kind marker exists. Typed element
+    access must use :func:`require_container_kind` instead.
+    """
+    container_model, list_model, dict_model = container_models
+    row = _container_row(session, container_model, owner_id)
+    if row is None:
+        msg = f'Container node {owner_id} has no stored container row.'
+        raise IntegrityError(msg)
+    kind: ContainerKind | None = None
+    if session.query(list_model).filter(list_model.node_id == owner_id).one_or_none() is not None:
+        kind = 'list'
+    elif session.query(dict_model).filter(dict_model.node_id == owner_id).one_or_none() is not None:
+        kind = 'dict'
+    return row.element_type, row.layout, kind
+
+
 def resolve_element_type(stored: str | None, child_node_type: str) -> str:
     """Resolve a container's element type against a candidate child.
 
@@ -143,7 +294,7 @@ def resolve_element_type(stored: str | None, child_node_type: str) -> str:
     - Otherwise the child must match exactly; nested containers compare
       only their outer ``node_type``, never inner metadata.
 
-    :param stored: the container's persisted ``container_element_type``
+    :param stored: the container's persisted ``element_type`` (``db_dbcontainer``)
         (NULL/None means unset, not the Python type ``NoneType``).
     :param child_node_type: the candidate child's ``node_type`` identifier.
     :raises IntegrityError: if the child type does not match the locked type.
@@ -208,6 +359,10 @@ def validate_ownership_graph(
     owner_element_type: t.Any,
     members: list[dict],
     assert_element_type: t.Any = None,
+    kind: ContainerKind | None = None,
+    container_models: t.Any = None,
+    owner_layout: t.Any = None,
+    assert_layout: t.Any = None,
 ) -> str | None:
     """Validate a complete ownership insertion for one container.
 
@@ -220,12 +375,17 @@ def validate_ownership_graph(
     - one membership row per owned child, agreeing with the child's
       ``owner_id`` reference (children must currently be standalone);
     - owners eligible (container), children eligible (data-only);
+    - list-vs-dict key discipline: ``key IS NULL`` for every list member,
+      ``key IS NOT NULL`` for every dict member (``kind`` defaults to the
+      owner's ``node_type`` when omitted);
     - homogeneity: every child matches the resolved element type; the
       resolved type is returned so the caller can persist it atomically
       with the rows. ``assert_element_type`` carries a pre-locked type
       established before storage (a container that held an element and was
       then emptied keeps its lock): it must agree with the stored lock and
       every child, and is persisted even when ``members`` is empty.
+    - ``layout`` (default ``'row'``) is locked alongside ``element_type``;
+      only ``'row'`` is approved.
     - exclusive ownership: a child already owned by anyone is rejected;
     - acyclicity: self-ownership and cycles through already-stored
       membership edges are rejected (transitive closure walk);
@@ -242,6 +402,9 @@ def validate_ownership_graph(
     :param session: the active SQLAlchemy session (caller owns commit).
     :param node_model: the backend's ``DbNode`` model class.
     :param membership_model: the backend's ``DbMembership`` model class.
+    :param kind: ``'list'``/``'dict'``; inferred from ``owner_node_type`` when omitted.
+    :param container_models: ``(DbContainer, DbListContainer, DbDictContainer)``; when given,
+        the stored container row/kind marker are cross-checked (stored locks immutable).
     :returns: the resolved (possibly newly locked) element type.
     :raises IntegrityError: on any invariant violation.
 
@@ -251,6 +414,20 @@ def validate_ownership_graph(
     """
     if not is_container_node_type(owner_node_type):
         msg = f'Ineligible owner node type: {owner_node_type!r}. Only containers may own nodes.'
+        raise IntegrityError(msg)
+    resolved_kind = kind if kind is not None else container_kind_for(owner_node_type)
+    if resolved_kind not in ('list', 'dict'):
+        msg = f'Unknown container kind for owner node type {owner_node_type!r} (kind={kind!r}).'
+        raise IntegrityError(msg)
+    if (
+        kind is not None
+        and container_kind_for(owner_node_type) is not None
+        and kind != container_kind_for(owner_node_type)
+    ):
+        msg = (
+            f'Container-kind mismatch: owner node type {owner_node_type!r} is a '
+            f'{container_kind_for(owner_node_type)} container but accessed as {kind}.'
+        )
         raise IntegrityError(msg)
     if owner_element_type is not None and not isinstance(owner_element_type, str):
         msg = f'Invalid container element type: {owner_element_type!r}. Must be a node_type string or NULL.'
@@ -264,6 +441,56 @@ def validate_ownership_graph(
             f'type is {assert_element_type!r}. Stored locks cannot be changed in place.'
         )
         raise IntegrityError(msg)
+
+    if assert_layout is not None and not isinstance(assert_layout, str):
+        msg = f'Invalid asserted layout: {assert_layout!r}. Must be a layout string or NULL.'
+        raise IntegrityError(msg)
+    if owner_layout is not None and not isinstance(owner_layout, str):
+        msg = f'Invalid stored layout: {owner_layout!r}. Must be a layout string or NULL.'
+        raise IntegrityError(msg)
+    effective_assert_layout = assert_layout if assert_layout is not None else owner_layout
+    if effective_assert_layout is not None and effective_assert_layout != LAYOUT_ROW:
+        msg = f'Unsupported container layout: {effective_assert_layout!r}. Only {LAYOUT_ROW!r} is approved.'
+        raise IntegrityError(msg)
+    if assert_layout is not None and owner_layout is not None and assert_layout != owner_layout:
+        msg = (
+            f'Layout lock disagreement: stored layout is {owner_layout!r} but asserted '
+            f'layout is {assert_layout!r}. Stored locks cannot be changed in place.'
+        )
+        raise IntegrityError(msg)
+    # Stored container-row agreement (when the caller passes container models): the locked
+    # element type/layout and the kind marker cannot change in place.
+    if container_models is not None:
+        container_model, list_model, dict_model = container_models
+        stored_row = _container_row(session, container_model, owner_id)
+        if stored_row is not None:
+            if owner_element_type is None:
+                owner_element_type = stored_row.element_type
+            elif stored_row.element_type != owner_element_type:
+                msg = (
+                    'Element-type lock disagreement: stored lock is '
+                    f'{stored_row.element_type!r} but asserted type is {owner_element_type!r}. '
+                    'Stored locks cannot be changed in place.'
+                )
+                raise IntegrityError(msg)
+            stored_layout = stored_row.layout
+            if owner_layout is None:
+                owner_layout = stored_layout
+            elif stored_layout != owner_layout:
+                msg = (
+                    f'Layout lock disagreement: stored layout is {stored_layout!r} but asserted '
+                    f'layout is {owner_layout!r}. Stored locks cannot be changed in place.'
+                )
+                raise IntegrityError(msg)
+            subtype = list_model if resolved_kind == 'list' else dict_model
+            if session.query(subtype).filter(subtype.node_id == owner_id).one_or_none() is None:
+                other = 'dict' if resolved_kind == 'list' else 'list'
+                msg = (
+                    f'Container-kind mismatch: node {owner_id} is stored as a {other} container '
+                    f'but accessed as {resolved_kind}. Cross-kind access never returns '
+                    'ambiguously-interpreted rows.'
+                )
+                raise IntegrityError(msg)
 
     seen_positions: set[int] = set()
     seen_keys: set[str] = set()
@@ -287,6 +514,21 @@ def validate_ownership_graph(
             position=position,
             key=key,
         )
+        # List-vs-dict key discipline (ADR-01 §3): list members carry key NULL (position is the
+        # semantic order); dict members carry a NOT NULL string key (position is insertion order,
+        # ORDER BY-only, never a lookup).
+        if resolved_kind == 'list' and key is not None:
+            msg = (
+                f'Container-kind violation: list container {owner_id} member at position {position} '
+                f'carries key {key!r}; list entries must have key NULL.'
+            )
+            raise IntegrityError(msg)
+        if resolved_kind == 'dict' and key is None:
+            msg = (
+                f'Container-kind violation: dict container {owner_id} member at position {position} '
+                'has no key; dict entries must have a NOT NULL string key.'
+            )
+            raise IntegrityError(msg)
         if position in seen_positions:
             msg = f'Duplicate membership position {position} for owner {owner_id}.'
             raise IntegrityError(msg)
@@ -459,17 +701,17 @@ def default_bulk_node_rows(rows: list[dict]) -> None:
 
     Rows predating the ownership schema (old archives, existing callers) carry no ownership keys;
     existing standalone nodes remain standalone through migration. Mutates rows in place, before the
-    backend's strict key check.
+    backend's strict key check. Container state (``db_dbcontainer`` and kind markers) is never
+    bulk-inserted: it is written atomically with membership rows via :func:`attach_membership`.
     """
     for row in rows:
         row.setdefault('owner_id', None)
-        row.setdefault('container_element_type', None)
 
 
 def validate_bulk_node_insert(rows: list[dict]) -> None:
     """Reject bulk node rows that would violate stored ownership invariants.
 
-    Owned children and locked element types can only be written atomically with their membership rows
+    Owned children can only be written atomically with their membership rows
     via :func:`attach_membership`; standalone bulk insertion of an owned child would break
     owner/membership agreement.
 
@@ -482,25 +724,20 @@ def validate_bulk_node_insert(rows: list[dict]) -> None:
                 'with membership rows via `create_container_membership`.'
             )
             raise IntegrityError(msg)
-        if row.get('container_element_type') is not None:
-            msg = (
-                'Cannot bulk-insert a locked element type: container element-type metadata must be '
-                'written atomically with membership rows via `create_container_membership`.'
-            )
-            raise IntegrityError(msg)
 
 
 def validate_bulk_node_update(rows: list[dict]) -> None:
     """Reject bulk node updates touching stored ownership.
 
     Stored ownership and membership cannot be changed in place (no triggers; the backend contract is
-    the enforcement boundary).
+    the enforcement boundary). Container state lives in ``db_dbcontainer`` and is immutable once
+    stored; it has no bulk-update path.
 
     :raises IntegrityError: on any violation.
     """
     for row in rows:
-        if 'owner_id' in row or 'container_element_type' in row:
-            msg = 'Cannot update stored ownership: `owner_id` and `container_element_type` are immutable once stored.'
+        if 'owner_id' in row:
+            msg = 'Cannot update stored ownership: `owner_id` is immutable once stored.'
             raise IntegrityError(msg)
 
 
@@ -521,48 +758,79 @@ def validate_link_rows(session, node_model, rows: list[dict]) -> None:
 
 
 def attach_membership(
-    backend, owner_id: int, members: list[dict], assert_element_type: str | None = None
+    backend,
+    owner_id: int,
+    members: list[dict],
+    assert_element_type: str | None = None,
+    *,
+    kind: ContainerKind | None = None,
+    assert_layout: str | None = None,
 ) -> str | None:
     """Atomically persist ownership edges for one container on any SQL backend.
 
-    Validates the complete ownership graph transactionally (eligibility, homogeneity, exclusivity,
-    acyclicity, owner/membership agreement) and then, in a single transaction (joining an enclosing
-    transaction when present), sets the children's ``owner_id`` references, locks the owner's
-    ``container_element_type``, and inserts the membership rows. No provenance links are created or
+    Validates the complete ownership graph transactionally (eligibility, list-vs-dict key
+    discipline, homogeneity, exclusivity, acyclicity, owner/membership agreement) and then, in a
+    single transaction (joining an enclosing transaction when present), creates the ``DbContainer``
+    + kind-subtype rows (atomic base+extension writes), sets the children's ``owner_id``
+    references, locks the container's ``element_type``/``layout``, and inserts the membership rows.
+    ``owner_id`` FKs point at the container row, not the node subtype, so the key discipline and
+    kind-marker checks here are authoritative. No provenance links are created or
     consulted: membership rows are containment edges, not provenance.
 
-    The backend must provide ``get_session()``, ``transaction()``, ``in_transaction``, and
-    ``_ownership_models()`` returning ``(DbNode, DbMembership)`` model classes.
+    The backend must provide ``get_session()``, ``transaction()``, ``in_transaction``,
+    ``_ownership_models()`` returning ``(DbNode, DbMembership)`` and ``_container_models()``
+    returning ``(DbContainer, DbListContainer, DbDictContainer)`` model classes.
 
     :param backend: the storage backend (``psql_dos``, ``sqlite_dos``, or ``sqlite_temp``).
     :param owner_id: pk of the stored owner container.
     :param members: list of ``{'child_id': int, 'child_node_type': str, 'position': int,
-        'key': str | None}``.
+        'key': str | None}`` (``key`` NULL for lists, NOT NULL string for dicts).
     :param assert_element_type: pre-locked element type established before storage (kept across
         emptying); must agree with the stored lock and every child, persisted even for empty members.
+    :param kind: ``'list'``/``'dict'``; inferred from the owner's ``node_type`` when omitted.
+    :param assert_layout: pre-locked layout (kept across emptying); defaults to ``'row'``.
     :returns: the resolved (possibly newly locked) element type.
     :raises IntegrityError: on any ownership-invariant violation.
     """
     from contextlib import nullcontext
 
     node_model, membership_model = backend._ownership_models()
+    container_models = backend._container_models()
+    container_model, _, _ = container_models
     session = backend.get_session()
     with nullcontext() if backend.in_transaction else backend.transaction():
         owner = session.query(node_model).filter(node_model.id == owner_id).one_or_none()
         if owner is None:
             msg = f'Owner node {owner_id} does not exist.'
             raise IntegrityError(msg)
+        if not is_container_node_type(owner.node_type):
+            msg = f'Ineligible owner node type: {owner.node_type!r}. Only containers may own nodes.'
+            raise IntegrityError(msg)
+        if kind is not None:
+            resolved_kind = kind
+        else:
+            inferred = container_kind_for(owner.node_type)
+            if inferred is None:
+                msg = f'Unknown container kind for owner {owner_id} (node_type={owner.node_type!r}).'
+                raise IntegrityError(msg)
+            resolved_kind = inferred
+        stored_row = _container_row(session, container_model, owner_id)
         resolved = validate_ownership_graph(
             session,
             node_model,
             membership_model,
             owner_id=owner_id,
             owner_node_type=owner.node_type,
-            owner_element_type=owner.container_element_type,
+            owner_element_type=stored_row.element_type if stored_row is not None else None,
             members=members,
             assert_element_type=assert_element_type,
+            kind=resolved_kind,
+            container_models=container_models,
+            owner_layout=stored_row.layout if stored_row is not None else None,
+            assert_layout=assert_layout,
         )
-        owner.container_element_type = resolved
+        resolved_layout = assert_layout or (stored_row.layout if stored_row is not None else LAYOUT_ROW)
+        ensure_container_rows(session, container_models, owner_id, resolved_kind, resolved, resolved_layout)
         for spec in members:
             child = session.query(node_model).filter(node_model.id == spec['child_id']).one()
             child.owner_id = owner_id
@@ -576,6 +844,29 @@ def attach_membership(
             )
         session.flush()
     return resolved
+
+
+def attach_list_membership(
+    backend, owner_id: int, members: list[dict], assert_element_type: str | None = None
+) -> str | None:
+    """Attach ordered members to a list container (every ``key`` must be NULL).
+
+    Asserts the ``DbListContainer`` extension row and ``key IS NULL`` for every member; cross-kind
+    access fails instead of returning ambiguously-interpreted rows. See :func:`attach_membership`.
+    """
+    return attach_membership(backend, owner_id, members, assert_element_type, kind='list')
+
+
+def attach_dict_membership(
+    backend, owner_id: int, members: list[dict], assert_element_type: str | None = None
+) -> str | None:
+    """Attach keyed members to a dict container (every ``key`` must be a NOT NULL string).
+
+    Asserts the ``DbDictContainer`` extension row and ``key IS NOT NULL`` for every member;
+    cross-kind access fails instead of returning ambiguously-interpreted rows. See
+    :func:`attach_membership`.
+    """
+    return attach_membership(backend, owner_id, members, assert_element_type, kind='dict')
 
 
 def assert_no_provenance_link_to_owned(session, node_model, *, endpoint_id: int, role: str = 'endpoint') -> None:

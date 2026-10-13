@@ -16,6 +16,7 @@ import typing as t
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import Field, fields_of
 from aiida.engine.processes.ports import (
     CalcJobOutputPort,
@@ -150,6 +151,47 @@ class ProcessSpec(spec.ProcessSpec):
 
         for field in _with_defaults(fields, defaults):
             self._declare_field(f'{name}{self.namespace_separator}{field.name}', field, node_types=node_types)
+
+    def input_from_field(self, name: str, field: Field, *, node_types: bool = False) -> None:
+        """Convert one extracted :class:`Field` to an input port or namespace.
+
+        Structured annotations become a namespace via :meth:`input_namespace_from`; all other
+        annotations become a leaf :class:`InputPort`.
+
+        :param name: the port or namespace to declare (dotted for nested fields).
+        :param field: the extracted field carrying the stripped annotation, default and help.
+        :param node_types: translate Python field types to ORM types for legacy declarations.
+        """
+        valid_type = infer_valid_type_from_type_annotation(field.annotation, stored=node_types) or (Data,)
+
+        if self.has_input(name):
+            port = self.inputs[name]
+            assert isinstance(port, InputPort)
+            port.default = field.default
+            return
+
+        if field.default is None and type(None) not in valid_type:
+            valid_type += (type(None),)
+
+        if fields_of(field.annotation) is not None:
+            self.input_namespace_from(
+                name,
+                field.annotation,
+                node_types=node_types,
+                required=field.required,
+                help=field.help,
+            )
+            return
+
+        self.input(
+            name,
+            valid_type=valid_type,
+            default=_lazily(field.default, node_types=node_types)
+            if field.default is not UNSPECIFIED
+            else UNSPECIFIED,
+            serializer=to_aiida_type,
+            help=field.help,
+        )
 
     def _declare_field(self, name: str, field: Field, *, node_types: bool) -> None:
         """Declare one model field as a port or a nested namespace."""

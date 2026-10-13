@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import collections
 import collections.abc
-import copy
 import functools
 import inspect
 import logging
@@ -24,12 +23,12 @@ import docstring_parser
 
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import as_dict, is_structured, port_help, without_marks
-from aiida.engine.processes.ports import InputPort, infer_valid_type_from_type_annotation
+from aiida.engine.processes.port_model import field_from_annotation
+from aiida.engine.processes.ports import coerce_model_values, infer_valid_type_from_type_annotation
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.manage import get_manager
-from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
+from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 if t.TYPE_CHECKING:
@@ -232,17 +231,9 @@ def process_function(
             result, _ = run_get_node(*args, **kwargs)
             return result
 
-        try:
-            takes = get_annotations(function, eval_str=True)
-        except (NameError, TypeError):
-            takes = {}
-
         def get_launch_inputs(**inputs: t.Any) -> dict[str, t.Any]:
-            """Return the inputs to launch the process with.
-
-            A structured type value is flattened to its namespace mapping.
-            """
-            return {name: _flattened(takes.get(name), value) for name, value in inputs.items()}
+            """Return the inputs to launch the process with."""
+            return coerce_model_values(dict(inputs))
 
         decorated_function.run = decorated_function  # type: ignore[attr-defined]
         decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
@@ -314,54 +305,15 @@ def declare_parameter(
     stored: bool,
 ) -> None:
     """Declare one function parameter as an input port or namespace."""
-    annotation = annotations.get(parameter.name)
-    valid_type = infer_valid_type_from_type_annotation(annotation, stored=stored) or (Data,)
-    help_string = port_help(annotation)
-    if help_string is None:
-        help_string = param_help_string.get(parameter.name, None)
-
-    default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
-
-    # If the keyword was already specified, simply override the default
-    if spec.has_input(parameter.name):
-        port = spec.inputs[parameter.name]
-        assert isinstance(port, InputPort)
-        port.default = default
-        return
-
-    # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
-    # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
-    # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
-    if default is None and type(None) not in valid_type:
-        valid_type += (type(None),)
-
-    # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
-    # done lazily using a lambda, just as any port defaults should not define node instances directly as is
-    # also checked by the ``spec.input`` call.
-    indirect_default: t.Any
-    if default is not None and default is not UNSPECIFIED and not isinstance(default, Data) and not callable(default):
-
-        def indirect_default(value=default):
-            return to_aiida_type(value) if stored else copy.deepcopy(value)
-    else:
-        indirect_default = default
-
-    if is_structured(without_marks(annotation)):
-        spec.input_namespace_from(
-            parameter.name,
-            without_marks(annotation),
-            node_types=stored,
-            required=default is UNSPECIFIED,
-            help=help_string,
-        )
-        return
-
-    spec.input(
+    spec.input_from_field(
         parameter.name,
-        valid_type=valid_type,
-        default=indirect_default,
-        serializer=to_aiida_type,
-        help=help_string,
+        field_from_annotation(
+            parameter.name,
+            annotations.get(parameter.name),
+            parameter.default if parameter.default is not parameter.empty else UNSPECIFIED,
+            param_help_string.get(parameter.name, None),
+        ),
+        node_types=stored,
     )
 
 
@@ -405,20 +357,6 @@ def declare_output_ports(outputs: t.Sequence[str] | None, return_annotation: t.A
     )
 
     return True
-
-
-def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
-    """Return a value as the port taking it holds it, which for a structured type is the namespace of its fields.
-
-    What says to flatten is the annotation rather than the shape of the value, since plenty of things are a
-    dataclass without being what a parameter was written to take.
-    """
-    if not is_structured(annotation):
-        return value
-
-    held = as_dict(value)
-
-    return value if held is None else held
 
 
 class FunctionProcessBase(Process):
@@ -565,9 +503,6 @@ class FunctionProcessBase(Process):
     def create_inputs(cls, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
         """Create the input dictionary for the ``FunctionProcess``."""
         cls.validate_inputs(*args, **kwargs)
-
-        takes = get_annotations(cls._func, eval_str=True)
-        kwargs = {name: _flattened(takes.get(name), value) for name, value in kwargs.items()}
 
         # The complete input dictionary consists of the keyword arguments...
         inputs = dict(kwargs or {})

@@ -16,7 +16,14 @@ import typing as t
 from collections.abc import Callable, Sequence
 
 from aiida.common.lang import override
-from aiida.engine.processes.functions import FunctionProcess, P, ProcessFunctionType, process_function
+from aiida.engine.processes.functions import (
+    FunctionProcessBase,
+    P,
+    ProcessFunctionType,
+    declare_output_ports,
+    declare_parameter,
+    process_function,
+)
 from aiida.engine.processes.graphs.spec import TaskSpec, fixed_inputs
 from aiida.engine.processes.port_model import is_structured
 from aiida.engine.processes.ports import PortNamespace
@@ -28,10 +35,29 @@ __all__ = ('TaskHandle', 'TaskProcess')
 R = t.TypeVar('R')
 
 
-class TaskProcess(FunctionProcess):
-    """Consume declared Python/ORM inputs and create provenance nodes for leaf outputs."""
+class TaskProcess(FunctionProcessBase):
+    """Task process with plain Python inputs and static leaf outputs."""
 
-    NODE_INPUT_TYPES: t.ClassVar[bool] = False
+    @classmethod
+    @override
+    def _declare_input(
+        cls,
+        spec: ProcessSpec,
+        parameter: inspect.Parameter,
+        annotations: dict[str, t.Any],
+        param_help_string: dict[str, str | None],
+    ) -> None:
+        declare_parameter(spec, parameter, annotations, param_help_string, stored=False)
+
+    @classmethod
+    @override
+    def _declare_outputs(
+        cls, spec: ProcessSpec, outputs: Sequence[str] | None, annotations: dict[str, t.Any]
+    ) -> None:
+        if declare_output_ports(outputs, annotations.get('return'), spec):
+            spec.outputs.dynamic = False
+        else:
+            spec.outputs.valid_type = (Data, dict)
 
     @override
     def _out_result(self, result: t.Any) -> None:

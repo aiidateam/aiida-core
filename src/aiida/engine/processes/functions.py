@@ -35,7 +35,14 @@ from aiida.orm.utils.mixins import FunctionCalculationMixin
 if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
 
-__all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
+__all__ = (
+    'FunctionProcess',
+    'FunctionProcessBase',
+    'calcfunction',
+    'declare_output_ports',
+    'declare_parameter',
+    'workfunction',
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -125,13 +132,13 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
 
 def process_function(
     node_class: type[ProcessNode],
-    base_class: type[FunctionProcess] | None = None,
+    base_class: type[FunctionProcessBase] | None = None,
     outputs: t.Sequence[str] | None = None,
 ) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
-    :param base_class: the ``FunctionProcess`` subclass to build, which defaults to ``FunctionProcess`` itself
+    :param base_class: the ``FunctionProcessBase`` subclass to build, defaulting to the legacy ``FunctionProcess``
     :param outputs: optional names for static leaf outputs of task processes.
     """
 
@@ -141,7 +148,9 @@ def process_function(
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
         """
-        process_class = FunctionProcess.build(function, node_class=node_class, base_class=base_class, outputs=outputs)
+        process_class = FunctionProcessBase.build(
+            function, node_class=node_class, base_class=base_class, outputs=outputs
+        )
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
@@ -296,7 +305,7 @@ def _signature_names(
     return args, var_positional, var_keyword
 
 
-def _declare_parameter(
+def declare_parameter(
     spec: ProcessSpec,
     parameter: inspect.Parameter,
     annotations: dict[str, t.Any],
@@ -356,7 +365,7 @@ def _declare_parameter(
     )
 
 
-def _declare_output_ports(outputs: t.Sequence[str] | None, return_annotation: t.Any, spec: ProcessSpec) -> bool:
+def declare_output_ports(outputs: t.Sequence[str] | None, return_annotation: t.Any, spec: ProcessSpec) -> bool:
     """Declare the output ports of a function process, and return whether any were declared.
 
     Explicit names take precedence over the return annotation. Otherwise a scalar annotation declares
@@ -412,8 +421,13 @@ def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
     return value if held is None else held
 
 
-class FunctionProcess(Process):
-    """Function process class used for turning functions into a Process"""
+class FunctionProcessBase(Process):
+    """Shared machinery for processes generated from plain Python functions.
+
+    Subclasses define the input/output contract by overriding :meth:`_declare_input` and
+    :meth:`_declare_outputs`; the base holds everything contract-neutral (input assembly, running
+    the wrapped function, provenance recording).
+    """
 
     _func_args: t.Sequence[str] = ()
     _var_positional: str | None = None
@@ -421,6 +435,24 @@ class FunctionProcess(Process):
 
     _binds_process_class: t.ClassVar[bool] = False
     """Disable runtime class binding so `ProcessNode.process_class` resolves to the decorated function."""
+
+    @classmethod
+    def _declare_input(
+        cls,
+        spec: ProcessSpec,
+        parameter: inspect.Parameter,
+        annotations: dict[str, t.Any],
+        param_help_string: dict[str, str | None],
+    ) -> None:
+        """Declare one function parameter as an input port or namespace."""
+        raise NotImplementedError
+
+    @classmethod
+    def _declare_outputs(
+        cls, spec: ProcessSpec, outputs: t.Sequence[str] | None, annotations: dict[str, t.Any]
+    ) -> None:
+        """Declare the output ports of the wrapped function."""
+        raise NotImplementedError
 
     @classmethod
     @override
@@ -435,16 +467,13 @@ class FunctionProcess(Process):
         """
         return {}
 
-    NODE_INPUT_TYPES: t.ClassVar[bool] = True
-    """Preserve the node-valued argument contract of calcfunctions and workfunctions at declaration time."""
-
     @staticmethod
     def build(
         func: FunctionType,
         node_class: type[ProcessNode],
-        base_class: type[FunctionProcess] | None = None,
+        base_class: type[FunctionProcessBase] | None = None,
         outputs: t.Sequence[str] | None = None,
-    ) -> type[FunctionProcess]:
+    ) -> type[FunctionProcessBase]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -469,9 +498,9 @@ class FunctionProcess(Process):
         args, var_positional, var_keyword = _signature_names(signature)
 
         # Filled in once the class below exists, so that `define` can name it and reach what comes after it. A
-        # bare `super()` here is `super(FunctionProcess, cls)`, since this sits inside a method of that class,
-        # which would walk past whatever `base_class` has to say.
-        generated: type[FunctionProcess] | None = None
+        # bare `super()` here is `super(FunctionProcessBase, cls)`, since this sits inside a method of that
+        # class, which would walk past whatever `base_class` has to say.
+        generated: type[FunctionProcessBase] | None = None
 
         def define(cls, spec):
             """Define the spec dynamically"""
@@ -480,7 +509,7 @@ class FunctionProcess(Process):
             for parameter in signature.parameters.values():
                 if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
                     continue
-                _declare_parameter(spec, parameter, annotations, param_help_string, stored=cls.NODE_INPUT_TYPES)
+                cls._declare_input(spec, parameter, annotations, param_help_string)
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']
@@ -493,12 +522,7 @@ class FunctionProcess(Process):
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
-            if not cls.NODE_INPUT_TYPES and _declare_output_ports(outputs, annotations.get('return'), spec):
-                spec.outputs.dynamic = False
-            else:
-                # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
-                # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
-                spec.outputs.valid_type = (Data, dict)
+            cls._declare_outputs(spec, outputs, annotations)
 
         generated = type(
             func.__qualname__,
@@ -681,3 +705,27 @@ class FunctionProcess(Process):
                 'Must be a Data type or a mapping of {string: Data}'
             )
             raise TypeError(msg)
+
+
+class FunctionProcess(FunctionProcessBase):
+    """Legacy function process with node-valued inputs, used for ``calcfunction`` and ``workfunction``."""
+
+    @classmethod
+    @override
+    def _declare_input(
+        cls,
+        spec: ProcessSpec,
+        parameter: inspect.Parameter,
+        annotations: dict[str, t.Any],
+        param_help_string: dict[str, str | None],
+    ) -> None:
+        declare_parameter(spec, parameter, annotations, param_help_string, stored=True)
+
+    @classmethod
+    @override
+    def _declare_outputs(
+        cls, spec: ProcessSpec, outputs: t.Sequence[str] | None, annotations: dict[str, t.Any]
+    ) -> None:
+        # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
+        # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
+        spec.outputs.valid_type = (Data, dict)

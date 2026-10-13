@@ -14,7 +14,7 @@ import pytest
 
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
-from aiida.engine.processes.graphs.interface import GraphHandle
+from aiida.engine.processes.graphs.build_source import GraphHandle
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.spec import GraphSpec
 from aiida.manage.configuration.profile import Profile

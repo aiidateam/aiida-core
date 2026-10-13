@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import functools
 import inspect
 import textwrap
 import typing as t
@@ -24,9 +25,9 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
-from aiida.common.exceptions import UnsupportedSyntax
+from aiida.common.exceptions import GraphError, UnsupportedSyntax
 from aiida.engine.processes.graphs.inputs import place
-from aiida.engine.processes.graphs.interface import GraphHandle
+from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.shapes import (
     NamespaceShape,
     Shape,
@@ -49,7 +50,47 @@ from aiida.engine.processes.graphs.spec import (
 )
 from aiida.engine.processes.graphs.tasks import TaskHandle, build_task
 
-__all__ = ('UnsupportedSyntax', 'build_from_source', 'graph', 'task')
+__all__ = ('GraphHandle', 'UnsupportedSyntax', 'build_from_source', 'graph', 'task')
+
+
+class GraphHandle:
+    """An importable source declaration that builds without executing its body."""
+
+    def __init__(self, function: Callable[..., t.Any], identifier: str | None = None) -> None:
+        self._function = function
+        self.identifier = identifier or function.__name__
+        # Copy name and docstring, not the function state: the handle owns its identifier.
+        functools.update_wrapper(self, function, updated=())
+
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.NoReturn:
+        msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`, or inspect `.build()`.'
+        raise GraphError(msg)
+
+    @property
+    def function(self) -> Callable[..., t.Any]:
+        """Return the declared function for the lowering pipeline."""
+        return self._function
+
+    def build(self) -> GraphSpec:
+        """Return the graph that the function declares, lowered from its registered source."""
+        return replace(build_from_source(self.function), identifier=self.identifier)
+
+    @property
+    def process_class(self) -> type[GraphProcess]:
+        """Return the process class executing lowered graphs."""
+        return GraphProcess
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
+        """Validate graph arguments and prepare the declaration and provenance inputs."""
+        # Launching binds by name, so positional-only parameters accept keywords at launch.
+        parameters = [
+            parameter.replace(kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.KEYWORD_ONLY)
+            else parameter
+            for parameter in inspect.signature(self._function).parameters.values()
+        ]
+        bound = inspect.Signature(parameters).bind_partial(**inputs)
+        return GraphProcess.launch_inputs(self.build(), dict(bound.arguments))
 
 P = t.ParamSpec('P')
 R = t.TypeVar('R')

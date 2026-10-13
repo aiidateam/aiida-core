@@ -13,8 +13,7 @@ import json
 import pytest
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, UnsupportedSyntax
-from aiida.engine.processes.graphs.build_source import build_from_source
-from aiida.engine.processes.graphs.interface import GraphHandle
+from aiida.engine.processes.graphs.build_source import GraphHandle, build_from_source
 from aiida.engine.processes.graphs.shapes import load_shape
 from aiida.engine.processes.graphs.spec import Dependency, GraphSpec, TaskSpec
 from tests.engine.processes.graphs import declarations

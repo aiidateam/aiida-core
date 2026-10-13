@@ -33,11 +33,8 @@ INT_TYPE = 'data.core.int.Int.'
 DATA_TYPE = 'data.Data.'
 PROCESS_TYPE = 'process.calculation.calcjob.CalcJobNode.'
 
-# Real ORM identifiers (entry-point preserving underscores). NOTE (binding
-# F1): ``ownership.CONTAINER_NODE_TYPES`` still carries the wrong literals
-# (``datalist``/``datadict``); tests below use the literals the backend
-# contract currently enforces where needed and file the mismatch in the
-# verify-agent status file instead of fixing source.
+# Real ORM identifiers (entry-point preserving underscores), matching
+# ``ownership.CONTAINER_NODE_TYPES`` exactly (storage never loads plugins).
 STORAGE_LIST_TYPE = next(iter(t for t in ownership.CONTAINER_NODE_TYPES if 'List' in t))
 STORAGE_DICT_TYPE = next(iter(t for t in ownership.CONTAINER_NODE_TYPES if 'Dict' in t))
 
@@ -142,11 +139,12 @@ class TestBulkAndLinkGuards:
 
     def test_bulk_insert_owned_rejected(self):
         with pytest.raises(IntegrityError):
-            ownership.validate_bulk_node_insert([{'owner_id': 42, 'container_element_type': None}])
+            ownership.validate_bulk_node_insert([{'owner_id': 42}])
 
-    def test_bulk_insert_locked_type_rejected(self):
-        with pytest.raises(IntegrityError):
-            ownership.validate_bulk_node_insert([{'owner_id': None, 'container_element_type': FLOAT_TYPE}])
+    def test_bulk_insert_standalone_accepted(self):
+        # Container state (`db_dbcontainer` + kind markers) has no bulk-insert path: it is written
+        # atomically with membership rows, never through `EntityTypes.NODE` rows.
+        assert ownership.validate_bulk_node_insert([{'owner_id': None}]) is None
 
     def test_bulk_update_ownership_rejected(self):
         with pytest.raises(IntegrityError):
@@ -223,10 +221,15 @@ class TestMigrationColumns:
 
     def test_owner_columns_present(self, backend):
         node_model, membership_model = backend._ownership_models()
+        container_model, list_model, dict_model = backend._container_models()
         assert hasattr(node_model, 'owner_id')
-        assert hasattr(node_model, 'container_element_type')
+        assert not hasattr(node_model, 'container_element_type')
         assert hasattr(membership_model, 'owner_id')
         assert hasattr(membership_model, 'child_id')
+        assert hasattr(container_model, 'element_type')
+        assert hasattr(container_model, 'layout')
+        assert hasattr(list_model, 'node_id')
+        assert hasattr(dict_model, 'node_id')
 
     def test_existing_nodes_standalone(self, backend):
         from aiida.orm import Data
@@ -234,7 +237,11 @@ class TestMigrationColumns:
         node = Data().store()
         row = backend.get_session().query(backend._ownership_models()[0]).filter_by(id=node.pk).one()
         assert row.owner_id is None
-        assert row.container_element_type is None
+        container_model, _, _ = backend._container_models()
+        assert (
+            backend.get_session().query(container_model).filter(container_model.node_id == node.pk).one_or_none()
+            is None
+        )
 
 
 class TestPerfBackend:

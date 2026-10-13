@@ -171,9 +171,20 @@ class TestModelParity:
 
         pg_cols = {column.name for column in pg_node.DbNode.__table__.columns}
         lite_cols = {column.name for column in lite_models.DbNode.__table__.columns}
-        assert {'owner_id', 'container_element_type'} <= pg_cols
-        assert {'owner_id', 'container_element_type'} <= lite_cols
+        # `owner_id` stays on the base node; element-type state moved to `db_dbcontainer` (ADR-01).
+        assert 'owner_id' in pg_cols
+        assert 'container_element_type' not in pg_cols
+        assert 'container_element_type' not in lite_cols
         assert pg_cols == lite_cols
+        for table_name in ('db_dbcontainer', 'db_dblistcontainer', 'db_dbdictcontainer'):
+            pg_table = pg_node.Base.metadata.tables[table_name]
+            lite_table = lite_models.SqliteBase.metadata.tables[table_name]
+            assert {column.name for column in pg_table.columns} == {column.name for column in lite_table.columns}
+        assert {column.name for column in pg_node.Base.metadata.tables['db_dbcontainer'].columns} == {
+            'node_id',
+            'element_type',
+            'layout',
+        }
 
     def test_membership_tables_match(self):
         from aiida.storage.psql_dos.models import node as pg_node
@@ -193,6 +204,11 @@ class TestModelParity:
             if isinstance(constraint, sa.UniqueConstraint)
         )
         assert pg_unique == lite_unique == [('child_id',), ('key', 'owner_id'), ('owner_id', 'position')]
+        # Membership owners are containers: the FK points at the container row, not the node subtype.
+        owner_fk = next(fk for fk in pg_node.DbMembership.__table__.foreign_key_constraints if 'owner_id' in fk.columns)
+        assert {fk.target_fullname for fk in owner_fk.elements} == {'db_dbcontainer.node_id'}
+        child_fk = next(fk for fk in pg_node.DbMembership.__table__.foreign_key_constraints if 'child_id' in fk.columns)
+        assert {fk.target_fullname for fk in child_fk.elements} == {'db_dbnode.id'}
 
     def test_heads_include_ownership_revision(self):
         from aiida.storage.psql_dos.migrator import PsqlDosMigrator
@@ -213,7 +229,7 @@ def memory_session():
         yield session, lite_models.DbNode, lite_models.DbMembership
 
 
-def _insert_node(session, node_model, node_type, owner_id=None, element_type=None):
+def _insert_node(session, node_model, node_type, owner_id=None):
     import uuid
     from datetime import datetime, timezone
 
@@ -229,11 +245,16 @@ def _insert_node(session, node_model, node_type, owner_id=None, element_type=Non
         repository_metadata={},
         user_id=1,
         owner_id=owner_id,
-        container_element_type=element_type,
     )
     session.add(row)
     session.flush()
     return row
+
+
+def _container_models():
+    from aiida.storage.sqlite_zip import models as lite_models
+
+    return lite_models.DbContainer, lite_models.DbListContainer, lite_models.DbDictContainer
 
 
 class TestGraphValidationSessionLevel:
@@ -310,11 +331,13 @@ class TestAtomicAttach:
     def test_attach_success(self, backend):
         owner, children = _make_graph()
         node_model, membership_model = backend._ownership_models()
+        container_model, list_model, _ = backend._container_models()
         resolved = backend.create_container_membership(owner.pk, _specs(children))
         assert resolved == FLOAT_TYPE
         session = backend.get_session()
-        stored_owner = session.query(node_model).filter(node_model.id == owner.pk).one()
-        assert stored_owner.container_element_type == FLOAT_TYPE
+        container_row = session.query(container_model).filter(container_model.node_id == owner.pk).one()
+        assert (container_row.element_type, container_row.layout) == (FLOAT_TYPE, 'row')
+        assert session.query(list_model).filter(list_model.node_id == owner.pk).one() is not None
         for position, child in enumerate(children):
             stored_child = session.query(node_model).filter(node_model.id == child.pk).one()
             assert stored_child.owner_id == owner.pk
@@ -332,15 +355,18 @@ class TestAtomicAttach:
     def test_empty_attach_leaves_type_unset(self, backend):
         owner, _ = _make_graph(child_types=())
         assert backend.create_container_membership(owner.pk, []) is None
-        node_model, _ = backend._ownership_models()
-        stored = backend.get_session().query(node_model).filter(node_model.id == owner.pk).one()
-        assert stored.container_element_type is None
+        container_model, list_model, _ = backend._container_models()
+        session = backend.get_session()
+        container_row = session.query(container_model).filter(container_model.node_id == owner.pk).one()
+        assert (container_row.element_type, container_row.layout) == (None, 'row')
+        assert session.query(list_model).filter(list_model.node_id == owner.pk).one() is not None
 
     def test_mixed_types_rejected_atomically(self, backend):
         owner, children = _make_graph()
         other = Data().store()
         backend.bulk_update(EntityTypes.NODE, [{'id': other.pk, 'node_type': INT_TYPE}])
-        node_model, membership_model = backend._ownership_models()
+        _, membership_model = backend._ownership_models()
+        container_model, _, _ = backend._container_models()
         session = backend.get_session()
         with pytest.raises(exceptions.IntegrityError, match='Homogeneity'):
             backend.create_container_membership(
@@ -350,8 +376,8 @@ class TestAtomicAttach:
                     {'child_id': other.pk, 'child_node_type': INT_TYPE, 'position': 1, 'key': None},
                 ],
             )
-        # Atomicity: neither the owner reference nor any membership row was written.
-        assert session.query(node_model).filter(node_model.id == owner.pk).one().container_element_type is None
+        # Atomicity: neither the container row nor any membership row was written.
+        assert session.query(container_model).filter(container_model.node_id == owner.pk).count() == 0
         assert session.query(membership_model).filter(membership_model.owner_id == owner.pk).count() == 0
 
     def test_locked_type_enforced_on_later_inserts(self, backend):
@@ -448,7 +474,6 @@ class TestAtomicAttach:
                         'dbcomputer_id': None,
                         'user_id': backend.default_user.pk,
                         'owner_id': 12345,
-                        'container_element_type': None,
                     }
                 ],
             )
@@ -457,8 +482,6 @@ class TestAtomicAttach:
         node = Data().store()
         with pytest.raises(exceptions.IntegrityError, match='immutable'):
             backend.bulk_update(EntityTypes.NODE, [{'id': node.pk, 'owner_id': node.pk}])
-        with pytest.raises(exceptions.IntegrityError, match='immutable'):
-            backend.bulk_update(EntityTypes.NODE, [{'id': node.pk, 'container_element_type': FLOAT_TYPE}])
 
     def test_store_rejects_owned_model(self, backend):
         node = Data().store()
@@ -481,6 +504,60 @@ class TestAtomicAttach:
                 [{'input_id': source.pk, 'output_id': children[0].pk, 'label': 'x', 'type': 'create'}],
                 allow_defaults=True,
             )
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestContainerKindDiscipline:
+    """List-vs-dict key discipline and kind-scoped access (ADR-01 §3, §7)."""
+
+    def test_list_rejects_keyed_members(self, backend):
+        owner, children = _make_graph()
+        with pytest.raises(exceptions.IntegrityError, match='key NULL'):
+            backend.create_container_membership(
+                owner.pk,
+                [{'child_id': children[0].pk, 'child_node_type': FLOAT_TYPE, 'position': 0, 'key': 'a'}],
+            )
+
+    def test_dict_rejects_keyless_members(self, backend):
+        owner, children = _make_graph(owner_type=DICT_OWNER_TYPE)
+        with pytest.raises(exceptions.IntegrityError, match='NOT NULL'):
+            backend.create_container_membership(
+                owner.pk,
+                [{'child_id': children[0].pk, 'child_node_type': FLOAT_TYPE, 'position': 0, 'key': None}],
+            )
+
+    def test_explicit_kind_mismatch_rejected(self, backend):
+        owner, children = _make_graph()
+        with pytest.raises(exceptions.IntegrityError, match=r'[Kk]ind'):
+            backend.create_container_membership(owner.pk, _specs(children), kind='dict')
+        owner_d, children_d = _make_graph(owner_type=DICT_OWNER_TYPE)
+        with pytest.raises(exceptions.IntegrityError, match=r'[Kk]ind'):
+            backend.create_dict_membership(owner.pk, _specs(children))
+        with pytest.raises(exceptions.IntegrityError, match=r'[Kk]ind'):
+            backend.create_list_membership(
+                owner_d.pk,
+                [
+                    {'child_id': children_d[0].pk, 'child_node_type': FLOAT_TYPE, 'position': 0, 'key': 'a'},
+                    {'child_id': children_d[1].pk, 'child_node_type': FLOAT_TYPE, 'position': 1, 'key': 'b'},
+                ],
+            )
+
+    def test_kind_scoped_reads_reject_cross_kind(self, backend):
+        from aiida.storage import ownership as ownership_contract
+
+        owner, children = _make_graph()
+        backend.create_list_membership(owner.pk, _specs(children))
+        session = backend.get_session()
+        container_models = backend._container_models()
+        element_type, layout = ownership_contract.require_container_kind(session, container_models, owner.pk, 'list')
+        assert (element_type, layout) == (FLOAT_TYPE, 'row')
+        with pytest.raises(exceptions.IntegrityError, match=r'[Kk]ind'):
+            ownership_contract.require_container_kind(session, container_models, owner.pk, 'dict')
+
+    def test_non_row_layout_rejected(self, backend):
+        owner, children = _make_graph()
+        with pytest.raises(exceptions.IntegrityError, match='layout'):
+            backend.create_container_membership(owner.pk, _specs(children), assert_layout='compact')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

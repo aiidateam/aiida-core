@@ -367,20 +367,26 @@ def test_ownership_storage(uninitialised_profile):
 
         node_model = migrator.get_current_table('db_dbnode')
         membership_model = migrator.get_current_table('db_dbmembership')
+        container_model = migrator.get_current_table('db_dbcontainer')
 
         with migrator.session() as session:
-            # Existing standalone nodes remain standalone through migration: no owner, unset element type.
+            # Existing standalone nodes remain standalone through migration: no owner, no container rows.
             node = session.query(node_model).filter(node_model.id == node_id).one()
             assert node.owner_id is None
-            assert node.container_element_type is None
             assert session.query(membership_model).count() == 0
+            assert session.query(container_model).count() == 0
 
         # The migrated schema carries the ownership tables, columns, and constraints.
         inspector = inspect(migrator.connection.engine)
-        assert {column['name'] for column in inspector.get_columns('db_dbnode')} >= {
-            'owner_id',
-            'container_element_type',
+        assert {column['name'] for column in inspector.get_columns('db_dbnode')} >= {'owner_id'}
+        assert 'container_element_type' not in {column['name'] for column in inspector.get_columns('db_dbnode')}
+        assert {column['name'] for column in inspector.get_columns('db_dbcontainer')} == {
+            'node_id',
+            'element_type',
+            'layout',
         }
+        assert {column['name'] for column in inspector.get_columns('db_dblistcontainer')} == {'node_id'}
+        assert {column['name'] for column in inspector.get_columns('db_dbdictcontainer')} == {'node_id'}
         assert {column['name'] for column in inspector.get_columns('db_dbmembership')} == {
             'id',
             'owner_id',

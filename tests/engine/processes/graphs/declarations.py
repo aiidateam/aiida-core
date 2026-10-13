@@ -434,7 +434,7 @@ def positional_only_parameter(value: int, /) -> int:
 
 
 @graph
-def expanded_task_arguments(values: dict[str, int]) -> int:  # skip on PR
+def expanded_task_arguments(values: dict[str, int]) -> int:
     """Call with unpacked arguments; mappings cannot expand statically.
 
     Declare the inputs explicitly instead:
@@ -478,11 +478,8 @@ def reassigned_name(value: int) -> int:
 
 # NOTE: we could internally represent `for`-loops as `while`
 # -> defer for follow-up
-# did XW have `for` construct?
-# reassignment could just be copying the object? unrolled for-loop in db?
-# if not in db, for loop in task
 @graph
-def fanout(values: list[int]) -> int:  # why does fail, is it not just the rebinding?
+def fanout(values: list[int]) -> int:
     """Loop over inputs, rebinding each round; fan-out over runtime collections is not supported.
 
     Unroll the placements instead:

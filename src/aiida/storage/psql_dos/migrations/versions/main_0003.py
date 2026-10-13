@@ -135,10 +135,10 @@ def _migrate_code_hidden_extra(conn):
 
 def upgrade():
     """Migrations for the upgrade."""
-    conn = op.get_bind()
-    migrate_ssh_transports(conn)
-    _migrate_legacy_codes(conn)
-    _migrate_code_hidden_extra(conn)
+    # NOTE: DDL first, then data migrations. PostgreSQL forbids ``ALTER TABLE`` after ``UPDATE``s on the
+    # same table in one transaction (``cannot ALTER TABLE ... because it has pending trigger events``),
+    # see ``django_0024a_dblog_update``. The new foreign keys are deferred, so the subsequent ``UPDATE``s
+    # are safe once the schema changes are in place.
     op.add_column('db_dbnode', sa.Column('owner_id', sa.Integer(), nullable=True))
     op.create_index('ix_db_dbnode_db_dbnode_owner_id', 'db_dbnode', ['owner_id'], unique=False)
     op.create_foreign_key(
@@ -182,6 +182,10 @@ def upgrade():
         sa.CheckConstraint('position >= 0', name='ck_db_dbmembership_position_nonnegative'),
         sa.CheckConstraint('owner_id != child_id', name='ck_db_dbmembership_no_self_ownership'),
     )
+    conn = op.get_bind()
+    migrate_ssh_transports(conn)
+    _migrate_legacy_codes(conn)
+    _migrate_code_hidden_extra(conn)
 
 
 def downgrade():

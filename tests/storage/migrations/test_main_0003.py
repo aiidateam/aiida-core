@@ -124,6 +124,12 @@ def test_migrate_legacy_code(migration_profile):
 
         # Downgrade only restores the schema revision; it cannot reconstruct the original legacy codes.
         migrator.migrate_down('main@main_0002')
+        # Like in the backend downgrade tests, the downgrade runs inside the migrator connection's
+        # open transaction: commit it so the session below sees the downgraded schema instead of
+        # blocking on its locks (PostgreSQL) or reading the pre-downgrade snapshot (SQLite). The
+        # downgraded table no longer carries `owner_id`, so map it afresh before querying.
+        migrator.connection.commit()
+        node_model = migrator.get_current_table('db_dbnode')
         with migrator.session() as session:
             remote = session.query(node_model).filter(node_model.id == remote_id).one()
             assert remote.node_type == 'data.core.code.installed.InstalledCode.'

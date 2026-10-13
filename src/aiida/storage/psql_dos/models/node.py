@@ -33,18 +33,25 @@ class DbNode(Base):
     - ``extras``, on the other hand,
       can be added and removed after the node has been stored and are usually set by the user.
 
-    Ownership (owned data containers, ``orm-container-spec.md`` sections 2-3):
+    Ownership (owned data containers, ``orm-container-spec.md`` sections 2-3,
+    ``orm-container-adr-01.md``):
 
     - ``owner_id`` is an indexed, nullable FK to ``db_dbnode.id``. NULL
       means a standalone node; non-null means an exclusively owned node.
       There is no separate ownership-mode flag.
-    - ``container_element_type`` stores the container's locked element
-      ``node_type`` identifier, or NULL when unset (a container that never
-      held an element, which may still be stored). Once established it
-      stays locked, including after removing every element.
-    - Membership edges live in ``db_dbmembership`` and must agree with
-      ``owner_id``; both are created atomically in one transaction and
-      are immutable once stored.
+    - Container state lives in ``db_dbcontainer`` (one row per container,
+      ``node_id`` PK/FK to ``db_dbnode``): the locked element ``node_type``
+      identifier (``element_type``, NULL when unset — a container that never
+      held an element, which may still be stored; locked after the first
+      element, including after emptying) and the storage ``layout``
+      discriminator (default ``'row'``, locked alongside ``element_type``).
+    - ``db_dblistcontainer`` / ``db_dbdictcontainer`` mark the container
+      kind (``node_id`` PK/FK to ``db_dbcontainer``); per-kind columns may
+      be added there in the future.
+    - Membership edges live in ``db_dbmembership`` (``owner_id`` FK to
+      ``db_dbcontainer``) and must agree with ``owner_id``; container,
+      subtype and membership rows are created atomically in one transaction
+      and are immutable once stored.
 
     """
 
@@ -83,7 +90,6 @@ class DbNode(Base):
         nullable=True,
         index=True,
     )
-    container_element_type = Column(String(255), nullable=True, index=True)
 
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
@@ -224,19 +230,87 @@ class DbLink(Base):
         )
 
 
+class DbContainer(Base):
+    """Database model for owned-data-container shared state (``orm-container-adr-01.md`` §3).
+
+    One row per container, ``node_id`` PK/FK to ``db_dbnode.id``. ``element_type`` is the locked
+    element ``node_type`` identifier (NULL means unset — the container never held an element and may
+    still be stored; locked after the first element, including after emptying). ``layout`` is the
+    storage-layout discriminator, default ``'row'``, locked at first-element time alongside
+    ``element_type``. All reads go through the typed accessors, never raw membership SQL, so a future
+    compact layout can slot behind the same API.
+    """
+
+    __tablename__ = 'db_dbcontainer'
+
+    node_id = Column(
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        primary_key=True,
+    )
+    element_type = Column(String(255), nullable=True, index=True)
+    layout = Column(String(32), nullable=False, default='row', server_default='row', index=True)
+
+    def __str__(self):
+        return f'container node={self.node_id} element_type={self.element_type} layout={self.layout}'
+
+
+class DbListContainer(Base):
+    """List-kind marker for an owned container (``orm-container-adr-01.md`` §3).
+
+    ``node_id`` PK/FK to ``db_dbcontainer.node_id``. Future list-only columns belong here. Reads of
+    list containers join this table so cross-kind access comes back empty/fails instead of returning
+    an ambiguously-interpreted row.
+    """
+
+    __tablename__ = 'db_dblistcontainer'
+
+    node_id = Column(
+        Integer,
+        ForeignKey('db_dbcontainer.node_id', deferrable=True, initially='DEFERRED'),
+        primary_key=True,
+    )
+
+    def __str__(self):
+        return f'list container node={self.node_id}'
+
+
+class DbDictContainer(Base):
+    """Dict-kind marker for an owned container (``orm-container-adr-01.md`` §3).
+
+    ``node_id`` PK/FK to ``db_dbcontainer.node_id``. Future dict-only columns belong here. Reads of
+    dict containers join this table so cross-kind access comes back empty/fails instead of returning
+    an ambiguously-interpreted row.
+    """
+
+    __tablename__ = 'db_dbdictcontainer'
+
+    node_id = Column(
+        Integer,
+        ForeignKey('db_dbcontainer.node_id', deferrable=True, initially='DEFERRED'),
+        primary_key=True,
+    )
+
+    def __str__(self):
+        return f'dict container node={self.node_id}'
+
+
 class DbMembership(Base):
     """Database model for owned-data-container membership edges.
 
     Each row is a containment edge from an immediate owner container
-    (``owner_id``) to one exclusively owned child node (``child_id``).
-    ``position`` persists element order for both lists and dictionaries;
-    database row order is not meaningful. ``key`` persists the string
-    dictionary key and stays NULL for ordered-list entries.
+    (``owner_id`` FK to ``db_dbcontainer.node_id``) to one exclusively owned
+    child node (``child_id``). ``position`` is the persisted iteration ordinal
+    for both kinds — semantic order for lists, explicit insertion order for
+    dicts (database row order is meaningless). ``key`` is the label for keyed
+    kinds only — NULL for lists, NOT NULL string for dicts. Non-string keys
+    are rejected at the ORM boundary (``TypeError``) and at the backend
+    boundary (``IntegrityError``).
 
     Quantities, layout, and constraints:
 
-    - ``owner_id``: FK to ``db_dbnode.id``, NOT NULL, indexed, default
-      NO ACTION (deferred; RESTRICT is unusable here, see the note on
+    - ``owner_id``: FK to ``db_dbcontainer.node_id``, NOT NULL, indexed,
+      default NO ACTION (deferred; RESTRICT is unusable here, see the note on
       ``DbNode.owner_id``). Deletion planning must expand to the full
       ownership unit explicitly; database cascades alone are not sufficient.
     - ``child_id``: FK to ``db_dbnode.id``, NOT NULL, indexed, unique
@@ -244,7 +318,9 @@ class DbMembership(Base):
     - ``position``: integer ``>= 0`` (CHECK), unique per owner.
     - ``key``: nullable string; uniqueness per owner applies to non-null
       keys (NULL entries never collide under the unique constraint).
-      Non-string keys are rejected in Python, never coerced.
+      List-vs-dict key discipline (``key IS NULL`` for lists, ``key IS NOT
+      NULL`` for dicts) is enforced in Python (``aiida.storage.ownership``)
+      since FKs point at rows, not subtypes, so DDL cannot express it.
     - ``owner_id != child_id`` (CHECK); longer cycles are rejected by
       transactional validation in ``aiida.storage.ownership`` since
       recursive constraints cannot be expressed declaratively.
@@ -260,7 +336,7 @@ class DbMembership(Base):
     id = Column(Integer, primary_key=True)
     owner_id = Column(
         Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        ForeignKey('db_dbcontainer.node_id', deferrable=True, initially='DEFERRED'),
         nullable=False,
         index=True,
     )

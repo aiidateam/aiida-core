@@ -24,7 +24,12 @@ import docstring_parser
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import is_structured, port_help, without_marks
-from aiida.engine.processes.ports import InputPort, coerce_model_values, infer_valid_type_from_type_annotation
+from aiida.engine.processes.ports import (
+    InputPort,
+    PortNamespace,
+    coerce_model_values,
+    infer_valid_type_from_type_annotation,
+)
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.manage import get_manager
@@ -644,7 +649,7 @@ class FunctionProcess(FunctionProcessBase):
         # If the keyword was already specified, simply override the default
         if spec.has_input(parameter.name):
             port = spec.inputs[parameter.name]
-            assert isinstance(port, InputPort)
+            assert isinstance(port, (InputPort, PortNamespace))
             port.default = default
             return
 

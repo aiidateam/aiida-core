@@ -92,6 +92,7 @@ class GraphHandle:
         bound = inspect.Signature(parameters).bind_partial(**inputs)
         return GraphProcess.launch_inputs(self.build(), dict(bound.arguments))
 
+
 P = t.ParamSpec('P')
 R = t.TypeVar('R')
 

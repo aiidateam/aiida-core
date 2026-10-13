@@ -63,9 +63,7 @@ class TaskProcess(FunctionProcessBase):
 
     @classmethod
     @override
-    def _declare_outputs(
-        cls, spec: ProcessSpec, outputs: Sequence[str] | None, annotations: dict[str, t.Any]
-    ) -> None:
+    def _declare_outputs(cls, spec: ProcessSpec, outputs: Sequence[str] | None, annotations: dict[str, t.Any]) -> None:
         if declare_output_ports(outputs, annotations.get('return'), spec):
             spec.outputs.dynamic = False
         else:

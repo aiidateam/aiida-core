@@ -23,7 +23,7 @@ import docstring_parser
 
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import is_structured, port_help, without_marks
+from aiida.engine.processes.port_model import Field, fields_of, is_structured, port_help, without_marks
 from aiida.engine.processes.ports import (
     InputPort,
     PortNamespace,
@@ -31,7 +31,7 @@ from aiida.engine.processes.ports import (
     infer_node_types,
 )
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.process_spec import ProcessSpec, _require_storable, _with_defaults
 from aiida.manage import get_manager
 from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
 from aiida.orm.utils.mixins import FunctionCalculationMixin
@@ -625,6 +625,63 @@ class FunctionProcessBase(Process):
             raise TypeError(msg)
 
 
+def _declare_node_namespace(
+    spec: ProcessSpec,
+    name: str,
+    container: type,
+    *,
+    required: bool,
+    help: str | None,
+    defaults: t.Mapping[str, t.Any] | None = None,
+) -> None:
+    """Declare a model namespace with node valid types for legacy function declarations."""
+    fields = fields_of(container)
+    if fields is None:
+        msg = (
+            f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
+            f'to declare `{name}` from. Use a `PortModel`.'
+        )
+        raise TypeError(msg)
+    spec.input_namespace(name, required=required, help=help)
+    for field in _with_defaults(fields, defaults):
+        _declare_node_field(spec, f'{name}{spec.namespace_separator}{field.name}', field)
+
+
+def _declare_node_field(spec: ProcessSpec, name: str, field: Field) -> None:
+    """Declare one model field with node valid types for legacy function declarations."""
+    if fields_of(field.annotation) is not None:
+        nested = field.default.as_dict() if isinstance(field.default, field.annotation) else field.default
+        _declare_node_namespace(
+            spec,
+            name,
+            field.annotation,
+            required=field.required,
+            help=field.help,
+            defaults=nested if isinstance(nested, dict) else None,
+        )
+        return
+    _require_storable(field)
+    declared = infer_node_types(field.annotation) or (Data,)
+    required = field.required or type(None) not in declared
+    indirect_default: t.Any = field.default
+    if field.required:
+        spec.input(name, valid_type=declared, required=required, help=field.help)
+        return
+    if not (field.default is None or isinstance(field.default, Data) or callable(field.default)):
+
+        def indirect_default(value=field.default):
+            return to_aiida_type(value)
+
+    spec.input(
+        name,
+        valid_type=declared,
+        required=required,
+        default=indirect_default,
+        serializer=to_aiida_type,
+        help=field.help,
+    )
+
+
 class FunctionProcess(FunctionProcessBase):
     """Legacy function process with node-valued inputs, used for ``calcfunction`` and ``workfunction``."""
 
@@ -677,10 +734,10 @@ class FunctionProcess(FunctionProcessBase):
             indirect_default = default
 
         if is_structured(without_marks(annotation)):
-            spec.input_namespace_from(
+            _declare_node_namespace(
+                spec,
                 parameter.name,
                 without_marks(annotation),
-                node_types=True,
                 required=default is UNSPECIFIED,
                 help=help_string,
             )

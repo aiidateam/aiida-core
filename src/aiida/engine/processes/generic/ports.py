@@ -667,7 +667,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         return result
 
     def validate(
-        self, port_values: Mapping[str, t.Any] | None = None, breadcrumbs: Sequence[str] = ()
+        self, port_values: Mapping[str, t.Any] | _Unspecified | None = None, breadcrumbs: Sequence[str] = ()
     ) -> PortValidationError | None:
         """
         Validate the namespace port itself and subsequently all the port_values it contains
@@ -685,7 +685,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
 
         if not isinstance(port_values, collections.abc.Mapping):
             # Defensive check: the port values originate from user input, so the annotation is not guaranteed
-            message = f'specified value is of type {type(port_values)} which is not sub class of `Mapping`'  # type: ignore[unreachable]
+            message = f'specified value is of type {type(port_values)} which is not sub class of `Mapping`'
             return PortValidationError(message, breadcrumbs_to_port(breadcrumbs_local))
 
         # Turn the port values into a normal dictionary and create a shallow copy. The `validate_ports` method to which

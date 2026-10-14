@@ -12,8 +12,6 @@ from pathlib import Path
 
 from aiida.engine.processes.port_model import PortModel
 
-# Input models.
-
 
 class Settings(PortModel):
     """Explicit namespace with a required field, for missing-input tests."""

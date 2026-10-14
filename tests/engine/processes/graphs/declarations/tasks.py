@@ -14,8 +14,6 @@ from aiida.engine.processes.graphs.build_source import task
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.declarations.port_models import Configuration
 
-# Task definitions.
-
 
 @task
 def add(x: int, y: int) -> int:
@@ -137,9 +135,6 @@ def mistyped_dict(x: int) -> dict[str, int]:
 def collision_add(x: int, y: int) -> int:
     """Provide a second addition task for collision coverage."""
     return x + y
-
-
-# Invalid task definitions.
 
 
 def unannotated_function(x: int):

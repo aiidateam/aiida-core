@@ -19,8 +19,6 @@ from tests.engine.processes.graphs.declarations.tasks import (
     statistics,
 )
 
-# Composition: nesting, branching, and looping.
-
 
 @graph
 def nested(x: int, y: int) -> int:

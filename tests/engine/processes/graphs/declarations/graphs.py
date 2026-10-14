@@ -24,8 +24,6 @@ from tests.engine.processes.graphs.declarations.tasks import (
     read_orm_node,
 )
 
-# Supported straight-line graphs.
-
 
 @graph
 def chain(x: int, y: int) -> int:
@@ -152,9 +150,6 @@ def collision(x: int) -> int:
 def missing_task_input(x: int) -> int:
     """Omit a required task input."""
     return add(x=x)
-
-
-# Flexible spellings, desugared to the explicit forms.
 
 
 @graph
@@ -384,3 +379,247 @@ def subscript_assignment(value: int) -> int:
     chosen = add(x=value, y=1)
     chosen['count'] = add(x=chosen, y=2)
     return chosen
+
+
+@graph
+def nested_definition(value: int) -> int:
+    """Define a helper inside the body; helpers belong in tasks.
+
+    Move the helper into a task instead:
+
+    >>> @task
+    >>> def helper(x: int) -> int:
+    >>>     return add(x=x, y=1)
+    """
+
+    def helper(x: int) -> int:
+        return add(x=x, y=1)
+
+    return helper(x=value)
+
+
+@graph
+def early_return(value: int, flag: bool) -> int:
+    """Return from a branch; graphs declare one output at the end.
+
+    Bind the branch instead:
+
+    >>> @graph
+    >>> def branched(value: int, flag: bool) -> int:
+    >>>     if flag:
+    >>>         chosen = add(x=value, y=1)
+    >>>     else:
+    >>>         chosen = add(x=value, y=2)
+    >>>     return chosen
+    """
+    if flag:
+        return add(x=value, y=1)
+    return add(x=value, y=2)
+
+
+@graph
+def augmented_assignment(value: int) -> int:
+    """Update a name in place; single-assignment keeps the graph well-defined.
+
+    Bind a new name instead:
+
+    >>> @graph
+    >>> def fresh_total(value: int) -> int:
+    >>>     first = add(x=value, y=1)
+    >>>     return add(x=first, y=1)
+    """
+    total = add(x=value, y=1)
+    total += 1
+    return total
+
+
+@graph
+def annotated_assignment(value: int) -> int:
+    """Annotate a local; locals carry no contracts in templates.
+
+    Drop the annotation instead:
+
+    >>> @graph
+    >>> def plain_binding(value: int) -> int:
+    >>>     total = add(x=value, y=1)
+    >>>     return total
+    """
+    total: int = add(x=value, y=1)
+    return total
+
+
+@graph
+def with_block(value: int) -> int:
+    """Manage a resource in the body; templates hold no runtime resources.
+
+    Move resource handling into a task instead.
+    """
+    with add(x=value, y=1):
+        result = add(x=value, y=2)
+    return result
+
+
+@graph
+def try_block(value: int) -> int:
+    """Catch errors in the body; errors are values, not raises.
+
+    Declare fallible results instead.
+    """
+    try:
+        result = add(x=value, y=1)
+    except ValueError:
+        result = add(x=value, y=2)
+    return result
+
+
+@graph
+def raise_statement(value: int) -> int:
+    """Raise in the body; errors are values, not raises.
+
+    Declare fallible results instead.
+    """
+    raise ValueError('graphs signal errors as values')
+    return add(x=value, y=1)
+
+
+@graph
+def assert_statement(value: int) -> int:
+    """Assert in the body; contracts validate at the boundary instead.
+
+    Declare the contract on the ports instead.
+    """
+    assert value > 0
+    return add(x=value, y=1)
+
+
+@graph
+def match_statement(value: int) -> int:
+    """Match structurally; branch on conditions instead.
+
+    >>> @graph
+    >>> def matched(value: int) -> int:
+    >>>     if value:
+    >>>         chosen = add(x=value, y=1)
+    >>>     else:
+    >>>         chosen = add(x=value, y=2)
+    >>>     return chosen
+    """
+    match value:
+        case 0:
+            return add(x=value, y=1)
+        case _:
+            return add(x=value, y=2)
+
+
+@graph
+def starred_call(value: int) -> int:
+    """Spread a sequence into a call; arity is static.
+
+    Pass each input by name instead:
+
+    >>> @graph
+    >>> def named_spread(value: int) -> int:
+    >>>     return add(x=value, y=1)
+    """
+    return add(*[value, 1])
+
+
+@graph
+def subscript_load(values: list[int]) -> int:
+    """Read one element; collections travel whole.
+
+    Pass the collection instead:
+
+    >>> @graph
+    >>> def whole_collection(values: list[int]) -> int:
+    >>>     return read_answer(values={'answer': 42})
+    """
+    return add(x=values[0], y=1)
+
+
+@graph
+def fstring_argument(value: int) -> int:
+    """Format a string inline; every value needs a producing task.
+
+    Format inside a task instead.
+    """
+    return add_named(x=value, y=f'{value}')
+
+
+@graph
+def boolean_condition(value: int, flag: bool) -> int:
+    """Combine conditions with operators; conditions are calls or names.
+
+    Compute the predicate in a task instead:
+
+    >>> @task
+    >>> def both(value: int, flag: bool) -> bool:
+    >>>     return flag and value > 0
+    """
+    if flag and value:
+        chosen = add(x=value, y=1)
+    else:
+        chosen = add(x=value, y=2)
+    return chosen
+
+
+@graph
+def compare_condition(value: int) -> int:
+    """Compare inline; conditions are calls or names.
+
+    Compute the predicate in a task instead:
+
+    >>> @task
+    >>> def positive(value: int) -> bool:
+    >>>     return value > 0
+    """
+    if value > 0:
+        chosen = add(x=value, y=1)
+    else:
+        chosen = add(x=value, y=2)
+    return chosen
+
+
+@graph
+def inline_conditional(value: int, flag: bool) -> int:
+    """Select inline; branch explicitly instead.
+
+    >>> @graph
+    >>> def explicit_choice(value: int, flag: bool) -> int:
+    >>>     if flag:
+    >>>         chosen = add(x=value, y=1)
+    >>>     else:
+    >>>         chosen = add(x=value, y=2)
+    >>>     return chosen
+    """
+    return add(x=value, y=1) if flag else add(x=value, y=2)
+
+
+@graph
+def walrus_condition(value: int, flag: bool) -> int:
+    """Bind inside a condition; bind before branching instead.
+
+    >>> @graph
+    >>> def bound_before(value: int, flag: bool) -> int:
+    >>>     picked = flag
+    >>>     if picked:
+    >>>         chosen = add(x=value, y=1)
+    >>>     else:
+    >>>         chosen = add(x=value, y=2)
+    >>>     return chosen
+    """
+    if picked := flag:  # noqa: F841 - the binding itself is rejected
+        chosen = add(x=value, y=1)
+    else:
+        chosen = add(x=value, y=2)
+    return chosen
+
+
+@graph
+def list_comprehension(values: list[int]) -> int:
+    """Map over inputs inline; scatter is a runtime control, not syntax.
+
+    Unroll the placements instead.
+    """
+    doubled = [add(x=value, y=1) for value in values]  # noqa: F841 - the comprehension is rejected
+    return add(x=values[0], y=1)

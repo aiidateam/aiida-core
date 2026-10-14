@@ -96,7 +96,7 @@ class GraphHandle:
         return GraphProcess.launch_inputs(self.lower(), dict(bound.arguments))
 
 
-def _key(function: Callable[..., t.Any]) -> str:
+def _registry_key(function: Callable[..., t.Any]) -> str:
     """Return the registry key of a declaration, rejecting nested functions."""
     if not inspect.isfunction(function):
         raise UnsupportedSyntax('Registered declarations must be Python functions, not process classes or builders')
@@ -129,7 +129,7 @@ class _SourceRegistry:
 
     def register(self, function: Callable[..., t.Any], *, kind: t.Literal['graph', 'task']) -> _SourceDefinition:
         """Capture a definition atomically, without executing its body."""
-        key = _key(function)
+        key = _registry_key(function)
         if key in self._definitions:
             msg = f'Duplicate registered function {key}; decorate each function once.'
             raise UnsupportedSyntax(msg)
@@ -168,7 +168,7 @@ _SOURCE_REGISTRY = _SourceRegistry()
 """The single registry owning live source definitions."""
 
 
-def _resolve_binding(function: Callable[..., t.Any], name: str) -> object:
+def _resolve_target(function: Callable[..., t.Any], name: str) -> object:
     """Return the call target visible where the graph was declared, without invoking it."""
     return function.__globals__.get(name)
 
@@ -255,7 +255,7 @@ class _Reference:
     shape: Shape
 
 
-GivenValue: t.TypeAlias = '_Reference | int | float | str | bool | dict[str, GivenValue] | None'
+CapturedValue: t.TypeAlias = '_Reference | int | float | str | bool | dict[str, CapturedValue] | None'
 
 
 @dataclass
@@ -482,12 +482,12 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
         state.names[name] = _Reference(ref.task, field_name, field_shape)
 
 
-def _lower_side(state: _LoweringState, statements: list[ast.stmt]) -> _Side:
-    """Lower one conditional side to a named region body."""
-    child = _region(state, statements)
+def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
+    """Lower one branch arm to a named region body."""
+    child = _collect_region_inputs(state, statements)
     name = _lower_assignment(child, statements[0])
     reference = child.names[name]
-    return _Side(name, child, _body(child, {reference.port: reference}))
+    return _Arm(name, child, _lower_region_body(child, {reference.port: reference}))
 
 
 def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
@@ -496,13 +496,13 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     test: ast.expr = bound if bound is not None else statement.test
     if not statement.orelse or len(statement.body) != 1 or len(statement.orelse) != 1:
         _reject(state, statement, 'if requires one assignment to the same name on each side')
-    first, second = (_lower_side(state, statements) for statements in (statement.body, statement.orelse))
+    first, second = (_lower_arm(state, statements) for statements in (statement.body, statement.orelse))
     if first.name != second.name or first.name in state.names:
         _reject(state, statement, 'if requires one new name shared by both sides')
     if CONDITION_PORT in first.body.inputs or CONDITION_PORT in second.body.inputs:
         _reject(state, statement, 'condition conflicts with a branch input; rename one of them')
     instance = f'branch_{len(state.tasks) + 1}'
-    given: dict[str, GivenValue] = {}
+    given: dict[str, CapturedValue] = {}
     _wire(state, instance, CONDITION_PORT, _lower_value(state, test), given)
     for name in sorted({path.split('.')[0] for side in (first, second) for path in side.child.inputs}):
         _wire(state, instance, name, state.names[name], given)
@@ -524,7 +524,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
         _reject(state, statement, 'while requires a bound condition name and no else')
     condition = test.id
-    child = _region(state, body)
+    child = _collect_region_inputs(state, body)
     # Loop state is read from the previous iteration, including values rebound in the body.
     assigned: set[str] = {
         node.targets[0].id
@@ -541,24 +541,24 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     for node in body:
         _lower_assignment(child, node, rebind=True)
     outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
-    body_spec = _body(child, outputs)
+    body_spec = _lower_region_body(child, outputs)
     instance = f'loop_{len(state.tasks) + 1}'
-    given: dict[str, GivenValue] = {}
+    given: dict[str, CapturedValue] = {}
     _route_region(state, child, instance, given)
     state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
     for name in assigned:
         state.names[name] = _Reference(instance, name, child.names[name].shape)
 
 
-class _Side(t.NamedTuple):
-    """One lowered conditional side with its region state."""
+class _Arm(t.NamedTuple):
+    """One lowered branch arm with its region state."""
 
     name: str
     child: _LoweringState
     body: GraphSpec
 
 
-def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
+def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
     assigned: set[str] = {
@@ -588,7 +588,7 @@ def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState
     return child
 
 
-def _route_region(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, GivenValue]) -> None:
+def _route_region(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, CapturedValue]) -> None:
     """Route the enclosing values a nested region reads."""
     for name in child.inputs:
         if name in state.names:
@@ -611,7 +611,7 @@ def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
     return ast.Name(id=name, ctx=ast.Load())
 
 
-def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
+def _snapshot_namespace_boundary(state: _LoweringState) -> dict[str, t.Any] | None:
     """Snapshot region boundaries only when routing a declared namespace field."""
     if not any('.' in path for path in state.inputs):
         return None
@@ -619,7 +619,7 @@ def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
     return dump_shape(NamespaceShape(fields=tuple((name, state.names[name].shape) for name in names)))
 
 
-def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
+def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
     """Lower collected region state to a nested graph template."""
     if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
         msg = 'control-flow outputs must be static leaves, not namespaces.'
@@ -632,11 +632,11 @@ def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=endpoints,
-        input_namespace=_region_input_namespace(state),
+        input_namespace=_snapshot_namespace_boundary(state),
     )
 
 
-def _called_name(state: _LoweringState, expression: ast.expr) -> str:
+def _call_target_name(state: _LoweringState, expression: ast.expr) -> str:
     """Return the target of a direct call, rejecting shadowed or indirect calls."""
     if not isinstance(expression, ast.Call) or not isinstance(expression.func, ast.Name):
         _reject(state, expression, 'only direct calls to registered tasks or graphs are supported; call them by name')
@@ -647,14 +647,14 @@ def _called_name(state: _LoweringState, expression: ast.expr) -> str:
 
 def _registered_target(state: _LoweringState, expression: ast.expr, name: str) -> TaskHandle | GraphHandle:
     """Return the task handle or graph behind a call target."""
-    target = _resolve_binding(state.definition.function, name)
+    target = _resolve_target(state.definition.function, name)
     if _task_spec_for(target) is None and not isinstance(target, GraphHandle):
         _reject(state, expression, f'unregistered call {name!r}; decorate it with `@task` or `@graph`')
     assert isinstance(target, (TaskHandle, GraphHandle))
     return target
 
 
-def _claim_instance(state: _LoweringState, name: str) -> str:
+def _claim_name(state: _LoweringState, name: str) -> str:
     """Return a placement name unused by earlier placements."""
     state.used[name] += 1
     count = state.used[name]
@@ -669,12 +669,12 @@ def _claim_instance(state: _LoweringState, name: str) -> str:
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     """Place a task or graph call with wired inputs."""
-    name: str = _called_name(state, expression)
+    name: str = _call_target_name(state, expression)
     assert isinstance(expression, ast.Call)
     target: TaskHandle | GraphHandle = _registered_target(state, expression, name)
-    instance: str = _claim_instance(state, name)
+    instance: str = _claim_name(state, name)
     if isinstance(target, GraphHandle):
-        body: GraphSpec = _lower_registered_graph(_key(target.function), state.stack)
+        body: GraphSpec = _lower_registered_graph(_registry_key(target.function), state.stack)
         task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
         inputs: NamespaceShape = body.input_shape
         result_port: str = body.result_port
@@ -686,16 +686,16 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         inputs = spec.input_shape
         result_port = spec.result_port
         result_shape = spec.result_shape
-    keywords: list[ast.keyword] = _named_keywords(state, expression, name, inputs)
+    keywords: list[ast.keyword] = _bind_positional(state, expression, name, inputs)
     task = replace(task, inputs=_lower_keywords(state, instance, name, inputs, keywords))
-    missing: list[str] = _required_missing(state, instance, inputs, task.inputs)
+    missing: list[str] = _missing_required_inputs(state, instance, inputs, task.inputs)
     if missing:
         _reject(state, expression, f'task {name!r} is missing required inputs: {missing}; pass them as call arguments')
     state.tasks.append(task)
     return _Reference(instance, result_port, result_shape)
 
 
-def _named_keywords(
+def _bind_positional(
     state: _LoweringState, expression: ast.Call, name: str, inputs: NamespaceShape
 ) -> list[ast.keyword]:
     """Bind positional arguments through declared input order, like the explicit keywords."""
@@ -726,9 +726,9 @@ def _wire_after(state: _LoweringState, instance: str, keyword: ast.keyword) -> N
 
 def _lower_keywords(
     state: _LoweringState, instance: str, name: str, inputs: NamespaceShape, keywords: list[ast.keyword]
-) -> dict[str, GivenValue]:
+) -> dict[str, CapturedValue]:
     """Wire one call's arguments to literals, references, and ordering edges."""
-    given: dict[str, GivenValue] = {}
+    given: dict[str, CapturedValue] = {}
     seen: set[str] = set()
     for keyword in keywords:
         port = keyword.arg
@@ -747,7 +747,7 @@ def _lower_keywords(
     return given
 
 
-def _required_missing(
+def _missing_required_inputs(
     state: _LoweringState, instance: str, shape: NamespaceShape, given: t.Any, prefix: str = ''
 ) -> list[str]:
     """Return the required task inputs that are neither wired nor routed from graph inputs."""
@@ -756,13 +756,13 @@ def _required_missing(
     for field_name, child in shape.fields:
         path = f'{prefix}.{field_name}' if prefix else field_name
         if isinstance(child, NamespaceShape):
-            missing.extend(_required_missing(state, instance, child, mapping.get(field_name), path))
-        elif child.required and field_name not in mapping and not _routed(state, instance, path):
+            missing.extend(_missing_required_inputs(state, instance, child, mapping.get(field_name), path))
+        elif child.required and field_name not in mapping and not _is_routed(state, instance, path):
             missing.append(path)
     return missing
 
 
-def _routed(state: _LoweringState, instance: str, path: str) -> bool:
+def _is_routed(state: _LoweringState, instance: str, path: str) -> bool:
     """Return whether a wired value reaches a task input."""
     routed = [entry for targets in state.inputs.values() for target, entry in targets if target == instance]
     if any(path == entry or path.startswith(f'{entry}.') for entry in routed):
@@ -787,7 +787,7 @@ def _wire(
 
 
 def _lower_input(
-    state: _LoweringState, instance: str, path: str, expression: ast.expr, shape: Shape, given: dict[str, GivenValue]
+    state: _LoweringState, instance: str, path: str, expression: ast.expr, shape: Shape, given: dict[str, CapturedValue]
 ) -> None:
     """Expand dictionary syntax only for declared fixed input namespaces."""
     if isinstance(expression, ast.Dict) and isinstance(shape, NamespaceShape):
@@ -828,10 +828,10 @@ _LoweredValue = t.Union['_Reference', int, float, str, bool, None, _Unhandled]
 _ValueHandler = t.Callable[['_LoweringState', ast.expr, bool], _LoweredValue]
 
 
-def _lower_attribute(state: _LoweringState, expression: ast.expr, allow_call: bool) -> _LoweredValue:
+def _lower_field_selection(state: _LoweringState, expression: ast.expr, allow_call: bool) -> _LoweredValue:
     """Resolve dotted access to a task output or a declared namespace field."""
     assert isinstance(expression, ast.Attribute)
-    return _lower_selection(state, expression, allow_call=allow_call)
+    return _select_field(state, expression.value, expression.attr, expression, allow_call=allow_call)
 
 
 def _lower_name(state: _LoweringState, expression: ast.expr, allow_call: bool) -> _LoweredValue:
@@ -861,7 +861,7 @@ def _lower_key_selection(state: _LoweringState, expression: ast.expr, allow_call
 # Value forms the language lowers, with the handler for each. The key sets
 # are the supported list; anything else falls through to `_unsupported_reason`.
 _VALUE_HANDLERS: tuple[tuple[tuple[type[ast.expr], ...], _ValueHandler], ...] = (
-    ((ast.Attribute,), _lower_attribute),
+    ((ast.Attribute,), _lower_field_selection),
     ((ast.Name,), _lower_name),
     ((ast.Constant,), _lower_literal),
     ((ast.Subscript,), _lower_key_selection),
@@ -910,11 +910,6 @@ def _unsupported_reason(expression: ast.expr) -> str:
     return 'unsupported expression; move the computation into a task body'
 
 
-def _lower_selection(state: _LoweringState, expression: ast.Attribute, *, allow_call: bool = False) -> _Reference:
-    """Resolve dotted access to a task output or a declared namespace field."""
-    return _select_field(state, expression.value, expression.attr, expression, allow_call=allow_call)
-
-
 def _select_field(
     state: _LoweringState, parent: ast.expr, attr: str, node: ast.AST, *, allow_call: bool = False
 ) -> _Reference:
@@ -946,4 +941,4 @@ def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
 def lower_from_source(function: GraphHandle | Callable[..., t.Any]) -> GraphSpec:
     """Build a GraphSpec from a registered graph's source and its registered callees."""
     target = function.function if isinstance(function, GraphHandle) else function
-    return _lower_registered_graph(_key(target), ())
+    return _lower_registered_graph(_registry_key(target), ())

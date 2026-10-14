@@ -8,33 +8,6 @@
 ###########################################################################
 """Task declarations shared by the behavior suites."""
 
-__all__ = (
-    'Alpha',
-    'ArithmeticPair',
-    'Beta',
-    'SummaryStats',
-    'add',
-    'arithmetic_pair',
-    'collision_add',
-    'decrement',
-    'fail_always',
-    'is_positive',
-    'kwargs_function',
-    'mismatched_alpha',
-    'mismatched_beta',
-    'mistyped_dict',
-    'mistyped_list',
-    'mistyped_output',
-    'multiply',
-    'pass_int',
-    'prepare',
-    'read_answer',
-    'read_nested_count',
-    'read_orm_node',
-    'statistics',
-    'unannotated_function',
-)
-
 from tests.engine.processes.graphs.declarations.tasks.rejected import (
     kwargs_function,
     unannotated_function,
@@ -62,4 +35,31 @@ from tests.engine.processes.graphs.declarations.tasks.supported import (
     read_nested_count,
     read_orm_node,
     statistics,
+)
+
+__all__ = (
+    'Alpha',
+    'ArithmeticPair',
+    'Beta',
+    'SummaryStats',
+    'add',
+    'arithmetic_pair',
+    'collision_add',
+    'decrement',
+    'fail_always',
+    'is_positive',
+    'kwargs_function',
+    'mismatched_alpha',
+    'mismatched_beta',
+    'mistyped_dict',
+    'mistyped_list',
+    'mistyped_output',
+    'multiply',
+    'pass_int',
+    'prepare',
+    'read_answer',
+    'read_nested_count',
+    'read_orm_node',
+    'statistics',
+    'unannotated_function',
 )

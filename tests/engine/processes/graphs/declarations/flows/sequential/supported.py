@@ -102,9 +102,9 @@ def multiple_ordered(x: int) -> int:
 
 @graph
 def named(x: int, y: int) -> dict[str, int]:
-    """Return multiple named outputs from one task."""
+    """Return multiple named outputs from one task, selected by key."""
     pair = arithmetic_pair(x=x, y=y)
-    return {'total': pair.sum, 'product': pair.product}
+    return {'total': pair['sum'], 'product': pair['product']}
 
 
 @graph

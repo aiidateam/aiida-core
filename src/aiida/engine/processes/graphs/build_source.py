@@ -804,6 +804,12 @@ def _lower_value(
     """Lower a value expression to a reference or literal."""
     if isinstance(expression, ast.Attribute):
         return _lower_selection(state, expression, allow_call=allow_call)
+    if (
+        isinstance(expression, ast.Subscript)
+        and isinstance(expression.slice, ast.Constant)
+        and isinstance(expression.slice.value, str)
+    ):
+        return _select_field(state, expression.value, expression.slice.value, expression, allow_call=allow_call)
     if isinstance(expression, ast.Name):
         if expression.id not in state.names:
             _reject(state, expression, f'unbound name {expression.id!r}; bind it in an earlier placement')
@@ -848,19 +854,26 @@ def _unsupported_reason(expression: ast.expr) -> str:
 
 def _lower_selection(state: _LoweringState, expression: ast.Attribute, *, allow_call: bool = False) -> _Reference:
     """Resolve dotted access to a task output or a declared namespace field."""
-    parent = _lower_value(state, expression.value, allow_call=allow_call)
-    if not isinstance(parent, _Reference):
-        _reject(state, expression, 'selection must name a task output or declared input namespace; bind values first')
-    if not isinstance(parent.shape, NamespaceShape):
-        if parent.task is not None and parent.port == expression.attr:
-            return parent
-        _reject(state, expression, 'selection requires a declared namespace; select fields on namespaces')
-    path = f'{parent.port}.{expression.attr}' if parent.port else expression.attr
+    return _select_field(state, expression.value, expression.attr, expression, allow_call=allow_call)
+
+
+def _select_field(
+    state: _LoweringState, parent: ast.expr, attr: str, node: ast.AST, *, allow_call: bool = False
+) -> _Reference:
+    """Resolve a named field on a task output or a declared namespace."""
+    reference = _lower_value(state, parent, allow_call=allow_call)
+    if not isinstance(reference, _Reference):
+        _reject(state, node, 'selection must name a task output or declared input namespace; bind values first')
+    if not isinstance(reference.shape, NamespaceShape):
+        if reference.task is not None and reference.port == attr:
+            return reference
+        _reject(state, node, 'selection requires a declared namespace; select fields on namespaces')
+    path = f'{reference.port}.{attr}' if reference.port else attr
     try:
-        shape = parent.shape.select(expression.attr)
+        shape = reference.shape.select(attr)
     except KeyError:
-        _reject(state, expression, f'unknown or undeclared namespace field {path!r}; check declared fields')
-    return _Reference(parent.task, path, shape)
+        _reject(state, node, f'unknown or undeclared namespace field {path!r}; check declared fields')
+    return _Reference(reference.task, path, shape)
 
 
 def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Task declarations shared by the behavior suites."""
+"""Supported task declarations shared by the behavior suites."""
 
 import typing as t
 
@@ -155,17 +155,3 @@ def mistyped_dict(x: int) -> dict[str, int]:
 def collision_add(x: int, y: int) -> int:
     """Provide a second addition task for collision coverage."""
     return x + y
-
-
-def unannotated_function(x: int):
-    """Reject functions without a return annotation at decoration.
-
-    Static lowering wires placements against declared outputs, so annotate the
-    function or wrap it in an annotated one instead of leaving it dynamic.
-    """
-    return x
-
-
-def kwargs_function(**kwargs: t.Any) -> int:
-    """Reject undecorated functions with kwargs at decoration."""
-    return 1

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Straight-line graph declarations shared by the behavior suites."""
+"""Sequential graph declarations shared by the behavior suites."""
 
 from aiida.engine.processes.graphs.build_source import graph
 from aiida.orm.nodes.data.int import Int

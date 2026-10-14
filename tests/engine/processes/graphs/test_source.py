@@ -90,7 +90,7 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
     'declaration, message',
     [
         pytest.param(declarations.expanded_task_arguments, 'calls require named arguments', id='expanded'),
-        pytest.param(declarations.arithmetic_expression, 'unsupported expression', id='expression'),
+        pytest.param(declarations.arithmetic_expression, 'move the computation into a task', id='expression'),
         pytest.param(declarations.reassigned_name, 'assignment must bind a new name', id='rebound'),
         pytest.param(declarations.fanout, 'for loops are not supported', id='fanout'),
         pytest.param(declarations.variadic_parameters, 'variadic parameters are not supported', id='variadic'),
@@ -98,7 +98,7 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(
             declarations.namespace_return, 'return must select a task output or graph input leaf', id='namespace'
         ),
-        pytest.param(declarations.nested_outputs, 'unsupported expression', id='nested-output'),
+        pytest.param(declarations.nested_outputs, 'flat mappings of task outputs', id='nested-output'),
         pytest.param(declarations.missing_final_return, 'graph must end in a return', id='missing-return'),
         pytest.param(declarations.unbound, 'unbound name', id='unbound'),
         pytest.param(declarations.unregistered_call, 'unregistered call', id='unregistered'),
@@ -112,13 +112,13 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(declarations.raise_statement, 'only single-name assignments', id='raise'),
         pytest.param(declarations.assert_statement, 'only single-name assignments', id='assert'),
         pytest.param(declarations.match_statement, 'graph must end in a return', id='match'),
-        pytest.param(declarations.starred_call, 'unsupported expression', id='starred'),
-        pytest.param(declarations.subscript_load, 'unsupported expression', id='subscript-load'),
-        pytest.param(declarations.fstring_argument, 'unsupported expression', id='fstring'),
-        pytest.param(declarations.boolean_condition, 'unsupported expression', id='boolop'),
-        pytest.param(declarations.compare_condition, 'unsupported expression', id='compare'),
-        pytest.param(declarations.inline_conditional, 'unsupported expression', id='ifexp'),
-        pytest.param(declarations.walrus_condition, 'unsupported expression', id='walrus'),
+        pytest.param(declarations.starred_call, 'unsupported unpacking', id='starred'),
+        pytest.param(declarations.subscript_load, 'collections travel whole', id='subscript-load'),
+        pytest.param(declarations.fstring_argument, 'format inside a task', id='fstring'),
+        pytest.param(declarations.boolean_condition, 'compute the predicate', id='boolop'),
+        pytest.param(declarations.compare_condition, 'compute the predicate', id='compare'),
+        pytest.param(declarations.inline_conditional, 'branch explicitly', id='ifexp'),
+        pytest.param(declarations.walrus_condition, 'bind before branching', id='walrus'),
         pytest.param(declarations.list_comprehension, 'must call a registered task or graph', id='listcomp'),
     ],
 )

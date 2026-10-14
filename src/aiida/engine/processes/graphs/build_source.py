@@ -814,7 +814,36 @@ def _lower_value(
         return expression.value
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression)
-    _reject(state, expression, 'unsupported expression; move the computation into a task body')
+    _reject(state, expression, _unsupported_reason(expression))
+
+
+def _unsupported_reason(expression: ast.expr) -> str:
+    """Explain one unsupported expression with its working alternative."""
+    if isinstance(expression, (ast.BoolOp, ast.Compare)):
+        return 'unsupported boolean expression; compute the predicate in a task'
+    if isinstance(expression, ast.IfExp):
+        return 'unsupported inline conditional; branch explicitly instead'
+    if isinstance(expression, ast.NamedExpr):
+        return 'unsupported inline binding; bind before branching instead'
+    if isinstance(expression, ast.Subscript):
+        return 'unsupported element access; collections travel whole'
+    if isinstance(expression, ast.Starred):
+        return 'unsupported unpacking; pass each input by name'
+    if isinstance(expression, ast.JoinedStr):
+        return 'unsupported string formatting; format inside a task instead'
+    if isinstance(expression, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+        return 'unsupported comprehension; unroll the placements or await Map'
+    if isinstance(expression, ast.Lambda):
+        return 'unsupported inline function; declare a task instead'
+    if isinstance(expression, ast.Call):
+        return 'unsupported nested call; bind it to a name first'
+    if isinstance(expression, ast.Dict):
+        return 'unsupported nested mapping; return flat mappings of task outputs'
+    if isinstance(expression, (ast.List, ast.Tuple, ast.Set)):
+        return 'unsupported collection literal; pass collections as graph inputs'
+    if isinstance(expression, (ast.Await, ast.Yield, ast.YieldFrom)):
+        return 'unsupported asynchronous construct; tasks are synchronous functions'
+    return 'unsupported expression; move the computation into a task body'
 
 
 def _lower_selection(state: _LoweringState, expression: ast.Attribute, *, allow_call: bool = False) -> _Reference:

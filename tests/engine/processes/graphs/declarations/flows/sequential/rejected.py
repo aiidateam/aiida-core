@@ -376,6 +376,8 @@ def starred_call(value: int) -> int:
 #     return add(x=value, y=1)
 
 
+# TODO: Access by string?
+# TODO: Could support it for Container types
 @graph
 def subscript_load(values: list[int]) -> int:
     """Read one element; collections travel whole."""

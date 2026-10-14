@@ -439,6 +439,16 @@ def fstring_argument(value: int) -> int:
     return add(x=value, y=f'{value}')
 
 
+# Format inside a task instead:
+# @task
+# def greeting(value: int) -> str:
+#     return f'result is {value}'
+#
+# @graph
+# def formatted(value: int) -> str:
+#     return greeting(value=value)
+
+
 @graph
 def boolean_condition(value: int, flag: bool) -> int:
     """Combine conditions with operators; conditions are calls or names."""
@@ -516,3 +526,13 @@ def list_comprehension(values: list[int]) -> int:
     """
     doubled = [add(x=value, y=1) for value in values]  # noqa: F841 - the comprehension is rejected
     return add(x=values[0], y=1)
+
+
+# Loop inside a task instead:
+# @task
+# def total(values: list[int]) -> int:
+#     return sum(values)
+#
+# @graph
+# def summed(values: list[int]) -> int:
+#     return total(values=values)

@@ -21,6 +21,7 @@ from tests.engine.processes.graphs.declarations.tasks import (
     read_answer,
     read_nested_count,
     read_orm_node,
+    statistics,
 )
 
 
@@ -187,6 +188,27 @@ def keyword_only_parameter(*, value: int) -> int:
 def positional_only_parameter(value: int, /) -> int:
     """Declare a positional-only parameter, treated as ordinary."""
     return add(x=value, y=1)
+
+
+@graph
+def nested(x: int, y: int) -> int:
+    """Nest one graph in another."""
+    inner = chain(x=x, y=y)
+    return add(x=inner, y=x)
+
+
+@graph
+def nested_multiply_add(x: int, y: int, z: int) -> int:
+    """Nest the multiply-add graph once."""
+    intermediate = multiply_add(x=x, y=y, z=z)
+    return add(x=intermediate, y=1)
+
+
+@graph
+def summarize(values: list[float]):
+    """Expose summary statistics computed by plain Python."""
+    stats = statistics(values=values)
+    return {'mean': stats.mean, 'stdev': stats.stdev}
 
 
 # Rejected declarations.

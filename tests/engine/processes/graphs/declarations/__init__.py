@@ -105,17 +105,11 @@ __all__ = (
     'wrong_type',
 )
 
-from tests.engine.processes.graphs.declarations.composition import (
+from tests.engine.processes.graphs.declarations.conditional import (
     computed_choice,
-    countdown,
-    countdown_call,
     external_choice,
-    fanout,
     inline_condition,
     mismatched_branches,
-    nested,
-    nested_multiply_add,
-    summarize,
 )
 from tests.engine.processes.graphs.declarations.graphs import (
     annotated_assignment,
@@ -148,7 +142,9 @@ from tests.engine.processes.graphs.declarations.graphs import (
     multiply_add,
     named,
     namespace_return,
+    nested,
     nested_definition,
+    nested_multiply_add,
     nested_outputs,
     ordered,
     ordered_named,
@@ -164,6 +160,7 @@ from tests.engine.processes.graphs.declarations.graphs import (
     starred_call,
     subscript_assignment,
     subscript_load,
+    summarize,
     try_block,
     tuple_assignment,
     unbound,
@@ -174,6 +171,11 @@ from tests.engine.processes.graphs.declarations.graphs import (
     wired,
     with_block,
     wrong_type,
+)
+from tests.engine.processes.graphs.declarations.iterative import (
+    countdown,
+    countdown_call,
+    fanout,
 )
 from tests.engine.processes.graphs.declarations.port_models import (
     Configuration,

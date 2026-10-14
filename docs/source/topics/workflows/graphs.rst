@@ -12,7 +12,7 @@ A graph declares dependencies between tasks. AiiDA parses the graph's Python sou
 Save declarations in an importable Python module, installed wherever the daemon runs. Notebook, ``__main__``, and nested function declarations are not yet supported.
 
 Declaring and launching
-----------------------
+-----------------------
 
 For example, save this as ``my_workflow.py``:
 
@@ -107,7 +107,7 @@ A nullable field still requires its key unless it has a default. Missing require
 Whole namespaces and selected fields are wired without flattening ordinary dictionary-valued leaves or replacing original input-node identities.
 
 Subgraphs, branches, and loops
------------------------------
+------------------------------
 
 Calling another declared graph inside a graph places it as a subgraph. It runs as a child graph process:
 

@@ -101,6 +101,8 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(declarations.nested_outputs, 'unsupported expression', id='nested-output'),
         pytest.param(declarations.missing_final_return, 'graph must end in a return', id='missing-return'),
         pytest.param(declarations.unbound, 'unbound name', id='unbound'),
+        pytest.param(declarations.unregistered_call, 'unregistered call', id='unregistered'),
+        pytest.param(declarations.subscript_assignment, 'only single-name assignments', id='subscript'),
     ],
 )
 def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, message: str) -> None:

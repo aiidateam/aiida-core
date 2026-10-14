@@ -9,6 +9,7 @@
 """Importable task and graph declarations shared by the behavior suites."""
 
 import typing as t
+from pathlib import Path
 
 from aiida.engine.processes.graphs.build_source import graph, task
 from aiida.engine.processes.port_model import PortModel
@@ -35,6 +36,12 @@ class DefaultedSettings(PortModel):
     """A namespace usable without any inputs, for default coverage."""
 
     count: int = 2
+
+
+class UnsupportedPortModel(PortModel):
+    """A namespace with an unpersistable field, for declaration rejection."""
+
+    log_path: Path
 
 
 # Task definitions.
@@ -159,6 +166,11 @@ def mistyped_dict(x: int) -> dict[str, int]:
 @task
 def collision_add(x: int, y: int) -> int:
     """Provide a second addition task for collision coverage."""
+    return x + y
+
+
+def plain_add(x: int, y: int) -> int:
+    """Add without a task decorator; graphs only call registered tasks."""
     return x + y
 
 
@@ -303,6 +315,35 @@ def collision(x: int) -> int:
 def missing_task_input(x: int) -> int:
     """Omit a required task input."""
     return add(x=x)
+
+
+@graph
+def unregistered_call(value: int) -> int:
+    """Call an undecorated function; only registered tasks and graphs lower.
+
+    Decorate the callee instead:
+
+    >>> @task
+    >>> def plain_task(x: int, y: int) -> int:
+    >>>     return x + y
+    """
+    return plain_add(x=value, y=1)
+
+
+@graph
+def subscript_assignment(value: int) -> int:
+    """Mutate a placement in place; placements bind new names instead.
+
+    Bind a new name instead:
+
+    >>> @graph
+    >>> def fresh_binding(value: int) -> int:
+    >>>     first = add(x=value, y=1)
+    >>>     return add(x=first, y=2)
+    """
+    chosen = add(x=value, y=1)
+    chosen['count'] = add(x=chosen, y=2)
+    return chosen
 
 
 # Composition: nesting, branching, and looping.

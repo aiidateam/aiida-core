@@ -798,60 +798,96 @@ def _lower_input(
     _wire(state, instance, path, _lower_value(state, expression), given)
 
 
+class _Unhandled:
+    """Sentinel for value handlers that decline an expression."""
+
+
+_UNHANDLED = _Unhandled()
+
+_LoweredValue = t.Union['_Reference', int, float, str, bool, None, _Unhandled]
+_ValueHandler = t.Callable[['_LoweringState', ast.expr, bool], _LoweredValue]
+
+
+def _lower_attribute(state: _LoweringState, expression: ast.expr, allow_call: bool) -> _LoweredValue:
+    """Resolve dotted access to a task output or a declared namespace field."""
+    assert isinstance(expression, ast.Attribute)
+    return _lower_selection(state, expression, allow_call=allow_call)
+
+
+def _lower_name(state: _LoweringState, expression: ast.expr, allow_call: bool) -> _LoweredValue:
+    """Resolve a bound placement or graph input."""
+    assert isinstance(expression, ast.Name)
+    if expression.id not in state.names:
+        _reject(state, expression, f'unbound name {expression.id!r}; bind it in an earlier placement')
+    return state.names[expression.id]
+
+
+def _lower_literal(state: _LoweringState, expression: ast.expr, allow_call: bool) -> _LoweredValue:
+    """Pass a plain constant through, or decline anything richer."""
+    assert isinstance(expression, ast.Constant)
+    if expression.value is None or isinstance(expression.value, (int, float, str, bool)):
+        return expression.value
+    return _UNHANDLED
+
+
+def _lower_key_selection(state: _LoweringState, expression: ast.expr, allow_call: bool) -> _LoweredValue:
+    """Resolve a literal key on a task output or a declared namespace."""
+    assert isinstance(expression, ast.Subscript)
+    if isinstance(expression.slice, ast.Constant) and isinstance(expression.slice.value, str):
+        return _select_field(state, expression.value, expression.slice.value, expression, allow_call=allow_call)
+    return _UNHANDLED
+
+
+# Value forms the language lowers, with the handler for each. The key sets
+# are the supported list; anything else falls through to `_unsupported_reason`.
+_VALUE_HANDLERS: tuple[tuple[tuple[type[ast.expr], ...], _ValueHandler], ...] = (
+    ((ast.Attribute,), _lower_attribute),
+    ((ast.Name,), _lower_name),
+    ((ast.Constant,), _lower_literal),
+    ((ast.Subscript,), _lower_key_selection),
+)
+
+# Value forms the language rejects, with the guidance each carries. The key sets
+# are the unsupported list; anything missing here reports the generic fallback.
+_VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
+    (ast.BoolOp, ast.Compare): 'unsupported boolean expression; compute the predicate in a task',
+    (ast.IfExp,): 'unsupported inline conditional; branch explicitly instead',
+    (ast.NamedExpr,): 'unsupported inline binding; bind before branching instead',
+    (ast.Subscript,): 'unsupported element access; collections travel whole',
+    (ast.Starred,): 'unsupported unpacking; pass each input by name',
+    (ast.JoinedStr,): 'unsupported string formatting; format inside a task instead',
+    (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp): (
+        'unsupported comprehension; unroll the placements or await Map'
+    ),
+    (ast.Lambda,): 'unsupported inline function; declare a task instead',
+    (ast.Call,): 'unsupported nested call; bind it to a name first',
+    (ast.Dict,): 'unsupported nested mapping; return flat mappings of task outputs',
+    (ast.List, ast.Tuple, ast.Set): 'unsupported collection literal; pass collections as graph inputs',
+    (ast.Await, ast.Yield, ast.YieldFrom): ('unsupported asynchronous construct; tasks are synchronous functions'),
+}
+
+
 def _lower_value(
     state: _LoweringState, expression: ast.expr, *, allow_call: bool = False
 ) -> _Reference | int | float | str | bool | None:
     """Lower a value expression to a reference or literal."""
-    if isinstance(expression, ast.Attribute):
-        return _lower_selection(state, expression, allow_call=allow_call)
-    if (
-        isinstance(expression, ast.Subscript)
-        and isinstance(expression.slice, ast.Constant)
-        and isinstance(expression.slice.value, str)
-    ):
-        return _select_field(state, expression.value, expression.slice.value, expression, allow_call=allow_call)
-    if isinstance(expression, ast.Name):
-        if expression.id not in state.names:
-            _reject(state, expression, f'unbound name {expression.id!r}; bind it in an earlier placement')
-        return state.names[expression.id]
-    if isinstance(expression, ast.Constant) and (
-        expression.value is None or isinstance(expression.value, (int, float, str, bool))
-    ):
-        return expression.value
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression)
+    for kinds, handler in _VALUE_HANDLERS:
+        if isinstance(expression, kinds):
+            lowered = handler(state, expression, allow_call)
+            if not isinstance(lowered, _Unhandled):
+                return lowered
+            break
     _reject(state, expression, _unsupported_reason(expression))
 
 
 def _unsupported_reason(expression: ast.expr) -> str:
     """Explain one unsupported expression with its working alternative."""
-    match expression:
-        case ast.BoolOp() | ast.Compare():
-            return 'unsupported boolean expression; compute the predicate in a task'
-        case ast.IfExp():
-            return 'unsupported inline conditional; branch explicitly instead'
-        case ast.NamedExpr():
-            return 'unsupported inline binding; bind before branching instead'
-        case ast.Subscript():
-            return 'unsupported element access; collections travel whole'
-        case ast.Starred():
-            return 'unsupported unpacking; pass each input by name'
-        case ast.JoinedStr():
-            return 'unsupported string formatting; format inside a task instead'
-        case ast.ListComp() | ast.SetComp() | ast.DictComp() | ast.GeneratorExp():
-            return 'unsupported comprehension; unroll the placements or await Map'
-        case ast.Lambda():
-            return 'unsupported inline function; declare a task instead'
-        case ast.Call():
-            return 'unsupported nested call; bind it to a name first'
-        case ast.Dict():
-            return 'unsupported nested mapping; return flat mappings of task outputs'
-        case ast.List() | ast.Tuple() | ast.Set():
-            return 'unsupported collection literal; pass collections as graph inputs'
-        case ast.Await() | ast.Yield() | ast.YieldFrom():
-            return 'unsupported asynchronous construct; tasks are synchronous functions'
-        case _:
-            return 'unsupported expression; move the computation into a task body'
+    for kinds, guidance in _VALUE_REJECTIONS.items():
+        if isinstance(expression, kinds):
+            return guidance
+    return 'unsupported expression; move the computation into a task body'
 
 
 def _lower_selection(state: _LoweringState, expression: ast.Attribute, *, allow_call: bool = False) -> _Reference:

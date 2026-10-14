@@ -306,13 +306,32 @@ class _AsyncSSH(_AsynchronousSSHBackend):
 
     async def lstat(self, path: str):
         # The return object from asyncssh is compatible with `class::Stat`
-        return await self._sftp.lstat(path)
+        try:
+            return await self._sftp.lstat(path)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            msg = f'No such file or directory: {path}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while stating path {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def isdir(self, path: str):
-        return await self._sftp.isdir(path)
+        try:
+            return await self._sftp.isdir(path)
+        except asyncssh.sftp.SFTPNoSuchFile:
+            return False
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while checking if {path} is directory: {exc}'
+            raise OSError(msg) from exc
 
     async def isfile(self, path: str):
-        return await self._sftp.isfile(path)
+        try:
+            return await self._sftp.isfile(path)
+        except asyncssh.sftp.SFTPNoSuchFile:
+            return False
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while checking if {path} is file: {exc}'
+            raise OSError(msg) from exc
 
     async def listdir(self, path: str):
         try:
@@ -338,6 +357,9 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             if not exist_ok:
                 msg = f'Directory already exists: {path}'
                 raise FileExistsError(msg)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            msg = f'No such file or directory: {path}'
+            raise FileNotFoundError(msg) from exc
         except asyncssh.sftp.SFTPFailure as exc:
             if self._sftp.version < 6:
                 if not exist_ok:
@@ -346,6 +368,9 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             else:
                 msg = f'Error while creating directory {path}: {exc}'
                 raise TransportInternalError(msg)
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while creating directory {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def remove(self, path: str):
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
@@ -354,18 +379,37 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         if await self.isdir(path):
             msg = f'The path {path} is a directory'
             raise OSError(msg)
-        else:
+        try:
             await self._sftp.remove(path)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            msg = f'No such file: {path}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Failed to remove path: {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def rename(self, oldpath: str, newpath: str):
-        await self._sftp.rename(oldpath, newpath)
+        try:
+            await self._sftp.rename(oldpath, newpath)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            msg = f'No such file or directory: {oldpath}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Failed to rename path: {oldpath} -> {newpath}: {exc}'
+            raise OSError(msg) from exc
 
     async def rmdir(self, path: str):
         try:
             await self._sftp.rmdir(path)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            msg = f'No such file or directory: {path}'
+            raise FileNotFoundError(msg) from exc
         except asyncssh.sftp.SFTPFailure:
             msg = f'Error while removing directory {path}: probably directory is not empty'
             raise OSError(msg)
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while removing directory {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def rmtree(self, path: str):
         try:
@@ -375,13 +419,26 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             raise OSError(msg)
 
     async def path_exists(self, path: str):
-        return await self._sftp.exists(path)
+        try:
+            return await self._sftp.exists(path)
+        except asyncssh.sftp.SFTPNoSuchFile:
+            return False
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while checking if path {path} exists: {exc}'
+            raise OSError(msg) from exc
 
     async def symlink(self, source: str, destination: str):
         """Create a single link from source to destination.
         No magic is allowed in source or destination.
         """
-        await self._sftp.symlink(source, destination)
+        try:
+            await self._sftp.symlink(source, destination)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            msg = f'No such file or directory: {source}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Failed to create symlink: {source} -> {destination}: {exc}'
+            raise OSError(msg) from exc
 
     async def glob(self, path: str, ignore_nonexisting: bool = True):
         try:
@@ -394,7 +451,14 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             raise OSError(msg)
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
-        await self._sftp.chmod(path, mode, follow_symlinks=follow_symlinks)
+        try:
+            await self._sftp.chmod(path, mode, follow_symlinks=follow_symlinks)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            msg = f'No such file or directory: {path}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Failed to change permissions: {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def copy(
         self,
@@ -440,7 +504,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                     f'perhaps the parent folder does not exists: {exc}'
                 )
                 raise FileNotFoundError(msg)
-            except asyncssh.sftp.SFTPFailure as exc:
+            except asyncssh.sftp.SFTPError as exc:
                 msg = f'Error while copying {remotesource} to {remotedestination}: {exc}'
                 raise OSError(msg)
         else:

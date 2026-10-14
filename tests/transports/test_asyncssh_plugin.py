@@ -219,6 +219,148 @@ class TestSftpErrorTranslation:
 
         assert not isinstance(exception.value, FileNotFoundError)
 
+    @pytest.mark.asyncio
+    async def test_lstat_of_missing_path_raises_file_not_found(self):
+        backend = self._backend(lstat=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/does/not/exist'):
+            await backend.lstat('/does/not/exist')
+
+    @pytest.mark.asyncio
+    async def test_lstat_failure_raises_oserror(self):
+        backend = self._backend(lstat=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')))
+
+        with pytest.raises(OSError, match='Permission denied') as exception:
+            await backend.lstat('/root')
+
+        assert not isinstance(exception.value, FileNotFoundError)
+
+    @pytest.mark.asyncio
+    async def test_isdir_missing_path_returns_false(self):
+        backend = self._backend(isdir=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+        assert await backend.isdir('/does/not/exist') is False
+
+    @pytest.mark.asyncio
+    async def test_isdir_failure_raises_oserror(self):
+        backend = self._backend(isdir=AsyncMock(side_effect=asyncssh.sftp.SFTPFailure('I/O error')))
+
+        with pytest.raises(OSError, match='I/O error'):
+            await backend.isdir('/some/dir')
+
+    @pytest.mark.asyncio
+    async def test_isfile_missing_path_returns_false(self):
+        backend = self._backend(isfile=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+        assert await backend.isfile('/does/not/exist') is False
+
+    @pytest.mark.asyncio
+    async def test_isfile_failure_raises_oserror(self):
+        backend = self._backend(isfile=AsyncMock(side_effect=asyncssh.sftp.SFTPFailure('I/O error')))
+
+        with pytest.raises(OSError, match='I/O error'):
+            await backend.isfile('/some/file')
+
+    @pytest.mark.asyncio
+    async def test_path_exists_missing_path_returns_false(self):
+        backend = self._backend(exists=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+        assert await backend.path_exists('/does/not/exist') is False
+
+    @pytest.mark.asyncio
+    async def test_path_exists_failure_raises_oserror(self):
+        backend = self._backend(exists=AsyncMock(side_effect=asyncssh.sftp.SFTPFailure('I/O error')))
+
+        with pytest.raises(OSError, match='I/O error'):
+            await backend.path_exists('/some/path')
+
+    @pytest.mark.asyncio
+    async def test_remove_missing_file_raises_file_not_found(self):
+        backend = self._backend(
+            isdir=AsyncMock(return_value=False),
+            remove=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')),
+        )
+
+        with pytest.raises(FileNotFoundError, match='/does/not/exist'):
+            await backend.remove('/does/not/exist')
+
+    @pytest.mark.asyncio
+    async def test_remove_failure_raises_oserror(self):
+        backend = self._backend(
+            isdir=AsyncMock(return_value=False),
+            remove=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')),
+        )
+
+        with pytest.raises(OSError, match='Permission denied'):
+            await backend.remove('/some/file')
+
+    @pytest.mark.asyncio
+    async def test_rename_missing_path_raises_file_not_found(self):
+        backend = self._backend(rename=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/old/path'):
+            await backend.rename('/old/path', '/new/path')
+
+    @pytest.mark.asyncio
+    async def test_rename_failure_raises_oserror(self):
+        backend = self._backend(rename=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')))
+
+        with pytest.raises(OSError, match='Permission denied'):
+            await backend.rename('/old/path', '/new/path')
+
+    @pytest.mark.asyncio
+    async def test_rmdir_missing_path_raises_file_not_found(self):
+        backend = self._backend(rmdir=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/does/not/exist'):
+            await backend.rmdir('/does/not/exist')
+
+    @pytest.mark.asyncio
+    async def test_rmdir_failure_raises_oserror(self):
+        backend = self._backend(rmdir=AsyncMock(side_effect=asyncssh.sftp.SFTPFailure('directory is not empty')))
+
+        with pytest.raises(OSError, match='probably directory is not empty'):
+            await backend.rmdir('/some/dir')
+
+    @pytest.mark.asyncio
+    async def test_symlink_missing_path_raises_file_not_found(self):
+        backend = self._backend(symlink=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/source/path'):
+            await backend.symlink('/source/path', '/dest/path')
+
+    @pytest.mark.asyncio
+    async def test_symlink_failure_raises_oserror(self):
+        backend = self._backend(symlink=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')))
+
+        with pytest.raises(OSError, match='Permission denied'):
+            await backend.symlink('/source/path', '/dest/path')
+
+    @pytest.mark.asyncio
+    async def test_chmod_missing_path_raises_file_not_found(self):
+        backend = self._backend(chmod=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/does/not/exist'):
+            await backend.chmod('/does/not/exist', 0o755)
+
+    @pytest.mark.asyncio
+    async def test_chmod_failure_raises_oserror(self):
+        backend = self._backend(chmod=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')))
+
+        with pytest.raises(OSError, match='Permission denied'):
+            await backend.chmod('/some/path', 0o755)
+
+    @pytest.mark.asyncio
+    async def test_mkdir_missing_parent_raises_file_not_found(self):
+        backend = self._backend(mkdir=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/does/not/exist'):
+            await backend.mkdir('/does/not/exist')
+
+    @pytest.mark.asyncio
+    async def test_mkdir_failure_raises_oserror(self):
+        backend = self._backend(mkdir=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')))
+
+        with pytest.raises(OSError, match='Permission denied'):
+            await backend.mkdir('/some/dir')
+
 
 class TestSemaphoreBehavior:
     """Tests for AsyncSshTransport semaphore/concurrency control."""

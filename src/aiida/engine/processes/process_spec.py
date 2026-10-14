@@ -113,7 +113,7 @@ class ProcessSpec(spec.ProcessSpec):
         name: str,
         container: type,
         *,
-        defaults: t.Mapping[str, t.Any] | None = None,
+        _defaults: t.Mapping[str, t.Any] | None = None,
         **kwargs: t.Any,
     ) -> None:
         """Declare a namespace holding one port per field of a structured type.
@@ -133,7 +133,7 @@ class ProcessSpec(spec.ProcessSpec):
 
         :param name: the namespace to declare the fields under.
         :param container: the structured type whose fields to declare.
-        :param defaults: default values for nested model fields, keyed by field name.
+        :param _defaults: enclosing instance values overriding nested model defaults.
         :param kwargs: passed on to the namespace itself, ``required`` and ``help`` among them.
         :raises TypeError: if the structured type is not one this knows how to read.
         """
@@ -148,7 +148,7 @@ class ProcessSpec(spec.ProcessSpec):
 
         self.input_namespace(name, **kwargs)
 
-        for field in _with_defaults(fields, defaults):
+        for field in _with_defaults(fields, _defaults):
             self._declare_field(f'{name}{self.namespace_separator}{field.name}', field)
 
     def _declare_field(self, name: str, field: Field) -> None:
@@ -160,7 +160,7 @@ class ProcessSpec(spec.ProcessSpec):
                 field.annotation,
                 required=field.required,
                 help=field.help,
-                defaults=nested if isinstance(nested, dict) else None,
+                _defaults=nested if isinstance(nested, dict) else None,
             )
             return
         self.input(name, **_as_a_port(field))

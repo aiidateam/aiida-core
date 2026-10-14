@@ -166,7 +166,7 @@ def test_incompatible_boundary_types_fail_during_build() -> None:
 def test_rejection_carries_source_location() -> None:
     with pytest.raises(UnsupportedSyntax) as caught:
         declarations.unbound.build()
-    assert 'declarations.py' in str(caught.value)
+    assert 'declarations' in str(caught.value)
     assert 'unbound name' in str(caught.value)
     assert '^' in str(caught.value)
 

@@ -6,186 +6,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Importable task and graph declarations shared by the behavior suites."""
+"""Straight-line graph declarations shared by the behavior suites."""
 
-import typing as t
-from pathlib import Path
-
-from aiida.engine.processes.graphs.build_source import graph, task
-from aiida.engine.processes.port_model import PortModel
+from aiida.engine.processes.graphs.build_source import graph
 from aiida.orm.nodes.data.int import Int
-
-# Input models.
-
-
-class Settings(PortModel):
-    """Explicit namespace with a required field, for missing-input tests."""
-
-    count: int = 2
-    nullable: int | None
-
-
-class Configuration(PortModel):
-    """Top-level namespace carrying settings and a label."""
-
-    settings: Settings
-    label: str = 'test'
-
-
-class DefaultedSettings(PortModel):
-    """A namespace usable without any inputs, for default coverage."""
-
-    count: int = 2
-
-
-class UnsupportedPortModel(PortModel):
-    """A namespace with an unpersistable field, for declaration rejection."""
-
-    log_path: Path
-
-
-# Task definitions.
-
-
-@task
-def add(x: int, y: int) -> int:
-    """Add two integers."""
-    return x + y
-
-
-@task(outputs=('sum',))
-def add_named(x: int, y: int) -> int:
-    """Return the integer sum under a named output, for selection wiring."""
-    return x + y
-
-
-@task
-def multiply(x: int, y: int) -> int:
-    """Multiply two integers."""
-    return x * y
-
-
-@task(outputs=('sum', 'product'))
-def arithmetic_pair(x: int, y: int) -> tuple[int, int]:
-    """Return sum and product as named outputs."""
-    return x + y, x * y
-
-
-@task
-def read_nested_count(config: Configuration) -> int:
-    """Read the nested count from a model."""
-    return config.settings.count
-
-
-@task
-def read_answer(values: dict[str, int]) -> int:
-    """Read one answer from a mapping."""
-    return values['answer']
-
-
-@task
-def pass_int(value: int) -> int:
-    """Pass an integer through unchanged."""
-    return value
-
-
-@task
-def read_orm_node(value: Int) -> int:
-    """Unwrap an `Int` node to its value."""
-    assert isinstance(value, Int)
-    return value.value
-
-
-@task
-def is_positive(value: int) -> bool:
-    """Decide whether a value is positive."""
-    return value > 0
-
-
-@task
-def decrement(value: int) -> int:
-    """Subtract one."""
-    return value - 1
-
-
-@task(outputs=('mean', 'stdev'))
-def statistics(values: list[float]) -> tuple[float, float]:
-    """Summarize samples; bodies run as plain Python and are never lowered."""
-    import math
-
-    total = 0.0
-    for sample in values:
-        total += sample
-    mean = total / len(values)
-    variance = sum((sample - mean) ** 2 for sample in values) / len(values)
-    return mean, math.sqrt(variance)
-
-
-@task(outputs=('alpha',))
-def mismatched_alpha(value: int) -> int:
-    """Return its input under the `alpha` output."""
-    return value
-
-
-@task(outputs=('beta',))
-def mismatched_beta(value: int) -> int:
-    """Return its input under the `beta` output."""
-    return value
-
-
-@task
-def prepare(value: int) -> None:
-    """Order downstream placements after this one."""
-    return None
-
-
-@task
-def fail_always(x: int) -> int:
-    """Raise unconditionally, for failure propagation."""
-    raise ValueError('deliberately failed')
-
-
-@task
-def mistyped_output(x: int) -> int:
-    """Return a mistyped value, rejected at runtime."""
-    return 'wrong'  # rejected at runtime
-
-
-@task
-def mistyped_list(x: int) -> list[int]:
-    """Return a mistyped collection, rejected at runtime."""
-    return {'value': x}  # rejected at runtime
-
-
-@task
-def mistyped_dict(x: int) -> dict[str, int]:
-    """Return a mistyped mapping, rejected at runtime."""
-    return [x]  # rejected at runtime
-
-
-@task
-def collision_add(x: int, y: int) -> int:
-    """Provide a second addition task for collision coverage."""
-    return x + y
-
-
-def plain_add(x: int, y: int) -> int:
-    """Add without a task decorator; graphs only call registered tasks."""
-    return x + y
-
-
-# Invalid task definitions.
-
-
-def unannotated_function(x: int):
-    """Reject undecorated functions without annotations at decoration."""
-    return x
-
-
-def kwargs_function(**kwargs: t.Any) -> int:
-    """Reject undecorated functions with kwargs at decoration."""
-    return 1
-
+from tests.engine.processes.graphs.declarations.port_models import Configuration, DefaultedSettings
+from tests.engine.processes.graphs.declarations.tasks import (
+    add,
+    add_named,
+    arithmetic_pair,
+    collision_add,
+    fail_always,
+    multiply,
+    prepare,
+    read_answer,
+    read_nested_count,
+    read_orm_node,
+)
 
 # Supported straight-line graphs.
 
@@ -317,117 +154,6 @@ def missing_task_input(x: int) -> int:
     return add(x=x)
 
 
-@graph
-def unregistered_call(value: int) -> int:
-    """Call an undecorated function; only registered tasks and graphs lower.
-
-    Decorate the callee instead:
-
-    >>> @task
-    >>> def plain_task(x: int, y: int) -> int:
-    >>>     return x + y
-    """
-    return plain_add(x=value, y=1)
-
-
-@graph
-def subscript_assignment(value: int) -> int:
-    """Mutate a placement in place; placements bind new names instead.
-
-    Bind a new name instead:
-
-    >>> @graph
-    >>> def fresh_binding(value: int) -> int:
-    >>>     first = add(x=value, y=1)
-    >>>     return add(x=first, y=2)
-    """
-    chosen = add(x=value, y=1)
-    chosen['count'] = add(x=chosen, y=2)
-    return chosen
-
-
-# Composition: nesting, branching, and looping.
-
-
-@graph
-def nested(x: int, y: int) -> int:
-    """Nest one graph in another."""
-    inner = chain(x=x, y=y)
-    return add(x=inner, y=x)
-
-
-@graph
-def nested_multiply_add(x: int, y: int, z: int) -> int:
-    """Nest the multiply-add graph once."""
-    intermediate = multiply_add(x=x, y=y, z=z)
-    return add(x=intermediate, y=1)
-
-
-@graph
-def external_choice(value: int, condition: bool) -> int:
-    """Branch on an input flag."""
-    if condition:
-        selected_branch = add(x=value, y=1)
-    else:
-        selected_branch = add(x=value, y=2)
-    return selected_branch
-
-
-@graph
-def computed_choice(value: int) -> int:
-    """Branch on a task-computed condition."""
-    condition = is_positive(value=value)
-    if condition:
-        selected_branch = add(x=value, y=1)
-    else:
-        selected_branch = add(x=value, y=2)
-    return selected_branch
-
-
-@graph
-def inline_condition(value: int) -> int:
-    """Branch on an inline predicate call, bound like the explicit form."""
-    if is_positive(value=value):
-        selected_branch = add(x=value, y=1)
-    else:
-        selected_branch = add(x=value, y=2)
-    return selected_branch
-
-
-@graph
-def countdown(value: int, condition: bool) -> int:
-    """Loop until a task-computed condition clears."""
-    while condition:
-        value = decrement(value=value)
-        condition = is_positive(value=value)
-    return value
-
-
-@graph
-def countdown_call(value: int) -> int:
-    """Loop on an inline predicate call, re-evaluated every iteration."""
-    while is_positive(value=value):
-        value = decrement(value=value)
-    return value
-
-
-@graph
-def summarize(values: list[float]):
-    """Expose summary statistics computed by plain Python."""
-    stats = statistics(values=values)
-    return {'mean': stats.mean, 'stdev': stats.stdev}
-
-
-@graph
-def mismatched_branches(value: int, condition: bool) -> int:
-    """Return different outputs per side, rejected."""
-    if condition:
-        selected_branch = mismatched_alpha(value=value)
-    else:
-        selected_branch = mismatched_beta(value=value)
-    return selected_branch
-
-
 # Flexible spellings, desugared to the explicit forms.
 
 
@@ -515,25 +241,6 @@ def reassigned_name(value: int) -> int:
     result = add(x=value, y=1)
     result = add(x=result, y=2)
     return result
-
-
-# NOTE: we could internally represent `for`-loops as `while`
-# -> defer for follow-up
-@graph
-def fanout(values: list[int]) -> int:
-    """Loop over inputs, rebinding each round; fan-out over runtime collections is not supported.
-
-    Unroll the placements instead:
-
-    >>> @graph
-    >>> def unrolled_fanout(value: int) -> int:
-    >>>     first = add(x=value, y=1)
-    >>>     second = add(x=first, y=1)
-    >>>     return add(x=second, y=1)
-    """
-    for value in values:
-        result = add(x=value, y=1)
-    return result  # rejected at lowering
 
 
 @graph
@@ -643,3 +350,37 @@ def unbound(value: int) -> int:
     >>>     return add(x=total, y=1)
     """
     return add(x=value, y=missing)  # noqa: F821 - unbound names must fail at lowering
+
+
+def plain_add(x: int, y: int) -> int:
+    """Add without a task decorator; graphs only call registered tasks."""
+    return x + y
+
+
+@graph
+def unregistered_call(value: int) -> int:
+    """Call an undecorated function; only registered tasks and graphs lower.
+
+    Decorate the callee instead:
+
+    >>> @task
+    >>> def plain_task(x: int, y: int) -> int:
+    >>>     return x + y
+    """
+    return plain_add(x=value, y=1)
+
+
+@graph
+def subscript_assignment(value: int) -> int:
+    """Mutate a placement in place; placements bind new names instead.
+
+    Bind a new name instead:
+
+    >>> @graph
+    >>> def fresh_binding(value: int) -> int:
+    >>>     first = add(x=value, y=1)
+    >>>     return add(x=first, y=2)
+    """
+    chosen = add(x=value, y=1)
+    chosen['count'] = add(x=chosen, y=2)
+    return chosen

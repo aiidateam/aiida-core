@@ -13,7 +13,7 @@ from __future__ import annotations
 import functools
 import inspect
 import typing as t
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.lang import override
@@ -63,17 +63,22 @@ class TaskProcess(FunctionProcessBase):
 
     @classmethod
     @override
-    def _declare_outputs(cls, spec: ProcessSpec, outputs: Sequence[str] | None, annotations: dict[str, t.Any]) -> None:
-        if declare_output_ports(outputs, annotations.get('return'), spec):
-            spec.outputs.dynamic = False
-        else:
-            spec.outputs.valid_type = (Data, dict)
+    def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
+        declare_output_ports(annotations.get('return'), spec)
+        spec.outputs.dynamic = False
 
     @override
     def _out_result(self, result: t.Any) -> None:
         outputs = self.spec().outputs
         names = list(outputs)
-        values = result if isinstance(result, tuple) else (result,)
+        if isinstance(result, Mapping) and len(names) != 1:
+            missing = [name for name in names if name not in result]
+            if missing:
+                msg = f'task omitted declared outputs {missing}.'
+                raise GraphValidationError(msg)
+            values = tuple(result[name] for name in names)
+        else:
+            values = result if isinstance(result, tuple) else (result,)
         if not names and result is None:
             return
         if len(values) != len(names):
@@ -145,7 +150,7 @@ class TaskHandle(t.Generic[P, R]):
         return self._function.recreate_from(*args, **kwargs)
 
 
-def _check_task_contract(function: Callable[..., t.Any], outputs: Sequence[str] | None) -> Sequence[str] | None:
+def _check_task_contract(function: Callable[..., t.Any]) -> None:
     """Reject task declarations the graph runtime cannot represent."""
     signature = inspect.signature(function)
     if 'after' in signature.parameters:
@@ -156,34 +161,22 @@ def _check_task_contract(function: Callable[..., t.Any], outputs: Sequence[str] 
     if is_structured(annotation):
         msg = 'task output namespaces are not supported; declare leaf outputs instead.'
         raise GraphTypeCheckError(msg)
-    if outputs is None:
-        if annotation is inspect.Signature.empty:
-            msg = (
-                'tasks require a return annotation to wire their outputs; '
-                'annotate the function or wrap third-party functions in an annotated one.'
-            )
-            raise GraphTypeCheckError(msg)
-        if annotation is type(None):
-            outputs = ()
-    if outputs is not None:
-        if (
-            isinstance(outputs, str)
-            or any(not name.isidentifier() for name in outputs)
-            or len(set(outputs)) != len(outputs)
-        ):
-            msg = 'task outputs must be unique identifier names.'
-            raise GraphTypeCheckError(msg)
-    return outputs
+    if annotation is inspect.Signature.empty:
+        msg = (
+            'tasks require a return annotation to wire their outputs; '
+            'annotate the function or wrap third-party functions in an annotated one.'
+        )
+        raise GraphTypeCheckError(msg)
 
 
-def build_task(function: Callable[P, R], *, outputs: Sequence[str] | None = None) -> TaskHandle[P, R]:
+def build_task(function: Callable[P, R]) -> TaskHandle[P, R]:
     """Construct a task process with static leaf outputs and Python-valued inputs."""
-    outputs = _check_task_contract(function, outputs)
-    decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess, outputs=outputs)(function)
+    _check_task_contract(function)
+    decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess)(function)
     handle = TaskHandle(t.cast(ProcessFunctionType[P, R, CalcFunctionNode], decorated))
     spec = handle.process_class.spec()
     fixed_inputs(spec.inputs)
-    if spec.outputs.dynamic or any(isinstance(port, PortNamespace) for port in spec.outputs.values()):
+    if any(isinstance(port, PortNamespace) for port in spec.outputs.values()):
         msg = 'tasks require static leaf outputs.'
         raise GraphTypeCheckError(msg)
     return handle

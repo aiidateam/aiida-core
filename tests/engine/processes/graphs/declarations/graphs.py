@@ -13,7 +13,6 @@ from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.declarations.port_models import Configuration, DefaultedSettings
 from tests.engine.processes.graphs.declarations.tasks import (
     add,
-    add_named,
     arithmetic_pair,
     collision_add,
     fail_always,
@@ -56,9 +55,9 @@ def ordered(x: int) -> int:
 
 @graph
 def ordered_named(value: int) -> int:
-    """Order on a named-output task; the bare return takes the `sum` port."""
+    """Order on a task; the bare return takes the single output."""
     prepared = prepare(value=value)
-    return add_named(x=value, y=1, after=prepared)
+    return add(x=value, y=1, after=prepared)
 
 
 @graph
@@ -91,7 +90,7 @@ def selected(config: Configuration) -> int:
 @graph
 def selected_field(settings: DefaultedSettings) -> int:
     """Select a defaulted namespace field, without passing any inputs."""
-    return add_named(x=settings.count, y=1)
+    return add(x=settings.count, y=1)
 
 
 @graph
@@ -543,7 +542,7 @@ def fstring_argument(value: int) -> int:
 
     Format inside a task instead.
     """
-    return add_named(x=value, y=f'{value}')
+    return add(x=value, y=f'{value}')
 
 
 @graph

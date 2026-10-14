@@ -54,13 +54,17 @@ Static named outputs
 --------------------
 
 Task outputs must be statically declared. A scalar return annotation declares a single ``result`` output.
-Explicit output names declare multiple leaf outputs, returned as a tuple in the same order:
+A total ``TypedDict`` return annotation declares one leaf output per key, returned as a mapping:
 
 .. code:: python
 
-    @task(outputs=('sum', 'product'))
-    def arithmetic(x: int, y: int) -> tuple[int, int]:
-        return x + y, x * y
+    class Pair(TypedDict):
+        sum: int
+        product: int
+
+    @task
+    def arithmetic(x: int, y: int) -> Pair:
+        return {'sum': x + y, 'product': x * y}
 
     @graph
     def statistics(x: int, y: int):

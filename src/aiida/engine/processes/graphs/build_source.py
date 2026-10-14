@@ -184,21 +184,18 @@ def task(function: Callable[P, R]) -> TaskHandle[P, R]: ...
 
 
 @t.overload
-def task(
-    function: None = None, *, outputs: tuple[str, ...] | None = None
-) -> Callable[[Callable[P, R]], TaskHandle[P, R]]: ...
-def task(function: Callable[..., t.Any] | None = None, *, outputs: tuple[str, ...] | None = None) -> t.Any:
+def task(function: None = None) -> Callable[[Callable[P, R]], TaskHandle[P, R]]: ...
+def task(function: Callable[..., t.Any] | None = None) -> t.Any:
     """Register an importable task with static outputs and fixed input namespaces.
 
     :param function: the function to decorate.
-    :param outputs: optional names for leaf outputs, returned as a tuple in this order.
     :return: a callable, launchable task handle.
     """
 
     def decorate(target: Callable[..., t.Any]) -> t.Any:
         """Register the task source without executing its body."""
         _SOURCE_REGISTRY.register(target, kind='task')
-        return build_task(target, outputs=outputs)
+        return build_task(target)
 
     if function is not None:
         return decorate(function)

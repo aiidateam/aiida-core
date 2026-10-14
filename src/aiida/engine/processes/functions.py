@@ -20,7 +20,9 @@ import typing as t
 from inspect import get_annotations
 
 import docstring_parser
+from typing_extensions import is_typeddict
 
+from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import Field, fields_of, is_structured, port_help, without_marks
@@ -136,13 +138,11 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
 def process_function(
     node_class: type[ProcessNode],
     base_class: type[FunctionProcessBase] | None = None,
-    outputs: t.Sequence[str] | None = None,
 ) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
     :param base_class: the ``FunctionProcessBase`` subclass to build, defaulting to the legacy ``FunctionProcess``
-    :param outputs: optional names for static leaf outputs of task processes.
     """
 
     def decorator(function: FunctionType) -> FunctionType:
@@ -151,9 +151,7 @@ def process_function(
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
         """
-        process_class = FunctionProcessBase.build(
-            function, node_class=node_class, base_class=base_class, outputs=outputs
-        )
+        process_class = FunctionProcessBase.build(function, node_class=node_class, base_class=base_class)
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
@@ -300,46 +298,34 @@ def _signature_names(
     return args, var_positional, var_keyword
 
 
-def declare_output_ports(outputs: t.Sequence[str] | None, return_annotation: t.Any, spec: ProcessSpec) -> bool:
-    """Declare the output ports of a function process, and return whether any were declared.
+def declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
+    """Declare static leaf output ports from the return annotation.
 
-    Explicit names take precedence over the return annotation. Otherwise a scalar annotation declares
-    one ``result`` port. Task registration rejects missing declarations and namespace returns.
+    A scalar annotation declares one ``result`` port; a total ``TypedDict`` declares one
+    port per key. Task registration rejects missing declarations and namespace returns.
 
-    :param outputs: names of static leaf outputs.
     :param return_annotation: the return annotation of the wrapped function, if it has one.
     :param spec: the spec to declare them on.
-    :returns: ``False`` if the namespace should stay dynamic, ``True`` otherwise.
-    :raises TypeError: if ``outputs`` is not a sequence of port names.
     """
-    if outputs is not None:
-        if isinstance(outputs, str):
-            # A bare string is a sequence of strings, so it would silently declare one port per character.
-            msg = f'`outputs` should be a sequence of port names, got the string `{outputs}`.'
-            raise TypeError(msg)
-
-        annotations = (
-            t.get_args(return_annotation) if t.get_origin(return_annotation) is tuple else (return_annotation,)
-        )
-        for index, name in enumerate(outputs):
-            annotation = annotations[index] if len(annotations) == len(outputs) else None
-            if t.get_origin(annotation) in (list, dict):
-                annotation = t.get_origin(annotation)
-            spec.output(name, valid_type=infer_node_types(annotation) or (Data,))
-
-        return True
-
     if return_annotation is None or return_annotation is type(None):
-        return False
-
+        return
+    if is_typeddict(return_annotation):
+        hints = t.get_type_hints(return_annotation, include_extras=True)
+        if set(hints) != set(return_annotation.__required_keys__):
+            msg = 'TypedDict task outputs must be total; declare every output.'
+            raise GraphTypeCheckError(msg)
+        for key, hint in hints.items():
+            spec.output(key, valid_type=infer_node_types(without_marks(hint)) or (Data,))
+        return
+    if t.get_origin(return_annotation) is tuple:
+        msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
+        raise GraphTypeCheckError(msg)
     if t.get_origin(return_annotation) in (list, dict):
         return_annotation = t.get_origin(return_annotation)
     spec.output(
         Process.SINGLE_OUTPUT_LINKNAME,
         valid_type=infer_node_types(return_annotation) or (Data,),
     )
-
-    return True
 
 
 class FunctionProcessBase(Process):
@@ -369,9 +355,7 @@ class FunctionProcessBase(Process):
         raise NotImplementedError
 
     @classmethod
-    def _declare_outputs(
-        cls, spec: ProcessSpec, outputs: t.Sequence[str] | None, annotations: dict[str, t.Any]
-    ) -> None:
+    def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
         """Declare the output ports of the wrapped function."""
         raise NotImplementedError
 
@@ -393,7 +377,6 @@ class FunctionProcessBase(Process):
         func: FunctionType,
         node_class: type[ProcessNode],
         base_class: type[FunctionProcessBase] | None = None,
-        outputs: t.Sequence[str] | None = None,
     ) -> type[FunctionProcessBase]:
         """Build a Process from the given function.
 
@@ -443,7 +426,7 @@ class FunctionProcessBase(Process):
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
-            cls._declare_outputs(spec, outputs, annotations)
+            cls._declare_outputs(spec, annotations)
 
         generated = type(
             func.__qualname__,
@@ -753,9 +736,7 @@ class FunctionProcess(FunctionProcessBase):
 
     @classmethod
     @override
-    def _declare_outputs(
-        cls, spec: ProcessSpec, outputs: t.Sequence[str] | None, annotations: dict[str, t.Any]
-    ) -> None:
+    def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
         # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
         # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
         spec.outputs.valid_type = (Data, dict)

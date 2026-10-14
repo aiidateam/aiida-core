@@ -32,10 +32,10 @@ pytestmark = pytest.mark.presto
         pytest.param(declarations.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(declarations.diamond, {'x': 2}, {'result': 7}, id='diamond'),
         pytest.param(declarations.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
-        pytest.param(declarations.selected_field, {'settings': {}}, {'sum': 3}, id='namespace-field-default'),
+        pytest.param(declarations.selected_field, {'settings': {}}, {'result': 3}, id='namespace-field-default'),
         pytest.param(declarations.literal_dictionary, {}, {'result': 42}, id='dictionary-literal'),
         pytest.param(declarations.dictionary_input, {'values': {'answer': 42}}, {'result': 42}, id='dictionary-leaf'),
-        pytest.param(declarations.ordered_named, {'value': 2}, {'sum': 3}, id='ordering-without-output'),
+        pytest.param(declarations.ordered_named, {'value': 2}, {'result': 3}, id='ordering-without-output'),
         pytest.param(declarations.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
         pytest.param(
             declarations.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-choice-true'
@@ -113,5 +113,5 @@ def test_ordering_dependency_consumes_no_value() -> None:
     """An `after` dependency orders placements without wiring an output value."""
     specification: GraphSpec = declarations.ordered_named.build()
     assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
-        ('prepare', 'add_named', None, None)
+        ('prepare', 'add', None, None)
     ]

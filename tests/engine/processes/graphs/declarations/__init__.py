@@ -9,12 +9,15 @@
 """Importable task and graph declarations shared by the behavior suites."""
 
 __all__ = (
+    'Alpha',
+    'ArithmeticPair',
+    'Beta',
     'Configuration',
     'DefaultedSettings',
     'Settings',
+    'SummaryStats',
     'UnsupportedPortModel',
     'add',
-    'add_named',
     'annotated_assignment',
     'arithmetic_expression',
     'arithmetic_pair',
@@ -179,8 +182,11 @@ from tests.engine.processes.graphs.declarations.port_models import (
     UnsupportedPortModel,
 )
 from tests.engine.processes.graphs.declarations.tasks import (
+    Alpha,
+    ArithmeticPair,
+    Beta,
+    SummaryStats,
     add,
-    add_named,
     arithmetic_pair,
     collision_add,
     decrement,

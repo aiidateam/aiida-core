@@ -21,22 +21,23 @@ def add(x: int, y: int) -> int:
     return x + y
 
 
-@task(outputs=('sum',))
-def add_named(x: int, y: int) -> int:
-    """Return the integer sum under a named output, for selection wiring."""
-    return x + y
-
-
 @task
 def multiply(x: int, y: int) -> int:
     """Multiply two integers."""
     return x * y
 
 
-@task(outputs=('sum', 'product'))
-def arithmetic_pair(x: int, y: int) -> tuple[int, int]:
+class ArithmeticPair(t.TypedDict):
+    """Named outputs of the arithmetic pair task."""
+
+    sum: int
+    product: int
+
+
+@task
+def arithmetic_pair(x: int, y: int) -> ArithmeticPair:
     """Return sum and product as named outputs."""
-    return x + y, x * y
+    return {'sum': x + y, 'product': x * y}
 
 
 @task
@@ -76,8 +77,15 @@ def decrement(value: int) -> int:
     return value - 1
 
 
-@task(outputs=('mean', 'stdev'))
-def statistics(values: list[float]) -> tuple[float, float]:
+class SummaryStats(t.TypedDict):
+    """Named outputs of the statistics task."""
+
+    mean: float
+    stdev: float
+
+
+@task
+def statistics(values: list[float]) -> SummaryStats:
     """Summarize samples; bodies run as plain Python and are never lowered."""
     import math
 
@@ -86,19 +94,31 @@ def statistics(values: list[float]) -> tuple[float, float]:
         total += sample
     mean = total / len(values)
     variance = sum((sample - mean) ** 2 for sample in values) / len(values)
-    return mean, math.sqrt(variance)
+    return {'mean': mean, 'stdev': math.sqrt(variance)}
 
 
-@task(outputs=('alpha',))
-def mismatched_alpha(value: int) -> int:
+class Alpha(t.TypedDict):
+    """Single named output, mismatched on purpose."""
+
+    alpha: int
+
+
+class Beta(t.TypedDict):
+    """Single named output, mismatched on purpose."""
+
+    beta: int
+
+
+@task
+def mismatched_alpha(value: int) -> Alpha:
     """Return its input under the `alpha` output."""
-    return value
+    return {'alpha': value}
 
 
-@task(outputs=('beta',))
-def mismatched_beta(value: int) -> int:
+@task
+def mismatched_beta(value: int) -> Beta:
     """Return its input under the `beta` output."""
-    return value
+    return {'beta': value}
 
 
 @task

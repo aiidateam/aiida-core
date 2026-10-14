@@ -311,6 +311,13 @@ def with_block(value: int) -> int:
     return result
 
 
+# Move the block into a task instead:
+# @task
+# def resourced(value: int) -> int:
+#     with acquire(value) as handle:
+#         return use(handle)
+
+
 @graph
 def try_block(value: int) -> int:
     """Catch errors in the body; errors are values, not raises.
@@ -324,6 +331,18 @@ def try_block(value: int) -> int:
     return result
 
 
+# Declare fallible results instead:
+# @task
+# def fallible(value: int) -> Result[int, TaskErrors]: ...
+#
+# @graph
+# def guarded(value: int) -> int:
+#     outcome = fallible(value=value)
+#     if outcome.error is None:
+#         return outcome.result
+#     return 0
+
+
 @graph
 def raise_statement(value: int) -> int:
     """Raise in the body; errors are values, not raises.
@@ -334,6 +353,18 @@ def raise_statement(value: int) -> int:
     return add(x=value, y=1)
 
 
+# Return declared errors instead of raising:
+# @task
+# def fallible(value: int) -> Result[int, TaskErrors]: ...
+#
+# @graph
+# def guarded(value: int) -> int:
+#     outcome = fallible(value=value)
+#     if outcome.error is None:
+#         return outcome.result
+#     return 0
+
+
 @graph
 def assert_statement(value: int) -> int:
     """Assert in the body; contracts validate at the boundary instead.
@@ -342,6 +373,14 @@ def assert_statement(value: int) -> int:
     """
     assert value > 0
     return add(x=value, y=1)
+
+
+# Check values where they execute, inside task bodies:
+# @task
+# def checked(value: int) -> int:
+#     if value <= 0:
+#         raise ValueError('expected a positive value')
+#     return add(x=value, y=1)
 
 
 @graph

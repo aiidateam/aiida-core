@@ -14,8 +14,8 @@ import pytest
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, UnsupportedSyntax
 from aiida.engine.processes.graphs.build_source import GraphHandle, lower_from_source
+from aiida.engine.processes.graphs.ir import Dependency, GraphIR, TaskIR
 from aiida.engine.processes.graphs.shapes import load_shape
-from aiida.engine.processes.graphs.spec import Dependency, GraphSpec, TaskSpec
 from tests.engine.processes.graphs import language
 
 
@@ -51,7 +51,7 @@ def test_build_does_not_invoke_graph_or_task_bodies(monkeypatch: pytest.MonkeyPa
     assert spec.task_names == ('add', 'add_2')
     assert spec.dependencies == (Dependency('add', 'add_2', 'result', 'x'),)
     assert spec.inputs == {'x': (('add', 'x'),), 'y': (('add', 'y'), ('add_2', 'y'))}
-    assert GraphSpec.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+    assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
 
 
 def test_lower_from_source_matches_handle_build() -> None:
@@ -60,7 +60,7 @@ def test_lower_from_source_matches_handle_build() -> None:
 
 def test_declared_spec_round_trips_through_json() -> None:
     spec = language.multiply_add.lower()
-    restored = GraphSpec.from_dict(json.loads(json.dumps(spec.to_dict())))
+    restored = GraphIR.from_dict(json.loads(json.dumps(spec.to_dict())))
     assert restored.to_dict() == spec.to_dict()
     assert restored.identifier == 'multiply_add'
     assert set(restored.outputs) == {'result'}
@@ -127,7 +127,7 @@ def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, mes
 
 
 def test_nested_graph_builds_subgraph_task() -> None:
-    from aiida.engine.processes.graphs.spec import SubgraphTask
+    from aiida.engine.processes.graphs.ir import SubgraphTask
 
     spec = language.nested_multiply_add.lower()
     assert isinstance(spec.tasks[0], SubgraphTask)
@@ -135,7 +135,7 @@ def test_nested_graph_builds_subgraph_task() -> None:
 
 
 def test_branches_build_control_tasks() -> None:
-    from aiida.engine.processes.graphs.spec import BranchControl
+    from aiida.engine.processes.graphs.ir import BranchControl
 
     spec = language.external_choice.lower()
     assert isinstance(spec.tasks[0], BranchControl)
@@ -144,7 +144,7 @@ def test_branches_build_control_tasks() -> None:
 
 
 def test_loops_build_control_tasks() -> None:
-    from aiida.engine.processes.graphs.spec import LoopControl
+    from aiida.engine.processes.graphs.ir import LoopControl
 
     spec = language.countdown.lower()
     assert isinstance(spec.tasks[0], LoopControl)
@@ -190,15 +190,15 @@ def test_spec_version_and_unknown_task_kind_rejection() -> None:
     data = language.chain.lower().to_dict()
     data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
-        GraphSpec.from_dict(data)
+        GraphIR.from_dict(data)
     task_data = language.add.task_spec.to_dict()
     task_data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
-        TaskSpec.from_dict(task_data)
+        TaskIR.from_dict(task_data)
     data = language.chain.lower().to_dict()
     data['tasks'][0]['kind'] = 'map'
     with pytest.raises(GraphTypeCheckError, match='unsupported graph task kind'):
-        GraphSpec.from_dict(data)
+        GraphIR.from_dict(data)
     with pytest.raises(GraphTypeCheckError, match='Unknown graph value shape'):
         load_shape({'kind': 'many', 'required': True})
 

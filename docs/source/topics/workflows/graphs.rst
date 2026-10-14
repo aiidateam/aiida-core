@@ -4,7 +4,7 @@ Graphs of tasks
 ===============
 
 Workflows are plain Python functions using a tiny embedded language: assignments, calls, and returns, plus ``if`` and ``while`` over task results.
-Graph bodies never execute; AiiDA walks their source and lowers the supported constructs into a ``GraphSpec``, a static JSON-serializable DAG of tasks, dependencies, and typed ports, rejecting everything else with a source location.
+Graph bodies never execute; AiiDA walks their source and lowers the supported constructs into a ``GraphIR``, a static JSON-serializable DAG of tasks, dependencies, and typed ports, rejecting everything else with a source location.
 The engine runs the spec rather than the source, which is what makes provenance, checkpointing, caching, and daemon dispatch possible.
 An ``if`` becomes a branch dispatching exactly one side as a child graph; a ``while`` becomes a loop dispatching numbered child runs that thread state between iterations.
 
@@ -41,7 +41,7 @@ Launch it from another module or an interactive interpreter with a loaded AiiDA 
     submitted = submit(pipeline, x=2, y=3)
     declaration = pipeline.lower()
 
-Calling a graph directly is not supported. ``lower()`` returns a ``GraphSpec`` without running tasks or the graph body.
+Calling a graph directly is not supported. ``lower()`` returns a ``GraphIR`` without running tasks or the graph body.
 Graph inputs are the function parameters, with literal defaults filled when absent, and graph outputs reference task outputs or input leaves.
 Calls take named or positional arguments without unpacking. Assignments bind one name, unpack one tuple of task outputs, or share one placement across names. Arbitrary Python code, imports, comprehensions, and fan-out loops are rejected with a source location.
 

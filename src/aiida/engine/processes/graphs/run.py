@@ -16,9 +16,9 @@ from dataclasses import dataclass, field
 
 from aiida.common.links import LinkType
 from aiida.engine.processes.graphs.inputs import at, place
-from aiida.engine.processes.graphs.spec import (
+from aiida.engine.processes.graphs.ir import (
     BranchControl,
-    GraphSpec,
+    GraphIR,
     GraphTask,
     LoopControl,
     SubgraphTask,
@@ -49,7 +49,7 @@ class Start:
     instance: str
     task: GraphTask
     inputs: dict[str, t.Any]
-    body: GraphSpec | None = None
+    body: GraphIR | None = None
 
 
 @dataclass
@@ -59,7 +59,7 @@ class Step:
     starts: list[Start] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
-    def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any], body: GraphSpec | None = None) -> None:
+    def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any], body: GraphIR | None = None) -> None:
         """Record the dispatch of one task instance within this step."""
         self.starts.append(Start(instance=instance, task=task, inputs=inputs, body=body))
 
@@ -83,7 +83,7 @@ class GraphRunState(t.TypedDict, total=False):
 class GraphRun:
     """How far a graph has progressed; dispatch itself belongs to GraphProcess."""
 
-    graph: GraphSpec
+    graph: GraphIR
     given: dict[str, t.Any] = field(default_factory=dict)
     instances: dict[str, list[str]] = field(default_factory=dict)
     dispatched: dict[str, int] = field(default_factory=dict)
@@ -177,7 +177,7 @@ class GraphRun:
         }
 
     @classmethod
-    def from_dict(cls, graph: GraphSpec, given: dict[str, t.Any], data: Mapping[str, t.Any]) -> GraphRun:
+    def from_dict(cls, graph: GraphIR, given: dict[str, t.Any], data: Mapping[str, t.Any]) -> GraphRun:
         """Rebuild the scheduling progress from a checkpoint."""
         readable_version(data.get('version', STATE_VERSION), STATE_VERSION, 'graph run')
         return cls(

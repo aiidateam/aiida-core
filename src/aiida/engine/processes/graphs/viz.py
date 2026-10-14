@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 
-from aiida.engine.processes.graphs.spec import BodyTask, GraphSpec
+from aiida.engine.processes.graphs.ir import BodyTask, GraphIR
 
 __all__ = ('to_mermaid',)
 
@@ -34,7 +34,7 @@ def _edge(source: str, target: str, label: str = '') -> str:
     return f'    {source} --> {target}'
 
 
-def to_mermaid(spec: GraphSpec) -> str:
+def to_mermaid(spec: GraphIR) -> str:
     """Return the graph template as a Mermaid flowchart.
 
     Placements render flat with path-prefixed ids, so nested regions need no
@@ -50,7 +50,7 @@ def to_mermaid(spec: GraphSpec) -> str:
     return '\n'.join(lines) + '\n'
 
 
-def _render_body(spec: GraphSpec, prefix: tuple[str, ...], lines: list[str]) -> None:
+def _render_body(spec: GraphIR, prefix: tuple[str, ...], lines: list[str]) -> None:
     """Draw one template level: inputs, placements, wirings, and nested bodies."""
     for name, targets in spec.inputs.items():
         lines.append('    ' + _node_id(*prefix, 'in', name) + '{{' + _label(name) + '}}')

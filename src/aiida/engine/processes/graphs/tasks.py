@@ -25,7 +25,7 @@ from aiida.engine.processes.functions import (
     process_function,
 )
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.graphs.spec import TaskSpec, fixed_inputs
+from aiida.engine.processes.graphs.ir import TaskIR, fixed_inputs
 from aiida.engine.processes.port_model import field_from_annotation, is_structured
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
@@ -98,7 +98,7 @@ class TaskHandle(t.Generic[P, R]):
 
     def __init__(self, function: ProcessFunctionType[P, R, CalcFunctionNode]) -> None:
         self._function = function
-        self.task_spec = TaskSpec.from_process(function)
+        self.task_spec = TaskIR.from_process(function)
         # Copy name and docstring, not the function state: the handle owns its task spec.
         functools.update_wrapper(self, function, updated=())
 

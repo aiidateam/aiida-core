@@ -17,9 +17,9 @@ from aiida.common.exceptions import GraphError, GraphTypeCheckError, MissingRequ
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.build_source import GraphHandle
+from aiida.engine.processes.graphs.ir import GraphIR
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.run import GraphRun
-from aiida.engine.processes.graphs.spec import GraphSpec
 from aiida.engine.processes.graphs.tasks import TaskHandle
 from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.int import Int
@@ -61,7 +61,7 @@ def test_supported_graph_syntax_executes(
 ) -> None:
     """Supported declarations and their JSON representations return exact named values."""
     if serialized:
-        spec = GraphSpec.from_dict(json.loads(json.dumps(declaration.lower().to_dict())))
+        spec = GraphIR.from_dict(json.loads(json.dumps(declaration.lower().to_dict())))
         outputs, node = run_get_node(GraphProcess, **GraphProcess.launch_inputs(spec, inputs))
     else:
         outputs, node = run_get_node(declaration, **inputs)

@@ -19,8 +19,8 @@ from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.graphs.ir import GraphIR, ProcessTask
 from aiida.engine.processes.graphs.run import GraphRun, GraphRunState, Start
-from aiida.engine.processes.graphs.spec import GraphSpec, ProcessTask
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
@@ -55,7 +55,7 @@ class GraphProcess(Process):
 
     @override
     def _create_and_setup_db_record(self) -> t.Any:
-        graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
+        graph = GraphIR.from_dict(self.inputs[self._GRAPH].get_dict())
         stored = graph.serialize_inputs(dict(self.inputs.get(self._GRAPH_INPUTS, {})))
         self._input_sources = AttributesFrozendict({**self._input_sources, self._GRAPH_INPUTS: stored})
         self._parsed_inputs = AttributesFrozendict(
@@ -65,7 +65,7 @@ class GraphProcess(Process):
         return super()._create_and_setup_db_record()
 
     @classmethod
-    def launch_inputs(cls, body: GraphSpec, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
+    def launch_inputs(cls, body: GraphIR, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
         """Validate graph inputs before constructing its process or storing provenance."""
         return {cls._GRAPH: Dict(dict=body.to_dict()), cls._GRAPH_INPUTS: body.serialize_inputs(inputs)}
 
@@ -79,7 +79,7 @@ class GraphProcess(Process):
     def run_state(self) -> GraphRun:
         """Return the scheduling progress, rebuilt from the checkpoint when needed."""
         if self._run is None:
-            graph = GraphSpec.from_dict(self.inputs[self._GRAPH].get_dict())
+            graph = GraphIR.from_dict(self.inputs[self._GRAPH].get_dict())
             self._run = GraphRun.from_dict(
                 graph=graph,
                 given=graph.serialize_inputs(dict(self._input_sources.get(self._GRAPH_INPUTS, {}))),
@@ -88,7 +88,7 @@ class GraphProcess(Process):
         return self._run
 
     @property
-    def graph(self) -> GraphSpec:
+    def graph(self) -> GraphIR:
         """Return the static graph this process executes."""
         return self.run_state.graph
 

@@ -28,15 +28,15 @@ __all__ = (
     'BranchControl',
     'Dependency',
     'Endpoint',
-    'GraphSpec',
+    'GraphIR',
     'LoopControl',
     'ProcessTask',
     'SubgraphTask',
-    'TaskSpec',
+    'TaskIR',
 )
 
-SPEC_VERSION = '0.1'
-TASK_SPEC_VERSION = '0.1'
+GRAPH_IR_VERSION = '0.1'
+TASK_IR_VERSION = '0.1'
 CONDITION_PORT = 'condition'
 TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
 
@@ -97,15 +97,15 @@ class ExecutorReference:
 
 
 @dataclass(frozen=True)
-class TaskSpec:
+class TaskIR:
     """A task's executor and its static input/output contracts."""
 
     identifier: str
     executor: ExecutorReference
-    version: str = TASK_SPEC_VERSION
+    version: str = TASK_IR_VERSION
 
     @classmethod
-    def from_process(cls, process: t.Callable[..., t.Any]) -> TaskSpec:
+    def from_process(cls, process: t.Callable[..., t.Any]) -> TaskIR:
         """Reference an importable decorated task function."""
         return cls(identifier=process.__name__, executor=ExecutorReference(process.__module__, process.__name__))
 
@@ -154,12 +154,12 @@ class TaskSpec:
         return {'identifier': self.identifier, 'executor': self.executor.to_dict(), 'version': self.version}
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, t.Any]) -> TaskSpec:
+    def from_dict(cls, data: Mapping[str, t.Any]) -> TaskIR:
         """Rebuild a task declaration from its serialized form."""
         return cls(
             identifier=data['identifier'],
             executor=ExecutorReference.from_dict(data['executor']),
-            version=readable_version(data.get('version'), TASK_SPEC_VERSION, 'task'),
+            version=readable_version(data.get('version'), TASK_IR_VERSION, 'task'),
         )
 
 
@@ -225,7 +225,11 @@ class Dependency:
 
 @dataclass(frozen=True, kw_only=True)
 class GraphTask(abc.ABC):
-    """A named process or control-flow task with directly supplied inputs."""
+    """A named process or control-flow task with directly supplied inputs.
+
+    `Task` nodes execute something (a process or a nested template run once);
+    `Control` nodes dispatch bodies without executing anything themselves.
+    """
 
     KIND: t.ClassVar[TaskKind]
     name: str
@@ -254,8 +258,8 @@ class GraphTask(abc.ABC):
         common = {'name': data['name'], 'inputs': data.get('inputs', {})}
         kind = data.get('kind')
         if kind == 'process':
-            return ProcessTask(spec=TaskSpec.from_dict(data['spec']), **common)
-        body = GraphSpec.from_dict(data['body']) if kind in ('graph', 'branch', 'loop') else None
+            return ProcessTask(spec=TaskIR.from_dict(data['spec']), **common)
+        body = GraphIR.from_dict(data['body']) if kind in ('graph', 'branch', 'loop') else None
         if kind == 'graph':
             assert body is not None
             return SubgraphTask(body=body, **common)
@@ -263,7 +267,7 @@ class GraphTask(abc.ABC):
             assert body is not None
             return BranchControl(
                 body=body,
-                otherwise=GraphSpec.from_dict(data['otherwise']) if data.get('otherwise') is not None else None,
+                otherwise=GraphIR.from_dict(data['otherwise']) if data.get('otherwise') is not None else None,
                 condition_port=data.get('condition_port', CONDITION_PORT),
                 **common,
             )
@@ -283,7 +287,7 @@ class GraphTask(abc.ABC):
 class BodyTask(GraphTask):
     """A placement whose executor is a nested graph template."""
 
-    body: GraphSpec
+    body: GraphIR
 
     def input_ports(self) -> tuple[PortNamespace, ...]:
         """Return the input contracts of the nested template."""
@@ -311,10 +315,10 @@ class BranchControl(BodyTask):
 
     KIND: t.ClassVar[TaskKind] = 'branch'
     condition_port: str = CONDITION_PORT
-    otherwise: GraphSpec | None = None
+    otherwise: GraphIR | None = None
 
     @property
-    def branches(self) -> tuple[GraphSpec, ...]:
+    def branches(self) -> tuple[GraphIR, ...]:
         """Return the taken-first side templates."""
         return (self.body,) if self.otherwise is None else (self.body, self.otherwise)
 
@@ -348,7 +352,7 @@ class ProcessTask(GraphTask):
     """A decorated task function dispatched as one child process."""
 
     KIND: t.ClassVar[TaskKind] = 'process'
-    spec: TaskSpec
+    spec: TaskIR
 
     def input_ports(self) -> tuple[PortNamespace, ...]:
         """Return the fixed input contracts of the task process."""
@@ -376,7 +380,7 @@ def _stored_types(port: t.Any) -> tuple[type, ...]:
 
 
 @dataclass(frozen=True)
-class GraphSpec:
+class GraphIR:
     """A static graph template, with fixed input namespaces and named leaf outputs."""
 
     tasks: tuple[GraphTask, ...]
@@ -384,7 +388,7 @@ class GraphSpec:
     inputs: dict[str, tuple[Route, ...]] = field(default_factory=dict)
     outputs: dict[str, Endpoint] = field(default_factory=dict)
     identifier: str | None = None
-    version: str = SPEC_VERSION
+    version: str = GRAPH_IR_VERSION
     input_namespace: dict[str, t.Any] | None = None
     output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
     result_path: str | None = None
@@ -533,7 +537,7 @@ class GraphSpec:
             if not isinstance(source, PortNamespace) or not isinstance(target, PortNamespace):
                 msg = f'{context} has incompatible value and namespace shapes.'
                 raise GraphTypeCheckError(msg)
-            GraphSpec._check_namespaces(source, target, context)
+            GraphIR._check_namespaces(source, target, context)
             return
 
         produced, accepted = _stored_types(source), _stored_types(target)
@@ -549,15 +553,15 @@ class GraphSpec:
     @staticmethod
     def _check_compatible(first: PortNamespace, second: PortNamespace, context: str) -> None:
         """Check that two output contracts accept each other."""
-        GraphSpec._check_types(first, second, context)
-        GraphSpec._check_types(second, first, context)
+        GraphIR._check_types(first, second, context)
+        GraphIR._check_types(second, first, context)
 
     @staticmethod
     def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str) -> None:
         """Check that shared fields agree and required fields exist."""
         for name, child in target.items():
             if name in source:
-                GraphSpec._check_types(source[name], child, context)
+                GraphIR._check_types(source[name], child, context)
             elif child.required:
                 msg = f'{context} is missing required field `{name}`.'
                 raise GraphTypeCheckError(msg)
@@ -670,7 +674,7 @@ class GraphSpec:
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, t.Any]) -> GraphSpec:
+    def from_dict(cls, data: Mapping[str, t.Any]) -> GraphIR:
         """Rebuild a graph template from its serialized form."""
         return cls(
             tasks=tuple(GraphTask.from_dict(task) for task in data['tasks']),
@@ -680,7 +684,7 @@ class GraphSpec:
             },
             outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
             identifier=data.get('identifier'),
-            version=readable_version(data.get('version'), SPEC_VERSION, 'graph'),
+            version=readable_version(data.get('version'), GRAPH_IR_VERSION, 'graph'),
             input_namespace=data.get('input_namespace'),
             result_path=data.get('result_path'),
             output_typehints={

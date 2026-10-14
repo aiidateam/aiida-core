@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Build a GraphSpec from restricted graph source without executing graph bodies.
+"""Build a GraphIR from restricted graph source without executing graph bodies.
 
 Lowering retrieves each graph definition once and passes it through the parser without further registry reads.
 Graph bodies are never executed.
@@ -27,6 +27,18 @@ from types import MappingProxyType
 
 from aiida.common.exceptions import GraphError, UnsupportedSyntax
 from aiida.engine.processes.graphs.inputs import place
+from aiida.engine.processes.graphs.ir import (
+    CONDITION_PORT,
+    BranchControl,
+    Dependency,
+    Endpoint,
+    GraphIR,
+    LoopControl,
+    ProcessTask,
+    Route,
+    SubgraphTask,
+    TaskIR,
+)
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.shapes import (
     NamespaceShape,
@@ -35,18 +47,6 @@ from aiida.engine.processes.graphs.shapes import (
     json_default,
     shape_for_annotation,
     shape_for_annotations,
-)
-from aiida.engine.processes.graphs.spec import (
-    CONDITION_PORT,
-    BranchControl,
-    Dependency,
-    Endpoint,
-    GraphSpec,
-    LoopControl,
-    ProcessTask,
-    Route,
-    SubgraphTask,
-    TaskSpec,
 )
 from aiida.engine.processes.graphs.tasks import TaskHandle, build_task
 
@@ -74,7 +74,7 @@ class GraphHandle:
         """Return the declared function for the lowering pipeline."""
         return self._function
 
-    def lower(self) -> GraphSpec:
+    def lower(self) -> GraphIR:
         """Return the graph that the function declares, lowered from its registered source."""
         return replace(lower_from_source(self.function), identifier=self.identifier)
 
@@ -173,7 +173,7 @@ def _resolve_target(function: Callable[..., t.Any], name: str) -> object:
     return function.__globals__.get(name)
 
 
-def _task_spec_for(target: object) -> TaskSpec | None:
+def _task_spec_for(target: object) -> TaskIR | None:
     """Return the declaration of a task handle, or `None` for other call targets."""
     return target.task_spec if isinstance(target, TaskHandle) else None
 
@@ -356,7 +356,7 @@ def _declare_graph_inputs(state: _LoweringState, function: ast.FunctionDef) -> N
     return boundary
 
 
-def _lower_function(state: _LoweringState) -> GraphSpec:
+def _lower_function(state: _LoweringState) -> GraphIR:
     """Lower one registered graph definition to a static template."""
     function = _parse_function(state.definition)
     _check_signature(state, function)
@@ -390,7 +390,7 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
         msg = 'return must name a task or graph input; return placements, input leaves, or mappings'
         _reject(state, statements[-1], msg)
     outputs, output_typehints = _lower_outputs(state, result)
-    return GraphSpec(
+    return GraphIR(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
@@ -555,7 +555,7 @@ class _Arm(t.NamedTuple):
 
     name: str
     child: _LoweringState
-    body: GraphSpec
+    body: GraphIR
 
 
 def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
@@ -619,7 +619,7 @@ def _snapshot_namespace_boundary(state: _LoweringState) -> dict[str, t.Any] | No
     return dump_shape(NamespaceShape(fields=tuple((name, state.names[name].shape) for name in names)))
 
 
-def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
+def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphIR:
     """Lower collected region state to a nested graph template."""
     if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
         msg = 'control-flow outputs must be static leaves, not namespaces.'
@@ -627,7 +627,7 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
     endpoints: dict[str, Endpoint] = {
         name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()
     }
-    return GraphSpec(
+    return GraphIR(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
@@ -674,13 +674,13 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     target: TaskHandle | GraphHandle = _registered_target(state, expression, name)
     instance: str = _claim_name(state, name)
     if isinstance(target, GraphHandle):
-        body: GraphSpec = _lower_registered_graph(_registry_key(target.function), state.stack)
+        body: GraphIR = _lower_registered_graph(_registry_key(target.function), state.stack)
         task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
         inputs: NamespaceShape = body.input_shape
         result_port: str = body.result_port
         result_shape: Shape = body.result_shape
     else:
-        spec: TaskSpec | None = _task_spec_for(target)
+        spec: TaskIR | None = _task_spec_for(target)
         assert spec is not None
         task = ProcessTask(name=instance, inputs={}, spec=spec)
         inputs = spec.input_shape
@@ -929,7 +929,7 @@ def _select_field(
     return _Reference(reference.task, path, shape)
 
 
-def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
+def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphIR:
     """Lower a nested graph once, rejecting recursive calls."""
     definition = _SOURCE_REGISTRY.get_graph(key)
     if key in stack:
@@ -938,7 +938,7 @@ def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
     return _lower_function(_LoweringState(definition, (*stack, key)))
 
 
-def lower_from_source(function: GraphHandle | Callable[..., t.Any]) -> GraphSpec:
-    """Build a GraphSpec from a registered graph's source and its registered callees."""
+def lower_from_source(function: GraphHandle | Callable[..., t.Any]) -> GraphIR:
+    """Build a GraphIR from a registered graph's source and its registered callees."""
     target = function.function if isinstance(function, GraphHandle) else function
     return _lower_registered_graph(_registry_key(target), ())

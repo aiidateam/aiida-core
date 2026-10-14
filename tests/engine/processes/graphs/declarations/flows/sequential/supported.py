@@ -24,6 +24,37 @@ from tests.engine.processes.graphs.declarations.tasks import (
     statistics,
 )
 
+__all__ = (
+    'chain',
+    'chained_assignment',
+    'collision',
+    'default_parameter',
+    'diamond',
+    'dictionary_input',
+    'failed',
+    'input_passthrough',
+    'keyword_only_parameter',
+    'labelled',
+    'literal_dictionary',
+    'missing_task_input',
+    'multiple_ordered',
+    'multiply_add',
+    'named',
+    'nested',
+    'nested_multiply_add',
+    'ordered',
+    'ordered_named',
+    'orm_passthrough',
+    'positional_only_parameter',
+    'positional_task_arguments',
+    'selected',
+    'selected_field',
+    'summarize',
+    'tuple_assignment',
+    'whole',
+    'wired',
+)
+
 
 @graph
 def chain(x: int, y: int) -> int:

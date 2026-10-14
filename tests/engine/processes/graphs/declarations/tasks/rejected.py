@@ -10,6 +10,11 @@
 
 import typing as t
 
+__all__ = (
+    'kwargs_function',
+    'unannotated_function',
+)
+
 
 def unannotated_function(x: int):
     """Reject functions without a return annotation at decoration.

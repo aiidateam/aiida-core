@@ -14,6 +14,31 @@ from aiida.engine.processes.graphs.build_source import task
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.declarations.port_models import Configuration
 
+__all__ = (
+    'Alpha',
+    'ArithmeticPair',
+    'Beta',
+    'SummaryStats',
+    'add',
+    'arithmetic_pair',
+    'collision_add',
+    'decrement',
+    'fail_always',
+    'is_positive',
+    'mismatched_alpha',
+    'mismatched_beta',
+    'mistyped_dict',
+    'mistyped_list',
+    'mistyped_output',
+    'multiply',
+    'pass_int',
+    'prepare',
+    'read_answer',
+    'read_nested_count',
+    'read_orm_node',
+    'statistics',
+)
+
 
 @task
 def add(x: int, y: int) -> int:

@@ -11,6 +11,12 @@
 from aiida.engine.processes.graphs.build_source import graph
 from tests.engine.processes.graphs.declarations.tasks import add, decrement, is_positive
 
+__all__ = (
+    'countdown',
+    'countdown_call',
+    'fanout',
+)
+
 
 @graph
 def countdown(value: int, condition: bool) -> int:
@@ -33,16 +39,16 @@ def countdown_call(value: int) -> int:
 # -> defer for follow-up
 @graph
 def fanout(values: list[int]) -> int:
-    """Loop over inputs, rebinding each round; fan-out over runtime collections is not supported.
-
-    Unroll the placements instead:
-
-    >>> @graph
-    >>> def unrolled_fanout(value: int) -> int:
-    >>>     first = add(x=value, y=1)
-    >>>     second = add(x=first, y=1)
-    >>>     return add(x=second, y=1)
-    """
+    """Loop over inputs, rebinding each round; fan-out over runtime collections is not supported."""
     for value in values:
         result = add(x=value, y=1)
     return result  # rejected at lowering
+
+
+# Unroll the placements instead:
+
+# @graph
+# def unrolled_fanout(value: int) -> int:
+#     first = add(x=value, y=1)
+#     second = add(x=first, y=1)
+#     return add(x=second, y=1)

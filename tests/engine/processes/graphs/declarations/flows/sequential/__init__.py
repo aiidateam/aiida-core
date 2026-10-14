@@ -6,8 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Graph declarations shared by the behavior suites, by control kind."""
+"""Sequential graph declarations shared by the behavior suites."""
 
-from tests.engine.processes.graphs.declarations.graphs.conditional import *
-from tests.engine.processes.graphs.declarations.graphs.iterative import *
-from tests.engine.processes.graphs.declarations.graphs.sequential import *
+from tests.engine.processes.graphs.declarations.flows.sequential.rejected import *
+from tests.engine.processes.graphs.declarations.flows.sequential.supported import *

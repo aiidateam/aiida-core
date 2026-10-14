@@ -11,6 +11,13 @@
 from aiida.engine.processes.graphs.build_source import graph
 from tests.engine.processes.graphs.declarations.tasks import add, is_positive, mismatched_alpha, mismatched_beta
 
+__all__ = (
+    'computed_choice',
+    'external_choice',
+    'inline_condition',
+    'mismatched_branches',
+)
+
 
 @graph
 def external_choice(value: int, condition: bool) -> int:

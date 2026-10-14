@@ -8,6 +8,6 @@
 ###########################################################################
 """Importable task and graph declarations shared by the behavior suites."""
 
-from tests.engine.processes.graphs.declarations.graphs import *
+from tests.engine.processes.graphs.declarations.flows import *
 from tests.engine.processes.graphs.declarations.port_models import *
 from tests.engine.processes.graphs.declarations.tasks import *

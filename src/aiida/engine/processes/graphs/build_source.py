@@ -132,7 +132,7 @@ class _SourceRegistry:
         """Capture a definition atomically, without executing its body."""
         key = _key(function)
         if key in self._definitions:
-            msg = f'Duplicate registered function {key}'
+            msg = f'Duplicate registered function {key}; decorate each function once.'
             raise UnsupportedSyntax(msg)
         try:
             lines, first_line = inspect.getsourcelines(function)
@@ -160,7 +160,7 @@ class _SourceRegistry:
         """Retrieve a source graph once, at the entry to its lowering pipeline."""
         definition = self._definitions.get(key)
         if definition is None or definition.kind != 'graph':
-            msg = f'Graph {key} is not registered'
+            msg = f'Graph {key} is not registered; decorate it with `@graph`.'
             raise UnsupportedSyntax(msg)
         return definition
 
@@ -289,7 +289,7 @@ def _parse_function(definition: _SourceDefinition) -> ast.FunctionDef:
 def _check_signature(state: _LoweringState, function: ast.FunctionDef) -> None:
     """Reject parameter kinds the graph compiler cannot represent."""
     if function.args.vararg or function.args.kwarg:
-        _reject(state, function, 'variadic parameters are not supported')
+        _reject(state, function, 'variadic parameters are not supported; declare fixed parameters instead')
 
 
 def _parameter_defaults(state: _LoweringState, function: ast.FunctionDef) -> dict[str, t.Any]:
@@ -307,11 +307,19 @@ def _parameter_defaults(state: _LoweringState, function: ast.FunctionDef) -> dic
         try:
             value: t.Any = ast.literal_eval(default)
         except (ValueError, TypeError, SyntaxError):
-            _reject(state, default, f'parameter default for `{parameter.arg}` must be a literal')
+            _reject(
+                state,
+                default,
+                f'parameter default for `{parameter.arg}` must be a literal; use a task or an input instead',
+            )
         try:
             json_default(value)
         except TypeError:
-            _reject(state, default, f'parameter default for `{parameter.arg}` must be a finite JSON value')
+            _reject(
+                state,
+                default,
+                f'parameter default for `{parameter.arg}` must be a finite JSON value; pass richer values as inputs',
+            )
         defaults[parameter.arg] = value
     return defaults
 
@@ -338,7 +346,7 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
         if isinstance(statements[0].value.value, str):
             statements = statements[1:]
     if not statements or not isinstance(statements[-1], ast.Return):
-        msg = f'{state.key}: graph must end in a return'
+        msg = f'{state.key}: graph must end in a return declaring its outputs'
         raise UnsupportedSyntax(msg)
     for statement in statements[:-1]:
         if isinstance(statement, ast.If):
@@ -359,7 +367,8 @@ def _lower_function(state: _LoweringState) -> GraphSpec:
             _lower_assignment(state, statement)
     result: ast.expr | None = statements[-1].value
     if result is None:
-        _reject(state, statements[-1], 'return must name a task or graph input')
+        msg = 'return must name a task or graph input; return placements, input leaves, or mappings'
+        _reject(state, statements[-1], msg)
     outputs, output_typehints = _lower_outputs(state, result)
     return GraphSpec(
         tasks=tuple(state.tasks),
@@ -378,7 +387,7 @@ def _lower_outputs(state: _LoweringState, result: ast.expr) -> tuple[dict[str, E
     references = _lower_return(state, result)
     returned = shape_for_annotation(hints.get('return'))
     if isinstance(returned, NamespaceShape):
-        _reject(state, result, 'graph output namespaces are not supported')
+        _reject(state, result, 'graph output namespaces are not supported; select leaf fields instead')
     outputs = {name: Endpoint(task=reference.task, port=reference.port) for name, reference in references.items()}
     typehints: dict[str, tuple[type, ...]] = (
         {next(iter(outputs)): returned.types} if len(outputs) == 1 and returned.types else {}
@@ -392,17 +401,21 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
         outputs: dict[str, _Reference] = {}
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str) or not key.value.isidentifier():
-                _reject(state, expression, 'output names must be identifier string literals')
+                _reject(state, expression, 'output names must be identifier string literals; name outputs statically')
             if key.value in outputs:
-                _reject(state, expression, 'duplicate graph output')
+                _reject(state, expression, 'duplicate graph output; name each output once')
             reference = _lower_value(state, value, allow_call=True)
             if not isinstance(reference, _Reference) or isinstance(reference.shape, NamespaceShape):
-                _reject(state, value, 'graph outputs must select static leaves')
+                _reject(state, value, 'graph outputs must select static leaves, not namespaces')
             outputs[key.value] = reference
         return outputs
     reference = _lower_value(state, expression, allow_call=True)
     if not isinstance(reference, _Reference) or not reference.port or isinstance(reference.shape, NamespaceShape):
-        _reject(state, expression, 'return must select a task output or graph input leaf')
+        _reject(
+            state,
+            expression,
+            'return must select a task output or graph input leaf; return placements, input leaves, or mappings',
+        )
     port = reference.port.split('.')[-1]
     return {port: reference}
 
@@ -410,15 +423,16 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
 def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
     """Bind a call result to new placement names."""
     if not isinstance(statement, ast.Assign) or not statement.targets:
-        _reject(state, statement, 'only single-name assignments are supported')
+        _reject(state, statement, 'only single-name assignments are supported; bind each placement to a new name')
     names: list[str] = [target.id for target in statement.targets if isinstance(target, ast.Name)]
     if len(names) != len(statement.targets):
-        _reject(state, statement, 'only single-name assignments are supported')
+        _reject(state, statement, 'only single-name assignments are supported; bind each placement to a new name')
     for name in names:
         if name in state.names and not rebind:
-            _reject(state, statement, 'assignment must bind a new name')
+            _reject(state, statement, 'assignment must bind a new name; use a fresh name instead of rebinding')
     if not isinstance(statement.value, ast.Call):
-        _reject(state, statement.value, 'graph assignments must call a registered task or graph')
+        msg = 'graph assignments must call a registered task or graph; pass literals as call arguments'
+        _reject(state, statement.value, msg)
     ref: _Reference = _lower_call(state, statement.value)
     for name in names:
         state.names[name] = ref
@@ -431,15 +445,16 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
     assert isinstance(target, ast.Tuple)
     names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
     if not names or len(names) != len(target.elts) or any(name in state.names for name in names):
-        _reject(state, statement, 'tuple assignment must bind new names')
+        _reject(state, statement, 'tuple assignment must bind new names; use fresh names')
     if not isinstance(statement.value, ast.Call):
-        _reject(state, statement.value, 'graph assignments must call a registered task or graph')
+        msg = 'graph assignments must call a registered task or graph; pass literals as call arguments'
+        _reject(state, statement.value, msg)
     ref: _Reference = _lower_call(state, statement.value)
     if not isinstance(ref.shape, NamespaceShape):
         if len(names) == 1:
             state.names[names[0]] = ref
             return
-        _reject(state, statement.value, 'tuple assignment needs multiple outputs')
+        _reject(state, statement.value, 'tuple assignment needs multiple outputs; bind single outputs to one name')
     fields: tuple[tuple[str, Shape], ...] = ref.shape.fields
     if len(names) != len(fields):
         _reject(state, statement, f'tuple assignment needs exactly {len(fields)} names for {len(fields)} outputs')
@@ -503,7 +518,7 @@ def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState
     child = _LoweringState(state.definition, state.stack)
     for name in sorted(names):
         if name not in state.names:
-            _reject(state, statements[0], f'unbound name {name!r}')
+            _reject(state, statements[0], f'unbound name {name!r}; bind it before the region')
         child.inputs[name] = []
         shape = state.names[name].shape
         child.names[name] = _Reference(None, name, shape)
@@ -551,7 +566,7 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     if first.name != second.name or first.name in state.names:
         _reject(state, statement, 'if requires one new name shared by both sides')
     if CONDITION_PORT in first.body.inputs or CONDITION_PORT in second.body.inputs:
-        _reject(state, statement, 'condition conflicts with a branch input')
+        _reject(state, statement, 'condition conflicts with a branch input; rename one of them')
     instance = f'branch_{len(state.tasks) + 1}'
     given: dict[str, GivenValue] = {}
     _wire(state, instance, CONDITION_PORT, _lower_value(state, test), given)
@@ -588,7 +603,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         child.inputs.setdefault(name, [])
         child.names[name] = _Reference(None, name, state.names[name].shape)
     if condition not in assigned:
-        _reject(state, statement, 'while body must update its condition')
+        _reject(state, statement, 'while body must update its condition; rebind the condition name in the body')
     for node in body:
         _lower_assignment(child, node, rebind=True)
     outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
@@ -604,9 +619,9 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
 def _called_name(state: _LoweringState, expression: ast.expr) -> str:
     """Return the target of a direct call, rejecting shadowed or indirect calls."""
     if not isinstance(expression, ast.Call) or not isinstance(expression.func, ast.Name):
-        _reject(state, expression, 'only direct calls to registered tasks or graphs are supported')
+        _reject(state, expression, 'only direct calls to registered tasks or graphs are supported; call them by name')
     if expression.func.id in state.names:
-        _reject(state, expression, f'call target {expression.func.id!r} is shadowed')
+        _reject(state, expression, f'call target {expression.func.id!r} is shadowed; rename the placement')
     return expression.func.id
 
 
@@ -614,7 +629,7 @@ def _registered_target(state: _LoweringState, expression: ast.expr, name: str) -
     """Return the task handle or graph behind a call target."""
     target = _resolve_binding(state.definition.function, name)
     if _task_spec_for(target) is None and not isinstance(target, GraphHandle):
-        _reject(state, expression, f'unregistered call {name!r}')
+        _reject(state, expression, f'unregistered call {name!r}; decorate it with `@task` or `@graph`')
     assert isinstance(target, (TaskHandle, GraphHandle))
     return target
 
@@ -655,7 +670,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     task = replace(task, inputs=_lower_keywords(state, instance, name, inputs, keywords))
     missing: list[str] = _required_missing(state, instance, inputs, task.inputs)
     if missing:
-        _reject(state, expression, f'task {name!r} is missing required inputs: {missing}')
+        _reject(state, expression, f'task {name!r} is missing required inputs: {missing}; pass them as call arguments')
     state.tasks.append(task)
     return _Reference(instance, result_port, result_shape)
 
@@ -669,11 +684,11 @@ def _named_keywords(
     else:
         order: list[str] = [field for field, _ in inputs.fields]
         if len(expression.args) > len(order):
-            _reject(state, expression, f'too many positional arguments for `{name}`')
+            _reject(state, expression, f'too many positional arguments for `{name}`; drop the extras')
         keywords = [ast.keyword(arg=field, value=arg) for field, arg in zip(order, expression.args)]
         keywords.extend(expression.keywords)
     if any(keyword.arg is None for keyword in keywords):
-        _reject(state, expression, 'calls require named arguments without unpacking')
+        _reject(state, expression, 'calls require named arguments without unpacking; pass each input by name')
     return keywords
 
 
@@ -685,7 +700,7 @@ def _wire_after(state: _LoweringState, instance: str, keyword: ast.keyword) -> N
     for predecessor in ordered:
         reference = _lower_value(state, predecessor)
         if not isinstance(reference, _Reference) or reference.task is None:
-            _reject(state, predecessor, 'after must name a previously placed task')
+            _reject(state, predecessor, 'after must name a previously placed task; place it earlier in the body')
         state.dependencies.append(Dependency(reference.task, instance))
 
 
@@ -699,7 +714,7 @@ def _lower_keywords(
         port = keyword.arg
         assert port is not None
         if port in seen:
-            _reject(state, keyword, f'duplicate input {port!r}')
+            _reject(state, keyword, f'duplicate input {port!r}; pass it once')
         seen.add(port)
         if port == 'after':
             _wire_after(state, instance, keyword)
@@ -707,7 +722,7 @@ def _lower_keywords(
         try:
             shape = inputs.select(port)
         except KeyError:
-            _reject(state, keyword, f'duplicate or unknown input {port!r} of {name!r}')
+            _reject(state, keyword, f'duplicate or unknown input {port!r} of {name!r}; check the signature')
         _lower_input(state, instance, port, keyword.value, shape, given)
     return given
 
@@ -760,14 +775,15 @@ def _lower_input(
         seen: set[str] = set()
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
-                _reject(state, expression, 'namespace keys must be string literals without unpacking')
+                msg = 'namespace keys must be string literals without unpacking; compute dynamic keys in tasks'
+                _reject(state, expression, msg)
             name: str = key.value
             if name in seen:
-                _reject(state, expression, f'duplicate or unknown namespace input {name!r}')
+                _reject(state, expression, f'duplicate or unknown namespace input {name!r}; check declared names')
             try:
                 child = shape.select(name)
             except KeyError:
-                _reject(state, expression, f'duplicate or unknown namespace input {name!r}')
+                _reject(state, expression, f'duplicate or unknown namespace input {name!r}; check declared names')
             seen.add(name)
             _lower_input(state, instance, f'{path}.{name}', value, child, given)
         return
@@ -790,7 +806,7 @@ def _lower_value(
         return _lower_selection(state, expression, allow_call=allow_call)
     if isinstance(expression, ast.Name):
         if expression.id not in state.names:
-            _reject(state, expression, f'unbound name {expression.id!r}')
+            _reject(state, expression, f'unbound name {expression.id!r}; bind it in an earlier placement')
         return state.names[expression.id]
     if isinstance(expression, ast.Constant) and (
         expression.value is None or isinstance(expression.value, (int, float, str, bool))
@@ -798,23 +814,23 @@ def _lower_value(
         return expression.value
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression)
-    _reject(state, expression, 'unsupported expression')
+    _reject(state, expression, 'unsupported expression; move the computation into a task body')
 
 
 def _lower_selection(state: _LoweringState, expression: ast.Attribute, *, allow_call: bool = False) -> _Reference:
     """Resolve dotted access to a task output or a declared namespace field."""
     parent = _lower_value(state, expression.value, allow_call=allow_call)
     if not isinstance(parent, _Reference):
-        _reject(state, expression, 'selection must name a task output or declared input namespace')
+        _reject(state, expression, 'selection must name a task output or declared input namespace; bind values first')
     if not isinstance(parent.shape, NamespaceShape):
         if parent.task is not None and parent.port == expression.attr:
             return parent
-        _reject(state, expression, 'selection requires a declared namespace')
+        _reject(state, expression, 'selection requires a declared namespace; select fields on namespaces')
     path = f'{parent.port}.{expression.attr}' if parent.port else expression.attr
     try:
         shape = parent.shape.select(expression.attr)
     except KeyError:
-        _reject(state, expression, f'unknown or undeclared namespace field {path!r}')
+        _reject(state, expression, f'unknown or undeclared namespace field {path!r}; check declared fields')
     return _Reference(parent.task, path, shape)
 
 
@@ -843,7 +859,7 @@ def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
     """Lower a nested graph once, rejecting recursive calls."""
     definition = _SOURCE_REGISTRY.get_graph(key)
     if key in stack:
-        msg = f'Recursive graph call: {" -> ".join((*stack, key))}'
+        msg = f'Recursive graph call: {" -> ".join((*stack, key))}; express repetition with a while loop instead'
         raise UnsupportedSyntax(msg)
     return _lower_function(_LoweringState(definition, (*stack, key)))
 

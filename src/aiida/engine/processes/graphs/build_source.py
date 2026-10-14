@@ -52,6 +52,9 @@ from aiida.engine.processes.graphs.tasks import TaskHandle, build_task
 
 __all__ = ('GraphHandle', 'UnsupportedSyntax', 'graph', 'lower_from_source', 'task')
 
+P = t.ParamSpec('P')
+R = t.TypeVar('R')
+
 
 class GraphHandle:
     """An importable source declaration that builds without executing its body."""
@@ -91,10 +94,6 @@ class GraphHandle:
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
         return GraphProcess.launch_inputs(self.lower(), dict(bound.arguments))
-
-
-P = t.ParamSpec('P')
-R = t.TypeVar('R')
 
 
 def _key(function: Callable[..., t.Any]) -> str:
@@ -275,6 +274,27 @@ class _LoweringState:
     def key(self) -> str:
         """Return the registry key of the lowered graph."""
         return self.definition.key
+
+
+def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
+    """Point at the offending node in the original file, not just the extracted function."""
+    source = state.definition.source.splitlines()
+    location = state.definition
+    line: int | None = getattr(node, 'lineno', None)
+    column: int | None = getattr(node, 'col_offset', None)
+    if line is None or column is None or line > len(source):
+        msg = f'{location.filename}: {state.key}: {reason}: {ast.unparse(node)}'
+        raise UnsupportedSyntax(msg)
+
+    text = source[line - 1]
+    # AST columns are UTF-8 byte offsets; a displayed caret needs a character offset.
+    before = text.encode('utf-8')[:column].decode('utf-8', errors='ignore')
+    position = len(before)
+    msg = (
+        f'{location.filename}:{location.first_line + line - 1}:{position + 1}: '
+        f'{state.key}: {reason}\n    {text}\n    {" " * position}^'
+    )
+    raise UnsupportedSyntax(msg)
 
 
 def _parse_function(definition: _SourceDefinition) -> ast.FunctionDef:
@@ -462,92 +482,6 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
         state.names[name] = _Reference(ref.task, field_name, field_shape)
 
 
-def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
-    """Snapshot region boundaries only when routing a declared namespace field."""
-    if not any('.' in path for path in state.inputs):
-        return None
-    names = tuple(name for name in state.inputs if '.' not in name)
-    return dump_shape(NamespaceShape(fields=tuple((name, state.names[name].shape) for name in names)))
-
-
-def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
-    """Lower collected region state to a nested graph template."""
-    if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
-        msg = 'control-flow outputs must be static leaves, not namespaces.'
-        raise UnsupportedSyntax(msg)
-    endpoints: dict[str, Endpoint] = {
-        name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()
-    }
-    return GraphSpec(
-        tasks=tuple(state.tasks),
-        dependencies=tuple(state.dependencies),
-        inputs={name: tuple(targets) for name, targets in state.inputs.items()},
-        outputs=endpoints,
-        input_namespace=_region_input_namespace(state),
-    )
-
-
-class _Side(t.NamedTuple):
-    """One lowered conditional side with its region state."""
-
-    name: str
-    child: _LoweringState
-    body: GraphSpec
-
-
-def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
-    """Collect the enclosing values a nested body reads as region inputs."""
-    # Names read in the body become inputs of the nested graph. Calls are not values.
-    assigned: set[str] = {
-        target.id
-        for stmt in statements
-        if isinstance(stmt, ast.Assign)
-        for target in stmt.targets
-        if isinstance(target, ast.Name)
-    }
-    callees: set[int] = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
-    names: set[str] = {
-        node.id
-        for stmt in statements
-        for node in ast.walk(stmt)
-        if isinstance(node, ast.Name)
-        and isinstance(node.ctx, ast.Load)
-        and node.id not in assigned
-        and id(node) not in callees
-    }
-    child = _LoweringState(state.definition, state.stack)
-    for name in sorted(names):
-        if name not in state.names:
-            _reject(state, statements[0], f'unbound name {name!r}; bind it before the region')
-        child.inputs[name] = []
-        shape = state.names[name].shape
-        child.names[name] = _Reference(None, name, shape)
-    return child
-
-
-def _route_region(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, GivenValue]) -> None:
-    """Route the enclosing values a nested region reads."""
-    for name in child.inputs:
-        if name in state.names:
-            _wire(state, instance, name, state.names[name], given)
-
-
-def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
-    """Lower a call condition to a fresh binding, like its explicit assignment form."""
-    if not isinstance(test, ast.Call):
-        return None
-    name = 'condition'
-    count = 2
-    while name in state.names:
-        name = f'condition_{count}'
-        count += 1
-    bound = ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())], value=test)
-    ast.copy_location(bound, test)
-    ast.copy_location(bound.targets[0], test)
-    _lower_assignment(state, bound)
-    return ast.Name(id=name, ctx=ast.Load())
-
-
 def _lower_side(state: _LoweringState, statements: list[ast.stmt]) -> _Side:
     """Lower one conditional side to a named region body."""
     child = _region(state, statements)
@@ -614,6 +548,92 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
     for name in assigned:
         state.names[name] = _Reference(instance, name, child.names[name].shape)
+
+
+class _Side(t.NamedTuple):
+    """One lowered conditional side with its region state."""
+
+    name: str
+    child: _LoweringState
+    body: GraphSpec
+
+
+def _region(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
+    """Collect the enclosing values a nested body reads as region inputs."""
+    # Names read in the body become inputs of the nested graph. Calls are not values.
+    assigned: set[str] = {
+        target.id
+        for stmt in statements
+        if isinstance(stmt, ast.Assign)
+        for target in stmt.targets
+        if isinstance(target, ast.Name)
+    }
+    callees: set[int] = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
+    names: set[str] = {
+        node.id
+        for stmt in statements
+        for node in ast.walk(stmt)
+        if isinstance(node, ast.Name)
+        and isinstance(node.ctx, ast.Load)
+        and node.id not in assigned
+        and id(node) not in callees
+    }
+    child = _LoweringState(state.definition, state.stack)
+    for name in sorted(names):
+        if name not in state.names:
+            _reject(state, statements[0], f'unbound name {name!r}; bind it before the region')
+        child.inputs[name] = []
+        shape = state.names[name].shape
+        child.names[name] = _Reference(None, name, shape)
+    return child
+
+
+def _route_region(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, GivenValue]) -> None:
+    """Route the enclosing values a nested region reads."""
+    for name in child.inputs:
+        if name in state.names:
+            _wire(state, instance, name, state.names[name], given)
+
+
+def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
+    """Lower a call condition to a fresh binding, like its explicit assignment form."""
+    if not isinstance(test, ast.Call):
+        return None
+    name = 'condition'
+    count = 2
+    while name in state.names:
+        name = f'condition_{count}'
+        count += 1
+    bound = ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())], value=test)
+    ast.copy_location(bound, test)
+    ast.copy_location(bound.targets[0], test)
+    _lower_assignment(state, bound)
+    return ast.Name(id=name, ctx=ast.Load())
+
+
+def _region_input_namespace(state: _LoweringState) -> dict[str, t.Any] | None:
+    """Snapshot region boundaries only when routing a declared namespace field."""
+    if not any('.' in path for path in state.inputs):
+        return None
+    names = tuple(name for name in state.inputs if '.' not in name)
+    return dump_shape(NamespaceShape(fields=tuple((name, state.names[name].shape) for name in names)))
+
+
+def _body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphSpec:
+    """Lower collected region state to a nested graph template."""
+    if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
+        msg = 'control-flow outputs must be static leaves, not namespaces.'
+        raise UnsupportedSyntax(msg)
+    endpoints: dict[str, Endpoint] = {
+        name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()
+    }
+    return GraphSpec(
+        tasks=tuple(state.tasks),
+        dependencies=tuple(state.dependencies),
+        inputs={name: tuple(targets) for name, targets in state.inputs.items()},
+        outputs=endpoints,
+        input_namespace=_region_input_namespace(state),
+    )
 
 
 def _called_name(state: _LoweringState, expression: ast.expr) -> str:
@@ -912,27 +932,6 @@ def _select_field(
     except KeyError:
         _reject(state, node, f'unknown or undeclared namespace field {path!r}; check declared fields')
     return _Reference(reference.task, path, shape)
-
-
-def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
-    """Point at the offending node in the original file, not just the extracted function."""
-    source = state.definition.source.splitlines()
-    location = state.definition
-    line: int | None = getattr(node, 'lineno', None)
-    column: int | None = getattr(node, 'col_offset', None)
-    if line is None or column is None or line > len(source):
-        msg = f'{location.filename}: {state.key}: {reason}: {ast.unparse(node)}'
-        raise UnsupportedSyntax(msg)
-
-    text = source[line - 1]
-    # AST columns are UTF-8 byte offsets; a displayed caret needs a character offset.
-    before = text.encode('utf-8')[:column].decode('utf-8', errors='ignore')
-    position = len(before)
-    msg = (
-        f'{location.filename}:{location.first_line + line - 1}:{position + 1}: '
-        f'{state.key}: {reason}\n    {text}\n    {" " * position}^'
-    )
-    raise UnsupportedSyntax(msg)
 
 
 def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:

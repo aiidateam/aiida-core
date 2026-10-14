@@ -102,9 +102,9 @@ def multiple_ordered(x: int) -> int:
 
 @graph
 def named(x: int, y: int) -> dict[str, int]:
-    """Return multiple named outputs from one task, selected by key."""
+    """Return multiple named outputs from one task."""
     pair = arithmetic_pair(x=x, y=y)
-    return {'total': pair['sum'], 'product': pair['product']}
+    return {'total': pair.sum, 'product': pair.product}
 
 
 @graph
@@ -237,6 +237,6 @@ def nested_multiply_add(x: int, y: int, z: int) -> int:
 
 @graph
 def summarize(values: list[float]):
-    """Expose summary statistics computed by plain Python."""
+    """Expose summary statistics computed by plain Python, selected by key."""
     stats = statistics(values=values)
-    return {'mean': stats.mean, 'stdev': stats.stdev}
+    return {'mean': stats['mean'], 'stdev': stats['stdev']}

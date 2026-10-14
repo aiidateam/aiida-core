@@ -11,6 +11,7 @@
 import typing as t
 
 __all__ = (
+    'args_function',
     'kwargs_function',
     'unannotated_function',
 )
@@ -28,3 +29,8 @@ def unannotated_function(x: int):
 def kwargs_function(**kwargs: t.Any) -> int:
     """Reject undecorated functions with kwargs at decoration."""
     return 1
+
+
+def args_function(*args: int) -> int:
+    """Reject functions with positional spillover at decoration."""
+    return args[0]

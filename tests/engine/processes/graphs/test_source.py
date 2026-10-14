@@ -226,6 +226,8 @@ def test_task_registration_rejects_excluded_contracts() -> None:
         task(declarations.unannotated_function)
     with pytest.raises(GraphTypeCheckError, match='fixed inputs'):
         task(declarations.kwargs_function)
+    with pytest.raises(GraphTypeCheckError, match='fixed inputs'):
+        task(declarations.args_function)
     with pytest.raises(UnsupportedSyntax, match='module scope'):
         task(local_function)
     with pytest.raises(UnsupportedSyntax, match='not process classes'):

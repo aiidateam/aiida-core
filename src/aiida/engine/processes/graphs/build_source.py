@@ -50,7 +50,7 @@ from aiida.engine.processes.graphs.spec import (
 )
 from aiida.engine.processes.graphs.tasks import TaskHandle, build_task
 
-__all__ = ('GraphHandle', 'UnsupportedSyntax', 'build_from_source', 'graph', 'task')
+__all__ = ('GraphHandle', 'UnsupportedSyntax', 'graph', 'lower_from_source', 'task')
 
 
 class GraphHandle:
@@ -63,7 +63,7 @@ class GraphHandle:
         functools.update_wrapper(self, function, updated=())
 
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.NoReturn:
-        msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`, or inspect `.build()`.'
+        msg = f'`{self.identifier}` declares a graph; launch it with `run` or `submit`, or inspect `.lower()`.'
         raise GraphError(msg)
 
     @property
@@ -71,9 +71,9 @@ class GraphHandle:
         """Return the declared function for the lowering pipeline."""
         return self._function
 
-    def build(self) -> GraphSpec:
+    def lower(self) -> GraphSpec:
         """Return the graph that the function declares, lowered from its registered source."""
-        return replace(build_from_source(self.function), identifier=self.identifier)
+        return replace(lower_from_source(self.function), identifier=self.identifier)
 
     @property
     def process_class(self) -> type[GraphProcess]:
@@ -90,7 +90,7 @@ class GraphHandle:
             for parameter in inspect.signature(self._function).parameters.values()
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
-        return GraphProcess.launch_inputs(self.build(), dict(bound.arguments))
+        return GraphProcess.launch_inputs(self.lower(), dict(bound.arguments))
 
 
 P = t.ParamSpec('P')
@@ -213,7 +213,7 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
     """Save a graph's source without executing its body.
 
     The body is never executed: its source is captured at decoration time and lowered to a declaration by
-    :func:`build_from_source` (or the ``build`` method of the returned handle) when the graph runs.
+    :func:`lower_from_source` (or the ``lower`` method of the returned handle) when the graph runs.
 
     Example usage:
 
@@ -226,9 +226,9 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
     ... def add_twice(x: int, y: int) -> int:
     ...     first = add(x=x, y=y)
     ...     return add(x=first, y=y)
-    >>> declaration = add_twice.build()
+    >>> declaration = add_twice.lower()
 
-    A graph is launched like any other process, by passing it to ``run`` or ``submit``. Use ``build`` to get the
+    A graph is launched like any other process, by passing it to ``run`` or ``submit``. Use ``lower`` to get the
     declaration on its own, without running anything.
 
     :param function: The function to decorate.
@@ -848,7 +848,7 @@ def _lower_registered_graph(key: str, stack: tuple[str, ...]) -> GraphSpec:
     return _lower_function(_LoweringState(definition, (*stack, key)))
 
 
-def build_from_source(function: GraphHandle | Callable[..., t.Any]) -> GraphSpec:
+def lower_from_source(function: GraphHandle | Callable[..., t.Any]) -> GraphSpec:
     """Build a GraphSpec from a registered graph's source and its registered callees."""
     target = function.function if isinstance(function, GraphHandle) else function
     return _lower_registered_graph(_key(target), ())

@@ -39,9 +39,9 @@ Launch it from another module or an interactive interpreter with a loaded AiiDA 
     outputs, node = run_get_node(pipeline, x=2, y=3)
     assert outputs['result'].value == 8
     submitted = submit(pipeline, x=2, y=3)
-    declaration = pipeline.build()
+    declaration = pipeline.lower()
 
-Calling a graph directly is not supported. ``build()`` returns a ``GraphSpec`` without running tasks or the graph body.
+Calling a graph directly is not supported. ``lower()`` returns a ``GraphSpec`` without running tasks or the graph body.
 Graph inputs are the function parameters, with literal defaults filled when absent, and graph outputs reference task outputs or input leaves.
 Calls take named or positional arguments without unpacking. Assignments bind one name, unpack one tuple of task outputs, or share one placement across names. Arbitrary Python code, imports, comprehensions, and fan-out loops are rejected with a source location.
 

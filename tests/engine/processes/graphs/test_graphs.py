@@ -61,7 +61,7 @@ def test_supported_graph_syntax_executes(
 ) -> None:
     """Supported declarations and their JSON representations return exact named values."""
     if serialized:
-        spec = GraphSpec.from_dict(json.loads(json.dumps(declaration.build().to_dict())))
+        spec = GraphSpec.from_dict(json.loads(json.dumps(declaration.lower().to_dict())))
         outputs, node = run_get_node(GraphProcess, **GraphProcess.launch_inputs(spec, inputs))
     else:
         outputs, node = run_get_node(declaration, **inputs)
@@ -198,7 +198,7 @@ def test_task_failure_does_not_dispatch_downstream() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_ordering_is_a_scheduler_dependency() -> None:
-    state = GraphRun(declarations.ordered.build(), given={'x': Int(2)})
+    state = GraphRun(declarations.ordered.lower(), given={'x': Int(2)})
     assert [start.instance for start in state.step().starts] == ['prepare']
     _, completed = declarations.prepare.run_get_node(value=2)
     assert completed.pk is not None
@@ -210,13 +210,13 @@ def test_ordering_is_a_scheduler_dependency() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_raw_graph_launch_uses_fixed_boundary_contract() -> None:
     outputs, node = run_get_node(
-        GraphProcess, graph=Dict(dict=declarations.chain.build().to_dict()), graph_inputs={'x': 2, 'y': 3}
+        GraphProcess, graph=Dict(dict=declarations.chain.lower().to_dict()), graph_inputs={'x': 2, 'y': 3}
     )
     assert node.is_finished_ok
     assert outputs['result'].value == 8
     assert isinstance(node, GraphNode)
     with pytest.raises(MissingRequiredInputsError):
-        GraphProcess(inputs={'graph': Dict(dict=declarations.chain.build().to_dict()), 'graph_inputs': {'x': 2}})
+        GraphProcess(inputs={'graph': Dict(dict=declarations.chain.lower().to_dict()), 'graph_inputs': {'x': 2}})
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -246,7 +246,7 @@ def test_checkpoint_preserves_boundary_node_and_runtime_values() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_checkpointed_scheduler_does_not_repeat_completed_tasks() -> None:
-    state = GraphRun(declarations.chain.build(), given={'x': Int(2), 'y': Int(3)})
+    state = GraphRun(declarations.chain.lower(), given={'x': Int(2), 'y': Int(3)})
     assert [start.instance for start in state.step().starts] == ['add']
     _, completed = declarations.add.run_get_node(x=2, y=3)
     assert completed.pk is not None
@@ -261,7 +261,7 @@ def test_run_state_versions_its_checkpoints() -> None:
     """Scheduler checkpoints carry a version; unknown ones fail loudly, old ones load."""
     from aiida.engine.processes.graphs.run import STATE_VERSION
 
-    state = GraphRun(declarations.chain.build(), given={'x': Int(2), 'y': Int(3)})
+    state = GraphRun(declarations.chain.lower(), given={'x': Int(2), 'y': Int(3)})
     assert state.to_dict().get('version') == STATE_VERSION
     saved = state.to_dict()
     GraphRun.from_dict(state.graph, state.given, {key: value for key, value in saved.items() if key != 'version'})

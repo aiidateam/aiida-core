@@ -9,7 +9,7 @@
 """Declare source graphs and execute their static task dependencies."""
 
 from aiida.common.exceptions import UnsupportedSyntax
-from aiida.engine.processes.graphs.build_source import GraphHandle, build_from_source, graph, task
+from aiida.engine.processes.graphs.build_source import GraphHandle, graph, lower_from_source, task
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.spec import (
     BranchControl,
@@ -35,7 +35,7 @@ __all__ = (
     'TaskProcess',
     'TaskSpec',
     'UnsupportedSyntax',
-    'build_from_source',
     'graph',
+    'lower_from_source',
     'task',
 )

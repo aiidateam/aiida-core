@@ -69,7 +69,7 @@ def test_supported_graph_syntax_executes(
 ) -> None:
     """Supported declarations and their JSON representations return exact named values."""
     if serialized:
-        specification: GraphSpec = declaration.build()
+        specification: GraphSpec = declaration.lower()
         restored: GraphSpec = GraphSpec.from_dict(json.loads(json.dumps(specification.to_dict())))
         outputs, node = run_get_node(GraphProcess, **GraphProcess.launch_inputs(body=restored, inputs=inputs))
     else:
@@ -111,7 +111,7 @@ def test_nested_graph_has_child_workflow_provenance(aiida_profile_clean: Profile
 
 def test_ordering_dependency_consumes_no_value() -> None:
     """An `after` dependency orders placements without wiring an output value."""
-    specification: GraphSpec = declarations.ordered_named.build()
+    specification: GraphSpec = declarations.ordered_named.lower()
     assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
         ('prepare', 'add', None, None)
     ]

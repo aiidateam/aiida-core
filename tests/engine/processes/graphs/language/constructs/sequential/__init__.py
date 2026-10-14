@@ -6,8 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Importable task and graph declarations shared by the behavior suites."""
+"""Sequential graph declarations shared by the behavior suites."""
 
-from tests.engine.processes.graphs.declarations.flows import *
-from tests.engine.processes.graphs.declarations.port_models import *
-from tests.engine.processes.graphs.declarations.tasks import *
+from tests.engine.processes.graphs.language.constructs.sequential.rejected import *
+from tests.engine.processes.graphs.language.constructs.sequential.supported import *

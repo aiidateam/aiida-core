@@ -8,6 +8,6 @@
 ###########################################################################
 """Graph declarations shared by the behavior suites, by control kind."""
 
-from tests.engine.processes.graphs.declarations.flows.conditional import *
-from tests.engine.processes.graphs.declarations.flows.iterative import *
-from tests.engine.processes.graphs.declarations.flows.sequential import *
+from tests.engine.processes.graphs.language.constructs.conditional import *
+from tests.engine.processes.graphs.language.constructs.iterative import *
+from tests.engine.processes.graphs.language.constructs.sequential import *

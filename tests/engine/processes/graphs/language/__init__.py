@@ -6,7 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Task declarations shared by the behavior suites."""
+"""The graph language by example: importable task and graph specimens shared by the behavior suites."""
 
-from tests.engine.processes.graphs.declarations.tasks.rejected import *
-from tests.engine.processes.graphs.declarations.tasks.supported import *
+from tests.engine.processes.graphs.language.constructs import *
+from tests.engine.processes.graphs.language.port_models import *
+from tests.engine.processes.graphs.language.tasks import *

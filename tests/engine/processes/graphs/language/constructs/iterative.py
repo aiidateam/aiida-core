@@ -9,7 +9,7 @@
 """Looping graph declarations shared by the behavior suites."""
 
 from aiida.engine.processes.graphs.build_source import graph
-from tests.engine.processes.graphs.declarations.tasks import add, decrement, is_positive
+from tests.engine.processes.graphs.language.tasks import add, decrement, is_positive
 
 __all__ = (
     'countdown',

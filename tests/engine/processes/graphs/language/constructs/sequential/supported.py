@@ -10,8 +10,8 @@
 
 from aiida.engine.processes.graphs.build_source import graph
 from aiida.orm.nodes.data.int import Int
-from tests.engine.processes.graphs.declarations.port_models import Configuration, DefaultedSettings
-from tests.engine.processes.graphs.declarations.tasks import (
+from tests.engine.processes.graphs.language.port_models import Configuration, DefaultedSettings
+from tests.engine.processes.graphs.language.tasks import (
     add,
     arithmetic_pair,
     collision_add,

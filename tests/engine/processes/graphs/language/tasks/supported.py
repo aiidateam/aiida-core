@@ -12,7 +12,7 @@ import typing as t
 
 from aiida.engine.processes.graphs.build_source import task
 from aiida.orm.nodes.data.int import Int
-from tests.engine.processes.graphs.declarations.port_models import Configuration
+from tests.engine.processes.graphs.language.port_models import Configuration
 
 __all__ = (
     'Alpha',

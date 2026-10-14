@@ -20,7 +20,7 @@ from aiida.engine.processes.graphs.spec import GraphSpec
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.process.workflow.graph import GraphNode
-from tests.engine.processes.graphs import declarations
+from tests.engine.processes.graphs import language
 
 pytestmark = pytest.mark.presto
 
@@ -28,35 +28,35 @@ pytestmark = pytest.mark.presto
 @pytest.mark.parametrize(
     ('declaration', 'inputs', 'expected'),
     [
-        pytest.param(declarations.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
-        pytest.param(declarations.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
-        pytest.param(declarations.diamond, {'x': 2}, {'result': 7}, id='diamond'),
-        pytest.param(declarations.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
-        pytest.param(declarations.selected_field, {'settings': {}}, {'result': 3}, id='namespace-field-default'),
-        pytest.param(declarations.literal_dictionary, {}, {'result': 42}, id='dictionary-literal'),
-        pytest.param(declarations.dictionary_input, {'values': {'answer': 42}}, {'result': 42}, id='dictionary-leaf'),
-        pytest.param(declarations.ordered_named, {'value': 2}, {'result': 3}, id='ordering-without-output'),
-        pytest.param(declarations.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
+        pytest.param(language.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
+        pytest.param(language.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
+        pytest.param(language.diamond, {'x': 2}, {'result': 7}, id='diamond'),
+        pytest.param(language.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
+        pytest.param(language.selected_field, {'settings': {}}, {'result': 3}, id='namespace-field-default'),
+        pytest.param(language.literal_dictionary, {}, {'result': 42}, id='dictionary-literal'),
+        pytest.param(language.dictionary_input, {'values': {'answer': 42}}, {'result': 42}, id='dictionary-leaf'),
+        pytest.param(language.ordered_named, {'value': 2}, {'result': 3}, id='ordering-without-output'),
+        pytest.param(language.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
         pytest.param(
-            declarations.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-choice-true'
+            language.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-choice-true'
         ),
         pytest.param(
-            declarations.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-choice-false'
+            language.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-choice-false'
         ),
-        pytest.param(declarations.computed_choice, {'value': 2}, {'result': 3}, id='computed-choice-true'),
-        pytest.param(declarations.computed_choice, {'value': -2}, {'result': 0}, id='computed-choice-false'),
-        pytest.param(declarations.inline_condition, {'value': 2}, {'result': 3}, id='inline-choice-true'),
-        pytest.param(declarations.inline_condition, {'value': -2}, {'result': 0}, id='inline-choice-false'),
-        pytest.param(declarations.countdown, {'value': 3, 'condition': True}, {'value': 0}, id='loop-state'),
-        pytest.param(declarations.countdown_call, {'value': 3}, {'value': 0}, id='loop-call-state'),
-        pytest.param(declarations.countdown_call, {'value': -2}, {'value': -2}, id='loop-call-zero'),
-        pytest.param(declarations.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
-        pytest.param(declarations.tuple_assignment, {'x': 2, 'y': 3}, {'result': 11}, id='tuple-unpacking'),
-        pytest.param(declarations.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
-        pytest.param(declarations.default_parameter, {}, {'result': 3}, id='parameter-default-filled'),
-        pytest.param(declarations.default_parameter, {'value': 5}, {'result': 6}, id='parameter-default-overridden'),
-        pytest.param(declarations.keyword_only_parameter, {'value': 2}, {'result': 3}, id='keyword-only'),
-        pytest.param(declarations.positional_only_parameter, {'value': 2}, {'result': 3}, id='positional-only'),
+        pytest.param(language.computed_choice, {'value': 2}, {'result': 3}, id='computed-choice-true'),
+        pytest.param(language.computed_choice, {'value': -2}, {'result': 0}, id='computed-choice-false'),
+        pytest.param(language.inline_condition, {'value': 2}, {'result': 3}, id='inline-choice-true'),
+        pytest.param(language.inline_condition, {'value': -2}, {'result': 0}, id='inline-choice-false'),
+        pytest.param(language.countdown, {'value': 3, 'condition': True}, {'value': 0}, id='loop-state'),
+        pytest.param(language.countdown_call, {'value': 3}, {'value': 0}, id='loop-call-state'),
+        pytest.param(language.countdown_call, {'value': -2}, {'value': -2}, id='loop-call-zero'),
+        pytest.param(language.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
+        pytest.param(language.tuple_assignment, {'x': 2, 'y': 3}, {'result': 11}, id='tuple-unpacking'),
+        pytest.param(language.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
+        pytest.param(language.default_parameter, {}, {'result': 3}, id='parameter-default-filled'),
+        pytest.param(language.default_parameter, {'value': 5}, {'result': 6}, id='parameter-default-overridden'),
+        pytest.param(language.keyword_only_parameter, {'value': 2}, {'result': 3}, id='keyword-only'),
+        pytest.param(language.positional_only_parameter, {'value': 2}, {'result': 3}, id='positional-only'),
     ],
 )
 @pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])
@@ -81,7 +81,7 @@ def test_supported_graph_syntax_executes(
 def test_multiply_add_preserves_original_input(aiida_profile_clean: Profile) -> None:
     """The arithmetic graph retains input identity and returns the addition output."""
     original: Int = Int(value=2)
-    outputs, node = run_get_node(declarations.multiply_add, x=original, y=3, z=4)
+    outputs, node = run_get_node(language.multiply_add, x=original, y=3, z=4)
     assert node.is_finished_ok
     assert set(outputs) == {'result'}
     assert outputs['result'].value == 10
@@ -96,7 +96,7 @@ def test_multiply_add_preserves_original_input(aiida_profile_clean: Profile) -> 
 
 def test_nested_graph_has_child_workflow_provenance(aiida_profile_clean: Profile) -> None:
     """A nested declaration executes as a child graph with its own task calls."""
-    outputs, node = run_get_node(declarations.nested_multiply_add, x=2, y=3, z=4)
+    outputs, node = run_get_node(language.nested_multiply_add, x=2, y=3, z=4)
     assert node.is_finished_ok
     assert outputs['result'].value == 11
     calls = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
@@ -111,7 +111,7 @@ def test_nested_graph_has_child_workflow_provenance(aiida_profile_clean: Profile
 
 def test_ordering_dependency_consumes_no_value() -> None:
     """An `after` dependency orders placements without wiring an output value."""
-    specification: GraphSpec = declarations.ordered_named.lower()
+    specification: GraphSpec = language.ordered_named.lower()
     assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
         ('prepare', 'add', None, None)
     ]

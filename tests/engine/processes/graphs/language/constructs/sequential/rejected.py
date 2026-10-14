@@ -9,8 +9,8 @@
 """Sequential graph declarations rejected at lowering shared by the behavior suites."""
 
 from aiida.engine.processes.graphs.build_source import graph
-from tests.engine.processes.graphs.declarations.port_models import Configuration
-from tests.engine.processes.graphs.declarations.tasks import add
+from tests.engine.processes.graphs.language.port_models import Configuration
+from tests.engine.processes.graphs.language.tasks import add
 
 __all__ = (
     'annotated_assignment',

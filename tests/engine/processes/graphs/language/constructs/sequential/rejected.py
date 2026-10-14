@@ -17,12 +17,9 @@ __all__ = (
     'arithmetic_expression',
     'assert_statement',
     'augmented_assignment',
-    'boolean_condition',
-    'compare_condition',
     'early_return',
     'expanded_task_arguments',
     'fstring_argument',
-    'inline_conditional',
     'list_comprehension',
     'literal_return',
     'match_statement',
@@ -41,7 +38,6 @@ __all__ = (
     'unbound',
     'unregistered_call',
     'variadic_parameters',
-    'walrus_condition',
     'with_block',
     'wrong_type',
 )
@@ -447,75 +443,6 @@ def fstring_argument(value: int) -> int:
 # @graph
 # def formatted(value: int) -> str:
 #     return greeting(value=value)
-
-
-@graph
-def boolean_condition(value: int, flag: bool) -> int:
-    """Combine conditions with operators; conditions are calls or names."""
-    if flag and value:
-        chosen = add(x=value, y=1)
-    else:
-        chosen = add(x=value, y=2)
-    return chosen
-
-
-# Compute the predicate in a task instead:
-
-# @task
-# def both(value: int, flag: bool) -> bool:
-#     return flag and value > 0
-
-
-@graph
-def compare_condition(value: int) -> int:
-    """Compare inline; conditions are calls or names."""
-    if value > 0:
-        chosen = add(x=value, y=1)
-    else:
-        chosen = add(x=value, y=2)
-    return chosen
-
-
-# Compute the predicate in a task instead:
-
-# @task
-# def positive(value: int) -> bool:
-#     return value > 0
-
-
-@graph
-def inline_conditional(value: int, flag: bool) -> int:
-    """Select inline; branch explicitly instead."""
-    return add(x=value, y=1) if flag else add(x=value, y=2)
-
-
-# @graph
-# def explicit_choice(value: int, flag: bool) -> int:
-#     if flag:
-#         chosen = add(x=value, y=1)
-#     else:
-#         chosen = add(x=value, y=2)
-#     return chosen
-
-
-@graph
-def walrus_condition(value: int, flag: bool) -> int:
-    """Bind inside a condition; bind before branching instead."""
-    if picked := flag:  # noqa: F841 - the binding itself is rejected
-        chosen = add(x=value, y=1)
-    else:
-        chosen = add(x=value, y=2)
-    return chosen
-
-
-# @graph
-# def bound_before(value: int, flag: bool) -> int:
-#     picked = flag
-#     if picked:
-#         chosen = add(x=value, y=1)
-#     else:
-#         chosen = add(x=value, y=2)
-#     return chosen
 
 
 @graph

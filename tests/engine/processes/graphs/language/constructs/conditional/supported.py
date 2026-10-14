@@ -3,19 +3,18 @@
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
 # The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
-# For further information on the license, see the LICENSE.txt file        #
+# For further information on the license, see the LICENSE.txt file       #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Branching graph declarations shared by the behavior suites."""
+"""Supported branching graph declarations shared by the behavior suites."""
 
 from aiida.engine.processes.graphs.build_source import graph
-from tests.engine.processes.graphs.language.tasks import add, is_positive, mismatched_alpha, mismatched_beta
+from tests.engine.processes.graphs.language.tasks import add, is_positive
 
 __all__ = (
     'computed_choice',
     'external_choice',
     'inline_condition',
-    'mismatched_branches',
 )
 
 
@@ -47,14 +46,4 @@ def inline_condition(value: int) -> int:
         selected_branch = add(x=value, y=1)
     else:
         selected_branch = add(x=value, y=2)
-    return selected_branch
-
-
-@graph
-def mismatched_branches(value: int, condition: bool) -> int:
-    """Return different outputs per side, rejected."""
-    if condition:
-        selected_branch = mismatched_alpha(value=value)
-    else:
-        selected_branch = mismatched_beta(value=value)
     return selected_branch

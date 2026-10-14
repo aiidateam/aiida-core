@@ -216,6 +216,7 @@ def test_cyclic_and_invalid_ordering_dependencies() -> None:
 
 
 def test_task_registration_rejects_excluded_contracts() -> None:
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
     from aiida.engine.processes.graphs.build_source import task
 
     def local_function(x: int) -> int:
@@ -227,3 +228,5 @@ def test_task_registration_rejects_excluded_contracts() -> None:
         task(declarations.kwargs_function)
     with pytest.raises(UnsupportedSyntax, match='module scope'):
         task(local_function)
+    with pytest.raises(UnsupportedSyntax, match='not process classes'):
+        task(ArithmeticAddCalculation)

@@ -143,7 +143,11 @@ def collision_add(x: int, y: int) -> int:
 
 
 def unannotated_function(x: int):
-    """Reject undecorated functions without annotations at decoration."""
+    """Reject functions without a return annotation at decoration.
+
+    Static lowering wires placements against declared outputs, so annotate the
+    function or wrap it in an annotated one instead of leaving it dynamic.
+    """
     return x
 
 

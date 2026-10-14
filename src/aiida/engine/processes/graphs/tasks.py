@@ -158,7 +158,10 @@ def _check_task_contract(function: Callable[..., t.Any], outputs: Sequence[str] 
         raise GraphTypeCheckError(msg)
     if outputs is None:
         if annotation is inspect.Signature.empty:
-            msg = 'tasks require a return annotation or explicit static output names.'
+            msg = (
+                'tasks require a return annotation to wire their outputs; '
+                'annotate the function or wrap third-party functions in an annotated one.'
+            )
             raise GraphTypeCheckError(msg)
         if annotation is type(None):
             outputs = ()

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Execution contracts for straight-line source graphs."""
+"""Execution contracts for source graphs."""
 
 import json
 import typing as t
@@ -35,6 +35,7 @@ pytestmark = pytest.mark.presto
     'declaration, inputs, expected',
     [
         pytest.param(language.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
+        pytest.param(language.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(language.diamond, {'x': 2}, {'result': 7}, id='diamond'),
         pytest.param(language.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
         pytest.param(
@@ -43,9 +44,29 @@ pytestmark = pytest.mark.presto
             {'result': 3},
             id='namespace-field',
         ),
+        pytest.param(language.selected_field, {'settings': {}}, {'result': 3}, id='namespace-field-default'),
+        pytest.param(language.literal_dictionary, {}, {'result': 42}, id='dictionary-literal'),
         pytest.param(language.dictionary_input, {'values': {'answer': 42}}, {'result': 42}, id='dictionary-leaf'),
         pytest.param(language.ordered, {'x': 2}, {'result': 3}, id='ordering-without-output'),
+        pytest.param(language.ordered_named, {'value': 2}, {'result': 3}, id='ordering-named'),
+        pytest.param(language.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
         pytest.param(language.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
+        pytest.param(language.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
+        pytest.param(language.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'),
+        pytest.param(language.computed_choice, {'value': 2}, {'result': 3}, id='computed-true'),
+        pytest.param(language.computed_choice, {'value': -2}, {'result': 0}, id='computed-false'),
+        pytest.param(language.inline_condition, {'value': 2}, {'result': 3}, id='inline-true'),
+        pytest.param(language.inline_condition, {'value': -2}, {'result': 0}, id='inline-false'),
+        pytest.param(language.countdown, {'value': 3, 'condition': True}, {'value': 0}, id='loop'),
+        pytest.param(language.countdown_call, {'value': 3}, {'value': 0}, id='loop-call'),
+        pytest.param(language.countdown_call, {'value': -2}, {'value': -2}, id='loop-call-zero'),
+        pytest.param(language.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
+        pytest.param(language.tuple_assignment, {'x': 2, 'y': 3}, {'result': 11}, id='tuple-unpacking'),
+        pytest.param(language.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
+        pytest.param(language.default_parameter, {}, {'result': 3}, id='parameter-default-filled'),
+        pytest.param(language.default_parameter, {'value': 5}, {'result': 6}, id='parameter-default-overridden'),
+        pytest.param(language.keyword_only_parameter, {'value': 2}, {'result': 3}, id='keyword-only'),
+        pytest.param(language.positional_only_parameter, {'value': 2}, {'result': 3}, id='positional-only'),
         pytest.param(
             language.summarize,
             {'values': [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]},
@@ -89,25 +110,6 @@ def test_task_after_kwarg_rejected_outside_graphs() -> None:
     """`after` orders graph placements; direct task calls reject it."""
     with pytest.raises(GraphError, match='after'):
         language.add(x=1, y=1, after='x')
-
-
-@pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize(
-    'declaration, inputs, expected',
-    [
-        pytest.param(language.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested'),
-        pytest.param(language.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
-        pytest.param(language.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'),
-        pytest.param(language.computed_choice, {'value': 2}, {'result': 3}, id='computed-true'),
-        pytest.param(language.computed_choice, {'value': -2}, {'result': 0}, id='computed-false'),
-        pytest.param(language.countdown, {'value': 3, 'condition': True}, {'value': 0}, id='loop'),
-    ],
-)
-def test_composition_executes(declaration: GraphHandle, inputs: dict[str, t.Any], expected: dict[str, int]) -> None:
-    """Nested graphs, both branch outcomes, and loop iterations return exact values."""
-    outputs, node = run_get_node(declaration, **inputs)
-    assert node.is_finished_ok
-    assert {name: value.value for name, value in outputs.items()} == expected
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

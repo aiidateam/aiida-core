@@ -173,6 +173,14 @@ def test_mismatched_branch_outputs_fail_during_build() -> None:
         language.mismatched_branches.lower()
 
 
+def test_ordering_dependency_carries_no_value() -> None:
+    """An `after` dependency orders placements without wiring an output value."""
+    specification = language.ordered_named.lower()
+    assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
+        ('prepare', 'add', None, None)
+    ]
+
+
 def test_incompatible_boundary_types_fail_during_build() -> None:
     with pytest.raises(GraphTypeCheckError, match='incompatible types'):
         language.wrong_type.lower()

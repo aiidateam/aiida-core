@@ -26,6 +26,7 @@ from aiida.orm import Data
 
 __all__ = (
     'BranchControl',
+    'Comparison',
     'Dependency',
     'Endpoint',
     'GraphIR',
@@ -35,7 +36,7 @@ __all__ = (
     'TaskIR',
 )
 
-GRAPH_IR_VERSION = '0.1'
+GRAPH_IR_VERSION = '0.2'
 TASK_IR_VERSION = '0.1'
 CONDITION_PORT = 'condition'
 TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
@@ -269,6 +270,7 @@ class GraphTask(abc.ABC):
                 body=body,
                 otherwise=GraphIR.from_dict(data['otherwise']) if data.get('otherwise') is not None else None,
                 condition_port=data.get('condition_port', CONDITION_PORT),
+                comparison=Comparison.from_dict(data['comparison']) if data.get('comparison') is not None else None,
                 **common,
             )
         if kind == 'loop':
@@ -276,6 +278,7 @@ class GraphTask(abc.ABC):
             return LoopControl(
                 body=body,
                 condition_port=data.get('condition_port', CONDITION_PORT),
+                comparison=Comparison.from_dict(data['comparison']) if data.get('comparison') is not None else None,
                 max_iterations=data['max_iterations'],
                 **common,
             )
@@ -310,11 +313,43 @@ class SubgraphTask(BodyTask):
 
 
 @dataclass(frozen=True, kw_only=True)
+class Comparison:
+    """A comparison over control inputs or literals, evaluated without a task."""
+
+    operator: str
+    left: str | int | float | bool | None
+    right: str | int | float | bool | None
+
+    def __post_init__(self) -> None:
+        if self.operator not in COMPARISON_OPERATORS:
+            msg = f'unsupported comparison operator {self.operator!r}; use one of {sorted(COMPARISON_OPERATORS)}.'
+            raise GraphTypeCheckError(msg)
+
+    @property
+    def ports(self) -> tuple[str, ...]:
+        """Return the control input ports this comparison reads."""
+        return tuple(side for side in (self.left, self.right) if isinstance(side, str))
+
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the comparison without its evaluated values."""
+        return {'operator': self.operator, 'left': self.left, 'right': self.right}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, t.Any]) -> Comparison:
+        """Rebuild a comparison from its serialized form."""
+        return cls(operator=data['operator'], left=data.get('left'), right=data.get('right'))
+
+
+COMPARISON_OPERATORS = ('==', '!=', '<', '<=', '>', '>=')
+
+
+@dataclass(frozen=True, kw_only=True)
 class BranchControl(BodyTask):
     """A condition dispatching exactly one of two nested templates."""
 
     KIND: t.ClassVar[TaskKind] = 'branch'
     condition_port: str = CONDITION_PORT
+    comparison: Comparison | None = None
     otherwise: GraphIR | None = None
 
     @property
@@ -331,6 +366,7 @@ class BranchControl(BodyTask):
         return {
             **super().to_dict(),
             'condition_port': self.condition_port,
+            'comparison': None if self.comparison is None else self.comparison.to_dict(),
             'otherwise': None if self.otherwise is None else self.otherwise.to_dict(),
         }
 
@@ -341,10 +377,16 @@ class LoopControl(BodyTask):
 
     KIND: t.ClassVar[TaskKind] = 'loop'
     condition_port: str = CONDITION_PORT
+    comparison: Comparison | None = None
     max_iterations: int = 1000
 
     def to_dict(self) -> dict[str, t.Any]:
-        return {**super().to_dict(), 'condition_port': self.condition_port, 'max_iterations': self.max_iterations}
+        return {
+            **super().to_dict(),
+            'condition_port': self.condition_port,
+            'comparison': None if self.comparison is None else self.comparison.to_dict(),
+            'max_iterations': self.max_iterations,
+        }
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -369,7 +411,11 @@ class ProcessTask(GraphTask):
 
 def _accepts_condition(task: GraphTask, port: str | None) -> bool:
     """Return whether a control task wires its condition outside declared inputs."""
-    return isinstance(task, (BranchControl, LoopControl)) and port == task.condition_port
+    if not isinstance(task, (BranchControl, LoopControl)):
+        return False
+    if port == task.condition_port:
+        return True
+    return task.comparison is not None and port in task.comparison.ports
 
 
 def _stored_types(port: t.Any) -> tuple[type, ...]:
@@ -515,7 +561,9 @@ class GraphIR:
 
     @staticmethod
     def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
-        if isinstance(task, (BranchControl, LoopControl)) and path == task.condition_port:
+        if isinstance(task, (BranchControl, LoopControl)) and (
+            path == task.condition_port or (task.comparison is not None and path in task.comparison.ports)
+        ):
             return []
         return [port for namespace in task.input_ports() if (port := port_at(namespace, path)) is not None]
 
@@ -630,7 +678,11 @@ class GraphIR:
                 msg = 'both branches must return the same outputs.'
                 raise GraphTypeCheckError(msg)
             self._check_compatible(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
-        if isinstance(task, LoopControl) and (task.condition_port not in task.body.outputs or task.max_iterations < 1):
+        if (
+            isinstance(task, LoopControl)
+            and task.comparison is None
+            and (task.condition_port not in task.body.outputs or task.max_iterations < 1)
+        ):
             msg = 'a loop must return its condition and allow at least one iteration.'
             raise GraphTypeCheckError(msg)
 

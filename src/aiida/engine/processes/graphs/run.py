@@ -18,6 +18,7 @@ from aiida.common.links import LinkType
 from aiida.engine.processes.graphs.inputs import at, place
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
+    Comparison,
     GraphIR,
     GraphTask,
     LoopControl,
@@ -35,6 +36,28 @@ STATE_VERSION = '0.1'
 def holds(condition: t.Any) -> bool:
     """Evaluate the value of a condition node rather than the node's identity."""
     return bool(condition.value if isinstance(condition, BaseType) else condition)
+
+
+def evaluate(comparison: Comparison, values: Mapping[str, t.Any]) -> bool:
+    """Decide a comparison from control inputs or iteration outputs."""
+    left: t.Any = values[comparison.left] if isinstance(comparison.left, str) else comparison.left
+    right: t.Any = values[comparison.right] if isinstance(comparison.right, str) else comparison.right
+    left = left.value if isinstance(left, BaseType) else left
+    right = right.value if isinstance(right, BaseType) else right
+    if comparison.operator == '==':
+        return bool(left == right)
+    if comparison.operator == '!=':
+        return bool(left != right)
+    if comparison.operator == '<':
+        return bool(left < right)
+    if comparison.operator == '<=':
+        return bool(left <= right)
+    if comparison.operator == '>':
+        return bool(left > right)
+    if comparison.operator == '>=':
+        return bool(left >= right)
+    msg = f'unsupported comparison operator {comparison.operator!r}.'
+    raise RuntimeError(msg)
 
 
 def returned(node: Node) -> dict[str, t.Any]:
@@ -209,7 +232,11 @@ class GraphRun:
 
     def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Dispatch the taken side of a branch, skipping when it has no body."""
-        taken = task.body if holds(inputs.pop(task.condition_port, None)) else task.otherwise
+        if task.comparison is not None:
+            decision = evaluate(task.comparison, inputs)
+        else:
+            decision = holds(inputs.pop(task.condition_port, None))
+        taken = task.body if decision else task.otherwise
         if taken is None:
             self.skipped.add(task.name)
             return
@@ -219,7 +246,11 @@ class GraphRun:
 
     def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Start iterating a loop, or pass through never-entered initial state."""
-        if not holds(inputs.get(task.condition_port, True)):
+        if task.comparison is not None:
+            if not evaluate(task.comparison, inputs):
+                self._pass_initial_state(task, inputs)
+                return
+        elif not holds(inputs.get(task.condition_port, True)):
             self._pass_initial_state(task, inputs)
             return
         self.instances[task.name] = []
@@ -236,7 +267,12 @@ class GraphRun:
         if not runs or any(instance not in self.done for instance in runs):
             return
         last = load_node(self.done[runs[-1]])
-        if not last.is_finished_ok or not holds(returned(last).get(task.condition_port)):
+        if not last.is_finished_ok:
+            return
+        if task.comparison is not None:
+            if not evaluate(task.comparison, {**self._inputs_for(task), **returned(last)}):
+                return
+        elif not holds(returned(last).get(task.condition_port)):
             return
         if len(runs) >= task.max_iterations:
             msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations with its condition still true.'

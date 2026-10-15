@@ -114,7 +114,6 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(language.subscript_load, 'collections travel whole', id='subscript-load'),
         pytest.param(language.fstring_argument, 'format inside a task', id='fstring'),
         pytest.param(language.boolean_condition, 'compute the predicate', id='boolop'),
-        pytest.param(language.compare_condition, 'compute the predicate', id='compare'),
         pytest.param(language.inline_conditional, 'branch explicitly', id='ifexp'),
         pytest.param(language.walrus_condition, 'bind before branching', id='walrus'),
         pytest.param(language.list_comprehension, 'must call a registered task or graph', id='listcomp'),
@@ -179,6 +178,13 @@ def test_ordering_dependency_carries_no_value() -> None:
     assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
         ('prepare', 'add', None, None)
     ]
+
+
+def test_comparison_rejects_unknown_operator() -> None:
+    from aiida.engine.processes.graphs.ir import Comparison
+
+    with pytest.raises(GraphTypeCheckError, match='unsupported comparison operator'):
+        Comparison.from_dict({'operator': '===', 'left': 'value', 'right': 0})
 
 
 def test_incompatible_boundary_types_fail_during_build() -> None:

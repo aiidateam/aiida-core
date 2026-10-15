@@ -12,6 +12,7 @@ from aiida.engine.processes.graphs.build_source import graph
 from tests.engine.processes.graphs.language.tasks import add, is_positive
 
 __all__ = (
+    'compare_condition',
     'computed_choice',
     'external_choice',
     'inline_condition',
@@ -37,6 +38,16 @@ def computed_choice(value: int) -> int:
     else:
         selected_branch = add(x=value, y=2)
     return selected_branch
+
+
+@graph
+def compare_condition(value: int) -> int:
+    """Compare against a bound; the scheduler evaluates the comparison."""
+    if value > 0:
+        chosen = add(x=value, y=1)
+    else:
+        chosen = add(x=value, y=2)
+    return chosen
 
 
 @graph

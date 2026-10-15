@@ -13,7 +13,6 @@ from tests.engine.processes.graphs.language.tasks import add, mismatched_alpha, 
 
 __all__ = (
     'boolean_condition',
-    'compare_condition',
     'inline_conditional',
     'mismatched_branches',
     'walrus_condition',
@@ -45,23 +44,6 @@ def boolean_condition(value: int, flag: bool) -> int:
 # @task
 # def both(value: int, flag: bool) -> bool:
 #     return flag and value > 0
-
-
-@graph
-def compare_condition(value: int) -> int:
-    """Compare inline; conditions are calls or names."""
-    if value > 0:
-        chosen = add(x=value, y=1)
-    else:
-        chosen = add(x=value, y=2)
-    return chosen
-
-
-# Compute the predicate in a task instead:
-
-# @task
-# def positive(value: int) -> bool:
-#     return value > 0
 
 
 @graph

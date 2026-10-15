@@ -30,6 +30,7 @@ from aiida.engine.processes.graphs.inputs import place
 from aiida.engine.processes.graphs.ir import (
     CONDITION_PORT,
     BranchControl,
+    Comparison,
     Dependency,
     Endpoint,
     GraphIR,
@@ -503,10 +504,14 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
         _reject(state, statement, 'condition conflicts with a branch input; rename one of them')
     instance = f'branch_{len(state.tasks) + 1}'
     given: dict[str, CapturedValue] = {}
-    _wire(state, instance, CONDITION_PORT, _lower_value(state, test), given)
+    comparison = _lower_comparison(state, instance, test, given)
+    if comparison is None:
+        _wire(state, instance, CONDITION_PORT, _lower_value(state, test), given)
     for name in sorted({path.split('.')[0] for side in (first, second) for path in side.child.inputs}):
         _wire(state, instance, name, state.names[name], given)
-    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    state.tasks.append(
+        BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body, comparison=comparison)
+    )
     selected = first.child.names[first.name]
     state.names[first.name] = _Reference(instance, selected.port, selected.shape)
 
@@ -521,9 +526,11 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         ast.copy_location(update.targets[0], statement.test)
         body.append(update)
     test: ast.expr = bound if bound is not None else statement.test
-    if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
-        _reject(state, statement, 'while requires a bound condition name and no else')
-    condition = test.id
+    if statement.orelse or (
+        not isinstance(test, ast.Compare) and (not isinstance(test, ast.Name) or test.id not in state.names)
+    ):
+        _reject(state, statement, 'while requires a bound condition or comparison and no else')
+    condition = test.id if isinstance(test, ast.Name) else CONDITION_PORT
     child = _collect_region_inputs(state, body)
     # Loop state is read from the previous iteration, including values rebound in the body.
     assigned: set[str] = {
@@ -536,7 +543,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
             _reject(state, statement, f'loop state {name!r} must be initialized before the loop')
         child.inputs.setdefault(name, [])
         child.names[name] = _Reference(None, name, state.names[name].shape)
-    if condition not in assigned:
+    if not isinstance(test, ast.Compare) and condition not in assigned:
         _reject(state, statement, 'while body must update its condition; rebind the condition name in the body')
     for node in body:
         _lower_assignment(child, node, rebind=True)
@@ -545,7 +552,12 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     instance = f'loop_{len(state.tasks) + 1}'
     given: dict[str, CapturedValue] = {}
     _route_region(state, child, instance, given)
-    state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
+    comparison = _lower_comparison(state, instance, test, given) if isinstance(test, ast.Compare) else None
+    if comparison is None and isinstance(test, ast.Compare):
+        _reject(state, test, _unsupported_reason(test))
+    state.tasks.append(
+        LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition, comparison=comparison)
+    )
     for name in assigned:
         state.names[name] = _Reference(instance, name, child.names[name].shape)
 
@@ -609,6 +621,38 @@ def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
     ast.copy_location(bound.targets[0], test)
     _lower_assignment(state, bound)
     return ast.Name(id=name, ctx=ast.Load())
+
+
+_COMPARISON_OPERATORS: dict[type[ast.cmpop], str] = {
+    ast.Eq: '==',
+    ast.NotEq: '!=',
+    ast.Lt: '<',
+    ast.LtE: '<=',
+    ast.Gt: '>',
+    ast.GtE: '>=',
+}
+
+
+def _lower_comparison(
+    state: _LoweringState, instance: str, test: ast.expr, given: dict[str, CapturedValue]
+) -> Comparison | None:
+    """Lower one comparison over names and literals, or decline anything richer."""
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1 or type(test.ops[0]) not in _COMPARISON_OPERATORS:
+        return None
+    operands: list[str | int | float | bool | None] = []
+    for side in (test.left, *test.comparators):
+        if isinstance(side, ast.Constant) and (side.value is None or isinstance(side.value, (int, float, str, bool))):
+            operands.append(side.value)
+        elif isinstance(side, ast.Name):
+            lowered = _lower_value(state, side)
+            if not isinstance(lowered, _Reference):
+                return None
+            _wire(state, instance, side.id, lowered, given)
+            operands.append(side.id)
+        else:
+            return None
+    left, right = operands
+    return Comparison(operator=_COMPARISON_OPERATORS[type(test.ops[0])], left=left, right=right)
 
 
 def _snapshot_namespace_boundary(state: _LoweringState) -> dict[str, t.Any] | None:

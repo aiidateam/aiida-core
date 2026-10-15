@@ -14,6 +14,7 @@ from tests.engine.processes.graphs.language.tasks import decrement, is_positive
 __all__ = (
     'countdown',
     'countdown_call',
+    'countdown_compare',
 )
 
 
@@ -30,5 +31,13 @@ def countdown(value: int, condition: bool) -> int:
 def countdown_call(value: int) -> int:
     """Loop on an inline predicate call, re-evaluated every iteration."""
     while is_positive(value=value):
+        value = decrement(value=value)
+    return value
+
+
+@graph
+def countdown_compare(value: int) -> int:
+    """Loop while the counter stays positive, compared inline."""
+    while value > 0:
         value = decrement(value=value)
     return value

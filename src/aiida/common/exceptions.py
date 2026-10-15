@@ -8,6 +8,8 @@
 ###########################################################################
 """Module that define the exceptions that are thrown by AiiDA's internal code."""
 
+from dataclasses import dataclass
+
 __all__ = (
     'AiidaException',
     'ClosedStorage',
@@ -20,6 +22,9 @@ __all__ = (
     'FailedError',
     'FeatureDisabled',
     'FeatureNotAvailable',
+    'GraphError',
+    'GraphTypeCheckError',
+    'GraphValidationError',
     'HashingError',
     'IncompatibleStorageSchema',
     'InputValidationError',
@@ -33,6 +38,8 @@ __all__ = (
     'LockingProfileError',
     'MissingConfigurationError',
     'MissingEntryPointError',
+    'MissingInput',
+    'MissingRequiredInputsError',
     'ModificationNotAllowed',
     'MultipleEntryPointError',
     'MultipleObjectsError',
@@ -52,6 +59,7 @@ __all__ = (
     'UniquenessError',
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
+    'UnsupportedSyntax',
     'ValidationError',
 )
 
@@ -64,8 +72,56 @@ class AiidaException(Exception):  # noqa: N818
     """
 
 
+@dataclass(frozen=True)
+class MissingInput:
+    """One missing required input, with graph-relative path and configuration help."""
+
+    identifier: str | None
+    socket_path: str
+    help: str | None
+    required: bool
+
+
+class ValidationError(AiidaException):
+    """Error raised when there is an error during the validation phase
+    of a property.
+    """
+
+
+class GraphError(AiidaException):
+    """Base for graph errors, also used directly for graph API misuse."""
+
+
+class GraphTypeCheckError(GraphError):
+    """A graph template violates the type checking stage: contracts, wiring, shapes, or structure."""
+
+
+class GraphValidationError(GraphError, ValidationError):
+    """Launch inputs or execution results violate the graph contract: the input checking stage."""
+
+
+class MissingRequiredInputsError(GraphValidationError):
+    """Required graph inputs are missing.
+
+    :param missing: the missing inputs, in deterministic path order.
+    """
+
+    def __init__(self, missing: tuple[MissingInput, ...]) -> None:
+        self.missing = missing
+        message = f'missing required graph inputs: {", ".join(item.socket_path for item in missing)}.'
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[type, tuple[tuple[MissingInput, ...]]]:
+        """Preserve structured diagnostics when the exception is pickled."""
+        return type(self), (self.missing,)
+
+
 class NotExistent(AiidaException):
     """Raised when the required entity does not exist."""
+
+
+class UnsupportedSyntax(GraphError):  # noqa: N818 - keep the established exception name
+    """A registered graph contains syntax the source parser cannot represent."""
 
 
 class NotExistentAttributeError(AttributeError, NotExistent):
@@ -159,12 +215,6 @@ class InternalError(AiidaException):
 class PluginInternalError(InternalError):
     """Error raised when there is an internal error which is due to a plugin
     and not to the AiiDA infrastructure.
-    """
-
-
-class ValidationError(AiidaException):
-    """Error raised when there is an error during the validation phase
-    of a property.
     """
 
 

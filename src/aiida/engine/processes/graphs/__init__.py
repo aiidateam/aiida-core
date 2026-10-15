@@ -1,0 +1,43 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Declare source graphs and execute their static task dependencies."""
+
+from aiida.common.exceptions import UnsupportedSyntax
+from aiida.engine.processes.graphs.build_source import GraphHandle, graph, lower_from_source, task
+from aiida.engine.processes.graphs.ir import (
+    BranchControl,
+    Comparison,
+    Dependency,
+    Endpoint,
+    GraphIR,
+    LoopControl,
+    SubgraphTask,
+    TaskIR,
+)
+from aiida.engine.processes.graphs.process import GraphProcess
+from aiida.engine.processes.graphs.tasks import TaskHandle, TaskProcess
+
+__all__ = (
+    'BranchControl',
+    'Comparison',
+    'Dependency',
+    'Endpoint',
+    'GraphHandle',
+    'GraphIR',
+    'GraphProcess',
+    'LoopControl',
+    'SubgraphTask',
+    'TaskHandle',
+    'TaskIR',
+    'TaskProcess',
+    'UnsupportedSyntax',
+    'graph',
+    'lower_from_source',
+    'task',
+)

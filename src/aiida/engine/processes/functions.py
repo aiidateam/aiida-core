@@ -11,39 +11,43 @@
 from __future__ import annotations
 
 import collections
+import collections.abc
 import functools
 import inspect
 import logging
 import signal
 import typing as t
 from inspect import get_annotations
-from types import UnionType
 
 import docstring_parser
+from typing_extensions import is_typeddict
 
+from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
-from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec
-from aiida.manage import get_manager
-from aiida.orm import (
-    Bool,
-    CalcFunctionNode,
-    Data,
-    Dict,
-    Float,
-    Int,
-    List,
-    ProcessNode,
-    Str,
-    WorkFunctionNode,
-    to_aiida_type,
+from aiida.engine.processes.generic.ports import UNSPECIFIED
+from aiida.engine.processes.port_model import Field, fields_of, is_structured, port_help, without_marks
+from aiida.engine.processes.ports import (
+    InputPort,
+    PortNamespace,
+    coerce_model_values,
+    infer_node_types,
 )
+from aiida.engine.processes.process import Process
+from aiida.engine.processes.process_spec import ProcessSpec, _require_storable, _with_defaults
+from aiida.manage import get_manager
+from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
 
-__all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
+__all__ = (
+    'FunctionProcess',
+    'FunctionProcessBase',
+    'calcfunction',
+    'declare_output_ports',
+    'workfunction',
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -65,6 +69,8 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
     def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]: ...
 
     def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]: ...
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]: ...
 
     is_process_function: bool
 
@@ -129,10 +135,14 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType], FunctionType]:
+def process_function(
+    node_class: type[ProcessNode],
+    base_class: type[FunctionProcessBase] | None = None,
+) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
+    :param base_class: the ``FunctionProcessBase`` subclass to build, defaulting to the legacy ``FunctionProcess``
     """
 
     def decorator(function: FunctionType) -> FunctionType:
@@ -141,7 +151,7 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
         """
-        process_class = FunctionProcess.build(function, node_class=node_class)
+        process_class = FunctionProcessBase.build(function, node_class=node_class, base_class=base_class)
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
@@ -223,9 +233,14 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        def get_launch_inputs(**inputs: t.Any) -> dict[str, t.Any]:
+            """Return the inputs to launch the process with."""
+            return coerce_model_values(dict(inputs))
+
         decorated_function.run = decorated_function  # type: ignore[attr-defined]
         decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
         decorated_function.run_get_node = run_get_node  # type: ignore[attr-defined]
+        decorated_function.get_launch_inputs = get_launch_inputs  # type: ignore[attr-defined]
         decorated_function.is_process_function = True  # type: ignore[attr-defined]
         decorated_function.node_class = node_class  # type: ignore[attr-defined]
         decorated_function.process_class = process_class  # type: ignore[attr-defined]
@@ -237,47 +252,89 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
     return decorator
 
 
-def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
-    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
+def _function_annotations(func: FunctionType) -> dict[str, t.Any]:
+    """Return the resolved type hints of a function, warning instead of failing on bad hints."""
+    try:
+        return get_annotations(func, eval_str=True)
+    except Exception as exception:
+        # Since we are running with ``eval_str=True`` to unstringize the annotations, the call can except if the
+        # annotations are incorrect. In this case we simply want to log a warning and continue with type inference.
+        LOGGER.warning(f'function `{func.__name__}` has invalid type hints: {exception}')
+        return {}
 
-    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
-    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
-        tuple is returned.
+
+def _help_strings(func: FunctionType) -> tuple[dict[str, str | None], str | None]:
+    """Return the parameter and namespace help texts parsed from a docstring."""
+    if func.__doc__ is None:
+        return {}, None
+    try:
+        parsed_docstring = docstring_parser.parse(func.__doc__)
+    except Exception as exception:
+        LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
+        return {}, None
+    param_help_string = {param.arg_name: param.description for param in parsed_docstring.params}
+    namespace_help_string = parsed_docstring.short_description if parsed_docstring.short_description else ''
+    if parsed_docstring.long_description is not None:
+        namespace_help_string += f'\n\n{parsed_docstring.long_description}'
+    return param_help_string, namespace_help_string
+
+
+def _signature_names(
+    signature: inspect.Signature,
+) -> tuple[list[str], str | None, str | None]:
+    """Return the positional names and variadic parameter names of a signature."""
+    args: list[str] = []
+    var_positional: str | None = None
+    var_keyword: str | None = None
+    for key, parameter in signature.parameters.items():
+        if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY]:
+            args.append(key)
+
+        if parameter.kind is parameter.VAR_POSITIONAL:
+            var_positional = key
+
+        if parameter.kind is parameter.VAR_KEYWORD:
+            var_keyword = key
+    return args, var_positional, var_keyword
+
+
+def declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
+    """Declare static leaf output ports from the return annotation.
+
+    A scalar annotation declares one ``result`` port; a total ``TypedDict`` declares one
+    port per key. Task registration rejects missing declarations and namespace returns.
+
+    :param return_annotation: the return annotation of the wrapped function, if it has one.
+    :param spec: the spec to declare them on.
     """
-
-    def get_type_from_annotation(annotation):
-        # `t.Dict`/`t.List` are distinct runtime keys from `dict`/`list` (`t.Dict != dict`) and map the
-        # pre-PEP-585 annotation spelling; UP006 would collapse them into duplicate builtin keys.
-        valid_type_map = {
-            bool: Bool,
-            dict: Dict,
-            t.Dict: Dict,  # noqa: UP006
-            float: Float,
-            int: Int,
-            list: List,
-            t.List: List,  # noqa: UP006
-            str: Str,
-        }
-
-        if inspect.isclass(annotation) and issubclass(annotation, Data):
-            return annotation
-
-        return valid_type_map.get(annotation)
-
-    inferred_valid_type: tuple[t.Any, ...] = ()
-
-    if inspect.isclass(annotation):
-        inferred_valid_type = (get_type_from_annotation(annotation),)
-    elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
-        inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
-    elif t.get_origin(annotation) is t.Optional:
-        inferred_valid_type = (t.get_args(annotation),)
-
-    return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
+    if return_annotation is None or return_annotation is type(None):
+        return
+    if is_typeddict(return_annotation):
+        hints = t.get_type_hints(return_annotation, include_extras=True)
+        if set(hints) != set(return_annotation.__required_keys__):
+            msg = 'TypedDict task outputs must be total; declare every output.'
+            raise GraphTypeCheckError(msg)
+        for key, hint in hints.items():
+            spec.output(key, valid_type=infer_node_types(without_marks(hint)) or (Data,))
+        return
+    if t.get_origin(return_annotation) is tuple:
+        msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
+        raise GraphTypeCheckError(msg)
+    if t.get_origin(return_annotation) in (list, dict):
+        return_annotation = t.get_origin(return_annotation)
+    spec.output(
+        Process.SINGLE_OUTPUT_LINKNAME,
+        valid_type=infer_node_types(return_annotation) or (Data,),
+    )
 
 
-class FunctionProcess(Process):
-    """Function process class used for turning functions into a Process"""
+class FunctionProcessBase(Process):
+    """Shared machinery for processes generated from plain Python functions.
+
+    Subclasses define the input/output contract by overriding :meth:`_declare_input` and
+    :meth:`_declare_outputs`; the base holds everything contract-neutral (input assembly, running
+    the wrapped function, provenance recording).
+    """
 
     _func_args: t.Sequence[str] = ()
     _var_positional: str | None = None
@@ -285,6 +342,22 @@ class FunctionProcess(Process):
 
     _binds_process_class: t.ClassVar[bool] = False
     """Disable runtime class binding so `ProcessNode.process_class` resolves to the decorated function."""
+
+    @classmethod
+    def _declare_input(
+        cls,
+        spec: ProcessSpec,
+        parameter: inspect.Parameter,
+        annotations: dict[str, t.Any],
+        param_help_string: dict[str, str | None],
+    ) -> None:
+        """Declare one function parameter as an input port or namespace."""
+        raise NotImplementedError
+
+    @classmethod
+    def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
+        """Declare the output ports of the wrapped function."""
+        raise NotImplementedError
 
     @classmethod
     @override
@@ -300,7 +373,11 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func: FunctionType, node_class: type[ProcessNode]) -> type[FunctionProcess]:
+    def build(
+        func: FunctionType,
+        node_class: type[ProcessNode],
+        base_class: type[FunctionProcessBase] | None = None,
+    ) -> type[FunctionProcessBase]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -320,94 +397,23 @@ class FunctionProcess(Process):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
         signature = inspect.signature(func)
+        annotations = _function_annotations(func)
+        param_help_string, namespace_help_string = _help_strings(func)
+        args, var_positional, var_keyword = _signature_names(signature)
 
-        args: list[str] = []
-        var_positional: str | None = None
-        var_keyword: str | None = None
-
-        try:
-            annotations = get_annotations(func, eval_str=True)
-        except Exception as exception:
-            # Since we are running with ``eval_str=True`` to unstringize the annotations, the call can except if the
-            # annotations are incorrect. In this case we simply want to log a warning and continue with type inference.
-            LOGGER.warning(f'function `{func.__name__}` has invalid type hints: {exception}')
-            annotations = {}
-
-        if func.__doc__ is None:
-            param_help_string: dict[str, str | None] = {}
-            namespace_help_string = None
-        else:
-            try:
-                parsed_docstring = docstring_parser.parse(func.__doc__)
-            except Exception as exception:
-                LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
-                param_help_string = {}
-                namespace_help_string = None
-            else:
-                param_help_string = {param.arg_name: param.description for param in parsed_docstring.params}
-                namespace_help_string = parsed_docstring.short_description if parsed_docstring.short_description else ''
-                if parsed_docstring.long_description is not None:
-                    namespace_help_string += f'\n\n{parsed_docstring.long_description}'
-
-        for key, parameter in signature.parameters.items():
-            if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY]:
-                args.append(key)
-
-            if parameter.kind is parameter.VAR_POSITIONAL:
-                var_positional = key
-
-            if parameter.kind is parameter.VAR_KEYWORD:
-                var_keyword = key
+        # Filled in once the class below exists, so that `define` can name it and reach what comes after it. A
+        # bare `super()` here is `super(FunctionProcessBase, cls)`, since this sits inside a method of that
+        # class, which would walk past whatever `base_class` has to say.
+        generated: type[FunctionProcessBase] | None = None
 
         def define(cls, spec):
             """Define the spec dynamically"""
-            from aiida.engine.processes.generic.ports import UNSPECIFIED
-
-            super().define(spec)
+            super(generated, cls).define(spec)  # type: ignore[arg-type]
 
             for parameter in signature.parameters.values():
                 if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
                     continue
-
-                annotation = annotations.get(parameter.name)
-                valid_type = infer_valid_type_from_type_annotation(annotation) or (Data,)
-                help_string = param_help_string.get(parameter.name, None)
-
-                default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
-
-                # If the keyword was already specified, simply override the default
-                if spec.has_input(parameter.name):
-                    spec.inputs[parameter.name].default = default
-                    continue
-
-                # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
-                # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
-                # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
-                if default is None:
-                    valid_type += (type(None),)
-
-                # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
-                # done lazily using a lambda, just as any port defaults should not define node instances directly as is
-                # also checked by the ``spec.input`` call.
-                if (
-                    default is not None
-                    and default != UNSPECIFIED
-                    and not isinstance(default, Data)
-                    and not callable(default)
-                ):
-
-                    def indirect_default(value=default):
-                        return to_aiida_type(value)
-                else:
-                    indirect_default = default  # type: ignore[assignment]
-
-                spec.input(
-                    parameter.name,
-                    valid_type=valid_type,
-                    default=indirect_default,
-                    serializer=to_aiida_type,
-                    help=help_string,
-                )
+                cls._declare_input(spec, parameter, annotations, param_help_string)
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']
@@ -420,14 +426,11 @@ class FunctionProcess(Process):
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
-            # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
-            # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
-            # the output namespace can be nested.
-            spec.outputs.valid_type = (Data, dict)
+            cls._declare_outputs(spec, annotations)
 
-        return type(
+        generated = type(
             func.__qualname__,
-            (FunctionProcess,),
+            (base_class or FunctionProcess,),
             {
                 '__module__': func.__module__,
                 '__name__': func.__name__,
@@ -440,6 +443,8 @@ class FunctionProcess(Process):
                 '_node_class': node_class,
             },
         )
+
+        return generated
 
     @classmethod
     def validate_inputs(cls, *args: t.Any, **kwargs: t.Any) -> None:
@@ -544,11 +549,27 @@ class FunctionProcess(Process):
         if self.node.exit_status is not None:
             return ExitCode(self.node.exit_status, self.node.exit_message)
 
-        # Now the original functions arguments need to be reconstructed from the inputs to the process, as they were
-        # passed to the original function call. To do so, all positional parameters are popped from the inputs
-        # dictionary and added to the positional arguments list.
-        args = []
-        kwargs: dict[str, Data] = {}
+        args, kwargs = self._function_arguments()
+
+        from aiida.engine.processes.greenback import run_with_portal
+
+        result = await run_with_portal(self._func, *args, **kwargs)
+
+        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
+            return result  # type: ignore[unreachable]
+
+        self._out_result(result)
+
+        return ExitCode()
+
+    def _function_arguments(self) -> tuple[list[t.Any], dict[str, t.Any]]:
+        """Return the arguments of the wrapped function, rebuilt from the inputs of the process.
+
+        They were passed as they are written in the call, so all positional parameters are popped from the inputs
+        and added to the positional arguments, and what is left over is passed by keyword.
+        """
+        args: list[t.Any] = []
+        kwargs: dict[str, t.Any] = {}
         inputs = dict(self.inputs or {})
 
         for name, parameter in inspect.signature(self._func).parameters.items():
@@ -566,23 +587,156 @@ class FunctionProcess(Process):
         # The remaining inputs have to be keyword arguments.
         kwargs.update(**inputs)
 
-        from aiida.engine.processes.greenback import run_with_portal
+        return args, kwargs
 
-        result = await run_with_portal(self._func, *args, **kwargs)
+    def _out_result(self, result: t.Any) -> None:
+        """Attach the value returned by the wrapped function to the output ports.
 
-        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
-            return result  # type: ignore[unreachable]
-
-        if isinstance(result, Data):  # type: ignore[unreachable]
-            self.out(self.SINGLE_OUTPUT_LINKNAME, result)  # type: ignore[unreachable]
+        :param result: the value returned by the wrapped function.
+        :raises TypeError: if the value cannot be attached to an output port.
+        """
+        if isinstance(result, Data):
+            self.out(self.SINGLE_OUTPUT_LINKNAME, result)
         elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
                 self.out(name, value)
         else:
-            msg = (  # type: ignore[unreachable]
+            msg = (
                 f"Function process returned an output with unsupported type '{result.__class__}'\n"
                 'Must be a Data type or a mapping of {string: Data}'
             )
             raise TypeError(msg)
 
-        return ExitCode()
+
+def _declare_node_namespace(
+    spec: ProcessSpec,
+    name: str,
+    container: type,
+    *,
+    required: bool,
+    help: str | None,
+    defaults: t.Mapping[str, t.Any] | None = None,
+) -> None:
+    """Declare a model namespace with node valid types for legacy function declarations."""
+    fields = fields_of(container)
+    if fields is None:
+        msg = (
+            f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
+            f'to declare `{name}` from. Use a `PortModel`.'
+        )
+        raise TypeError(msg)
+    spec.input_namespace(name, required=required, help=help)
+    for field in _with_defaults(fields, defaults):
+        _declare_node_field(spec, f'{name}{spec.namespace_separator}{field.name}', field)
+
+
+def _declare_node_field(spec: ProcessSpec, name: str, field: Field) -> None:
+    """Declare one model field with node valid types for legacy function declarations."""
+    if fields_of(field.annotation) is not None:
+        nested = field.default.as_dict() if isinstance(field.default, field.annotation) else field.default
+        _declare_node_namespace(
+            spec,
+            name,
+            field.annotation,
+            required=field.required,
+            help=field.help,
+            defaults=nested if isinstance(nested, dict) else None,
+        )
+        return
+    _require_storable(field)
+    declared = infer_node_types(field.annotation) or (Data,)
+    required = field.required or type(None) not in declared
+    indirect_default: t.Any = field.default
+    if field.required:
+        spec.input(name, valid_type=declared, required=required, help=field.help)
+        return
+    if not (field.default is None or isinstance(field.default, Data) or callable(field.default)):
+
+        def indirect_default(value=field.default):
+            return to_aiida_type(value)
+
+    spec.input(
+        name,
+        valid_type=declared,
+        required=required,
+        default=indirect_default,
+        serializer=to_aiida_type,
+        help=field.help,
+    )
+
+
+class FunctionProcess(FunctionProcessBase):
+    """Legacy function process with node-valued inputs, used for ``calcfunction`` and ``workfunction``."""
+
+    @classmethod
+    @override
+    def _declare_input(
+        cls,
+        spec: ProcessSpec,
+        parameter: inspect.Parameter,
+        annotations: dict[str, t.Any],
+        param_help_string: dict[str, str | None],
+    ) -> None:
+        """Declare one function parameter as a node-valued input port or namespace."""
+        annotation = annotations.get(parameter.name)
+        valid_type = infer_node_types(annotation) or (Data,)
+        help_string = port_help(annotation)
+        if help_string is None:
+            help_string = param_help_string.get(parameter.name, None)
+
+        default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
+
+        # If the keyword was already specified, simply override the default
+        if spec.has_input(parameter.name):
+            port = spec.inputs[parameter.name]
+            assert isinstance(port, (InputPort, PortNamespace))
+            port.default = default
+            return
+
+        # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
+        # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
+        # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
+        if default is None and type(None) not in valid_type:
+            valid_type += (type(None),)
+
+        # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
+        # done lazily using a lambda, just as any port defaults should not define node instances directly as is
+        # also checked by the ``spec.input`` call.
+        indirect_default: t.Any
+        if (
+            default is not None
+            and default is not UNSPECIFIED
+            and not isinstance(default, Data)
+            and not callable(default)
+        ):
+
+            def indirect_default(value=default):
+                return to_aiida_type(value)
+
+        else:
+            indirect_default = default
+
+        if is_structured(without_marks(annotation)):
+            _declare_node_namespace(
+                spec,
+                parameter.name,
+                without_marks(annotation),
+                required=default is UNSPECIFIED,
+                help=help_string,
+            )
+            return
+
+        spec.input(
+            parameter.name,
+            valid_type=valid_type,
+            default=indirect_default,
+            serializer=to_aiida_type,
+            help=help_string,
+        )
+
+    @classmethod
+    @override
+    def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
+        # Without a declaration we do not know beforehand what outputs will be returned, so the namespace has
+        # to be dynamic and accept `Data` nodes as well as a dictionary, since it can be nested.
+        spec.outputs.valid_type = (Data, dict)

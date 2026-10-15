@@ -31,6 +31,7 @@ __all__ = (
     'default_parameter',
     'diamond',
     'dictionary_input',
+    'direct_result',
     'failed',
     'input_passthrough',
     'keyword_only_parameter',
@@ -54,6 +55,12 @@ __all__ = (
     'whole',
     'wired',
 )
+
+
+@graph
+def direct_result(value: int) -> int:
+    """Select the single output port explicitly."""
+    return add(x=value, y=10).result
 
 
 @graph

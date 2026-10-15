@@ -37,6 +37,7 @@ pytestmark = pytest.mark.presto
         pytest.param(language.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
         pytest.param(language.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(language.diamond, {'x': 2}, {'result': 7}, id='diamond'),
+        pytest.param(language.direct_result, {'value': 2}, {'result': 12}, id='direct-result'),
         pytest.param(language.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
         pytest.param(
             language.selected,

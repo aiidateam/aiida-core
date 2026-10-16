@@ -16,6 +16,7 @@ import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
 from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
+from aiida.common.links import LinkType
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
@@ -141,6 +142,36 @@ async def test_retrieve_files_from_list(
         await execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
     assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy
+
+
+@pytest.mark.asyncio
+async def test_retrieve_temporary_with_existing_output(node_and_calc_info, tmp_path):
+    """Reuse permanent provenance while populating a fresh temporary folder on recovery."""
+    node, _ = node_and_calc_info
+    remote = tmp_path / 'remote'
+    remote.mkdir()
+    (remote / 'permanent.txt').write_text('permanent output')
+    (remote / 'temporary.txt').write_text('temporary output')
+    node.set_remote_workdir(str(remote))
+    node.set_retrieve_list(['permanent.txt'])
+    node.set_retrieve_temporary_list(['temporary.txt'])
+    before = tmp_path / 'before'
+    after = tmp_path / 'after'
+    before.mkdir()
+    after.mkdir()
+
+    async with node.computer.get_transport() as transport:
+        retrieved = await execmanager.retrieve_calculation(node, transport, before)
+        retrieved.base.links.add_incoming(node, LinkType.CREATE, node.link_label_retrieved)
+        retrieved_uuid = retrieved.uuid
+        (remote / 'permanent.txt').unlink()
+        (remote / 'temporary.txt').write_text('recovered temporary output')
+        result = await execmanager.retrieve_calculation(node, transport, after)
+
+    assert result is None
+    assert (after / 'temporary.txt').read_text() == 'recovered temporary output'
+    assert node.outputs.retrieved.uuid == retrieved_uuid
+    assert node.outputs.retrieved.base.repository.get_object_content('permanent.txt') == 'permanent output'
 
 
 @pytest.mark.asyncio

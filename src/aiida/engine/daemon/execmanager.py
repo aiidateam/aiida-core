@@ -745,28 +745,26 @@ async def retrieve_calculation(
     EXEC_LOGGER.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
     EXEC_LOGGER.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
 
-    # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
-    # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
-    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
+    # Reuse a persisted output on recovery, but temporary files may need to be retrieved into a new directory.
     link_label = calculation.link_label_retrieved
+    retrieved_files = None
     if calculation.base.links.get_outgoing(FolderData, link_label_filter=link_label).first():
         EXEC_LOGGER.warning(
-            f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping retrieval'
+            f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping permanent retrieval'
         )
-        return
-
-    # Create the FolderData node into which to store the files that are to be retrieved
-    retrieved_files = FolderData()
+    else:
+        retrieved_files = FolderData()
 
     with transport:
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
-        with SandboxFolder(filepath_sandbox) as folder:
-            await retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
-            # Here I retrieved everything; now I store them inside the calculation
-            retrieved_files.base.repository.put_object_from_tree(folder.abspath)
+        if retrieved_files is not None:
+            with SandboxFolder(filepath_sandbox) as folder:
+                await retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
+                # Here I retrieved everything; now I store them inside the calculation
+                retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
@@ -780,11 +778,11 @@ async def retrieve_calculation(
                     extra=logger_extra,
                 )
 
-        # Store everything
-        EXEC_LOGGER.debug(
-            f'[retrieval of calc {calculation.pk}] Storing retrieved_files={retrieved_files.pk}', extra=logger_extra
-        )
-        retrieved_files.store()
+        if retrieved_files is not None:
+            EXEC_LOGGER.debug(
+                f'[retrieval of calc {calculation.pk}] Storing retrieved_files={retrieved_files.pk}', extra=logger_extra
+            )
+            retrieved_files.store()
 
     return retrieved_files
 

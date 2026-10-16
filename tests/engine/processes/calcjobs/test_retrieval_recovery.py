@@ -140,6 +140,21 @@ def temporary_result_parser(entry_points):
     entry_points.add(TemporaryResultParser, group='aiida.parsers', name='test.temporary_result')
 
 
+@pytest.fixture
+def transport_retry_options(aiida_manager, monkeypatch):
+    """Override the active profile in memory and restore its options after each test."""
+
+    def configure(max_attempts: int) -> None:
+        # Earlier tests can reload the config/profile, leaving session fixture objects stale.
+        profile = aiida_manager.get_profile()
+        assert profile is not None
+        for option, value in ((tasks.RETRY_INTERVAL_OPTION, 0), (tasks.MAX_ATTEMPTS_OPTION, max_attempts)):
+            monkeypatch.setitem(profile.options, option, value)
+            assert tasks.get_config_option(option) == value
+
+    return configure
+
+
 @pytest.mark.requires_broker
 @pytest.mark.parametrize('backend', ['local', 'asyncssh', 'openssh'])
 @pytest.mark.parametrize('failures, partial', [(0, '123'), (1, 'invalid'), (1, '123'), (3, '123'), (20, '123')])
@@ -147,8 +162,7 @@ def test_temporary_retrieval_retries(
     aiida_localhost,
     aiida_computer_ssh,
     aiida_code_installed,
-    aiida_config,
-    aiida_profile,
+    transport_retry_options,
     temporary_result_parser,
     monkeypatch,
     backend,
@@ -160,9 +174,7 @@ def test_temporary_retrieval_retries(
     if backend != 'local':
         computer.configure(backend=backend, safe_interval=0)
     code = aiida_code_installed(computer=computer)
-    aiida_config.set_option('transport.task_retry_initial_interval', 0, scope=aiida_profile.name)
-    aiida_config.set_option('transport.task_maximum_attempts', failures + 1, scope=aiida_profile.name)
-    aiida_config.store()
+    transport_retry_options(failures + 1)
     transport_class = TransportFactory(computer.transport_type)
     original_get = transport_class.get_async
     failed_folders = []
@@ -265,17 +277,14 @@ def test_temporary_retrieval_checkpoint(
 def test_temporary_retrieval_resume(
     aiida_code_installed,
     aiida_manager,
-    aiida_config,
-    aiida_profile,
+    transport_retry_options,
     temporary_result_parser,
     monkeypatch,
     attempts,
     error_type,
 ):
     """Failed or interrupted tasks clean their staging and can resume from the saved checkpoint."""
-    aiida_config.set_option('transport.task_retry_initial_interval', 0, scope=aiida_profile.name)
-    aiida_config.set_option('transport.task_maximum_attempts', attempts, scope=aiida_profile.name)
-    aiida_config.store()
+    transport_retry_options(attempts)
     runner = aiida_manager.get_runner()
     process = runner.instantiate_process(
         TemporaryResultCalculation, code=aiida_code_installed(), x=orm.Int(1), y=orm.Int(2)

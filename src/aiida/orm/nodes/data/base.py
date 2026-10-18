@@ -16,7 +16,7 @@ from functools import singledispatch
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
 
-__all__ = ('BaseType', 'to_aiida_type')
+__all__ = ('BaseType', 'from_aiida_type', 'to_aiida_type')
 
 
 @singledispatch
@@ -24,6 +24,18 @@ def to_aiida_type(value):
     """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
     msg = f'Cannot convert value of type {type(value)} to AiiDA type.'
     raise TypeError(msg)
+
+
+@singledispatch
+def from_aiida_type(node: Data) -> object:
+    """Return the Python value of a registered data type or the unregistered node.
+
+    Plugins can register conversions through `from_aiida_type.register`.
+
+    :param node: data node to convert.
+    :return: converted Python value, or the original node when no conversion is registered.
+    """
+    return node
 
 
 class BaseType(Data):
@@ -61,3 +73,8 @@ class BaseType(Data):
 
     def new(self, value=None):
         return self.__class__(value)
+
+
+@from_aiida_type.register(BaseType)
+def _base_type_from_aiida_type(node: BaseType) -> object:
+    return node.value

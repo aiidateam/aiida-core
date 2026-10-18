@@ -3,7 +3,7 @@
 import contextlib
 import pathlib
 import typing as t
-from collections.abc import Iterable, Iterator
+from collections.abc import Generator, Iterable
 
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
@@ -306,7 +306,7 @@ class Repository:
         """
         return [entry.name for entry in self.list_objects(path)]
 
-    def put_object_from_filelike(self, handle: t.BinaryIO, path: FilePath) -> None:
+    def put_object_from_filelike(self, handle: t.IO, path: FilePath) -> None:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -384,7 +384,7 @@ class Repository:
         return True
 
     @contextlib.contextmanager
-    def open(self, path: FilePath) -> Iterator[t.BinaryIO]:
+    def open(self, path: FilePath) -> Generator[t.BinaryIO, None, None]:
         """Open a file handle to an object stored under the given path.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -512,7 +512,7 @@ class Repository:
             target = pathlib.Path(target)
 
         if not isinstance(target, pathlib.Path):
-            msg = f'path `{path}` is not of type `str` nor `pathlib.Path`.'  # type: ignore[unreachable]
+            msg = f'target `{target}` is not of type `str` nor `pathlib.Path`.'  # type: ignore[unreachable]
             raise TypeError(msg)
 
         if not target.is_absolute():

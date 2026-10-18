@@ -1350,7 +1350,7 @@ def generate_calculation_node_io(generate_calculation_node, tmp_path):
         folderdata_relpath = Path('relative_path')
         arraydata_linklabel = 'arraydata'
 
-        singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)
+        singlefiledata_input = SinglefileData(content=filecontent, filename=filename)
         # ? Use instance for folderdata
         folderdata = FolderData()
         folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]

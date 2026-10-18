@@ -284,6 +284,7 @@ class TestTrajectory:
 
         assert trajectory.get_step_structure(0).pbc == (True, False, False)
 
+    @pytest.mark.skip(reason='v3: getters no longer support access once the attribute is deleted')
     def test_trajectory_without_pbc(self, trajectory_data):
         """Test old `TrajectoryData` that do not have the `pbc` attribute."""
         trajectory = TrajectoryData()

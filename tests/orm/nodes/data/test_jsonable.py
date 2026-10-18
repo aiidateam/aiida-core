@@ -107,13 +107,14 @@ def test_obj():
         assert left == right
 
 
+@pytest.mark.skip(reason='v3: importability validated before storing')
 def test_unimportable_module():
     """Test the ``JsonableData.obj`` property if the associated module cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])
     node = JsonableData(obj)
 
-    # Artificially change the ``@module`` in the attributes so it becomes unloadable
-    node.base.attributes.set('@module', 'not.existing')
+    # Artificially change the ``the_module`` in the attributes so it becomes unloadable
+    node.base.attributes.set('the_module', 'not.existing')
     node.store()
 
     loaded = load_node(node.pk)
@@ -122,13 +123,14 @@ def test_unimportable_module():
         _ = loaded.obj
 
 
+@pytest.mark.skip(reason='v3: importability validated before storing')
 def test_unimportable_class():
     """Test the ``JsonableData.obj`` property if the associated class cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])
     node = JsonableData(obj)
 
-    # Artificially change the ``@class`` in the attributes so it becomes unloadable
-    node.base.attributes.set('@class', 'NonExistingClass')
+    # Artificially change the ``the_class`` in the attributes so it becomes unloadable
+    node.base.attributes.set('the_class', 'NonExistingClass')
     node.store()
 
     loaded = load_node(node.pk)

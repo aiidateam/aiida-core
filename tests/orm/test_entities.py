@@ -48,4 +48,4 @@ class TestBackendEntitiesAndCollections:
     def test_pickle(self):
         """Pickling is not supported and should raise."""
         with pytest.raises(InvalidOperation):
-            pickle.dumps(orm.Entity({}))
+            pickle.dumps(orm.Entity())

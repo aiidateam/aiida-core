@@ -18,6 +18,7 @@ from functools import partial
 
 import click
 
+from aiida.cmdline.commands.cmd_data import create_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -30,6 +31,7 @@ from aiida.common import exceptions
 
 if t.TYPE_CHECKING:
     from aiida.orm import Code
+    from aiida.orm.models.entity import CreateModel
 
 
 @verdi.group('code')
@@ -37,20 +39,9 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls: type[Code], **kwargs) -> None:
+def create_code(ctx: click.Context, cls: type[Code], model: CreateModel) -> None:
     """Create a new `Code` instance."""
-    try:
-        model = cls.CliModel(**kwargs)
-        instance = cls.from_model(model)
-    except (TypeError, ValueError) as exception:
-        echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
-
-    try:
-        instance.store()
-    except exceptions.ValidationError as exception:
-        echo.echo_critical(f'Failed to store instance of `{cls}`: {exception}')
-
-    echo.echo_success(f'Created {cls.__name__}<{instance.pk}>')
+    create_data(ctx, cls, model)
 
 
 @verdi_code.group(
@@ -232,6 +223,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 def show(code: Code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
+    from aiida.orm.decorators.attributes import iter_attributes
 
     table = []
 
@@ -245,11 +237,18 @@ def show(code: Code):
     if code.computer is not None:
         table.append(['Computer', f'{code.computer.label} ({code.computer.hostname}), pk: {code.computer.pk}'])
 
-    for key, field in code.AttributesModel.model_fields.items():
-        if key == 'source':
+    for name, attribute in iter_attributes(code.__class__).items():
+        if name == 'source':
             continue
-        value = getattr(code, key)
-        table.append([field.title, value])
+
+        if attribute.model_field_info.title:
+            title = attribute.model_field_info.title
+        else:
+            title = name.replace('_', ' ').capitalize()
+
+        value = getattr(code, name)
+
+        table.append([title, value])
 
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
@@ -407,7 +406,7 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
                 projections[entity].append(projection)
 
     if not all_entries:
-        filters['code'][f'extras.{orm.Code._KEY_EXTRA_IS_HIDDEN}'] = {'!==': True}
+        filters['code'][f'extras.{orm.Code.KEY_EXTRA_IS_HIDDEN}'] = {'!==': True}
 
     if not all_users:
         if default_user := orm.User.collection.get_default():
@@ -419,7 +418,7 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         filters['computer']['uuid'] = computer.uuid
 
     if default_calc_job_plugin is not None:
-        filters['code']['attributes.input_plugin'] = default_calc_job_plugin.name
+        filters['code']['attributes.default_calc_job_plugin'] = default_calc_job_plugin.name
 
     query = orm.QueryBuilder()
     query.append(orm.Code, tag='code', project=projections.get('code', None), filters=filters.get('code', None))

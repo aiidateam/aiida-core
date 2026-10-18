@@ -8,8 +8,10 @@
 ###########################################################################
 """Module for defintion of base `Data` sub class for numeric based data types."""
 
+import abc
+import typing as t
+
 from aiida.orm.nodes.data.base import BaseType, to_aiida_type
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('NumericType',)
 
@@ -40,14 +42,11 @@ def _right_operator(func):
     return inner
 
 
-class NumericType(BaseType):
-    """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
+_NumericT = t.TypeVar('_NumericT', int, float)
 
-    class AttributesModel(BaseType.AttributesModel):
-        value: int | float = OrmMetadataField(
-            title='Numeric value',
-            description='The value of the numeric data',
-        )
+
+class NumericType(BaseType[_NumericT], abc.ABC, t.Generic[_NumericT]):
+    """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
 
     @_left_operator
     def __add__(self, other):

@@ -98,7 +98,7 @@ def test_serialize_unstored_group():
 
 def test_serialize_unstored_computer():
     """Test that you can't serialize an unstored node"""
-    computer = orm.Computer('test_computer', 'test_host')
+    computer = orm.Computer('test_computer', hostname='test_host')
 
     with pytest.raises(ValueError):
         serialize.serialize(computer)

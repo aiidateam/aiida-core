@@ -95,6 +95,7 @@ def test_get_member():
     assert loaded.get_member() == member
 
 
+@pytest.mark.skip(reason='v3: importability validated before storing')
 def test_get_member_module_not_importable():
     """Test the ``get_member`` property when the enum cannot be imported from the identifier."""
     member = DummyEnum.OPTION_A

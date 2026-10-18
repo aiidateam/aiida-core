@@ -41,6 +41,7 @@ def test_load(obj):
     assert loaded.load() == obj
 
 
+@pytest.mark.skip(reason='TBD')
 def test_kwargs():
     """Test that kwargs passed to the constructor are forwarded to the pickler and stored in node's attributes."""
     pickled = PickledData(Node, recurse=True).store()

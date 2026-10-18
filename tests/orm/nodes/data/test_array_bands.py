@@ -47,8 +47,12 @@ class TestGetBandsAndParentsStructure:
     @pytest.mark.parametrize('all_users, expected', ((True, [True, True]), (False, [True, False])))
     def test_all_users(self, alternate_user, all_users, expected):
         """Test the behavior for the ``all_users`` argument."""
-        bands_default_user = BandsData().store()
-        bands_alternate_user = BandsData(user=alternate_user).store()
+        bands_default_user = BandsData()
+        bands_default_user.set_kpoints_mesh([1, 1, 1])
+        bands_default_user.store()
+        bands_alternate_user = BandsData(user=alternate_user)
+        bands_alternate_user.set_kpoints_mesh([1, 1, 1])
+        bands_alternate_user.store()
         bands = [bands_default_user, bands_alternate_user]
 
         args = self._get_default_ns()
@@ -61,8 +65,12 @@ class TestGetBandsAndParentsStructure:
     @pytest.mark.parametrize('argument, attribute', (('group_name', 'label'), ('group_pk', 'pk')))
     def test_identifier(self, argument, attribute):
         """Test the behavior for the ``group_name`` and ``group_pk`` arguments."""
-        bands_data_grouped = BandsData().store()
-        _ = BandsData().store()
+        bands_data_grouped = BandsData()
+        bands_data_grouped.set_kpoints_mesh([1, 1, 1])
+        bands_data_grouped.store()
+        bands_data_ungrouped = BandsData()
+        bands_data_ungrouped.set_kpoints_mesh([1, 1, 1])
+        bands_data_ungrouped.store()
         bands_group = Group(uuid.uuid4().hex).store()
         bands_group.add_nodes(bands_data_grouped)
 

@@ -54,6 +54,14 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the node type
         """
 
+    @node_type.setter
+    @abc.abstractmethod
+    def node_type(self, value: str) -> None:
+        """Set the node type.
+
+        :param value: the new value to set
+        """
+
     @property
     @abc.abstractmethod
     def process_type(self) -> str | None:
@@ -158,12 +166,28 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the ctime
         """
 
+    @ctime.setter
+    @abc.abstractmethod
+    def ctime(self, value: datetime) -> None:
+        """Set the node ctime.
+
+        :param value: the new ctime to set
+        """
+
     @property
     @abc.abstractmethod
     def mtime(self) -> datetime:
         """Return the node mtime.
 
         :return: the mtime
+        """
+
+    @mtime.setter
+    @abc.abstractmethod
+    def mtime(self, value: datetime) -> None:
+        """Set the node mtime.
+
+        :param value: the new mtime to set
         """
 
     @abc.abstractmethod

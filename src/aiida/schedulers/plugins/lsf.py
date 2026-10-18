@@ -373,7 +373,7 @@ class LsfScheduler(BashCliScheduler):
             )
 
         if sched_error_path:
-            lines.append(f'#BSUB -e {job_tmpl.sched_error_path}')
+            lines.append(f'#BSUB -e {sched_error_path}')
 
         if job_tmpl.queue_name:
             lines.append(f'#BSUB -q {job_tmpl.queue_name}')

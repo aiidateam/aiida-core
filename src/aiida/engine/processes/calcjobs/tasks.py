@@ -292,8 +292,12 @@ async def task_retrieve_job(
     """
     node = process.node
     if node.get_state() == CalcJobState.PARSING:
-        logger.warning(f'CalcJob<{node.pk}> already marked as PARSING, skipping task_retrieve_job')
-        return
+        # PARSING may have been saved before the output link or the next checkpoint.
+        retrieved_link = node.base.links.get_outgoing(link_label_filter=node.link_label_retrieved).first()
+        if retrieved_link is not None:
+            process.out(node.link_label_retrieved, retrieved_link.node)
+            logger.warning(f'CalcJob<{node.pk}> already has a retrieved output, skipping task_retrieve_job')
+            return
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
     authinfo = node.get_authinfo()

@@ -167,7 +167,7 @@ def validate_link(
     # link of this type regardless of the label. If instead it is `unique_label`, an infinite amount of links of that
     # type can be defined, as long as the link label is unique for the sub set of links of that type. Finally, for
     # `unique_triple` the triple of node, link type and link label has to be unique.
-    link_mapping = {
+    link_mapping: dict[LinkType, tuple[type[Node], type[Node], str, str]] = {
         LinkType.CALL_CALC: (WorkflowNode, CalculationNode, 'unique_triple', 'unique'),
         LinkType.CALL_WORK: (WorkflowNode, WorkflowNode, 'unique_triple', 'unique'),
         LinkType.CREATE: (CalculationNode, Data, 'unique_pair', 'unique'),
@@ -178,11 +178,11 @@ def validate_link(
 
     type_source, type_target, outdegree, indegree = link_mapping[link_type]
 
-    if not isinstance(source, type_source) or not isinstance(target, type_target):  # type: ignore[unreachable]
+    if not isinstance(source, type_source) or not isinstance(target, type_target):
         msg = f'cannot add a {link_type} link from {type(source)} to {type(target)}'
         raise ValueError(msg)
 
-    if outdegree == 'unique_triple' or indegree == 'unique_triple':  # type: ignore[unreachable]
+    if outdegree == 'unique_triple' or indegree == 'unique_triple':
         # For a `unique_triple` degree we just have to check if an identical triple already exist, either in the cache
         # or stored, in which case, the new proposed link is a duplicate and thus illegal
         duplicate_link_triple = link_triple_exists(source, target, link_type, link_label, backend)

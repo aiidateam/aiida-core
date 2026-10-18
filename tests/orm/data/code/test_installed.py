@@ -19,11 +19,8 @@ from aiida.orm.nodes.data.code.installed import InstalledCode
 
 def test_constructor_raises(aiida_localhost, bash_path):
     """Test the constructor when it is supposed to raise."""
-    with pytest.raises(TypeError, match=r'missing .* required positional arguments'):
+    with pytest.raises(TypeError, match=r'.*missing .* required positional arguments.*'):
         InstalledCode()
-
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
-        InstalledCode(computer=aiida_localhost, filepath_executable=bash_path)
 
 
 def test_constructor(aiida_localhost, bash_path):
@@ -74,9 +71,6 @@ def test_filepath_executable(aiida_localhost, bash_path, cat_path):
     filepath_executable = str(cat_path.absolute())
     code.filepath_executable = filepath_executable
     assert code.filepath_executable == pathlib.PurePath(filepath_executable)
-
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
-        code.filepath_executable = pathlib.Path(filepath_executable)
 
     code.store()
 

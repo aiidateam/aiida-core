@@ -14,11 +14,13 @@ be executed when a calculation job is run with this code.
 
 from __future__ import annotations
 
-import pathlib
+import typing as t
 
+from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.orm.cli import CliFieldInfo
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.code.installed import InstalledCode
-from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('ContainerizedCode',)
 
@@ -29,98 +31,62 @@ class ContainerizedCode(InstalledCode):
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
 
-    class CommonFields(InstalledCode.CommonFields):
-        engine_command: str = OrmMetadataField(
-            title='Engine command',
-            description='The command to run the container. It must contain the placeholder {image_name} that will be '
-            'replaced with the `image_name`',
-            short_name='-E',
-        )
-        image_name: str = OrmMetadataField(
-            title='Image name',
-            description='Name of the image container in which to the run the executable',
-            short_name='-I',
-        )
-
-    class AttributesModel(CommonFields, InstalledCode.AttributesModel): ...
-
-    class ConstructorArgsModel(CommonFields, InstalledCode.ConstructorArgsModel): ...
-
     def __init__(
         self,
         engine_command: str | None = None,
         image_name: str | None = None,
-        **kwargs,
+        **kwargs: t.Any,
     ):
         if engine_command is None or image_name is None:
             raise ValueError('Both `engine_command` and `image_name` must be provided.')
 
         super().__init__(**kwargs)
 
+        if '{image_name}' not in engine_command:
+            raise ValueError("the '{image_name}' template field should be in engine command")
+
         self.engine_command = engine_command
         self.image_name = image_name
 
-    @property
-    def filepath_executable(self) -> pathlib.PurePath:
-        """Return the filepath of the executable that this code represents.
-
-        .. note:: This is overridden from the base class since the path does not have to be absolute.
-
-        :return: The filepath of the executable.
-        """
-        return super().filepath_executable
-
-    @filepath_executable.setter
-    def filepath_executable(self, value: str) -> None:
-        """Set the filepath of the executable that this code represents.
-
-        .. note:: This is overridden from the base class since the path does not have to be absolute.
-
-        :param value: The filepath of the executable.
-        """
-        type_check(value, str)
-        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
-
-    @property
+    @attribute(
+        cli_field_info=CliFieldInfo(
+            help='The command to run the container. It must contain the placeholder {image_name} that will be '
+            'replaced with the `image_name`',
+            short_name='-E',
+        )
+    )
     def engine_command(self) -> str:
-        """Return the engine command with image as template field of the containerized code.
-
-        :return: The engine command of the containerized code
-        """
+        """The engine command with image as template field of the containerized code."""
         return self.base.attributes.get(self._KEY_ATTRIBUTE_ENGINE_COMMAND)
 
     @engine_command.setter
     def engine_command(self, value: str) -> None:
-        """Set the engine command of the containerized code.
-
-        :param value: The engine command of the containerized code
-        """
         type_check(value, str)
 
         if '{image_name}' not in value:
-            raise ValueError("the '{image_name}' template field should be in engine command.")
+            raise exceptions.ValidationError("`engine_command` must contain the '{image_name}' template field.")
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_ENGINE_COMMAND, value)
 
-    @property
+    @attribute(
+        cli_field_info=CliFieldInfo(
+            help='Name of the image in which to the run the executable',
+            short_name='-I',
+        )
+    )
     def image_name(self) -> str:
-        """The image name of container.
-
-        :return: The image name of container.
-        """
+        """The image name of container."""
         return self.base.attributes.get(self._KEY_ATTRIBUTE_IMAGE_NAME)
 
     @image_name.setter
     def image_name(self, value: str) -> None:
-        """Set the image name of container.
-
-        :param value: The image name of container.
-        """
         type_check(value, str)
         self.base.attributes.set(self._KEY_ATTRIBUTE_IMAGE_NAME, value)
 
     def get_prepend_cmdline_params(
-        self, mpi_args: list[str] | None = None, extra_mpirun_params: list[str] | None = None
+        self,
+        mpi_args: list[str] | None = None,
+        extra_mpirun_params: list[str] | None = None,
     ) -> list[str]:
         """Return the list of prepend cmdline params for mpi seeting
 
@@ -130,3 +96,19 @@ class ContainerizedCode(InstalledCode):
         engine_cmdline_params = engine_cmdline.split()
 
         return (mpi_args or []) + (extra_mpirun_params or []) + engine_cmdline_params
+
+    def _validate(self) -> None:
+        super()._validate()
+
+        try:
+            engine_command = self.engine_command
+        except AttributeError as exc:
+            raise exceptions.ValidationError('`engine_command` is not set.') from exc
+
+        try:
+            self.image_name
+        except AttributeError as exc:
+            raise exceptions.ValidationError('`image_name` is not set.') from exc
+
+        if '{image_name}' not in engine_command:
+            raise exceptions.ValidationError("`engine_command` must contain the '{image_name}' template field.")

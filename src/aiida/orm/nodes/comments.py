@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.orm.comments import Comment
 from aiida.orm.users import User
 
 if t.TYPE_CHECKING:
+    from aiida.orm.comments import Comment
     from aiida.orm.nodes.node import Node
 
 
@@ -25,6 +25,8 @@ class NodeComments:
         :param user: the user to associate with the comment, will use default if not supplied
         :return: the newly created comment
         """
+        from aiida.orm.comments import Comment
+
         user = user or User.get_collection(self._node.backend).get_default()
         assert user is not None
         return Comment(backend=self._node.backend, node=self._node, user=user, content=content).store()
@@ -37,6 +39,8 @@ class NodeComments:
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
+        from aiida.orm.comments import Comment
+
         return Comment.get_collection(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
 
     def all(self) -> list[Comment]:
@@ -44,6 +48,8 @@ class NodeComments:
 
         :return: the list of comments, sorted by pk
         """
+        from aiida.orm.comments import Comment
+
         return Comment.get_collection(self._node.backend).find(
             filters={'dbnode_id': self._node.pk}, order_by=[{'id': 'asc'}]
         )
@@ -56,6 +62,8 @@ class NodeComments:
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
+        from aiida.orm.comments import Comment
+
         comment = Comment.get_collection(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
         comment.set_content(content)
 
@@ -64,4 +72,6 @@ class NodeComments:
 
         :param identifier: the comment pk
         """
+        from aiida.orm.comments import Comment
+
         Comment.get_collection(self._node.backend).delete(identifier)

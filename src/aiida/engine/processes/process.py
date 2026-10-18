@@ -56,6 +56,19 @@ if t.TYPE_CHECKING:
 __all__ = ('Process', 'ProcessState')
 
 
+def _with_runtime_values(port: InputPort | PortNamespace | None, original: t.Any, runtime: t.Any) -> t.Any:
+    """Rebuild a supplied mapping shape holding runtime values.
+
+    Prepared trees may hold injected defaults absent from the supplied inputs;
+    following the supplied space keeps those out of the raw inputs.
+    """
+    if isinstance(port, PortNamespace) and isinstance(original, Mapping) and isinstance(runtime, Mapping):
+        return AttributesFrozendict(
+            {key: _with_runtime_values(port.get(key), original[key], runtime[key]) for key in original}
+        )
+    return runtime
+
+
 @process_persistence.auto_persist('_parent_pid', '_enable_persistence')
 class Process(ProcessBase):
     """This class represents an AiiDA process which can be executed and will
@@ -166,10 +179,11 @@ class Process(ProcessBase):
         from aiida.manage import manager
 
         self._runner = runner if runner is not None else manager.get_manager().get_runner()
+        self._provenance_inputs: dict[str, t.Any] | None = None
         # assert self._runner.communicator is not None, 'communicator not set for runner'
 
         super().__init__(
-            inputs=self.spec().inputs.serialize(inputs),
+            inputs=inputs,
             logger=logger,
             loop=self._runner.loop,
             communicator=self._runner.communicator,
@@ -287,6 +301,7 @@ class Process(ProcessBase):
             assert self.node.is_stored
 
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
+        out_state['provenance_inputs'] = serialize.serialize(self._flat_inputs())
 
     def get_provenance_inputs_iterator(self) -> Iterator[tuple[str, InputPort | PortNamespace]]:
         """Get provenance input iterator.
@@ -315,6 +330,15 @@ class Process(ProcessBase):
 
         load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
         super().load_instance_state(saved_state, load_context)
+        self._input_sources = self.raw_inputs or self.inputs
+        runtime = self.spec().inputs.prepare(self.inputs).runtime
+        assert isinstance(runtime, AttributesFrozendict)
+        self._parsed_inputs = runtime
+        self._provenance_inputs = (
+            serialize.deserialize_unsafe(saved_state['provenance_inputs'])
+            if 'provenance_inputs' in saved_state
+            else None
+        )
 
         if self.SaveKeys.CALC_ID.value in saved_state:
             self._bind_node(orm.load_node(saved_state[self.SaveKeys.CALC_ID.value]))  # type: ignore[arg-type]
@@ -453,6 +477,19 @@ class Process(ProcessBase):
         """
         for key, value in out_dict.items():
             self.out(key, value)
+
+    @override
+    def _pre_process_inputs(self, inputs: dict[str, t.Any]) -> AttributesFrozendict:
+        """Keep provenance sources separate from the values validated and consumed at runtime."""
+        prepared = super()._pre_process_inputs(inputs)
+        resolved = self.spec().inputs.prepare(prepared)
+        namespace = self.spec().inputs
+        assert isinstance(resolved.sources, AttributesFrozendict)
+        self._input_sources = resolved.sources
+        self._raw_inputs = _with_runtime_values(namespace, self.raw_inputs or {}, resolved.runtime)
+        self._provenance_inputs = None
+        assert isinstance(resolved.runtime, AttributesFrozendict)
+        return resolved.runtime
 
     def on_create(self) -> None:
         """Called when a Process is created."""
@@ -837,7 +874,8 @@ class Process(ProcessBase):
         # within the ``metadata`` port namespace, this may not always be the case. The ``_filter_serializable_metadata``
         # method will filter out all ports that set ``is_metadata=True`` no matter where in the namespace they are
         # defined so this approach is more robust for the future.
-        serializable_inputs = self._filter_serializable_metadata(self.spec().inputs, self.raw_inputs)
+        provided = self.spec().inputs.prepare(self.raw_inputs or {}).runtime
+        serializable_inputs = self._filter_serializable_metadata(self.spec().inputs, provided)
         pruned = prune_mapping(serializable_inputs)
         self.node.set_metadata_inputs(pruned)
 
@@ -900,16 +938,18 @@ class Process(ProcessBase):
         return result or None
 
     def _flat_inputs(self) -> dict[str, t.Any]:
-        """Return a flattened version of the parsed inputs dictionary.
+        """Return flattened provenance inputs, serializing database leaves after runtime validation.
 
-        The eventual keys will be a concatenation of the nested keys. Note that the `metadata` dictionary, if present,
-        is not passed, as those are dealt with separately in `_setup_metadata`.
+        Original nodes are retained separately from the runtime values they supply.
+        Metadata and non-database ports are omitted according to their declarations.
 
-        :return: flat dictionary of parsed inputs
+        :return: flat dictionary of provenance inputs.
 
         """
-        inputs = {key: value for key, value in self.inputs.items() if key != self.spec().metadata_key}
-        return dict(self._flatten_inputs(self.spec().inputs, inputs))
+        if self._provenance_inputs is None:
+            inputs = self.spec().inputs.serialize(dict(self._input_sources))
+            self._provenance_inputs = dict(self._flatten_inputs(self.spec().inputs, inputs))
+        return dict(self._provenance_inputs)
 
     def _flat_outputs(self) -> dict[str, t.Any]:
         """Return a flattened version of the registered outputs dictionary.
@@ -951,6 +991,9 @@ class Process(ProcessBase):
                     nested_port = t.cast(InputPort | PortNamespace, port[name]) if port else None
                 except (KeyError, TypeError):
                     nested_port = None
+
+                if nested_port is None and isinstance(port, PortNamespace) and (port.is_metadata or port.non_db):
+                    continue
 
                 sub_items = self._flatten_inputs(
                     port=nested_port, port_value=value, parent_name=prefixed_key, separator=separator

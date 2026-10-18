@@ -22,6 +22,7 @@ from types import UnionType
 import docstring_parser
 
 from aiida.common.lang import override
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.manage import get_manager
@@ -238,12 +239,7 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
 
 
 def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
-    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
-
-    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
-    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
-        tuple is returned.
-    """
+    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation."""
 
     def get_type_from_annotation(annotation):
         # `t.Dict`/`t.List` are distinct runtime keys from `dict`/`list` (`t.Dict != dict`) and map the
@@ -361,8 +357,6 @@ class FunctionProcess(Process):
 
         def define(cls, spec):
             """Define the spec dynamically"""
-            from aiida.engine.processes.generic.ports import UNSPECIFIED
-
             super().define(spec)
 
             for parameter in signature.parameters.values():
@@ -391,7 +385,7 @@ class FunctionProcess(Process):
                 # also checked by the ``spec.input`` call.
                 if (
                     default is not None
-                    and default != UNSPECIFIED
+                    and default is not UNSPECIFIED
                     and not isinstance(default, Data)
                     and not callable(default)
                 ):

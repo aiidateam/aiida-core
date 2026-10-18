@@ -466,9 +466,14 @@ class OrmEntityLoader:
         if not isinstance(value, str):
             value = str(value)
 
+        # If the value consists of just the ambiguity breaker, it is unambiguously a LABEL
+        if value == cls.label_ambiguity_breaker:
+            identifier = value
+            identifier_type = IdentifierType.LABEL
+
         # If the final character of the value is the special marker, we enforce LABEL interpretation
-        if value[-1] == cls.label_ambiguity_breaker:
-            identifier = value.rstrip(cls.label_ambiguity_breaker)
+        elif value[-1] == cls.label_ambiguity_breaker:
+            identifier = value[:-1]
             identifier_type = IdentifierType.LABEL
 
         else:

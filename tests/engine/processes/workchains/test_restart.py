@@ -13,6 +13,8 @@ import warnings
 import pytest
 
 from aiida import engine, orm
+from aiida.calculations.shell import ShellJob
+from aiida.common import AttributeDict
 from aiida.engine.processes.workchains.awaitable import Awaitable
 
 
@@ -352,3 +354,43 @@ def test_wrap_bare_dict_inputs():
     """
     _, node = engine.launch.run_get_node(CustomBaseRestartWorkChain, **{'sub': {'parameters': orm.Dict({'a': 1})}})
     assert node.is_finished
+
+
+class RetryShellJob(engine.BaseRestartWorkChain):
+    """`BaseRestartWorkChain` of `ShellJob`, whose output namespace is dynamic."""
+
+    _process_class = ShellJob
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.expose_inputs(ShellJob, namespace='shell')
+        spec.expose_outputs(ShellJob)
+
+        spec.outline(
+            cls.setup,
+            engine.while_(cls.should_run_process)(
+                cls.run_process,
+                cls.inspect_process,
+            ),
+            cls.results,
+        )
+
+    def setup(self):
+        super().setup()
+        self.ctx.inputs = AttributeDict(self.exposed_inputs(ShellJob, namespace='shell'))
+
+
+@pytest.mark.requires_broker
+def test_results_dynamic_output_namespace(aiida_code_installed):
+    """Test that ``results`` attaches the outputs a process emitted into a dynamic output namespace.
+
+    Such a namespace declares no ports, so the names to attach can only come from what the process emitted. A
+    ``ShellJob`` puts its files there, which is everything it was run for.
+    """
+    code = aiida_code_installed(default_calc_job_plugin='core.shell', filepath_executable='/bin/echo')
+    results, node = engine.launch.run_get_node(RetryShellJob, shell={'code': code, 'arguments': ['hello']})
+
+    assert node.is_finished_ok, node.exit_message
+    assert sorted(results) == ['remote_folder', 'retrieved', 'stderr', 'stdout']
+    assert results['stdout'].get_content() == 'hello\n'

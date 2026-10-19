@@ -306,13 +306,18 @@ def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
 
 
 def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> bool:
-    """Declare one static ``result`` output from the return annotation.
+    """Declare static leaf outputs from the return annotation.
 
     :param return_annotation: the return annotation of the wrapped function, if it has one.
     :param spec: the spec to declare the output on.
     :returns: ``False`` if the namespace should stay dynamic, ``True`` otherwise.
     """
     if return_annotation is None or return_annotation is type(None):
+        return True
+
+    if t.is_typeddict(return_annotation):
+        for name, hint in t.get_type_hints(return_annotation).items():
+            spec.output(name, valid_type=infer_valid_type_from_type_annotation(hint) or (Data,))
         return True
 
     if t.get_origin(return_annotation) in (list, dict):

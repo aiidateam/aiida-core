@@ -38,6 +38,7 @@ pytestmark = pytest.mark.presto
         pytest.param(language.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(language.diamond, {'x': 2}, {'result': 7}, id='diamond'),
         pytest.param(language.direct_result, {'value': 2}, {'result': 12}, id='direct-result'),
+        pytest.param(language.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
         pytest.param(
             language.selected,
             {'config': {'settings': {'count': 2, 'nullable': None}}},
@@ -52,11 +53,18 @@ pytestmark = pytest.mark.presto
         pytest.param(language.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
         pytest.param(language.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
         pytest.param(language.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
+        pytest.param(language.tuple_assignment, {'x': 2, 'y': 3}, {'result': 11}, id='tuple-unpacking'),
         pytest.param(language.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
         pytest.param(language.default_parameter, {}, {'result': 3}, id='parameter-default-filled'),
         pytest.param(language.default_parameter, {'value': 5}, {'result': 6}, id='parameter-default-overridden'),
         pytest.param(language.keyword_only_parameter, {'value': 2}, {'result': 3}, id='keyword-only'),
         pytest.param(language.positional_only_parameter, {'value': 2}, {'result': 3}, id='positional-only'),
+        pytest.param(
+            language.summarize,
+            {'values': [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]},
+            {'mean': 5.0, 'stdev': 2.0},
+            id='plain-python-body',
+        ),
         pytest.param(language.input_passthrough, {'value': 4}, {'value': 4}, id='input-passthrough'),
     ],
 )
@@ -79,6 +87,15 @@ def test_orm_typed_inputs_arrive_as_nodes() -> None:
     outputs, node = run_get_node(language.orm_passthrough, value=Int(4))
     assert node.is_finished_ok
     assert outputs['result'].value == 4
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_task_body_runs_plain_python() -> None:
+    """Task bodies execute with imports, loops, and comprehensions; only graph bodies lower."""
+    outputs, node = run_get_node(language.statistics, values=[2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])
+    assert node.is_finished_ok
+    assert outputs['mean'].value == 5.0
+    assert outputs['stdev'].value == 2.0
 
 
 def test_task_after_kwarg_rejected_outside_graphs() -> None:

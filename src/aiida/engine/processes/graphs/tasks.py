@@ -13,7 +13,7 @@ from __future__ import annotations
 import functools
 import inspect
 import typing as t
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.lang import override
@@ -43,7 +43,14 @@ class TaskProcess(FunctionProcess):
     def _out_result(self, result: t.Any) -> None:
         outputs = self.spec().outputs
         names = list(outputs)
-        values = result if isinstance(result, tuple) else (result,)
+        if isinstance(result, Mapping) and len(names) != 1:
+            missing = [name for name in names if name not in result]
+            if missing:
+                msg = f'task omitted declared outputs {missing}.'
+                raise GraphValidationError(msg)
+            values = tuple(result[name] for name in names)
+        else:
+            values = result if isinstance(result, tuple) else (result,)
         if not names and result is None:
             return
         if len(values) != len(names):

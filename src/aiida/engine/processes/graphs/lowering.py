@@ -374,6 +374,12 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             _reject(state, statement, 'for loops are not supported; write out one call per value, or use a while loop')
         elif isinstance(statement, (ast.Import, ast.ImportFrom)):
             _reject(state, statement, 'imports are not supported in graph bodies; import inside task bodies instead')
+        elif (
+            isinstance(statement, ast.Assign)
+            and len(statement.targets) == 1
+            and isinstance(statement.targets[0], ast.Tuple)
+        ):
+            _lower_unpack(state, statement)
         else:
             _lower_assignment(state, statement)
     result: ast.expr | None = statements[-1].value
@@ -450,6 +456,29 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt) -> str:
     for name in names:
         state.names[name] = ref
     return names[0]
+
+
+def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
+    """Bind each tuple element to one output of a multi-output call."""
+    target: ast.expr = statement.targets[0]
+    assert isinstance(target, ast.Tuple)
+    names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
+    if not names or len(names) != len(target.elts) or any(name in state.names for name in names):
+        _reject(state, statement, 'give each unpacked output a new name instead')
+    if not isinstance(statement.value, ast.Call):
+        msg = 'each line must call a task or graph instead'
+        _reject(state, statement.value, msg)
+    ref: _Reference = _lower_call(state, statement.value)
+    if not isinstance(ref.shape, NamespaceShape):
+        if len(names) == 1:
+            state.names[names[0]] = ref
+            return
+        _reject(state, statement.value, 'this task has one output; assign it to one name instead')
+    fields: tuple[tuple[str, Shape], ...] = ref.shape.fields
+    if len(names) != len(fields):
+        _reject(state, statement, f'name all {len(fields)} outputs, one name each')
+    for name, (field_name, field_shape) in zip(names, fields):
+        state.names[name] = _Reference(ref.task, field_name, field_shape)
 
 
 def _call_target_name(state: _LoweringState, expression: ast.expr) -> str:

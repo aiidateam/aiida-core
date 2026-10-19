@@ -59,6 +59,7 @@ __all__ = (
     'EnumData',
     'Float',
     'FolderData',
+    'GraphNode',
     'Group',
     'GroupEntityLoader',
     'ImportGroup',

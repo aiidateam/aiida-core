@@ -15,9 +15,9 @@ import typing as t
 
 from typing_extensions import Self, dataclass_transform
 
-__all__ = ('Field', 'PortField', 'PortModel', 'as_dict', 'fields_of', 'is_structured', 'without_marks')
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 
-UNSPECIFIED = object()
+__all__ = ('Field', 'PortField', 'PortModel', 'as_dict', 'fields_of', 'is_structured', 'without_marks')
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)

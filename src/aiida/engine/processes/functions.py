@@ -133,10 +133,13 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType], FunctionType]:
+def process_function(
+    node_class: type[ProcessNode], base_class: type[FunctionProcess] | None = None
+) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
+    :param base_class: the ``FunctionProcess`` subclass to build, which defaults to ``FunctionProcess`` itself
     """
 
     def decorator(function: FunctionType) -> FunctionType:
@@ -145,7 +148,7 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
         """
-        process_class = FunctionProcess.build(function, node_class=node_class)
+        process_class = FunctionProcess.build(function, node_class=node_class, base_class=base_class)
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
@@ -302,6 +305,26 @@ def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
     return value if held is None else held
 
 
+def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> bool:
+    """Declare one static ``result`` output from the return annotation.
+
+    :param return_annotation: the return annotation of the wrapped function, if it has one.
+    :param spec: the spec to declare the output on.
+    :returns: ``False`` if the namespace should stay dynamic, ``True`` otherwise.
+    """
+    if return_annotation is None or return_annotation is type(None):
+        return True
+
+    if t.get_origin(return_annotation) in (list, dict):
+        return_annotation = t.get_origin(return_annotation)
+    spec.output(
+        Process.SINGLE_OUTPUT_LINKNAME,
+        valid_type=infer_valid_type_from_type_annotation(return_annotation) or (Data,),
+    )
+
+    return True
+
+
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
 
@@ -311,6 +334,8 @@ class FunctionProcess(Process):
 
     _binds_process_class: t.ClassVar[bool] = False
     """Disable runtime class binding so `ProcessNode.process_class` resolves to the decorated function."""
+
+    NODE_INPUT_TYPES: t.ClassVar[bool] = True
 
     @classmethod
     @override
@@ -326,7 +351,9 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func: FunctionType, node_class: type[ProcessNode]) -> type[FunctionProcess]:
+    def build(
+        func: FunctionType, node_class: type[ProcessNode], base_class: type[FunctionProcess] | None = None
+    ) -> type[FunctionProcess]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -444,14 +471,17 @@ class FunctionProcess(Process):
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
-            # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
-            # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
-            # the output namespace can be nested.
-            spec.outputs.valid_type = (Data, dict)
+            if not cls.NODE_INPUT_TYPES and _declare_output_ports(annotations.get('return'), spec):
+                spec.outputs.dynamic = False
+            else:
+                # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
+                # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary
+                # because the output namespace can be nested.
+                spec.outputs.valid_type = (Data, dict)
 
         return type(
             func.__qualname__,
-            (FunctionProcess,),
+            (base_class or FunctionProcess,),
             {
                 '__module__': func.__module__,
                 '__name__': func.__name__,
@@ -600,16 +630,24 @@ class FunctionProcess(Process):
         if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
             return result  # type: ignore[unreachable]
 
-        if isinstance(result, Data):  # type: ignore[unreachable]
-            self.out(self.SINGLE_OUTPUT_LINKNAME, result)  # type: ignore[unreachable]
+        self._out_result(result)
+
+        return ExitCode()
+
+    def _out_result(self, result: t.Any) -> None:
+        """Attach the value returned by the wrapped function to the output ports.
+
+        :param result: the value returned by the wrapped function.
+        :raises TypeError: if the value cannot be attached to an output port.
+        """
+        if isinstance(result, Data):
+            self.out(self.SINGLE_OUTPUT_LINKNAME, result)
         elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
                 self.out(name, value)
         else:
-            msg = (  # type: ignore[unreachable]
+            msg = (
                 f"Function process returned an output with unsupported type '{result.__class__}'\n"
                 'Must be a Data type or a mapping of {string: Data}'
             )
             raise TypeError(msg)
-
-        return ExitCode()

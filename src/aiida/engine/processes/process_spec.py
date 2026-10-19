@@ -27,7 +27,7 @@ from aiida.engine.processes.ports import (
 )
 from aiida.orm import Data, Dict, to_aiida_type
 
-__all__ = ('CalcJobProcessSpec', 'ProcessSpec')
+__all__ = ('CalcJobProcessSpec', 'GraphProcessSpec', 'ProcessSpec')
 
 
 def _require_storable(field: Field) -> None:
@@ -266,6 +266,10 @@ class ProcessSpec(spec.ProcessSpec):
     @property
     def outputs(self) -> PortNamespace:
         return super().outputs  # type: ignore[return-value]
+
+
+class GraphProcessSpec(ProcessSpec):
+    """Process spec for graph processes."""
 
 
 class CalcJobProcessSpec(ProcessSpec):

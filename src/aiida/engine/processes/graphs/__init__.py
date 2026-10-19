@@ -13,6 +13,7 @@ from aiida.engine.processes.graphs.ir import (
     Dependency,
     Endpoint,
     GraphIR,
+    SubgraphTask,
     TaskIR,
 )
 from aiida.engine.processes.graphs.lowering import GraphHandle, graph, lower_from_source, task
@@ -25,6 +26,7 @@ __all__ = (
     'GraphHandle',
     'GraphIR',
     'GraphProcess',
+    'SubgraphTask',
     'TaskHandle',
     'TaskIR',
     'TaskProcess',

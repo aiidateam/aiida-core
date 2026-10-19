@@ -33,6 +33,7 @@ from aiida.engine.processes.graphs.ir import (
     GraphIR,
     ProcessTask,
     Route,
+    SubgraphTask,
     TaskIR,
 )
 from aiida.engine.processes.graphs.process import GraphProcess
@@ -260,7 +261,7 @@ class _LoweringState:
 
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask] = field(default_factory=list)
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -494,13 +495,18 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     target: TaskHandle | GraphHandle = _registered_target(state, expression, name)
     instance: str = _claim_name(state, name)
     if isinstance(target, GraphHandle):
-        _reject(state, expression, 'nested graphs are not supported; call tasks directly instead')
-    spec: TaskIR | None = _task_spec_for(target)
-    assert spec is not None
-    task = ProcessTask(name=instance, inputs={}, spec=spec)
-    inputs = spec.input_shape
-    result_port = spec.result_port
-    result_shape = spec.result_shape
+        body: GraphIR = _lower_registered_graph(_registry_key(target.function), state.stack)
+        task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
+        inputs: NamespaceShape = body.input_shape
+        result_port: str = body.result_port
+        result_shape: Shape = body.result_shape
+    else:
+        spec: TaskIR | None = _task_spec_for(target)
+        assert spec is not None
+        task = ProcessTask(name=instance, inputs={}, spec=spec)
+        inputs = spec.input_shape
+        result_port = spec.result_port
+        result_shape = spec.result_shape
     keywords: list[ast.keyword] = _bind_positional(state, expression, name, inputs)
     task = replace(task, inputs=_lower_keywords(state, instance, name, inputs, keywords))
     missing: list[str] = _missing_required_inputs(state, instance, inputs, task.inputs)

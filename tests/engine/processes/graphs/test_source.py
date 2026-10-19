@@ -124,6 +124,19 @@ def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, mes
         declaration.lower()
 
 
+def test_nested_graph_builds_subgraph_task() -> None:
+    from aiida.engine.processes.graphs.ir import SubgraphTask
+
+    spec = language.nested_multiply_add.lower()
+    assert isinstance(spec.tasks[0], SubgraphTask)
+    assert spec.tasks[0].body.identifier == 'multiply_add'
+
+
+def test_recursive_call_fails_during_build() -> None:
+    with pytest.raises(UnsupportedSyntax, match='Recursive graph call'):
+        language.recursive_call.lower()
+
+
 def test_ordering_dependency_carries_no_value() -> None:
     """An `after` dependency orders placements without wiring an output value."""
     specification = language.ordered_named.lower()

@@ -35,6 +35,7 @@ pytestmark = pytest.mark.presto
     'declaration, inputs, expected',
     [
         pytest.param(language.multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 10}, id='multiply-add'),
+        pytest.param(language.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(language.diamond, {'x': 2}, {'result': 7}, id='diamond'),
         pytest.param(language.direct_result, {'value': 2}, {'result': 12}, id='direct-result'),
         pytest.param(
@@ -84,6 +85,22 @@ def test_task_after_kwarg_rejected_outside_graphs() -> None:
     """`after` orders graph placements; direct task calls reject it."""
     with pytest.raises(GraphError, match='after'):
         language.add(x=1, y=1, after='x')
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_graph_has_child_workflow_provenance() -> None:
+    """A nested declaration executes as a child graph with its own task calls."""
+    outputs, node = run_get_node(language.nested_multiply_add, x=2, y=3, z=4)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 11
+    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(calls) == {'multiply_add'}
+    child = calls['multiply_add']
+    assert isinstance(child, GraphNode)
+    assert child.is_finished_ok
+    assert child.outputs.result.value == 10
+    children: dict[str, ProcessNode] = child.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert set(children) == {'multiply', 'add'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

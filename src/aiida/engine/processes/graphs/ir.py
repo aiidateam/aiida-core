@@ -29,6 +29,7 @@ __all__ = (
     'Endpoint',
     'GraphIR',
     'ProcessTask',
+    'SubgraphTask',
     'TaskIR',
 )
 
@@ -260,6 +261,10 @@ class GraphTask(abc.ABC):
         kind = data.get('kind')
         if kind == 'process':
             return ProcessTask(spec=TaskIR.from_dict(data['spec']), **common)
+        body = GraphIR.from_dict(data['body']) if kind in ('graph', 'branch', 'loop') else None
+        if kind == 'graph':
+            assert body is not None
+            return SubgraphTask(body=body, **common)
         msg = f'unsupported graph task kind `{kind}`.'
         raise GraphTypeCheckError(msg)
 
@@ -282,6 +287,32 @@ class ProcessTask(GraphTask):
     def to_dict(self) -> dict[str, t.Any]:
         """Return the placement with its task declaration."""
         return {**super().to_dict(), 'spec': self.spec.to_dict()}
+
+
+@dataclass(frozen=True, kw_only=True)
+class BodyTask(GraphTask):
+    """A placement whose executor is a nested graph template."""
+
+    body: GraphIR
+
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the input contracts of the nested template."""
+        return (self.body.input_spec(),)
+
+    def output_ports(self) -> PortNamespace:
+        """Return the output contracts of the nested template."""
+        return self.body.output_spec()
+
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its nested template."""
+        return {**super().to_dict(), 'body': self.body.to_dict()}
+
+
+@dataclass(frozen=True, kw_only=True)
+class SubgraphTask(BodyTask):
+    """A nested graph dispatched once as a child process."""
+
+    KIND: t.ClassVar[TaskKind] = 'graph'
 
 
 @dataclass(frozen=True)

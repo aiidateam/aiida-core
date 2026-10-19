@@ -452,3 +452,22 @@ def test_builder_preserves_original_nodes() -> None:
     builder = NodeWorkChain.get_builder()
     builder.count = original
     assert builder._inputs()['count'] is original
+
+
+def test_builder_accepts_model_namespace() -> None:
+    """Builder namespaces accept model instances like namespace mappings."""
+    from dataclasses import field
+
+    from aiida.engine import PortModel
+    from aiida.engine.processes.builder import ProcessBuilderNamespace
+    from aiida.engine.processes.process_spec import ProcessSpec
+
+    class Settings(PortModel):
+        count: int = 2
+        tags: list[str] = field(default_factory=list)
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', Settings)
+    builder = ProcessBuilderNamespace(spec.inputs)
+    builder.config = Settings(count=9)
+    assert dict(builder.config) == {'count': 9, 'tags': []}

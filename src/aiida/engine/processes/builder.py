@@ -36,6 +36,15 @@ class PrettyEncoder(json.JSONEncoder):
             return o.get_description()
 
 
+def _preserve_nodes(original: t.Any, prepared: t.Any) -> t.Any:
+    """Keep supplied nodes in prepared inputs so provenance retains their identities."""
+    if isinstance(original, Node):
+        return original
+    if isinstance(original, Mapping) and isinstance(prepared, Mapping):
+        return {key: _preserve_nodes(original[key], prepared[key]) for key in original}
+    return prepared
+
+
 class ProcessBuilderNamespace(MutableMapping):
     """Input namespace for the `ProcessBuilder`.
 

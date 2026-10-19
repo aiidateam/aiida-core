@@ -39,6 +39,7 @@ __all__ = (
     'InterruptableFuture',
     'JobManager',
     'JobsList',
+    'Launchable',
     'ObjectLoader',
     'OutputPort',
     'PastException',

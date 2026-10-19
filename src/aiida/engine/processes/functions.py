@@ -23,6 +23,7 @@ import docstring_parser
 
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
+from aiida.engine.processes.port_model import as_dict, is_structured
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.manage import get_manager
@@ -66,6 +67,8 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
     def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]: ...
 
     def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]: ...
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]: ...
 
     is_process_function: bool
 
@@ -224,9 +227,22 @@ def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType]
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        try:
+            takes = get_annotations(function, eval_str=True)
+        except (NameError, TypeError):
+            takes = {}
+
+        def get_launch_inputs(**inputs: t.Any) -> dict[str, t.Any]:
+            """Return the inputs to launch the process with.
+
+            A structured type value is flattened to its namespace mapping.
+            """
+            return {name: _flattened(takes.get(name), value) for name, value in inputs.items()}
+
         decorated_function.run = decorated_function  # type: ignore[attr-defined]
         decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
         decorated_function.run_get_node = run_get_node  # type: ignore[attr-defined]
+        decorated_function.get_launch_inputs = get_launch_inputs  # type: ignore[attr-defined]
         decorated_function.is_process_function = True  # type: ignore[attr-defined]
         decorated_function.node_class = node_class  # type: ignore[attr-defined]
         decorated_function.process_class = process_class  # type: ignore[attr-defined]
@@ -270,6 +286,20 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
         inferred_valid_type = (t.get_args(annotation),)
 
     return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
+
+
+def _flattened(annotation: t.Any, value: t.Any) -> t.Any:
+    """Return a value as the port taking it holds it, which for a structured type is the namespace of its fields.
+
+    What says to flatten is the annotation rather than the shape of the value, since plenty of things are a
+    dataclass without being what a parameter was written to take.
+    """
+    if not is_structured(annotation):
+        return value
+
+    held = as_dict(value)
+
+    return value if held is None else held
 
 
 class FunctionProcess(Process):
@@ -458,6 +488,9 @@ class FunctionProcess(Process):
     def create_inputs(cls, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
         """Create the input dictionary for the ``FunctionProcess``."""
         cls.validate_inputs(*args, **kwargs)
+
+        takes = get_annotations(cls._func, eval_str=True)
+        kwargs = {name: _flattened(takes.get(name), value) for name, value in kwargs.items()}
 
         # The complete input dictionary consists of the keyword arguments...
         inputs = dict(kwargs or {})

@@ -33,18 +33,16 @@ class ProjectionData(OrbitalData, ArrayData):
 
     def _check_projections_bands(self, projection_array):
         """Checks to make sure that a reference bandsdata is already set, and that
-        projection_array is of the same shape of the bands data
+        projection_array is of the same shape of the bands data.
 
-        :param projwfc_arrays: nk x nb x nwfc array, to be
-                               checked against bands
+        :param projection_array: array to be checked against bands
 
-        :raise: AttributeError if energy is not already set
-        :raise: AttributeError if input_array is not of same shape as
-                dos_energy
+        :raise: ValidationError if bands have not been set first
+        :raise: AttributeError if projection_array is not of same shape as bands
         """
         try:
-            shape_bands = np.shape(self.get_reference_bandsdata())
-        except AttributeError:
+            shape_bands = np.shape(self.get_reference_bandsdata().get_bands())
+        except (AttributeError, exceptions.NotExistent):
             raise exceptions.ValidationError('Bands must be set first, then projwfc')
         # The [0:2] is so that each array, and not collection of arrays
         # is used to make the comparison
@@ -223,9 +221,9 @@ class ProjectionData(OrbitalData, ArrayData):
         list_of_orbitals = copy.deepcopy(list_of_orbitals)
 
         # validates the input data
-        if not list_of_pdos and not list_of_projections:
+        if list_of_pdos is None and list_of_projections is None:
             raise exceptions.ValidationError('Must set either pdos or projections')
-        if bool(list_of_energy) != bool(list_of_pdos):
+        if (list_of_energy is None) != (list_of_pdos is None):
             raise exceptions.ValidationError('list_of_pdos and list_of_energy must always be set together')
 
         orb_length = len(list_of_orbitals)
@@ -245,7 +243,7 @@ class ProjectionData(OrbitalData, ArrayData):
         self.base.attributes.set('orbital_dicts', list_of_orbital_dicts)
 
         # verifies and sets the projections
-        if list_of_projections:
+        if list_of_projections is not None:
             list_of_projections = single_to_list(list_of_projections)
             array_list_checker(list_of_projections, 'projections', orb_length)
             for i, _ in enumerate(list_of_projections):
@@ -256,7 +254,7 @@ class ProjectionData(OrbitalData, ArrayData):
                 self.set_array(f'proj_{array_name}', this_projection)
 
         # verifies and sets both pdos and energy
-        if list_of_pdos:
+        if list_of_pdos is not None:
             list_of_pdos = single_to_list(list_of_pdos)
             list_of_energy = single_to_list(list_of_energy)
             array_list_checker(list_of_pdos, 'pdos', orb_length)
@@ -265,8 +263,6 @@ class ProjectionData(OrbitalData, ArrayData):
                 this_pdos = list_of_pdos[i]
                 this_energy = list_of_energy[i]
                 array_name = self._from_index_to_arrayname(i)
-                if bands_check:
-                    self._check_projections_bands(this_projection)
                 self.set_array(f'pdos_{array_name}', this_pdos)
                 self.set_array(f'energy_{array_name}', this_energy)
 

@@ -10,6 +10,7 @@
 
 from aiida.common.exceptions import UnsupportedSyntax
 from aiida.engine.processes.graphs.ir import (
+    BranchControl,
     Dependency,
     Endpoint,
     GraphIR,
@@ -21,6 +22,7 @@ from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.tasks import TaskHandle, TaskProcess
 
 __all__ = (
+    'BranchControl',
     'Dependency',
     'Endpoint',
     'GraphHandle',

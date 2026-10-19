@@ -25,6 +25,7 @@ from aiida.engine.processes.process import Process
 from aiida.orm import Data
 
 __all__ = (
+    'BranchControl',
     'Dependency',
     'Endpoint',
     'GraphIR',
@@ -35,6 +36,7 @@ __all__ = (
 
 GRAPH_IR_VERSION = '0.1'
 TASK_IR_VERSION = '0.1'
+CONDITION_PORT = 'condition'
 TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
 
 
@@ -265,6 +267,14 @@ class GraphTask(abc.ABC):
         if kind == 'graph':
             assert body is not None
             return SubgraphTask(body=body, **common)
+        if kind == 'branch':
+            assert body is not None
+            return BranchControl(
+                body=body,
+                otherwise=GraphIR.from_dict(data['otherwise']) if data.get('otherwise') is not None else None,
+                condition_port=data.get('condition_port', CONDITION_PORT),
+                **common,
+            )
         msg = f'unsupported graph task kind `{kind}`.'
         raise GraphTypeCheckError(msg)
 
@@ -313,6 +323,32 @@ class SubgraphTask(BodyTask):
     """A nested graph dispatched once as a child process."""
 
     KIND: t.ClassVar[TaskKind] = 'graph'
+
+
+@dataclass(frozen=True, kw_only=True)
+class BranchControl(BodyTask):
+    """A condition dispatching exactly one of two nested templates."""
+
+    KIND: t.ClassVar[TaskKind] = 'branch'
+    condition_port: str = CONDITION_PORT
+    otherwise: GraphIR | None = None
+
+    @property
+    def branches(self) -> tuple[GraphIR, ...]:
+        """Return the taken-first side templates."""
+        return (self.body,) if self.otherwise is None else (self.body, self.otherwise)
+
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the input contracts of each side template."""
+        return tuple(branch.input_spec() for branch in self.branches)
+
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with both side templates and the condition port."""
+        return {
+            **super().to_dict(),
+            'condition_port': self.condition_port,
+            'otherwise': None if self.otherwise is None else self.otherwise.to_dict(),
+        }
 
 
 @dataclass(frozen=True)

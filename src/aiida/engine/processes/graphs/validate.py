@@ -13,16 +13,16 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.exceptions import GraphTypeCheckError
-from aiida.engine.processes.graphs.ir import input_ports_at, port_at
+from aiida.engine.processes.graphs.ir import BranchControl, input_ports_at, port_at
 from aiida.engine.processes.ports import PortNamespace, infer_node_types
 from aiida.orm import Data
 
 if t.TYPE_CHECKING:
-    from aiida.engine.processes.graphs.ir import Dependency, GraphIR, Route
+    from aiida.engine.processes.graphs.ir import Dependency, GraphIR, GraphTask, Route
 
 
 def validate_graph(graph: GraphIR) -> None:
-    """Check names, inputs, dependencies, outputs, and acyclicity."""
+    """Check names, inputs, dependencies, regions, outputs, and acyclicity."""
     if len(set(graph.task_names)) != len(graph.task_names):
         msg = 'task names must be unique.'
         raise GraphTypeCheckError(msg)
@@ -33,6 +33,7 @@ def validate_graph(graph: GraphIR) -> None:
         # Touch the port views: they raise on dynamic or namespaced outputs the spec cannot represent.
         task.input_ports()
         task.output_ports()
+        _validate_region(graph, task)
     _validate_outputs(graph, boundary)
     _validate_acyclic(graph)
 
@@ -48,7 +49,7 @@ def _validate_routed_input(graph: GraphIR, boundary: PortNamespace, name: str, r
     """Check that one routed graph input names a known task input of compatible type."""
     task = graph.task(route.task)
     ports = input_ports_at(task, route.port)
-    if not ports:
+    if not ports and not _accepts_condition(task, route.port):
         msg = f'input `{name}` refers to unknown input `{route.task}.{route.port}`.'
         raise GraphTypeCheckError(msg)
     origin = port_at(boundary, name)
@@ -72,11 +73,23 @@ def _validate_edge(graph: GraphIR, edge: Dependency) -> None:
     if origin is None or isinstance(origin, PortNamespace):
         msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
         raise GraphTypeCheckError(msg)
-    if not ports:
+    if not ports and not _accepts_condition(target, edge.target_port):
         msg = f'dependency refers to unknown input `{edge.target}.{edge.target_port}`.'
         raise GraphTypeCheckError(msg)
     for port in ports:
         _check_types(origin, port, f'dependency `{edge.source}` to `{edge.target}`')
+
+
+def _validate_region(graph: GraphIR, task: GraphTask) -> None:
+    """Check that control-flow bodies agree on their condition and outputs."""
+    if isinstance(task, BranchControl) and task.otherwise is not None:
+        if task.condition_port in task.body.inputs or task.condition_port in task.otherwise.inputs:
+            msg = 'branch condition conflicts with a body input.'
+            raise GraphTypeCheckError(msg)
+        if task.body.outputs.keys() != task.otherwise.outputs.keys():
+            msg = 'both branches must return the same outputs.'
+            raise GraphTypeCheckError(msg)
+        _check_compatible(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
 
 
 def _validate_outputs(graph: GraphIR, boundary: PortNamespace) -> None:
@@ -122,6 +135,12 @@ def _check_types(source: t.Any, target: t.Any, context: str) -> None:
         raise GraphTypeCheckError(msg)
 
 
+def _check_compatible(first: PortNamespace, second: PortNamespace, context: str) -> None:
+    """Check that two output contracts accept each other."""
+    _check_types(first, second, context)
+    _check_types(second, first, context)
+
+
 def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str) -> None:
     """Check that shared fields agree and required fields exist."""
     for name, child in target.items():
@@ -130,6 +149,11 @@ def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str
         elif child.required:
             msg = f'{context} is missing required field `{name}`.'
             raise GraphTypeCheckError(msg)
+
+
+def _accepts_condition(task: GraphTask, port: str | None) -> bool:
+    """Return whether a control task wires its condition outside declared inputs."""
+    return isinstance(task, BranchControl) and port == task.condition_port
 
 
 def _stored_types(port: t.Any) -> tuple[type, ...]:

@@ -16,16 +16,23 @@ from dataclasses import dataclass, field
 
 from aiida.engine.processes.graphs.inputs import at, place
 from aiida.engine.processes.graphs.ir import (
+    BranchControl,
     GraphIR,
     GraphTask,
     SubgraphTask,
     readable_version,
 )
 from aiida.orm import Node, load_node
+from aiida.orm.nodes.data.base import BaseType
 
 __all__ = ('GraphRun',)
 
 STATE_VERSION = '0.1'
+
+
+def holds(condition: t.Any) -> bool:
+    """Evaluate the value of a condition node rather than the node's identity."""
+    return bool(condition.value if isinstance(condition, BaseType) else condition)
 
 
 @dataclass(frozen=True)
@@ -182,8 +189,21 @@ class GraphRun:
             return
         task = self.graph.task(name)
         inputs = self._inputs_for(task)
-        self.instances[name] = [name]
-        step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
+        if isinstance(task, BranchControl):
+            self._begin_branch(task, inputs, step)
+        else:
+            self.instances[name] = [name]
+            step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
+
+    def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
+        """Dispatch the taken side of a branch, skipping when it has no body."""
+        taken = task.body if holds(inputs.pop(task.condition_port, None)) else task.otherwise
+        if taken is None:
+            self.skipped.add(task.name)
+            return
+        self.instances[task.name] = [task.name]
+        # Each side may consume a different subset of the enclosing inputs.
+        step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
 
     def _inputs_for(self, task: GraphTask) -> dict[str, t.Any]:
         """Wire graph inputs and dependency outputs into one task's declared inputs."""

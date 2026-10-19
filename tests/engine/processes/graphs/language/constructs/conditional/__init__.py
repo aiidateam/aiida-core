@@ -9,3 +9,4 @@
 """Branching graph declarations shared by the behavior suites."""
 
 from tests.engine.processes.graphs.language.constructs.conditional.rejected import *
+from tests.engine.processes.graphs.language.constructs.conditional.supported import *

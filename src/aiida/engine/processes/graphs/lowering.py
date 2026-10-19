@@ -28,6 +28,8 @@ from types import MappingProxyType
 from aiida.common.exceptions import GraphError, UnsupportedSyntax
 from aiida.engine.processes.graphs.inputs import place
 from aiida.engine.processes.graphs.ir import (
+    CONDITION_PORT,
+    BranchControl,
     Dependency,
     Endpoint,
     GraphIR,
@@ -261,7 +263,7 @@ class _LoweringState:
 
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl] = field(default_factory=list)
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -367,7 +369,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
         raise UnsupportedSyntax(msg)
     for statement in statements[:-1]:
         if isinstance(statement, ast.If):
-            _reject(state, statement, 'if statements are not supported here; move the choice into a task instead')
+            _lower_branch(state, statement)
         elif isinstance(statement, ast.While):
             _reject(state, statement, 'while loops are not supported; write out one call per value instead')
         elif isinstance(statement, (ast.For, ast.AsyncFor)):
@@ -479,6 +481,121 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
         _reject(state, statement, f'name all {len(fields)} outputs, one name each')
     for name, (field_name, field_shape) in zip(names, fields):
         state.names[name] = _Reference(ref.task, field_name, field_shape)
+
+
+def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
+    """Lower one branch arm to a named region body."""
+    child = _collect_region_inputs(state, statements)
+    name = _lower_assignment(child, statements[0])
+    reference = child.names[name]
+    return _Arm(name, child, _lower_region_body(child, {reference.port: reference}))
+
+
+def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
+    """Lower an if statement to a branch control task."""
+    bound = _bind_condition(state, statement.test)
+    test: ast.expr = bound if bound is not None else statement.test
+    if not statement.orelse or len(statement.body) != 1 or len(statement.orelse) != 1:
+        _reject(state, statement, 'assign the same name on both sides instead')
+    first, second = (_lower_arm(state, statements) for statements in (statement.body, statement.orelse))
+    if first.name != second.name or first.name in state.names:
+        _reject(state, statement, 'both sides must share one new name instead')
+    if CONDITION_PORT in first.body.inputs or CONDITION_PORT in second.body.inputs:
+        _reject(state, statement, 'condition conflicts with a branch input; rename one of them')
+    instance = f'branch_{len(state.tasks) + 1}'
+    given: dict[str, CapturedValue] = {}
+    _wire(state, instance, CONDITION_PORT, _lower_value(state, test), given)
+    for name in sorted({path.split('.')[0] for side in (first, second) for path in side.child.inputs}):
+        _wire(state, instance, name, state.names[name], given)
+    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    selected = first.child.names[first.name]
+    state.names[first.name] = _Reference(instance, selected.port, selected.shape)
+
+
+class _Arm(t.NamedTuple):
+    """One lowered branch arm with its region state."""
+
+    name: str
+    child: _LoweringState
+    body: GraphIR
+
+
+def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
+    """Collect the enclosing values a nested body reads as region inputs."""
+    # Names read in the body become inputs of the nested graph. Calls are not values.
+    assigned: set[str] = {
+        target.id
+        for stmt in statements
+        if isinstance(stmt, ast.Assign)
+        for target in stmt.targets
+        if isinstance(target, ast.Name)
+    }
+    callees: set[int] = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
+    names: set[str] = {
+        node.id
+        for stmt in statements
+        for node in ast.walk(stmt)
+        if isinstance(node, ast.Name)
+        and isinstance(node.ctx, ast.Load)
+        and node.id not in assigned
+        and id(node) not in callees
+    }
+    child = _LoweringState(state.definition, state.stack)
+    for name in sorted(names):
+        if name not in state.names:
+            _reject(state, statements[0], f'{name!r} is not known here; assign it before the branch or loop instead')
+        child.inputs[name] = []
+        shape = state.names[name].shape
+        child.names[name] = _Reference(None, name, shape)
+    return child
+
+
+def _route_region(state: _LoweringState, child: _LoweringState, instance: str, given: dict[str, CapturedValue]) -> None:
+    """Route the enclosing values a nested region reads."""
+    for name in child.inputs:
+        if name in state.names:
+            _wire(state, instance, name, state.names[name], given)
+
+
+def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
+    """Lower a call condition to a fresh binding, like its explicit assignment form."""
+    if not isinstance(test, ast.Call):
+        return None
+    name = 'condition'
+    count = 2
+    while name in state.names:
+        name = f'condition_{count}'
+        count += 1
+    bound = ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())], value=test)
+    ast.copy_location(bound, test)
+    ast.copy_location(bound.targets[0], test)
+    _lower_assignment(state, bound)
+    return ast.Name(id=name, ctx=ast.Load())
+
+
+def _snapshot_namespace_boundary(state: _LoweringState) -> dict[str, t.Any] | None:
+    """Snapshot region boundaries only when routing a declared namespace field."""
+    if not any('.' in path for path in state.inputs):
+        return None
+    names = tuple(name for name in state.inputs if '.' not in name)
+    return dump_shape(NamespaceShape(fields=tuple((name, state.names[name].shape) for name in names)))
+
+
+def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphIR:
+    """Lower collected region state to a nested graph template."""
+    if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
+        msg = 'control-flow outputs must be static leaves, not namespaces.'
+        raise UnsupportedSyntax(msg)
+    endpoints: dict[str, Endpoint] = {
+        name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()
+    }
+    return GraphIR(
+        tasks=tuple(state.tasks),
+        dependencies=tuple(state.dependencies),
+        inputs={name: tuple(targets) for name, targets in state.inputs.items()},
+        outputs=endpoints,
+        input_namespace=_snapshot_namespace_boundary(state),
+    )
 
 
 def _call_target_name(state: _LoweringState, expression: ast.expr) -> str:

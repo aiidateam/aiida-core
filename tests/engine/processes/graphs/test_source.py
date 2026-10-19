@@ -104,6 +104,7 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(language.unknown_call, 'check the spelling', id='unknown'),
         pytest.param(language.subscript_assignment, 'assign to a plain name', id='subscript'),
         pytest.param(language.nested_definition, 'move it into a task', id='nested-def'),
+        pytest.param(language.early_return, 'assign the same name on both sides', id='early-return'),
         pytest.param(language.augmented_assignment, 'move it into a task', id='aug-assign'),
         pytest.param(language.annotated_assignment, 'drop the annotation', id='ann-assign'),
         pytest.param(language.with_block, 'move it into a task', id='with'),
@@ -114,7 +115,10 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(language.starred_call, 'list each input by name', id='starred'),
         pytest.param(language.subscript_load, 'pass the whole collection', id='subscript-load'),
         pytest.param(language.fstring_argument, 'build this text in a task', id='fstring'),
+        pytest.param(language.boolean_condition, 'put this check in a task', id='boolop'),
+        pytest.param(language.compare_condition, 'put this check in a task', id='compare'),
         pytest.param(language.inline_conditional, 'as if and else', id='ifexp'),
+        pytest.param(language.walrus_condition, 'on its own line', id='walrus'),
         pytest.param(language.list_comprehension, 'must call a task or graph', id='listcomp'),
     ],
 )
@@ -132,9 +136,32 @@ def test_nested_graph_builds_subgraph_task() -> None:
     assert spec.tasks[0].body.identifier == 'multiply_add'
 
 
+def test_branches_build_control_tasks() -> None:
+    from aiida.engine.processes.graphs.ir import BranchControl
+
+    spec = language.external_choice.lower()
+    assert isinstance(spec.tasks[0], BranchControl)
+    assert set(spec.tasks[0].body.outputs) == {'result'}
+    assert set(spec.tasks[0].otherwise.outputs) == {'result'}
+
+
 def test_recursive_call_fails_during_build() -> None:
     with pytest.raises(UnsupportedSyntax, match='Recursive graph call'):
         language.recursive_call.lower()
+
+
+def test_inline_condition_matches_bound_form() -> None:
+    """An inline predicate call lowers like its explicit assignment form."""
+    inline = language.inline_condition.lower().to_dict()
+    bound = language.computed_choice.lower().to_dict()
+    inline.pop('identifier')
+    bound.pop('identifier')
+    assert inline == bound
+
+
+def test_mismatched_branch_outputs_fail_during_build() -> None:
+    with pytest.raises(GraphTypeCheckError, match='same outputs'):
+        language.mismatched_branches.lower()
 
 
 def test_ordering_dependency_carries_no_value() -> None:

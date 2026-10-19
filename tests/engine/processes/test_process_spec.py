@@ -11,12 +11,12 @@
 import typing as t
 from dataclasses import field
 from itertools import count
-from pathlib import Path
 
 import pytest
 
 from aiida.engine import PortField, PortModel, ProcessSpec
 from aiida.orm import Int, Str
+from tests.engine.processes.graphs.language import UnsupportedPortModel
 
 
 class Settings(PortModel):
@@ -80,11 +80,8 @@ def test_field_factory_is_evaluated_for_each_preprocess() -> None:
 def test_unpersistable_field_types_fail_at_declaration() -> None:
     """Field types without a storage representation are rejected naming the field."""
 
-    class PathInputs(PortModel):
-        log_path: Path = Path('/tmp')
-
     with pytest.raises(TypeError, match='log_path'):
-        ProcessSpec().input_namespace_from('config', PathInputs)
+        ProcessSpec().input_namespace_from('config', UnsupportedPortModel)
 
 
 def test_models_are_not_constructed_by_validation() -> None:

@@ -71,6 +71,8 @@ def fixed_inputs(ports: PortNamespace) -> None:
 
 def input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
     """Return the declared ports one placement path resolves to."""
+    if isinstance(task, (BranchControl, LoopControl)) and path == task.condition_port:
+        return []
     return [port for namespace in task.input_ports() if (port := port_at(namespace, path)) is not None]
 
 
@@ -289,26 +291,6 @@ class GraphTask(abc.ABC):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ProcessTask(GraphTask):
-    """A decorated task function dispatched as one child process."""
-
-    KIND: t.ClassVar[TaskKind] = 'process'
-    spec: TaskIR
-
-    def input_ports(self) -> tuple[PortNamespace, ...]:
-        """Return the fixed input contracts of the task process."""
-        return (self.spec.inputs,)
-
-    def output_ports(self) -> PortNamespace:
-        """Return the static leaf outputs of the task process."""
-        return self.spec.outputs
-
-    def to_dict(self) -> dict[str, t.Any]:
-        """Return the placement with its task declaration."""
-        return {**super().to_dict(), 'spec': self.spec.to_dict()}
-
-
-@dataclass(frozen=True, kw_only=True)
 class BodyTask(GraphTask):
     """A placement whose executor is a nested graph template."""
 
@@ -370,6 +352,26 @@ class LoopControl(BodyTask):
 
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'condition_port': self.condition_port, 'max_iterations': self.max_iterations}
+
+
+@dataclass(frozen=True, kw_only=True)
+class ProcessTask(GraphTask):
+    """A decorated task function dispatched as one child process."""
+
+    KIND: t.ClassVar[TaskKind] = 'process'
+    spec: TaskIR
+
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the fixed input contracts of the task process."""
+        return (self.spec.inputs,)
+
+    def output_ports(self) -> PortNamespace:
+        """Return the static leaf outputs of the task process."""
+        return self.spec.outputs
+
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its task declaration."""
+        return {**super().to_dict(), 'spec': self.spec.to_dict()}
 
 
 @dataclass(frozen=True)

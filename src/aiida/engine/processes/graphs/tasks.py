@@ -18,15 +18,17 @@ from collections.abc import Callable, Mapping
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.lang import override
 from aiida.engine.processes.functions import (
-    FunctionProcess,
+    FunctionProcessBase,
     P,
     ProcessFunctionType,
+    declare_output_ports,
     process_function,
 )
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.ir import TaskIR, fixed_inputs
-from aiida.engine.processes.port_model import is_structured
+from aiida.engine.processes.port_model import field_from_annotation, is_structured
 from aiida.engine.processes.ports import PortNamespace
-from aiida.engine.processes.process_spec import ProcessSpec
+from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.orm import CalcFunctionNode, Data, to_aiida_type
 
 __all__ = ('TaskHandle', 'TaskProcess')
@@ -34,10 +36,36 @@ __all__ = ('TaskHandle', 'TaskProcess')
 R = t.TypeVar('R')
 
 
-class TaskProcess(FunctionProcess):
-    """Consume declared Python/ORM inputs and create provenance nodes for leaf outputs."""
+class TaskProcess(FunctionProcessBase):
+    """Task process with plain Python inputs and static leaf outputs."""
 
-    NODE_INPUT_TYPES: t.ClassVar[bool] = False
+    _spec_class = GraphProcessSpec
+
+    @classmethod
+    @override
+    def _declare_input(
+        cls,
+        spec: ProcessSpec,
+        parameter: inspect.Parameter,
+        annotations: dict[str, t.Any],
+        param_help_string: dict[str, str | None],
+    ) -> None:
+        assert isinstance(spec, GraphProcessSpec)
+        spec.input_from_field(
+            parameter.name,
+            field_from_annotation(
+                parameter.name,
+                annotations.get(parameter.name),
+                parameter.default if parameter.default is not parameter.empty else UNSPECIFIED,
+                param_help_string.get(parameter.name, None),
+            ),
+        )
+
+    @classmethod
+    @override
+    def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
+        declare_output_ports(annotations.get('return'), spec)
+        spec.outputs.dynamic = False
 
     @override
     def _out_result(self, result: t.Any) -> None:

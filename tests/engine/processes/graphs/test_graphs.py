@@ -121,6 +121,7 @@ def test_zero_iteration_loop_returns_initial_state() -> None:
     assert outputs['value'].value == 3
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_nested_graph_has_child_workflow_provenance() -> None:
     """A nested declaration executes as a child graph with its own task calls."""
     outputs, node = run_get_node(language.nested_multiply_add, x=2, y=3, z=4)
@@ -171,6 +172,15 @@ def test_dictionary_leaf_is_a_single_node() -> None:
     assert isinstance(linked, Dict)
     child = node.called[0]
     assert child.inputs.values.uuid == linked.uuid
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_missing_inputs_are_aggregated() -> None:
+    with pytest.raises(MissingRequiredInputsError) as caught:
+        language.whole.get_launch_inputs(config={'settings': {}})
+    assert 'config.settings.nullable' in str(caught.value)
+    with pytest.raises(MissingRequiredInputsError):
+        language.chain.get_launch_inputs()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

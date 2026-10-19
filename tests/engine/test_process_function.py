@@ -24,7 +24,7 @@ import re
 import pytest
 
 from aiida import orm
-from aiida.engine import ExitCode, calcfunction, run, run_get_node, submit, workfunction
+from aiida.engine import ExitCode, PortModel, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 
@@ -55,6 +55,16 @@ def function_variadic_arguments_and_keywords(*args, str_a, str_b):
 @calcfunction
 def function_variadic_arguments_label_overlap(args_0, *args):
     return args_0 + orm.Int(sum(args))
+
+
+class TaskConfig(PortModel):
+    count: int = 2
+
+
+@calcfunction
+def function_model_namespace(config: TaskConfig) -> orm.Int:
+    assert isinstance(config['count'], orm.Int)
+    return orm.Int(config['count'].value + 1)
 
 
 @calcfunction
@@ -794,3 +804,12 @@ def test_help_text_spec_inference_invalid_docstring(caplog, monkeypatch):
     # Now call the spec to have it parse the docstring.
     function.spec()
     assert 'function `function` has a docstring that could not be parsed' in caplog.records[0].message
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_function_model_namespace() -> None:
+    """Legacy functions declare model namespaces with node types and receive nodes."""
+    assert function_model_namespace(TaskConfig(count=3)) == 4
+    result, node = function_model_namespace.run_get_node({'count': orm.Int(5)})
+    assert result == 6
+    assert node.is_finished_ok

@@ -16,6 +16,7 @@ import typing as t
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import Field, fields_of
 from aiida.engine.processes.ports import (
     CalcJobOutputPort,
@@ -39,16 +40,16 @@ def _require_storable(field: Field) -> None:
     raise TypeError(msg)
 
 
-def _as_a_port(field: Field, *, node_types: bool = False) -> dict[str, t.Any]:
+def _as_a_port(field: Field) -> dict[str, t.Any]:
     """Return how one model field is declared as a port."""
     _require_storable(field)
-    declared = infer_node_types(field.annotation) if node_types else infer_runtime_types(field.annotation)
+    declared = infer_runtime_types(field.annotation)
     # Non-nullable fields stay required so no `None` type is added; a default still applies through the port.
     required = field.required or type(None) not in declared
     options: dict[str, t.Any] = {'required': required, 'help': field.help}
 
     if not field.required:
-        options['default'] = _lazily(field.default, node_types=node_types)
+        options['default'] = _lazily(field.default)
 
     return {**options, 'valid_type': declared or (Data,)}
 
@@ -75,12 +76,12 @@ def _with_defaults(fields: tuple[Field, ...], defaults: t.Mapping[str, t.Any] | 
     )
 
 
-def _lazily(default: t.Any, *, node_types: bool) -> t.Any:
+def _lazily(default: t.Any) -> t.Any:
     """Copy Python defaults per launch; provenance serialization happens after runtime validation."""
     if default is None or isinstance(default, Data) or callable(default):
         return default
 
-    return lambda: to_aiida_type(default) if node_types else copy.deepcopy(default)
+    return lambda: copy.deepcopy(default)
 
 
 class ProcessSpec(spec.ProcessSpec):
@@ -112,9 +113,10 @@ class ProcessSpec(spec.ProcessSpec):
         name: str,
         container: type,
         *,
-        node_types: bool = False,
-        _defaults: t.Mapping[str, t.Any] | None = None,
-        **kwargs: t.Any,
+        defaults: t.Mapping[str, t.Any] | None = None,
+        required: bool = True,
+        help: str | None = None,
+        validator: t.Callable[[t.Any, t.Any], str | None] | None = None,
     ) -> None:
         """Declare a namespace holding one port per field of a structured type.
 
@@ -133,9 +135,10 @@ class ProcessSpec(spec.ProcessSpec):
 
         :param name: the namespace to declare the fields under.
         :param container: the structured type whose fields to declare.
-        :param node_types: translate Python field types to ORM types for legacy process function declarations.
-        :param _defaults: enclosing instance values overriding nested model defaults.
-        :param kwargs: passed on to the namespace itself, ``required`` and ``help`` among them.
+        :param defaults: enclosing instance values overriding nested model defaults.
+        :param required: whether the namespace itself is required.
+        :param help: help text for the namespace itself.
+        :param validator: validator for the namespace itself.
         :raises TypeError: if the structured type is not one this knows how to read.
         """
         fields = fields_of(container)
@@ -147,25 +150,24 @@ class ProcessSpec(spec.ProcessSpec):
             )
             raise TypeError(msg)
 
-        self.input_namespace(name, **kwargs)
+        self.input_namespace(name, required=required, help=help, validator=validator)
 
-        for field in _with_defaults(fields, _defaults):
-            self._declare_field(f'{name}{self.namespace_separator}{field.name}', field, node_types=node_types)
+        for field in _with_defaults(fields, defaults):
+            self._declare_field(f'{name}{self.namespace_separator}{field.name}', field)
 
-    def _declare_field(self, name: str, field: Field, *, node_types: bool) -> None:
+    def _declare_field(self, name: str, field: Field) -> None:
         """Declare one model field as a port or a nested namespace."""
         if fields_of(field.annotation) is not None:
             nested = field.default.as_dict() if isinstance(field.default, field.annotation) else field.default
             self.input_namespace_from(
                 name,
                 field.annotation,
-                node_types=node_types,
                 required=field.required,
                 help=field.help,
-                _defaults=nested if isinstance(nested, dict) else None,
+                defaults=nested if isinstance(nested, dict) else None,
             )
             return
-        self.input(name, **_as_a_port(field, node_types=node_types))
+        self.input(name, **_as_a_port(field))
 
     def outputs_from(self, container: type, prefix: str = '') -> None:
         """Declare one output port per field of a structured type.
@@ -269,7 +271,49 @@ class ProcessSpec(spec.ProcessSpec):
 
 
 class GraphProcessSpec(ProcessSpec):
-    """Process spec for graph processes."""
+    """Process spec for graph tasks and graph processes, declaring runtime-typed inputs.
+
+    The ``Field``-based declaration path lives here so plain processes never see it:
+    annotations convert to plain Python runtime types, with provenance serialization
+    happening after runtime validation.
+    """
+
+    def input_from_field(self, name: str, field: Field) -> None:
+        """Convert one extracted :class:`Field` to an input port or namespace.
+
+        Structured annotations become a namespace via :meth:`input_namespace_from`; all other
+        annotations become a leaf :class:`InputPort`.
+
+        :param name: the port or namespace to declare (dotted for nested fields).
+        :param field: the extracted field carrying the stripped annotation, default and help.
+        """
+        valid_type = infer_runtime_types(field.annotation) or (Data,)
+
+        if self.has_input(name):
+            port = self.inputs[name]
+            assert isinstance(port, InputPort)
+            port.default = field.default
+            return
+
+        if field.default is None and type(None) not in valid_type:
+            valid_type += (type(None),)
+
+        if fields_of(field.annotation) is not None:
+            self.input_namespace_from(
+                name,
+                field.annotation,
+                required=field.required,
+                help=field.help,
+            )
+            return
+
+        self.input(
+            name,
+            valid_type=valid_type,
+            default=_lazily(field.default) if field.default is not UNSPECIFIED else UNSPECIFIED,
+            serializer=to_aiida_type,
+            help=field.help,
+        )
 
 
 class CalcJobProcessSpec(ProcessSpec):

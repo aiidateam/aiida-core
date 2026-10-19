@@ -17,7 +17,17 @@ from typing_extensions import Self, dataclass_transform
 
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 
-__all__ = ('Field', 'PortField', 'PortModel', 'as_dict', 'fields_of', 'is_structured', 'without_marks')
+__all__ = (
+    'Field',
+    'PortField',
+    'PortModel',
+    'as_dict',
+    'field_from_annotation',
+    'fields_of',
+    'is_structured',
+    'port_help',
+    'without_marks',
+)
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -72,6 +82,31 @@ class Field:
     def required(self) -> bool:
         """Return whether a value has to be given for this field."""
         return self.default is UNSPECIFIED
+
+
+def field_from_annotation(
+    name: str,
+    annotation: t.Any,
+    default: t.Any = UNSPECIFIED,
+    help: str | None = None,
+) -> Field:
+    """Build a :class:`Field` from one annotated declaration.
+
+    This is the extraction half of ``annotation -> port``: strip ``Annotated`` marks for the
+    declared type and read ``PortField`` help, falling back to the given help (typically a
+    docstring entry). Conversion of the returned field to ports belongs to the spec.
+
+    :param name: the field (port) name.
+    :param annotation: the declared annotation, possibly ``Annotated`` with ``PortField``.
+    :param default: the declared default, or ``UNSPECIFIED`` when required.
+    :param help: fallback help text when the annotation carries none.
+    """
+    return Field(
+        name=name,
+        annotation=without_marks(annotation),
+        default=default,
+        help=port_help(annotation) or help,
+    )
 
 
 def is_a_plain_class(annotation: t.Any) -> bool:

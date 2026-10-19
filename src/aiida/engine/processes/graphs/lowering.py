@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+import copy
 import functools
 import inspect
 import textwrap
@@ -33,6 +34,7 @@ from aiida.engine.processes.graphs.ir import (
     Dependency,
     Endpoint,
     GraphIR,
+    LoopControl,
     ProcessTask,
     Route,
     SubgraphTask,
@@ -263,7 +265,7 @@ class _LoweringState:
 
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask | BranchControl] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl] = field(default_factory=list)
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     names: dict[str, _Reference] = field(default_factory=dict)
@@ -371,7 +373,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
         if isinstance(statement, ast.If):
             _lower_branch(state, statement)
         elif isinstance(statement, ast.While):
-            _reject(state, statement, 'while loops are not supported; write out one call per value instead')
+            _lower_loop(state, statement)
         elif isinstance(statement, (ast.For, ast.AsyncFor)):
             _reject(state, statement, 'for loops are not supported; write out one call per value, or use a while loop')
         elif isinstance(statement, (ast.Import, ast.ImportFrom)):
@@ -439,7 +441,7 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
     return {port: reference}
 
 
-def _lower_assignment(state: _LoweringState, statement: ast.stmt) -> str:
+def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
     """Bind a call result to new placement names."""
     if isinstance(statement, ast.AnnAssign):
         _reject(state, statement, 'drop the annotation; types come from the task or input instead')
@@ -449,7 +451,7 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt) -> str:
     if len(names) != len(statement.targets):
         _reject(state, statement, 'assign to a plain name instead, one per line')
     for name in names:
-        if name in state.names:
+        if name in state.names and not rebind:
             _reject(state, statement, 'assign each result a new name instead of reusing one')
     if not isinstance(statement.value, ast.Call):
         msg = 'each line must call a task or graph instead'
@@ -510,6 +512,45 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
     selected = first.child.names[first.name]
     state.names[first.name] = _Reference(instance, selected.port, selected.shape)
+
+
+def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
+    """Lower a while statement to a resumable loop control task."""
+    bound = _bind_condition(state, statement.test)
+    body: list[ast.stmt] = list(statement.body)
+    if bound is not None:
+        update = ast.Assign(targets=[ast.Name(id=bound.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
+        ast.copy_location(update, statement.test)
+        ast.copy_location(update.targets[0], statement.test)
+        body.append(update)
+    test: ast.expr = bound if bound is not None else statement.test
+    if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
+        _reject(state, statement, 'while loops need a named check and no else')
+    condition = test.id
+    child = _collect_region_inputs(state, body)
+    # Loop state is read from the previous iteration, including values rebound in the body.
+    assigned: set[str] = {
+        node.targets[0].id
+        for node in body
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+    }
+    for name in assigned:
+        if name not in state.names:
+            _reject(state, statement, f'set {name!r} before the loop instead')
+        child.inputs.setdefault(name, [])
+        child.names[name] = _Reference(None, name, state.names[name].shape)
+    if condition not in assigned:
+        _reject(state, statement, 'update the check inside the loop body instead')
+    for node in body:
+        _lower_assignment(child, node, rebind=True)
+    outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
+    body_spec = _lower_region_body(child, outputs)
+    instance = f'loop_{len(state.tasks) + 1}'
+    given: dict[str, CapturedValue] = {}
+    _route_region(state, child, instance, given)
+    state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
+    for name in assigned:
+        state.names[name] = _Reference(instance, name, child.names[name].shape)
 
 
 class _Arm(t.NamedTuple):

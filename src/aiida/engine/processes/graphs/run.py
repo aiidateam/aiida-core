@@ -14,11 +14,13 @@ import typing as t
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from aiida.common.links import LinkType
 from aiida.engine.processes.graphs.inputs import at, place
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
     GraphIR,
     GraphTask,
+    LoopControl,
     SubgraphTask,
     readable_version,
 )
@@ -33,6 +35,11 @@ STATE_VERSION = '0.1'
 def holds(condition: t.Any) -> bool:
     """Evaluate the value of a condition node rather than the node's identity."""
     return bool(condition.value if isinstance(condition, BaseType) else condition)
+
+
+def returned(node: Node) -> dict[str, t.Any]:
+    """Read the leaf outputs of one graph iteration."""
+    return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
 
 
 @dataclass(frozen=True)
@@ -130,6 +137,9 @@ class GraphRun:
     def step(self) -> Step:
         """Advance scheduling: continue loops, then dispatch every ready task."""
         step = Step()
+        for task in self.graph.tasks:
+            if isinstance(task, LoopControl) and task.name in self.instances:
+                self._continue_loop(task, step)
         while ready := self.graph.ready(self.settled, self.decided):
             for name in ready:
                 self._begin(name, step)
@@ -191,6 +201,8 @@ class GraphRun:
         inputs = self._inputs_for(task)
         if isinstance(task, BranchControl):
             self._begin_branch(task, inputs, step)
+        elif isinstance(task, LoopControl):
+            self._begin_loop(task, inputs, step)
         else:
             self.instances[name] = [name]
             step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
@@ -204,6 +216,40 @@ class GraphRun:
         self.instances[task.name] = [task.name]
         # Each side may consume a different subset of the enclosing inputs.
         step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
+
+    def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
+        """Start iterating a loop, or pass through never-entered initial state."""
+        if not holds(inputs.get(task.condition_port, True)):
+            self._pass_initial_state(task, inputs)
+            return
+        self.instances[task.name] = []
+        self._begin_iteration(task, inputs, step)
+
+    def _pass_initial_state(self, task: LoopControl, inputs: dict[str, t.Any]) -> None:
+        """Complete a never-entered loop with its initial state, like Python would."""
+        self.instances[task.name] = [task.name]
+        self.passed[task.name] = {name: inputs[name] for name in task.body.outputs if name in inputs}
+
+    def _continue_loop(self, task: LoopControl, step: Step) -> None:
+        """Dispatch the next iteration once the previous one finished successfully."""
+        runs = self.instances[task.name]
+        if not runs or any(instance not in self.done for instance in runs):
+            return
+        last = load_node(self.done[runs[-1]])
+        if not last.is_finished_ok or not holds(returned(last).get(task.condition_port)):
+            return
+        if len(runs) >= task.max_iterations:
+            msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations with its condition still true.'
+            raise RuntimeError(msg)
+        self._begin_iteration(task, {**self._inputs_for(task), **returned(last)}, step)
+
+    def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
+        """Dispatch one numbered loop iteration over the loop body."""
+        instance = f'{task.name}_iteration_{len(self.instances[task.name])}'
+        self.instances[task.name].append(instance)
+        step.begin(
+            instance, task, {name: value for name, value in inputs.items() if name in task.body.inputs}, task.body
+        )
 
     def _inputs_for(self, task: GraphTask) -> dict[str, t.Any]:
         """Wire graph inputs and dependency outputs into one task's declared inputs."""

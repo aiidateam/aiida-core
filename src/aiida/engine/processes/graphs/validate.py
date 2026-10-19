@@ -13,7 +13,7 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.exceptions import GraphTypeCheckError
-from aiida.engine.processes.graphs.ir import BranchControl, input_ports_at, port_at
+from aiida.engine.processes.graphs.ir import BranchControl, LoopControl, input_ports_at, port_at
 from aiida.engine.processes.ports import PortNamespace, infer_node_types
 from aiida.orm import Data
 
@@ -90,6 +90,9 @@ def _validate_region(graph: GraphIR, task: GraphTask) -> None:
             msg = 'both branches must return the same outputs.'
             raise GraphTypeCheckError(msg)
         _check_compatible(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
+    if isinstance(task, LoopControl) and (task.condition_port not in task.body.outputs or task.max_iterations < 1):
+        msg = 'a loop must return its condition and allow at least one iteration.'
+        raise GraphTypeCheckError(msg)
 
 
 def _validate_outputs(graph: GraphIR, boundary: PortNamespace) -> None:
@@ -153,7 +156,7 @@ def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str
 
 def _accepts_condition(task: GraphTask, port: str | None) -> bool:
     """Return whether a control task wires its condition outside declared inputs."""
-    return isinstance(task, BranchControl) and port == task.condition_port
+    return isinstance(task, (BranchControl, LoopControl)) and port == task.condition_port
 
 
 def _stored_types(port: t.Any) -> tuple[type, ...]:

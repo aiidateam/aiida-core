@@ -58,6 +58,9 @@ pytestmark = pytest.mark.presto
         pytest.param(language.computed_choice, {'value': -2}, {'result': 0}, id='computed-false'),
         pytest.param(language.inline_condition, {'value': 2}, {'result': 3}, id='inline-true'),
         pytest.param(language.inline_condition, {'value': -2}, {'result': 0}, id='inline-false'),
+        pytest.param(language.countdown, {'value': 3, 'condition': True}, {'value': 0}, id='loop'),
+        pytest.param(language.countdown_call, {'value': 3}, {'value': 0}, id='loop-call'),
+        pytest.param(language.countdown_call, {'value': -2}, {'value': -2}, id='loop-call-zero'),
         pytest.param(language.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
         pytest.param(language.tuple_assignment, {'x': 2, 'y': 3}, {'result': 11}, id='tuple-unpacking'),
         pytest.param(language.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
@@ -111,6 +114,13 @@ def test_task_after_kwarg_rejected_outside_graphs() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_zero_iteration_loop_returns_initial_state() -> None:
+    """A never-entered loop returns its initial state like the equivalent Python loop."""
+    outputs, node = run_get_node(language.countdown, value=3, condition=False)
+    assert node.is_finished_ok
+    assert outputs['value'].value == 3
+
+
 def test_nested_graph_has_child_workflow_provenance() -> None:
     """A nested declaration executes as a child graph with its own task calls."""
     outputs, node = run_get_node(language.nested_multiply_add, x=2, y=3, z=4)

@@ -9,3 +9,4 @@
 """Looping graph declarations shared by the behavior suites."""
 
 from tests.engine.processes.graphs.language.constructs.iterative.rejected import *
+from tests.engine.processes.graphs.language.constructs.iterative.supported import *

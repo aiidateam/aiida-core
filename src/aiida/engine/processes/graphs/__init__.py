@@ -14,6 +14,7 @@ from aiida.engine.processes.graphs.ir import (
     Dependency,
     Endpoint,
     GraphIR,
+    LoopControl,
     SubgraphTask,
     TaskIR,
 )
@@ -28,6 +29,7 @@ __all__ = (
     'GraphHandle',
     'GraphIR',
     'GraphProcess',
+    'LoopControl',
     'SubgraphTask',
     'TaskHandle',
     'TaskIR',

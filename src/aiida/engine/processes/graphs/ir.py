@@ -29,6 +29,7 @@ __all__ = (
     'Dependency',
     'Endpoint',
     'GraphIR',
+    'LoopControl',
     'ProcessTask',
     'SubgraphTask',
     'TaskIR',
@@ -275,6 +276,14 @@ class GraphTask(abc.ABC):
                 condition_port=data.get('condition_port', CONDITION_PORT),
                 **common,
             )
+        if kind == 'loop':
+            assert body is not None
+            return LoopControl(
+                body=body,
+                condition_port=data.get('condition_port', CONDITION_PORT),
+                max_iterations=data['max_iterations'],
+                **common,
+            )
         msg = f'unsupported graph task kind `{kind}`.'
         raise GraphTypeCheckError(msg)
 
@@ -349,6 +358,18 @@ class BranchControl(BodyTask):
             'condition_port': self.condition_port,
             'otherwise': None if self.otherwise is None else self.otherwise.to_dict(),
         }
+
+
+@dataclass(frozen=True, kw_only=True)
+class LoopControl(BodyTask):
+    """A condition iterating one nested template with numbered child runs."""
+
+    KIND: t.ClassVar[TaskKind] = 'loop'
+    condition_port: str = CONDITION_PORT
+    max_iterations: int = 1000
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {**super().to_dict(), 'condition_port': self.condition_port, 'max_iterations': self.max_iterations}
 
 
 @dataclass(frozen=True)

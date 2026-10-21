@@ -31,19 +31,21 @@ class ProjectionData(OrbitalData, ArrayData):
 
     _SKIP_MODEL_INHERITANCE_CHECK = True
 
-    def _check_projections_bands(self, projection_array):
+    def _check_projections_bands(self, projection_array, shape_bands=None):
         """Checks to make sure that a reference bandsdata is already set, and that
         projection_array is of the same shape of the bands data.
 
         :param projection_array: array to be checked against bands
+        :param shape_bands: optional precomputed shape of the reference bands array
 
         :raise: ValidationError if bands have not been set first
         :raise: AttributeError if projection_array is not of same shape as bands
         """
-        try:
-            shape_bands = np.shape(self.get_reference_bandsdata().get_bands())
-        except (AttributeError, exceptions.NotExistent):
-            raise exceptions.ValidationError('Bands must be set first, then projwfc')
+        if shape_bands is None:
+            try:
+                shape_bands = np.shape(self.get_reference_bandsdata().get_bands())
+            except (AttributeError, exceptions.NotExistent):
+                raise exceptions.ValidationError('Bands must be set first, then projwfc')
         # The [0:2] is so that each array, and not collection of arrays
         # is used to make the comparison
         if np.shape(projection_array) != shape_bands:
@@ -246,11 +248,17 @@ class ProjectionData(OrbitalData, ArrayData):
         if list_of_projections is not None:
             list_of_projections = single_to_list(list_of_projections)
             array_list_checker(list_of_projections, 'projections', orb_length)
+            shape_bands = None
+            if bands_check and list_of_projections:
+                try:
+                    shape_bands = np.shape(self.get_reference_bandsdata().get_bands())
+                except (AttributeError, exceptions.NotExistent):
+                    raise exceptions.ValidationError('Bands must be set first, then projwfc')
             for i, _ in enumerate(list_of_projections):
                 this_projection = list_of_projections[i]
                 array_name = self._from_index_to_arrayname(i)
                 if bands_check:
-                    self._check_projections_bands(this_projection)
+                    self._check_projections_bands(this_projection, shape_bands=shape_bands)
                 self.set_array(f'proj_{array_name}', this_projection)
 
         # verifies and sets both pdos and energy

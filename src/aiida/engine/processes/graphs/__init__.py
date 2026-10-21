@@ -18,7 +18,7 @@ from aiida.engine.processes.graphs.ir import (
     SubgraphTask,
     TaskIR,
 )
-from aiida.engine.processes.graphs.lowering import GraphHandle, graph, lower_from_source, task
+from aiida.engine.processes.graphs.lowering import GraphHandle, graph, task
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.tasks import TaskHandle, TaskProcess
 
@@ -36,6 +36,5 @@ __all__ = (
     'TaskProcess',
     'UnsupportedSyntax',
     'graph',
-    'lower_from_source',
     'task',
 )

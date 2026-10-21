@@ -65,7 +65,7 @@ class GraphProcess(Process):
         return super()._create_and_setup_db_record()
 
     @classmethod
-    def launch_inputs(cls, body: GraphIR, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
+    def _launch_inputs(cls, body: GraphIR, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
         """Validate graph inputs before constructing its process or storing provenance."""
         return {cls._GRAPH: Dict(dict=body.to_dict()), cls._GRAPH_INPUTS: body.serialize_inputs(inputs)}
 
@@ -73,10 +73,10 @@ class GraphProcess(Process):
     @override
     def output_ports(self) -> PortNamespace:
         """Return the static outputs declared by the stored graph."""
-        return self.graph.output_spec()
+        return self._graph.output_spec()
 
     @property
-    def run_state(self) -> GraphRun:
+    def _run_state(self) -> GraphRun:
         """Return the scheduling progress, rebuilt from the checkpoint when needed."""
         if self._run is None:
             graph = GraphIR.from_dict(self.inputs[self._GRAPH].get_dict())
@@ -88,15 +88,15 @@ class GraphProcess(Process):
         return self._run
 
     @property
-    def graph(self) -> GraphIR:
+    def _graph(self) -> GraphIR:
         """Return the static graph this process executes."""
-        return self.run_state.graph
+        return self._run_state.graph
 
     @override
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         """Checkpoint the scheduling progress and the graph input sources."""
         super().save_instance_state(out_state, save_context)
-        out_state['run'] = self.run_state.to_dict()
+        out_state['run'] = self._run_state.to_dict()
         out_state['graph_input_sources'] = self._encode_input_args(
             dict(self._input_sources.get(self._GRAPH_INPUTS, {}))
         )
@@ -114,7 +114,7 @@ class GraphProcess(Process):
         self._parsed_inputs = AttributesFrozendict(
             {
                 **self.inputs,
-                self._GRAPH_INPUTS: self.graph.input_spec().prepare(self._input_sources[self._GRAPH_INPUTS]).runtime,
+                self._GRAPH_INPUTS: self._graph.input_spec().prepare(self._input_sources[self._GRAPH_INPUTS]).runtime,
             }
         )
 
@@ -125,12 +125,12 @@ class GraphProcess(Process):
 
     def _do_step(self) -> t.Any:
         """Dispatch the ready tasks, then wait for them or finish the graph."""
-        step = self.run_state.step()
+        step = self._run_state.step()
         for note in step.notes:
             self.report(note)
         for start in step.starts:
             self._submit(start)
-        if self.run_state.pending:
+        if self._run_state.pending:
             return Wait(self._do_step, 'waiting for dispatched tasks')
         return self._finish()
 
@@ -138,7 +138,7 @@ class GraphProcess(Process):
         """Submit one task instance as a child process with an explicit call link."""
         process_class: type[Process]
         if start.body is not None:
-            process_class, inputs = GraphProcess, self.launch_inputs(start.body, start.inputs)
+            process_class, inputs = GraphProcess, self._launch_inputs(start.body, start.inputs)
         elif isinstance(start.task, ProcessTask):
             process_class, inputs = start.task.spec.process_class, start.inputs
         else:
@@ -147,27 +147,27 @@ class GraphProcess(Process):
         metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
         node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None
-        self.run_state.started(start.instance, node.pk)
+        self._run_state.started(start.instance, node.pk)
         self.report(f'dispatched task `{start.instance}` as {node.pk}')
 
     @override
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:
         """Resume this process when any dispatched task finishes."""
         super().on_wait(awaitables)
-        for instance, pk in self.run_state.pending.items():
+        for instance, pk in self._run_state.pending.items():
             self.runner.call_on_process_finish(
                 pk, functools.partial(self.call_soon, self._on_task_finished, instance, pk)
             )
 
     def _on_task_finished(self, instance: str, pk: int) -> None:
         """Record one finished task instance and resume a waiting graph."""
-        self.run_state.completed(instance, pk)
+        self._run_state.completed(instance, pk)
         if self.state == ProcessState.WAITING:
             self.resume()
 
     def _finish(self) -> ExitCode | None:
         """Return the task failure exit code, or expose the graph outputs."""
-        state = self.run_state
+        state = self._run_state
         if state.failed:
             return self.exit_codes.ERROR_TASK_FAILED.format(task=state.failed[0])
         for name, value in state.outputs().items():
@@ -176,4 +176,4 @@ class GraphProcess(Process):
 
     @override
     def _build_process_label(self) -> str:
-        return self.graph.identifier or super()._build_process_label()
+        return self._graph.identifier or super()._build_process_label()

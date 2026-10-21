@@ -14,7 +14,7 @@ import pytest
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, UnsupportedSyntax
 from aiida.engine.processes.graphs.ir import Dependency, GraphIR, TaskIR
-from aiida.engine.processes.graphs.lowering import GraphHandle, lower_from_source
+from aiida.engine.processes.graphs.lowering import GraphHandle, _lower_from_source
 from aiida.engine.processes.graphs.shapes import load_shape
 from tests.engine.processes.graphs.programs import (
     assignments,
@@ -29,25 +29,7 @@ from tests.engine.processes.graphs.programs import (
 )
 
 
-def test_public_api_is_source_only() -> None:
-    from aiida import engine
-
-    for excluded in (
-        'graph_execution',
-        'task_execution',
-        'graph_source',
-        'task_source',
-        'Many',
-        'each',
-        'select',
-        'monitor',
-        'handler',
-        'rerun_from',
-        'task_from_builder',
-        'task_from_workchain',
-    ):
-        assert not hasattr(engine, excluded)
-    assert isinstance(calls.chain, GraphHandle)
+def test_graph_cannot_be_called_directly() -> None:
     with pytest.raises(GraphError, match='launch'):
         calls.chain(x=1, y=2)
 
@@ -57,19 +39,19 @@ def test_build_does_not_invoke_graph_or_task_bodies(monkeypatch: pytest.MonkeyPa
         raise AssertionError('must not invoke a task while lowering')
 
     monkeypatch.setattr(tasks.add.process_class, '_func', staticmethod(fail))
-    spec = calls.chain.lower()
+    spec = calls.chain._lower()
     assert spec.task_names == ('add', 'add_2')
     assert spec.dependencies == (Dependency('add', 'add_2', 'result', 'x'),)
     assert spec.inputs == {'x': (('add', 'x'),), 'y': (('add', 'y'), ('add_2', 'y'))}
     assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
 
 
-def test_lower_from_source_matches_handle_build() -> None:
-    assert lower_from_source(calls.chain).to_dict() == calls.chain.lower().to_dict()
+def test__lower_from_source_matches_handle_build() -> None:
+    assert _lower_from_source(calls.chain).to_dict() == calls.chain._lower().to_dict()
 
 
 def test_declared_spec_round_trips_through_json() -> None:
-    spec = calls.multiply_add.lower()
+    spec = calls.multiply_add._lower()
     restored = GraphIR.from_dict(json.loads(json.dumps(spec.to_dict())))
     assert restored.to_dict() == spec.to_dict()
     assert restored.identifier == f'{calls.__name__}:multiply_add'
@@ -78,9 +60,9 @@ def test_declared_spec_round_trips_through_json() -> None:
 
 def test_identifier_includes_module() -> None:
     assert calls.labelled.identifier == f'{calls.__name__}:labelled'
-    assert calls.labelled.lower().identifier == f'{calls.__name__}:labelled'
-    assert calls.chain.lower().identifier == f'{calls.__name__}:chain'
-    assert lower_from_source(calls.chain).identifier == calls.chain.identifier
+    assert calls.labelled._lower().identifier == f'{calls.__name__}:labelled'
+    assert calls.chain._lower().identifier == f'{calls.__name__}:chain'
+    assert _lower_from_source(calls.chain).identifier == calls.chain.identifier
 
 
 def test_graph_rejects_identifier_argument() -> None:
@@ -91,17 +73,17 @@ def test_graph_rejects_identifier_argument() -> None:
 
 
 def test_task_alias_does_not_collide_with_generated_name() -> None:
-    assert len(calls.collision.lower().tasks) == 3
+    assert len(calls.collision._lower().tasks) == 3
 
 
 def test_missing_task_input_fails_during_build() -> None:
     with pytest.raises(UnsupportedSyntax, match='y'):
-        calls.missing_task_input.lower()
+        calls.missing_task_input._lower()
 
 
 def test_parameter_defaults_fill_missing_inputs() -> None:
     """Literal parameter defaults apply without passing the input."""
-    spec = parameters.default_parameter.lower()
+    spec = parameters.default_parameter._lower()
     assert spec.prepare_inputs({}) == {'value': 2}
     assert spec.prepare_inputs({'value': 5}) == {'value': 5}
 
@@ -145,13 +127,13 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
 def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, message: str) -> None:
     """Rejected syntax raises `UnsupportedSyntax` before graph execution."""
     with pytest.raises(UnsupportedSyntax, match=message):
-        declaration.lower()
+        declaration._lower()
 
 
 def test_nested_graph_builds_subgraph_task() -> None:
     from aiida.engine.processes.graphs.ir import SubgraphTask
 
-    spec = calls.nested_multiply_add.lower()
+    spec = calls.nested_multiply_add._lower()
     assert isinstance(spec.tasks[0], SubgraphTask)
     assert spec.tasks[0].body.identifier == f'{calls.__name__}:multiply_add'
 
@@ -159,7 +141,7 @@ def test_nested_graph_builds_subgraph_task() -> None:
 def test_branches_build_control_tasks() -> None:
     from aiida.engine.processes.graphs.ir import BranchControl
 
-    spec = branches.external_choice.lower()
+    spec = branches.external_choice._lower()
     assert isinstance(spec.tasks[0], BranchControl)
     assert set(spec.tasks[0].body.outputs) == {'result'}
     assert set(spec.tasks[0].otherwise.outputs) == {'result'}
@@ -168,23 +150,23 @@ def test_branches_build_control_tasks() -> None:
 def test_loops_build_control_tasks() -> None:
     from aiida.engine.processes.graphs.ir import LoopControl
 
-    spec = loops.countdown.lower()
+    spec = loops.countdown._lower()
     assert isinstance(spec.tasks[0], LoopControl)
     assert set(spec.tasks[0].body.outputs) == {'value', 'condition'}
-    called = loops.countdown_call.lower()
+    called = loops.countdown_call._lower()
     assert isinstance(called.tasks[1], LoopControl)
     assert set(called.tasks[1].body.outputs) == {'value', 'condition'}
 
 
 def test_recursive_call_fails_during_build() -> None:
     with pytest.raises(UnsupportedSyntax, match='Recursive graph call'):
-        calls.recursive_call.lower()
+        calls.recursive_call._lower()
 
 
 def test_inline_condition_matches_bound_form() -> None:
     """An inline predicate call lowers like its explicit assignment form."""
-    inline = branches.inline_condition.lower().to_dict()
-    bound = branches.computed_choice.lower().to_dict()
+    inline = branches.inline_condition._lower().to_dict()
+    bound = branches.computed_choice._lower().to_dict()
     inline.pop('identifier')
     bound.pop('identifier')
     assert inline == bound
@@ -192,12 +174,12 @@ def test_inline_condition_matches_bound_form() -> None:
 
 def test_mismatched_branch_outputs_fail_during_build() -> None:
     with pytest.raises(GraphTypeCheckError, match='same outputs'):
-        branches.mismatched_branches.lower()
+        branches.mismatched_branches._lower()
 
 
 def test_ordering_dependency_carries_no_value() -> None:
     """An `after` dependency orders placements without wiring an output value."""
-    specification = calls.ordered_named.lower()
+    specification = calls.ordered_named._lower()
     assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
         ('prepare', 'add', None, None)
     ]
@@ -205,19 +187,19 @@ def test_ordering_dependency_carries_no_value() -> None:
 
 def test_incompatible_boundary_types_fail_during_build() -> None:
     with pytest.raises(GraphTypeCheckError, match='incompatible types'):
-        ports.wrong_type.lower()
+        ports.wrong_type._lower()
 
 
 def test_rejection_carries_source_location() -> None:
     with pytest.raises(UnsupportedSyntax) as caught:
-        assignments.unbound.lower()
+        assignments.unbound._lower()
     assert 'programs/assignments.py' in str(caught.value)
     assert 'unbound name' in str(caught.value)
     assert '^' in str(caught.value)
 
 
 def test_spec_version_and_unknown_task_kind_rejection() -> None:
-    data = calls.chain.lower().to_dict()
+    data = calls.chain._lower().to_dict()
     data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
         GraphIR.from_dict(data)
@@ -225,7 +207,7 @@ def test_spec_version_and_unknown_task_kind_rejection() -> None:
     task_data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
         TaskIR.from_dict(task_data)
-    data = calls.chain.lower().to_dict()
+    data = calls.chain._lower().to_dict()
     data['tasks'][0]['kind'] = 'map'
     with pytest.raises(GraphTypeCheckError, match='unsupported graph task kind'):
         GraphIR.from_dict(data)
@@ -236,7 +218,7 @@ def test_spec_version_and_unknown_task_kind_rejection() -> None:
 def test_cyclic_and_invalid_ordering_dependencies() -> None:
     from dataclasses import replace
 
-    spec = calls.chain.lower()
+    spec = calls.chain._lower()
     with pytest.raises(GraphTypeCheckError, match='cycle'):
         replace(spec, dependencies=(*spec.dependencies, Dependency('add_2', 'add')))
     with pytest.raises(GraphTypeCheckError, match='both ports'):

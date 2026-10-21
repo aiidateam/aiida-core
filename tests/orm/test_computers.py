@@ -78,6 +78,73 @@ class TestComputer:
         computer.set_minimum_job_poll_interval(interval)
         assert computer.get_minimum_job_poll_interval() == interval
 
+    def test_copy(self):
+        """Test the :meth:`aiida.orm.Computer.copy` method."""
+        computer = Computer(
+            label=f'comp-{uuid.uuid4()}',
+            hostname='localhost',
+            description='Test description',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida',
+        )
+
+        # Unstored computer cannot be copied
+        with pytest.raises(exceptions.InvalidOperation, match='only after having stored it'):
+            computer.copy()
+
+        computer.store()
+
+        try:
+            clone = computer.copy()
+            assert not clone.is_stored
+            assert clone.pk is None
+            assert clone.uuid != computer.uuid
+            assert clone.label == computer.label
+            assert clone.hostname == computer.hostname
+            assert clone.description == computer.description
+            assert clone.transport_type == computer.transport_type
+            assert clone.scheduler_type == computer.scheduler_type
+            assert clone.get_workdir() == computer.get_workdir()
+            assert clone.metadata == computer.metadata
+
+            # Mutating the clone does not affect the original
+            clone.label = f'comp-{uuid.uuid4()}'
+            clone.set_workdir('/new/workdir')
+            assert computer.get_workdir() == '/tmp/aiida'
+
+            # Clone can be stored
+            clone.store()
+            assert clone.is_stored
+            assert clone.pk != computer.pk
+            Computer.collection.delete(clone.pk)
+        finally:
+            Computer.collection.delete(computer.pk)
+
+    def test_copy_dunder(self):
+        """Test `copy.copy` and `copy.deepcopy` on a `Computer` instance."""
+        import copy
+
+        computer = Computer(
+            label=f'comp-{uuid.uuid4()}',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+        ).store()
+
+        try:
+            clone_shallow = copy.copy(computer)
+            assert not clone_shallow.is_stored
+            assert clone_shallow.uuid != computer.uuid
+            assert clone_shallow.label == computer.label
+
+            clone_deep = copy.deepcopy(computer)
+            assert not clone_deep.is_stored
+            assert clone_deep.uuid != computer.uuid
+            assert clone_deep.label == computer.label
+        finally:
+            Computer.collection.delete(computer.pk)
+
 
 class TestComputerConfigure:
     """Tests for the configuring of instance of the `Computer` ORM class."""

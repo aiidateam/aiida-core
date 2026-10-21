@@ -84,6 +84,40 @@ def _lazily(default: t.Any) -> t.Any:
     return lambda: copy.deepcopy(default)
 
 
+def _declare_namespace(
+    spec: ProcessSpec,
+    name: str,
+    container: type,
+    *,
+    leaf_options: t.Callable[[Field], dict[str, t.Any]],
+    defaults: t.Mapping[str, t.Any] | None = None,
+    required: bool = True,
+    help: str | None = None,
+    validator: t.Callable[[t.Any, t.Any], str | None] | None = None,
+) -> None:
+    """Declare a model tree with the leaf types appropriate to its process."""
+    fields = fields_of(container)
+    if fields is None:
+        msg = f'`{getattr(container, "__name__", container)}` is not a structured type. Use a `PortModel`.'
+        raise TypeError(msg)
+    spec.input_namespace(name, required=required, help=help, validator=validator)
+    for field in _with_defaults(fields, defaults):
+        path = f'{name}{spec.namespace_separator}{field.name}'
+        if fields_of(field.annotation) is not None:
+            nested = field.default.as_dict() if isinstance(field.default, field.annotation) else field.default
+            _declare_namespace(
+                spec,
+                path,
+                field.annotation,
+                leaf_options=leaf_options,
+                defaults=nested if isinstance(nested, t.Mapping) else None,
+                required=field.required,
+                help=field.help,
+            )
+        else:
+            spec.input(path, **leaf_options(field))
+
+
 class ProcessSpec(spec.ProcessSpec):
     """Default process spec for process classes defined in `aiida-core`.
 
@@ -99,14 +133,6 @@ class ProcessSpec(spec.ProcessSpec):
     def __init__(self) -> None:
         super().__init__()
         self._exit_codes = ExitCodesNamespace()
-        self._structured_outputs = False
-
-    @property
-    def result_port(self) -> str:
-        """Return the port representing a call result, or the root for a namespace result."""
-        if self._structured_outputs or len(self.outputs) != 1:
-            return ''
-        return next(iter(self.outputs))
 
     def input_namespace_from(
         self,
@@ -141,33 +167,16 @@ class ProcessSpec(spec.ProcessSpec):
         :param validator: validator for the namespace itself.
         :raises TypeError: if the structured type is not one this knows how to read.
         """
-        fields = fields_of(container)
-
-        if fields is None:
-            msg = (
-                f'`{getattr(container, "__name__", container)}` is not a structured type, so there is nothing '
-                f'to declare `{name}` from. Use a `PortModel`.'
-            )
-            raise TypeError(msg)
-
-        self.input_namespace(name, required=required, help=help, validator=validator)
-
-        for field in _with_defaults(fields, defaults):
-            self._declare_field(f'{name}{self.namespace_separator}{field.name}', field)
-
-    def _declare_field(self, name: str, field: Field) -> None:
-        """Declare one model field as a port or a nested namespace."""
-        if fields_of(field.annotation) is not None:
-            nested = field.default.as_dict() if isinstance(field.default, field.annotation) else field.default
-            self.input_namespace_from(
-                name,
-                field.annotation,
-                required=field.required,
-                help=field.help,
-                defaults=nested if isinstance(nested, dict) else None,
-            )
-            return
-        self.input(name, **_as_a_port(field))
+        _declare_namespace(
+            self,
+            name,
+            container,
+            leaf_options=_as_a_port,
+            defaults=defaults,
+            required=required,
+            help=help,
+            validator=validator,
+        )
 
     def outputs_from(self, container: type, prefix: str = '') -> None:
         """Declare one output port per field of a structured type.
@@ -194,9 +203,6 @@ class ProcessSpec(spec.ProcessSpec):
                 f'to declare the outputs from. Use a `PortModel`.'
             )
             raise TypeError(msg)
-
-        if not prefix:
-            self._structured_outputs = True
 
         for field in fields:
             name = f'{prefix}{field.name}'
@@ -271,21 +277,13 @@ class ProcessSpec(spec.ProcessSpec):
 
 
 class GraphProcessSpec(ProcessSpec):
-    """Process spec for graph tasks and graph processes, declaring runtime-typed inputs.
-
-    The ``Field``-based declaration path lives here so plain processes never see it:
-    annotations convert to plain Python runtime types, with provenance serialization
-    happening after runtime validation.
-    """
+    """Process specification for graph and task processes with runtime-typed inputs."""
 
     def input_from_field(self, name: str, field: Field) -> None:
-        """Convert one extracted :class:`Field` to an input port or namespace.
+        """Declare a runtime-typed input port or structured namespace from a field.
 
-        Structured annotations become a namespace via :meth:`input_namespace_from`; all other
-        annotations become a leaf :class:`InputPort`.
-
-        :param name: the port or namespace to declare (dotted for nested fields).
-        :param field: the extracted field carrying the stripped annotation, default and help.
+        :param name: the input port or namespace name, dotted for nested fields.
+        :param field: the extracted annotation, default and help for the input.
         """
         valid_type = infer_runtime_types(field.annotation) or (Data,)
 

@@ -130,6 +130,7 @@ Structured inputs
 Launch with a mapping or model instance, for example ``run_get_node(configured, config={'settings': {'nullable': None}})``.
 Models declare namespaces; tasks receive attribute-accessible namespace mappings, not reconstructed model instances.
 A nullable field still requires its key unless it has a default. Missing required graph inputs are reported together by ``MissingRequiredInputsError``.
+Model default factories are evaluated when the graph is lowered; their results must be finite JSON values and are copied for each run of the lowered graph.
 Whole namespaces and selected fields are wired without flattening ordinary dictionary-valued leaves or replacing original input-node identities.
 
 Subgraphs, branches, and loops

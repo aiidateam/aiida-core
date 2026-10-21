@@ -8,13 +8,14 @@
 ###########################################################################
 """Build-only contracts for straight-line source graphs."""
 
+import importlib
 import json
 
 import pytest
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, UnsupportedSyntax
 from aiida.engine.processes.graphs.ir import Dependency, GraphIR, TaskIR
-from aiida.engine.processes.graphs.lowering import GraphHandle, _lower_from_source
+from aiida.engine.processes.graphs.lowering import GraphHandle
 from aiida.engine.processes.graphs.shapes import load_shape
 from tests.engine.processes.graphs.programs import (
     assignments,
@@ -46,8 +47,29 @@ def test_build_does_not_invoke_graph_or_task_bodies(monkeypatch: pytest.MonkeyPa
     assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
 
 
-def test__lower_from_source_matches_handle_build() -> None:
-    assert _lower_from_source(calls.chain).to_dict() == calls.chain._lower().to_dict()
+def test_signed_literals_keep_their_sign() -> None:
+    assert parameters.signed_literals._lower().tasks[0].inputs == {'x': -3, 'y': 1}
+
+
+def test_optional_collection_keeps_both_types() -> None:
+    spec = parameters.optional_collection._lower()
+    assert spec.input_spec()['values'].valid_type == (list, type(None))
+
+
+def test_factory_defaults_are_independent_per_launch() -> None:
+    spec = parameters.factory_defaults._lower()
+    first = spec.prepare_inputs({'settings': {}})
+    second = spec.prepare_inputs({'settings': {}})
+    assert first == second == {'settings': {'values': []}}
+    first['settings']['values'].append(1)
+    assert second == {'settings': {'values': []}}
+    assert GraphIR.from_dict(spec.to_dict()).prepare_inputs({'settings': {}}) == second
+
+
+def test_graph_declarations_can_be_reloaded() -> None:
+    before = parameters.default_parameter._lower().to_dict()
+    importlib.reload(parameters)
+    assert parameters.default_parameter._lower().to_dict() == before
 
 
 def test_declared_spec_round_trips_through_json() -> None:
@@ -62,7 +84,6 @@ def test_identifier_includes_module() -> None:
     assert calls.labelled.identifier == f'{calls.__name__}:labelled'
     assert calls.labelled._lower().identifier == f'{calls.__name__}:labelled'
     assert calls.chain._lower().identifier == f'{calls.__name__}:chain'
-    assert _lower_from_source(calls.chain).identifier == calls.chain.identifier
 
 
 def test_graph_rejects_identifier_argument() -> None:

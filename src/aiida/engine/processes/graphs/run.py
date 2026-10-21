@@ -54,18 +54,13 @@ class Start:
 
 @dataclass
 class Step:
-    """The dispatches and notes decided by one scheduling step."""
+    """The dispatches decided by one scheduling step."""
 
     starts: list[Start] = field(default_factory=list)
-    notes: list[str] = field(default_factory=list)
 
     def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any], body: GraphIR | None = None) -> None:
         """Record the dispatch of one task instance within this step."""
         self.starts.append(Start(instance=instance, task=task, inputs=inputs, body=body))
-
-    def note(self, text: str) -> None:
-        """Record a human-readable scheduling decision within this step."""
-        self.notes.append(text)
 
 
 class GraphRunState(t.TypedDict, total=False):
@@ -75,7 +70,6 @@ class GraphRunState(t.TypedDict, total=False):
     instances: dict[str, list[str]]
     dispatched: dict[str, int]
     done: dict[str, int]
-    skipped: list[str]
     passed: dict[str, dict[str, t.Any]]
 
 
@@ -88,7 +82,6 @@ class GraphRun:
     instances: dict[str, list[str]] = field(default_factory=dict)
     dispatched: dict[str, int] = field(default_factory=dict)
     done: dict[str, int] = field(default_factory=dict)
-    skipped: set[str] = field(default_factory=set)
     passed: dict[str, dict[str, t.Any]] = field(default_factory=dict)
 
     @property
@@ -122,17 +115,8 @@ class GraphRun:
     @property
     def failed(self) -> list[str]:
         """Return the finished tasks with at least one unsuccessful output, in graph order."""
-        return [name for name in self.graph.task_names if name in self.finished and name not in self.succeeded]
-
-    @property
-    def settled(self) -> set[str]:
-        """Return the tasks that need no further scheduling."""
-        return self.succeeded | self.skipped
-
-    @property
-    def decided(self) -> set[str]:
-        """Return the tasks with instances, plus the skipped ones."""
-        return set(self.instances) | self.skipped
+        finished, succeeded = self.finished, self.succeeded
+        return [name for name in self.graph.task_names if name in finished and name not in succeeded]
 
     def step(self) -> Step:
         """Advance scheduling: continue loops, then dispatch every ready task."""
@@ -140,7 +124,8 @@ class GraphRun:
         for task in self.graph.tasks:
             if isinstance(task, LoopControl) and task.name in self.instances:
                 self._continue_loop(task, step)
-        while ready := self.graph.ready(self.settled, self.decided):
+        succeeded = self.succeeded
+        while ready := self.graph.ready(succeeded | self.passed.keys(), self.instances):
             for name in ready:
                 self._begin(name, step)
         return step
@@ -161,7 +146,7 @@ class GraphRun:
                 produced[output] = at(self.given, source.port)
             elif source.task in self.passed:
                 produced[output] = at(self.passed[source.task], source.port)
-            elif source.task not in self.skipped:
+            else:
                 produced[output] = at(self._produced_by(source.task).outputs, source.port)
         return produced
 
@@ -172,7 +157,6 @@ class GraphRun:
             'instances': {name: list(runs) for name, runs in self.instances.items()},
             'dispatched': dict(self.dispatched),
             'done': dict(self.done),
-            'skipped': sorted(self.skipped),
             'passed': {name: dict(outputs) for name, outputs in self.passed.items()},
         }
 
@@ -186,17 +170,11 @@ class GraphRun:
             instances={name: list(runs) for name, runs in data.get('instances', {}).items()},
             dispatched=dict(data.get('dispatched', {})),
             done=dict(data.get('done', {})),
-            skipped=set(data.get('skipped', ())),
             passed={name: dict(outputs) for name, outputs in data.get('passed', {}).items()},
         )
 
     def _begin(self, name: str, step: Step) -> None:
-        """Dispatch one ready task, skipping it when a predecessor was skipped."""
-        missing = sorted(self.graph.predecessors(name) & self.skipped)
-        if missing:
-            step.note(f'task `{name}` will not run, since `{missing[0]}` did not')
-            self.skipped.add(name)
-            return
+        """Dispatch one ready task."""
         task = self.graph.task(name)
         inputs = self._inputs_for(task)
         if isinstance(task, BranchControl):
@@ -208,18 +186,15 @@ class GraphRun:
             step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
 
     def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
-        """Dispatch the taken side of a branch, skipping when it has no body."""
-        taken = task.body if holds(inputs.pop(task.condition_port, None)) else task.otherwise
-        if taken is None:
-            self.skipped.add(task.name)
-            return
+        """Dispatch the taken side of a branch."""
+        taken = task.body if holds(inputs.pop(task.condition_port)) else task.otherwise
         self.instances[task.name] = [task.name]
         # Each side may consume a different subset of the enclosing inputs.
         step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
 
     def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Start iterating a loop, or pass through never-entered initial state."""
-        if not holds(inputs.get(task.condition_port, True)):
+        if not holds(inputs[task.condition_port]):
             self._pass_initial_state(task, inputs)
             return
         self.instances[task.name] = []
@@ -236,12 +211,15 @@ class GraphRun:
         if not runs or any(instance not in self.done for instance in runs):
             return
         last = load_node(self.done[runs[-1]])
-        if not last.is_finished_ok or not holds(returned(last).get(task.condition_port)):
+        if not last.is_finished_ok:
+            return
+        outputs = returned(last)
+        if not holds(outputs[task.condition_port]):
             return
         if len(runs) >= task.max_iterations:
             msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations with its condition still true.'
             raise RuntimeError(msg)
-        self._begin_iteration(task, {**self._inputs_for(task), **returned(last)}, step)
+        self._begin_iteration(task, {**self._inputs_for(task), **outputs}, step)
 
     def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Dispatch one numbered loop iteration over the loop body."""

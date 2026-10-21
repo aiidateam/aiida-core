@@ -21,7 +21,6 @@ __all__ = (
     'Field',
     'PortField',
     'PortModel',
-    'as_dict',
     'field_from_annotation',
     'fields_of',
     'is_structured',
@@ -141,14 +140,6 @@ def fields_of(annotation: t.Any) -> tuple[Field, ...] | None:
         hint = hints.get(field.name)
         fields.append(Field(name=field.name, annotation=without_marks(hint), default=default, help=port_help(hint)))
     return tuple(fields)
-
-
-def as_dict(value: t.Any) -> dict[str, t.Any] | None:
-    """Return a model's namespace values, or None for other values.
-
-    :param value: a model instance or any other value.
-    """
-    return value.as_dict() if isinstance(value, PortModel) else None
 
 
 def _namespace_value(value: t.Any) -> t.Any:

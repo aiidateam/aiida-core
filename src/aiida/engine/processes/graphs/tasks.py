@@ -57,7 +57,7 @@ class TaskProcess(FunctionProcessBase):
                 parameter.name,
                 annotations.get(parameter.name),
                 parameter.default if parameter.default is not parameter.empty else UNSPECIFIED,
-                param_help_string.get(parameter.name, None),
+                param_help_string.get(parameter.name),
             ),
         )
 

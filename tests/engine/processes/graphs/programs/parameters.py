@@ -8,7 +8,10 @@
 ###########################################################################
 """Parameters declarations shared by the graph behavior suites."""
 
-from aiida.engine.processes.graphs.lowering import graph
+from dataclasses import field
+
+from aiida.engine import PortModel
+from aiida.engine.processes.graphs.lowering import graph, task
 from tests.engine.processes.graphs.programs.tasks import add
 
 
@@ -29,6 +32,35 @@ def variadic_parameters(*values: int) -> int:
 def default_parameter(value: int = 2) -> int:
     """Declare a parameter default, filled when absent."""
     return add(x=value, y=1)
+
+
+@graph
+def signed_literals() -> int:
+    return add(x=-3, y=+1)
+
+
+@task
+def sum_optional(values: list[int] | None) -> int:
+    return sum(values) if values is not None else 0
+
+
+@graph
+def optional_collection(values: list[int] | None) -> int:
+    return sum_optional(values=values)
+
+
+class FactorySettings(PortModel):
+    values: list[int] = field(default_factory=list)
+
+
+@task
+def count_settings(settings: FactorySettings) -> int:
+    return len(settings['values'])
+
+
+@graph
+def factory_defaults(settings: FactorySettings) -> int:
+    return count_settings(settings=settings)
 
 
 @graph

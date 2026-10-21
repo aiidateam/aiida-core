@@ -61,13 +61,13 @@ class GraphProcess(Process):
         self._parsed_inputs = AttributesFrozendict(
             {**self.inputs, self._GRAPH_INPUTS: graph.input_spec().prepare(stored).runtime}
         )
-        self._run = GraphRun.from_dict(graph=graph, given=graph.serialize_inputs(dict(stored)), data=self._saved)
+        self._run = GraphRun.from_dict(graph=graph, given=stored, data=self._saved)
         return super()._create_and_setup_db_record()
 
     @classmethod
     def _launch_inputs(cls, body: GraphIR, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
-        """Validate graph inputs before constructing its process or storing provenance."""
-        return {cls._GRAPH: Dict(dict=body.to_dict()), cls._GRAPH_INPUTS: body.serialize_inputs(inputs)}
+        """Fill graph arguments; process initialization validates and serializes their runtime values."""
+        return {cls._GRAPH: Dict(dict=body.to_dict()), cls._GRAPH_INPUTS: body.prepare_inputs(inputs)}
 
     @property
     @override
@@ -126,8 +126,6 @@ class GraphProcess(Process):
     def _do_step(self) -> t.Any:
         """Dispatch the ready tasks, then wait for them or finish the graph."""
         step = self._run_state.step()
-        for note in step.notes:
-            self.report(note)
         for start in step.starts:
             self._submit(start)
         if self._run_state.pending:

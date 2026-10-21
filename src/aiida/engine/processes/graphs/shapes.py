@@ -14,12 +14,12 @@ import math
 import typing as t
 from collections.abc import Mapping
 from dataclasses import dataclass
-from types import UnionType
 
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import _namespace_value, fields_of, port_help, without_marks
+from aiida.engine.processes.ports import infer_runtime_types
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -59,6 +59,8 @@ def shape_for_annotation(
     annotation: object, *, required: bool = True, default: object = UNSPECIFIED, help: str | None = None
 ) -> Shape:
     """Capture a Python declaration without constructing engine input or output ports."""
+    if default is not UNSPECIFIED:
+        default = json_default(default() if callable(default) else default)
     resolved_help = help or port_help(annotation)
     annotation = without_marks(annotation)
     fields = fields_of(annotation)
@@ -77,17 +79,9 @@ def shape_for_annotation(
             default=default,
             help=resolved_help,
         )
-    origin = t.get_origin(annotation)
-    types = None
-    if annotation is not t.Any:
-        if origin in (t.Union, UnionType):
-            args = t.get_args(annotation)
-            types = tuple(arg for arg in args if isinstance(arg, type)) or None
-        elif origin in (dict, list):
-            types = (origin,)
-        elif isinstance(annotation, type):
-            types = (annotation,)
-    return LeafShape(types=types, required=required, default=default, help=resolved_help)
+    return LeafShape(
+        types=infer_runtime_types(annotation) or None, required=required, default=default, help=resolved_help
+    )
 
 
 def shape_for_annotations(

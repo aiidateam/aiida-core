@@ -41,22 +41,15 @@ def place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
     target[name] = value
 
 
-def shape_from_port(port: InputPort | OutputPort | PortNamespace, *, defaults: bool = True) -> Shape:
+def shape_from_port(port: InputPort | OutputPort | PortNamespace) -> Shape:
     """Capture only the graph-relevant static contract of a process port."""
     options: dict[str, t.Any] = {'required': port.required, 'help': port.help}
-    if defaults and isinstance(port, (InputPort, PortNamespace)) and port.has_default():
-        default = port.default
-        if isinstance(default, partial) and default.func is json_default:
-            default = default.args[0]
-        options['default'] = json_default(default)
     if not isinstance(port, PortNamespace):
         kinds = port.valid_type
         return LeafShape(types=(kinds,) if isinstance(kinds, type) else kinds, **options)
     return NamespaceShape(
         fields=tuple(
-            (name, shape_from_port(child, defaults=defaults))
-            for name, child in port.items()
-            if not getattr(child, 'is_metadata', False)
+            (name, shape_from_port(child)) for name, child in port.items() if not getattr(child, 'is_metadata', False)
         ),
         **options,
     )
@@ -121,8 +114,8 @@ class _InputResolver:
         """Return a default value and whether an absent namespace was opened."""
         if port.has_default():
             default = port.default
-            if isinstance(default, partial) and default.func is json_default:
-                default = default.args[0]
+            if callable(default):
+                default = default()
             return json_default(default), False
         if not port.required:
             return UNSPECIFIED, False

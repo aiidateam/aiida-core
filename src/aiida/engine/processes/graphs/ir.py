@@ -15,11 +15,12 @@ import typing as t
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
+from functools import cached_property
 
 from aiida.common.exceptions import GraphTypeCheckError, GraphValidationError
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.graphs.inputs import at, port_for_shape, prepare_inputs, shape_from_port
-from aiida.engine.processes.graphs.shapes import NamespaceShape, Shape, load_shape
+from aiida.engine.processes.graphs.shapes import NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_node_types
 from aiida.engine.processes.process import Process
 from aiida.orm import Data
@@ -35,7 +36,7 @@ __all__ = (
     'TaskIR',
 )
 
-GRAPH_IR_VERSION = '0.1'
+GRAPH_IR_VERSION = '0.2'
 TASK_IR_VERSION = '0.1'
 CONDITION_PORT = 'condition'
 TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
@@ -116,7 +117,7 @@ class TaskIR:
         """Reference an importable decorated task function."""
         return cls(identifier=process.__name__, executor=ExecutorReference(process.__module__, process.__name__))
 
-    @property
+    @cached_property
     def process_class(self) -> type[Process]:
         """Return the task process class loaded from its executor reference."""
         return self.executor.load()
@@ -145,7 +146,7 @@ class TaskIR:
     @property
     def input_shape(self) -> NamespaceShape:
         """Return the fixed input contracts as nested shapes."""
-        shape = shape_from_port(self.inputs, defaults=False)
+        shape = shape_from_port(self.inputs)
         assert isinstance(shape, NamespaceShape)
         return shape
 
@@ -154,7 +155,7 @@ class TaskIR:
         """Return the result port contracts, or the whole outputs namespace."""
         selected = self.outputs[self.result_port] if self.result_port else self.outputs
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
-        return shape_from_port(selected, defaults=False)
+        return shape_from_port(selected)
 
     def to_dict(self) -> dict[str, t.Any]:
         """Return the task declaration without the live process class."""
@@ -274,7 +275,7 @@ class GraphTask(abc.ABC):
             assert body is not None
             return BranchControl(
                 body=body,
-                otherwise=GraphIR.from_dict(data['otherwise']) if data.get('otherwise') is not None else None,
+                otherwise=GraphIR.from_dict(data['otherwise']),
                 condition_port=data.get('condition_port', CONDITION_PORT),
                 **common,
             )
@@ -322,12 +323,12 @@ class BranchControl(BodyTask):
 
     KIND: t.ClassVar[TaskKind] = 'branch'
     condition_port: str = CONDITION_PORT
-    otherwise: GraphIR | None = None
+    otherwise: GraphIR
 
     @property
     def branches(self) -> tuple[GraphIR, ...]:
         """Return the taken-first side templates."""
-        return (self.body,) if self.otherwise is None else (self.body, self.otherwise)
+        return self.body, self.otherwise
 
     def input_ports(self) -> tuple[PortNamespace, ...]:
         """Return the input contracts of each side template."""
@@ -338,7 +339,7 @@ class BranchControl(BodyTask):
         return {
             **super().to_dict(),
             'condition_port': self.condition_port,
-            'otherwise': None if self.otherwise is None else self.otherwise.to_dict(),
+            'otherwise': self.otherwise.to_dict(),
         }
 
 
@@ -379,18 +380,15 @@ class GraphIR:
     """A static graph template, with fixed input namespaces and named leaf outputs."""
 
     tasks: tuple[GraphTask, ...]
+    input_shape: NamespaceShape
     dependencies: tuple[Dependency, ...] = ()
     inputs: dict[str, tuple[Route, ...]] = field(default_factory=dict)
     outputs: dict[str, Endpoint] = field(default_factory=dict)
     identifier: str | None = None
     version: str = GRAPH_IR_VERSION
-    input_namespace: dict[str, t.Any] | None = None
     output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
-    result_path: str | None = None
 
     def __post_init__(self) -> None:
-        if self.input_namespace is not None:
-            object.__setattr__(self, 'input_namespace', deepcopy(self.input_namespace))
         self.validate()
 
     @property
@@ -407,45 +405,18 @@ class GraphIR:
         raise KeyError(msg)
 
     def input_spec(self) -> PortNamespace:
-        """Return the boundary inputs, declared or derived from the consumers."""
-        if self.input_namespace is not None:
-            namespace = port_for_shape('inputs', load_shape(self.input_namespace))
-            if not isinstance(namespace, PortNamespace) or namespace.keys() != {
-                name.split('.')[0] for name in self.inputs
-            }:
-                msg = 'the graph boundary namespace must declare exactly the graph inputs.'
-                raise GraphTypeCheckError(msg)
-            return namespace
-        namespace = PortNamespace('inputs')
-        for name in self.inputs:
-            if '.' in name:
-                msg = f'graph input path `{name}` requires a declared namespace.'
-                raise GraphTypeCheckError(msg)
-            consumers = [port for task, path in self.inputs[name] for port in input_ports_at(self.task(task), path)]
-            if consumers:
-                shape = shape_from_port(consumers[0], defaults=False)
-                namespace[name] = port_for_shape(name, shape)
-            else:
-                namespace[name] = InputPort(name, valid_type=Data)
+        """Construct process ports for the declared graph input shape."""
+        namespace = port_for_shape('inputs', self.input_shape)
+        assert isinstance(namespace, PortNamespace)
+        if namespace.keys() != {name.split('.')[0] for name in self.inputs}:
+            msg = 'the graph boundary namespace must declare exactly the graph inputs.'
+            raise GraphTypeCheckError(msg)
         return namespace
 
     @property
-    def input_shape(self) -> NamespaceShape:
-        """Return the boundary input contracts as nested shapes."""
-        shape = shape_from_port(self.input_spec())
-        assert isinstance(shape, NamespaceShape)
-        return shape
-
-    @property
     def result_port(self) -> str:
-        """Return the result path, the single output, or an empty string."""
-        return (
-            self.result_path
-            if self.result_path is not None
-            else next(iter(self.outputs))
-            if len(self.outputs) == 1
-            else ''
-        )
+        """Return the single output, or an empty string for named outputs."""
+        return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
 
     @property
     def result_shape(self) -> Shape:
@@ -453,7 +424,7 @@ class GraphIR:
         namespace = self.output_spec()
         selected = namespace[self.result_port] if self.result_port else namespace
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
-        return shape_from_port(selected, defaults=False)
+        return shape_from_port(selected)
 
     def output_spec(self) -> PortNamespace:
         """Return the named leaf outputs with their stored types."""
@@ -482,13 +453,13 @@ class GraphIR:
         return origin.valid_type
 
     def prepare_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:
-        """Convert the graph inputs to runtime values without storing provenance."""
+        """Fill graph defaults and aggregate missing inputs without storing provenance."""
         return prepare_inputs(self.input_spec(), inputs, self.identifier)
 
     def serialize_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:
         """Prepare the graph inputs and validate them against every consumer."""
         namespace = self.input_spec()
-        prepared = self.prepare_inputs(inputs)
+        prepared = prepare_inputs(namespace, inputs, self.identifier)
         serialized = namespace.serialize(prepared)
         assert serialized is not None
         runtime = namespace.prepare(serialized).runtime
@@ -536,8 +507,7 @@ class GraphIR:
             'outputs': {name: source.to_dict() for name, source in self.outputs.items()},
             'identifier': self.identifier,
             'version': self.version,
-            'input_namespace': deepcopy(self.input_namespace),
-            'result_path': self.result_path,
+            'input_namespace': dump_shape(self.input_shape),
             'output_typehints': {
                 name: [get_object_loader().identify_object(kind) for kind in kinds]
                 for name, kinds in self.output_typehints.items()
@@ -547,7 +517,13 @@ class GraphIR:
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphIR:
         """Rebuild a graph template from its serialized form."""
+        version = readable_version(data.get('version'), GRAPH_IR_VERSION, 'graph')
+        boundary = load_shape(data['input_namespace'])
+        if not isinstance(boundary, NamespaceShape):
+            msg = 'the graph boundary must be a namespace.'
+            raise GraphTypeCheckError(msg)
         return cls(
+            input_shape=boundary,
             tasks=tuple(GraphTask.from_dict(task) for task in data['tasks']),
             dependencies=tuple(Dependency.from_dict(edge) for edge in data.get('dependencies', ())),
             inputs={
@@ -555,9 +531,7 @@ class GraphIR:
             },
             outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
             identifier=data.get('identifier'),
-            version=readable_version(data.get('version'), GRAPH_IR_VERSION, 'graph'),
-            input_namespace=data.get('input_namespace'),
-            result_path=data.get('result_path'),
+            version=version,
             output_typehints={
                 name: tuple(get_object_loader().load_object(kind) for kind in kinds)
                 for name, kinds in data.get('output_typehints', {}).items()

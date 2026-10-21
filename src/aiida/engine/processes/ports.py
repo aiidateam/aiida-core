@@ -479,16 +479,7 @@ def infer_node_types(annotation: t.Any) -> tuple[t.Any, ...]:
     :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
         tuple is returned.
     """
-    annotation = without_marks(annotation)
-    origin = t.get_origin(annotation)
-    inferred: tuple[t.Any, ...] = ()
-
-    if is_a_plain_class(annotation) or origin in (list, dict):
-        inferred = (_node_type(annotation),)
-    elif origin is t.Union or origin is UnionType:
-        inferred = tuple(_node_type(item) for item in t.get_args(annotation))
-
-    return tuple(kind for kind in inferred if kind is not None)
+    return tuple(kind for declared in infer_runtime_types(annotation) if (kind := _node_type(declared)) is not None)
 
 
 def infer_runtime_types(annotation: t.Any) -> tuple[t.Any, ...]:

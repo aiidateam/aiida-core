@@ -15,6 +15,7 @@ import pytest
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, MissingRequiredInputsError
 from aiida.common.links import LinkType
+from aiida.engine import task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import GraphIR
 from aiida.engine.processes.graphs.lowering import GraphHandle
@@ -65,6 +66,10 @@ pytestmark = pytest.mark.presto
         pytest.param(call_programs.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
         pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 11}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
+        pytest.param(parameters.signed_literals, {}, {'result': -2}, id='signed-literals'),
+        pytest.param(parameters.optional_collection, {'values': [1, 2]}, {'result': 3}, id='optional-list'),
+        pytest.param(parameters.optional_collection, {'values': None}, {'result': 0}, id='optional-none'),
+        pytest.param(parameters.factory_defaults, {'settings': {}}, {'result': 0}, id='factory-defaults'),
         pytest.param(parameters.default_parameter, {}, {'result': 3}, id='parameter-default-filled'),
         pytest.param(parameters.default_parameter, {'value': 5}, {'result': 6}, id='parameter-default-overridden'),
         pytest.param(parameters.keyword_only_parameter, {'value': 2}, {'result': 3}, id='keyword-only'),
@@ -106,6 +111,17 @@ def test_task_body_runs_plain_python() -> None:
     assert node.is_finished_ok
     assert outputs['mean'].value == 5.0
     assert outputs['stdev'].value == 2.0
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_task_can_run_without_retrievable_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    namespace = {'__name__': tasks.__name__}
+    exec(compile('def generated(value: int) -> int:\n    return value + 1\n', '<generated-task>', 'exec'), namespace)
+    declaration = task(namespace['generated'])
+    monkeypatch.setattr(tasks, 'generated', declaration, raising=False)
+    result, node = run_get_node(declaration, value=3)
+    assert node.is_finished_ok
+    assert result.value == 4
 
 
 def test_task_after_kwarg_rejected_outside_graphs() -> None:

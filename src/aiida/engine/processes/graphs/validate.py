@@ -82,7 +82,7 @@ def _validate_edge(graph: GraphIR, edge: Dependency) -> None:
 
 def _validate_region(graph: GraphIR, task: GraphTask) -> None:
     """Check that control-flow bodies agree on their condition and outputs."""
-    if isinstance(task, BranchControl) and task.otherwise is not None:
+    if isinstance(task, BranchControl):
         if task.condition_port in task.body.inputs or task.condition_port in task.otherwise.inputs:
             msg = 'branch condition conflicts with a body input.'
             raise GraphTypeCheckError(msg)

@@ -14,7 +14,7 @@ from dataclasses import FrozenInstanceError, field
 import pytest
 
 from aiida.engine import PortField, PortModel
-from aiida.engine.processes.port_model import as_dict, fields_of
+from aiida.engine.processes.port_model import fields_of
 from aiida.orm import Int
 
 
@@ -41,7 +41,6 @@ def test_models_are_frozen_keyword_only_declarations() -> None:
         Settings(3)
     value = Values(label='test', nullable=None)
     assert Values.from_dict(value.as_dict()) == value
-    assert as_dict(3) is None
 
 
 def test_inherited_required_fields_and_metadata() -> None:

@@ -442,9 +442,14 @@ def test_function_launch_inputs_flatten_models() -> None:
     assert configure.get_launch_inputs(settings=Settings(count=9)) == {'settings': {'count': 9}}
 
 
-@pytest.mark.requires_broker
-def test_submit_process_function(runner) -> None:
-    """Submission accepts a process function through the launch contract."""
-    node = runner.submit(increment, count=2)
+@pytest.mark.presto
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_submit_process_function(manager) -> None:
+    """Submission accepts and executes a process function without a broker."""
+    with manager.create_runner(communicator=None) as runner:
+        node = runner.submit(increment, count=2)
+        runner.run_until_complete(runner.get_process_future(node.pk))
+    assert node.is_finished_ok
     assert node.process_label == 'increment'
     assert node.inputs.count.value == 2
+    assert node.outputs.result.value == 3

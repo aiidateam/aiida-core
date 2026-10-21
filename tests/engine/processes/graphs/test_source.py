@@ -203,7 +203,7 @@ def test_spec_version_and_unknown_task_kind_rejection() -> None:
     data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
         GraphIR.from_dict(data)
-    task_data = tasks.add.task_spec.to_dict()
+    task_data = tasks.add._task_spec.to_dict()
     task_data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
         TaskIR.from_dict(task_data)

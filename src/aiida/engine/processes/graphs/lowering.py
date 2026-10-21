@@ -176,7 +176,7 @@ def _resolve_target(function: Callable[..., t.Any], name: str) -> object:
 
 def _task_spec_for(target: object) -> TaskIR | None:
     """Return the declaration of a task handle, or `None` for other call targets."""
-    return target.task_spec if isinstance(target, TaskHandle) else None
+    return target._task_spec if isinstance(target, TaskHandle) else None
 
 
 @t.overload

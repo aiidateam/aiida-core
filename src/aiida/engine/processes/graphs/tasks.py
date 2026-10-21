@@ -98,7 +98,7 @@ class TaskHandle(t.Generic[P, R]):
 
     def __init__(self, function: ProcessFunctionType[P, R, CalcFunctionNode]) -> None:
         self._function = function
-        self.task_spec = TaskIR.from_process(function)
+        self._task_spec = TaskIR.from_process(function)
         # Copy name and docstring, not the function state: the handle owns its task spec.
         functools.update_wrapper(self, function, updated=())
 

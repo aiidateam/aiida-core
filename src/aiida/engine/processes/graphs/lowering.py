@@ -60,9 +60,9 @@ R = t.TypeVar('R')
 class GraphHandle:
     """An importable source declaration that builds without executing its body."""
 
-    def __init__(self, function: Callable[..., t.Any], identifier: str | None = None) -> None:
+    def __init__(self, function: Callable[..., t.Any]) -> None:
         self._function = function
-        self.identifier = identifier or function.__name__
+        self.identifier = function.__name__
         # Copy name and docstring, not the function state: the handle owns its identifier.
         functools.update_wrapper(self, function, updated=())
 
@@ -208,8 +208,8 @@ def graph(function: Callable[..., t.Any]) -> GraphHandle: ...
 
 
 @t.overload
-def graph(function: None = None, *, identifier: str | None = None) -> Callable[[Callable[..., t.Any]], GraphHandle]: ...
-def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | None = None) -> t.Any:
+def graph(function: None = None) -> Callable[[Callable[..., t.Any]], GraphHandle]: ...
+def graph(function: Callable[..., t.Any] | None = None) -> t.Any:
     """Save a graph's source without executing its body.
 
     The body is never executed: its source is captured at decoration time and lowered to a declaration by
@@ -232,14 +232,13 @@ def graph(function: Callable[..., t.Any] | None = None, *, identifier: str | Non
     declaration on its own, without running anything.
 
     :param function: The function to decorate.
-    :param identifier: Name of the graph, which defaults to the name of the function.
     :return: A handle that can build, run, or submit the graph.
     """
 
     def decorate(target: Callable[..., t.Any]) -> GraphHandle:
         """Register the graph source without executing its body."""
         _SOURCE_REGISTRY.register(target, kind='graph')
-        return GraphHandle(target, identifier=identifier)
+        return GraphHandle(target)
 
     if function is not None:
         return decorate(function)

@@ -76,8 +76,16 @@ def test_declared_spec_round_trips_through_json() -> None:
     assert set(restored.outputs) == {'result'}
 
 
-def test_custom_identifier_is_kept() -> None:
-    assert calls.labelled.lower().identifier == 'custom-label'
+def test_identifier_is_function_name() -> None:
+    assert calls.labelled.lower().identifier == 'labelled'
+    assert calls.chain.lower().identifier == 'chain'
+
+
+def test_graph_rejects_identifier_argument() -> None:
+    from aiida.engine import graph
+
+    with pytest.raises(TypeError, match='identifier'):
+        graph(identifier='custom-label')
 
 
 def test_task_alias_does_not_collide_with_generated_name() -> None:

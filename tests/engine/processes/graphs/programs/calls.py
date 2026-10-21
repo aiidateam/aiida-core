@@ -132,9 +132,9 @@ def multiple_ordered(x: int) -> int:
     return add(x=x, y=1, after=(first, second))
 
 
-@graph(identifier='custom-label')
+@graph()
 def labelled(x: int) -> int:
-    """Carry a custom identifier."""
+    """Use the function name with the parenthesized decorator."""
     return add(x=x, y=1)
 
 

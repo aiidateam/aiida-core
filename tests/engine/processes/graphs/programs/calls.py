@@ -134,7 +134,7 @@ def multiple_ordered(x: int) -> int:
 
 @graph()
 def labelled(x: int) -> int:
-    """Use the function name with the parenthesized decorator."""
+    """Use the fully qualified name with the parenthesized decorator."""
     return add(x=x, y=1)
 
 

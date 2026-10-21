@@ -72,13 +72,15 @@ def test_declared_spec_round_trips_through_json() -> None:
     spec = calls.multiply_add.lower()
     restored = GraphIR.from_dict(json.loads(json.dumps(spec.to_dict())))
     assert restored.to_dict() == spec.to_dict()
-    assert restored.identifier == 'multiply_add'
+    assert restored.identifier == f'{calls.__name__}:multiply_add'
     assert set(restored.outputs) == {'result'}
 
 
-def test_identifier_is_function_name() -> None:
-    assert calls.labelled.lower().identifier == 'labelled'
-    assert calls.chain.lower().identifier == 'chain'
+def test_identifier_includes_module() -> None:
+    assert calls.labelled.identifier == f'{calls.__name__}:labelled'
+    assert calls.labelled.lower().identifier == f'{calls.__name__}:labelled'
+    assert calls.chain.lower().identifier == f'{calls.__name__}:chain'
+    assert lower_from_source(calls.chain).identifier == calls.chain.identifier
 
 
 def test_graph_rejects_identifier_argument() -> None:
@@ -151,7 +153,7 @@ def test_nested_graph_builds_subgraph_task() -> None:
 
     spec = calls.nested_multiply_add.lower()
     assert isinstance(spec.tasks[0], SubgraphTask)
-    assert spec.tasks[0].body.identifier == 'multiply_add'
+    assert spec.tasks[0].body.identifier == f'{calls.__name__}:multiply_add'
 
 
 def test_branches_build_control_tasks() -> None:

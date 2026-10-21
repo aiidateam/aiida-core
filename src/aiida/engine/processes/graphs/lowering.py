@@ -62,7 +62,7 @@ class GraphHandle:
 
     def __init__(self, function: Callable[..., t.Any]) -> None:
         self._function = function
-        self.identifier = function.__name__
+        self.identifier = _registry_key(function)
         # Copy name and docstring, not the function state: the handle owns its identifier.
         functools.update_wrapper(self, function, updated=())
 
@@ -395,7 +395,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
         dependencies=tuple(state.dependencies),
         inputs={name: tuple(targets) for name, targets in state.inputs.items()},
         outputs=outputs,
-        identifier=state.key.partition(':')[2],
+        identifier=state.key,
         output_typehints=output_typehints,
         input_namespace=dump_shape(boundary),
     )

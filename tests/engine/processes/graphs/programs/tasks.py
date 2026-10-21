@@ -6,38 +6,32 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Supported task declarations shared by the behavior suites."""
+"""Tasks declarations shared by the graph behavior suites."""
 
 import typing as t
 
 from aiida.engine.processes.graphs.lowering import task
 from aiida.orm.nodes.data.int import Int
-from tests.engine.processes.graphs.language.port_models import Configuration
+from tests.engine.processes.graphs.programs.port_models import Configuration
 
-__all__ = (
-    'Alpha',
-    'ArithmeticPair',
-    'Beta',
-    'SummaryStats',
-    'add',
-    'arithmetic_pair',
-    'collision_add',
-    'decrement',
-    'fail_always',
-    'is_positive',
-    'mismatched_alpha',
-    'mismatched_beta',
-    'mistyped_dict',
-    'mistyped_list',
-    'mistyped_output',
-    'multiply',
-    'pass_int',
-    'prepare',
-    'read_answer',
-    'read_nested_count',
-    'read_orm_node',
-    'statistics',
-)
+
+def unannotated_function(x: int):
+    """Reject functions without a return annotation at decoration.
+
+    Static lowering wires placements against declared outputs, so annotate the
+    function or wrap it in an annotated one instead of leaving it dynamic.
+    """
+    return x
+
+
+def kwargs_function(**kwargs: t.Any) -> int:
+    """Reject undecorated functions with kwargs at decoration."""
+    return 1
+
+
+def args_function(*args: int) -> int:
+    """Reject functions with positional spillover at decoration."""
+    return args[0]
 
 
 @task

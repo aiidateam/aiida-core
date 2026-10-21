@@ -16,7 +16,17 @@ from aiida.common.exceptions import GraphError, GraphTypeCheckError, Unsupported
 from aiida.engine.processes.graphs.ir import Dependency, GraphIR, TaskIR
 from aiida.engine.processes.graphs.lowering import GraphHandle, lower_from_source
 from aiida.engine.processes.graphs.shapes import load_shape
-from tests.engine.processes.graphs import language
+from tests.engine.processes.graphs.programs import (
+    assignments,
+    branches,
+    calls,
+    expressions,
+    loops,
+    parameters,
+    ports,
+    statements,
+    tasks,
+)
 
 
 def test_public_api_is_source_only() -> None:
@@ -37,17 +47,17 @@ def test_public_api_is_source_only() -> None:
         'task_from_workchain',
     ):
         assert not hasattr(engine, excluded)
-    assert isinstance(language.chain, GraphHandle)
+    assert isinstance(calls.chain, GraphHandle)
     with pytest.raises(GraphError, match='launch'):
-        language.chain(x=1, y=2)
+        calls.chain(x=1, y=2)
 
 
 def test_build_does_not_invoke_graph_or_task_bodies(monkeypatch: pytest.MonkeyPatch) -> None:
     def fail(*args, **kwargs):
         raise AssertionError('must not invoke a task while lowering')
 
-    monkeypatch.setattr(language.add.process_class, '_func', staticmethod(fail))
-    spec = language.chain.lower()
+    monkeypatch.setattr(tasks.add.process_class, '_func', staticmethod(fail))
+    spec = calls.chain.lower()
     assert spec.task_names == ('add', 'add_2')
     assert spec.dependencies == (Dependency('add', 'add_2', 'result', 'x'),)
     assert spec.inputs == {'x': (('add', 'x'),), 'y': (('add', 'y'), ('add_2', 'y'))}
@@ -55,11 +65,11 @@ def test_build_does_not_invoke_graph_or_task_bodies(monkeypatch: pytest.MonkeyPa
 
 
 def test_lower_from_source_matches_handle_build() -> None:
-    assert lower_from_source(language.chain).to_dict() == language.chain.lower().to_dict()
+    assert lower_from_source(calls.chain).to_dict() == calls.chain.lower().to_dict()
 
 
 def test_declared_spec_round_trips_through_json() -> None:
-    spec = language.multiply_add.lower()
+    spec = calls.multiply_add.lower()
     restored = GraphIR.from_dict(json.loads(json.dumps(spec.to_dict())))
     assert restored.to_dict() == spec.to_dict()
     assert restored.identifier == 'multiply_add'
@@ -67,21 +77,21 @@ def test_declared_spec_round_trips_through_json() -> None:
 
 
 def test_custom_identifier_is_kept() -> None:
-    assert language.labelled.lower().identifier == 'custom-label'
+    assert calls.labelled.lower().identifier == 'custom-label'
 
 
 def test_task_alias_does_not_collide_with_generated_name() -> None:
-    assert len(language.collision.lower().tasks) == 3
+    assert len(calls.collision.lower().tasks) == 3
 
 
 def test_missing_task_input_fails_during_build() -> None:
     with pytest.raises(UnsupportedSyntax, match='y'):
-        language.missing_task_input.lower()
+        calls.missing_task_input.lower()
 
 
 def test_parameter_defaults_fill_missing_inputs() -> None:
     """Literal parameter defaults apply without passing the input."""
-    spec = language.default_parameter.lower()
+    spec = parameters.default_parameter.lower()
     assert spec.prepare_inputs({}) == {'value': 2}
     assert spec.prepare_inputs({'value': 5}) == {'value': 5}
 
@@ -89,37 +99,37 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
 @pytest.mark.parametrize(
     'declaration, message',
     [
-        pytest.param(language.expanded_task_arguments, 'name each argument', id='expanded'),
-        pytest.param(language.arithmetic_expression, 'put this calculation in a task', id='expression'),
-        pytest.param(language.reassigned_name, 'assign each result a new name', id='rebound'),
-        pytest.param(language.fanout, 'for loops are not supported', id='fanout'),
-        pytest.param(language.variadic_parameters, 'list each input separately', id='variadic'),
-        pytest.param(language.literal_return, 'return a task output or graph input', id='literal'),
-        pytest.param(language.namespace_return, 'return a task output or graph input', id='namespace'),
-        pytest.param(language.nested_outputs, 'list each output by name', id='nested-output'),
-        pytest.param(language.missing_final_return, 'end the graph with a return', id='missing-return'),
-        pytest.param(language.unbound, 'is not known here', id='unbound'),
-        pytest.param(language.unregistered_call, 'unregistered call', id='unregistered'),
-        pytest.param(language.builtin_call, 'wrap it in a task', id='builtin'),
-        pytest.param(language.unknown_call, 'check the spelling', id='unknown'),
-        pytest.param(language.subscript_assignment, 'assign to a plain name', id='subscript'),
-        pytest.param(language.nested_definition, 'move it into a task', id='nested-def'),
-        pytest.param(language.early_return, 'assign the same name on both sides', id='early-return'),
-        pytest.param(language.augmented_assignment, 'move it into a task', id='aug-assign'),
-        pytest.param(language.annotated_assignment, 'drop the annotation', id='ann-assign'),
-        pytest.param(language.with_block, 'move it into a task', id='with'),
-        pytest.param(language.try_block, 'move it into a task', id='try'),
-        pytest.param(language.raise_statement, 'move it into a task', id='raise'),
-        pytest.param(language.assert_statement, 'move it into a task', id='assert'),
-        pytest.param(language.match_statement, 'end the graph with a return', id='match'),
-        pytest.param(language.starred_call, 'list each input by name', id='starred'),
-        pytest.param(language.subscript_load, 'pass the whole collection', id='subscript-load'),
-        pytest.param(language.fstring_argument, 'build this text in a task', id='fstring'),
-        pytest.param(language.boolean_condition, 'put this check in a task', id='boolop'),
-        pytest.param(language.compare_condition, 'put this check in a task', id='compare'),
-        pytest.param(language.inline_conditional, 'as if and else', id='ifexp'),
-        pytest.param(language.walrus_condition, 'on its own line', id='walrus'),
-        pytest.param(language.list_comprehension, 'must call a task or graph', id='listcomp'),
+        pytest.param(calls.expanded_task_arguments, 'name each argument', id='expanded'),
+        pytest.param(expressions.arithmetic_expression, 'put this calculation in a task', id='expression'),
+        pytest.param(assignments.reassigned_name, 'assign each result a new name', id='rebound'),
+        pytest.param(loops.fanout, 'for loops are not supported', id='fanout'),
+        pytest.param(parameters.variadic_parameters, 'list each input separately', id='variadic'),
+        pytest.param(ports.literal_return, 'return a task output or graph input', id='literal'),
+        pytest.param(ports.namespace_return, 'return a task output or graph input', id='namespace'),
+        pytest.param(ports.nested_outputs, 'list each output by name', id='nested-output'),
+        pytest.param(ports.missing_final_return, 'end the graph with a return', id='missing-return'),
+        pytest.param(assignments.unbound, 'is not known here', id='unbound'),
+        pytest.param(calls.unregistered_call, 'unregistered call', id='unregistered'),
+        pytest.param(calls.builtin_call, 'wrap it in a task', id='builtin'),
+        pytest.param(calls.unknown_call, 'check the spelling', id='unknown'),
+        pytest.param(assignments.subscript_assignment, 'assign to a plain name', id='subscript'),
+        pytest.param(statements.nested_definition, 'move it into a task', id='nested-def'),
+        pytest.param(branches.early_return, 'assign the same name on both sides', id='early-return'),
+        pytest.param(assignments.augmented_assignment, 'move it into a task', id='aug-assign'),
+        pytest.param(assignments.annotated_assignment, 'drop the annotation', id='ann-assign'),
+        pytest.param(statements.with_block, 'move it into a task', id='with'),
+        pytest.param(statements.try_block, 'move it into a task', id='try'),
+        pytest.param(statements.raise_statement, 'move it into a task', id='raise'),
+        pytest.param(statements.assert_statement, 'move it into a task', id='assert'),
+        pytest.param(branches.match_statement, 'end the graph with a return', id='match'),
+        pytest.param(calls.starred_call, 'list each input by name', id='starred'),
+        pytest.param(ports.subscript_load, 'pass the whole collection', id='subscript-load'),
+        pytest.param(expressions.fstring_argument, 'build this text in a task', id='fstring'),
+        pytest.param(branches.boolean_condition, 'put this check in a task', id='boolop'),
+        pytest.param(branches.compare_condition, 'put this check in a task', id='compare'),
+        pytest.param(branches.inline_conditional, 'as if and else', id='ifexp'),
+        pytest.param(branches.walrus_condition, 'on its own line', id='walrus'),
+        pytest.param(loops.list_comprehension, 'must call a task or graph', id='listcomp'),
     ],
 )
 def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, message: str) -> None:
@@ -131,7 +141,7 @@ def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, mes
 def test_nested_graph_builds_subgraph_task() -> None:
     from aiida.engine.processes.graphs.ir import SubgraphTask
 
-    spec = language.nested_multiply_add.lower()
+    spec = calls.nested_multiply_add.lower()
     assert isinstance(spec.tasks[0], SubgraphTask)
     assert spec.tasks[0].body.identifier == 'multiply_add'
 
@@ -139,7 +149,7 @@ def test_nested_graph_builds_subgraph_task() -> None:
 def test_branches_build_control_tasks() -> None:
     from aiida.engine.processes.graphs.ir import BranchControl
 
-    spec = language.external_choice.lower()
+    spec = branches.external_choice.lower()
     assert isinstance(spec.tasks[0], BranchControl)
     assert set(spec.tasks[0].body.outputs) == {'result'}
     assert set(spec.tasks[0].otherwise.outputs) == {'result'}
@@ -148,23 +158,23 @@ def test_branches_build_control_tasks() -> None:
 def test_loops_build_control_tasks() -> None:
     from aiida.engine.processes.graphs.ir import LoopControl
 
-    spec = language.countdown.lower()
+    spec = loops.countdown.lower()
     assert isinstance(spec.tasks[0], LoopControl)
     assert set(spec.tasks[0].body.outputs) == {'value', 'condition'}
-    called = language.countdown_call.lower()
+    called = loops.countdown_call.lower()
     assert isinstance(called.tasks[1], LoopControl)
     assert set(called.tasks[1].body.outputs) == {'value', 'condition'}
 
 
 def test_recursive_call_fails_during_build() -> None:
     with pytest.raises(UnsupportedSyntax, match='Recursive graph call'):
-        language.recursive_call.lower()
+        calls.recursive_call.lower()
 
 
 def test_inline_condition_matches_bound_form() -> None:
     """An inline predicate call lowers like its explicit assignment form."""
-    inline = language.inline_condition.lower().to_dict()
-    bound = language.computed_choice.lower().to_dict()
+    inline = branches.inline_condition.lower().to_dict()
+    bound = branches.computed_choice.lower().to_dict()
     inline.pop('identifier')
     bound.pop('identifier')
     assert inline == bound
@@ -172,12 +182,12 @@ def test_inline_condition_matches_bound_form() -> None:
 
 def test_mismatched_branch_outputs_fail_during_build() -> None:
     with pytest.raises(GraphTypeCheckError, match='same outputs'):
-        language.mismatched_branches.lower()
+        branches.mismatched_branches.lower()
 
 
 def test_ordering_dependency_carries_no_value() -> None:
     """An `after` dependency orders placements without wiring an output value."""
-    specification = language.ordered_named.lower()
+    specification = calls.ordered_named.lower()
     assert [(edge.source, edge.target, edge.source_port, edge.target_port) for edge in specification.dependencies] == [
         ('prepare', 'add', None, None)
     ]
@@ -185,27 +195,27 @@ def test_ordering_dependency_carries_no_value() -> None:
 
 def test_incompatible_boundary_types_fail_during_build() -> None:
     with pytest.raises(GraphTypeCheckError, match='incompatible types'):
-        language.wrong_type.lower()
+        ports.wrong_type.lower()
 
 
 def test_rejection_carries_source_location() -> None:
     with pytest.raises(UnsupportedSyntax) as caught:
-        language.unbound.lower()
-    assert 'language' in str(caught.value)
+        assignments.unbound.lower()
+    assert 'programs/assignments.py' in str(caught.value)
     assert 'unbound name' in str(caught.value)
     assert '^' in str(caught.value)
 
 
 def test_spec_version_and_unknown_task_kind_rejection() -> None:
-    data = language.chain.lower().to_dict()
+    data = calls.chain.lower().to_dict()
     data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
         GraphIR.from_dict(data)
-    task_data = language.add.task_spec.to_dict()
+    task_data = tasks.add.task_spec.to_dict()
     task_data['version'] = '99'
     with pytest.raises(GraphTypeCheckError, match='version'):
         TaskIR.from_dict(task_data)
-    data = language.chain.lower().to_dict()
+    data = calls.chain.lower().to_dict()
     data['tasks'][0]['kind'] = 'map'
     with pytest.raises(GraphTypeCheckError, match='unsupported graph task kind'):
         GraphIR.from_dict(data)
@@ -216,7 +226,7 @@ def test_spec_version_and_unknown_task_kind_rejection() -> None:
 def test_cyclic_and_invalid_ordering_dependencies() -> None:
     from dataclasses import replace
 
-    spec = language.chain.lower()
+    spec = calls.chain.lower()
     with pytest.raises(GraphTypeCheckError, match='cycle'):
         replace(spec, dependencies=(*spec.dependencies, Dependency('add_2', 'add')))
     with pytest.raises(GraphTypeCheckError, match='both ports'):
@@ -231,11 +241,11 @@ def test_task_registration_rejects_excluded_contracts() -> None:
         return x
 
     with pytest.raises(GraphTypeCheckError, match='return annotation'):
-        task(language.unannotated_function)
+        task(tasks.unannotated_function)
     with pytest.raises(GraphTypeCheckError, match='fixed inputs'):
-        task(language.kwargs_function)
+        task(tasks.kwargs_function)
     with pytest.raises(GraphTypeCheckError, match='fixed inputs'):
-        task(language.args_function)
+        task(tasks.args_function)
     with pytest.raises(UnsupportedSyntax, match='module scope'):
         task(local_function)
     with pytest.raises(UnsupportedSyntax, match='not process classes'):

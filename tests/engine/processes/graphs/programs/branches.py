@@ -3,21 +3,13 @@
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
 # The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
-# For further information on the license, see the LICENSE.txt file       #
+# For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Branching graph declarations rejected at lowering shared by the behavior suites."""
+"""Branches declarations shared by the graph behavior suites."""
 
 from aiida.engine.processes.graphs.lowering import graph
-from tests.engine.processes.graphs.language.tasks import add, mismatched_alpha, mismatched_beta
-
-__all__ = (
-    'boolean_condition',
-    'compare_condition',
-    'inline_conditional',
-    'mismatched_branches',
-    'walrus_condition',
-)
+from tests.engine.processes.graphs.programs.tasks import add, is_positive, mismatched_alpha, mismatched_beta
 
 
 @graph
@@ -93,6 +85,75 @@ def walrus_condition(value: int, flag: bool) -> int:
 # def bound_before(value: int, flag: bool) -> int:
 #     picked = flag
 #     if picked:
+#         chosen = add(x=value, y=1)
+#     else:
+#         chosen = add(x=value, y=2)
+#     return chosen
+
+
+@graph
+def external_choice(value: int, condition: bool) -> int:
+    """Branch on an input flag."""
+    if condition:
+        selected_branch = add(x=value, y=1)
+    else:
+        selected_branch = add(x=value, y=2)
+    return selected_branch
+
+
+@graph
+def computed_choice(value: int) -> int:
+    """Branch on a task-computed condition."""
+    condition = is_positive(value=value)
+    if condition:
+        selected_branch = add(x=value, y=1)
+    else:
+        selected_branch = add(x=value, y=2)
+    return selected_branch
+
+
+@graph
+def inline_condition(value: int) -> int:
+    """Branch on an inline predicate call, bound like the explicit form."""
+    if is_positive(value=value):
+        selected_branch = add(x=value, y=1)
+    else:
+        selected_branch = add(x=value, y=2)
+    return selected_branch
+
+
+@graph
+def early_return(value: int, flag: bool) -> int:
+    """Return from a branch; graphs declare one output at the end."""
+    if flag:
+        return add(x=value, y=1)
+    return add(x=value, y=2)
+
+
+# Bind the branch instead:
+
+# @graph
+# def branched(value: int, flag: bool) -> int:
+#     if flag:
+#         chosen = add(x=value, y=1)
+#     else:
+#         chosen = add(x=value, y=2)
+#     return chosen
+
+
+@graph
+def match_statement(value: int) -> int:
+    """Match structurally; branch on conditions instead."""
+    match value:
+        case 0:
+            return add(x=value, y=1)
+        case _:
+            return add(x=value, y=2)
+
+
+# @graph
+# def matched(value: int) -> int:
+#     if value:
 #         chosen = add(x=value, y=1)
 #     else:
 #         chosen = add(x=value, y=2)

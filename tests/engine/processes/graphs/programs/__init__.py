@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""The graph language by example: importable task and graph specimens shared by the behavior suites."""
+"""Graph programs shared by lowering, execution, and visualization tests.
 
-from tests.engine.processes.graphs.language.constructs import *
-from tests.engine.processes.graphs.language.port_models import *
-from tests.engine.processes.graphs.language.tasks import *
+Modules group declarations by feature, including deliberately invalid programs.
+Expectations live in the behavior suites rather than in the declarations.
+"""

@@ -16,7 +16,7 @@ import pytest
 
 from aiida.engine import PortField, PortModel, ProcessSpec
 from aiida.orm import Int, Str
-from tests.engine.processes.graphs.language import UnsupportedPortModel
+from tests.engine.processes.graphs.programs.port_models import UnsupportedPortModel
 
 
 class Settings(PortModel):

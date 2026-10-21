@@ -6,18 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Port models shared by task and graph declarations."""
+"""Port models declarations shared by the graph behavior suites."""
 
 from pathlib import Path
 
 from aiida.engine.processes.port_model import PortModel
-
-__all__ = (
-    'Configuration',
-    'DefaultedSettings',
-    'Settings',
-    'UnsupportedPortModel',
-)
 
 
 class Settings(PortModel):

@@ -15,7 +15,7 @@ from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.programs.port_models import Configuration
 
 
-def unannotated_function(x: int):
+def unannotated_function(x: int):  # rejected at decoration
     """Reject functions without a return annotation at decoration.
 
     Static lowering wires placements against declared outputs, so annotate the
@@ -24,12 +24,12 @@ def unannotated_function(x: int):
     return x
 
 
-def kwargs_function(**kwargs: t.Any) -> int:
+def kwargs_function(**kwargs: t.Any) -> int:  # rejected at decoration
     """Reject undecorated functions with kwargs at decoration."""
     return 1
 
 
-def args_function(*args: int) -> int:
+def args_function(*args: int) -> int:  # rejected at decoration
     """Reject functions with positional spillover at decoration."""
     return args[0]
 
@@ -153,21 +153,21 @@ def fail_always(x: int) -> int:
 
 
 @task
-def mistyped_output(x: int) -> int:
+def mistyped_output(x: int) -> int:  # rejected at runtime
     """Return a mistyped value, rejected at runtime."""
-    return 'wrong'  # rejected at runtime
+    return 'wrong'
 
 
 @task
-def mistyped_list(x: int) -> list[int]:
+def mistyped_list(x: int) -> list[int]:  # rejected at runtime
     """Return a mistyped collection, rejected at runtime."""
-    return {'value': x}  # rejected at runtime
+    return {'value': x}
 
 
 @task
-def mistyped_dict(x: int) -> dict[str, int]:
+def mistyped_dict(x: int) -> dict[str, int]:  # rejected at runtime
     """Return a mistyped mapping, rejected at runtime."""
-    return [x]  # rejected at runtime
+    return [x]
 
 
 @task

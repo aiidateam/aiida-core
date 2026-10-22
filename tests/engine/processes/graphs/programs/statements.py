@@ -13,7 +13,7 @@ from tests.engine.processes.graphs.programs.tasks import add
 
 
 @graph
-def nested_definition(value: int) -> int:
+def nested_definition(value: int) -> int:  # rejected at lowering
     """Define a helper inside the body; helpers belong in tasks."""
 
     def helper(x: int) -> int:
@@ -30,7 +30,7 @@ def nested_definition(value: int) -> int:
 
 
 @graph
-def with_block(value: int) -> int:
+def with_block(value: int) -> int:  # rejected at lowering
     """Manage a resource in the body; templates hold no runtime resources.
 
     Move resource handling into a task instead.
@@ -48,7 +48,7 @@ def with_block(value: int) -> int:
 
 
 @graph
-def try_block(value: int) -> int:
+def try_block(value: int) -> int:  # rejected at lowering
     """Catch errors in the body; errors are values, not raises.
 
     Declare fallible results instead.
@@ -73,7 +73,7 @@ def try_block(value: int) -> int:
 
 
 @graph
-def raise_statement(value: int) -> int:
+def raise_statement(value: int) -> int:  # rejected at lowering
     """Raise in the body; errors are values, not raises.
 
     Declare fallible results instead.
@@ -95,7 +95,7 @@ def raise_statement(value: int) -> int:
 
 
 @graph
-def assert_statement(value: int) -> int:
+def assert_statement(value: int) -> int:  # rejected at lowering
     """Assert in the body; contracts validate at the boundary instead.
 
     Declare the contract on the ports instead.

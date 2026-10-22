@@ -61,7 +61,8 @@ A ``PortModel`` declares a fixed namespace of ports without introducing a second
     spec.input_namespace_from('settings', Settings)
     spec.outputs_from(Settings)
 
-Models are frozen, keyword-only dataclasses. Nested models declare nested namespaces.
+Models are frozen, keyword-only dataclasses.
+Nested models declare nested namespaces.
 A field is required unless it has a default; allowing ``None`` does not make its key optional.
 ``PortField`` supplies help text through ``Annotated``.
 Inputs can be namespace mappings or model instances, but processes receive attribute-accessible namespace mappings, not reconstructed models.

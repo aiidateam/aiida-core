@@ -13,7 +13,7 @@ from tests.engine.processes.graphs.programs.tasks import add
 
 
 @graph
-def arithmetic_expression(value: int) -> int:
+def arithmetic_expression(value: int) -> int:  # rejected at lowering
     """Compute an input inline; every value needs a producing task."""
     return add(x=value + 1, y=2)
 
@@ -27,7 +27,7 @@ def arithmetic_expression(value: int) -> int:
 
 
 @graph
-def fstring_argument(value: int) -> int:
+def fstring_argument(value: int) -> int:  # rejected at lowering
     """Format a string inline; every value needs a producing task.
 
     Format inside a task instead.

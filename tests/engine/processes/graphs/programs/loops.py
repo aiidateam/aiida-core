@@ -12,14 +12,12 @@ from aiida.engine.processes.graphs.lowering import graph
 from tests.engine.processes.graphs.programs.tasks import add, decrement, is_positive
 
 
-# NOTE: we could internally represent `for`-loops as `while`
-# -> defer for follow-up
 @graph
-def fanout(values: list[int]) -> int:
+def fanout(values: list[int]) -> int:  # rejected at lowering
     """Loop over inputs, rebinding each round; fan-out over runtime collections is not supported."""
     for value in values:
         result = add(x=value, y=1)
-    return result  # rejected at lowering
+    return result
 
 
 # Unroll the placements instead:
@@ -49,13 +47,13 @@ def countdown_call(value: int) -> int:
 
 
 @graph
-def list_comprehension(values: list[int]) -> int:
+def list_comprehension(values: list[int]) -> int:  # rejected at lowering
     """Map over inputs inline; scatter is a runtime control, not syntax.
 
     Unroll the placements instead.
     """
-    doubled = [add(x=value, y=1) for value in values]  # noqa: F841 - the comprehension is rejected
-    return add(x=values[0], y=1)
+    _ = [add(x=value, y=1) for value in values]
+    return add(x=1, y=1)
 
 
 # Loop inside a task instead:

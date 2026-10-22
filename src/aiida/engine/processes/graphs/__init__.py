@@ -8,7 +8,7 @@
 ###########################################################################
 """Declare source graphs and execute their static task dependencies."""
 
-from aiida.common.exceptions import UnsupportedSyntax
+from aiida.common.exceptions import GraphLanguageError
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
     Dependency,
@@ -28,13 +28,13 @@ __all__ = (
     'Endpoint',
     'GraphHandle',
     'GraphIR',
+    'GraphLanguageError',
     'GraphProcess',
     'LoopControl',
     'SubgraphTask',
     'TaskHandle',
     'TaskIR',
     'TaskProcess',
-    'UnsupportedSyntax',
     'graph',
     'task',
 )

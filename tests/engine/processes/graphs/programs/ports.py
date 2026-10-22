@@ -22,7 +22,7 @@ from tests.engine.processes.graphs.programs.tasks import (
 
 
 @graph
-def literal_return() -> int:
+def literal_return() -> int:  # rejected at lowering
     """Return a literal; workflows return existing nodes, they never create data."""
     return 42
 
@@ -34,12 +34,8 @@ def literal_return() -> int:
 #     return value
 
 
-# TODO: PortModel as return type should def be supported
-# -> yes, we will still do
-
-
 @graph
-def namespace_return(config: Configuration) -> Configuration:
+def namespace_return(config: Configuration) -> Configuration:  # rejected at lowering
     """Return a whole namespace; outputs are flat leaves."""
     return config
 
@@ -52,7 +48,7 @@ def namespace_return(config: Configuration) -> Configuration:
 
 
 @graph
-def nested_outputs(x: int) -> dict[str, dict[str, int]]:
+def nested_outputs(x: int) -> dict[str, dict[str, int]]:  # rejected at lowering
     """Return nested outputs; outputs are flat leaves."""
     value = add(x=x, y=1)
     return {'outer': {'inner': value}}
@@ -80,7 +76,7 @@ def missing_final_return(value: int) -> int:  # rejected at lowering
 
 
 @graph
-def wrong_type(x: str) -> int:
+def wrong_type(x: str) -> int:  # rejected at lowering
     """Feed a mistyped value; contracts fail fast at validation."""
     return add(x=x, y=1)
 
@@ -92,10 +88,8 @@ def wrong_type(x: str) -> int:
 #     return add(x=x, y=1)
 
 
-# TODO: Access by string?
-# TODO: Could support it for Container types
 @graph
-def subscript_load(values: list[int]) -> int:
+def subscript_load(values: list[int]) -> int:  # rejected at lowering
     """Read one element; collections travel whole."""
     return add(x=values[0], y=1)
 

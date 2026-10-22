@@ -16,7 +16,7 @@ from tests.engine.processes.graphs.programs.tasks import add
 
 
 @graph
-def variadic_parameters(*values: int) -> int:
+def variadic_parameters(*values: int) -> int:  # rejected at lowering
     """Declare variadic parameters; dynamic arity is unrepresentable in fixed ports."""
     return add(*values)
 

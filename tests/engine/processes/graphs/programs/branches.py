@@ -13,7 +13,7 @@ from tests.engine.processes.graphs.programs.tasks import add, is_positive, misma
 
 
 @graph
-def mismatched_branches(value: int, condition: bool) -> int:
+def mismatched_branches(value: int, condition: bool) -> int:  # rejected at lowering
     """Return different outputs per side, rejected."""
     if condition:
         selected_branch = mismatched_alpha(value=value)
@@ -23,7 +23,7 @@ def mismatched_branches(value: int, condition: bool) -> int:
 
 
 @graph
-def boolean_condition(value: int, flag: bool) -> int:
+def boolean_condition(value: int, flag: bool) -> int:  # rejected at lowering
     """Combine conditions with operators; conditions are calls or names."""
     if flag and value:
         chosen = add(x=value, y=1)
@@ -40,7 +40,7 @@ def boolean_condition(value: int, flag: bool) -> int:
 
 
 @graph
-def compare_condition(value: int) -> int:
+def compare_condition(value: int) -> int:  # rejected at lowering
     """Compare inline; conditions are calls or names."""
     if value > 0:
         chosen = add(x=value, y=1)
@@ -57,7 +57,7 @@ def compare_condition(value: int) -> int:
 
 
 @graph
-def inline_conditional(value: int, flag: bool) -> int:
+def inline_conditional(value: int, flag: bool) -> int:  # rejected at lowering
     """Select inline; branch explicitly instead."""
     return add(x=value, y=1) if flag else add(x=value, y=2)
 
@@ -72,7 +72,7 @@ def inline_conditional(value: int, flag: bool) -> int:
 
 
 @graph
-def walrus_condition(value: int, flag: bool) -> int:
+def walrus_condition(value: int, flag: bool) -> int:  # rejected at lowering
     """Bind inside a condition; bind before branching instead."""
     if picked := flag:  # noqa: F841 - the binding itself is rejected
         chosen = add(x=value, y=1)
@@ -123,7 +123,7 @@ def inline_condition(value: int) -> int:
 
 
 @graph
-def early_return(value: int, flag: bool) -> int:
+def early_return(value: int, flag: bool) -> int:  # rejected at lowering
     """Return from a branch; graphs declare one output at the end."""
     if flag:
         return add(x=value, y=1)
@@ -142,7 +142,7 @@ def early_return(value: int, flag: bool) -> int:
 
 
 @graph
-def match_statement(value: int) -> int:
+def match_statement(value: int) -> int:  # rejected at lowering
     """Match structurally; branch on conditions instead."""
     match value:
         case 0:

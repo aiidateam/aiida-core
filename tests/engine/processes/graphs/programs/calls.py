@@ -13,7 +13,7 @@ from tests.engine.processes.graphs.programs.tasks import add, collision_add, fai
 
 
 @graph
-def expanded_task_arguments(values: dict[str, int]) -> int:
+def expanded_task_arguments(values: dict[str, int]) -> int:  # rejected at lowering
     """Call with unpacked arguments; mappings cannot expand statically."""
     return add(**values)
 
@@ -26,7 +26,7 @@ def expanded_task_arguments(values: dict[str, int]) -> int:
 
 
 @graph
-def recursive_call(value: int) -> int:
+def recursive_call(value: int) -> int:  # rejected at lowering
     """Call itself; the spec would be infinite."""
     return recursive_call(value=value)
 
@@ -44,7 +44,7 @@ def plain_add(x: int, y: int) -> int:
 
 
 @graph
-def builtin_call(values: list[int]) -> int:
+def builtin_call(values: list[int]) -> int:  # rejected at lowering
     """Call a built-in; built-ins cannot run here."""
     count = len(values)
     return add(x=count, y=1)
@@ -57,13 +57,13 @@ def builtin_call(values: list[int]) -> int:
 
 
 @graph
-def unknown_call(value: int) -> int:
+def unknown_call(value: int) -> int:  # rejected at lowering
     """Call an undefined name; check the spelling."""
     return frobnicate(value)  # noqa: F821 - the undefined name is rejected
 
 
 @graph
-def unregistered_call(value: int) -> int:
+def unregistered_call(value: int) -> int:  # rejected at lowering
     """Call an undecorated function; only registered tasks and graphs lower."""
     return plain_add(x=value, y=1)
 
@@ -76,7 +76,7 @@ def unregistered_call(value: int) -> int:
 
 
 @graph
-def starred_call(value: int) -> int:
+def starred_call(value: int) -> int:  # rejected at lowering
     """Spread a sequence into a call; arity is static."""
     return add(*[value, 1])
 
@@ -154,7 +154,7 @@ def collision(x: int) -> int:
 
 
 @graph
-def missing_task_input(x: int) -> int:
+def missing_task_input(x: int) -> int:  # rejected at lowering
     """Omit a required task input."""
     return add(x=x)
 

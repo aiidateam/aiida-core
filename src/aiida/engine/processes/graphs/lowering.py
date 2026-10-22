@@ -24,7 +24,7 @@ from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 
-from aiida.common.exceptions import GraphError, UnsupportedSyntax
+from aiida.common.exceptions import GraphError, GraphLanguageError
 from aiida.engine.processes.graphs.inputs import place
 from aiida.engine.processes.graphs.ir import (
     CONDITION_PORT,
@@ -47,7 +47,7 @@ from aiida.engine.processes.graphs.shapes import (
 )
 from aiida.engine.processes.graphs.tasks import TaskHandle, build_task
 
-__all__ = ('GraphHandle', 'UnsupportedSyntax', 'graph', 'task')
+__all__ = ('GraphHandle', 'GraphLanguageError', 'graph', 'task')
 
 P = t.ParamSpec('P')
 R = t.TypeVar('R')
@@ -140,12 +140,12 @@ class _SourceDefinition:
             lines, first_line = inspect.getsourcelines(function)
         except OSError as exception:
             msg = f'Cannot read the source of {key}: definitions need retrievable source.'
-            raise UnsupportedSyntax(msg) from exception
+            raise GraphLanguageError(msg) from exception
         try:
             hints = t.get_type_hints(function, include_extras=True)
         except (NameError, AttributeError) as exception:
             msg = f'Cannot resolve type hints for {key}: {exception}'
-            raise UnsupportedSyntax(msg) from exception
+            raise GraphLanguageError(msg) from exception
         return cls(
             key=key,
             function=function,
@@ -262,12 +262,12 @@ def graph(function: Callable[..., t.Any] | None = None) -> t.Any:
 def _function_identifier(function: Callable[..., t.Any]) -> str:
     """Return an importable function identifier, rejecting nested functions."""
     if not inspect.isfunction(function):
-        raise UnsupportedSyntax('Registered declarations must be Python functions, not process classes or builders')
+        raise GraphLanguageError('Registered declarations must be Python functions, not process classes or builders')
     if function.__qualname__ != function.__name__:
-        raise UnsupportedSyntax('Registered functions must be defined at module scope, not nested in other code')
+        raise GraphLanguageError('Registered functions must be defined at module scope, not nested in other code')
     if function.__module__ == '__main__':
         msg = 'Graph declarations require an importable module; save the function in a Python module.'
-        raise UnsupportedSyntax(msg)
+        raise GraphLanguageError(msg)
     return f'{function.__module__}:{function.__name__}'
 
 
@@ -279,7 +279,7 @@ def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
     column: int | None = getattr(node, 'col_offset', None)
     if line is None or column is None or line > len(source):
         msg = f'{location.filename}: {state.key}: {reason}: {ast.unparse(node)}'
-        raise UnsupportedSyntax(msg)
+        raise GraphLanguageError(msg)
 
     text = source[line - 1]
     # AST columns are UTF-8 byte offsets; a displayed caret needs a character offset.
@@ -289,7 +289,7 @@ def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
         f'{location.filename}:{location.first_line + line - 1}:{position + 1}: '
         f'{state.key}: {reason}\n    {text}\n    {" " * position}^'
     )
-    raise UnsupportedSyntax(msg)
+    raise GraphLanguageError(msg)
 
 
 def _parse_function(definition: _SourceDefinition) -> ast.FunctionDef:
@@ -297,7 +297,7 @@ def _parse_function(definition: _SourceDefinition) -> ast.FunctionDef:
     module = ast.parse(definition.source)
     if len(module.body) != 1 or not isinstance(module.body[0], ast.FunctionDef):
         msg = f'{definition.key}: expected one function definition'
-        raise UnsupportedSyntax(msg)
+        raise GraphLanguageError(msg)
     return module.body[0]
 
 
@@ -366,7 +366,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             statements = statements[1:]
     if not statements or not isinstance(statements[-1], ast.Return):
         msg = f'{state.key}: end the graph with a return declaring its outputs'
-        raise UnsupportedSyntax(msg)
+        raise GraphLanguageError(msg)
     for statement in statements[:-1]:
         if isinstance(statement, ast.If):
             _lower_branch(state, statement=statement)
@@ -641,7 +641,7 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
     """Lower collected region state to a nested graph template."""
     if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
         msg = 'control-flow outputs must be static leaves, not namespaces.'
-        raise UnsupportedSyntax(msg)
+        raise GraphLanguageError(msg)
     endpoints: dict[str, Endpoint] = {
         name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()
     }
@@ -847,7 +847,7 @@ def _lower_input(
             value = ast.literal_eval(expression)
         except (ValueError, TypeError) as exception:
             msg = 'Dictionary-valued ports require a literal value or a reference to the whole port.'
-            raise UnsupportedSyntax(msg) from exception
+            raise GraphLanguageError(msg) from exception
         place(given, path, value)
         return
     _wire(state, instance=instance, port=path, value=_lower_value(state, expression), given=given)
@@ -918,5 +918,5 @@ def _lower_graph(handle: GraphHandle, stack: tuple[str, ...]) -> GraphIR:
     key = definition.key
     if key in stack:
         msg = f'Recursive graph call: {" -> ".join((*stack, key))}; express repetition with a while loop instead'
-        raise UnsupportedSyntax(msg)
+        raise GraphLanguageError(msg)
     return _lower_function(_LoweringState(definition, stack=(*stack, key)))

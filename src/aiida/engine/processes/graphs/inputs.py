@@ -15,7 +15,7 @@ import typing as t
 from collections.abc import Mapping
 from functools import partial
 
-from aiida.common.exceptions import GraphValidationError, MissingInput, MissingRequiredInputsError
+from aiida.common.exceptions import GraphValidationError, MissingGraphInput, MissingRequiredInputsError
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, json_default
 from aiida.engine.processes.port_model import _namespace_value
@@ -76,7 +76,7 @@ class _InputResolver:
 
     def __init__(self, identifier: str | None) -> None:
         self.identifier = identifier
-        self.missing: list[MissingInput] = []
+        self.missing: list[MissingGraphInput] = []
 
     def fill(self, namespace: PortNamespace, given: Mapping[str, t.Any]) -> dict[str, t.Any]:
         """Return filled inputs, raising together all missing required fields.
@@ -107,7 +107,7 @@ class _InputResolver:
             if prepared is not UNSPECIFIED:
                 result[name] = prepared
         if absent_namespace and len(self.missing) == missing_before:
-            self.missing.append(MissingInput(self.identifier, path, port.help, True))
+            self.missing.append(MissingGraphInput(self.identifier, path, port.help, True))
         return result
 
     def _fill_default(self, port: InputPort | PortNamespace, path: str) -> tuple[t.Any, bool]:
@@ -120,7 +120,7 @@ class _InputResolver:
         if not port.required:
             return UNSPECIFIED, False
         if not isinstance(port, PortNamespace) or not port:
-            self.missing.append(MissingInput(self.identifier, path, port.help, True))
+            self.missing.append(MissingGraphInput(self.identifier, path, port.help, True))
             return UNSPECIFIED, False
         return {}, True
 

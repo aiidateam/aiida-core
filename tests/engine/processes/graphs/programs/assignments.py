@@ -13,7 +13,7 @@ from tests.engine.processes.graphs.programs.tasks import add, arithmetic_pair
 
 
 @graph
-def reassigned_name(value: int) -> int:
+def reassigned_name(value: int) -> int:  # rejected at lowering
     """Rebind a name; single-assignment keeps the graph well-defined, not just readable."""
     result = add(x=value, y=1)
     result = add(x=result, y=2)
@@ -29,7 +29,7 @@ def reassigned_name(value: int) -> int:
 
 
 @graph
-def unbound(value: int) -> int:
+def unbound(value: int) -> int:  # rejected at lowering
     """Reference an unbound name; every name must bind first."""
     return add(x=value, y=missing)  # noqa: F821 - unbound names must fail at lowering
 
@@ -43,7 +43,7 @@ def unbound(value: int) -> int:
 
 
 @graph
-def subscript_assignment(value: int) -> int:
+def subscript_assignment(value: int) -> int:  # rejected at lowering
     """Mutate a placement in place; placements bind new names instead."""
     chosen = add(x=value, y=1)
     chosen['count'] = add(x=chosen, y=2)
@@ -59,7 +59,7 @@ def subscript_assignment(value: int) -> int:
 
 
 @graph
-def augmented_assignment(value: int) -> int:
+def augmented_assignment(value: int) -> int:  # rejected at lowering
     """Update a name in place; single-assignment keeps the graph well-defined."""
     total = add(x=value, y=1)
     total += 1
@@ -75,7 +75,7 @@ def augmented_assignment(value: int) -> int:
 
 
 @graph
-def annotated_assignment(value: int) -> int:
+def annotated_assignment(value: int) -> int:  # rejected at lowering
     """Annotate a local; locals carry no contracts in templates."""
     total: int = add(x=value, y=1)
     return total

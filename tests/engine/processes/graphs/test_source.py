@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from aiida.common.exceptions import GraphError, GraphTypeCheckError, UnsupportedSyntax
+from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError
 from aiida.engine.processes.graphs.ir import Dependency, GraphIR, TaskIR
 from aiida.engine.processes.graphs.lowering import GraphHandle
 from aiida.engine.processes.graphs.shapes import load_shape
@@ -98,7 +98,7 @@ def test_task_alias_does_not_collide_with_generated_name() -> None:
 
 
 def test_missing_task_input_fails_during_build() -> None:
-    with pytest.raises(UnsupportedSyntax, match='y'):
+    with pytest.raises(GraphLanguageError, match='y'):
         calls.missing_task_input.build()
 
 
@@ -146,8 +146,8 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
     ],
 )
 def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, message: str) -> None:
-    """Rejected syntax raises `UnsupportedSyntax` before graph execution."""
-    with pytest.raises(UnsupportedSyntax, match=message):
+    """Rejected syntax raises `GraphLanguageError` before graph execution."""
+    with pytest.raises(GraphLanguageError, match=message):
         declaration.build()
 
 
@@ -180,7 +180,7 @@ def test_loops_build_control_tasks() -> None:
 
 
 def test_recursive_call_fails_during_build() -> None:
-    with pytest.raises(UnsupportedSyntax, match='Recursive graph call'):
+    with pytest.raises(GraphLanguageError, match='Recursive graph call'):
         calls.recursive_call.build()
 
 
@@ -212,7 +212,7 @@ def test_incompatible_boundary_types_fail_during_build() -> None:
 
 
 def test_rejection_carries_source_location() -> None:
-    with pytest.raises(UnsupportedSyntax) as caught:
+    with pytest.raises(GraphLanguageError) as caught:
         assignments.unbound.build()
     assert 'programs/assignments.py' in str(caught.value)
     assert 'unbound name' in str(caught.value)
@@ -259,7 +259,7 @@ def test_task_registration_rejects_excluded_contracts() -> None:
         task(tasks.kwargs_function)
     with pytest.raises(GraphTypeCheckError, match='fixed inputs'):
         task(tasks.args_function)
-    with pytest.raises(UnsupportedSyntax, match='module scope'):
+    with pytest.raises(GraphLanguageError, match='module scope'):
         task(local_function)
-    with pytest.raises(UnsupportedSyntax, match='not process classes'):
+    with pytest.raises(GraphLanguageError, match='not process classes'):
         task(ArithmeticAddCalculation)

@@ -87,7 +87,7 @@ def _validate_region(graph: GraphIR, task: GraphTask) -> None:
             msg = 'branch condition conflicts with a body input.'
             raise GraphTypeCheckError(msg)
         if task.body.outputs.keys() != task.otherwise.outputs.keys():
-            msg = 'both branches must return the same outputs.'
+            msg = 'both branches must return the same outputs; convert outputs to a shared type in a task instead.'
             raise GraphTypeCheckError(msg)
         _check_compatible(task.body.output_spec(), task.otherwise.output_spec(), 'branch outputs')
     if isinstance(task, LoopControl) and (task.condition_port not in task.body.outputs or task.max_iterations < 1):

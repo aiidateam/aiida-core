@@ -39,12 +39,6 @@ class Folder:
     specific given folder borders.
 
     .. todo::
-        fix this, os.path.commonprefix of /a/b/c and /a/b2/c will give
-        a/b, check if this is wanted or if we want to put trailing slashes.
-        (or if we want to use os.path.relpath and check for a string starting
-        with os.pardir?)
-
-    .. todo::
         rethink whether the folder_limit option is still useful. If not, remove
         it alltogether (it was a nice feature, but unfortunately all the calls
         to os.path.abspath or normpath are quite slow).
@@ -59,7 +53,12 @@ class Folder:
             folder_limit = os.path.abspath(folder_limit)
 
             # check that it is a subfolder
-            if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
+            try:
+                is_subfolder = pathlib.Path(abspath).resolve().is_relative_to(pathlib.Path(folder_limit).resolve())
+            except (ValueError, OSError, RuntimeError):
+                is_subfolder = False
+
+            if not is_subfolder:
                 msg = (
                     'The absolute path for this folder is not within the '
                     f'folder_limit. abspath={abspath}, folder_limit={folder_limit}.'
@@ -271,9 +270,16 @@ class Folder:
         """
         if os.path.isabs(relpath):
             raise ValueError('relpath must be a relative path')
-        dest_abs_path = os.path.join(self.abspath, relpath)
+        dest_abs_path = os.path.normpath(os.path.join(self.abspath, relpath))
 
-        if not os.path.commonprefix([dest_abs_path, self.folder_limit]) == self.folder_limit:
+        try:
+            is_within_limit = (
+                pathlib.Path(dest_abs_path).resolve().is_relative_to(pathlib.Path(self.folder_limit).resolve())
+            )
+        except (ValueError, OSError, RuntimeError):
+            is_within_limit = False
+
+        if not is_within_limit:
             errstr = f"You didn't specify a valid filename: {relpath}"
             raise ValueError(errstr)
 

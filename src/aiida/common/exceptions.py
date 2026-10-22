@@ -77,7 +77,7 @@ class MissingInput:
     """One missing required input, with graph-relative path and configuration help."""
 
     identifier: str | None
-    socket_path: str
+    socket_path: str  # TODO: socket_path?
     help: str | None
     required: bool
 

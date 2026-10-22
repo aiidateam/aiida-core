@@ -36,9 +36,9 @@ __all__ = (
     'TaskIR',
 )
 
-GRAPH_IR_VERSION = '0.2'
+GRAPH_IR_VERSION = '0.2'  # TODO: 0.1 until release
 TASK_IR_VERSION = '0.1'
-CONDITION_PORT = 'condition'
+CONDITION_PORT = 'condition'  # NOTE: use of this? no other mechanism?
 TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
 
 
@@ -318,11 +318,11 @@ class SubgraphTask(BodyTask):
 
 
 @dataclass(frozen=True, kw_only=True)
-class BranchControl(BodyTask):
+class BranchControl(BodyTask):  # NOTE: is this the right inheritance structure?
     """A condition dispatching exactly one of two nested templates."""
 
     KIND: t.ClassVar[TaskKind] = 'branch'
-    condition_port: str = CONDITION_PORT
+    condition_port: str = CONDITION_PORT  # NOTE: use of this? no other mechanism?
     otherwise: GraphIR
 
     @property

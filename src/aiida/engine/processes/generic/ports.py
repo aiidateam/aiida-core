@@ -45,7 +45,7 @@ def is_mutable_property(cls: t.Any, attribute: str) -> bool:
 _LOGGER = logging.getLogger(__name__)
 
 
-class _Unspecified:
+class _Unspecified:  # TODO: understand this
     """Sentinel for absent port values, stable under copying.
 
     Exposed ports are deep-copied, so a bare ``object()`` would lose

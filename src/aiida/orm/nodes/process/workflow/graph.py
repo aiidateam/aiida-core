@@ -13,7 +13,7 @@ from aiida.orm.nodes.process.workflow.workflow import WorkflowNode
 __all__ = ('GraphNode',)
 
 
-class GraphNode(WorkflowNode):
+class GraphNode(WorkflowNode):  # NOTE: no implementation needed here?
     """ORM class for all nodes representing the execution of a graph of tasks.
 
     A graph is run by one process class for every graph there is, since what to run is an input rather than a

@@ -54,8 +54,8 @@ class Folder:
 
             # check that it is a subfolder
             try:
-                is_subfolder = pathlib.Path(abspath).resolve().is_relative_to(pathlib.Path(folder_limit).resolve())
-            except (ValueError, OSError, RuntimeError):
+                is_subfolder = pathlib.Path(abspath).is_relative_to(pathlib.Path(folder_limit))
+            except ValueError:
                 is_subfolder = False
 
             if not is_subfolder:
@@ -273,10 +273,8 @@ class Folder:
         dest_abs_path = os.path.normpath(os.path.join(self.abspath, relpath))
 
         try:
-            is_within_limit = (
-                pathlib.Path(dest_abs_path).resolve().is_relative_to(pathlib.Path(self.folder_limit).resolve())
-            )
-        except (ValueError, OSError, RuntimeError):
+            is_within_limit = pathlib.Path(dest_abs_path).is_relative_to(pathlib.Path(self.folder_limit))
+        except ValueError:
             is_within_limit = False
 
         if not is_within_limit:

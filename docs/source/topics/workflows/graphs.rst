@@ -3,7 +3,7 @@
 Graphs of tasks
 ===============
 
-Workflows are plain Python functions using a tiny embedded language: assignments, calls, and returns, plus ``if`` and ``while`` over task results.
+``@graph`` decorated workflows are plain Python functions using a tiny embedded language: assignments, calls, and returns, plus ``if`` and ``while`` over task results.
 Graph bodies never execute; AiiDA walks their source and lowers the supported constructs into a ``GraphIR``, a static JSON-serializable DAG of tasks, dependencies, and typed ports, rejecting everything else with a source location.
 The engine runs the spec rather than the source, which is what makes provenance, checkpointing, caching, and daemon dispatch possible.
 An ``if`` becomes a branch dispatching exactly one side as a child graph; a ``while`` becomes a loop dispatching numbered child runs that thread state between iterations.
@@ -14,7 +14,7 @@ Two languages
 Task bodies
 ^^^^^^^^^^^
 
-Task bodies are plain Python and are executed on the daemon workers, so you can write anything that Python supports there.
+``@task`` bodies are plain Python and are executed on the daemon workers, so you can write anything that Python supports there.
 Only the task itself and its annotated inputs and outputs end up in the database and the provenance graph: one process node per task, one data node per declared output, and links to the already stored input nodes.
 Plain values become stored nodes at the boundary: inputs once when the workflow launches, outputs when each task finishes; passing a node reuses it instead.
 Everything in between, local variables, loops, helper calls, temporary files, leaves no trace.
@@ -30,7 +30,7 @@ The plan language is:
 * ``(a, b) = task(...)`` only for tasks with several outputs, one name per output
 * arguments by name like ``x=1`` or by position; no ``*args``, no ``**kwargs``
 * literal defaults like ``def f(value=3)``
-* ``.result`` only on single-output tasks; ``.field`` or ``['field']`` only on grouped outputs
+* ``.result`` only on single-output tasks; ``.key`` or ``['key']`` only on grouped outputs
 * one ``return`` at the end, of a task output, a graph input, or a flat mapping of those
 * ``if`` and ``else`` each storing their outcome under the same name
 * ``after=...`` for ordering without passing values

@@ -73,6 +73,9 @@ jobs:
       with:
         python-version: '3.10'
 
+    - name: Setup SSH on localhost
+      run: .github/workflows/setup_ssh.sh
+
     - name: Run sub-set of test suite
       run: pytest -s -m requires_broker --broker-backend zmq --db-backend=sqlite tests/
 

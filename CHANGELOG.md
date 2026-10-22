@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.9.4 - 2026-10-22
+
+This patch fixes `CalcJob` upload and retrieval robustness after partial transfers and restarts, and relaxes the type of the `structurelist` argument of `TrajectoryData`.
+
+### Fixes
+
+- CalcJob: recover temporary retrieval after partial downloads and restarts ([#7732](https://github.com/aiidateam/aiida-core/pull/7732)) [[d29211e1f]](https://github.com/aiidateam/aiida-core/commit/d29211e1fbad9d7f77210c95ec81a529371e20b4)
+- Fix retrieval recovery before output checkpoint persistence ([#7731](https://github.com/aiidateam/aiida-core/pull/7731)) [[fe921f751]](https://github.com/aiidateam/aiida-core/commit/fe921f7519101f8b66511755bdafc4af480c464c)
+- Fix CalcJob upload backup collisions on repeated retries ([#7730](https://github.com/aiidateam/aiida-core/pull/7730)) [[66cc38e31]](https://github.com/aiidateam/aiida-core/commit/66cc38e319ec21287993d58a190b10f9349e64ca)
+- Relax type for structurelist argument to TrajectoryData ([#7536](https://github.com/aiidateam/aiida-core/pull/7536)) [[5ccfed482]](https://github.com/aiidateam/aiida-core/commit/5ccfed482fb34918fd2e75ef3c0637dc3d8df472)
+
 ## v2.9.3 - 2026-10-02
 
 This patch improves graph traversal performance on large PostgreSQL databases, fixes `verdi daemon status` for profiles using the legacy `rabbitmq` broker name, and allows newer AsyncSSH 2.x releases.

@@ -114,6 +114,15 @@ def test_task_body_runs_plain_python() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_single_key_typeddict_task_unpacks_output() -> None:
+    """A single-key `TypedDict` task stores its value under the named port, not the whole mapping."""
+    outputs, node = run_get_node(tasks.mismatched_alpha, value=2)
+    assert node.is_finished_ok
+    assert isinstance(outputs['alpha'], Int)
+    assert outputs['alpha'].value == 2
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_task_can_run_without_retrievable_source(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace = {'__name__': tasks.__name__}
     exec(compile('def generated(value: int) -> int:\n    return value + 1\n', '<generated-task>', 'exec'), namespace)

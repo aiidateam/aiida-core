@@ -15,6 +15,8 @@ import inspect
 import typing as t
 from collections.abc import Callable, Mapping
 
+from typing_extensions import is_typeddict
+
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.lang import override
 from aiida.engine.processes.functions import (
@@ -40,6 +42,8 @@ class TaskProcess(FunctionProcessBase):
     """Task process with plain Python inputs and static leaf outputs."""
 
     _spec_class = GraphProcessSpec
+    # Set at declaration: a total `TypedDict` return declares one port per key.
+    _named_outputs: t.ClassVar[bool] = False
 
     @classmethod
     @override
@@ -66,12 +70,13 @@ class TaskProcess(FunctionProcessBase):
     def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
         declare_output_ports(annotations.get('return'), spec)
         spec.outputs.dynamic = False
+        cls._named_outputs = is_typeddict(annotations.get('return'))
 
     @override
     def _out_result(self, result: t.Any) -> None:
         outputs = self.spec().outputs
         names = list(outputs)
-        if isinstance(result, Mapping) and len(names) != 1:
+        if isinstance(result, Mapping) and self._named_outputs:
             missing = [name for name in names if name not in result]
             if missing:
                 msg = f'task omitted declared outputs {missing}.'

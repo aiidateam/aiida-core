@@ -172,7 +172,10 @@ def test_clear_stale_pid_files_cmdline_exceptions(profile_access_manager, monkey
     fake_file.write_text("['some', 'command']", encoding='utf-8')
 
     class MockProcess:
+        """Mock process whose cmdline raises an exception."""
+
         def cmdline(self):
+            """Mock cmdline call."""
             raise exception
 
     monkeypatch.setattr(psutil, 'Process', lambda pid: MockProcess())
@@ -189,6 +192,7 @@ def test_clear_stale_pid_files_process_access_denied(profile_access_manager, mon
     fake_file.write_text("['some', 'command']", encoding='utf-8')
 
     def mock_process(pid):
+        """Mock psutil.Process that raises AccessDenied."""
         raise psutil.AccessDenied(pid=pid)
 
     monkeypatch.setattr(psutil, 'Process', mock_process)
@@ -206,7 +210,10 @@ def test_clear_stale_pid_files_active_process(profile_access_manager, monkeypatc
     fake_file.write_text(cmd, encoding='utf-8')
 
     class MockProcess:
+        """Mock process returning matching cmdline."""
+
         def cmdline(self):
+            """Mock cmdline call."""
             return ['verdi', 'daemon', 'start']
 
     monkeypatch.setattr(psutil, 'Process', lambda pid: MockProcess())

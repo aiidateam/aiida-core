@@ -36,7 +36,6 @@ from aiida.engine.processes.graphs.ir import (
     ProcessTask,
     Route,
     SubgraphTask,
-    TaskIR,
 )
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.shapes import (
@@ -270,11 +269,6 @@ def _function_identifier(function: Callable[..., t.Any]) -> str:
         msg = 'Graph declarations require an importable module; save the function in a Python module.'
         raise UnsupportedSyntax(msg)
     return f'{function.__module__}:{function.__name__}'
-
-
-def _task_spec_for(target: object) -> TaskIR | None:
-    """Return the declaration of a task handle, or `None` for other call targets."""
-    return target._task_spec if isinstance(target, TaskHandle) else None
 
 
 def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
@@ -677,14 +671,13 @@ def _registered_target(state: _LoweringState, expression: ast.expr, name: str) -
     """Return the task handle or graph behind a call target."""
     namespace = state.definition.function.__globals__
     target = namespace.get(name)
-    if _task_spec_for(target) is None and not isinstance(target, GraphHandle):
-        if target is None and name in vars(builtins):
-            _reject(state, node=expression, reason=f'built-in {name!r} cannot run here; wrap it in a task instead')
-        if target is None and name not in namespace:
-            _reject(state, node=expression, reason=f'unknown name {name!r}; check the spelling instead')
-        _reject(state, node=expression, reason=f'unregistered call {name!r}; add `@task` or `@graph` above it instead')
-    assert isinstance(target, (TaskHandle, GraphHandle))
-    return target
+    if isinstance(target, (TaskHandle, GraphHandle)):
+        return target
+    if target is None and name in vars(builtins):
+        _reject(state, node=expression, reason=f'built-in {name!r} cannot run here; wrap it in a task instead')
+    if target is None and name not in namespace:
+        _reject(state, node=expression, reason=f'unknown name {name!r}; check the spelling instead')
+    _reject(state, node=expression, reason=f'unregistered call {name!r}; add `@task` or `@graph` above it instead')
 
 
 def _claim_name(state: _LoweringState, name: str) -> str:
@@ -713,8 +706,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         result_port: str = body.result_port
         result_shape: Shape = body.result_shape
     else:
-        spec: TaskIR | None = _task_spec_for(target)
-        assert spec is not None
+        spec = target._task_spec
         task = ProcessTask(name=instance, inputs={}, spec=spec)
         inputs = spec.input_shape
         result_port = spec.result_port

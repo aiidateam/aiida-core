@@ -74,10 +74,10 @@ class AiidaException(Exception):  # noqa: N818
 
 @dataclass(frozen=True)
 class MissingInput:
-    """One missing required input, with graph-relative path and configuration help."""
+    """One missing required graph input, located by its port path."""
 
     identifier: str | None
-    socket_path: str  # TODO: socket_path?
+    port_path: str
     help: str | None
     required: bool
 
@@ -108,7 +108,7 @@ class MissingRequiredInputsError(GraphValidationError):
 
     def __init__(self, missing: tuple[MissingInput, ...]) -> None:
         self.missing = missing
-        message = f'missing required graph inputs: {", ".join(item.socket_path for item in missing)}.'
+        message = f'missing required graph inputs: {", ".join(item.port_path for item in missing)}.'
         super().__init__(message)
 
     def __reduce__(self) -> tuple[type, tuple[tuple[MissingInput, ...]]]:

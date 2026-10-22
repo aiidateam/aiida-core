@@ -497,8 +497,9 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
 def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     """Lower an if statement to a branch control task."""
     _check_branch_shape(state, statement)
-    bound: ast.Name | None = _bind_condition(state, statement.test)
-    test: ast.expr = bound if bound is not None else statement.test
+    test: ast.expr = statement.test
+    if isinstance(test, ast.Call):
+        test = _bind_call_condition(state, test)
     first = _lower_arm(state, statement.body)
     second = _lower_arm(state, statement.orelse)
     _check_arms_agree(state, statement, first, second)
@@ -537,14 +538,14 @@ def _wire_branch_inputs(
 
 def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     """Lower a while statement to a resumable loop control task."""
-    bound = _bind_condition(state, statement.test)
     body: list[ast.stmt] = list(statement.body)
-    if bound is not None:
-        update = ast.Assign(targets=[ast.Name(id=bound.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
+    test: ast.expr = statement.test
+    if isinstance(test, ast.Call):
+        test = _bind_call_condition(state, test)
+        update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
         body.append(update)
-    test: ast.expr = bound if bound is not None else statement.test
     if statement.orelse or not isinstance(test, ast.Name) or test.id not in state.names:
         _reject(state, statement, 'while loops need a named check and no else')
     condition = test.id
@@ -613,10 +614,8 @@ def _route_region(state: _LoweringState, child: _LoweringState, instance: str, g
             _wire(state, instance, name, state.names[name], given)
 
 
-def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
+def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
     """Lower a call condition to a fresh binding."""
-    if not isinstance(test, ast.Call):
-        return None
     name = 'condition'
     count = 2
     while name in state.names:

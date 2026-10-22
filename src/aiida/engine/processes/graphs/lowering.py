@@ -470,23 +470,43 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
 
 def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     """Lower an if statement to a branch control task."""
+    _check_branch_shape(state, statement)
     bound = _bind_condition(state, statement.test)
     test: ast.expr = bound if bound is not None else statement.test
+    first = _lower_arm(state, statement.body)
+    second = _lower_arm(state, statement.orelse)
+    _check_arms_agree(state, statement, first, second)
+    instance = f'branch_{len(state.tasks) + 1}'
+    given = _wire_branch_inputs(state, instance, first, second, test)
+    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    selected = first.child.names[first.name]
+    state.names[first.name] = _Reference(instance, selected.port, selected.shape)
+
+
+def _check_branch_shape(state: _LoweringState, statement: ast.If) -> None:
+    """Reject branch statements that do not assign one name on both sides."""
     if not statement.orelse or len(statement.body) != 1 or len(statement.orelse) != 1:
         _reject(state, statement, 'assign the same name on both sides instead')
-    first, second = (_lower_arm(state, statements) for statements in (statement.body, statement.orelse))
+
+
+def _check_arms_agree(state: _LoweringState, statement: ast.If, first: _Arm, second: _Arm) -> None:
+    """Reject arms assigning different names, taken names, or the condition port."""
     if first.name != second.name or first.name in state.names:
         _reject(state, statement, 'both sides must share one new name instead')
     if CONDITION_PORT in first.body.inputs or CONDITION_PORT in second.body.inputs:
         _reject(state, statement, 'condition conflicts with a branch input; rename one of them')
-    instance = f'branch_{len(state.tasks) + 1}'
+
+
+def _wire_branch_inputs(
+    state: _LoweringState, instance: str, first: _Arm, second: _Arm, test: ast.expr
+) -> dict[str, CapturedValue]:
+    """Wire the condition and the region inputs into a branch placement."""
     given: dict[str, CapturedValue] = {}
     _wire(state, instance, CONDITION_PORT, _lower_value(state, test), given)
-    for name in sorted({path.split('.')[0] for side in (first, second) for path in side.child.inputs}):
+    read = {path.split('.')[0] for side in (first, second) for path in side.child.inputs}
+    for name in sorted(read):
         _wire(state, instance, name, state.names[name], given)
-    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
-    selected = first.child.names[first.name]
-    state.names[first.name] = _Reference(instance, selected.port, selected.shape)
+    return given
 
 
 def _lower_loop(state: _LoweringState, statement: ast.While) -> None:

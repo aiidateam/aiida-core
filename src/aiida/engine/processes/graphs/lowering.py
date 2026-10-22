@@ -497,7 +497,7 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
 def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     """Lower an if statement to a branch control task."""
     _check_branch_shape(state, statement)
-    bound = _bind_condition(state, statement.test)
+    bound: ast.Name | None = _bind_condition(state, statement.test)
     test: ast.expr = bound if bound is not None else statement.test
     first = _lower_arm(state, statement.body)
     second = _lower_arm(state, statement.orelse)

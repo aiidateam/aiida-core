@@ -54,6 +54,24 @@ P = t.ParamSpec('P')
 R = t.TypeVar('R')
 
 
+# Value forms the language rejects, with the guidance each carries. The key sets
+# are the unsupported list; anything missing here reports the generic fallback.
+_VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
+    (ast.BoolOp, ast.Compare): 'put this check in a task and branch on its result instead',
+    (ast.IfExp,): 'write this as if and else instead',
+    (ast.NamedExpr,): 'give it a name on its own line before the if instead',
+    (ast.Subscript,): 'cannot pick elements here; pass the whole collection instead',
+    (ast.Starred,): 'cannot unpack here; list each input by name instead',
+    (ast.JoinedStr,): 'build this text in a task instead',
+    (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp): ('write out one call per value instead'),
+    (ast.Lambda,): 'write a task instead',
+    (ast.Call,): 'put the inner call on its own line first',
+    (ast.Dict,): 'list each output by name instead of nesting them',
+    (ast.List, ast.Tuple, ast.Set): 'provide collections as graph inputs instead',
+    (ast.Await, ast.Yield, ast.YieldFrom): ('tasks cannot wait or pause; write plain steps instead'),
+}
+
+
 class GraphHandle:
     """An importable source declaration that builds without executing its body."""
 
@@ -104,18 +122,6 @@ class GraphHandle:
         return GraphProcess._launch_inputs(self.build(), dict(bound.arguments))
 
 
-def _function_identifier(function: Callable[..., t.Any]) -> str:
-    """Return an importable function identifier, rejecting nested functions."""
-    if not inspect.isfunction(function):
-        raise UnsupportedSyntax('Registered declarations must be Python functions, not process classes or builders')
-    if function.__qualname__ != function.__name__:
-        raise UnsupportedSyntax('Registered functions must be defined at module scope, not nested in other code')
-    if function.__module__ == '__main__':
-        msg = 'Graph declarations require an importable module; save the function in a Python module.'
-        raise UnsupportedSyntax(msg)
-    return f'{function.__module__}:{function.__name__}'
-
-
 @dataclass(frozen=True)
 class _SourceDefinition:
     """The source and annotations captured by a graph handle."""
@@ -151,9 +157,43 @@ class _SourceDefinition:
         )
 
 
-def _task_spec_for(target: object) -> TaskIR | None:
-    """Return the declaration of a task handle, or `None` for other call targets."""
-    return target._task_spec if isinstance(target, TaskHandle) else None
+@dataclass(frozen=True)
+class _Reference:
+    """A parsed reference to a leaf or fixed input namespace."""
+
+    task: str | None  # None denotes a graph input.
+    port: str
+    shape: Shape
+
+
+CapturedValue: t.TypeAlias = '_Reference | int | float | str | bool | dict[str, CapturedValue] | None'
+
+
+@dataclass
+class _LoweringState:
+    """The placements, wirings, and references collected while lowering one graph body."""
+
+    definition: _SourceDefinition
+    stack: tuple[str, ...]
+    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl] = field(default_factory=list)
+    dependencies: list[Dependency] = field(default_factory=list)
+    inputs: dict[str, list[Route]] = field(default_factory=dict)
+    input_shapes: dict[str, Shape] = field(default_factory=dict)
+    names: dict[str, _Reference] = field(default_factory=dict)
+    used: Counter[str] = field(default_factory=Counter)
+
+    @property
+    def key(self) -> str:
+        """Return the fully qualified name of the lowered graph."""
+        return self.definition.key
+
+
+class _Arm(t.NamedTuple):
+    """One lowered branch arm with its region state."""
+
+    name: str
+    child: _LoweringState
+    body: GraphIR
 
 
 @t.overload
@@ -220,35 +260,21 @@ def graph(function: Callable[..., t.Any] | None = None) -> t.Any:
     return decorate
 
 
-@dataclass(frozen=True)
-class _Reference:
-    """A parsed reference to a leaf or fixed input namespace."""
+def _function_identifier(function: Callable[..., t.Any]) -> str:
+    """Return an importable function identifier, rejecting nested functions."""
+    if not inspect.isfunction(function):
+        raise UnsupportedSyntax('Registered declarations must be Python functions, not process classes or builders')
+    if function.__qualname__ != function.__name__:
+        raise UnsupportedSyntax('Registered functions must be defined at module scope, not nested in other code')
+    if function.__module__ == '__main__':
+        msg = 'Graph declarations require an importable module; save the function in a Python module.'
+        raise UnsupportedSyntax(msg)
+    return f'{function.__module__}:{function.__name__}'
 
-    task: str | None  # None denotes a graph input.
-    port: str
-    shape: Shape
 
-
-CapturedValue: t.TypeAlias = '_Reference | int | float | str | bool | dict[str, CapturedValue] | None'
-
-
-@dataclass
-class _LoweringState:
-    """The placements, wirings, and references collected while lowering one graph body."""
-
-    definition: _SourceDefinition
-    stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl] = field(default_factory=list)
-    dependencies: list[Dependency] = field(default_factory=list)
-    inputs: dict[str, list[Route]] = field(default_factory=dict)
-    input_shapes: dict[str, Shape] = field(default_factory=dict)
-    names: dict[str, _Reference] = field(default_factory=dict)
-    used: Counter[str] = field(default_factory=Counter)
-
-    @property
-    def key(self) -> str:
-        """Return the fully qualified name of the lowered graph."""
-        return self.definition.key
+def _task_spec_for(target: object) -> TaskIR | None:
+    """Return the declaration of a task handle, or `None` for other call targets."""
+    return target._task_spec if isinstance(target, TaskHandle) else None
 
 
 def _reject(state: _LoweringState, node: ast.AST, reason: str) -> t.NoReturn:
@@ -549,14 +575,6 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         state.names[name] = _Reference(instance, name, child.names[name].shape)
 
 
-class _Arm(t.NamedTuple):
-    """One lowered branch arm with its region state."""
-
-    name: str
-    child: _LoweringState
-    body: GraphIR
-
-
 def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
@@ -813,24 +831,6 @@ def _lower_input(
         place(given, path, value)
         return
     _wire(state, instance, path, _lower_value(state, expression), given)
-
-
-# Value forms the language rejects, with the guidance each carries. The key sets
-# are the unsupported list; anything missing here reports the generic fallback.
-_VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
-    (ast.BoolOp, ast.Compare): 'put this check in a task and branch on its result instead',
-    (ast.IfExp,): 'write this as if and else instead',
-    (ast.NamedExpr,): 'give it a name on its own line before the if instead',
-    (ast.Subscript,): 'cannot pick elements here; pass the whole collection instead',
-    (ast.Starred,): 'cannot unpack here; list each input by name instead',
-    (ast.JoinedStr,): 'build this text in a task instead',
-    (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp): ('write out one call per value instead'),
-    (ast.Lambda,): 'write a task instead',
-    (ast.Call,): 'put the inner call on its own line first',
-    (ast.Dict,): 'list each output by name instead of nesting them',
-    (ast.List, ast.Tuple, ast.Set): 'provide collections as graph inputs instead',
-    (ast.Await, ast.Yield, ast.YieldFrom): ('tasks cannot wait or pause; write plain steps instead'),
-}
 
 
 def _lower_value(

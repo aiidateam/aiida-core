@@ -318,11 +318,11 @@ class SubgraphTask(BodyTask):
 
 
 @dataclass(frozen=True, kw_only=True)
-class BranchControl(BodyTask):  # NOTE: is this the right inheritance structure?
+class BranchControl(BodyTask):
     """A condition dispatching exactly one of two nested templates."""
 
     KIND: t.ClassVar[TaskKind] = 'branch'
-    condition_port: str = CONDITION_PORT  # NOTE: use of this? no other mechanism?
+    condition_port: str = CONDITION_PORT
     otherwise: GraphIR
 
     @property

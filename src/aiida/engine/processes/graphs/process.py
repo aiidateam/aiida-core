@@ -66,7 +66,7 @@ class GraphProcess(Process):
 
     @classmethod
     def _launch_inputs(cls, body: GraphIR, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
-        """Fill graph arguments; process initialization validates and serializes their runtime values."""
+        """Fill graph arguments."""
         return {cls._GRAPH: Dict(dict=body.to_dict()), cls._GRAPH_INPUTS: body.prepare_inputs(inputs)}
 
     @property

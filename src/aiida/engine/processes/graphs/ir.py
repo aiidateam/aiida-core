@@ -245,7 +245,7 @@ class GraphTask(abc.ABC):
 
     @property
     def kind(self) -> TaskKind:
-        """Return the placement kind stored for this task."""
+        """Return the placement kind."""
         return self.KIND
 
     @abc.abstractmethod
@@ -327,7 +327,7 @@ class BranchControl(BodyTask):  # NOTE: is this the right inheritance structure?
 
     @property
     def branches(self) -> tuple[GraphIR, ...]:
-        """Return the taken-first side templates."""
+        """Return the branch bodies, taken side first."""
         return self.body, self.otherwise
 
     def input_ports(self) -> tuple[PortNamespace, ...]:

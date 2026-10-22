@@ -55,11 +55,9 @@ def prepare_inputs(inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> d
 
 @t.runtime_checkable
 class Launchable(t.Protocol):
-    """Something that resolves to a process and the inputs to run it with.
+    """A process and the inputs to run it with.
 
-    This is what ``run`` and ``submit`` accept beside a process class, and implementing it is how a process
-    builder and a process function reach the engine through the same door. Implementing it is also
-    what lets a plugin add a way of expressing work without the engine having to learn about the type.
+    ``run`` and ``submit`` accept this beside a process class; implementing it is how plugins express work.
     """
 
     @property

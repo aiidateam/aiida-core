@@ -576,7 +576,7 @@ def _route_region(state: _LoweringState, child: _LoweringState, instance: str, g
 
 
 def _bind_condition(state: _LoweringState, test: ast.expr) -> ast.Name | None:
-    """Lower a call condition to a fresh binding, like its explicit assignment form."""
+    """Lower a call condition to a fresh binding."""
     if not isinstance(test, ast.Call):
         return None
     name = 'condition'

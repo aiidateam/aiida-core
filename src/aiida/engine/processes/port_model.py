@@ -70,7 +70,7 @@ class PortModel:
 
 @dataclasses.dataclass(frozen=True)
 class Field:
-    """One model field in the words a port is declared with."""
+    """One `PortModel` field."""
 
     name: str
     annotation: t.Any
@@ -162,7 +162,7 @@ def _marks(annotation: t.Any) -> t.Iterator[t.Any]:
 
 
 def port_help(annotation: t.Any) -> str | None:
-    """Return the help text of a `PortField` mark, if the annotation carries one."""
+    """Return the help text of a `PortField` mark."""
     for mark in _marks(annotation):
         if isinstance(mark, PortField):
             return mark.help

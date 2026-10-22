@@ -18,7 +18,7 @@ pytestmark = pytest.mark.presto
 
 def test_diamond_renders_inputs_and_wirings() -> None:
     """One graph input fans out to both placements with dependency edges."""
-    chart = to_mermaid(calls.diamond._lower())
+    chart = to_mermaid(calls.diamond.build())
     assert chart.startswith('flowchart TD\n')
     assert 'in__x{{x}}' in chart
     assert 'in__x -->|x| add' in chart
@@ -30,7 +30,7 @@ def test_diamond_renders_inputs_and_wirings() -> None:
 
 def test_nested_graph_renders_pathed_placements() -> None:
     """Nested placements render flat with path-prefixed ids under their control."""
-    chart = to_mermaid(calls.nested_multiply_add._lower())
+    chart = to_mermaid(calls.nested_multiply_add.build())
     assert 'multiply_add["multiply_add"]' in chart
     assert 'multiply_add__multiply["multiply_add/multiply"]' in chart
     assert 'multiply_add -.-> multiply_add__in__x' in chart

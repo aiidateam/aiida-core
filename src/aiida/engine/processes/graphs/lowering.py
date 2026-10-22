@@ -59,6 +59,7 @@ class GraphHandle:
 
     def __init__(self, function: Callable[..., t.Any]) -> None:
         self._definition = _SourceDefinition.capture(function)
+        self._template: GraphIR | None = None
         # Copy name and docstring, not the function state: the handle owns its identifier.
         functools.update_wrapper(self, function, updated=())
 
@@ -76,9 +77,14 @@ class GraphHandle:
         """Return the declared function for the lowering pipeline."""
         return self._definition.function
 
-    def _lower(self) -> GraphIR:
-        """Return the graph that the function declares, lowered from its registered source."""
-        return _lower_graph(self, ())
+    def build(self) -> GraphIR:
+        """Lower the declaration once and return the cached template.
+
+        Lowering validates the source, so this raises its diagnostics early.
+        """
+        if self._template is None:
+            self._template = _lower_graph(self, ())
+        return self._template
 
     @property
     def process_class(self) -> type[GraphProcess]:
@@ -95,7 +101,7 @@ class GraphHandle:
             for parameter in inspect.signature(self.function).parameters.values()
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
-        return GraphProcess._launch_inputs(self._lower(), dict(bound.arguments))
+        return GraphProcess._launch_inputs(self.build(), dict(bound.arguments))
 
 
 def _function_identifier(function: Callable[..., t.Any]) -> str:

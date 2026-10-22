@@ -50,13 +50,14 @@ A ``PortModel`` declares a fixed namespace of ports without introducing a second
 .. code:: python
 
     from typing import Annotated
-    from aiida.engine import PortField, PortModel
+    from aiida.engine import PortField, PortModel, ProcessSpec
 
     class Settings(PortModel):
         count: Annotated[int, PortField(help='Iteration count.')] = 10
         label: str
         nullable: int | None
 
+    spec = ProcessSpec()
     spec.input_namespace_from('settings', Settings)
     spec.outputs_from(Settings)
 

@@ -107,7 +107,7 @@ class _InputResolver:
             if prepared is not UNSPECIFIED:
                 result[name] = prepared
         if absent_namespace and len(self.missing) == missing_before:
-            self.missing.append(MissingGraphInput(self.identifier, path, port.help, True))
+            self.missing.append(MissingGraphInput(self.identifier, path, port.help, port.required))
         return result
 
     def _fill_default(self, port: InputPort | PortNamespace, path: str) -> tuple[t.Any, bool]:
@@ -120,7 +120,7 @@ class _InputResolver:
         if not port.required:
             return UNSPECIFIED, False
         if not isinstance(port, PortNamespace) or not port:
-            self.missing.append(MissingGraphInput(self.identifier, path, port.help, True))
+            self.missing.append(MissingGraphInput(self.identifier, path, port.help, port.required))
             return UNSPECIFIED, False
         return {}, True
 

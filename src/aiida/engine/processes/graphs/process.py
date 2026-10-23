@@ -51,6 +51,7 @@ class GraphProcess(Process):
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         self._run: GraphRun | None = None
         self._saved: GraphRunState = {}
+        self._watched_pks: set[int] = set()
         super().__init__(*args, **kwargs)
 
     @override
@@ -106,6 +107,7 @@ class GraphProcess(Process):
         """Restore the scheduling progress and the graph input sources."""
         super().load_instance_state(saved_state, load_context)
         self._run = None
+        self._watched_pks = set()
         self._saved = t.cast(GraphRunState, dict(saved_state.get('run', {})))
         if 'graph_input_sources' in saved_state:
             self._input_sources = AttributesFrozendict(
@@ -152,7 +154,14 @@ class GraphProcess(Process):
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:
         """Resume this process when any dispatched task finishes."""
         super().on_wait(awaitables)
+        self._watch_pending()
+
+    def _watch_pending(self) -> None:
+        """Register one finish callback per pending task."""
         for instance, pk in self._run_state.pending.items():
+            if pk in self._watched_pks:
+                continue
+            self._watched_pks.add(pk)
             self.runner.call_on_process_finish(
                 pk, functools.partial(self.call_soon, self._on_task_finished, instance, pk)
             )

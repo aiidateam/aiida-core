@@ -134,6 +134,19 @@ def test_single_key_typeddict_task_unpacks_output() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_on_wait_registers_each_pending_task_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Repeated wake-ups register one finish callback per pending task."""
+    process = GraphProcess(inputs=call_programs.chain.get_launch_inputs(x=Int(2), y=3))
+    name = call_programs.chain.build().task_names[0]
+    process._run_state.started(name, 123)
+    calls: list[int] = []
+    monkeypatch.setattr(process.runner, 'call_on_process_finish', lambda pk, _callback: calls.append(pk))
+    process._watch_pending()
+    process._watch_pending()
+    assert calls == [123]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_task_can_run_without_retrievable_source(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace = {'__name__': tasks.__name__}
     exec(compile('def generated(value: int) -> int:\n    return value + 1\n', '<generated-task>', 'exec'), namespace)

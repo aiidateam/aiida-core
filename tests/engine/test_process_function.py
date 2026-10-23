@@ -19,12 +19,14 @@ complain as the dummy node class is not recognized as a valid process node.
 from __future__ import annotations
 
 import enum
+import inspect
 import re
 
 import pytest
 
 from aiida import orm
-from aiida.engine import ExitCode, PortModel, calcfunction, run, run_get_node, submit, workfunction
+from aiida.engine import ExitCode, PortModel, ProcessSpec, calcfunction, run, run_get_node, submit, workfunction
+from aiida.engine.processes.functions import FunctionProcess
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 
@@ -824,3 +826,15 @@ def test_function_model_namespace() -> None:
     result, node = function_model_namespace.run_get_node({'count': orm.Int(5)})
     assert result == 6
     assert node.is_finished_ok
+
+
+def test_declare_input_override_wraps_default_lazily() -> None:
+    """Overriding a predeclared legacy input serializes the default lazily."""
+    spec = ProcessSpec()
+    spec.input('x', valid_type=(orm.Int,))
+    FunctionProcess._declare_input(
+        spec, inspect.Parameter('x', inspect.Parameter.POSITIONAL_OR_KEYWORD, default=5), {'x': int}, {}
+    )
+    default = spec.inputs['x'].default
+    assert callable(default)
+    assert default().value == 5

@@ -648,19 +648,6 @@ class FunctionProcess(FunctionProcessBase):
 
         default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
 
-        # If the keyword was already specified, simply override the default
-        if spec.has_input(parameter.name):
-            port = spec.inputs[parameter.name]
-            assert isinstance(port, (InputPort, PortNamespace))
-            port.default = default
-            return
-
-        # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
-        # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
-        # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
-        if default is None and type(None) not in valid_type:
-            valid_type += (type(None),)
-
         # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
         # done lazily using a lambda, just as any port defaults should not define node instances directly as is
         # also checked by the ``spec.input`` call.
@@ -677,6 +664,20 @@ class FunctionProcess(FunctionProcessBase):
 
         else:
             indirect_default = default
+
+        # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
+        # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
+        # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
+        if default is None and type(None) not in valid_type:
+            valid_type += (type(None),)
+
+        # If the keyword was already specified, simply override the default
+        if spec.has_input(parameter.name):
+            port = spec.inputs[parameter.name]
+            assert isinstance(port, (InputPort, PortNamespace))
+            # Namespaces fill from plain mappings; only leaf defaults serialize lazily.
+            port.default = default if isinstance(port, PortNamespace) else indirect_default
+            return
 
         if is_structured(without_marks(annotation)):
             container = without_marks(annotation)

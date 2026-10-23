@@ -17,7 +17,7 @@ from aiida.common import InvalidOperation
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.processes.builder import ProcessBuilder
-from aiida.engine.processes.functions import FunctionProcessBase
+from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.process import Process
 from aiida.engine.runners import TYPE_RUN_PROCESS, TYPE_SUBMIT_PROCESS, ResultAndPk
 from aiida.engine.utils import instantiate_process, is_process_scoped, prepare_inputs
@@ -106,9 +106,10 @@ def submit(
 
     inputs = prepare_inputs(inputs, **kwargs)
 
-    # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
-    # current process in the scope should be an instance of ``FunctionProcessBase``.
-    if is_process_scoped() and not isinstance(Process.current(), FunctionProcessBase):
+    # Submitting from within another process requires ``self.submit``, unless the current process is a legacy
+    # function process (which always runs inline). Task processes may run in the daemon, so they stay guarded.
+    current = Process.current()
+    if is_process_scoped() and not isinstance(current, FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this

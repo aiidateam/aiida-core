@@ -185,14 +185,18 @@ class NodeRepository:
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Iterator[t.TextIO]: ...
+    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Generator[t.TextIO, None, None]: ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]: ...
+    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Generator[t.BinaryIO, None, None]: ...
 
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
+    def open(
+        self,
+        path: FilePath,
+        mode: t.Literal['r', 'rb'] = 'r',
+    ) -> t.Generator[t.BinaryIO, None, None] | t.Generator[t.TextIO, None, None]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -218,7 +222,7 @@ class NodeRepository:
                 yield handle
 
     @contextlib.contextmanager
-    def as_path(self, path: FilePath | None = None) -> t.Iterator[pathlib.Path]:
+    def as_path(self, path: FilePath | None = None) -> t.Generator[pathlib.Path, None, None]:
         """Make the contents of the repository available as a normal filepath on the local file system.
 
         :param path: optional relative path of the object within the repository.
@@ -261,12 +265,12 @@ class NodeRepository:
         return self._repository.has_object(path)
 
     @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['r']) -> str: ...
+    def get_object_content(self, path: FilePath, mode: t.Literal['r']) -> str: ...
 
     @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['rb']) -> bytes: ...
+    def get_object_content(self, path: FilePath, mode: t.Literal['rb']) -> bytes: ...
 
-    def get_object_content(self, path: str, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
+    def get_object_content(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
         """Return the content of a object identified by key.
 
         :param path: the relative path of the object within the repository.
@@ -329,7 +333,7 @@ class NodeRepository:
         self._repository.put_object_from_filelike(io.BytesIO(content), path)
         self._update_repository_metadata()
 
-    def put_object_from_filelike(self, handle: io.BufferedReader, path: str):
+    def put_object_from_filelike(self, handle: t.IO, path: str):
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.

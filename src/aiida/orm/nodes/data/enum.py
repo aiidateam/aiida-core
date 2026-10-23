@@ -20,23 +20,19 @@ from __future__ import annotations
 import typing as t
 from enum import Enum
 
+from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.loaders import get_object_loader
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 __all__ = ('EnumData',)
 
-EnumType = t.TypeVar('EnumType', bound=Enum)
+_EnumT = t.TypeVar('_EnumT', bound=Enum)
 
 
-@to_aiida_type.register(Enum)
-def _(value):
-    return EnumData(member=value)
-
-
-class EnumData(Data):
+class EnumData(Data, t.Generic[_EnumT]):
     """Data plugin that allows to easily wrap an :class:`enum.Enum` member.
 
     The enum member is stored in the database by storing the value, name and the identifier (string that represents the
@@ -50,72 +46,83 @@ class EnumData(Data):
     KEY_VALUE = 'value'
     KEY_IDENTIFIER = 'identifier'
 
-    class AttributesModel(Data.AttributesModel):
-        name: str = OrmMetadataField(
-            description='The member name',
-            orm_to_model=lambda node: t.cast(EnumData, node).name,
-        )
-        value: t.Any = OrmMetadataField(
-            description='The member value',
-            orm_to_model=lambda node: t.cast(EnumData, node).value,
-        )
-        identifier: str = OrmMetadataField(
-            description='The member identifier',
-            orm_to_model=lambda node: t.cast(EnumData, node).identifier,
-        )
+    def __init__(
+        self,
+        member: Enum | None = None,
+        *,
+        name: str | None = None,
+        value: object | None = None,
+        identifier: str | None = None,
+        **kwargs: t.Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        if member is not None:
+            self.set_member(member)
+        elif name is not None and value is not None and identifier is not None:
+            self._set_member_parts(name, value, identifier)
 
-    class ConstructorArgsModel(OrmModel):
-        member: Enum = OrmMetadataField(
-            description='The enum member to wrap',
-            write_only=True,
-        )
+    def __eq__(self, other: t.Any) -> bool:
+        """Return whether the other object is equivalent to ourselves."""
+        if isinstance(other, Enum):
+            try:
+                return self.get_member() == other
+            except (ImportError, ValueError):
+                return False
 
-    def __init__(self, member: Enum, *args, **kwargs):
-        """Construct the node for the to enum member that is to be wrapped."""
-        type_check(member, Enum)
-        super().__init__(*args, **kwargs)
+        if isinstance(other, EnumData):
+            return self.base.attributes.all == other.base.attributes.all
 
-        data = {
-            self.KEY_NAME: member.name,
-            self.KEY_VALUE: member.value,
-            self.KEY_IDENTIFIER: get_object_loader().identify_object(member.__class__),
-        }
+        return False
 
-        self.base.attributes.set_many(data)
-
-    @property
+    @attribute
     def name(self) -> str:
-        """Return the name of the enum member."""
+        """The name of the enum member."""
         return self.base.attributes.get(self.KEY_NAME)
 
-    @property
-    def value(self) -> t.Any:
-        """Return the value of the enum member."""
+    @name.setter
+    def name(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set(self.KEY_NAME, value)
+
+    @attribute
+    def value(self) -> object:
+        """The value of the enum member."""
         return self.base.attributes.get(self.KEY_VALUE)
 
-    @property
+    @value.setter
+    def value(self, value: object) -> None:
+        type_check(value, object)
+        self.base.attributes.set(self.KEY_VALUE, value)
+
+    @attribute
     def identifier(self) -> str:
-        """Return the identifier of the enum member."""
+        """The identifier of the enum class (<module>:<class>)."""
         return self.base.attributes.get(self.KEY_IDENTIFIER)
+
+    @identifier.setter
+    def identifier(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set(self.KEY_IDENTIFIER, value)
 
     @property
     def member(self) -> Enum:
         """Return the enum member wrapped by this node."""
         return self.get_member()
 
-    def get_enum(self) -> type[EnumType]:
+    def get_enum(self) -> type[_EnumT]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
         """
         identifier = self.identifier
+
         try:
             return get_object_loader().load_object(identifier)
         except ValueError as exc:
             msg = f'Could not reconstruct enum class because `{identifier}` could not be loaded.'
             raise ImportError(msg) from exc
 
-    def get_member(self) -> EnumType:  # type: ignore[type-var]
+    def get_member(self) -> _EnumT:
         """Return the enum member reconstructed from the serialized data stored in the database.
 
         For the enum member to be successfully reconstructed, the class of course has to still be importable and its
@@ -125,8 +132,8 @@ class EnumData(Data):
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
         :raises `ValueError`: if the stored enum member value is no longer valid for the imported enum class.
         """
-        value = self.base.attributes.get(self.KEY_VALUE)
-        enum: type[EnumType] = self.get_enum()
+        value = self.value
+        enum: type[_EnumT] = self.get_enum()
 
         try:
             return enum(value)
@@ -137,14 +144,62 @@ class EnumData(Data):
             )
             raise ValueError(msg) from exc
 
-    def __eq__(self, other: t.Any) -> bool:
-        """Return whether the other object is equivalent to ourselves."""
-        if isinstance(other, Enum):
-            try:
-                return self.get_member() == other
-            except (ImportError, ValueError):
-                return False
-        elif isinstance(other, EnumData):
-            return self.base.attributes.all == other.base.attributes.all
+    def set_member(self, member: Enum) -> None:
+        """Set the enum member for this node."""
+        type_check(member, Enum)
+        self._set_member_parts(
+            name=member.name,
+            value=member.value,
+            identifier=get_object_loader().identify_object(member.__class__),
+        )
 
-        return False
+    def _set_member_parts(self, name: str, value: object, identifier: str) -> None:
+        """Set the enum member for this node using its individual parts."""
+        type_check(name, str)
+        type_check(value, object)
+        type_check(identifier, str)
+        self.base.attributes.set_many(
+            {
+                self.KEY_NAME: name,
+                self.KEY_VALUE: value,
+                self.KEY_IDENTIFIER: identifier,
+            }
+        )
+
+    def _validate(self) -> None:
+        super()._validate()
+
+        try:
+            name = self.name
+        except AttributeError as exc:
+            raise exceptions.ValidationError("'name' not set.") from exc
+
+        try:
+            value = self.value
+        except AttributeError as exc:
+            raise exceptions.ValidationError("'value' not set.") from exc
+
+        try:
+            self.identifier
+        except AttributeError as exc:
+            raise exceptions.ValidationError("'identifier' not set.") from exc
+
+        try:
+            enum = self.get_enum()
+        except ImportError as exc:
+            raise exceptions.ValidationError(str(exc)) from exc
+
+        try:
+            member = enum(value)
+        except ValueError as exc:
+            msg = f"The stored value '{value}' is not a valid value for the enum '{enum}'."
+            raise exceptions.ValidationError(msg) from exc
+
+        if member.name != name:
+            msg = f"Attribute 'name' says '{name}' but '{member.name}' was reconstructed from the stored value."
+            raise exceptions.ValidationError(msg)
+
+
+@to_aiida_type.register(Enum)
+def _(value: Enum):
+    return EnumData(member=value)

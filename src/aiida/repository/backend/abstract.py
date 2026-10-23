@@ -9,11 +9,11 @@ import abc
 import contextlib
 import hashlib
 import io
-import pathlib
 import typing as t
 from collections.abc import Iterable, Iterator
 
 from aiida.common.hashing import chunked_file_hash
+from aiida.common.typing import FilePath
 
 __all__ = ('AbstractRepositoryBackend',)
 
@@ -71,7 +71,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def is_readable_byte_stream(handle: t.Any) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
 
-    def put_object_from_filelike(self, handle: t.BinaryIO) -> str:
+    def put_object_from_filelike(self, handle: t.IO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -84,10 +84,10 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         return self._put_object_from_filelike(handle)
 
     @abc.abstractmethod
-    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.IO) -> str:
         pass
 
-    def put_object_from_file(self, filepath: str | pathlib.Path) -> str:
+    def put_object_from_file(self, filepath: FilePath) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
 
         :param filepath: absolute path of file whose contents to copy to the repository.

@@ -35,8 +35,11 @@ def test_read_stored():
 
 def test_constructor():
     """Test the various construction options."""
-    with pytest.raises(TypeError):
-        node = XyData(numpy.array([1, 2]))
+    with pytest.raises(ValueError, match=r"The 'arrays' keyword argument is not allowed; .*"):
+        XyData(arrays={...})
+
+    with pytest.raises(ValueError, match=r'at least one y_array must be provided.'):
+        XyData(numpy.array([1, 2]))
 
     node = XyData()
 

@@ -238,7 +238,7 @@ def import_ase(filename, label, group, dry_run):
 
     try:
         asecell = ase.io.read(filename)
-        new_structure = StructureData(ase=asecell)
+        new_structure = StructureData.from_ase(asecell)
     except ValueError as err:
         echo.echo_critical(str(err))
 

@@ -270,7 +270,8 @@ def prepare_localhost():
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir=tempfile.gettempdir(),
-        ).store()
+        )
+        computer.store()
         computer.configure(safe_interval=0.0)
         computer.set_minimum_job_poll_interval(0.0)
 

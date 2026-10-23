@@ -8,6 +8,8 @@ from uuid import uuid4
 
 import pytest
 
+from aiida.common.typing import FilePath
+
 if t.TYPE_CHECKING:
     from pgtest.pgtest import PGTest
 
@@ -108,7 +110,7 @@ def config_psql_dos(
 @pytest.fixture(scope='session')
 def config_sqlite_dos(
     tmp_path_factory: pytest.TempPathFactory,
-) -> t.Callable[[str | pathlib.Path | None], dict[str, t.Any]]:
+) -> t.Callable[[FilePath | None], dict[str, t.Any]]:
     """Return a profile configuration for the :class:`~aiida.storage.sqlite_dos.backend.SqliteDosStorage`.
 
     The factory has the following signature to allow further configuring the database that is created:
@@ -117,7 +119,7 @@ def config_sqlite_dos(
     :returns: The dictionary with the storage configuration for the ``core.sqlite_dos`` storage plugin.
     """
 
-    def factory(filepath: str | pathlib.Path | None = None) -> dict[str, t.Any]:
+    def factory(filepath: FilePath | None = None) -> dict[str, t.Any]:
         return {'filepath': str(filepath or tmp_path_factory.mktemp('test_sqlite_dos_storage'))}
 
     return factory

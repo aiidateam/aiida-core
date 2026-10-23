@@ -67,7 +67,7 @@ def validate_handler_overrides(
 
     for handler, overrides in handler_overrides.get_dict().items():
         if not isinstance(handler, str):
-            return f'The key `{handler}` is not a string.'
+            return f'The key `{handler}` is not a string.'  # type: ignore[unreachable]
 
         if not process_class.is_process_handler(handler):
             return f'The key `{handler}` is not a process handler of {process_class}'

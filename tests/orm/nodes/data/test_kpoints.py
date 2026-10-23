@@ -49,6 +49,7 @@ class TestKpoints:
         This is a regression test for #2749.
         """
         kpt = KpointsData()
+        kpt.set_kpoints_mesh([1, 1, 1])
         kpt.set_cell_from_structure(self.structure)
 
         assert np.abs(kpt.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.0

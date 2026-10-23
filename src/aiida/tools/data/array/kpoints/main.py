@@ -218,7 +218,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     kpoints = KpointsData()
     kpoints.set_cell(structure.cell)
     kpoints.set_kpoints(explicit_kpoints)
-    kpoints.labels = labels
+    kpoints.set_labels(labels)
 
     parameters = {
         'bravais_info': bravais_info,

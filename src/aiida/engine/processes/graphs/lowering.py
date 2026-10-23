@@ -111,9 +111,11 @@ class GraphHandle:
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
         """Validate graph arguments and prepare the declaration and provenance inputs."""
         # Launching binds by name, so positional-only parameters accept keywords at launch.
+        # Keyword-only parameters already bind by name and must keep their kind: converting
+        # them breaks signatures where a default precedes them.
         parameters = [
             parameter.replace(kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.KEYWORD_ONLY)
+            if parameter.kind is inspect.Parameter.POSITIONAL_ONLY
             else parameter
             for parameter in inspect.signature(self.function).parameters.values()
         ]

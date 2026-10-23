@@ -73,6 +73,15 @@ pytestmark = pytest.mark.presto
         pytest.param(parameters.default_parameter, {}, {'result': 3}, id='parameter-default-filled'),
         pytest.param(parameters.default_parameter, {'value': 5}, {'result': 6}, id='parameter-default-overridden'),
         pytest.param(parameters.keyword_only_parameter, {'value': 2}, {'result': 3}, id='keyword-only'),
+        pytest.param(
+            parameters.keyword_only_after_default, {'value': 2}, {'result': 3}, id='keyword-only-default-filled'
+        ),
+        pytest.param(
+            parameters.keyword_only_after_default,
+            {'count': 5, 'value': 2},
+            {'result': 7},
+            id='keyword-only-default-overridden',
+        ),
         pytest.param(parameters.positional_only_parameter, {'value': 2}, {'result': 3}, id='positional-only'),
         pytest.param(
             ports.summarize,

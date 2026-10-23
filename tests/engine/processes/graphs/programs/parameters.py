@@ -76,6 +76,12 @@ def keyword_only_parameter(*, value: int) -> int:
 
 
 @graph
+def keyword_only_after_default(count: int = 1, *, value: int) -> int:
+    """Declare a default before a keyword-only parameter; launching binds by name."""
+    return add(x=count, y=value)
+
+
+@graph
 def positional_only_parameter(value: int, /) -> int:
     """Declare a positional-only parameter, treated as ordinary."""
     return add(x=value, y=1)

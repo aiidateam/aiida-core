@@ -192,7 +192,7 @@ Its body consists of task assignments, rebinding existing loop state, and must u
 
 Loop iterations are child graph processes.
 A loop that is never entered returns its initial state, like the equivalent Python loop.
-The default limit is 1000 iterations; exceeding it with the condition still true fails the graph.
+The default limit is 1000 iterations; exceeding it with the condition still true raises an error, failing the graph process.
 
 Explicit ordering
 -----------------

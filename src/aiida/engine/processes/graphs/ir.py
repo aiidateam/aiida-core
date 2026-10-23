@@ -19,7 +19,7 @@ from functools import cached_property
 
 from aiida.common.exceptions import GraphTypeCheckError, GraphValidationError
 from aiida.common.loaders import get_object_loader
-from aiida.engine.processes.graphs.inputs import at, port_for_shape, prepare_inputs, shape_from_port
+from aiida.engine.processes.graphs.inputs import _at, port_for_shape, prepare_graph_inputs, shape_from_port
 from aiida.engine.processes.graphs.shapes import NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, infer_node_types
 from aiida.engine.processes.process import Process
@@ -452,12 +452,12 @@ class GraphIR:
 
     def prepare_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:
         """Fill graph defaults and aggregate missing inputs without storing provenance."""
-        return prepare_inputs(self.input_spec(), inputs, self.identifier)
+        return prepare_graph_inputs(self.input_spec(), inputs, self.identifier)
 
     def serialize_inputs(self, inputs: Mapping[str, t.Any]) -> dict[str, t.Any]:
         """Prepare the graph inputs and validate them against every consumer."""
         namespace = self.input_spec()
-        prepared = prepare_inputs(namespace, inputs, self.identifier)
+        prepared = prepare_graph_inputs(namespace, inputs, self.identifier)
         serialized = namespace.serialize(prepared)
         assert serialized is not None
         runtime = namespace.prepare(serialized).runtime
@@ -467,7 +467,7 @@ class GraphIR:
             raise GraphValidationError(error)
         for name, targets in self.inputs.items():
             try:
-                value = at(serialized, name)
+                value = _at(serialized, name)
             except KeyError:
                 continue
             for task, path in targets:

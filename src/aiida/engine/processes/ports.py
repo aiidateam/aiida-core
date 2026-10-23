@@ -21,7 +21,7 @@ from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.engine.processes.port_model import _namespace_value, is_a_plain_class, is_structured, without_marks
+from aiida.engine.processes.port_model import is_a_plain_class, is_structured, namespace_value, without_marks
 from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
@@ -308,7 +308,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
     def _as_mapping(self, value: t.Any) -> Mapping[str, t.Any]:
         """Return model instances as mappings, rejecting other non-mappings."""
-        value = _namespace_value(value)
+        value = namespace_value(value)
         if not isinstance(value, Mapping):
             msg = f'port namespace `{self.name}` received `{type(value)}` instead of a dictionary'
             raise TypeError(msg)
@@ -330,7 +330,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         mapping = self._as_mapping(mapping)
 
         def dynamic(value: t.Any) -> t.Any:
-            value = _namespace_value(value)
+            value = namespace_value(value)
             if isinstance(value, Mapping):
                 return {key: dynamic(item) for key, item in value.items()}
             return _runtime_value(self.valid_type, value)
@@ -362,14 +362,14 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             return None
 
         breadcrumbs = (*breadcrumbs, self.name)
-        mapping = _namespace_value(mapping)
+        mapping = namespace_value(mapping)
         if not isinstance(mapping, Mapping):
             port_name = breadcrumbs_to_port(breadcrumbs)
             msg = f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary'
             raise TypeError(msg)
 
         def dynamic(item: t.Any) -> t.Any:
-            item = _namespace_value(item)
+            item = namespace_value(item)
             if isinstance(item, Mapping):
                 return {key: dynamic(leaf) for key, leaf in item.items()}
             if self._passes_through(item):
@@ -514,7 +514,7 @@ def coerce_model_values(value: t.Any) -> t.Any:
     as the mapping of its fields. Centralizing the conversion here keeps every launch boundary
     consistent without duplicating model handling.
     """
-    coerced = _namespace_value(value)
+    coerced = namespace_value(value)
     if isinstance(coerced, Mapping):
         return {key: coerce_model_values(item) for key, item in coerced.items()}
     return coerced
@@ -528,7 +528,7 @@ def _source_tree(original: t.Any, runtime: t.Any) -> t.Any:
     """
     if isinstance(original, Node):
         return original
-    original = _namespace_value(original)
+    original = namespace_value(original)
     if isinstance(original, Mapping) and isinstance(runtime, Mapping):
         return {key: _source_tree(value, runtime[key]) for key, value in original.items() if key in runtime}
     return runtime

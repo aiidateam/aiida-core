@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from aiida.common.links import LinkType
-from aiida.engine.processes.graphs.inputs import at, place
+from aiida.engine.processes.graphs.inputs import _at, _place
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
     GraphIR,
@@ -32,12 +32,12 @@ __all__ = ('GraphRun',)
 STATE_VERSION = '0.1'
 
 
-def holds(condition: t.Any) -> bool:
+def _holds(condition: t.Any) -> bool:
     """Evaluate the value of a condition node rather than the node's identity."""
     return bool(condition.value if isinstance(condition, BaseType) else condition)
 
 
-def returned(node: Node) -> dict[str, t.Any]:
+def _returned(node: Node) -> dict[str, t.Any]:
     """Read the leaf outputs of one graph iteration."""
     return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
 
@@ -143,11 +143,11 @@ class GraphRun:
         produced = {}
         for output, source in self.graph.outputs.items():
             if source.task is None:
-                produced[output] = at(self.given, source.port)
+                produced[output] = _at(self.given, source.port)
             elif source.task in self.passed:
-                produced[output] = at(self.passed[source.task], source.port)
+                produced[output] = _at(self.passed[source.task], source.port)
             else:
-                produced[output] = at(self._produced_by(source.task).outputs, source.port)
+                produced[output] = _at(self._produced_by(source.task).outputs, source.port)
         return produced
 
     def to_dict(self) -> GraphRunState:
@@ -187,14 +187,14 @@ class GraphRun:
 
     def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Dispatch the taken side of a branch."""
-        taken = task.body if holds(inputs.pop(task.condition_port)) else task.otherwise
+        taken = task.body if _holds(inputs.pop(task.condition_port)) else task.otherwise
         self.instances[task.name] = [task.name]
         # Each side may consume a different subset of the enclosing inputs.
         step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
 
     def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
         """Start iterating a loop, or pass through never-entered initial state."""
-        if not holds(inputs[task.condition_port]):
+        if not _holds(inputs[task.condition_port]):
             self._pass_initial_state(task, inputs)
             return
         self.instances[task.name] = []
@@ -213,8 +213,8 @@ class GraphRun:
         last = load_node(self.done[runs[-1]])
         if not last.is_finished_ok:
             return
-        outputs = returned(last)
-        if not holds(outputs[task.condition_port]):
+        outputs = _returned(last)
+        if not _holds(outputs[task.condition_port]):
             return
         if len(runs) >= task.max_iterations:
             msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations; check that its condition terminates.'
@@ -239,16 +239,16 @@ class GraphRun:
         inputs = copy(task.inputs)
         for name, targets in self.graph.inputs.items():
             try:
-                value = at(self.given, name)
+                value = _at(self.given, name)
             except KeyError:
                 continue
             for target, port in targets:
                 if target == task.name:
-                    place(inputs, port, value)
+                    _place(inputs, port, value)
         for edge in self.graph.dependencies:
             if edge.target == task.name and edge.carried_between is not None:
                 source, target = edge.carried_between
-                place(inputs, target, at(self._produced_by(edge.source).outputs, source))
+                _place(inputs, target, _at(self._produced_by(edge.source).outputs, source))
         return inputs
 
     def _produced_by(self, name: str) -> Node:

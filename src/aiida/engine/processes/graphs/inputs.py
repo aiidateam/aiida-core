@@ -18,18 +18,18 @@ from functools import partial
 from aiida.common.exceptions import GraphValidationError, MissingGraphInput, MissingRequiredInputsError
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, json_default
-from aiida.engine.processes.port_model import _namespace_value
+from aiida.engine.processes.port_model import namespace_value
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace
 
 
-def at(container: t.Any, path: str) -> t.Any:
+def _at(container: t.Any, path: str) -> t.Any:
     """Read a value inside a namespace, or the whole namespace for an empty path."""
     for name in path.split('.') if path else ():
         container = container[name]
     return container
 
 
-def place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
+def _place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
     """Place a leaf or namespace reference without flattening dictionary-valued leaves."""
     *namespaces, name = path.split('.')
     target = inputs
@@ -126,7 +126,7 @@ class _InputResolver:
 
     def _checked_mapping(self, port: PortNamespace, value: t.Any, path: str) -> Mapping[str, t.Any]:
         """Return namespace values as a mapping, rejecting mistyped and unknown inputs."""
-        value = _namespace_value(value)
+        value = namespace_value(value)
         if not isinstance(value, Mapping):
             msg = f'graph input `{path}` must be a namespace mapping, not `{type(value).__name__}`.'
             raise GraphValidationError(msg)
@@ -137,6 +137,8 @@ class _InputResolver:
         return value
 
 
-def prepare_inputs(namespace: PortNamespace, given: Mapping[str, t.Any], identifier: str | None) -> dict[str, t.Any]:
+def prepare_graph_inputs(
+    namespace: PortNamespace, given: Mapping[str, t.Any], identifier: str | None
+) -> dict[str, t.Any]:
     """Fill graph inputs with defaults, aggregating missing fields without mutating callers."""
     return _InputResolver(identifier).fill(namespace, given)

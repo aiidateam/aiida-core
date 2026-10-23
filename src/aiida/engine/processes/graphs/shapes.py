@@ -18,8 +18,19 @@ from dataclasses import dataclass
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import _namespace_value, fields_of, port_help, without_marks
+from aiida.engine.processes.port_model import fields_of, namespace_value, port_help, without_marks
 from aiida.engine.processes.ports import infer_runtime_types
+
+__all__ = (
+    'LeafShape',
+    'NamespaceShape',
+    'ValueShape',
+    'dump_shape',
+    'json_default',
+    'load_shape',
+    'namespace_shape_for',
+    'shape_for_annotation',
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -64,42 +75,43 @@ def shape_for_annotation(
     resolved_help = help or port_help(annotation)
     annotation = without_marks(annotation)
     fields = fields_of(annotation)
-    if fields is not None:
-        return NamespaceShape(
-            fields=tuple(
-                (
-                    field.name,
-                    shape_for_annotation(
-                        field.annotation, required=field.required, default=field.default, help=field.help
-                    ),
-                )
-                for field in fields
-            ),
-            required=required,
-            default=default,
-            help=resolved_help,
+    if fields is None:
+        return LeafShape(
+            types=infer_runtime_types(annotation) or None, required=required, default=default, help=resolved_help
         )
-    return LeafShape(
-        types=infer_runtime_types(annotation) or None, required=required, default=default, help=resolved_help
+    return NamespaceShape(
+        fields=tuple(
+            (
+                field.name,
+                shape_for_annotation(field.annotation, required=field.required, default=field.default, help=field.help),
+            )
+            for field in fields
+        ),
+        required=required,
+        default=default,
+        help=resolved_help,
     )
 
 
-def shape_for_annotations(
+def namespace_shape_for(
     hints: Mapping[str, object], names: tuple[str, ...], defaults: Mapping[str, object] | None = None
 ) -> NamespaceShape:
     """Capture the named inputs of a source graph."""
     given = defaults or {}
-    return NamespaceShape(fields=tuple((name, _shaped(hints.get(name), name, given)) for name in names))
-
-
-def _shaped(hint: object, name: str, given: Mapping[str, object]) -> Shape:
-    """Capture one named input with its literal default, if any."""
-    return shape_for_annotation(hint, required=name not in given, default=given.get(name, UNSPECIFIED))
+    return NamespaceShape(
+        fields=tuple(
+            (
+                name,
+                shape_for_annotation(hints.get(name), required=name not in given, default=given.get(name, UNSPECIFIED)),
+            )
+            for name in names
+        )
+    )
 
 
 def json_default(value: object) -> object:
     """Copy finite JSON defaults, rejecting identities and executable values."""
-    value = _namespace_value(value)
+    value = namespace_value(value)
     if value is None or isinstance(value, (bool, int, str)):
         return value
     if isinstance(value, float) and math.isfinite(value):

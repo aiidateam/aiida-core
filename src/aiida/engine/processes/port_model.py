@@ -55,7 +55,7 @@ class PortModel:
 
     def as_dict(self) -> dict[str, t.Any]:
         """Return the declared fields as a namespace mapping."""
-        return {field.name: _namespace_value(getattr(self, field.name)) for field in fields_of(type(self)) or ()}
+        return {field.name: namespace_value(getattr(self, field.name)) for field in fields_of(type(self)) or ()}
 
     @classmethod
     def from_dict(cls, values: t.Mapping[str, t.Any]) -> Self:
@@ -142,7 +142,7 @@ def fields_of(annotation: t.Any) -> tuple[Field, ...] | None:
     return tuple(fields)
 
 
-def _namespace_value(value: t.Any) -> t.Any:
+def namespace_value(value: t.Any) -> t.Any:
     return value.as_dict() if isinstance(value, PortModel) else value
 
 

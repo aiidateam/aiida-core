@@ -25,7 +25,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError
-from aiida.engine.processes.graphs.inputs import place
+from aiida.engine.processes.graphs.inputs import _place
 from aiida.engine.processes.graphs.ir import (
     CONDITION_PORT,
     BranchControl,
@@ -42,8 +42,8 @@ from aiida.engine.processes.graphs.shapes import (
     NamespaceShape,
     Shape,
     json_default,
+    namespace_shape_for,
     shape_for_annotation,
-    shape_for_annotations,
 )
 from aiida.engine.processes.graphs.tasks import TaskHandle, build_task
 
@@ -346,7 +346,7 @@ def _declare_graph_inputs(state: _LoweringState, function: ast.FunctionDef) -> N
     """Route every graph parameter to its input shape."""
     parameters = [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
     defaults = _parameter_defaults(state, function=function)
-    boundary = shape_for_annotations(state.definition.hints, tuple(arg.arg for arg in parameters), defaults=defaults)
+    boundary = namespace_shape_for(state.definition.hints, tuple(arg.arg for arg in parameters), defaults=defaults)
     for arg in parameters:
         state.inputs[arg.arg] = []
         shape = boundary.select(arg.arg)
@@ -812,7 +812,7 @@ def _wire(
 ) -> None:
     """Route a literal, input, or task output into a placement."""
     if not isinstance(value, _Reference):
-        place(given, port, value)
+        _place(given, port, value)
     elif value.task is None:
         state.inputs.setdefault(value.port, []).append(Route(instance, port=port))
     else:
@@ -824,7 +824,7 @@ def _lower_input(
 ) -> None:
     """Expand dictionary syntax only for declared fixed input namespaces."""
     if isinstance(expression, ast.Dict) and isinstance(shape, NamespaceShape):
-        place(given, path, {})
+        _place(given, path, {})
         seen: set[str] = set()
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
@@ -848,7 +848,7 @@ def _lower_input(
         except (ValueError, TypeError) as exception:
             msg = 'Dictionary-valued ports require a literal value or a reference to the whole port.'
             raise GraphLanguageError(msg) from exception
-        place(given, path, value)
+        _place(given, path, value)
         return
     _wire(state, instance=instance, port=path, value=_lower_value(state, expression), given=given)
 

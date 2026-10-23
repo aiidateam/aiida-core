@@ -290,7 +290,7 @@ class GraphProcessSpec(ProcessSpec):
         if self.has_input(name):
             port = self.inputs[name]
             assert isinstance(port, InputPort)
-            port.default = field.default
+            port.default = _lazily(field.default) if field.default is not UNSPECIFIED else UNSPECIFIED
             return
 
         if field.default is None and type(None) not in valid_type:

@@ -91,6 +91,17 @@ def test_field_factory_is_evaluated_for_each_preprocess() -> None:
     assert first != second
 
 
+def test_input_from_field_override_keeps_lazy_default() -> None:
+    """Redeclaring an input keeps per-launch deepcopy semantics for mutable defaults."""
+    spec = GraphProcessSpec()
+    spec.input_from_field('values', field_from_annotation('values', list[int], [1]))
+    spec.input_from_field('values', field_from_annotation('values', list[int], [1]))
+    first = spec.inputs['values'].default()
+    second = spec.inputs['values'].default()
+    assert first == second == [1]
+    assert first is not second
+
+
 def test_unpersistable_field_types_fail_at_declaration() -> None:
     """Field types without a storage representation are rejected naming the field."""
 

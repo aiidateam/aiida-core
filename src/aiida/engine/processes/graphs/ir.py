@@ -42,7 +42,7 @@ CONDITION_PORT: t.Final = 'condition'
 TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop']
 
 
-def readable_version(version: object, supported: str, what: str) -> str:
+def require_version(version: object, supported: str, what: str) -> str:
     """Reject declarations whose format this implementation cannot read."""
     if version != supported:
         msg = f'cannot read a {what} declaration of version `{version}`; supported version is `{supported}`.'
@@ -166,7 +166,7 @@ class TaskIR:
         return cls(
             identifier=data['identifier'],
             executor=ExecutorReference.from_dict(data['executor']),
-            version=readable_version(data.get('version'), TASK_IR_VERSION, 'task'),
+            version=require_version(data.get('version'), TASK_IR_VERSION, 'task'),
         )
 
 
@@ -520,7 +520,7 @@ class GraphIR:
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphIR:
         """Rebuild a graph template from its serialized form."""
-        version = readable_version(data.get('version'), GRAPH_IR_VERSION, 'graph')
+        version = require_version(data.get('version'), GRAPH_IR_VERSION, 'graph')
         boundary = load_shape(data['input_namespace'])
         if not isinstance(boundary, NamespaceShape):
             msg = 'the graph boundary must be a namespace.'

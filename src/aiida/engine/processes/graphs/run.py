@@ -22,7 +22,7 @@ from aiida.engine.processes.graphs.ir import (
     GraphTask,
     LoopControl,
     SubgraphTask,
-    readable_version,
+    require_version,
 )
 from aiida.orm import Node, load_node
 from aiida.orm.nodes.data.base import BaseType
@@ -163,7 +163,7 @@ class GraphRun:
     @classmethod
     def from_dict(cls, graph: GraphIR, given: dict[str, t.Any], data: Mapping[str, t.Any]) -> GraphRun:
         """Rebuild the scheduling progress from a checkpoint."""
-        readable_version(data.get('version', STATE_VERSION), STATE_VERSION, 'graph run')
+        require_version(data.get('version', STATE_VERSION), STATE_VERSION, 'graph run')
         return cls(
             graph=graph,
             given=given,

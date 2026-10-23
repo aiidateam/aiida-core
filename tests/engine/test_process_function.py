@@ -19,12 +19,14 @@ complain as the dummy node class is not recognized as a valid process node.
 from __future__ import annotations
 
 import enum
+import inspect
 import re
 
 import pytest
 
 from aiida import orm
-from aiida.engine import ExitCode, calcfunction, run, run_get_node, submit, workfunction
+from aiida.engine import ExitCode, PortModel, ProcessSpec, calcfunction, run, run_get_node, submit, workfunction
+from aiida.engine.processes.functions import FunctionProcess
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 
@@ -55,6 +57,27 @@ def function_variadic_arguments_and_keywords(*args, str_a, str_b):
 @calcfunction
 def function_variadic_arguments_label_overlap(args_0, *args):
     return args_0 + orm.Int(sum(args))
+
+
+class TaskConfig(PortModel):
+    count: int = 2
+
+
+@calcfunction
+def function_model_namespace(config: TaskConfig) -> orm.Int:
+    assert isinstance(config['count'], orm.Int)
+    return orm.Int(config['count'].value + 1)
+
+
+@calcfunction
+def function_model_namespace_instance_default(config: TaskConfig = TaskConfig(count=9)) -> orm.Int:
+    return orm.Int(config['count'].value + 1)
+
+
+def test_structured_parameter_instance_default_reaches_leaf_ports() -> None:
+    """An instance default on a structured parameter supplies the leaf port defaults."""
+    spec = function_model_namespace_instance_default.spec()
+    assert spec.inputs.pre_process({})['config']['count'] == 9
 
 
 @calcfunction
@@ -794,3 +817,24 @@ def test_help_text_spec_inference_invalid_docstring(caplog, monkeypatch):
     # Now call the spec to have it parse the docstring.
     function.spec()
     assert 'function `function` has a docstring that could not be parsed' in caplog.records[0].message
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_function_model_namespace() -> None:
+    """Legacy functions declare model namespaces with node types and receive nodes."""
+    assert function_model_namespace(TaskConfig(count=3)) == 4
+    result, node = function_model_namespace.run_get_node({'count': orm.Int(5)})
+    assert result == 6
+    assert node.is_finished_ok
+
+
+def test_declare_input_override_wraps_default_lazily() -> None:
+    """Overriding a predeclared legacy input serializes the default lazily."""
+    spec = ProcessSpec()
+    spec.input('x', valid_type=(orm.Int,))
+    FunctionProcess._declare_input(
+        spec, inspect.Parameter('x', inspect.Parameter.POSITIONAL_OR_KEYWORD, default=5), {'x': int}, {}
+    )
+    default = spec.inputs['x'].default
+    assert callable(default)
+    assert default().value == 5

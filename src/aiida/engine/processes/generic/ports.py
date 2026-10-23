@@ -43,7 +43,32 @@ def is_mutable_property(cls: t.Any, attribute: str) -> bool:
 
 
 _LOGGER = logging.getLogger(__name__)
-UNSPECIFIED = ()
+
+
+class _Unspecified:
+    """Sentinel for absent port values, stable under copying.
+
+    Exposed ports are deep-copied, so a bare ``object()`` would lose
+    identity and leak into values as an unknown default. This singleton
+    survives copying, pickling, and reads in tracebacks.
+    """
+
+    __slots__ = ()
+
+    def __copy__(self) -> _Unspecified:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, t.Any]) -> _Unspecified:
+        return self
+
+    def __reduce__(self) -> str:
+        return 'UNSPECIFIED'
+
+    def __repr__(self) -> str:
+        return 'UNSPECIFIED'
+
+
+UNSPECIFIED = _Unspecified()
 
 VALIDATOR_SIGNATURE_DEPRECATION_WARNING = """the validator `{}` has a signature that only takes a single argument.
     This has been deprecated and the new signature is `validator(value, port)` where the `port` argument will be the
@@ -368,7 +393,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
             self.dynamic = dynamic
 
     def __str__(self) -> str:
-        return json.dumps(self.get_description(), sort_keys=True, indent=4)
+        return json.dumps(self.get_description(), sort_keys=True, indent=4, default=str)
 
     def __iter__(self) -> Iterator[str]:
         return self._ports.__iter__()
@@ -443,7 +468,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
 
         :returns: a dictionary of descriptions of the Ports contained within this PortNamespace
         """
-        description = {
+        description: dict[str, dict[str, t.Any]] = {
             '_attrs': {
                 'default': self.default,
                 'dynamic': self.dynamic,
@@ -642,7 +667,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         return result
 
     def validate(
-        self, port_values: Mapping[str, t.Any] | None = None, breadcrumbs: Sequence[str] = ()
+        self, port_values: Mapping[str, t.Any] | _Unspecified | None = None, breadcrumbs: Sequence[str] = ()
     ) -> PortValidationError | None:
         """
         Validate the namespace port itself and subsequently all the port_values it contains
@@ -655,12 +680,16 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         breadcrumbs_local = (*breadcrumbs, self.name)
         message: str | None
 
-        if not port_values:
+        if port_values is None or port_values is UNSPECIFIED:
+            port_values = {}
+
+        if isinstance(port_values, tuple) and not port_values:
+            # Historical shorthand for an empty namespace.
             port_values = {}
 
         if not isinstance(port_values, collections.abc.Mapping):
             # Defensive check: the port values originate from user input, so the annotation is not guaranteed
-            message = f'specified value is of type {type(port_values)} which is not sub class of `Mapping`'  # type: ignore[unreachable]
+            message = f'specified value is of type {type(port_values)} which is not sub class of `Mapping`'
             return PortValidationError(message, breadcrumbs_to_port(breadcrumbs_local))
 
         # Turn the port values into a normal dictionary and create a shallow copy. The `validate_ports` method to which

@@ -13,7 +13,8 @@ import threading
 import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.engine import Process, launch
+from aiida.common import exceptions
+from aiida.engine import Process, calcfunction, launch
 from aiida.engine.processes.generic.futures import Future
 from aiida.manage.caching import enable_caching
 from aiida.orm import Int, Str, WorkflowNode
@@ -43,6 +44,12 @@ class Proc(Process):
 
     async def run(self):
         pass
+
+
+@calcfunction
+def add_one(value: Int) -> Int:
+    """Add one to the input."""
+    return Int(value.value + 1)
 
 
 def the_hans_klok_comeback(loop):
@@ -85,6 +92,14 @@ def test_submit(runner):
 
     runner.submit(Proc, inputs)
     runner.submit(Proc, **inputs)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_broker_submit_of_process_function_raises(runner, monkeypatch):
+    """Daemon submit cannot persist a process function; run it instead."""
+    monkeypatch.setattr(runner, '_broker_submit', True)
+    with pytest.raises(exceptions.InvalidOperation, match='cannot submit a process function'):
+        runner.submit(add_one, {'value': Int(1)})
 
 
 def test_run_return_value_cached(aiida_code_installed):

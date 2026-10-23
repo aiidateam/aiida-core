@@ -6,12 +6,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for :class:`aiida.orm.nodes.data.base.BaseType` classes."""
+"""Tests for :class:`aiida.orm.nodes.data.base.BaseType` classes and ``from_aiida_type``."""
 
 import operator
+from enum import IntEnum
 
 import pytest
 
+from aiida import orm
+from aiida.common.links import LinkType
+from aiida.manage.configuration import Profile
 from aiida.orm import Bool, Float, Int, NumericType, Str, load_node
 
 
@@ -280,3 +284,103 @@ def test_unary_abs(numeric_type):
     abs_negative = abs(node_negative)
     assert abs_negative != node_negative
     assert abs_positive == abs_negative
+
+
+class Priority(IntEnum):
+    LOW = 1
+    HIGH = 2
+
+
+@pytest.mark.presto
+class TestFromAiidaType:
+    """Contracts for converting ORM data nodes to Python values."""
+
+    @pytest.mark.parametrize(
+        ('node_type', 'value'),
+        [
+            pytest.param(orm.Bool, True, id='bool'),
+            pytest.param(orm.Int, 3, id='int'),
+            pytest.param(orm.Float, 1.5, id='float'),
+            pytest.param(orm.Str, 'hello', id='str'),
+            pytest.param(orm.List, [1, {'name': 'entry'}], id='list'),
+            pytest.param(orm.Dict, {'values': [1, 2]}, id='dict'),
+            pytest.param(orm.EnumData, LinkType.CREATE, id='enum'),
+            pytest.param(orm.EnumData, Priority.HIGH, id='int-enum'),
+        ],
+    )
+    @pytest.mark.parametrize('stored', [pytest.param(False, id='unstored'), pytest.param(True, id='stored')])
+    def test_registered_data_returns_exact_python_type(
+        self, aiida_profile_clean: Profile, node_type: type[orm.Data], value: object, stored: bool
+    ) -> None:
+        """Registered nodes retain their exact Python value and type after conversion."""
+        node: orm.Data = node_type(value)
+        if stored:
+            node.store()
+        converted: object = orm.from_aiida_type(node)
+        assert type(converted) is type(value)
+        assert converted == value
+        if isinstance(value, IntEnum | LinkType):
+            assert converted is value
+
+    @pytest.mark.parametrize('stored', [pytest.param(False, id='unstored'), pytest.param(True, id='stored')])
+    def test_unregistered_data_preserves_node_identity(self, aiida_profile_clean: Profile, stored: bool) -> None:
+        """Unregistered data is returned as the original node."""
+        node: orm.Data = orm.Data()
+        if stored:
+            node.store()
+        assert orm.from_aiida_type(node) is node
+
+    @pytest.mark.parametrize(
+        ('node_type', 'value'),
+        [
+            pytest.param(orm.Dict, {'counts': [1, 2]}, id='dict'),
+            pytest.param(orm.List, [{'counts': [1, 2]}], id='list'),
+        ],
+    )
+    def test_mutating_stored_converted_container_preserves_stored_values(
+        self, aiida_profile_clean: Profile, node_type: type[orm.Data], value: object
+    ) -> None:
+        """Mutating the returned container leaves stored node attributes unchanged."""
+        node: orm.Data = node_type(value).store()
+        converted: object = orm.from_aiida_type(node)
+        if isinstance(converted, dict):
+            converted['counts'].append(3)
+        else:
+            assert isinstance(converted, list)
+            converted[0]['counts'].append(3)
+        assert orm.from_aiida_type(node) == value
+
+    def test_mutating_unstored_converted_list_preserves_node_values(self, aiida_profile_clean: Profile) -> None:
+        """Mutating the converted list of an unstored node leaves the node unchanged."""
+        node: orm.List = orm.List([{'counts': [1, 2]}])
+        converted = orm.from_aiida_type(node)
+        assert isinstance(converted, list)
+        converted[0]['counts'].append(3)
+        assert orm.from_aiida_type(node) == [{'counts': [1, 2]}]
+
+    def test_mutating_unstored_converted_dict_preserves_node_values(self, aiida_profile_clean: Profile) -> None:
+        """Mutating the converted dict of an unstored node leaves the node unchanged."""
+        node: orm.Dict = orm.Dict({'counts': [1, 2]})
+        converted = orm.from_aiida_type(node)
+        assert isinstance(converted, dict)
+        converted['counts'].append(3)
+        assert orm.from_aiida_type(node) == {'counts': [1, 2]}
+
+    def test_plugin_registration_overrides_unregistered_fallback(self, aiida_profile_clean: Profile) -> None:
+        """A plugin registration controls conversion of its own data subclass."""
+
+        class PluginData(orm.Data):
+            pass
+
+        node: PluginData = PluginData()
+        assert orm.from_aiida_type(node) is node
+
+        @orm.from_aiida_type.register(PluginData)
+        def convert(value: PluginData) -> str:
+            return f'plugin:{value.uuid}'
+
+        assert orm.from_aiida_type(node) == f'plugin:{node.uuid}'
+
+    def test_python_round_trip_preserves_registered_values(self, aiida_profile_clean: Profile) -> None:
+        """Forward and reverse conversion preserve the regular enum member."""
+        assert orm.from_aiida_type(orm.to_aiida_type(LinkType.RETURN)) is LinkType.RETURN

@@ -13,7 +13,7 @@ import typing as t
 from collections.abc import Mapping, MutableMapping
 from uuid import uuid4
 
-from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.engine.processes.utils import prune_mapping
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
@@ -113,11 +113,22 @@ class ProcessBuilderNamespace(MutableMapping):
                     raise AttributeError(msg) from exception
                 port = None
             else:
-                value = port.serialize(value)  # type: ignore[union-attr]
-                validation_error = port.validate(value)  # type: ignore[union-attr]
+                if not isinstance(port, (InputPort, PortNamespace)):
+                    msg = f'Unknown port type for builder parameter: {attr}'
+                    raise TypeError(msg)
+                resolved = port.prepare(value)
+                if isinstance(port, PortNamespace):
+                    runtime = resolved.runtime
+                    if not isinstance(runtime, Mapping):
+                        msg = f'Invalid runtime value for namespace `{attr}`.'
+                        raise TypeError(msg)
+                    validation_error = port.validate(runtime)
+                else:
+                    validation_error = port.validate(resolved.runtime)
                 if validation_error:
                     msg = f'invalid attribute value {validation_error.message}'
                     raise ValueError(msg)
+                value = resolved.sources
 
             # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
             # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become
@@ -237,6 +248,10 @@ class ProcessBuilder(ProcessBuilderNamespace):
     def process_class(self) -> type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
+        """Return inputs for launching this builder, with its values taking precedence."""
+        return {**inputs, **self._inputs(prune=True)}
 
     def __str__(self) -> str:
         """Return a readable string showing the process class and its current inputs."""

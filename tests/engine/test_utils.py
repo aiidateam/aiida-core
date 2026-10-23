@@ -347,3 +347,83 @@ def test_set_process_state_change_timestamp(manager, with_transaction, monkeypat
         assert get_process_state_change_timestamp() == current_timestamp
     else:
         assert get_process_state_change_timestamp() != current_timestamp
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_instantiate_process_from_class(manager) -> None:
+    """A process class instantiates with the given inputs."""
+    from aiida.engine import WorkChain
+
+    class AddWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec) -> None:
+            super().define(spec)
+            spec.input('count', valid_type=int)
+
+    process = instantiate_process(manager.get_runner(), AddWorkChain, count=2)
+    assert isinstance(process, AddWorkChain)
+    assert process.inputs['count'] == 2
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_instantiate_process_from_builder(manager) -> None:
+    """Builder values take precedence over caller inputs."""
+    from aiida.engine import WorkChain
+    from aiida.orm import Int
+
+    class AddWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec) -> None:
+            super().define(spec)
+            spec.input('count', valid_type=int)
+            spec.outline(cls.noop)
+
+        def noop(self) -> None:
+            pass
+
+    builder = AddWorkChain.get_builder()
+    builder.count = Int(2)
+    process = instantiate_process(manager.get_runner(), builder, count=5)
+    assert isinstance(process, AddWorkChain)
+    assert process.inputs['count'] == 2
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_instantiate_process_from_function(manager) -> None:
+    """A process function instantiates through its launch inputs."""
+    from aiida.engine import calcfunction
+
+    @calcfunction
+    def add(count: int) -> int:
+        return count + 1
+
+    process = instantiate_process(manager.get_runner(), add, count=2)
+    assert type(process) is add.process_class
+    assert process.inputs['count'] == 2
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_instantiate_process_rejects_invalid(manager) -> None:
+    """Anything that is not a process, builder, or function is rejected."""
+    with pytest.raises(ValueError, match='invalid process'):
+        instantiate_process(manager.get_runner(), object())
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_launchable_protocol(manager) -> None:
+    """Builders and process functions satisfy the launch contract."""
+    from aiida.engine import WorkChain, calcfunction
+    from aiida.engine.utils import Launchable
+
+    class AddWorkChain(WorkChain):
+        @classmethod
+        def define(cls, spec) -> None:
+            super().define(spec)
+            spec.input('count', valid_type=int)
+
+    @calcfunction
+    def add(count: int) -> int:
+        return count
+
+    assert isinstance(AddWorkChain.get_builder(), Launchable)
+    assert isinstance(add, Launchable)

@@ -434,3 +434,48 @@ def test_pretty_repr(example_inputs):
     name_spaced: underscored
     """
     assert pretty(builder) == textwrap.dedent(pretty_repr.lstrip('\n'))
+
+
+class NodeWorkChain(WorkChain):
+    """Work chain with a plain runtime input for builder node preservation."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('count', valid_type=int)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_builder_preserves_original_nodes() -> None:
+    """Builder assignment keeps supplied nodes instead of converting them."""
+    original: orm.Int = orm.Int(2)
+    builder = NodeWorkChain.get_builder()
+    builder.count = original
+    assert builder._inputs()['count'] is original
+
+
+def test_get_launch_inputs_prefers_builder_values() -> None:
+    """Builder inputs take precedence over caller inputs at launch."""
+    builder = NodeWorkChain.get_builder()
+    builder.count = 2
+    assert builder.get_launch_inputs() == {'count': 2}
+    assert builder.get_launch_inputs(count=5) == {'count': 2}
+
+
+def test_builder_accepts_model_namespace() -> None:
+    """Builder namespaces accept model instances like namespace mappings."""
+    from dataclasses import field
+
+    from aiida.engine import PortModel
+    from aiida.engine.processes.builder import ProcessBuilderNamespace
+    from aiida.engine.processes.process_spec import ProcessSpec
+
+    class Settings(PortModel):
+        count: int = 2
+        tags: list[str] = field(default_factory=list)
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', Settings)
+    builder = ProcessBuilderNamespace(spec.inputs)
+    builder.config = Settings(count=9)
+    assert dict(builder.config) == {'count': 9, 'tags': []}

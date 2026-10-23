@@ -216,7 +216,7 @@ def test_rejection_carries_source_location() -> None:
     with pytest.raises(GraphLanguageError) as caught:
         assignments.unbound.build()
     assert 'programs/assignments.py' in str(caught.value)
-    assert 'unbound name' in str(caught.value)
+    assert 'is not known here' in str(caught.value)
     assert '^' in str(caught.value)
 
 

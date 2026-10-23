@@ -393,7 +393,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
             self.dynamic = dynamic
 
     def __str__(self) -> str:
-        return json.dumps(self.get_description(), sort_keys=True, indent=4)
+        return json.dumps(self.get_description(), sort_keys=True, indent=4, default=str)
 
     def __iter__(self) -> Iterator[str]:
         return self._ports.__iter__()
@@ -470,7 +470,7 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         """
         description: dict[str, dict[str, t.Any]] = {
             '_attrs': {
-                'default': f'{self.default}',
+                'default': self.default,
                 'dynamic': self.dynamic,
                 'valid_type': str(self.valid_type),
                 'required': str(self.required),

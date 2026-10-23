@@ -168,6 +168,7 @@ class CalculationQueryBuilder:
             filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
         builder = orm.QueryBuilder()
+        builder.distinct()
         builder.append(cls=orm.ProcessNode, filters=filters, project=unique_projections, tag='process')
 
         if relationships is not None:

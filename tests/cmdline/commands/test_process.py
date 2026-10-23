@@ -452,7 +452,9 @@ class TestVerdiProcess:
             assert len(result.output_lines) == 1
             assert result.output_lines[0] == str(calcs[0].pk)
 
-        # Filtering by multiple groups should return nodes across all specified groups
+        # Filtering by multiple groups should return nodes across all specified groups without duplicates
+        # even if a process belongs to more than one of the specified groups
+        group_second.add_nodes(calcs[0])
         result = run_cli_command(
             cmd_process.process_list, ['-r', '-a', '-P', 'pk', '-G', str(group.pk), str(group_second.pk)]
         )

@@ -76,6 +76,9 @@ class TaskProcess(FunctionProcessBase):  # NOTE: converge with FunctionProcess, 
     def _out_result(self, result: t.Any) -> None:
         outputs = self.spec().outputs
         names = list(outputs)
+        if self._named_outputs and not isinstance(result, Mapping):
+            msg = f'task declares named outputs {names} but returned a single value; return a mapping instead.'
+            raise GraphValidationError(msg)
         if isinstance(result, Mapping) and self._named_outputs:
             missing = [name for name in names if name not in result]
             if missing:

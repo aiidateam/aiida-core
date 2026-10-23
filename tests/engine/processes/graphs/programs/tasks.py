@@ -135,6 +135,12 @@ def mismatched_alpha(value: int) -> Alpha:
 
 
 @task
+def scalar_for_named() -> Alpha:
+    """Return a scalar where a named mapping was declared."""
+    return 2
+
+
+@task
 def mismatched_beta(value: int) -> Beta:
     """Return its input under the `beta` output."""
     return {'beta': value}

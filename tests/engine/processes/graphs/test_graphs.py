@@ -13,7 +13,7 @@ import typing as t
 
 import pytest
 
-from aiida.common.exceptions import GraphError, GraphTypeCheckError, MissingRequiredInputsError
+from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError, MissingRequiredInputsError
 from aiida.common.links import LinkType
 from aiida.engine import task
 from aiida.engine.launch import run_get_node
@@ -131,6 +131,13 @@ def test_single_key_typeddict_task_unpacks_output() -> None:
     assert node.is_finished_ok
     assert isinstance(outputs['alpha'], Int)
     assert outputs['alpha'].value == 2
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_named_task_rejects_scalar_return() -> None:
+    """A task declaring named outputs must return a mapping, not a scalar."""
+    with pytest.raises(GraphValidationError, match='single value'):
+        tasks.scalar_for_named.run_get_node()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

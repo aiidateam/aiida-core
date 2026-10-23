@@ -12,12 +12,21 @@ Contains general Orbital class.
 For subclasses of Orbital, see the ``RealhydrogenOrbital`` class.
 """
 
+from __future__ import annotations
+
+import typing as t
+from collections.abc import Callable
+
 from aiida.common.exceptions import ValidationError
 
 __all__ = ('Orbital', 'RealhydrogenOrbital')
 
+ValidatorType = Callable[[t.Any], t.Any]
+RequiredFieldSpec = tuple[str, ValidatorType]
+OptionalFieldSpec = tuple[str, ValidatorType, t.Any]
 
-def validate_int(value):
+
+def validate_int(value: t.Any) -> int:
     """Validate that the value is an int"""
     try:
         conv_value = int(value)
@@ -26,14 +35,14 @@ def validate_int(value):
     return conv_value
 
 
-def validate_int_or_none(value):
+def validate_int_or_none(value: t.Any) -> int | None:
     """Validate that the value is a int or is None"""
     if value is None:
         return None
     return validate_int(value)
 
 
-def validate_float(value):
+def validate_float(value: t.Any) -> float:
     """Validate that the value is a float"""
     try:
         conv_value = float(value)
@@ -42,14 +51,14 @@ def validate_float(value):
     return conv_value
 
 
-def validate_float_or_none(value):
+def validate_float_or_none(value: t.Any) -> float | None:
     """Validate that the value is a float or is None"""
     if value is None:
         return None
     return validate_float(value)
 
 
-def validate_len3_list(value):
+def validate_len3_list(value: t.Any) -> list[float]:
     """Validate that the value is a list of three floats"""
     try:
         conv_value = [float(i) for i in value]
@@ -60,7 +69,7 @@ def validate_len3_list(value):
     return conv_value
 
 
-def validate_len3_list_or_none(value):
+def validate_len3_list_or_none(value: t.Any) -> list[float] | None:
     """Validate that the value is a list of three floats or is None"""
     if value is None:
         return None
@@ -84,20 +93,21 @@ class Orbital:
     """
 
     # len-2 tuples, with name and validator function
-    _base_fields_required = (
+    _base_fields_required: tuple[RequiredFieldSpec, ...] = (
         ('position', validate_len3_list),
         # NOTE: _orbital_type is internally used to manage the orbital type
     )
 
     # len-3 tuples, with (name, validator, default_value)
     # See how it is defined in the RealhydrogenOrbital class
-    _base_fields_optional = ()
+    _base_fields_optional: tuple[OptionalFieldSpec, ...] = ()
+    _orbital_dict: dict[str, t.Any]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: t.Any) -> None:
         # This runs the validator as well
         self.set_orbital_dict(kwargs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
 
     def __str__(self) -> str:
@@ -106,7 +116,7 @@ class Orbital:
         position_string = f'{orb_dict["position"][0]:.4f},{orb_dict["position"][1]:.4f},{orb_dict["position"][2]:.4f}'
         return f'Orbital @ {position_string}'
 
-    def _validate_keys(self, input_dict):
+    def _validate_keys(self, input_dict: dict[str, t.Any]) -> dict[str, t.Any]:
         """Checks all the input_dict and tries to validate them, to ensure
         that they have been properly set raises Exceptions indicating any
         problems that should arise during the validation
@@ -117,7 +127,7 @@ class Orbital:
         :return: validated_dict: a dictionary containing all the input keys
                  which have now been validated.
         """
-        validated_dict = {}
+        validated_dict: dict[str, t.Any] = {}
         if '_orbital_type' in input_dict:
             raise ValidationError('You cannot manually set the _orbital_type')
 
@@ -166,7 +176,7 @@ class Orbital:
             raise ValidationError(msg)
         return validated_dict
 
-    def set_orbital_dict(self, init_dict):
+    def set_orbital_dict(self, init_dict: dict[str, t.Any]) -> None:
         """Sets the orbital_dict, which can vary depending on the particular
         implementation of this base class.
 
@@ -174,12 +184,12 @@ class Orbital:
         """
         self._orbital_dict = self._validate_keys(init_dict)
 
-    def get_orbital_dict(self):
+    def get_orbital_dict(self) -> dict[str, t.Any]:
         """Returns the internal keys as a dictionary"""
         return self._orbital_dict
 
 
-def validate_l(value):
+def validate_l(value: t.Any) -> int:
     """Validate the value of the angular momentum"""
     if not isinstance(value, int):
         raise ValidationError('angular momentum (l) must be integer')
@@ -190,7 +200,7 @@ def validate_l(value):
     return value
 
 
-def validate_m(value):
+def validate_m(value: t.Any) -> int:
     """Validate the value of the magnetic number"""
     if not isinstance(value, int):
         raise ValidationError('magnetic number (m) must be integer')
@@ -201,7 +211,7 @@ def validate_m(value):
     return value
 
 
-def validate_kind_name(value):
+def validate_kind_name(value: t.Any) -> str | None:
     """Validate the value of the kind_name"""
     if value is not None and not isinstance(value, str):
         raise ValidationError('kind_name must be a string')
@@ -209,7 +219,7 @@ def validate_kind_name(value):
     return value
 
 
-def validate_n(value):
+def validate_n(value: t.Any) -> int:
     """Validate the value of the number of radial nodes"""
     if not isinstance(value, int):
         raise ValidationError('number of radial nodes (n) must be integer')
@@ -220,7 +230,7 @@ def validate_n(value):
     return value
 
 
-def validate_spin(value):
+def validate_spin(value: t.Any) -> int:
     """Validate the value of the spin"""
     if not isinstance(value, int):
         raise ValidationError('spin must be integer')
@@ -231,7 +241,7 @@ def validate_spin(value):
     return value
 
 
-CONVERSION_DICT = {
+CONVERSION_DICT: dict[str, dict[str, dict[str, int]]] = {
     'S': {'S': {'angular_momentum': 0, 'magnetic_number': 0}},
     'P': {
         'PZ': {'angular_momentum': 1, 'magnetic_number': 0},
@@ -316,12 +326,12 @@ class RealhydrogenOrbital(Orbital):
     L > 0 and from 0 to (-L) for L < 0.
     """
 
-    _base_fields_required = tuple(
+    _base_fields_required: tuple[RequiredFieldSpec, ...] = tuple(
         list(Orbital._base_fields_required)
         + [('angular_momentum', validate_l), ('magnetic_number', validate_m), ('radial_nodes', validate_n)]
     )
 
-    _base_fields_optional = tuple(
+    _base_fields_optional: tuple[OptionalFieldSpec, ...] = tuple(
         list(Orbital._base_fields_optional)
         + [
             ('kind_name', validate_kind_name, None),
@@ -333,7 +343,7 @@ class RealhydrogenOrbital(Orbital):
         ]
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         orb_dict = self.get_orbital_dict()
         try:
             orb_name = self.get_name_from_quantum_numbers(
@@ -342,18 +352,14 @@ class RealhydrogenOrbital(Orbital):
             position_string = '{:.4f},{:.4f},{:.4f}'.format(
                 orb_dict['position'][0], orb_dict['position'][1], orb_dict['position'][2]
             )
-            out_string = 'r{} {} orbital {} @ {}'.format(
-                orb_dict['radial_nodes'],
-                orb_name,
-                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else '',
-                position_string,
-            )
+            kind_str = f" for kind '{orb_dict['kind_name']}'" if orb_dict.get('kind_name') else ''
+            out_string = f'r{orb_dict["radial_nodes"]} {orb_name} orbital{kind_str} @ {position_string}'
         except KeyError:
             # Should not happen, but we want it not to crash in __str__
             out_string = '(not all parameters properly set)'
         return out_string
 
-    def _validate_keys(self, input_dict):
+    def _validate_keys(self, input_dict: dict[str, t.Any]) -> dict[str, t.Any]:
         """Validates the keys otherwise raise ValidationError. Does basic
         validation from the parent followed by validations for the
         quantum numbers. Raises exceptions should the input_dict fail the
@@ -365,8 +371,8 @@ class RealhydrogenOrbital(Orbital):
         validated_dict = super()._validate_keys(input_dict)
 
         # Validate m knowing the value of l
-        angular_momentum = validated_dict['angular_momentum']  # l quantum number, must be there
-        magnetic_number = validated_dict['magnetic_number']  # m quantum number, must be there
+        angular_momentum: int = validated_dict['angular_momentum']  # l quantum number, must be there
+        magnetic_number: int = validated_dict['magnetic_number']  # m quantum number, must be there
         if angular_momentum >= 0:
             accepted_range = [0, 2 * angular_momentum]
         else:
@@ -386,46 +392,47 @@ class RealhydrogenOrbital(Orbital):
         return validated_dict
 
     @classmethod
-    def get_name_from_quantum_numbers(cls, angular_momentum, magnetic_number=None):
+    def get_name_from_quantum_numbers(cls, angular_momentum: int, magnetic_number: int | None = None) -> str:
         """Returns the orbital_name correponding to the angular_momentum alone,
         or to both angular_number with magnetic_number. For example using
         angular_momentum=1 and magnetic_number=1 will return "Px"
         """
-        orbital_name = [
+        matching_orbitals = [
             orbital
             for orbital, data in CONVERSION_DICT.items()
             if any(values['angular_momentum'] == angular_momentum for values in data.values())
         ]
-        if not orbital_name:
+        if not matching_orbitals:
             msg = f'No orbital name corresponding to the angular_momentum {angular_momentum} could be found'
             raise ValueError(msg)
         if magnetic_number is not None:
             # finds angular momentum
-            orbital_name = orbital_name[0]
-            orbital_name = [
+            family_name: str = matching_orbitals[0]
+            sub_orbitals = [
                 x
-                for x in CONVERSION_DICT[orbital_name]
-                if CONVERSION_DICT[orbital_name][x]['magnetic_number'] == magnetic_number
+                for x in CONVERSION_DICT[family_name]
+                if CONVERSION_DICT[family_name][x]['magnetic_number'] == magnetic_number
             ]
 
-            if not orbital_name:
+            if not sub_orbitals:
                 msg = f'No orbital name corresponding to the magnetic_number {magnetic_number} could be found'
                 raise ValueError(msg)
-        return orbital_name[0]
+            return sub_orbitals[0]
+        return matching_orbitals[0]
 
     @classmethod
-    def get_quantum_numbers_from_name(cls, name):
+    def get_quantum_numbers_from_name(cls, name: str) -> list[dict[str, int]]:
         """Returns all the angular and magnetic numbers corresponding to name.
         For example, using "P" as name will return all quantum numbers
         associated with a "P" orbital, while "Px" will return only one set
         of quantum numbers, the ones associated with "Px"
         """
-        name = name.upper()
+        name_upper = name.upper()
         list_of_dicts = [
             subdata
             for orbital, data in CONVERSION_DICT.items()
             for suborbital, subdata in data.items()
-            if name in (suborbital, orbital)
+            if name_upper in (suborbital, orbital)
         ]
         if not list_of_dicts:
             raise ValueError('Invalid choice of projection name')

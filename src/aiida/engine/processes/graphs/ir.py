@@ -36,9 +36,9 @@ __all__ = (
     'TaskIR',
 )
 
-GRAPH_IR_VERSION = '0.2'  # TODO: 0.1 until release
+GRAPH_IR_VERSION = '0.1'
 TASK_IR_VERSION = '0.1'
-CONDITION_PORT = 'condition'  # NOTE: use of this? no other mechanism?
+CONDITION_PORT = 'condition'
 TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
 
 
@@ -139,8 +139,7 @@ class TaskIR:
         return ports
 
     @property
-    def result_port(self) -> str:
-        """Return the single output port, or an empty string for multiple outputs."""
+    def result_port(self) -> str:  # NOTE: '' marks multiple outputs; sum-type variants would subsume this.
         return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
 
     @property
@@ -179,7 +178,7 @@ class Route(t.NamedTuple):
 
 
 @dataclass(frozen=True)
-class Endpoint:
+class Endpoint:  # NOTE: sum-type variants would split passthrough and task endpoints.
     """A task output, or a graph input passed through unchanged."""
 
     port: str
@@ -196,7 +195,7 @@ class Endpoint:
 
 
 @dataclass(frozen=True)
-class Dependency:
+class Dependency:  # NOTE: sum-type variants would split valued and ordering edges.
     """A value dependency, or an ordering dependency with neither port named."""
 
     source: str
@@ -349,7 +348,7 @@ class LoopControl(BodyTask):
 
     KIND: t.ClassVar[TaskKind] = 'loop'
     condition_port: str = CONDITION_PORT
-    max_iterations: int = 1000
+    max_iterations: int = 1000  # NOTE: make settable per loop at runtime.
 
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'condition_port': self.condition_port, 'max_iterations': self.max_iterations}
@@ -414,8 +413,7 @@ class GraphIR:
         return namespace
 
     @property
-    def result_port(self) -> str:
-        """Return the single output, or an empty string for named outputs."""
+    def result_port(self) -> str:  # NOTE: '' marks named outputs; sum-type variants would subsume this.
         return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
 
     @property

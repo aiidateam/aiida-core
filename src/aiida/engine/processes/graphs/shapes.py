@@ -33,14 +33,14 @@ class ValueShape:
 
 @dataclass(frozen=True, kw_only=True)
 class LeafShape(ValueShape):
-    """One value, rather than a collection of individually linked fields."""
+    """One value with optional valid types."""
 
     types: tuple[type, ...] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class NamespaceShape(ValueShape):
-    """Fixed fields declared by a PortModel or named output ports."""
+    """Fixed fields declared by a PortModel or a flat set of named output ports."""
 
     fields: tuple[tuple[str, Shape], ...] = ()
 

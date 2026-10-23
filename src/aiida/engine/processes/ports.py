@@ -61,33 +61,6 @@ class PreparedInputs:
     sources: ValueTree
 
 
-def coerce_model_values(value: t.Any) -> t.Any:
-    """Recursively convert ``PortModel`` instances to namespace mappings.
-
-    Declared namespaces hold one port per model field, so a model instance passed as a value reads
-    as the mapping of its fields. Centralizing the conversion here keeps every launch boundary
-    consistent without duplicating model handling.
-    """
-    coerced = _namespace_value(value)
-    if isinstance(coerced, Mapping):
-        return {key: coerce_model_values(item) for key, item in coerced.items()}
-    return coerced
-
-
-def _source_tree(original: t.Any, runtime: t.Any) -> t.Any:
-    """Return the nodes converted values were sourced from, else the converted values.
-
-    A supplied node always survives conversion identically, so the supplied
-    side alone decides: a supplied node is its own source.
-    """
-    if isinstance(original, Node):
-        return original
-    original = _namespace_value(original)
-    if isinstance(original, Mapping) and isinstance(runtime, Mapping):
-        return {key: _source_tree(value, runtime[key]) for key, value in original.items() if key in runtime}
-    return runtime
-
-
 class WithNonDb:
     """A mixin that adds support to a port to flag it should not be stored in the database using the ``non_db`` flag."""
 
@@ -532,3 +505,30 @@ def _runtime_type(annotation: t.Any) -> t.Any | None:
     if is_a_plain_class(annotation):
         return annotation
     return None
+
+
+def coerce_model_values(value: t.Any) -> t.Any:
+    """Recursively convert ``PortModel`` instances to namespace mappings.
+
+    Declared namespaces hold one port per model field, so a model instance passed as a value reads
+    as the mapping of its fields. Centralizing the conversion here keeps every launch boundary
+    consistent without duplicating model handling.
+    """
+    coerced = _namespace_value(value)
+    if isinstance(coerced, Mapping):
+        return {key: coerce_model_values(item) for key, item in coerced.items()}
+    return coerced
+
+
+def _source_tree(original: t.Any, runtime: t.Any) -> t.Any:
+    """Return the nodes converted values were sourced from, else the converted values.
+
+    A supplied node always survives conversion identically, so the supplied
+    side alone decides: a supplied node is its own source.
+    """
+    if isinstance(original, Node):
+        return original
+    original = _namespace_value(original)
+    if isinstance(original, Mapping) and isinstance(runtime, Mapping):
+        return {key: _source_tree(value, runtime[key]) for key, value in original.items() if key in runtime}
+    return runtime

@@ -38,7 +38,7 @@ __all__ = ('TaskHandle', 'TaskProcess')
 R = t.TypeVar('R')
 
 
-class TaskProcess(FunctionProcessBase):
+class TaskProcess(FunctionProcessBase):  # NOTE: converge with FunctionProcess, or keep both leaves (to be decided).
     """Task process with plain Python inputs and static leaf outputs."""
 
     _spec_class = GraphProcessSpec
@@ -155,7 +155,7 @@ class TaskHandle(t.Generic[P, R]):
         return self._function.recreate_from(*args, **kwargs)
 
 
-def _check_task_contract(function: Callable[..., t.Any]) -> None:
+def _check_task_contract(function: Callable[..., t.Any]) -> None:  # NOTE: strict annotation resolution for tasks?
     """Reject task declarations the graph runtime cannot represent."""
     signature = inspect.signature(function)
     if 'after' in signature.parameters:

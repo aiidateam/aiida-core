@@ -298,7 +298,7 @@ def _signature_names(
     return args, var_positional, var_keyword
 
 
-def declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
+def declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:  # NOTE: PortModel returns as follow-up.
     """Declare static leaf output ports from the return annotation.
 
     A scalar annotation declares one ``result`` port; a total ``TypedDict`` declares one

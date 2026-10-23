@@ -157,7 +157,7 @@ class _SourceDefinition:
 
 
 @dataclass(frozen=True)
-class _Reference:
+class _Reference:  # NOTE: None task is a graph input and '' port a whole namespace; separate types would be clearer.
     """A parsed reference to a leaf or fixed input namespace."""
 
     task: str | None  # None denotes a graph input.
@@ -372,7 +372,7 @@ def _lower_function(state: _LoweringState) -> GraphIR:
             _lower_branch(state, statement=statement)
         elif isinstance(statement, ast.While):
             _lower_loop(state, statement=statement)
-        elif isinstance(statement, (ast.For, ast.AsyncFor)):
+        elif isinstance(statement, (ast.For, ast.AsyncFor)):  # NOTE: lower static for-loops via the loop machinery.
             _reject(
                 state,
                 node=statement,

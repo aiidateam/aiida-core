@@ -121,7 +121,6 @@ def test_checkpoint_preserves_runtime_values_and_original_nodes(through_builder:
         process.close()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class Settings(PortModel):
     count: t.Annotated[int, PortField(help='Iteration count.')] = 2
     tags: list[str] = field(default_factory=list)

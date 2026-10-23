@@ -328,6 +328,7 @@ class GraphTypeCheckError(GraphError):
     """A graph template violates the type checking stage: contracts, wiring, shapes, or structure."""
 
 
+# Shares `ValidationError` so launch handlers catch contract violations; program errors stay outside.
 class GraphValidationError(GraphError, ValidationError):
     """Launch inputs or execution results violate the graph contract: the input checking stage."""
 

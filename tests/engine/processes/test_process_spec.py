@@ -14,7 +14,8 @@ from itertools import count
 
 import pytest
 
-from aiida.engine import PortField, PortModel, ProcessSpec
+from aiida.engine import GraphProcessSpec, PortField, PortModel, ProcessSpec
+from aiida.engine.processes.port_model import field_from_annotation
 from aiida.orm import Int, Str
 from tests.engine.processes.graphs.programs.port_models import UnsupportedPortModel
 
@@ -53,6 +54,19 @@ def test_nested_model_default_is_preserved() -> None:
     spec = ProcessSpec()
     spec.input_namespace_from('config', Config)
     assert spec.inputs.pre_process({'config': {}})['config']['settings']['count'] == 9
+
+
+def test_enclosing_instance_default_reaches_leaf_ports() -> None:
+    """An instance default on a structured field supplies the leaf port defaults."""
+
+    class ConfigWithInstance(PortModel):
+        settings: Settings = Settings(count=9)
+
+    spec = GraphProcessSpec()
+    spec.input_from_field(
+        'config', field_from_annotation('config', ConfigWithInstance, ConfigWithInstance(settings=Settings(count=5)))
+    )
+    assert spec.inputs.pre_process({'config': {}})['config']['settings']['count'] == 5
 
 
 def test_nonnullable_field_rejects_explicit_none() -> None:

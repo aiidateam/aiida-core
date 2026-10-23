@@ -36,7 +36,7 @@ def _require_storable(field: Field) -> None:
     if is_storable(field.annotation):
         return
     name = getattr(field.annotation, '__name__', field.annotation)
-    msg = f'model field `{field.name}` with type `{name}` cannot be stored in provenance.'
+    msg = f'model field `{field.name}` with type `{name}` cannot be stored in provenance; use a storable type instead.'
     raise TypeError(msg)
 
 
@@ -297,9 +297,12 @@ class GraphProcessSpec(ProcessSpec):
             valid_type += (type(None),)
 
         if fields_of(field.annotation) is not None:
+            default = field.default
+            defaults = default.as_dict() if isinstance(default, field.annotation) else default
             self.input_namespace_from(
                 name,
                 field.annotation,
+                defaults=defaults if isinstance(defaults, t.Mapping) else None,
                 required=field.required,
                 help=field.help,
             )

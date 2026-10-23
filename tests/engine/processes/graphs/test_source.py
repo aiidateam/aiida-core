@@ -232,6 +232,12 @@ def test_nonfinite_dict_value_rejected() -> None:
         ports.nonfinite_dict_value.build()
 
 
+def test_malformed_forward_ref_rejected() -> None:
+    """Unresolvable hints raise a diagnostic instead of escaping as `SyntaxError`."""
+    with pytest.raises(GraphLanguageError, match='Cannot resolve type hints'):
+        GraphHandle(tasks.unhinted)
+
+
 def test_spec_version_and_unknown_task_kind_rejection() -> None:
     data = calls.chain.build().to_dict()
     data['version'] = '99'

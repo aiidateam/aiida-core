@@ -140,6 +140,14 @@ def scalar_for_named() -> Alpha:
     return 2
 
 
+def unhinted(value: t.Any) -> t.Any:
+    """Carry initially valid hints, replaced below with a malformed forward reference."""
+    return value
+
+
+unhinted.__annotations__ = {'value': 'int[', 'return': 'int'}
+
+
 @task
 def mismatched_beta(value: int) -> Beta:
     """Return its input under the `beta` output."""

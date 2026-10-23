@@ -423,9 +423,7 @@ def _has_conversion(annotation: type) -> bool:
 
 def _origin_storable(origin: t.Any, annotation: t.Any) -> bool:
     """Return whether a generic alias stores through its origin or its members."""
-    if origin in (list, dict):
-        return True
-    if origin is t.Union or origin is UnionType:
+    if origin in (list, dict, t.Union, UnionType):
         return all(is_storable(argument) for argument in t.get_args(annotation))
     return False
 

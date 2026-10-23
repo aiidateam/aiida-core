@@ -358,6 +358,14 @@ class TestFromAiidaType:
         converted[0]['counts'].append(3)
         assert orm.from_aiida_type(node) == [{'counts': [1, 2]}]
 
+    def test_mutating_unstored_converted_dict_preserves_node_values(self, aiida_profile_clean: Profile) -> None:
+        """Mutating the converted dict of an unstored node leaves the node unchanged."""
+        node: orm.Dict = orm.Dict({'counts': [1, 2]})
+        converted = orm.from_aiida_type(node)
+        assert isinstance(converted, dict)
+        converted['counts'].append(3)
+        assert orm.from_aiida_type(node) == {'counts': [1, 2]}
+
     def test_plugin_registration_overrides_unregistered_fallback(self, aiida_profile_clean: Profile) -> None:
         """A plugin registration controls conversion of its own data subclass."""
 

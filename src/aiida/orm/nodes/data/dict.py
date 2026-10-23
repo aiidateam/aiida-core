@@ -196,4 +196,4 @@ def _(value):
 
 @from_aiida_type.register(Dict)
 def _dict_from_aiida_type(node: Dict) -> dict[str, object]:
-    return node.get_dict()
+    return copy.deepcopy(node.get_dict())

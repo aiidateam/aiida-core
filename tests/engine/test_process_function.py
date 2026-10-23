@@ -68,6 +68,17 @@ def function_model_namespace(config: TaskConfig) -> orm.Int:
 
 
 @calcfunction
+def function_model_namespace_instance_default(config: TaskConfig = TaskConfig(count=9)) -> orm.Int:
+    return orm.Int(config['count'].value + 1)
+
+
+def test_structured_parameter_instance_default_reaches_leaf_ports() -> None:
+    """An instance default on a structured parameter supplies the leaf port defaults."""
+    spec = function_model_namespace_instance_default.spec()
+    assert spec.inputs.pre_process({})['config']['count'] == 9
+
+
+@calcfunction
 def function_return_true():
     return get_true_node()
 

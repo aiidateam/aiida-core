@@ -679,11 +679,14 @@ class FunctionProcess(FunctionProcessBase):
             indirect_default = default
 
         if is_structured(without_marks(annotation)):
+            container = without_marks(annotation)
+            defaults = default.as_dict() if isinstance(default, container) else None
             _declare_namespace(
                 spec,
                 parameter.name,
-                without_marks(annotation),
+                container,
                 leaf_options=_as_a_node_port,
+                defaults=defaults,
                 required=default is UNSPECIFIED,
                 help=help_string,
             )

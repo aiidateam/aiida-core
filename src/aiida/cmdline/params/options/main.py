@@ -329,6 +329,7 @@ GROUP = OverridableOption(
 
 GROUPS = OverridableOption(
     '-G',
+    '--group',
     '--groups',
     'groups',
     type=types.GroupParamType(),

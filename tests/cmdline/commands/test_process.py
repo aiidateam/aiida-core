@@ -374,6 +374,8 @@ class TestVerdiProcess:
 
         group = Group(str(uuid.uuid4())).store()
         group.add_nodes(calcs[0])
+        group_second = Group(str(uuid.uuid4())).store()
+        group_second.add_nodes(calcs[1])
 
         run_cli_command = functools.partial(run_cli_command, suppress_warnings=True)
 
@@ -444,11 +446,18 @@ class TestVerdiProcess:
                 assert line.strip() in [str(calc.pk) for calc in calcs]
 
         # The group option should limit the query set to nodes in the group
-        for flag in ['-G', '--group']:
+        for flag in ['-G', '--group', '--groups']:
             result = run_cli_command(cmd_process.process_list, ['-r', '-P', 'pk', flag, str(group.pk)])
 
             assert len(result.output_lines) == 1
             assert result.output_lines[0] == str(calcs[0].pk)
+
+        # Filtering by multiple groups should return nodes across all specified groups
+        result = run_cli_command(
+            cmd_process.process_list, ['-r', '-a', '-P', 'pk', '-G', str(group.pk), str(group_second.pk)]
+        )
+        assert len(result.output_lines) == 2
+        assert set(result.output_lines) == {str(calcs[0].pk), str(calcs[1].pk)}
 
         # The process label should limit the query set to nodes with the given `process_label` attribute
         for flag in ['-L', '--process-label']:

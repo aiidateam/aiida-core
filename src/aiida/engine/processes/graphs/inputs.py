@@ -46,7 +46,8 @@ def shape_from_port(port: InputPort | OutputPort | PortNamespace) -> Shape:
     options: dict[str, t.Any] = {'required': port.required, 'help': port.help}
     if not isinstance(port, PortNamespace):
         kinds = port.valid_type
-        return LeafShape(types=(kinds,) if isinstance(kinds, type) else kinds, **options)
+        types = (kinds,) if isinstance(kinds, type) else kinds
+        return LeafShape(types=types, **options)
     return NamespaceShape(
         fields=tuple(
             (name, shape_from_port(child)) for name, child in port.items() if not getattr(child, 'is_metadata', False)
@@ -60,9 +61,13 @@ def port_for_shape(name: str, shape: Shape) -> InputPort | PortNamespace:
     options: dict[str, t.Any] = {'required': shape.required, 'help': shape.help}
     if shape.default is not UNSPECIFIED:
         value = json_default(shape.default)
-        options['default'] = partial(json_default, value) if isinstance(shape, LeafShape) else value
+        if isinstance(shape, LeafShape):
+            options['default'] = partial(json_default, value)
+        else:
+            options['default'] = value
     if isinstance(shape, LeafShape):
         port = InputPort(name, valid_type=shape.types, **options)
+        # The constructor normalizes `valid_type`; restore the exact shape.
         port.valid_type = shape.types
         return port
     namespace = PortNamespace(name, populate_defaults=shape.required, **options)
@@ -94,9 +99,10 @@ class _InputResolver:
         absent_namespace = False
         missing_before = len(self.missing)
         if value is UNSPECIFIED:
-            value, absent_namespace = self._fill_default(port, path)
-            if value is UNSPECIFIED:
+            filled, absent_namespace = self._fill_default(port, path)
+            if filled is UNSPECIFIED:
                 return UNSPECIFIED
+            value = filled
         if not isinstance(port, PortNamespace):
             return value
         value = self._checked_mapping(port, value, path)
@@ -107,6 +113,7 @@ class _InputResolver:
             if prepared is not UNSPECIFIED:
                 result[name] = prepared
         if absent_namespace and len(self.missing) == missing_before:
+            # No child recorded anything, so the absent namespace itself is the missing field.
             self.missing.append(MissingGraphInput(self.identifier, path, port.help, port.required))
         return result
 
@@ -119,10 +126,10 @@ class _InputResolver:
             return json_default(default), False
         if not port.required:
             return UNSPECIFIED, False
-        if not isinstance(port, PortNamespace) or not port:
-            self.missing.append(MissingGraphInput(self.identifier, path, port.help, port.required))
-            return UNSPECIFIED, False
-        return {}, True
+        if isinstance(port, PortNamespace) and len(port):
+            return {}, True
+        self.missing.append(MissingGraphInput(self.identifier, path, port.help, port.required))
+        return UNSPECIFIED, False
 
     def _checked_mapping(self, port: PortNamespace, value: t.Any, path: str) -> Mapping[str, t.Any]:
         """Return namespace values as a mapping, rejecting mistyped and unknown inputs."""

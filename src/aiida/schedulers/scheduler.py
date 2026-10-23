@@ -112,7 +112,8 @@ class Scheduler(metaclass=abc.ABCMeta):
         try:
             return self._logger
         except AttributeError:
-            raise exceptions.InternalError('No self._logger configured for {}!')
+            msg = f'No self._logger configured for {self.__class__.__name__}!'
+            raise exceptions.InternalError(msg)
 
     @classproperty
     def job_resource_class(cls) -> type[JobResource]:  # noqa: N805

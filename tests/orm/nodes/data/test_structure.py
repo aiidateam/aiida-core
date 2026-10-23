@@ -108,3 +108,11 @@ class TestCellAngles:
         angles = structure.cell_angles
         # Without clamping, arccos(1.0001) would produce nan
         assert not any(np.isnan(a) for a in angles)
+
+
+def test_symbols_weights_unequal_lengths():
+    """Test that get_symbols_string raises ValueError when symbols and weights have mismatched lengths."""
+    from aiida.orm.nodes.data.structure import get_symbols_string
+
+    with pytest.raises(ValueError):
+        get_symbols_string(['Ba', 'Ti'], [0.5])

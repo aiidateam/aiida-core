@@ -748,7 +748,7 @@ stderr='{stderr.strip()}'"""
                 )
                 raise ValueError(msg)
 
-            data = dict(zip(fields, attributes))
+            data = dict(zip(fields, attributes, strict=True))
 
             if data['State'] == 'OUT_OF_MEMORY':
                 return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY  # type: ignore[no-any-return]

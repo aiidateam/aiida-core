@@ -683,6 +683,10 @@ class PortNamespace(collections.abc.MutableMapping, Port):
         if port_values is None or port_values is UNSPECIFIED:
             port_values = {}
 
+        if isinstance(port_values, tuple) and not port_values:
+            # Historical shorthand for an empty namespace.
+            port_values = {}
+
         if not isinstance(port_values, collections.abc.Mapping):
             # Defensive check: the port values originate from user input, so the annotation is not guaranteed
             message = f'specified value is of type {type(port_values)} which is not sub class of `Mapping`'

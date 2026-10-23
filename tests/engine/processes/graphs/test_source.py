@@ -220,6 +220,12 @@ def test_rejection_carries_source_location() -> None:
     assert '^' in str(caught.value)
 
 
+def test_nonfinite_inline_literal_rejected() -> None:
+    """Inline call literals must be finite JSON."""
+    with pytest.raises(GraphLanguageError, match='must be finite'):
+        expressions.nonfinite_literal.build()
+
+
 def test_spec_version_and_unknown_task_kind_rejection() -> None:
     data = calls.chain.build().to_dict()
     data['version'] = '99'

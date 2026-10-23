@@ -885,6 +885,15 @@ def _lower_value(
         except (ValueError, TypeError):
             _reject(state, node=expression, reason=_unsupported_reason(expression))
         if value is None or isinstance(value, (int, float, str, bool)):
+            try:
+                # Validate finiteness; valid values pass through unchanged below.
+                json_default(value)
+            except GraphTypeCheckError:
+                _reject(
+                    state,
+                    node=expression,
+                    reason='inline numbers must be finite; compute non-finite values in tasks instead',
+                )
             return value
     _reject(state, node=expression, reason=_unsupported_reason(expression))
 

@@ -35,6 +35,12 @@ def fstring_argument(value: int) -> int:  # rejected at lowering
     return add(x=value, y=f'{value}')
 
 
+@graph
+def nonfinite_literal(value: int) -> int:  # rejected at lowering
+    """Inline call literals must be finite; compute non-finite values in tasks instead."""
+    return add(x=1e999, y=value)
+
+
 # Format inside a task instead:
 # @task
 # def greeting(value: int) -> str:

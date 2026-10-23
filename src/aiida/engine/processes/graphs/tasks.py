@@ -54,7 +54,9 @@ class TaskProcess(FunctionProcessBase):  # NOTE: converge with FunctionProcess, 
         annotations: dict[str, t.Any],
         param_help_string: dict[str, str | None],
     ) -> None:
-        assert isinstance(spec, GraphProcessSpec)
+        if not isinstance(spec, GraphProcessSpec):
+            msg = f'task inputs need a graph spec, not `{type(spec).__name__}`.'
+            raise TypeError(msg)
         spec.input_from_field(
             parameter.name,
             field_from_annotation(

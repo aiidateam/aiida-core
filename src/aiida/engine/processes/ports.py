@@ -340,7 +340,9 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         for name, value in mapping.items():
             if name in self:
                 port = self[name]
-                assert isinstance(port, (InputPort, PortNamespace))
+                if not isinstance(port, (InputPort, PortNamespace)):
+                    msg = f'unknown port type for input `{name}`.'
+                    raise TypeError(msg)
                 resolved = port.prepare(value)
                 runtime[name] = resolved.runtime
                 sources[name] = resolved.sources

@@ -16,7 +16,7 @@ import typing as t
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
 
@@ -260,24 +260,49 @@ def calcjob_outputls(calcjob, path, color):
 @options.COMPUTERS(help='include only calcjobs that were ran on these computers')
 @options.FORCE()
 @options.EXIT_STATUS()
-def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit_status):
+@click.option(
+    '-w',
+    '--workchains',
+    'workchains',
+    type=types.ProcessParamType(sub_classes=('aiida.node:process.workflow.workchain',)),
+    multiple=True,
+    help='Also clean the remote work directories of all calcjobs that are descendants of these workchains, '
+    'identified by their PK or UUID. Can be specified multiple times.',
+)
+def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit_status, workchains):
     """Clean all content of all output remote folders of calcjobs.
 
     If no explicit calcjobs are specified as arguments, one or both of the -p and -o options has to be specified.
     If both are specified, a logical AND is done between the two, i.e. the calcjobs that will be cleaned have been
     modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
+
+    Alternatively, one or more workchains can be passed through the -w option, in which case the remote work
+    directories of all calcjobs that are descendants of those workchains are cleaned.
     """
+    from aiida.orm import CalcJobNode
     from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
 
     if calcjobs:
         if past_days is not None and older_than is not None:
             echo.echo_critical('specify either explicit calcjobs or use the filtering options')
-    elif past_days is None and older_than is None:
-        echo.echo_critical('if no explicit calcjobs are specified, at least one filtering option is required')
+    elif past_days is None and older_than is None and not workchains:
+        echo.echo_critical(
+            'if no explicit calcjobs are specified, at least one filtering option or workchain is required'
+        )
 
-    calcjobs_pks = [calcjob.pk for calcjob in calcjobs]
+    calcjobs_pks = {calcjob.pk for calcjob in calcjobs}
+
+    for workchain in workchains:
+        calcjobs_pks.update(
+            descendant.pk for descendant in workchain.called_descendants if isinstance(descendant, CalcJobNode)
+        )
+
+    # Guard against an empty selection reaching the query unfiltered, which would otherwise match every calcjob.
+    if workchains and not calcjobs_pks:
+        echo.echo_critical('none of the specified workchains have any calcjob descendants')
+
     path_mapping = get_calcjob_remote_paths(
-        calcjobs_pks,
+        list(calcjobs_pks) if calcjobs_pks else None,
         past_days,
         older_than,
         computers,

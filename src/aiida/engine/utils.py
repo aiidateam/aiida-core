@@ -117,7 +117,7 @@ def _process_class_of(process: object) -> type[Process]:
     if inspect.isclass(process) and issubclass(process, Process):
         return process
 
-    msg = f'invalid process {type(process)}, needs to be Process or ProcessBuilder'
+    msg = f'invalid process {type(process)}, needs to be a Process class or Launchable'
     raise ValueError(msg)
 
 

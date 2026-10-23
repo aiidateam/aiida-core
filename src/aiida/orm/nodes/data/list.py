@@ -8,6 +8,7 @@
 ###########################################################################
 """`Data` sub class to represent a list."""
 
+import copy
 import typing as t
 from collections.abc import MutableSequence
 
@@ -171,4 +172,4 @@ def _(value):
 
 @from_aiida_type.register(List)
 def _list_from_aiida_type(node: List) -> list[object]:
-    return node.get_list()
+    return copy.deepcopy(node.get_list())

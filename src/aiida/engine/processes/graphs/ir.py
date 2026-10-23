@@ -36,10 +36,10 @@ __all__ = (
     'TaskIR',
 )
 
-GRAPH_IR_VERSION = '0.1'
-TASK_IR_VERSION = '0.1'
-CONDITION_PORT = 'condition'
-TaskKind = t.Literal['process', 'graph', 'branch', 'loop']
+GRAPH_IR_VERSION: t.Final = '0.1'
+TASK_IR_VERSION: t.Final = '0.1'
+CONDITION_PORT: t.Final = 'condition'
+TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop']
 
 
 def readable_version(version: object, supported: str, what: str) -> str:

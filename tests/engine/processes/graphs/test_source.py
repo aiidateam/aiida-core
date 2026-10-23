@@ -226,6 +226,12 @@ def test_nonfinite_inline_literal_rejected() -> None:
         expressions.nonfinite_literal.build()
 
 
+def test_nonfinite_dict_value_rejected() -> None:
+    """Dictionary literal values must be finite JSON."""
+    with pytest.raises(GraphLanguageError, match='finite JSON'):
+        ports.nonfinite_dict_value.build()
+
+
 def test_spec_version_and_unknown_task_kind_rejection() -> None:
     data = calls.chain.build().to_dict()
     data['version'] = '99'

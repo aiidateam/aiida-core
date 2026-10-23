@@ -166,6 +166,12 @@ def literal_dictionary() -> int:
 
 
 @graph
+def nonfinite_dict_value() -> int:  # rejected at lowering
+    """Dictionary literal values must be finite JSON."""
+    return read_answer(values={'answer': 1e999})
+
+
+@graph
 def orm_passthrough(value: Int) -> int:
     """Pass an ORM node through a task."""
     return read_orm_node(value=value)

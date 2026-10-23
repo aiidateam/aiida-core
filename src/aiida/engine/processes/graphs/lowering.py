@@ -849,10 +849,17 @@ def _lower_input(
     if isinstance(expression, ast.Dict):
         try:
             value = ast.literal_eval(expression)
-        except (ValueError, TypeError) as exception:
-            msg = 'Dictionary-valued ports require a literal value or a reference to the whole port.'
-            raise GraphLanguageError(msg) from exception
-        _place(given, path, value)
+        except (ValueError, TypeError):
+            _reject(
+                state,
+                node=expression,
+                reason='dictionary-valued ports require a literal value or a reference to the whole port',
+            )
+        try:
+            checked = json_default(value)
+        except GraphTypeCheckError:
+            _reject(state, node=expression, reason='dictionary values must be finite JSON instead')
+        _place(given, path, checked)
         return
     _wire(state, instance=instance, port=path, value=_lower_value(state, expression), given=given)
 

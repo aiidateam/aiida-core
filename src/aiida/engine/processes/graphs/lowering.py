@@ -24,7 +24,7 @@ from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 
-from aiida.common.exceptions import GraphError, GraphLanguageError
+from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError
 from aiida.engine.processes.graphs.inputs import place
 from aiida.engine.processes.graphs.ir import (
     CONDITION_PORT,
@@ -331,7 +331,7 @@ def _parameter_defaults(state: _LoweringState, function: ast.FunctionDef) -> dic
             )
         try:
             json_default(value)
-        except TypeError:
+        except GraphTypeCheckError:
             msg = f'parameter default for `{parameter.arg}` must be a finite JSON value; pass richer values as inputs'
             _reject(
                 state,

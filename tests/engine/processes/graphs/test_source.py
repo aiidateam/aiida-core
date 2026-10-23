@@ -143,6 +143,7 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(branches.inline_conditional, 'as if and else', id='ifexp'),
         pytest.param(branches.walrus_condition, 'on its own line', id='walrus'),
         pytest.param(loops.list_comprehension, 'must call a task or graph', id='listcomp'),
+        pytest.param(parameters.infinite_default, 'finite JSON', id='infinite-default'),
     ],
 )
 def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, message: str) -> None:

@@ -21,6 +21,12 @@ def variadic_parameters(*values: int) -> int:  # rejected at lowering
     return add(*values)
 
 
+@graph
+def infinite_default(value: float = 1e999) -> int:  # rejected at lowering
+    """Declare a non-finite default; defaults must be finite JSON values."""
+    return add(x=1, y=1)
+
+
 # Plain Python takes any count, `total(1, 2, 3)`. Declare fixed arity instead:
 
 # @graph

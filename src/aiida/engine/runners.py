@@ -194,6 +194,9 @@ class Runner:
             raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
 
         if self._broker_submit:
+            if utils.is_process_function(process):
+                msg = 'cannot submit a process function to the daemon; run it in this process instead.'
+                raise exceptions.InvalidOperation(msg)
             assert self.persister is not None, 'runner does not have a persister'
             assert self.controller is not None, 'runner does not have a controller'
             self.persister.save_checkpoint(process_inited)

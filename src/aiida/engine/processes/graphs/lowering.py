@@ -419,7 +419,9 @@ def _lower_outputs(state: _LoweringState, result: ast.expr) -> tuple[dict[str, E
         _reject(state, node=result, reason='graphs cannot return a whole group; return single values instead')
     outputs = {name: Endpoint(task=reference.task, port=reference.port) for name, reference in references.items()}
     typehints: dict[str, tuple[type, ...]] = (
-        {next(iter(outputs)): returned.types} if len(outputs) == 1 and returned.types else {}
+        {next(iter(outputs)): returned.types}
+        if len(outputs) == 1 and returned.types and not isinstance(result, ast.Dict)
+        else {}
     )
     return outputs, typehints
 

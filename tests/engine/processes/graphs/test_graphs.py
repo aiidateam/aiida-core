@@ -90,6 +90,8 @@ pytestmark = pytest.mark.presto
             id='plain-python-body',
         ),
         pytest.param(ports.input_passthrough, {'value': 4}, {'value': 4}, id='input-passthrough'),
+        pytest.param(ports.single_named_scalar, {'value': 2}, {'only': 2}, id='single-named-scalar'),
+        pytest.param(ports.single_named_mapping, {'value': 2}, {'only': 2}, id='single-named-mapping'),
     ],
 )
 @pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])

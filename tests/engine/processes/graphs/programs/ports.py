@@ -115,6 +115,20 @@ def named(x: int, y: int) -> dict[str, int]:
 
 
 @graph
+def single_named_scalar(value: int) -> int:
+    """Return one named output with a scalar-style hint."""
+    out = add(x=value, y=0)
+    return {'only': out}
+
+
+@graph
+def single_named_mapping(value: int) -> dict[str, int]:
+    """Return one named output with a mapping-style hint."""
+    out = add(x=value, y=0)
+    return {'only': out}
+
+
+@graph
 def whole(config: Configuration) -> int:
     """Pass a whole namespace through."""
     return read_nested_count(config=config)

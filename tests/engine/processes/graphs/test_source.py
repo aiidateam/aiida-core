@@ -14,7 +14,7 @@ import json
 import pytest
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError
-from aiida.engine.processes.graphs.ir import Dependency, GraphIR, TaskIR
+from aiida.engine.processes.graphs.ir import Dependency, Endpoint, GraphIR, Route, TaskIR
 from aiida.engine.processes.graphs.lowering import GraphHandle
 from aiida.engine.processes.graphs.shapes import load_shape
 from tests.engine.processes.graphs.programs import (
@@ -245,6 +245,43 @@ def test_cyclic_and_invalid_ordering_dependencies() -> None:
         replace(spec, dependencies=(*spec.dependencies, Dependency('add_2', 'add')))
     with pytest.raises(GraphTypeCheckError, match='both ports'):
         Dependency('add', 'add_2', source_port='result')
+
+
+def test_dangling_input_task_fails_validation() -> None:
+    """A hand-built input route to a missing task raises a diagnostic, not `KeyError`."""
+    from dataclasses import replace
+
+    spec = calls.chain.build()
+    dangling = {name: tuple(Route('missing', route.port) for route in routes) for name, routes in spec.inputs.items()}
+    with pytest.raises(GraphTypeCheckError, match='unknown task'):
+        replace(spec, inputs=dangling)
+
+
+def test_dangling_dependency_task_fails_validation() -> None:
+    """A hand-built dependency on a missing task raises a diagnostic, not `KeyError`."""
+    from dataclasses import replace
+
+    spec = calls.chain.build()
+    with pytest.raises(GraphTypeCheckError, match='unknown task'):
+        replace(spec, dependencies=(*spec.dependencies, Dependency('missing', spec.task_names[0])))
+
+
+def test_dangling_output_task_fails_validation() -> None:
+    """A hand-built output endpoint on a missing task raises a diagnostic, not `KeyError`."""
+    from dataclasses import replace
+
+    spec = calls.chain.build()
+    with pytest.raises(GraphTypeCheckError, match='unknown task'):
+        replace(spec, outputs={'result': Endpoint(port='result', task='missing')})
+
+
+def test_unknown_output_port_fails_validation() -> None:
+    """A hand-built output endpoint on a missing port raises a diagnostic instead of crashing."""
+    from dataclasses import replace
+
+    spec = calls.chain.build()
+    with pytest.raises(GraphTypeCheckError, match='must reference a declared leaf'):
+        replace(spec, outputs={'result': Endpoint(port='nope', task=None)})
 
 
 def test_task_registration_rejects_excluded_contracts() -> None:

@@ -431,7 +431,12 @@ class GraphIR:
             if source.task is None:
                 origin = port_at(self.input_spec(), source.port)
             else:
-                origin = port_at(self.task(source.task).output_ports(), source.port)
+                try:
+                    task = self.task(source.task)
+                except KeyError as exception:
+                    msg = f'graph output `{name}` refers to unknown task `{source.task}`.'
+                    raise GraphTypeCheckError(msg) from exception
+                origin = port_at(task.output_ports(), source.port)
             if origin is None or isinstance(origin, PortNamespace):
                 msg = f'graph output `{name}` must reference a declared leaf.'
                 raise GraphTypeCheckError(msg)

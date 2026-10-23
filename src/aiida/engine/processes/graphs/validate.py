@@ -45,14 +45,26 @@ def _validate_inputs(graph: GraphIR, boundary: PortNamespace) -> None:
             _validate_routed_input(graph, boundary, name, route)
 
 
+def _task_at(graph: GraphIR, name: str, context: str) -> GraphTask:
+    """Return the named task, raising a diagnostic for dangling references."""
+    try:
+        return graph.task(name)
+    except KeyError as exception:
+        msg = f'{context} refers to unknown task `{name}`.'
+        raise GraphTypeCheckError(msg) from exception
+
+
 def _validate_routed_input(graph: GraphIR, boundary: PortNamespace, name: str, route: Route) -> None:
     """Check that one routed graph input names a known task input of compatible type."""
-    task = graph.task(route.task)
+    task = _task_at(graph, route.task, f'input `{name}`')
     ports = input_ports_at(task, route.port)
     if not ports and not _accepts_condition(task, route.port):
         msg = f'input `{name}` refers to unknown input `{route.task}.{route.port}`.'
         raise GraphTypeCheckError(msg)
     origin = port_at(boundary, name)
+    if origin is None:
+        msg = f'input `{name}` refers to unknown graph input.'
+        raise GraphTypeCheckError(msg)
     for target in ports:
         _check_types(origin, target, f'graph input `{name}`')
 
@@ -65,7 +77,8 @@ def _validate_dependencies(graph: GraphIR) -> None:
 
 def _validate_edge(graph: GraphIR, edge: Dependency) -> None:
     """Check that one valued dependency connects a known output to compatible inputs."""
-    source, target = graph.task(edge.source), graph.task(edge.target)
+    source = _task_at(graph, edge.source, 'dependency')
+    target = _task_at(graph, edge.target, 'dependency')
     if edge.carried_between is None:
         return
     origin = port_at(source.output_ports(), edge.source_port or '')

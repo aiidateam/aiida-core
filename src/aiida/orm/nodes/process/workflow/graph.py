@@ -16,6 +16,6 @@ __all__ = ('GraphNode',)
 class GraphNode(WorkflowNode):
     """ORM class for all nodes representing the execution of a graph of tasks.
 
-    A graph is run by one process class for every graph there is, since what to run is an input rather than a
-    subclass, so the kind of workflow a run was is what this says and the process type cannot.
+    Graphs share one process class with the executed graph carried in inputs, so the node records which workflow
+    ran where `process_type` alone cannot.
     """

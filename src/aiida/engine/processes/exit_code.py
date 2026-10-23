@@ -70,11 +70,13 @@ class ExitCodesNamespace(AttributeDict):
                 if exit_code.status == identifier:
                     return exit_code
 
-            raise ValueError('the exit code status {} does not correspond to a valid exit code')
+            msg = f'the exit code status {identifier} does not correspond to a valid exit code'
+            raise ValueError(msg)
         else:
             try:
                 exit_code = self[identifier]
-            except KeyError:
-                raise ValueError('the exit code label {} does not correspond to a valid exit code')
+            except KeyError as exc:
+                msg = f'the exit code label {identifier} does not correspond to a valid exit code'
+                raise ValueError(msg) from exc
             else:
                 return exit_code

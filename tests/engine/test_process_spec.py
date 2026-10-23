@@ -105,3 +105,15 @@ class TestProcessSpec:
 
         with pytest.raises(TypeError):
             self.spec.exit_code(status, label, 8)
+
+    def test_exit_codes_lookup_invalid_status(self):
+        """Test that looking up a non-existent status raises ValueError with the status in the message."""
+        with pytest.raises(ValueError, match=r'^the exit code status 9999 does not correspond to a valid exit code$'):
+            self.spec.exit_codes(9999)
+
+    def test_exit_codes_lookup_invalid_label(self):
+        """Test looking up a non-existent label raises ValueError with label in message and chains from KeyError."""
+        pattern = r'^the exit code label NON_EXISTENT does not correspond to a valid exit code$'
+        with pytest.raises(ValueError, match=pattern) as exc_info:
+            self.spec.exit_codes('NON_EXISTENT')
+        assert isinstance(exc_info.value.__cause__, KeyError)

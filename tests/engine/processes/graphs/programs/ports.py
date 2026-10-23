@@ -164,6 +164,12 @@ def input_passthrough(value: int) -> int:
 
 
 @graph
+def nested_passthrough(config: Configuration) -> int:
+    """Pass a nested input leaf straight to outputs."""
+    return config.settings.count
+
+
+@graph
 def summarize(values: list[float]):
     """Expose summary statistics computed by plain Python, selected by key."""
     stats = statistics(values=values)

@@ -82,6 +82,6 @@ def _render_body(spec: GraphIR, prefix: tuple[str, ...], lines: list[str]) -> No
             output = _node_id('out', name)
             lines.append(f'    {output}[/{_label(name)}/]')
             if endpoint.task is None:
-                lines.append(_edge(_node_id('in', endpoint.port), output, endpoint.port))
+                lines.append(_edge(_node_id('in', endpoint.port.split('.')[0]), output, endpoint.port))
             else:
                 lines.append(_edge(_node_id(endpoint.task), output, endpoint.port))

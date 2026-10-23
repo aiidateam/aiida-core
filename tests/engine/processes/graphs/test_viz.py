@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.engine.processes.graphs.viz import to_mermaid
-from tests.engine.processes.graphs.programs import calls
+from tests.engine.processes.graphs.programs import calls, ports
 
 pytestmark = pytest.mark.presto
 
@@ -35,3 +35,11 @@ def test_nested_graph_renders_pathed_placements() -> None:
     assert 'multiply_add__multiply["multiply_add/multiply"]' in chart
     assert 'multiply_add -.-> multiply_add__in__x' in chart
     assert 'multiply_add -->|result -> x| add' in chart
+
+
+def test_nested_passthrough_renders_top_level_input() -> None:
+    """A nested input passthrough wires from the top-level input node."""
+    chart = to_mermaid(ports.nested_passthrough.build())
+    assert 'in__config{{config}}' in chart
+    assert 'in__config -->|config.settings.count| out__count' in chart
+    assert 'in__config_settings_count' not in chart

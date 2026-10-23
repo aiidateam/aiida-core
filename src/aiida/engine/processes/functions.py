@@ -321,10 +321,12 @@ def declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:  
         msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
         raise GraphTypeCheckError(msg)
     if t.get_origin(return_annotation) in (list, dict):
-        return_annotation = t.get_origin(return_annotation)
+        origin = t.get_origin(return_annotation)
+    else:
+        origin = return_annotation
     spec.output(
         Process.SINGLE_OUTPUT_LINKNAME,
-        valid_type=infer_node_types(return_annotation) or (Data,),
+        valid_type=infer_node_types(origin) or (Data,),
     )
 
 

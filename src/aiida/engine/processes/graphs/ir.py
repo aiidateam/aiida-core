@@ -91,7 +91,7 @@ class ExecutorReference:
             return loaded.process_class
         if isinstance(loaded, type) and issubclass(loaded, Process):
             return loaded
-        msg = f'`{self.module}:{self.name}` does not resolve to a task process.'
+        msg = f'`{self.module}:{self.name}` does not resolve to a task process; keep task declarations importable.'
         raise ImportError(msg)
 
     def to_dict(self) -> dict[str, str]:

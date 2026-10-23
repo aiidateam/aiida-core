@@ -79,7 +79,7 @@ class TaskProcess(FunctionProcessBase):  # NOTE: converge with FunctionProcess, 
         if isinstance(result, Mapping) and self._named_outputs:
             missing = [name for name in names if name not in result]
             if missing:
-                msg = f'task omitted declared outputs {missing}.'
+                msg = f'task omitted declared outputs {missing}; return every declared output.'
                 raise GraphValidationError(msg)
             values = tuple(result[name] for name in names)
         else:
@@ -182,6 +182,6 @@ def build_task(function: Callable[P, R]) -> TaskHandle[P, R]:
     spec = handle.process_class.spec()
     fixed_inputs(spec.inputs)
     if any(isinstance(port, PortNamespace) for port in spec.outputs.values()):
-        msg = 'tasks require static leaf outputs.'
+        msg = 'tasks require static leaf outputs; declare leaf outputs instead.'
         raise GraphTypeCheckError(msg)
     return handle

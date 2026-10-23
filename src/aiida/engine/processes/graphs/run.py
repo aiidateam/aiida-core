@@ -217,7 +217,7 @@ class GraphRun:
         if not holds(outputs[task.condition_port]):
             return
         if len(runs) >= task.max_iterations:
-            msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations with its condition still true.'
+            msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations; check that its condition terminates.'
             raise RuntimeError(msg)
         self._begin_iteration(task, {**self._inputs_for(task), **outputs}, step)
 

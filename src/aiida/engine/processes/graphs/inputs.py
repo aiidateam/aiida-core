@@ -36,7 +36,7 @@ def place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
     for namespace in namespaces:
         target = target.setdefault(namespace, {})
         if not isinstance(target, dict):
-            msg = f'`{path}` puts an input inside a value rather than a namespace.'
+            msg = f'`{path}` puts an input inside a value rather than a namespace; rename one of them instead.'
             raise GraphValidationError(msg)
     target[name] = value
 

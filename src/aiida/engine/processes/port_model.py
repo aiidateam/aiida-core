@@ -23,6 +23,7 @@ __all__ = (
     'PortModel',
     'field_from_annotation',
     'fields_of',
+    'is_a_plain_class',
     'is_structured',
     'port_help',
     'without_marks',

@@ -413,7 +413,8 @@ class GraphIR:
         return namespace
 
     @property
-    def result_port(self) -> str:  # NOTE: '' marks named outputs; sum-type variants would subsume this.
+    def result_port(self) -> str:
+        """Return the single output port, or `''` when there is not exactly one."""
         return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
 
     @property

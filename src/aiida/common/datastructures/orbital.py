@@ -352,8 +352,12 @@ class RealhydrogenOrbital(Orbital):
             position_string = '{:.4f},{:.4f},{:.4f}'.format(
                 orb_dict['position'][0], orb_dict['position'][1], orb_dict['position'][2]
             )
-            kind_str = f" for kind '{orb_dict['kind_name']}'" if orb_dict.get('kind_name') else ''
-            out_string = f'r{orb_dict["radial_nodes"]} {orb_name} orbital{kind_str} @ {position_string}'
+            out_string = 'r{} {} orbital {} @ {}'.format(
+                orb_dict['radial_nodes'],
+                orb_name,
+                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else '',
+                position_string,
+            )
         except KeyError:
             # Should not happen, but we want it not to crash in __str__
             out_string = '(not all parameters properly set)'

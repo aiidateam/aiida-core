@@ -102,6 +102,16 @@ class TestVerdiGroup:
         group_ordering = [line.split()[1] for line in result.output.split('\n')[3:] if line]
         assert ['agroup', 'dummygroup4', 'dummygroup3', 'dummygroup2', 'dummygroup1'] == group_ordering
 
+        options = ['--order-by', 'ctime']
+        result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True, use_subprocess=True)
+        group_ordering = [line.split()[1] for line in result.output.split('\n')[3:] if line]
+        assert ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4', 'agroup'] == group_ordering
+
+        options = ['--order-by', 'ctime', '--order-direction', 'desc']
+        result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True, use_subprocess=True)
+        group_ordering = [line.split()[1] for line in result.output.split('\n')[3:] if line]
+        assert ['agroup', 'dummygroup4', 'dummygroup3', 'dummygroup2', 'dummygroup1'] == group_ordering
+
     def test_copy(self, run_cli_command):
         """Test `verdi group copy` command."""
         result = run_cli_command(cmd_group.group_copy, ['dummygroup1', 'dummygroup2'], use_subprocess=True)

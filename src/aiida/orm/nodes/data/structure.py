@@ -11,13 +11,13 @@ functions to operate on them.
 """
 
 from __future__ import annotations
-from collections.abc import Sequence
 
 import copy
 import functools
 import itertools
 import json
 import typing as t
+from collections.abc import Sequence
 
 import pydantic as pdt
 from typing_extensions import Self

@@ -9,9 +9,9 @@
 """Module of `Data` sub class to represent a pseudopotential single file in UPF format and related utilities."""
 
 from __future__ import annotations
-import pathlib
 
 import json
+import pathlib
 import re
 import typing as t
 

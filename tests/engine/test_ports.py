@@ -8,10 +8,21 @@
 ###########################################################################
 """Tests for process spec ports."""
 
+import typing as t
+
 import pytest
 
-from aiida.engine.processes.ports import InputPort, PortNamespace
-from aiida.orm import Dict, Int, Str, to_aiida_type
+from aiida.engine.processes.ports import InputPort, PortNamespace, infer_valid_type_from_type_annotation
+from aiida.orm import Bool, Data, Dict, Float, Int, List, Str, to_aiida_type
+
+
+@pytest.mark.parametrize(
+    'annotation',
+    [int | None, t.Optional[int], Int | None, t.Optional[Int]],  # noqa: UP045 - test legacy annotations too
+)
+def test_nullable_annotations_preserve_none_type(annotation):
+    expected = Int if annotation == Int | None else int
+    assert infer_valid_type_from_type_annotation(annotation, stored=False) == (expected, type(None))
 
 
 class TestInputPort:
@@ -24,6 +35,48 @@ class TestInputPort:
         assert port.validate(Int(1)) is None
         assert port.validate(Str('string')) is None
         assert port.validate(Dict()) is not None
+
+    @pytest.mark.parametrize(
+        'node_type,python_type,value',
+        [
+            (Str, str, 'label'),
+            (Bool, bool, True),
+            (Int, int, 3),
+            (Float, float, 1.5),
+            (List, list, [1, 2]),
+            (Dict, dict, {'value': 1}),
+        ],
+    )
+    @pytest.mark.parametrize('flags', [{'is_metadata': True}, {'non_db': True}, {}])
+    def test_prepare_python_values(self, node_type, python_type, value, flags):
+        """Adapt matching node values according to the port type, not its namespace flags."""
+        namespace = PortNamespace('inputs', **flags)
+        port = InputPort('value', valid_type=python_type)
+        namespace['value'] = port
+        converted = namespace.prepare({'value': node_type(value)})['value']
+        assert type(converted) is python_type
+        assert converted == value
+        assert port.validate(converted) is None
+
+    @pytest.mark.parametrize('valid_type', [Str, Data, (Str, str), (Data, str), None])
+    def test_prepare_preserves_accepted_nodes(self, valid_type):
+        """Node inputs and mixed unions retain identity and therefore provenance."""
+        value = Str('label')
+        port = InputPort('value', valid_type=valid_type)
+        assert port.prepare(value) is value
+
+    def test_prepare_wrong_type(self):
+        """Conversion never coerces an unrelated value to the declared Python type."""
+        port = InputPort('value', valid_type=int, non_db=True)
+        for value in (Str('3'), '3', Dict({'value': 3})):
+            assert port.validate(port.prepare(value)) is not None
+
+    @pytest.mark.parametrize('valid_type', [str, Str])
+    def test_serialize_database_input(self, valid_type):
+        """Storage serialization is independent of the runtime input type."""
+        namespace = PortNamespace('inputs')
+        namespace['value'] = InputPort('value', valid_type=valid_type)
+        assert isinstance(namespace.serialize({'value': 'label'})['value'], Str)
 
     def test_with_non_db(self):
         """Test the functionality of the `non_db` attribute upon construction and setting."""

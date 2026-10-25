@@ -19,6 +19,7 @@ when instantiated by the user.
 
 from __future__ import annotations
 
+import builtins
 import typing as t
 import warnings
 from collections.abc import Iterable, Sequence
@@ -84,14 +85,14 @@ class QueryBuilder:
         backend: StorageBackend | None = None,
         *,
         debug: bool | None = None,
-        path: Sequence[str | dict[str, t.Any] | EntityClsType] | None = (),
-        filters: dict[str, FilterType] | None = None,
-        project: dict[str, ProjectType] | None = None,
+        path: Sequence[str | builtins.dict[str, t.Any] | EntityClsType] | None = (),
+        filters: builtins.dict[str, FilterType] | None = None,
+        project: builtins.dict[str, ProjectType] | None = None,
         limit: int | None = None,
         offset: int | None = None,
         order_by: OrderByType | None = None,
         distinct: bool = False,
-        project_map: dict[str, dict[str, str]] | None = None,
+        project_map: builtins.dict[str, builtins.dict[str, str]] | None = None,
     ) -> None:
         """Instantiates a QueryBuilder instance.
 
@@ -217,7 +218,7 @@ class QueryBuilder:
         return self.as_dict()
 
     @classmethod
-    def from_dict(cls, dct: dict[str, t.Any]) -> QueryBuilder:
+    def from_dict(cls, dct: builtins.dict[str, t.Any]) -> QueryBuilder:
         """Create an instance from a dictionary representation of the query."""
         return cls(**dct)
 
@@ -564,7 +565,7 @@ class QueryBuilder:
 
         return self
 
-    def _init_project_map(self, project_map: dict[str, dict[str, str]]) -> None:
+    def _init_project_map(self, project_map: builtins.dict[str, builtins.dict[str, str]]) -> None:
         """Set the project map.
 
         Note, this is a private method,
@@ -638,7 +639,7 @@ class QueryBuilder:
                     if isinstance(item_to_order_by, str):
                         item_to_order_by = {item_to_order_by: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, qb_fields.QbField):
-                        item_to_order_by = {item_to_order_by.backend_key: {}}  # noqa: PLW2901
+                        item_to_order_by = {item_to_order_by._backend_key: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
@@ -705,7 +706,7 @@ class QueryBuilder:
         return self
 
     @staticmethod
-    def _process_filters(filters: FilterType) -> dict[str, t.Any]:
+    def _process_filters(filters: FilterType) -> builtins.dict[str, t.Any]:
         """Process filters."""
         if isinstance(filters, qb_fields.QbBoolField):
             filters = filters.as_filter()
@@ -720,7 +721,7 @@ class QueryBuilder:
                 # for the object instance directly
                 processed_filters[f'{key}_id'] = value.pk
             elif isinstance(key, qb_fields.QbField):
-                processed_filters[key.backend_key] = value
+                processed_filters[key._backend_key] = value
             else:
                 processed_filters[key] = value
 
@@ -835,10 +836,10 @@ class QueryBuilder:
 
         def _update_project_map(projection: qb_fields.QbField):
             """Return the DB field to use, or a tuple of the DB field to use and the key to return."""
-            if projection.backend_key != projection.key:
+            if projection._backend_key != projection._key:
                 self._project_map.setdefault(tag, {})
-                self._project_map[tag][projection.backend_key] = projection.key
-            return projection.backend_key
+                self._project_map[tag][projection._backend_key] = projection._key
+            return projection._backend_key
 
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore[list-item]
@@ -1083,7 +1084,7 @@ class QueryBuilder:
 
             yield item
 
-    def iterdict(self, batch_size: int | None = 100) -> Iterable[dict[str, dict[str, t.Any]]]:
+    def iterdict(self, batch_size: int | None = 100) -> Iterable[builtins.dict[str, builtins.dict[str, t.Any]]]:
         """Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
@@ -1148,7 +1149,7 @@ class QueryBuilder:
             raise NotExistent('No result was found')
         return res[0]
 
-    def dict(self, batch_size: int | None = None) -> list[dict[str, dict[str, t.Any]]]:
+    def dict(self, batch_size: int | None = None) -> list[builtins.dict[str, builtins.dict[str, t.Any]]]:
         """Executes the full query with the order of the rows as returned by the backend.
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.

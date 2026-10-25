@@ -20,7 +20,6 @@ from types import UnionType
 from uuid import UUID
 
 from aiida.common.lang import isidentifier
-from aiida.common.warnings import warn_deprecation
 
 __all__ = (
     'QbField',
@@ -59,10 +58,11 @@ class QbField:
         '_doc',
         '_dtype',
         '_is_attribute',
-        '_is_subscriptable',
         '_key',
     )
 
+    # TODO we no longer use alias, letting the backend projection map handle it.
+    # TODO however, we may want to use it here, so that repr() shows both. TBD!
     def __init__(
         self,
         key: str,
@@ -71,7 +71,6 @@ class QbField:
         dtype: t.Any | None = None,
         doc: str = '',
         is_attribute: bool = True,
-        is_subscriptable: bool = False,
     ) -> None:
         """Initialise a ORM entity field, accessible via the ``QueryBuilder``
 
@@ -80,67 +79,14 @@ class QbField:
         :param dtype: The data type of the field. If None, the field is of variable type.
         :param doc: A docstring for the field
         :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-        :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
-            ``QbDictField`` and its subclasses support nested lookup.
 
         """
         self._key = key
-        self._backend_key = alias if alias is not None else key
+        alias = alias or key
+        self._backend_key = f'attributes.{alias}' if is_attribute else alias
         self._doc = doc
         self._dtype = dtype
         self._is_attribute = is_attribute
-        self._is_subscriptable = is_subscriptable
-
-    @property
-    def key(self) -> str:
-        return self._key
-
-    @property
-    def backend_key(self) -> str:
-        if self._is_attribute:
-            return f'attributes.{self._backend_key}'
-        return self._backend_key
-
-    @property
-    def doc(self) -> str:
-        """Return the field documentation string."""
-        return self._doc
-
-    @property
-    def dtype(self) -> t.Any | None:
-        """Return the primitive root type."""
-        return extract_root_type(self._dtype)
-
-    @property
-    def annotation(self) -> t.Any | None:
-        """Return the full type annotation."""
-        warn_deprecation(
-            '`QbField.annotation` is deprecated. Inspect the corresponding ORM model field annotation instead.',
-            version=3,
-            stacklevel=2,
-        )
-        return self._dtype
-
-    @property
-    def is_attribute(self) -> bool:
-        """Return whether the field is stored in the attributes namespace."""
-        warn_deprecation(
-            '`QbField.is_attribute` is deprecated. Inspect the corresponding ORM model field metadata instead.',
-            version=3,
-            stacklevel=2,
-        )
-        return self._is_attribute
-
-    @property
-    def is_subscriptable(self) -> bool:
-        """Return whether nested lookup through ``field['key']`` is supported."""
-        warn_deprecation(
-            '`QbField.is_subscriptable` is deprecated. Subscriptability is determined by the field type;'
-            '`QbDictField` and its subclasses support nested lookup.',
-            version=3,
-            stacklevel=2,
-        )
-        return isinstance(self, QbDictField)
 
     def in_(self, value: t.Iterable[t.Any]):
         """Return a filter for only values in the list"""
@@ -150,20 +96,21 @@ class QbField:
             raise TypeError('in_ must be iterable')
         return QbFieldFilters(((self, 'in', value),))
 
+    # TODO see comment above constructor
     def __repr__(self) -> str:
         return (
-            f'{self.__class__.__name__}({self.backend_key!r}'
-            + (f', {self._backend_key!r}' if self._backend_key != self.key else '')
+            f'{self.__class__.__name__}({self._backend_key!r}'
+            # + (f', {self._backend_key!r}' if self._backend_key != self._key else '')
             + (f', dtype={self._dtype or ""}')
             + (f', doc={self._doc!r}' if self._doc else '')
             + ')'
         )
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}({self.backend_key}) -> {self._dtype}'
+        return f'{self.__class__.__name__}({self._backend_key}) -> {self._dtype}'
 
     def __hash__(self):
-        return hash((self.key, self.backend_key))
+        return hash((self._key, self._backend_key))
 
     def __eq__(self, value):
         return QbFieldFilters(((self, '==', value),))
@@ -290,14 +237,14 @@ class QbDictField(QbField):
     def _get_subfield(self, key: str) -> QbField:
         """Build a field for a nested key."""
         return QbAnyField(
-            key=f'{self.key}.{key}',
+            key=f'{self._key}.{key}',
             alias=f'{self._backend_key}.{key}' if self._is_attribute else None,
             dtype=t.Any,
             is_attribute=self._is_attribute,
         )
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}({self.backend_key}[...]) -> {self._dtype}'
+        return f'{self.__class__.__name__}({self._backend_key}[...]) -> {self._dtype}'
 
 
 class QbAttributesField(QbDictField):
@@ -360,7 +307,7 @@ class QbFieldFilters:
 
     def __init__(
         self,
-        filters: t.Sequence[tuple[QbField, str, t.Any]] | dict,
+        filters: t.Sequence[tuple[QbField, str, t.Any]] | dict[str, t.Any],
     ):
         self.filters: dict[str, t.Any] = {}
         self.add_filters(filters)
@@ -374,15 +321,14 @@ class QbFieldFilters:
         return self.filters.items()
 
     @singledispatchmethod
-    def add_filters(self, filters: dict):
+    def add_filters(self, filters: dict[str, t.Any]):
         self.filters.update(filters)
 
     @add_filters.register(list)
     @add_filters.register(tuple)
-    def _(self, filters):
-        field: QbField
+    def _(self, filters: t.Sequence[tuple[QbField, str, t.Any]]):
         for field, comparator, value in filters:
-            qb_field = field.backend_key
+            qb_field = field._backend_key
             if qb_field in self.filters:
                 self.filters['and'] = [
                     {qb_field: self.filters.pop(qb_field)},
@@ -479,7 +425,7 @@ class QbFields:
 
     def keys(self) -> list[str]:
         """Return the field keys, sorted, prefixed with 'attribute.' if field is an attribute."""
-        return sorted([self[key].backend_key for key in self])
+        return sorted([self[key]._backend_key for key in self])
 
     def __repr__(self) -> str:
         return pformat({key: repr(self[key]) for key in self}, width=500)
@@ -533,7 +479,6 @@ class QbFieldArguments(t.TypedDict):
     dtype: t.Any | None
     doc: str
     is_attribute: bool
-    is_subscriptable: bool
 
 
 def add_field(
@@ -543,7 +488,6 @@ def add_field(
     dtype: t.Any | None = None,
     doc: str = '',
     is_attribute: bool = False,
-    is_subscriptable: bool = False,
 ) -> QbField:
     """Add a `dtype`-dependent `QbField` representation of a field.
 
@@ -552,8 +496,6 @@ def add_field(
     :param dtype: The data type of the field. If None, the field is of variable type.
     :param doc: A docstring for the field
     :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-    :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
-        ``QbDictField`` and its subclasses support nested lookup.
     """
     kwargs: QbFieldArguments = {
         'key': key,
@@ -561,7 +503,6 @@ def add_field(
         'dtype': dtype,
         'doc': doc,
         'is_attribute': is_attribute,
-        'is_subscriptable': is_subscriptable,
     }
     if not isidentifier(key):
         msg = f'{key} is not a valid python identifier'

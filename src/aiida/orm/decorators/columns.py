@@ -14,7 +14,7 @@ from aiida.orm.decorators.base import (
     BaseFieldConfig,
     BaseFieldDecorator,
     BaseFieldSpec,
-    Storable,
+    HasQbFields,
 )
 
 if t.TYPE_CHECKING:
@@ -53,7 +53,7 @@ class ColumnSpec(BaseFieldSpec):
         return not self.updatable
 
 
-_EntityT = t.TypeVar('_EntityT', bound=Storable)
+_EntityT = t.TypeVar('_EntityT', bound=HasQbFields)
 _ValueT = t.TypeVar('_ValueT')
 _QbFieldT = t.TypeVar('_QbFieldT', bound=qb_fields.QbField)
 
@@ -90,9 +90,6 @@ class Column(
             return self._get_qb_field(self.spec.name, owner=owner)
 
         return self.fget(instance)
-
-    def _immutable_once_stored(self, instance: _EntityT) -> bool:
-        return instance.is_stored and self.spec.immutable
 
     def _build_spec(self, **kwargs: t.Any) -> ColumnSpec:
         """Resolve descriptor structure into the canonical column specification."""

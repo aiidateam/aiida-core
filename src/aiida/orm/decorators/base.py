@@ -9,18 +9,17 @@ from pydantic.fields import FieldInfo as ModelFieldInfo
 from pydantic_core import PydanticUndefined
 from typing_extensions import Self
 
-from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.utils import is_nullable, make_nullable, make_required
-from aiida.orm import qb_fields
 from aiida.orm.cli.utils import CliFieldInfo
+from aiida.orm.qb_fields import QbField, QbFields, add_field
 
 __all__ = (
     'BaseField',
     'BaseFieldConfig',
     'BaseFieldDecorator',
     'BaseFieldSpec',
-    'Storable',
+    'HasQbFields',
 )
 
 if t.TYPE_CHECKING:
@@ -58,19 +57,16 @@ class BaseFieldSpec:
     default_is_inferred_nullable: bool
 
 
-class Storable(t.Protocol):
-    """Protocol for ORM objects with storage lifecycle semantics."""
-
-    @property
-    def is_stored(self) -> bool: ...
+class HasQbFields(t.Protocol):
+    """Protocol for ORM objects with query builder fields."""
 
     @classproperty
-    def qb_fields(cls) -> qb_fields.QbFields: ...  # noqa: N805
+    def qb_fields(cls) -> QbFields: ...  # noqa: N805
 
 
-_OwnerT = t.TypeVar('_OwnerT', bound=Storable)
+_OwnerT = t.TypeVar('_OwnerT', bound=HasQbFields)
 _ValueT = t.TypeVar('_ValueT')
-_QbFieldT = t.TypeVar('_QbFieldT', bound=qb_fields.QbField)
+_QbFieldT = t.TypeVar('_QbFieldT', bound=QbField)
 _SpecT = t.TypeVar('_SpecT', bound=BaseFieldSpec)
 _ConfigT = t.TypeVar('_ConfigT', bound=BaseFieldConfig)
 
@@ -249,15 +245,7 @@ class BaseField(
             msg = f'{self._owner.__name__}.{self._name} is read-only'
             raise AttributeError(msg)
 
-        if self._immutable_once_stored(instance):
-            msg = f'{self._owner.__name__}.{self._name} is immutable once stored'
-            raise exceptions.ModificationNotAllowed(msg)
-
         return func
-
-    @abc.abstractmethod
-    def _immutable_once_stored(self, instance: _OwnerT) -> bool:
-        """Check whether the field is immutable once stored."""
 
     def _build_spec(self, **kwargs: t.Any) -> _SpecT:
         """Resolve the declaration into the canonical specification."""
@@ -349,7 +337,7 @@ class BaseField(
         """Build the QueryBuilder representation of this field."""
         return t.cast(
             _QbFieldT,
-            qb_fields.add_field(
+            add_field(
                 key,
                 dtype=self.adapted_type,
                 doc=self.spec.description,

@@ -10,148 +10,79 @@
 
 from __future__ import annotations
 
-import builtins
 import typing as t
+from collections.abc import Mapping, MutableMapping
 from copy import deepcopy
 
 import pydantic as pdt
+from typing_extensions import Self
 
-from aiida.common.lang import type_check
+from aiida.common.lang import override
 from aiida.orm.nodes.data.base import to_aiida_type
-from aiida.orm.nodes.data.data import Data
+from aiida.orm.nodes.data.data import Data, DataInterface
 
-__all__ = ('Dict',)
+if t.TYPE_CHECKING:
+    from aiida.orm.utils.managers import AttributeManager
+
+__all__ = ('Dict', 'DictInterface')
 
 
 class Dict(Data):
-    """`Data` sub class to represent a dictionary.
-
-    The dictionary contents of a `Dict` node are stored in the database as attributes. The dictionary
-    can be initialized through the `dict` argument in the constructor. Usual rules for attribute names
-    apply, in particular, keys cannot start with an underscore, or a ``ValueError`` will be raised.
-
-    After construction, values can be retrieved and updated through the item getters and setters, respectively:
-
-        node['key'] = 'value'
-
-    Alternatively, the `dict` property returns an instance of the `AttributeManager` that can be used
-    to get and set values through attribute notation:
-
-        node.dict.key = 'value'
-
-    Note that trying to set dictionary values directly on the node, e.g. `node.key = value`, will not
-    work as intended. It will merely set the `key` attribute on the node instance, but will not be
-    stored in the database. As soon as the node goes out of scope, the value will be lost.
-
-    Finally, all dictionary mutations will be forbidden once the node is stored.
-    """
+    """A data node that stores each dictionary entry as a node attribute."""
 
     _attributes_model_config = pdt.ConfigDict(extra='allow')
     _cli_expose_extra_attributes = True
 
-    def __init__(self, dict: builtins.dict[str, t.Any] | None = None, **kwargs: t.Any):
-        super().__init__(**kwargs)
-        if dict:
-            self.value = dict
-
-    def __getitem__(self, key: str) -> t.Any:
-        try:
-            return self.base.attributes.get(key)
-        except AttributeError as exc:
-            raise KeyError(key) from exc
-
-    def __setitem__(self, key: str, value: t.Any) -> None:
-        self.base.attributes.set(key, value)
-
-    def __delitem__(self, key):
-        if key not in self.base.attributes:
-            raise KeyError(key)
-        self.base.attributes.delete(key)
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, Dict):
-            return self.value == other.value
-        return self.value == other
-
-    def __contains__(self, key: str) -> bool:
-        """Return whether the node contains a key."""
-        return key in self.base.attributes
-
-    def __str__(self) -> str:
-        return f'{super().__str__()} value: {self.value}'
-
     @property
-    def value(self) -> builtins.dict[str, t.Any]:
-        """The dictionary content."""
-        return dict(self.base.attributes.all)
+    def dict(self) -> AttributeManager:
+        """Return an `AttributeManager` wrapper of this node.
 
-    @value.setter
-    def value(self, value: builtins.dict[str, t.Any]) -> None:
-        self.set_dict(value)
-
-    @property
-    def dict(self) -> t.Any:
-        """Return an instance of `AttributeManager` that transforms the dictionary into an attribute dict.
-
-        .. note:: this will allow one to do `node.dict.key` as well as `node.dict[key]`.
-
-        :return: an instance of the `AttributeResultManager`.
+        This allows `node.dict.key` and `node.dict[key]`.
         """
         from aiida.orm.utils.managers import AttributeManager
 
         return AttributeManager(self)
 
-    def get(self, key: str, default: t.Any | None = None, /) -> t.Any:
-        """Return the value for key if key is in the dictionary, else default.
 
-        :param key: The key whose value to return.
-        :param default: Optional default to return in case the key does not exist.
-        :returns: The value if the key exists, otherwise the ``default``.
-        """
-        return self.base.attributes.get(key, default)
+class DictInterface(DataInterface[Dict], MutableMapping[str, t.Any]):
+    """An in-memory mapping interface for the `Dict` data type."""
 
-    def update(self, dictionary: builtins.dict[str, t.Any]) -> None:
-        """Update the current dictionary with the keys provided in the dictionary.
+    _orm_cls = Dict
 
-        .. note:: works exactly as `dict.update()` where new keys are simply added and existing keys are overwritten.
+    def __init__(self, value: Mapping[str, t.Any] | None = None) -> None:
+        """Initialize the interface with a copy of a mapping."""
+        self.value = deepcopy(dict(value)) if value is not None else {}
 
-        :param dictionary: a dictionary with the keys to substitute
-        """
-        for key, value in dictionary.items():
-            self.base.attributes.set(key, value)
+    def __getitem__(self, key: str) -> t.Any:
+        return self.value[key]
 
-    def keys(self) -> t.Iterator[str]:
-        """Iterator of valid keys stored in the Dict object.
+    def __setitem__(self, key: str, value: t.Any) -> None:
+        self.value[key] = value
 
-        :return: iterator over the keys of the current dictionary
-        """
-        yield from self.base.attributes.keys()
+    def __delitem__(self, key: str) -> None:
+        del self.value[key]
 
-    def items(self) -> t.Iterator[tuple[str, t.Any]]:
-        """Iterator of all items stored in the Dict node."""
-        yield from self.base.attributes.items()
+    def __iter__(self) -> t.Iterator[str]:
+        return iter(self.value)
 
-    def get_dict(self) -> builtins.dict[str, t.Any]:
-        """Return a dictionary with the parameters currently set.
+    def __len__(self) -> int:
+        return len(self.value)
 
-        :return: dictionary
-        """
-        return self.value
+    def __repr__(self) -> str:
+        return f'{type(self).__name__}({self.value!r})'
 
-    def set_dict(self, dictionary: builtins.dict[str, t.Any]) -> None:
-        """Replace the current dictionary with another one.
+    @classmethod
+    @override
+    def from_aiida(cls, entity: Dict) -> Self:
+        """Construct an interface from a `Dict` node."""
+        return cls(value=entity.attributes)
 
-        :param dictionary: dictionary to set
-        """
-        type_check(dictionary, dict)
-
-        if self.source is not None:
-            dictionary = {'source': deepcopy(self.source), **dictionary}
-
-        self.base.attributes.clear()
-        self.base.attributes.set_many(dictionary)
+    @override
+    def _get_attributes(self) -> dict[str, t.Any]:
+        """Return a dictionary of the attributes for this interface."""
+        return deepcopy(self.value)
 
 
 @to_aiida_type.register(dict)
 def _(value: dict[str, t.Any]) -> Dict:
-    return Dict(value)
+    return Dict(attributes=deepcopy(value))

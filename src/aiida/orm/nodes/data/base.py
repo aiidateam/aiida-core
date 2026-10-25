@@ -16,9 +16,9 @@ from functools import singledispatch
 
 from typing_extensions import Self
 
-from aiida.orm.nodes.data.data import Data
+from aiida.orm.nodes.data.data import Data, DataInterface
 
-__all__ = ('BaseType', 'to_aiida_type')
+__all__ = ('BaseType', 'BaseTypeInterface', 'to_aiida_type')
 
 _ValueT = t.TypeVar('_ValueT')
 
@@ -26,23 +26,21 @@ _ValueT = t.TypeVar('_ValueT')
 class BaseType(Data, abc.ABC, t.Generic[_ValueT]):
     """Base class for AiiDA data types wrapping Python primitives."""
 
-    _type: type[_ValueT]
-
-    def __init__(self, value: _ValueT | None = None, **kwargs: t.Any):
-        super().__init__(**kwargs)
-        self.value = value if value is not None else self._type()
-
-    @property
-    @abc.abstractmethod
-    def value(self) -> _ValueT:
-        """The wrapped Python value."""
-
-    @value.setter
-    def value(self, value: _ValueT) -> None:
-        raise NotImplementedError()
+    value: _ValueT
 
     def __str__(self) -> str:
         return f'{super().__str__()} value: {self.value}'
+
+
+class BaseTypeInterface(DataInterface[BaseType[_ValueT]], abc.ABC, t.Generic[_ValueT]):
+    """Interface for AiiDA data types wrapping Python primitives."""
+
+    _orm_cls = BaseType[_ValueT]
+
+    _type: type[_ValueT]
+
+    def __init__(self, value: _ValueT | None = None) -> None:
+        self.value = value if value is not None else self._type()
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, BaseType):

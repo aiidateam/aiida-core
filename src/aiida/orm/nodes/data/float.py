@@ -14,15 +14,13 @@ import pydantic as pdt
 
 from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.base import to_aiida_type
-from aiida.orm.nodes.data.numeric import NumericType
+from aiida.orm.nodes.data.numeric import NumericType, NumericTypeInterface
 
-__all__ = ('Float',)
+__all__ = ('Float', 'FloatInterface')
 
 
 class Float(NumericType[float]):
     """`Data` sub class to represent a float value."""
-
-    _type = float
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=0.0))
     def value(self) -> float:
@@ -34,6 +32,13 @@ class Float(NumericType[float]):
         self.base.attributes.set('value', float(value))
 
 
+class FloatInterface(NumericTypeInterface[float]):
+    """Interface for the `Float` data type."""
+
+    _orm_cls = Float
+    _type = float
+
+
 @to_aiida_type.register(numbers.Real)
 def _(value: float) -> Float:
-    return Float(value)
+    return Float(attributes={'value': value})

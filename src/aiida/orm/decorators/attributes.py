@@ -15,7 +15,7 @@ from aiida.orm.decorators.base import (
     BaseFieldConfig,
     BaseFieldDecorator,
     BaseFieldSpec,
-    Storable,
+    HasQbFields,
 )
 from aiida.orm.decorators.columns import Column, ColumnConfig
 
@@ -48,7 +48,7 @@ class NodeAttributeSpec(BaseFieldSpec):
     persist_default: bool
 
 
-class PossiblyUpdatableOnceStored(Storable, t.Protocol):
+class PossiblyUpdatableOnceStored(HasQbFields, t.Protocol):
     """Marker protocol for instances that may have updatable attributes."""
 
     @classproperty
@@ -88,9 +88,6 @@ class NodeAttribute(
             raise AttributeError('Node attribute must be accessed through a Node class')
 
         return self._get_attribute_qb_field(owner)
-
-    def _immutable_once_stored(self, instance: _NodeT) -> bool:
-        return instance.is_stored and self._name not in instance._updatable_attributes
 
     def _build_spec(self, **kwargs: t.Any) -> NodeAttributeSpec:
         """Resolve the attribute structure into its canonical specification."""

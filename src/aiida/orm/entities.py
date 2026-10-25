@@ -31,7 +31,12 @@ if t.TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType, QueryBuilder
 
-__all__ = ('Entity', 'EntityCollection', 'EntityTypes')
+__all__ = (
+    'Entity',
+    'EntityCollection',
+    'EntityInterface',
+    'EntityTypes',
+)
 
 _EntityT = t.TypeVar('_EntityT', bound='Entity[t.Any, t.Any]')
 
@@ -287,6 +292,14 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _EntityCollectionT]):
         return fields
 
     @classproperty
+    def q(cls: type[_EntityT]) -> QbFields:  # noqa: N805
+        """Return the QueryBuilder fields for this entity.
+
+        Short-hand access to the `qb_fields` class property, allowing for more concise query building.
+        """
+        return cls.qb_fields
+
+    @classproperty
     def projections(cls: type[_EntityT]) -> dict[str, QbField]:  # noqa: N805
         """Return the projections for this entity."""
         return cls.qb_fields._dict
@@ -377,3 +390,18 @@ class Entity(abc.ABC, t.Generic[_BackendEntityT, _EntityCollectionT]):
     def _get_qb_field_factories(cls: type[_EntityT]) -> dict[str, t.Callable[[], QbField]]:
         """Return factories for the QueryBuilder fields declared by this entity class."""
         return {key: partial(column._build_column_qb_field, owner=cls) for key, column in iter_columns(cls).items()}
+
+
+class EntityInterface(abc.ABC, t.Generic[_EntityT]):
+    """Abstract base class for entity interfaces."""
+
+    _orm_cls: type[_EntityT]
+
+    @abc.abstractmethod
+    def to_aiida(self) -> _EntityT:
+        """Convert the interface to an ORM entity instance."""
+
+    @classmethod
+    @abc.abstractmethod
+    def from_aiida(cls, entity: _EntityT) -> Self:
+        """Construct the interface from an ORM entity instance."""

@@ -11,15 +11,13 @@
 import pydantic as pdt
 
 from aiida.orm.decorators import attribute
-from aiida.orm.nodes.data.base import BaseType, to_aiida_type
+from aiida.orm.nodes.data.base import BaseType, BaseTypeInterface, to_aiida_type
 
-__all__ = ('Str',)
+__all__ = ('Str', 'StrInterface')
 
 
 class Str(BaseType[str]):
     """`Data` sub class to represent a string value."""
-
-    _type = str
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=''))
     def value(self) -> str:
@@ -31,6 +29,13 @@ class Str(BaseType[str]):
         self.base.attributes.set('value', str(value))
 
 
+class StrInterface(BaseTypeInterface[str]):
+    """Interface for the `Str` data type."""
+
+    _orm_cls = Str
+    _type = str
+
+
 @to_aiida_type.register(str)
 def _(value: str) -> Str:
-    return Str(value)
+    return Str(attributes={'value': value})

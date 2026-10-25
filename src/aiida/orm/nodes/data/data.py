@@ -18,9 +18,11 @@ from aiida.common import exceptions
 from aiida.common.lang import override, type_check
 from aiida.common.links import LinkType
 from aiida.orm.decorators import attribute
-from aiida.orm.nodes.node import Node
+from aiida.orm.nodes.node import Node, NodeInterface
 
-__all__ = ('Data',)
+__all__ = ('Data', 'DataInterface')
+
+_DataT = t.TypeVar('_DataT', bound='Data')
 
 
 class Data(Node):
@@ -59,15 +61,6 @@ class Data(Node):
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
-
-    def __init__(
-        self,
-        source: dict | None = None,
-        **kwargs: t.Any,
-    ) -> None:
-        super().__init__(**kwargs)
-        if source is not None:
-            self.source = source
 
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
@@ -374,3 +367,7 @@ class Data(Node):
     def set_source(self, source):
         """Sets the dictionary describing the source of Data object."""
         self.source = source
+
+
+class DataInterface(NodeInterface[_DataT], t.Generic[_DataT]):
+    """Abstract base class for data interfaces."""

@@ -11,9 +11,9 @@
 import abc
 import typing as t
 
-from aiida.orm.nodes.data.base import BaseType, to_aiida_type
+from aiida.orm.nodes.data.base import BaseType, BaseTypeInterface, to_aiida_type
 
-__all__ = ('NumericType',)
+__all__ = ('NumericType', 'NumericTypeInterface')
 
 
 def _left_operator(func):
@@ -47,6 +47,10 @@ _NumericT = t.TypeVar('_NumericT', int, float)
 
 class NumericType(BaseType[_NumericT], abc.ABC, t.Generic[_NumericT]):
     """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
+
+
+class NumericTypeInterface(BaseTypeInterface[_NumericT], abc.ABC, t.Generic[_NumericT]):
+    """Interface for numeric data types."""
 
     @_left_operator
     def __add__(self, other):

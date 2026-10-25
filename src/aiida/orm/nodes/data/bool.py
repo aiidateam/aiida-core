@@ -12,15 +12,13 @@ import numpy
 import pydantic as pdt
 
 from aiida.orm.decorators import attribute
-from aiida.orm.nodes.data.base import BaseType, to_aiida_type
+from aiida.orm.nodes.data.base import BaseType, BaseTypeInterface, to_aiida_type
 
-__all__ = ('Bool',)
+__all__ = ('Bool', 'BoolInterface')
 
 
 class Bool(BaseType[bool]):
     """`Data` sub class to represent a boolean value."""
-
-    _type = bool
 
     @attribute(model_field_info=pdt.fields.FieldInfo(default=False))
     def value(self) -> bool:
@@ -30,6 +28,13 @@ class Bool(BaseType[bool]):
     @value.setter
     def value(self, value: bool) -> None:
         self.base.attributes.set('value', bool(value))
+
+
+class BoolInterface(BaseTypeInterface[bool]):
+    """Interface for the `Bool` data type."""
+
+    _orm_cls = Bool
+    _type = bool
 
     def __int__(self):
         return int(bool(self))
@@ -41,7 +46,7 @@ class Bool(BaseType[bool]):
 @to_aiida_type.register(bool)
 @to_aiida_type.register(numpy.bool_)
 def _(value: bool | numpy.bool_) -> Bool:
-    return Bool(bool(value))
+    return Bool(attributes={'value': bool(value)})
 
 
 def get_true_node():
@@ -52,7 +57,7 @@ def get_true_node():
 
     :return: a `Bool` instance with the value `True`
     """
-    return Bool(value=True)
+    return Bool(attributes={'value': True})
 
 
 def get_false_node():
@@ -63,4 +68,4 @@ def get_false_node():
 
     :return: a `Bool` instance with the value `False`
     """
-    return Bool(value=False)
+    return Bool(attributes={'value': False})

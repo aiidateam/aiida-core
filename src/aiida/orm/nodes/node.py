@@ -10,17 +10,17 @@
 
 from __future__ import annotations
 
+import abc
 import datetime
 import logging
-import re
 import typing as t
 from abc import ABCMeta
 from collections.abc import Iterator
-from functools import cached_property, wraps
+from copy import deepcopy
+from functools import cached_property
 from uuid import UUID
 
 import pydantic as pdt
-from pydantic_core import PydanticUndefined
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -32,7 +32,7 @@ from aiida.orm.cli.node import NodeCliCreateSpec
 from aiida.orm.computers import Computer
 from aiida.orm.decorators import column
 from aiida.orm.decorators.attributes import attributes_column, iter_attributes
-from aiida.orm.entities import Entity, EntityCollection
+from aiida.orm.entities import Entity, EntityCollection, EntityInterface
 from aiida.orm.extras import EntityExtras
 from aiida.orm.models.adapters import EntityPkAdapter
 from aiida.orm.models.node import NodeModelsNamespace
@@ -56,7 +56,7 @@ if t.TYPE_CHECKING:
     from aiida.orm.implementation.nodes import BackendNode
     from aiida.orm.nodes.repository import NodeRepository
 
-__all__ = ('Node',)
+__all__ = ('Node', 'NodeInterface')
 
 _NodeT = t.TypeVar('_NodeT', bound='Node')
 
@@ -175,30 +175,6 @@ class AbstractNodeMeta(ABCMeta):
 _P = t.ParamSpec('_P')
 
 
-def with_final_attribute_default_settings(
-    init: t.Callable[t.Concatenate[Node, _P], None],
-) -> t.Callable[t.Concatenate[Node, _P], None]:
-    """Apply attribute defaults after the outermost constructor finishes."""
-
-    @wraps(init)
-    def wrapper(self: Node, *args: _P.args, **kwargs: _P.kwargs) -> None:
-        outermost = not getattr(self, '_node_initializing', False)
-
-        if outermost:
-            self._node_initializing = True
-
-        try:
-            init(self, *args, **kwargs)
-
-            if outermost:
-                self._set_attribute_defaults()
-        finally:
-            if outermost:
-                del self._node_initializing
-
-    return wrapper
-
-
 class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNodeMeta):
     """Base class for all nodes in AiiDA.
 
@@ -251,23 +227,22 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    @with_final_attribute_default_settings
     def __init__(
         self,
         *,
         label: str = '',
         description: str = '',
-        extras: dict | None = None,
+        extras: dict[str, t.Any] | None = None,
+        attributes: dict[str, t.Any] | None = None,
         node_type: str | None = None,
         process_type: str | None = None,
         ctime: datetime.datetime | None = None,
         mtime: datetime.datetime | None = None,
         computer: Computer | None = None,
         user: User | None = None,
-        repository_metadata: dict | None = None,
+        repository_metadata: dict[str, t.Any] | None = None,
         files: dict[str, t.Callable[[], t.BinaryIO | None]] | None = None,
         backend: StorageBackend | None = None,
-        **attribute_kwargs: t.Any,
     ) -> None:
         backend = backend or get_manager().get_profile_storage()
 
@@ -298,8 +273,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if extras:
             self.base.extras.set_many(extras)
 
-        if attribute_kwargs:
-            self._set_unhandled_attributes(attribute_kwargs)
+        if attributes:
+            self.base.attributes.set_many(attributes)
 
         if files:
             self._attach_files(files, repository_metadata)
@@ -310,10 +285,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         # Initialize the set of declared attributes for the subclass.
         cls._declared_attributes = frozenset(iter_attributes(cls))
 
-        # Wrap the __init__ method to append default setting to sub-constructors
-        init = cls.__dict__.get('__init__')
-        if init is not None:
-            cls.__init__ = with_final_attribute_default_settings(init)  # type: ignore
+        # # Disallow __init__ overrides
+        # if '__init__' in cls.__dict__:
+        #     raise TypeError('Overriding __init__ is not allowed for Node subclasses')
 
     def __eq__(self, other: t.Any) -> bool:
         """Fallback equality comparison by uuid (can be overwritten by specific types)"""
@@ -670,52 +644,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if self.is_stored:
             raise exceptions.ModificationNotAllowed('the attributes of a stored entity are immutable')
 
-    def _set_unhandled_attributes(self, attribute_kwargs: dict[str, t.Any]) -> None:
-        """Set the attributes for the node, once validated."""
-        self._validate_attributes(attribute_kwargs)
-
-        for key, value in attribute_kwargs.items():
-            if key in self._declared_attributes:
-                setattr(self, key, value)
-            elif self._validate_extra_attribute(key):
-                self.base.attributes.set(key, value)
-            else:
-                msg = f'Unexpected attribute key: {key}'
-                raise exceptions.ValidationError(msg)
-
-    def _set_attribute_defaults(self) -> None:
-        """Persist defaults for declared attributes that remain unset after initialization."""
-        attributes = self.base.attributes.all.copy()
-        defaults: dict[str, t.Any] = {}
-
-        for name, attribute in iter_attributes(type(self)).items():
-            if name in attributes:
-                continue
-
-            if not attribute.spec.persist_default:
-                continue
-
-            value = attribute.get_default(validated_data=attributes)
-            if value is PydanticUndefined:
-                continue
-
-            defaults[name] = value
-            attributes[name] = value
-
-        if defaults:
-            self.base.attributes.set_many(defaults)
-
-    def _validate_extra_attribute(self, key: str) -> bool:
-        """Check if extra attribute is valid.
-
-        This is only ever false if the attribute key does not exist in an explicitly defined
-        allowed extra keys, e.g., via pattern matching or a predefined set.
-        """
-        if self._extra_attributes_pattern:
-            if re.match(self._extra_attributes_pattern, key) is None:
-                return False
-        return True
-
     @super_check
     def _validate(self) -> None:
         """Validate information stored in Node object.
@@ -838,3 +766,42 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: a description string
         """
         return ''
+
+
+class NodeInterface(EntityInterface[_NodeT], abc.ABC, t.Generic[_NodeT]):
+    """Abstract base class for node interfaces."""
+
+    def to_aiida(
+        self,
+        label: str = '',
+        description: str = '',
+        extras: dict[str, t.Any] | None = None,
+    ) -> _NodeT:
+        """Convert the interface to an ORM entity instance."""
+        attributes = self._get_attributes()
+        return self._orm_cls(
+            label=label,
+            description=description,
+            extras=extras,
+            attributes=deepcopy(attributes),
+        )
+
+    @classmethod
+    def from_aiida(cls, entity: _NodeT) -> Self:
+        """Construct the interface from an ORM entity instance."""
+        interface = cls.__new__(cls)
+        attributes = deepcopy(entity.attributes)
+        for key in iter_attributes(cls._orm_cls):
+            if key == 'source':
+                continue
+            setattr(interface, key, attributes.get(key))
+        return interface
+
+    def _get_attributes(self) -> dict[str, t.Any]:
+        """Return a dictionary of the attributes for this interface."""
+        attributes: dict[str, t.Any] = {}
+        for key in iter_attributes(self._orm_cls):
+            if key == 'source':
+                continue
+            attributes[key] = getattr(self, key)
+        return attributes

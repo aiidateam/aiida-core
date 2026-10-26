@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for `aiida.engine.processes.process.Process` runtime inputs."""
 
+import typing as t
+from dataclasses import field
 from unittest.mock import Mock
 
 import pytest
@@ -15,7 +17,7 @@ import pytest
 from aiida import orm
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import LinkType
-from aiida.engine import WorkChain
+from aiida.engine import PortField, PortModel, WorkChain, run_get_node
 from aiida.engine.processes.persistence import CheckpointPayload
 
 pytestmark = pytest.mark.presto
@@ -111,6 +113,99 @@ def test_checkpoint_preserves_runtime_values_and_original_nodes(through_builder:
         assert links['label'].uuid == given['label'].uuid
         assert links['count'].uuid == given['count'].uuid
         assert restored._flat_inputs()['count'].uuid == given['count'].uuid
+        restored.execute()
+        assert restored.node.is_finished_ok
+    finally:
+        if restored is not None:
+            restored.close()
+        process.close()
+
+
+class Settings(PortModel):
+    count: t.Annotated[int, PortField(help='Iteration count.')] = 2
+    tags: list[str] = field(default_factory=list)
+
+
+class Values(PortModel):
+    label: str
+    nullable: int | None
+    settings: Settings = Settings()
+    optional: str | None = None
+    node: orm.Int | None = None
+
+
+class NamespaceWorkChain(WorkChain):
+    """Work chain taking a structured namespace of runtime inputs."""
+
+    @classmethod
+    def define(cls, spec) -> None:
+        super().define(spec)
+        spec.input_namespace_from('values', Values)
+        spec.output('label', valid_type=orm.Str)
+        spec.outline(cls.echo)
+
+    def echo(self) -> None:
+        assert isinstance(self.inputs['values'], AttributesFrozendict)
+        assert isinstance(self.inputs['values'].settings, AttributesFrozendict)
+        self.out('label', self.node.inputs.values.label)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('as_nodes', [pytest.param(False, id='plain'), pytest.param(True, id='nodes')])
+@pytest.mark.parametrize('as_model', [pytest.param(False, id='mapping'), pytest.param(True, id='model')])
+def test_runtime_mapping_defaults_and_provenance(as_nodes: bool, as_model: bool) -> None:
+    """Model inputs run as plain values while provenance links retain ORM nodes."""
+    original = orm.Str('test') if as_nodes else 'test'
+    supplied = Values(label=original, nullable=None)
+    given = supplied if as_model else supplied.as_dict()
+    outputs, node = run_get_node(NamespaceWorkChain, values=given)
+    assert node.is_finished_ok
+    assert outputs['label'].value == 'test'
+    assert node.inputs.values.settings.count.value == 2
+    assert node.inputs.values.settings.tags.get_list() == []
+    if as_nodes:
+        assert node.inputs.values.label.uuid == original.uuid
+    assert node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('values__label')
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'given, match',
+    [
+        ({'label': 'test'}, r"validating port 'inputs.values.nullable'"),
+        ({'nullable': None}, r"validating port 'inputs.values.label'"),
+        (
+            {'label': 'test', 'nullable': None, 'settings': {'count': 'wrong'}},
+            r"validating port 'inputs.values.settings.count'",
+        ),
+        ({'label': 'test', 'nullable': None, 'unknown': 1}, r"Unexpected ports \{'unknown': 1\}"),
+    ],
+)
+def test_invalid_namespace_inputs(given, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        run_get_node(NamespaceWorkChain, values=given)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('through_builder', [pytest.param(False, id='direct'), pytest.param(True, id='builder')])
+def test_checkpoint_preserves_namespace_values_and_nodes(through_builder: bool) -> None:
+    """Checkpoint restoration keeps namespace runtime values and original node identities."""
+    original = orm.Str('test')
+    given = Values(label=original, nullable=None).as_dict()
+    if through_builder:
+        builder = NamespaceWorkChain.get_builder()
+        builder['values'] = given
+        given = builder._inputs()['values']
+    process = NamespaceWorkChain(inputs={'values': given})
+    restored = None
+    try:
+        assert process.inputs['values'].label == 'test'
+        checkpoint = CheckpointPayload.from_object(process)
+        process.close()
+        restored = checkpoint.decode()
+        assert restored.inputs['values'].label == 'test'
+        assert restored.inputs['values'].settings.count == 2
+        assert restored._flat_inputs()['values__label'].uuid == original.uuid
         restored.execute()
         assert restored.node.is_finished_ok
     finally:

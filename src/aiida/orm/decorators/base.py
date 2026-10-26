@@ -298,10 +298,14 @@ class BaseField(
             )
             raise TypeError(msg)
 
-        # We only take the first line of the docstring as the description,
-        description = (self.__doc__ or '').strip().split('\n')[0].strip()
-
         field_info = self.model_field_info
+
+        if field_info.description is not None:
+            description = field_info.description
+        else:
+            # We only take the first line of the docstring as the description
+            description = (self.__doc__ or '').strip().split('\n')[0].strip()
+
         model_type = self._get_model_type(value_type)
         default_is_inferred_nullable = (
             field_info.default is PydanticUndefined and field_info.default_factory is None and is_nullable(model_type)

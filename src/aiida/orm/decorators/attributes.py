@@ -340,6 +340,14 @@ def iter_attributes(entity: type) -> dict[str, NodeAttribute]:
     return result
 
 
+@dataclasses.dataclass(frozen=True)
+class NodeAttributesColumnConfig(ColumnConfig):
+    """Unresolved configuration of the top-level Node attributes column."""
+
+    cli_exclude: bool = True
+    may_be_large: bool = True
+
+
 class NodeAttributesColumn(
     Column[
         _NodeT,
@@ -349,14 +357,13 @@ class NodeAttributesColumn(
 ):
     """Top-level entity column representing the Node attributes mapping."""
 
-    def __init__(self, fget: Callable[[_NodeT], dict[str, t.Any]]) -> None:
-        super().__init__(
-            fget,
-            config=ColumnConfig(
-                may_be_large=True,
-                cli_exclude=True,
-            ),
-        )
+    config_type = NodeAttributesColumnConfig
+
+    # def __init__(self, fget: Callable[[_NodeT], dict[str, t.Any]]) -> None:
+    #     super().__init__(
+    #         fget,
+    #         config=NodeAttributesColumnConfig(),
+    #     )
 
     @override
     def _build_qb_field(
@@ -382,15 +389,25 @@ class NodeAttributesColumn(
         return qb_field
 
 
-class NodeAttributesColumnDecorator:
+class NodeAttributesColumnDecorator(
+    BaseFieldDecorator[
+        _NodeT,
+        _ValueT,
+        NodeAttributesColumnConfig,
+        NodeAttributesColumn,
+    ],
+):
     """Decorator for the top-level Node `attributes` column."""
+
+    config_type = NodeAttributesColumnConfig
+    field_type = NodeAttributesColumn
 
     def __call__(
         self,
         fget: Callable[[_NodeT], dict[str, t.Any]],
         /,
-    ) -> NodeAttributesColumn[_NodeT]:
-        return NodeAttributesColumn(fget)
+    ) -> NodeAttributesColumn:
+        return self.field_type(fget, config=NodeAttributesColumnConfig())
 
 
 attributes_column = NodeAttributesColumnDecorator()

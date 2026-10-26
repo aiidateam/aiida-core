@@ -8,6 +8,7 @@
 ###########################################################################
 """Build-only contracts for straight-line source graphs."""
 
+import copy
 import importlib
 import json
 import re
@@ -136,6 +137,19 @@ def test_rejected_source_syntax_fails_during_build(declaration: GraphHandle, mes
         declaration.build()
 
 
+def test_nested_graph_builds_subgraph_task() -> None:
+    from aiida.engine.processes.graphs.ir import SubgraphTask
+
+    spec = calls.nested_multiply_add.build()
+    assert isinstance(spec.tasks[0], SubgraphTask)
+    assert spec.tasks[0].body.identifier == f'{calls.__name__}:multiply_add'
+
+
+def test_recursive_call_fails_during_build() -> None:
+    with pytest.raises(GraphLanguageError, match='Recursive graph call'):
+        calls.recursive_call.build()
+
+
 def test_ordering_dependency_carries_no_value() -> None:
     """An `after` dependency orders placements without wiring an output value."""
     specification = calls.ordered_named.build()
@@ -261,6 +275,18 @@ def test_invalid_endpoint_fails_validation(mutate, message) -> None:
     spec = calls.chain.build()
     with pytest.raises(GraphTypeCheckError, match=message):
         mutate(spec)
+
+
+def test_mutated_nested_inputs_fail_port_validation() -> None:
+    """Mutating a nested body past its boundary fails validation naming the task."""
+    from aiida.engine.processes.graphs.ir import SubgraphTask
+
+    spec = copy.deepcopy(calls.nested.build())
+    task = spec.task('chain')
+    assert isinstance(task, SubgraphTask)
+    task.body.inputs['zzz'] = ()
+    with pytest.raises(GraphTypeCheckError, match='task `chain` declares ports'):
+        spec.validate()
 
 
 def test_dunder_main_function_gets_identifier() -> None:

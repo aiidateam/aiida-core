@@ -50,12 +50,6 @@ def annotated_assignment(value: int) -> int:  # rejected at lowering
 
 
 @graph
-def tuple_assignment(x: int, y: int) -> int:
-    """Bind two names at once from multiple outputs."""
-    total, product = arithmetic_pair(x=x, y=y)
-    return add(x=total, y=product)
-
-@graph
 def chained_assignment(value: int) -> int:
     """Assign two names in one statement to one placement."""
     first = second = add(x=value, y=1)

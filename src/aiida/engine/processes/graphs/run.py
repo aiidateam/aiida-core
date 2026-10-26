@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from aiida.engine.processes.graphs.inputs import _at, _place
-from aiida.engine.processes.graphs.ir import GraphIR, GraphTask, require_version
+from aiida.engine.processes.graphs.ir import GraphIR, GraphTask, SubgraphTask, require_version
 from aiida.orm import Node, load_node
 
 __all__ = ('GraphRun',)
@@ -159,7 +159,7 @@ class GraphRun:
         task = self.graph.task(name)
         inputs = self._inputs_for(task)
         self.instances[name] = [name]
-        step.begin(name, task, inputs)
+        step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
 
     def _inputs_for(self, task: GraphTask) -> dict[str, t.Any]:
         """Wire graph inputs and dependency outputs into one task's declared inputs."""

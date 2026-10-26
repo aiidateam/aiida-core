@@ -51,8 +51,6 @@ def multiply(x: int, y: int) -> int:
     return x * y
 
 
-
-
 @task
 def read_nested_count(config: Configuration) -> int:
     """Read the nested count from a model."""
@@ -88,8 +86,6 @@ def is_positive(value: int) -> bool:
 def decrement(value: int) -> int:
     """Subtract one."""
     return value - 1
-
-
 
 
 def unhinted(value: t.Any) -> t.Any:

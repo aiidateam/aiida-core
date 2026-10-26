@@ -130,3 +130,16 @@ def positional_task_arguments(value: int) -> int:
     """Call with positional arguments, bound through signature order."""
     return add(value, 1)
 
+
+@graph
+def nested(x: int, y: int) -> int:
+    """Nest one graph in another."""
+    inner = chain(x=x, y=y)
+    return add(x=inner, y=x)
+
+
+@graph
+def nested_multiply_add(x: int, y: int, z: int) -> int:
+    """Nest the multiply-add graph once."""
+    intermediate = multiply_add(x=x, y=y, z=z)
+    return add(x=intermediate, y=1)

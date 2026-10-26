@@ -108,10 +108,14 @@ def _prompt_for_template_variables(variables: t.Sequence[_TemplateVariable]) -> 
 
 def _detect_template_variables(template_content: str) -> list[str]:
     """Detect undeclared Jinja2 variables in template content, in alphabetical order."""
-    from jinja2 import meta
+    from jinja2 import TemplateSyntaxError, meta
     from jinja2.sandbox import SandboxedEnvironment
 
-    ast = SandboxedEnvironment().parse(template_content)
+    try:
+        ast = SandboxedEnvironment().parse(template_content)
+    except TemplateSyntaxError as exc:
+        msg = f'Invalid Jinja2 template: {exc}'
+        raise click.BadParameter(msg) from exc
     # ``find_undeclared_variables`` returns a set, whose iteration order varies between processes.
     return sorted(meta.find_undeclared_variables(ast))
 
@@ -119,7 +123,7 @@ def _detect_template_variables(template_content: str) -> list[str]:
 def _render_template(content: str, template_values: TemplateValues) -> dict[str, t.Any]:
     """Render a Jinja2 template string with the given values and parse as YAML."""
     import yaml
-    from jinja2 import StrictUndefined, UndefinedError
+    from jinja2 import StrictUndefined, TemplateSyntaxError, UndefinedError
     from jinja2.exceptions import SecurityError
     from jinja2.sandbox import SandboxedEnvironment
 
@@ -127,7 +131,12 @@ def _render_template(content: str, template_values: TemplateValues) -> dict[str,
     # ``jinja2.Environment`` grants a template Python attribute access, which is enough to execute code.
     env = SandboxedEnvironment(undefined=StrictUndefined)
     try:
-        rendered = env.from_string(content).render(**template_values)
+        template = env.from_string(content)
+    except TemplateSyntaxError as exc:
+        msg = f'Invalid Jinja2 template: {exc}'
+        raise click.BadParameter(msg) from exc
+    try:
+        rendered = template.render(**template_values)
     except UndefinedError as exc:
         msg = f'Missing template variable: {exc}'
         raise click.BadParameter(msg) from exc

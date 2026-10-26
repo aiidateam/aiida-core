@@ -140,6 +140,11 @@ class TestProcessTemplateContent:
                 r'No value provided for the template variables: label',
                 id='missing_vars_non_interactive',
             ),
+            pytest.param(
+                "label: '{{ label'\nhostname: localhost\n",
+                'Invalid Jinja2 template',
+                id='malformed_jinja',
+            ),
         ],
     )
     def test_invalid_input_raises(self, content, match):

@@ -233,6 +233,14 @@ def process_template_content(
         )
         raise click.BadParameter(msg)
 
+    # Interactive prompting constrains `type: list` variables through `click.Choice`; values arriving via
+    # `--template-vars` skip the prompt, so enforce the same constraint here rather than storing off-list values.
+    for name in detected_vars:
+        choices = _TemplateVariable.from_metadata(name, specs.get(name) or {}).choices
+        if choices and str(values[name]) not in choices:
+            msg = f'Invalid value for template variable {name!r}: {values[name]!r} is not one of {", ".join(choices)}.'
+            raise click.BadParameter(msg)
+
     return _render_template(content, values)
 
 

@@ -275,14 +275,17 @@ class TemplateAwareConfigFileOption(OverridableOption):
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         from aiida.cmdline.params.types import FileOrUrl
 
+        if 'type' in kwargs:
+            msg = 'TemplateAwareConfigFileOption requires a handle-yielding type and does not accept `type`.'
+            raise TypeError(msg)
         kwargs.update(
             {
                 'provider': _template_aware_yaml_provider,
                 'implicit': False,
                 'cls': _TemplateAwareClickOption,
-                # The provider needs the content, not a path, so the type has to yield a handle. Defaulted here
-                # rather than left to each declaration site, where forgetting it fails only at runtime.
-                'type': kwargs.get('type', FileOrUrl()),
+                # The provider needs the content, not a path, so the type is fixed here rather than left to each
+                # declaration site, where forgetting it fails only at runtime.
+                'type': FileOrUrl(),
             }
         )
         super().__init__(*args, **kwargs)

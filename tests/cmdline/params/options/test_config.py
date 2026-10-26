@@ -240,6 +240,39 @@ def test_template_config_interactive_choice(run_cli_command, tmp_path):
     assert 'Label: pw' in result.output
 
 
+def test_template_config_template_vars_outside_choices_raises(run_cli_command, tmp_path):
+    """``--template-vars`` values face the same ``type: list`` constraint as prompted answers."""
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """\
+            label: '{{ binary }}'
+            hostname: localhost
+            metadata:
+                template_variables:
+                    binary:
+                        type: list
+                        options:
+                            - pw
+                            - ph
+            """
+        )
+    )
+
+    result = run_cli_command(
+        cmd_with_template, ['--config', str(filepath), '--template-vars', '{"binary": "vim"}'], raises=True
+    )
+    assert 'not one of pw, ph' in result.stderr
+
+
+def test_template_aware_option_rejects_type_override():
+    """The provider needs a handle, so an explicit ``type`` fails at construction, not at runtime."""
+    from aiida.cmdline.params.options.config import TemplateAwareConfigFileOption
+
+    with pytest.raises(TypeError, match='does not accept `type`'):
+        TemplateAwareConfigFileOption('--config', type=click.Path())
+
+
 @pytest.mark.parametrize('config_first', (False, True), ids=('non_interactive_first', 'config_first'))
 def test_template_config_non_interactive_never_prompts(run_cli_command, templated_config, config_first):
     """``--non-interactive`` must be honoured whichever side of ``--config`` it is typed on.

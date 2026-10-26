@@ -192,6 +192,21 @@ class TestProcessTemplateContent:
         content = "label: plain\nmetadata:\n  tooltip: 'use {{ braces }} literally'\n"
         assert process_template_content(content, interactive=False) == {'label': 'plain'}
 
+    def test_template_vars_value_outside_choices_raises(self):
+        """Values from ``--template-vars`` face the same ``type: list`` constraint as prompted values."""
+        content = textwrap.dedent("""\
+            label: '{{ binary }}'
+            metadata:
+                template_variables:
+                    binary:
+                        type: list
+                        options:
+                            - pw
+                            - ph
+        """)
+        with pytest.raises(click.BadParameter, match='not one of pw, ph'):
+            process_template_content(content, interactive=False, template_vars={'binary': 'vim'})
+
     def test_non_mapping_after_rendering_raises(self):
         """The renderer refuses a non-mapping result rather than returning it against its annotation."""
         with pytest.raises(click.BadParameter, match='Expected a YAML mapping after template rendering, got str'):

@@ -114,6 +114,29 @@ def test_config_url_closed_on_callback_error(monkeypatch):
     assert response.closed
 
 
+def test_template_abort_closes_handle(tmp_path, monkeypatch):
+    """An aborted template prompt still releases the Click-owned config handle.
+
+    ``click.Abort`` bypasses the ``BadOptionUsage`` wrap so the user sees ``Aborted!``, but the base
+    ``ExitStack`` cleanup must still close the handle.
+    """
+    from aiida.cmdline.params.options.config import _template_aware_yaml_provider
+
+    path = tmp_path / 'config.yml'
+    path.write_text("label: '{{ label }}'\n")
+    context = click.Context(cmd_with_template)
+    param = next(param for param in cmd_with_template.params if param.name == 'config')
+    handle = param.type.convert(str(path), param, context)
+    monkeypatch.setattr(click, 'prompt', lambda *args, **kwargs: (_ for _ in ()).throw(click.Abort()))
+
+    with pytest.raises(click.Abort):
+        configuration_callback(
+            None, '--config', 'config', None, _template_aware_yaml_provider, False, context, param, handle
+        )
+
+    assert handle.closed
+
+
 def test_config_handle_left_open_for_saved_callback(tmp_path):
     """Click still owns the handle after a successful config callback."""
     path = tmp_path / 'config.yml'

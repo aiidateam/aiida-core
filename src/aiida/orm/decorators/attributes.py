@@ -382,7 +382,14 @@ class NodeAttributesColumn(
         return qb_field
 
 
-class NodeAttributesColumnDecorator:
+class NodeAttributesColumnDecorator(
+    BaseFieldDecorator[
+        _NodeT,
+        _ValueT,
+        NodeAttributeConfig,
+        NodeAttribute[t.Any, t.Any, qb_fields.QbField],
+    ],
+):
     """Decorator for the top-level Node `attributes` column."""
 
     def __call__(

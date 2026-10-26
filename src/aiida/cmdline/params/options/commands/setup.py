@@ -13,6 +13,7 @@ from __future__ import annotations
 import functools
 import getpass
 import typing as t
+import uuid
 
 import click
 
@@ -163,6 +164,27 @@ def get_quicksetup_password(ctx: click.Context, param: click.Parameter, value: s
     return value
 
 
+def validate_profile_uuid(ctx: click.Context, param: click.Parameter, value: str | None) -> str | None:
+    """Validate that the profile UUID is a valid UUID.
+
+    :param ctx: The click context.
+    :param param: The parameter.
+    :param value: The value passed for the parameter.
+    :return: The validated parameter.
+    :raises click.BadParameter: If the value is not a valid UUID.
+    """
+    if value is None:
+        return None
+
+    try:
+        uuid.UUID(str(value))
+    except (ValueError, AttributeError, TypeError):
+        msg = f'{value!r} is not a valid UUID.'
+        raise click.BadParameter(msg, param=param)
+
+    return value
+
+
 SETUP_PROFILE_UUID = options.OverridableOption(
     '--profile-uuid',
     prompt='Profile UUID',
@@ -173,6 +195,7 @@ SETUP_PROFILE_UUID = options.OverridableOption(
     required=False,
     hidden=True,
     type=str,
+    callback=validate_profile_uuid,
     cls=options.interactive.InteractiveOption,
 )
 

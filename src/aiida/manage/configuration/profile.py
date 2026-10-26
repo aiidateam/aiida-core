@@ -14,6 +14,7 @@ import collections
 import os
 import pathlib
 import typing as t
+import uuid
 from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
@@ -63,9 +64,13 @@ class Profile:
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:
-            from uuid import uuid4
-
-            self._attributes[self.KEY_UUID] = uuid4().hex
+            self._attributes[self.KEY_UUID] = uuid.uuid4().hex
+        elif validate:
+            try:
+                self._validate_uuid(self._attributes[self.KEY_UUID])
+            except (ValueError, TypeError) as exc:
+                msg = f'Profile {name!r} configuration has an invalid UUID: {exc}'
+                raise exceptions.ConfigurationError(msg) from exc
 
     def __repr__(self) -> str:
         return f'Profile<uuid={self.uuid!r} name={self.name!r}>'
@@ -73,6 +78,24 @@ class Profile:
     def copy(self):
         """Return a copy of the profile."""
         return self.__class__(self.name, self._attributes)
+
+    @staticmethod
+    def _validate_uuid(value: t.Any) -> None:
+        """Validate that the given value is a valid UUID.
+
+        :param value: the UUID as a string or :class:`uuid.UUID` instance.
+        :raises TypeError: if value is not a string or :class:`uuid.UUID`.
+        :raises ValueError: if value is not a valid UUID.
+        """
+        if not isinstance(value, (str, uuid.UUID)):
+            msg = f'UUID must be a string or uuid.UUID instance, got {type(value).__name__}'
+            raise TypeError(msg)
+
+        try:
+            uuid.UUID(str(value) if isinstance(value, uuid.UUID) else value)
+        except ValueError as exc:
+            msg = f'{value!r} is not a valid UUID.'
+            raise ValueError(msg) from exc
 
     @property
     def uuid(self) -> str:
@@ -83,8 +106,15 @@ class Profile:
         return self._attributes[self.KEY_UUID]
 
     @uuid.setter
-    def uuid(self, value: str) -> None:
-        self._attributes[self.KEY_UUID] = value
+    def uuid(self, value: str | uuid.UUID) -> None:
+        """Set the profile uuid.
+
+        :param value: string UUID or :class:`uuid.UUID` instance.
+        :raises TypeError: if value is not a string or :class:`uuid.UUID`.
+        :raises ValueError: if value is not a valid UUID.
+        """
+        self._validate_uuid(value)
+        self._attributes[self.KEY_UUID] = str(value)
 
     @property
     def default_user_email(self) -> str | None:

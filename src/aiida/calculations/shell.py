@@ -31,6 +31,7 @@ from aiida.orm import (
     SinglefileData,
     to_aiida_type,
 )
+from aiida.orm.nodes.data.singlefile import SinglefileInterface
 from aiida.parsers import Parser
 
 ParserFunctionType = t.Callable[[pathlib.Path, Parser], dict[str, Data]] | t.Callable[[pathlib.Path], dict[str, Data]]
@@ -487,7 +488,7 @@ class ShellJob(CalcJob):
         for key, node in nodes.items():
             if isinstance(node, SinglefileData):
                 default_filename = (
-                    node.filename if node.filename and node.filename != SinglefileData.DEFAULT_FILENAME else key
+                    node.filename if node.filename and node.filename != SinglefileInterface.DEFAULT_FILENAME else key
                 )
                 filename = filenames.get(key, default_filename)
             elif isinstance(node, FolderData):

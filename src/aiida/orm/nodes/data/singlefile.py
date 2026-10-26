@@ -12,25 +12,28 @@ from __future__ import annotations
 
 import contextlib
 import io
-import os
 import pathlib
+import shutil
+import tempfile
 import typing as t
 
 from aiida.common import exceptions
-from aiida.common.lang import type_check
+from aiida.common.lang import override, type_check
 from aiida.common.typing import FilePath
 from aiida.orm.cli import CliFieldInfo
 from aiida.orm.decorators import attribute
 from aiida.orm.decorators.repo import RepoFiles, RepoSourceCliInput, file_to_repo_files, repo_source
-from aiida.orm.nodes.data.data import Data
+from aiida.orm.nodes.data.data import Data, DataInterface
 
-__all__ = ('SinglefileData',)
+__all__ = ('SinglefileData', 'SinglefileInterface')
+
+_DEFAULT_FILENAME = 'file.txt'
 
 
 def _singlefile_to_repo_files(filepath: pathlib.Path, context: t.Mapping[str, t.Any]) -> RepoFiles:
     """Map a local file to the path selected for its repository entry."""
     attributes = context.get('attributes') or {}
-    filename = attributes.get('filename') or filepath.name or SinglefileData.DEFAULT_FILENAME
+    filename = attributes.get('filename') or filepath.name or _DEFAULT_FILENAME
     return file_to_repo_files(filepath, context, destination=filename)
 
 
@@ -41,7 +44,7 @@ def _singlefile_string_to_repo_files(
     """Map inline text to a repository file."""
     filename, content = value
     attributes = context.get('attributes') or {}
-    filename = attributes.get('filename') or filename or SinglefileData.DEFAULT_FILENAME
+    filename = attributes.get('filename') or filename or _DEFAULT_FILENAME
     content_bytes = content.encode('utf-8')
 
     def opener() -> t.BinaryIO:
@@ -70,7 +73,7 @@ def _collect_singlefile_cli_input() -> dict[str, t.Any]:
     filename = click.prompt(
         'File name',
         type=str,
-        default=SinglefileData.DEFAULT_FILENAME,
+        default=_DEFAULT_FILENAME,
     )
     content = click.prompt('File content', type=str, default='', show_default=False)
     return {'string': (filename, content)}
@@ -78,39 +81,6 @@ def _collect_singlefile_cli_input() -> dict[str, t.Any]:
 
 class SinglefileData(Data):
     """ORM representation of a single file in the node repository."""
-
-    DEFAULT_FILENAME = 'file.txt'
-
-    def __init__(
-        self,
-        file: str | pathlib.Path | t.IO | None = None,
-        filename: str | pathlib.Path | None = None,
-        content: str | bytes | t.IO | None = None,
-        **kwargs: t.Any,
-    ) -> None:
-        super().__init__(**kwargs)
-
-        if file is not None and content is not None:
-            raise ValueError('cannot specify both `file` and `content`.')
-
-        if content is not None:
-            if isinstance(content, str):
-                content = io.StringIO(str(content))
-            elif isinstance(content, bytes):
-                content = io.BytesIO(content)
-            else:
-                raise TypeError('`content` must be of type `str` or `bytes`.')
-
-            file = content
-
-        if file is not None:
-            self.set_file(file, filename=filename)
-
-        if filename is not None:
-            self.filename = str(filename)
-
-    def __str__(self) -> str:
-        return f'{super().__str__()} file: {self.filename}'
 
     @attribute(
         required_once_stored=True,
@@ -157,131 +127,12 @@ class SinglefileData(Data):
         max_files=1,
         interactive_collector=_collect_singlefile_cli_input,
     )
-    def singlefile(self) -> pathlib.PurePath | None:
+    def _singlefile(self) -> pathlib.PurePath | None:
         """The path of the file stored in the node repository."""
         if self.filename is None:
             return None
 
         return pathlib.PurePath(self.filename)
-
-    @property
-    def content(self) -> bytes:
-        """Return the content of the file as bytes."""
-        return self.get_content(mode='rb')
-
-    @t.overload
-    @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r'] = ...) -> t.Generator[t.TextIO, None, None]: ...
-
-    @t.overload
-    @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Generator[t.BinaryIO, None, None]: ...
-
-    @t.overload
-    @contextlib.contextmanager
-    def open(self, path: None = None, mode: t.Literal['r'] = ...) -> t.Generator[t.TextIO, None, None]: ...
-
-    @t.overload
-    @contextlib.contextmanager
-    def open(self, path: None = None, mode: t.Literal['rb'] = ...) -> t.Generator[t.BinaryIO, None, None]: ...
-
-    @contextlib.contextmanager
-    def open(
-        self,
-        path: FilePath | None = None,
-        mode: t.Literal['r', 'rb'] = 'r',
-    ) -> t.Generator[t.BinaryIO, None, None] | t.Generator[t.TextIO, None, None]:
-        """Return an open file handle to the content of this data node.
-
-        :param path: the relative path of the object within the repository.
-        :param mode: the mode with which to open the file handle (default: read mode)
-        :return: a file handle
-        """
-        if path is None:
-            path = self.filename
-
-        assert path is not None
-        with self.base.repository.open(path, mode=mode) as handle:
-            yield handle
-
-    @contextlib.contextmanager
-    def as_path(self) -> t.Generator[pathlib.Path, None, None]:
-        """Make the contents of the file available as a normal filepath on the local file system.
-
-        :param path: optional relative path of the object within the repository.
-        :return: the filepath of the content of the repository or object if ``path`` is specified.
-        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
-        :raises FileNotFoundError: if no object exists for the given path.
-        """
-        with self.base.repository.as_path(self.filename) as filepath:
-            yield filepath
-
-    @t.overload
-    def get_content(self, mode: t.Literal['rb']) -> bytes: ...
-
-    @t.overload
-    def get_content(self, mode: t.Literal['r'] = 'r') -> str: ...
-
-    @t.overload
-    def get_content(self, mode: t.Literal['r', 'rb']) -> str | bytes: ...
-
-    def get_content(self, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
-        """Return the content of the single file stored for this data node.
-
-        :param mode: the mode with which to open the file handle (default: read mode)
-        :return: the content of the file as a string or bytes, depending on ``mode``.
-        """
-        with self.open(mode=mode) as handle:  # type: ignore[call-overload]
-            return handle.read()
-
-    def set_file(self, file: FilePath | t.IO, *, filename: FilePath | None = None) -> None:
-        """Store the content of the file in the node's repository, deleting any other existing objects.
-
-        :param file: an absolute filepath or filelike object whose contents to copy
-            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
-        :param filename: specify filename to use (defaults to name of provided file).
-        """
-        if isinstance(file, (str, pathlib.Path)):
-            is_filelike = False
-
-            key = os.path.basename(file)
-            if not os.path.isabs(file):
-                msg = f'path `{file}` is not absolute'
-                raise ValueError(msg)
-
-            if not os.path.isfile(file):
-                msg = f'path `{file}` does not correspond to an existing file'
-                raise ValueError(msg)
-        else:
-            is_filelike = True
-            try:
-                key = os.path.basename(file.name)
-            except (AttributeError, TypeError):
-                key = self.DEFAULT_FILENAME
-
-        key = str(filename) if filename is not None else key
-        existing_object_names = self.base.repository.list_object_names()
-
-        try:
-            # Remove the 'key' from the list of currently existing objects such that it is not deleted after storing
-            existing_object_names.remove(key)
-        except ValueError:
-            pass
-
-        if is_filelike:
-            # TODO does not accommodate `tempfile._TemporaryFileWrapper` - rethink `set_file` signature
-            self.base.repository.put_object_from_filelike(t.cast(t.IO, file), key)
-        else:
-            self.base.repository.put_object_from_file(str(file), key)
-
-        # Delete any other existing objects (minus the current `key` which was already removed from the list)
-        for existing_key in existing_object_names:
-            self.base.repository.delete_object(existing_key)
-
-        self.filename = key
-
-    def attach_file(self, fileobj: t.BinaryIO, *, filepath: str) -> None:
-        self.set_file(fileobj, filename=filepath)
 
     def _validate(self) -> None:
         super()._validate()
@@ -297,4 +148,168 @@ class SinglefileData(Data):
         if fileobj.is_dir():
             raise exceptions.ValidationError('expected a file, found a directory')
 
+        self.filename = filename
+
+
+class SinglefileInterface(DataInterface[SinglefileData]):
+    """Detached, file-backed value interface for `SinglefileData`."""
+
+    _orm_cls = SinglefileData
+
+    filename: str
+    file: pathlib.Path
+
+    DEFAULT_FILENAME = _DEFAULT_FILENAME
+
+    def __init__(
+        self,
+        file: FilePath | t.IO | None = None,
+        *,
+        filename: FilePath | None = None,
+        content: str | bytes | None = None,
+    ) -> None:
+        """Initialize the interface from a path, file-like object, or inline content.
+
+        :param file: local file path or file-like object to copy.
+        :param filename: optional filename to store on the node.
+        :param content: optional string or byte content to store.
+        """
+        self._tempdir = tempfile.TemporaryDirectory()
+
+        if file is not None and content is not None:
+            raise ValueError('cannot specify both `file` and `content`.')
+
+        if content is not None:
+            if isinstance(content, str):
+                file = io.BytesIO(content.encode('utf-8'))
+            else:
+                file = io.BytesIO(content)
+
+        if file is None:
+            raise ValueError('a file or content must be provided.')
+
+        self.set_file(file, filename=filename)
+
+    @property
+    def content(self) -> bytes:
+        """Return the content of the file as bytes."""
+        return self.file.read_bytes()
+
+    @t.overload
+    @contextlib.contextmanager
+    def open(self, mode: t.Literal['r'] = ...) -> t.Generator[t.TextIO, None, None]: ...
+
+    @t.overload
+    @contextlib.contextmanager
+    def open(self, mode: t.Literal['rb'] = ...) -> t.Generator[t.BinaryIO, None, None]: ...
+
+    @contextlib.contextmanager
+    def open(self, mode: t.Literal['r', 'rb'] = 'r') -> t.Generator[t.BinaryIO | t.TextIO, None, None]:
+        """Open the file content.
+
+        :param mode: the mode with which to open the file handle (default: read mode)
+        :return: a file handle
+        """
+        if mode == 'rb':
+            with self.file.open('rb') as handle:
+                yield handle
+        else:
+            with self.file.open('r', encoding='utf-8') as handle:
+                yield handle
+
+    @contextlib.contextmanager
+    def as_path(self) -> t.Generator[pathlib.Path, None, None]:
+        """Yield a local path to the file.
+
+        The path remains available while this interface is alive.
+
+        :return: path to the file.
+        """
+        yield self.file
+
+    @t.overload
+    def get_content(self, mode: t.Literal['rb']) -> bytes: ...
+
+    @t.overload
+    def get_content(self, mode: t.Literal['r'] = 'r') -> str: ...
+
+    @t.overload
+    def get_content(self, mode: t.Literal['r', 'rb']) -> str | bytes: ...
+
+    def get_content(self, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
+        """Return the content as text or bytes, depending on ``mode``.
+
+        :param mode: the mode with which to read the content (default: text mode).
+        :return: the content as text or bytes.
+        """
+        with self.open(mode=mode) as handle:  # type: ignore[call-overload]
+            return handle.read()
+
+    def set_file(self, file: FilePath | t.IO, *, filename: FilePath | None = None) -> None:
+        """Replace the interface content with a copy of a path or file-like object.
+
+        :param file: local file path or file-like object to copy.
+        :param filename: optional filename to store on the node.
+        """
+        if isinstance(file, (str, pathlib.PurePath)):
+            source = pathlib.Path(file)
+            source_filename = source.name
+        else:
+            source = None
+            try:
+                source_filename = pathlib.Path(file.name).name
+            except (AttributeError, TypeError):
+                source_filename = ''
+
+        filename = str(filename) if filename is not None else source_filename or self.DEFAULT_FILENAME
+        basename = pathlib.PurePath(filename).name
+        if basename in ('', '.', '..'):
+            basename = 'content'
+        destination = pathlib.Path(self._tempdir.name) / basename
+
+        with tempfile.NamedTemporaryFile(dir=self._tempdir.name, delete=False) as temporary:
+            temporary_path = pathlib.Path(temporary.name)
+            if source is not None:
+                with source.open('rb') as source_handle:
+                    shutil.copyfileobj(source_handle, temporary)
+            else:
+                chunk = file.read(1024 * 1024)
+                if isinstance(chunk, str):
+                    while chunk:
+                        temporary.write(chunk.encode('utf-8'))
+                        chunk = file.read(1024 * 1024)
+                else:
+                    temporary.write(chunk)
+                    shutil.copyfileobj(file, temporary)
+
+        temporary_path.replace(destination)
+
+        old_file = getattr(self, '_file', None)
+        self.file = destination
+        self.filename = filename
+
+        if old_file is not None and old_file != destination:
+            old_file.unlink(missing_ok=True)
+
+    @override
+    def _get_files(self) -> dict[str, t.Callable[[], t.BinaryIO | None]]:
+        """Return the file opener for conversion to a node."""
+        return {self.filename: lambda: self.file.open('rb')}
+
+    @override
+    def _set_files(self, entity: SinglefileData) -> None:
+        """Copy the node's repository file into the interface-owned temporary directory."""
+        self._tempdir = tempfile.TemporaryDirectory()
+
+        filename = entity.filename
+        if filename is None:
+            raise ValueError('The entity does not have a filename.')
+
+        basename = pathlib.PurePath(filename).name
+        if basename in ('', '.', '..'):
+            basename = 'content'
+        destination = pathlib.Path(self._tempdir.name) / basename
+        entity.base.repository.copy_file(destination, filename)
+
+        self.file = destination
         self.filename = filename

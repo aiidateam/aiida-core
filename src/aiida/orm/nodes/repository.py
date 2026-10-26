@@ -400,6 +400,14 @@ class NodeRepository:
             for filename in filenames:
                 yield dirpath / filename
 
+    def copy_object(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
+        """Copy a file or directory from the repository to the target location.
+
+        :param target: the target location to copy the object to.
+        :param path: the path of the object in the repository.
+        """
+        self._repository.copy_object(target, path)
+
     def copy_tree(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 
@@ -407,6 +415,14 @@ class NodeRepository:
         :param path: optional relative path whose contents to copy.
         """
         self._repository.copy_tree(target, path)
+
+    def copy_file(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
+        """Copy a file from the repository to the target location.
+
+        :param target: the target location to copy the file to.
+        :param path: the path of the file in the repository.
+        """
+        self._repository.copy_file(target, path)
 
     def delete_object(self, path: str):
         """Delete the object from the repository.

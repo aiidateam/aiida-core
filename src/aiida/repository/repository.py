@@ -2,6 +2,7 @@
 
 import contextlib
 import pathlib
+import shutil
 import typing as t
 from collections.abc import Generator, Iterable
 
@@ -489,49 +490,85 @@ class Repository:
 
         yield path, dirnames, filenames
 
-    def copy_tree(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
-        """Copy the contents of the entire node repository to another location on the local file system.
+    def copy_object(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
+        """Copy a repository file or directory to the local filesystem.
 
-        .. note:: If ``path`` is specified, only its contents are copied, and the relative path with respect to the
-            root is discarded. For example, if ``path`` is ``relative/sub``, the contents of ``sub`` will be copied
-            directly to the target, without the ``relative/sub`` directory.
-
-        :param target: absolute path of the directory where to copy the contents to.
-        :param path: optional relative path whose contents to copy.
-        :raises TypeError: if ``target`` is of incorrect type or not absolute.
-        :raises NotADirectoryError: if ``path`` does not reference a directory.
+        For files, `target` is the destination file path.
+        For directories, `target` is the destination directory into which
+        the source directory's contents are copied.
         """
         path = self._pre_process_path(path)
         file_object = self.get_object(path)
 
-        if file_object.file_type != FileType.DIRECTORY:
-            msg = f'object with path `{path}` is not a directory.'
-            raise NotADirectoryError(msg)
+        if file_object.file_type == FileType.FILE:
+            self.copy_file(target, path)
+        elif file_object.file_type == FileType.DIRECTORY:
+            self.copy_tree(target, path)
+        else:
+            msg = f'Unsupported repository object type: {file_object.file_type}'
+            raise ValueError(msg)
 
-        if isinstance(target, str):
-            target = pathlib.Path(target)
+    def copy_file(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
+        """Copy a repository file to the local filesystem.
 
-        if not isinstance(target, pathlib.Path):
-            msg = f'target `{target}` is not of type `str` nor `pathlib.Path`.'  # type: ignore[unreachable]
-            raise TypeError(msg)
+        :param target: Absolute destination file path.
+        :param path: Path of the source file in the repository.
+        :raises TypeError: If the target is not an absolute path.
+        :raises FileNotFoundError: If the source is not a file.
+        """
+        path = self._pre_process_path(path)
+
+        if self.get_object(path).file_type != FileType.FILE:
+            msg = f'object with path `{path}` is not a file.'
+            raise FileNotFoundError(msg)
+
+        target = pathlib.Path(target)
 
         if not target.is_absolute():
             msg = f'provided target `{target}` is not an absolute path.'
             raise TypeError(msg)
 
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        with self.open(path) as source, target.open('wb') as destination:
+            shutil.copyfileobj(source, destination)
+
+    def copy_tree(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
+        """Copy a repository directory's contents to the local filesystem.
+
+        The source directory itself is not included in the destination.
+
+        :param target: Absolute destination directory path.
+        :param path: Optional source directory within the repository.
+        :raises TypeError: If the target is not an absolute path.
+        :raises NotADirectoryError: If the source is not a directory.
+        """
+        path = self._pre_process_path(path)
+
+        if self.get_object(path).file_type != FileType.DIRECTORY:
+            msg = f'object with path `{path}` is not a directory.'
+            raise NotADirectoryError(msg)
+
+        target = pathlib.Path(target)
+
+        if not target.is_absolute():
+            msg = f'provided target `{target}` is not an absolute path.'
+            raise TypeError(msg)
+
+        target.mkdir(parents=True, exist_ok=True)
+
         for root, dirnames, filenames in self.walk(path):
+            destination_dir = target / root.relative_to(path)
+
             for dirname in dirnames:
-                dirpath = target / (root / dirname).relative_to(path)
-                dirpath.mkdir(parents=True, exist_ok=True)
+                (destination_dir / dirname).mkdir(parents=True, exist_ok=True)
 
             for filename in filenames:
-                dirpath = target / root.relative_to(path)
-                filepath = dirpath / filename
+                destination = destination_dir / filename
+                destination.parent.mkdir(parents=True, exist_ok=True)
 
-                dirpath.mkdir(parents=True, exist_ok=True)
-
-                with self.open(root / filename) as handle:
-                    filepath.write_bytes(handle.read())
+                with self.open(root / filename) as source, destination.open('wb') as output:
+                    shutil.copyfileobj(source, output)
 
     # these methods are not actually used in aiida-core, but are here for completeness
 

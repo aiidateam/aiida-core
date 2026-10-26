@@ -183,6 +183,15 @@ class TestProcessTemplateContent:
         result = process_template_content('label: plain\nmetadata: just-a-string\n', interactive=False)
         assert result == {'label': 'plain'}
 
+    def test_metadata_literal_braces_ignored(self):
+        """Literal ``{{ }}`` text inside ``metadata`` must not demand a template value.
+
+        The section describes the file rather than the command and is stripped, so a tooltip documenting the
+        placeholders would otherwise force callers to supply a value for a variable nothing uses.
+        """
+        content = "label: plain\nmetadata:\n  tooltip: 'use {{ braces }} literally'\n"
+        assert process_template_content(content, interactive=False) == {'label': 'plain'}
+
     def test_non_mapping_after_rendering_raises(self):
         """The renderer refuses a non-mapping result rather than returning it against its annotation."""
         with pytest.raises(click.BadParameter, match='Expected a YAML mapping after template rendering, got str'):

@@ -14,6 +14,7 @@ import dataclasses
 import typing as t
 
 import click
+import yaml
 
 _URL_SCHEMES: t.Final = ('http://', 'https://')
 
@@ -122,7 +123,6 @@ def _detect_template_variables(template_content: str) -> list[str]:
 
 def _render_template(content: str, template_values: TemplateValues) -> dict[str, t.Any]:
     """Render a Jinja2 template string with the given values and parse as YAML."""
-    import yaml
     from jinja2 import StrictUndefined, TemplateSyntaxError, UndefinedError
     from jinja2.exceptions import SecurityError
     from jinja2.sandbox import SandboxedEnvironment
@@ -196,7 +196,6 @@ def process_template_content(
     :return: the configuration with placeholders substituted and the ``metadata`` section stripped.
     :raises click.BadParameter: if the content is not a YAML mapping, or if any placeholder is left without a value.
     """
-    import yaml
 
     try:
         full_config = yaml.safe_load(content)
@@ -209,7 +208,9 @@ def process_template_content(
         raise click.BadParameter(msg)
 
     metadata = full_config.pop('metadata', {})
-    detected_vars = _detect_template_variables(content)
+    # The ``metadata`` section describes the file rather than the command and is stripped from the result, so
+    # literal ``{{ }}`` text inside it (a tooltip documenting the placeholders, say) must not demand a value.
+    detected_vars = _detect_template_variables(yaml.safe_dump(full_config))
 
     if not detected_vars:
         return full_config
@@ -243,8 +244,6 @@ def parse_template_vars(value: str) -> dict[str, t.Any]:
     """
     import json
     import pathlib
-
-    import yaml
 
     def _ensure_mapping(parsed: t.Any, source: str) -> dict[str, t.Any]:
         if not isinstance(parsed, dict):

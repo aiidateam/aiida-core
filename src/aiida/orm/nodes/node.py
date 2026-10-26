@@ -779,17 +779,15 @@ class NodeInterface(EntityInterface[_NodeT], abc.ABC, t.Generic[_NodeT]):
             description=description,
             extras=extras,
             attributes=deepcopy(attributes),
+            files=self._get_files(),
         )
 
     @classmethod
     def from_aiida(cls, entity: _NodeT) -> Self:
         """Construct the interface from an ORM entity instance."""
         interface = cls.__new__(cls)
-        attributes = deepcopy(entity.attributes)
-        for key in iter_attributes(cls._orm_cls):
-            if key == 'source':
-                continue
-            setattr(interface, key, attributes.get(key))
+        interface._set_attributes(entity)
+        interface._set_files(entity)
         return interface
 
     def _get_attributes(self) -> dict[str, t.Any]:
@@ -800,3 +798,19 @@ class NodeInterface(EntityInterface[_NodeT], abc.ABC, t.Generic[_NodeT]):
                 continue
             attributes[key] = getattr(self, key)
         return attributes
+
+    def _set_attributes(self, entity: _NodeT) -> None:
+        """Set the attributes for this interface from the given entity."""
+        attributes = deepcopy(entity.attributes)
+        for key in iter_attributes(self._orm_cls):
+            if key == 'source':
+                continue
+            setattr(self, key, attributes.get(key))
+
+    def _get_files(self) -> dict[str, t.Callable[[], t.BinaryIO | None]]:
+        """Return a dictionary of the files for this interface."""
+        return {}
+
+    def _set_files(self, entity: _NodeT) -> None:
+        """Set the files for this interface from the given entity."""
+        pass

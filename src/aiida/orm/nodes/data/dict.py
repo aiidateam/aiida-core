@@ -15,7 +15,6 @@ from collections.abc import Mapping, MutableMapping
 from copy import deepcopy
 
 import pydantic as pdt
-from typing_extensions import Self
 
 from aiida.common.lang import override
 from aiida.orm.nodes.data.base import to_aiida_type
@@ -71,16 +70,15 @@ class DictInterface(DataInterface[Dict], MutableMapping[str, t.Any]):
     def __repr__(self) -> str:
         return f'{type(self).__name__}({self.value!r})'
 
-    @classmethod
-    @override
-    def from_aiida(cls, entity: Dict) -> Self:
-        """Construct an interface from a `Dict` node."""
-        return cls(value=entity.attributes)
-
     @override
     def _get_attributes(self) -> dict[str, t.Any]:
         """Return a dictionary of the attributes for this interface."""
         return deepcopy(self.value)
+
+    @override
+    def _set_attributes(self, entity: Dict) -> None:
+        """Set the attributes for this interface from the given entity."""
+        self.value = deepcopy(entity.attributes)
 
 
 @to_aiida_type.register(dict)

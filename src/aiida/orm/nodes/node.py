@@ -172,9 +172,6 @@ class AbstractNodeMeta(ABCMeta):
         return new_cls
 
 
-_P = t.ParamSpec('_P')
-
-
 class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNodeMeta):
     """Base class for all nodes in AiiDA.
 
@@ -446,9 +443,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     @column(
         cli_exclude=True,
-        model_field_info=pdt.fields.FieldInfo(
-            description='The PK of the associated computer.',
-        ),
+        model_field_info=pdt.fields.FieldInfo(description='The PK of the associated computer.'),
         model_adapter=EntityPkAdapter(Computer),
     )
     def computer(self) -> Computer | None:

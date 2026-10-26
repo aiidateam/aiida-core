@@ -40,6 +40,7 @@ __all__ = (
     'JobsList',
     'OutputPort',
     'PortNamespace',
+    'PreparedInputs',
     'Process',
     'ProcessBuilder',
     'ProcessBuilderNamespace',

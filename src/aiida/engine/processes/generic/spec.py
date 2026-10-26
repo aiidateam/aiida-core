@@ -64,7 +64,7 @@ class ProcessSpec:
         self._exposed_outputs: EXPOSED_TYPE = collections.defaultdict(lambda: collections.defaultdict(list))
 
     def __str__(self) -> str:
-        return json.dumps(self.get_description(), sort_keys=True, indent=4)
+        return json.dumps(self.get_description(), sort_keys=True, indent=4, default=str)
 
     @property
     def namespace_separator(self) -> str:

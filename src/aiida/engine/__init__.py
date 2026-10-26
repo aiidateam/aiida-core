@@ -35,6 +35,7 @@ __all__ = (
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',
+    'FunctionProcessBase',
     'GraphProcessSpec',
     'InputPort',
     'InterruptableFuture',

@@ -13,6 +13,7 @@ import typing as t
 from collections.abc import Mapping, MutableMapping
 from uuid import uuid4
 
+from aiida.engine.processes.generic.ports import PortNamespace as GenericPortNamespace
 from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.engine.processes.utils import prune_mapping
 from aiida.orm import Dict, Node
@@ -93,7 +94,8 @@ class ProcessBuilderNamespace(MutableMapping):
         # and add the dynamic property to that instead
         class_name = f'{self.__class__.__name__}-{uuid4()}'
         child_class = type(class_name, (self.__class__,), dynamic_properties)
-        self.__class__ = child_class
+        # Per-instance subclass only adds dynamic port properties; safe to treat as the same namespace type.
+        self.__class__ = child_class  # pyright: ignore[reportAttributeAccessIssue]
 
     def __setattr__(self, attr: str, value: t.Any) -> None:
         """Assign the given value to the port with key `attr`.
@@ -113,22 +115,32 @@ class ProcessBuilderNamespace(MutableMapping):
                     raise AttributeError(msg) from exception
                 port = None
             else:
-                if not isinstance(port, (InputPort, PortNamespace)):
+                if not isinstance(port, (InputPort, GenericPortNamespace)):
                     msg = f'Unknown port type for builder parameter: {attr}'
                     raise TypeError(msg)
-                resolved = port.prepare(value)
                 if isinstance(port, PortNamespace):
-                    runtime = resolved.runtime
+                    namespace_port: PortNamespace = port
+                    namespace_prepared = namespace_port.prepare(value)
+                    runtime = namespace_prepared.runtime
                     if not isinstance(runtime, Mapping):
                         msg = f'Invalid runtime value for namespace `{attr}`.'
                         raise TypeError(msg)
-                    validation_error = port.validate(runtime)
+                    validation_error = namespace_port.validate(runtime)
+                    value = namespace_prepared.sources
                 else:
-                    validation_error = port.validate(resolved.runtime)
+                    if not isinstance(port, InputPort):
+                        msg = f'builder parameter `{attr}` needs an engine port, not `{type(port).__name__}`.'
+                        raise TypeError(msg)
+                    leaf_port: InputPort = port
+                    leaf_prepared = leaf_port.prepare(value)
+                    leaf_runtime = leaf_prepared.runtime
+                    # Explicit `InputPort.validate` (i.e. `Port.validate(value: Any)`) pins overload resolution:
+                    # through the narrowed union the checker otherwise resolves the `PortNamespace` override.
+                    validation_error = InputPort.validate(leaf_port, leaf_runtime)
+                    value = leaf_prepared.sources
                 if validation_error:
                     msg = f'invalid attribute value {validation_error.message}'
                     raise ValueError(msg)
-                value = resolved.sources
 
             # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
             # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become
@@ -248,6 +260,13 @@ class ProcessBuilder(ProcessBuilderNamespace):
     def process_class(self) -> type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
+
+    def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
+        """Return inputs for launching this builder, with its values taking precedence.
+
+        Stored builder inputs merge over the passed ones; unlike a bare function, nothing is coerced.
+        """
+        return {**inputs, **self._inputs(prune=True)}
 
     def __str__(self) -> str:
         """Return a readable string showing the process class and its current inputs."""

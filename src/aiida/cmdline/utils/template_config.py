@@ -208,9 +208,12 @@ def process_template_content(
         raise click.BadParameter(msg)
 
     metadata = full_config.pop('metadata', {})
-    # The ``metadata`` section describes the file rather than the command and is stripped from the result, so
-    # literal ``{{ }}`` text inside it (a tooltip documenting the placeholders, say) must not demand a value.
-    detected_vars = _detect_template_variables(yaml.safe_dump(full_config))
+    # Detection and rendering both run over the dumped body rather than the raw content: the ``metadata`` section
+    # describes the file rather than the command and is stripped from the result, so literal ``{{ }}`` text inside
+    # it (or inside a YAML comment, which the parser likewise drops) must neither demand a value nor fail the
+    # render under ``StrictUndefined``.
+    body = yaml.safe_dump(full_config)
+    detected_vars = _detect_template_variables(body)
 
     if not detected_vars:
         return full_config
@@ -241,7 +244,7 @@ def process_template_content(
             msg = f'Invalid value for template variable {name!r}: {values[name]!r} is not one of {", ".join(choices)}.'
             raise click.BadParameter(msg)
 
-    return _render_template(content, values)
+    return _render_template(body, values)
 
 
 def parse_template_vars(value: str) -> dict[str, t.Any]:

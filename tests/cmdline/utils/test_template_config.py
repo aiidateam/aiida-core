@@ -192,6 +192,16 @@ class TestProcessTemplateContent:
         content = "label: plain\nmetadata:\n  tooltip: 'use {{ braces }} literally'\n"
         assert process_template_content(content, interactive=False) == {'label': 'plain'}
 
+    def test_yaml_comment_braces_ignored(self):
+        """``{{ }}`` inside a YAML comment is dropped by the parser, so it must survive detection and rendering.
+
+        Detection runs over the dumped body, and rendering the raw content instead failed under
+        ``StrictUndefined`` for a variable detection never asked for.
+        """
+        content = "label: '{{ label }}'\n# note {{ ignored }}\n"
+        result = process_template_content(content, interactive=False, template_vars={'label': 'x'})
+        assert result == {'label': 'x'}
+
     def test_template_vars_value_outside_choices_raises(self):
         """Values from ``--template-vars`` face the same ``type: list`` constraint as prompted values."""
         content = textwrap.dedent("""\

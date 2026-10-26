@@ -49,7 +49,8 @@ class PcodDbImporter(CodDbImporter):
                     values = [values]
                 sql_parts.append(f'({value[1](self, value[0], key, values)})')
         if kwargs:
-            raise NotImplementedError(f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}')
+            msg = f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}'
+            raise NotImplementedError(msg)
 
         return f'SELECT file FROM data WHERE {" AND ".join(sql_parts)}'
 

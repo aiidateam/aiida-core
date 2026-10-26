@@ -63,9 +63,10 @@ class CodeParamType(IdentifierParamType):
         if code and self._entry_point is not None:
             entry_point = code.default_calc_job_plugin
             if entry_point != self._entry_point:
-                raise click.BadParameter(
+                msg = (
                     f'the retrieved Code<{code.pk}> has plugin type "{entry_point}" '
                     f'while "{self._entry_point}" is required'
                 )
+                raise click.BadParameter(msg)
 
         return code

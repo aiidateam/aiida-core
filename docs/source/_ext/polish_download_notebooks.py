@@ -31,9 +31,9 @@ import base64
 import json
 import mimetypes
 import re
+import typing as t
 import zipfile
 from pathlib import Path
-from typing import Any
 
 from sphinx.application import Sphinx
 from sphinx.util import logging
@@ -249,7 +249,7 @@ def _polish_source(source: str, source_dir: Path) -> str:
     return _clean_markdown(text)
 
 
-def _polish_markdown_cells(cells: list[dict[str, Any]], source_dir: Path) -> bool:
+def _polish_markdown_cells(cells: list[dict[str, t.Any]], source_dir: Path) -> bool:
     """Convert MyST syntax to plain-Jupyter markdown in each markdown cell, in place.
 
     The cells belong to a notebook just loaded from disk and about to be written back,
@@ -314,7 +314,7 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
     for notebook_path in downloads_dir.rglob('*.ipynb'):
         if notebook_path.stem not in module_stems:
             continue
-        nb: dict[str, Any] = json.loads(notebook_path.read_text(encoding='utf-8'))
+        nb: dict[str, t.Any] = json.loads(notebook_path.read_text(encoding='utf-8'))
 
         if _polish_markdown_cells(nb.get('cells', []), source_dir):
             notebook_path.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + '\n', encoding='utf-8')
@@ -327,6 +327,6 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
     _bundle_module_notebooks(app, downloads_dir, module_stems)
 
 
-def setup(app: Sphinx) -> dict[str, Any]:
+def setup(app: Sphinx) -> dict[str, t.Any]:
     app.connect('build-finished', on_build_finished)
     return {'version': '0.2', 'parallel_read_safe': True, 'parallel_write_safe': True}

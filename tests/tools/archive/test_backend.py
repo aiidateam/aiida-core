@@ -15,17 +15,13 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation import StorageBackend
 from aiida.tools.archive.abstract import ArchiveReaderAbstract
 from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
-from tests.utils.archives import get_archive_file
 
 
 @pytest.fixture()
-def archive():
+def archive(archive_head):
     """Yield the archive open in read mode."""
     archive_format = ArchiveFormatSqlZip()
-    filepath_archive = get_archive_file(
-        f'export_{archive_format.latest_version}_simple.aiida', filepath='export/migrate'
-    )
-    with archive_format.open(filepath_archive, 'r') as reader:
+    with archive_format.open(archive_head, 'r') as reader:
         yield reader
 
 
@@ -39,9 +35,10 @@ def test_get(archive: ArchiveReaderAbstract):
     """Test retrieving a Node"""
     with pytest.raises(NotExistent):
         archive.get(orm.Node, uuid='xyz')
-    node = archive.get(orm.Node, uuid='d60b7c8a-4808-4f69-a72c-670df4d63700')
+    (uuid,) = archive.querybuilder().append(orm.CalcJobNode, project='uuid').all(flat=True)
+    node = archive.get(orm.Node, uuid=uuid)
     assert isinstance(node, orm.Node)
-    assert node.uuid == 'd60b7c8a-4808-4f69-a72c-670df4d63700'
+    assert node.uuid == uuid
 
 
 def test_querybuilder(archive: ArchiveReaderAbstract):
@@ -53,6 +50,7 @@ def test_querybuilder(archive: ArchiveReaderAbstract):
 
 def test_graph(archive: ArchiveReaderAbstract):
     """Test creating a provenance graph visualisation."""
+    (uuid,) = archive.querybuilder().append(orm.CalcJobNode, project='uuid').all(flat=True)
     graph = archive.graph()
-    graph.recurse_descendants('3b429fd4-601c-4473-add5-7cbb76cf38cb')
+    graph.recurse_descendants(uuid)
     assert 'digraph' in graph.graphviz.source

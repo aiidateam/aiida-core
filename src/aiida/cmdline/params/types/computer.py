@@ -99,7 +99,7 @@ class MpirunCommandParamType(StringParamType):
             )
 
         # Prepare some substitution values to check if it is all ok
-        subst = {i: 'value' for i in job_resource_keys}
+        subst = dict.fromkeys(job_resource_keys, 'value')
         subst['tot_num_mpiprocs'] = 'value'
 
         try:

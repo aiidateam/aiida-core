@@ -11,15 +11,15 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, TypedDict
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from sqlalchemy import Engine
     from sqlalchemy.orm import scoped_session
     from sqlalchemy.orm.session import Session
 
 
-class PsqlConfig(TypedDict, total=False):
+class PsqlConfig(t.TypedDict, total=False):
     """Configuration to connect to a PostgreSQL database."""
 
     database_hostname: str
@@ -28,7 +28,7 @@ class PsqlConfig(TypedDict, total=False):
     database_password: str
     database_name: str
 
-    engine_kwargs: dict[str, Any]
+    engine_kwargs: dict[str, t.Any]
     """keyword argument that will be passed on to the SQLAlchemy engine."""
 
 
@@ -65,7 +65,7 @@ def create_sqlalchemy_engine(config: PsqlConfig) -> Engine:
     )
 
 
-def create_scoped_session_factory(engine: Engine, **kwargs: Any) -> scoped_session[Session]:
+def create_scoped_session_factory(engine: Engine, **kwargs: t.Any) -> scoped_session[Session]:
     """Create scoped SQLAlchemy session factory"""
     from sqlalchemy.orm import scoped_session, sessionmaker
 

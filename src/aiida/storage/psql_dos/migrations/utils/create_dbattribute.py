@@ -95,9 +95,8 @@ def create_rows(key: str, value, node_id: int) -> list[dict]:
         try:
             jsondata = json.dumps(value)
         except TypeError:
-            raise ValueError(
-                f'Unable to store the value: it must be either a basic datatype, or json-serializable: {value}'
-            ) from TypeError
+            msg = f'Unable to store the value: it must be either a basic datatype, or json-serializable: {value}'
+            raise ValueError(msg) from TypeError
 
         columns['datatype'] = 'json'
         columns['tval'] = jsondata

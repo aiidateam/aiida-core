@@ -9,10 +9,10 @@
 # ruff: noqa: N802
 """A module containing the logic for creating joined queries."""
 
+import typing as t
 import weakref
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
 
 from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
@@ -27,7 +27,7 @@ from aiida.common.links import LinkType
 from aiida.storage.psql_dos.models.base import Model
 
 
-class _EntityMapper(Protocol):
+class _EntityMapper(t.Protocol):
     """Mapping of implemented entity types."""
 
     @property
@@ -57,7 +57,7 @@ class _EntityMapper(Protocol):
     @property
     def table_groups_nodes(self) -> type[Table]: ...
 
-    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, Any]) -> ColumnElement[bool] | None: ...
+    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, t.Any]) -> ColumnElement[bool] | None: ...
 
 
 @dataclass
@@ -67,8 +67,8 @@ class JoinReturn:
     edge_tag: str = ''
 
 
-FilterType = dict[str, Any]
-JoinFuncType = Callable[[Any, Any, bool, FilterType, bool], JoinReturn]
+FilterType = dict[str, t.Any]
+JoinFuncType = Callable[[t.Any, t.Any, bool, FilterType, bool], JoinReturn]
 
 
 class SqlaJoiner:
@@ -535,7 +535,7 @@ def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship: s
     """
     for entity, cls in (entities_cls_joined, entities_cls_to_join):
         if not issubclass(entity._sa_class_manager.class_, cls):
-            raise TypeError(
+            msg = (
                 f"You are attempting to join {entities_cls_joined[0].__name__} as '{relationship}' "
                 f'of {entities_cls_to_join[0].__name__}\n'
                 'This failed because you passed:\n'
@@ -545,3 +545,4 @@ def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship: s
                 f'as entity to join (expected {entities_cls_to_join[1].__name__})\n'
                 '\n'
             )
+            raise TypeError(msg)

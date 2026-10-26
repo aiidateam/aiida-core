@@ -30,7 +30,8 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
             matches = match(r'echo \$\(\(([0-9]+) \+ ([0-9]+)\)\).*', data.strip())
 
             if matches is None:
-                raise ValueError(f'failed to parse the integers `x` and `y` from the input content: {data}')
+                msg = f'failed to parse the integers `x` and `y` from the input content: {data}'
+                raise ValueError(msg)
 
             return {
                 'x': Int(matches.group(1)),

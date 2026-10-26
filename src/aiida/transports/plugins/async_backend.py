@@ -21,6 +21,7 @@ import logging
 import posixpath
 import re
 import subprocess
+import typing as t
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
@@ -227,11 +228,27 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
+    def __init__(
+        self,
+        machine: str,
+        data_machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        connect_kwargs: dict[str, t.Any] | None = None,
+    ):
+        super().__init__(machine, data_machine, logger, bash_command)
+        # The client configuration directives `asyncssh` reads no value from, if the computer
+        # relies on any. Empty for every other computer.
+        self.connect_kwargs = connect_kwargs or {}
+
+    async def _connect(self, host: str) -> asyncssh.SSHClientConnection:
+        return await asyncssh.connect(host, **self.connect_kwargs)
+
     async def open(self):
-        conn = await asyncssh.connect(self.machine)
+        conn = await self._connect(self.machine)
         data_conn = None
         try:
-            data_conn = conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+            data_conn = conn if self.data_machine == self.machine else await self._connect(self.data_machine)
             sftp = await data_conn.start_sftp_client()
         except BaseException:
             # `BaseException` rather than `Exception`, to also release them when the open is cancelled.
@@ -298,7 +315,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         return await self._sftp.isfile(path)
 
     async def listdir(self, path: str):
-        return list(await self._sftp.listdir(path))
+        try:
+            return list(await self._sftp.listdir(path))
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            # `asyncssh` errors do not derive from `OSError`, which the `Transport` interface promises.
+            msg = f'No such file or directory: {path}'
+            raise FileNotFoundError(msg) from exc
+        except asyncssh.sftp.SFTPError as exc:
+            msg = f'Error while listing directory {path}: {exc}'
+            raise OSError(msg) from exc
 
     async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
         try:
@@ -311,20 +336,24 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         except SFTPFileAlreadyExists:
             # SFTPFileAlreadyExists is only supported in asyncssh version 6.0.0 and later
             if not exist_ok:
-                raise FileExistsError(f'Directory already exists: {path}')
+                msg = f'Directory already exists: {path}'
+                raise FileExistsError(msg)
         except asyncssh.sftp.SFTPFailure as exc:
             if self._sftp.version < 6:
                 if not exist_ok:
-                    raise FileExistsError(f'Directory already exists: {path}')
+                    msg = f'Directory already exists: {path}'
+                    raise FileExistsError(msg)
             else:
-                raise TransportInternalError(f'Error while creating directory {path}: {exc}')
+                msg = f'Error while creating directory {path}: {exc}'
+                raise TransportInternalError(msg)
 
     async def remove(self, path: str):
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
         # if that's the case, we can get rid of the isfile check
         # https://github.com/aiidateam/aiida-core/issues/6719
         if await self.isdir(path):
-            raise OSError(f'The path {path} is a directory')
+            msg = f'The path {path} is a directory'
+            raise OSError(msg)
         else:
             await self._sftp.remove(path)
 
@@ -335,13 +364,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         try:
             await self._sftp.rmdir(path)
         except asyncssh.sftp.SFTPFailure:
-            raise OSError(f'Error while removing directory {path}: probably directory is not empty')
+            msg = f'Error while removing directory {path}: probably directory is not empty'
+            raise OSError(msg)
 
     async def rmtree(self, path: str):
         try:
             await self._sftp.rmtree(path, ignore_errors=False)
         except asyncssh.Error as exc:
-            raise OSError(f'Error while removing directory tree {path}: {exc}')
+            msg = f'Error while removing directory tree {path}: {exc}'
+            raise OSError(msg)
 
     async def path_exists(self, path: str):
         return await self._sftp.exists(path)
@@ -359,7 +390,8 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             if ignore_nonexisting:
                 self.logger.debug(f'Glob pattern {path} did not match any files or directories. Ignoring.')
                 return []
-            raise OSError(f'Either the remote path {path} does not exist, or a matching file/folder not found.')
+            msg = f'Either the remote path {path} does not exist, or a matching file/folder not found.'
+            raise OSError(msg)
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         await self._sftp.chmod(path, mode, follow_symlinks=follow_symlinks)
@@ -390,7 +422,8 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                     )
                 else:
                     if not await self.path_exists(remotesource):
-                        raise FileNotFoundError(f'The remote path {remotesource} does not exist')
+                        msg = f'The remote path {remotesource} does not exist'
+                        raise FileNotFoundError(msg)
                     await self._sftp.copy(
                         remotesource,
                         remotedestination,
@@ -402,12 +435,14 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             except asyncssh.sftp.SFTPNoSuchFile as exc:
                 # note: one could just create directories, but aiida engine expects this behavior
                 # see `execmanager.py`::_copy_remote_files for more details
-                raise FileNotFoundError(
+                msg = (
                     f'The remote path {remotedestination} is not reachable,'
                     f'perhaps the parent folder does not exists: {exc}'
                 )
+                raise FileNotFoundError(msg)
             except asyncssh.sftp.SFTPFailure as exc:
-                raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
+                msg = f'Error while copying {remotesource} to {remotedestination}: {exc}'
+                raise OSError(msg)
         else:
             self.logger.debug(
                 'The SSH server does not support SFTP remote copy (SFTP >= v9.0), '
@@ -431,12 +466,14 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                         f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
                     if 'No such file or directory' in str(stderr):
-                        raise FileNotFoundError(f'Error while executing cp: {stderr}')
+                        msg = f'Error while executing cp: {stderr}'
+                        raise FileNotFoundError(msg)
 
-                    raise OSError(
+                    msg = (
                         f'Error while executing cp. Exit code: {retval}, '
                         f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
+                    raise OSError(msg)
 
             cp_exe = 'cp'
             cp_flags = '-f'
@@ -608,7 +645,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
     async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
         if parents and not exist_ok:
             if await self.path_exists(path):
-                raise FileExistsError(f'Directory already exists: {path}')
+                msg = f'Directory already exists: {path}'
+                raise FileExistsError(msg)
 
         commands = self.ssh_command_generator(f'mkdir {"-p" if parents else ""} {{}}', paths=[path])
         returncode, _stdout, stderr = await self.openssh_execute(commands)
@@ -616,9 +654,11 @@ class _OpenSSH(_AsynchronousSSHBackend):
         if returncode != 0:
             if 'File exists' in stderr:
                 if not exist_ok:
-                    raise FileExistsError(f'Directory already exists: {path}')
+                    msg = f'Directory already exists: {path}'
+                    raise FileExistsError(msg)
             else:
-                raise OSError(f'Failed to create directory: {path}')
+                msg = f'Failed to create directory: {path}'
+                raise OSError(msg)
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         # chmod works with octal numbers, so we have to convert the mode to octal
@@ -627,7 +667,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
         returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to change permissions: {path}')
+            msg = f'Failed to change permissions: {path}'
+            raise OSError(msg)
 
     def _escape_for_glob(self, s):
         """Escape dangerous shell characters while preserving glob wildcards (* ? [ ])
@@ -652,7 +693,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
             if ignore_nonexisting:
                 self.logger.debug(f'Glob pattern {path} did not match any files or directories. Ignoring.')
                 return []
-            raise OSError(f'Either the path {path} does not exist, or a matching file/folder not found.')
+            msg = f'Either the path {path} does not exist, or a matching file/folder not found.'
+            raise OSError(msg)
 
         return list(stdout.strip().split())
 
@@ -665,7 +707,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
         returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to create symlink: {source} -> {destination}')
+            msg = f'Failed to create symlink: {source} -> {destination}'
+            raise OSError(msg)
 
     async def path_exists(self, path: str):
         commands = self.ssh_command_generator('test -e {}', paths=[path])
@@ -675,7 +718,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
             self.logger.debug(f'Stderr from `test -e {path}`: {stderr}')
 
         if returncode not in (0, 1):
-            raise OSError(f'Failed to check whether path exists: {path} (exit code {returncode}): {stderr}')
+            msg = f'Failed to check whether path exists: {path} (exit code {returncode}): {stderr}'
+            raise OSError(msg)
         return returncode == 0
 
     async def rmtree(self, path: str):
@@ -683,7 +727,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
         returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to remove path: {path}')
+            msg = f'Failed to remove path: {path}'
+            raise OSError(msg)
 
     async def rmdir(self, path: str):
         commands = self.ssh_command_generator('rmdir {}', paths=[path])
@@ -697,14 +742,16 @@ class _OpenSSH(_AsynchronousSSHBackend):
         returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to rename path: {oldpath} -> {newpath}')
+            msg = f'Failed to rename path: {oldpath} -> {newpath}'
+            raise OSError(msg)
 
     async def remove(self, path: str):
         commands = self.ssh_command_generator('rm {}', paths=[path])
         returncode, _stdout, _stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
-            raise OSError(f'Failed to remove path: {path}')
+            msg = f'Failed to remove path: {path}'
+            raise OSError(msg)
 
     async def listdir(self, path: str):
         commands = self.ssh_command_generator('ls {}', paths=[path])
@@ -818,16 +865,18 @@ class _OpenSSH(_AsynchronousSSHBackend):
                     raise OSError("Can't copy more than one file in the same destination file")
 
         elif not await self.path_exists(remotesource):
-            raise FileNotFoundError(f'The remote path {remotesource} does not exist')
+            msg = f'The remote path {remotesource} does not exist'
+            raise FileNotFoundError(msg)
 
         parent_directory = posixpath.dirname(remotedestination)
         if not await self.path_exists(parent_directory):
             # note: one could just create directories, but aiida engine expects this behavior
             # see `execmanager.py`::_copy_remote_files for more details
-            raise FileNotFoundError(
+            msg = (
                 f'The remote path {remotedestination} is not reachable,'
                 f'perhaps the parent folder does not exist: {parent_directory}'
             )
+            raise FileNotFoundError(msg)
 
         returncode, _stdout, stderr = await self.openssh_execute(
             [
@@ -838,7 +887,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
             ]
         )
         if returncode != 0:
-            raise OSError(f'Failed to copy from {remotesource} to {remotedestination} : {stderr}')
+            msg = f'Failed to copy from {remotesource} to {remotedestination} : {stderr}'
+            raise OSError(msg)
 
 
 class Stat:

@@ -41,10 +41,12 @@ def validate_daemon_workers(ctx, param, value):
         value = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
 
     if not isinstance(value, int):
-        raise click.BadParameter(f'{value} is not an integer')
+        msg = f'{value} is not an integer'
+        raise click.BadParameter(msg)
 
     if value <= 0:
-        raise click.BadParameter(f'{value} is not a positive non-zero integer')
+        msg = f'{value} is not a positive non-zero integer'
+        raise click.BadParameter(msg)
 
     return value
 

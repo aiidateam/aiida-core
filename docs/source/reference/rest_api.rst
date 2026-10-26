@@ -416,11 +416,8 @@ Nodes
         {
           "data": {
             "attributes": {
-              "append_text": "",
-              "input_plugin": "quantumespresso.pw",
-              "is_local": false,
-              "prepend_text": "",
-              "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
+              "attribute_name": "value",
+              "...": "..."
             }
           },
           "id": "ffe11",
@@ -464,27 +461,27 @@ Nodes
 
     REST URL::
 
-         http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,is_local
+         http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=attribute_one,attribute_two
 
     Description:
 
-        Returns a list of the attributes ``append_text`` and ``is_local`` of the |Node| object with ``uuid="ffe11..."``.
+        Returns a list of the attributes ``attribute_one`` and ``attribute_two`` of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
         {
           "data": {
             "attributes": {
-              "append_text": "",
-              "is_local": false
+              "attribute_one": "value one",
+              "attribute_two": "value two"
             }
           },
           "id": "ffe11",
           "method": "GET",
           "path": "/api/v4/nodes/ffe11/contents/attributes",
-          "query_string": "attributes_filter=append_text,is_local",
+          "query_string": "attributes_filter=attribute_one,attribute_two",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,is_local",
+          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=attribute_one,attribute_two",
           "url_root": "http://localhost:5000/"
         }
 
@@ -711,7 +708,7 @@ Computers
                 "id": 3,
                 "name": "Alpha",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh_async",
+                "transport_type": "core.ssh",
                 "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
               },
               {
@@ -720,7 +717,7 @@ Computers
                 "id": 4,
                 "name": "Beta",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh_async",
+                "transport_type": "core.ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               },
               {
@@ -729,7 +726,7 @@ Computers
                 "id": 5,
                 "name": "Gamma",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh_async",
+                "transport_type": "core.ssh",
                 "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
               }
             ]
@@ -764,7 +761,7 @@ Computers
                 "id": 4,
                 "name": "Beta",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh_async",
+                "transport_type": "core.ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               }
             ]
@@ -972,87 +969,15 @@ Option 1: HTTPie
 
       {
           "data": {
-              "Code_1": [
+              "query_tag": [
                   {
-                      "attributes": {
-                          "append_text": " ",
-                          "input_plugin": "quantumespresso.ph",
-                          "is_local": false,
-                          "prepend_text": "ulimit -s unlimited",
-                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/ph.x"
-                      },
-                      "ctime": "Wed, 16 Dec 2020 11:50:03 GMT",
-                      "dbcomputer_id": 1,
-                      "description": "phonon quantum_espresso v6.6",
-                      "extras": {
-                          "_aiida_hash": "045368af9cfeafa6fe3b0c6707e71b85cbef4fec55514ad0068c3ff19193e11f",
-                          "hidden": false
-                      },
-                      "full_type": "data.code.Code.|",
-                      "id": 3428,
-                      "label": "q-e_6.6_ph",
-                      "mtime": "Wed, 16 Dec 2020 11:50:03 GMT",
-                      "node_type": "data.code.Code.",
-                      "process_type": null,
-                      "user_id": 1,
-                      "uuid": "7565cf2a-8219-4c2b-bbae-9c6cd3d95aa2"
+                      "attributes": {"...": "..."},
+                      "...": "..."
                   },
-                  {
-                      "attributes": {
-                          "append_text": " ",
-                          "input_plugin": "quantumespresso.pp",
-                          "is_local": false,
-                          "prepend_text": "ulimit -s unlimited",
-                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/pp.x"
-                      },
-                      "ctime": "Mon, 14 Dec 2020 16:44:20 GMT",
-                      "dbcomputer_id": 1,
-                      "description": "postproc quantum_espresso v6.6",
-                      "extras": {
-                          "_aiida_hash": "1dca299bb587e002ac7aa745b5fd0b8893105dc0a16acefdfbc6188637dad05f",
-                          "hidden": false
-                      },
-                      "full_type": "data.code.Code.|",
-                      "id": 1822,
-                      "label": "q-e_6.6_pp",
-                      "mtime": "Mon, 14 Dec 2020 16:44:20 GMT",
-                      "node_type": "data.code.Code.",
-                      "process_type": null,
-                      "user_id": 1,
-                      "uuid": "a1b0530d-1a8d-413c-a4bd-af79868926c8"
-                  },
-                  {
-                      "attributes": {
-                          "append_text": " ",
-                          "input_plugin": "quantumespresso.pw",
-                          "is_local": false,
-                          "prepend_text": "ulimit -s unlimited",
-                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/pw.x"
-                      },
-                      "ctime": "Thu, 19 Nov 2020 14:38:42 GMT",
-                      "dbcomputer_id": 1,
-                      "description": "quantum_espresso v6.6",
-                      "extras": {
-                          "_aiida_hash": "e714b9e79656a0cf1c24d19a92f3553c3052d103b4f5b25bd2ae89581cb4886e",
-                          "hidden": false
-                      },
-                      "full_type": "data.code.Code.|",
-                      "id": 1,
-                      "label": "q-e_6.6_pw",
-                      "mtime": "Thu, 19 Nov 2020 14:38:42 GMT",
-                      "node_type": "data.code.Code.",
-                      "process_type": null,
-                      "user_id": 1,
-                      "uuid": "e48ec85b-3034-435b-ac96-d5ba37df393e"
-                  }
+                  "..."
               ]
           },
-          "method": "POST",
-          "path": "/api/v4/querybuilder",
-          "query_string": "",
-          "resource_type": "QueryBuilder",
-          "url": "http://localhost:5000/api/v4/querybuilder",
-          "url_root": "http://localhost:5000/"
+          "...": "..."
       }
 
   The easiest way to construct the query json file is by using the :ref:`QueryBuilder <topics:database:advancedquery>` from AiiDA as we will demonstrate next.
@@ -1083,29 +1008,10 @@ Option 1: HTTPie
   .. code-block:: python
 
     {
-      "path": [
-        {
-          "entity_type": "data.code.Code.",
-          "tag": "Code_1",
-          "joining_keyword": null,
-          "joining_value": null,
-          "outerjoin": false,
-          "edge_tag": null
-        }
-      ],
-      "filters": {
-        "Code_1": {
-          "node_type": {
-            "like": "data.code.%"
-          }
-        }
-      },
-      "project": {
-        "Code_1": []
-      },
-      "order_by": {},
-      "limit": null,
-      "offset": null
+      "path": [...],
+      "filters": {...},
+      "project": {...},
+      "...": "..."
     }
 
 Option 2: Resquests library (all python approach)
@@ -1114,7 +1020,7 @@ Option 2: Resquests library (all python approach)
 
   .. code-block:: python
 
-    from aiida.orm import QueryBuilder, Code
+    from aiida.orm import Code, QueryBuilder
     from aiida import load_profile
     import requests
 
@@ -1309,8 +1215,7 @@ Regular filters can be compounded, requiring all specified filters to apply.
 .. note:: Node types are specified by a string that defines their position in the AiiDA source tree, ending with a dot.
     Examples:
 
-    - ``node_type="data.core.code.Code."`` selects only objects of type |Code|.
-    - ``node_type="data.core.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.RemoteData`.
+    - ``node_type="<node-type>."`` selects only objects of the specified node type.
 
 .. note:: When using the *links/incoming* (*links/outgoing*) endpoints in combination with one or more filters, the filters are applied to the incoming (outgoing) nodes of the selected *id*.
     For example, the request::
@@ -1462,7 +1367,6 @@ Filter values should be specified as follows:
 
 
 .. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`
-.. |Code| replace:: :py:class:`~aiida.orm.Code`
 .. |Node| replace:: :py:class:`~aiida.orm.Node`
 .. |ProcessNode| replace:: :py:class:`~aiida.orm.ProcessNode`
 .. |CalcJobNode| replace:: :py:class:`~aiida.orm.CalcJobNode`

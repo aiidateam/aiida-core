@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from dataclasses import dataclass, field
-from typing import cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -88,7 +88,7 @@ class GroupNodeMapping:
         if groups is not None:
             # Only query the specified groups
             if all(isinstance(g, orm.Group) for g in groups):
-                orm_groups = cast(list[orm.Group], groups)
+                orm_groups = t.cast(list[orm.Group], groups)
                 group_uuids = [g.uuid for g in orm_groups]
             else:
                 group_uuids = [orm.load_group(g).uuid for g in groups]

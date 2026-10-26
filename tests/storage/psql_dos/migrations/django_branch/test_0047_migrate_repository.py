@@ -39,15 +39,15 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
         )
         session.add(user)
         session.commit()
-        kwargs = dict(
-            user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
-            label='test',
-            description='',
-            node_type='data.',
-            repository_metadata={},
-        )
+        kwargs = {
+            'user_id': user.id,
+            'ctime': timezone.now(),
+            'mtime': timezone.now(),
+            'label': 'test',
+            'description': '',
+            'node_type': 'data.',
+            'repository_metadata': {},
+        }
         dbnode_01 = node_model(uuid=str(uuid4()), **kwargs)
         dbnode_02 = node_model(uuid=str(uuid4()), **kwargs)
         dbnode_03 = node_model(uuid=str(uuid4()), **kwargs)

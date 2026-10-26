@@ -15,6 +15,16 @@ import pytest
 from aiida.manage.external.postgres import Postgres
 
 
+def test_legacy_database_key():
+    """Normalize the legacy DSN key before passing it to pgsu without mutating the caller's dictionary."""
+    dbinfo = {'database': 'legacy', 'dbname': 'other'}
+
+    postgres = Postgres(dbinfo=dbinfo, determine_setup=False)
+
+    assert postgres.dsn['dbname'] == 'legacy'
+    assert dbinfo == {'database': 'legacy', 'dbname': 'other'}
+
+
 @pytest.mark.requires_psql
 class PostgresTest(TestCase):
     """Test the public API provided by the `Postgres` class"""

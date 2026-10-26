@@ -1,0 +1,630 @@
+columns:
+  alembic_version:
+  - default: null
+    name: version_num
+    nullable: false
+    type: VARCHAR(32)
+  db_dbauthinfo:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: aiidauser_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: dbcomputer_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: metadata
+    nullable: false
+    type: JSON
+  - default: null
+    name: auth_params
+    nullable: false
+    type: JSON
+  - default: null
+    name: enabled
+    nullable: false
+    type: BOOLEAN
+  db_dbcomment:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: CHAR(32)
+  - default: null
+    name: dbnode_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: ctime
+    nullable: false
+    type: DATETIME
+  - default: null
+    name: mtime
+    nullable: false
+    type: DATETIME
+  - default: null
+    name: user_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: content
+    nullable: false
+    type: TEXT
+  db_dbcomputer:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: CHAR(32)
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: hostname
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: description
+    nullable: false
+    type: TEXT
+  - default: null
+    name: scheduler_type
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: transport_type
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: metadata
+    nullable: false
+    type: JSON
+  db_dbgroup:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: CHAR(32)
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: type_string
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: time
+    nullable: false
+    type: DATETIME
+  - default: null
+    name: description
+    nullable: false
+    type: TEXT
+  - default: null
+    name: extras
+    nullable: false
+    type: JSON
+  - default: null
+    name: user_id
+    nullable: false
+    type: INTEGER
+  db_dbgroup_dbnodes:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: dbnode_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: dbgroup_id
+    nullable: false
+    type: INTEGER
+  db_dblink:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: input_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: output_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: type
+    nullable: false
+    type: VARCHAR(255)
+  db_dblog:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: CHAR(32)
+  - default: null
+    name: time
+    nullable: false
+    type: DATETIME
+  - default: null
+    name: loggername
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: levelname
+    nullable: false
+    type: VARCHAR(50)
+  - default: null
+    name: dbnode_id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: message
+    nullable: false
+    type: TEXT
+  - default: null
+    name: metadata
+    nullable: false
+    type: JSON
+  db_dbnode:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: uuid
+    nullable: false
+    type: CHAR(32)
+  - default: null
+    name: node_type
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: process_type
+    nullable: true
+    type: VARCHAR(255)
+  - default: null
+    name: label
+    nullable: false
+    type: VARCHAR(255)
+  - default: null
+    name: description
+    nullable: false
+    type: TEXT
+  - default: null
+    name: ctime
+    nullable: false
+    type: DATETIME
+  - default: null
+    name: mtime
+    nullable: false
+    type: DATETIME
+  - default: null
+    name: attributes
+    nullable: true
+    type: JSON
+  - default: null
+    name: extras
+    nullable: true
+    type: JSON
+  - default: null
+    name: repository_metadata
+    nullable: false
+    type: JSON
+  - default: null
+    name: dbcomputer_id
+    nullable: true
+    type: INTEGER
+  - default: null
+    name: user_id
+    nullable: false
+    type: INTEGER
+  db_dbuser:
+  - default: null
+    name: id
+    nullable: false
+    type: INTEGER
+  - default: null
+    name: email
+    nullable: false
+    type: VARCHAR(254)
+  - default: null
+    name: first_name
+    nullable: false
+    type: VARCHAR(254)
+  - default: null
+    name: last_name
+    nullable: false
+    type: VARCHAR(254)
+  - default: null
+    name: institution
+    nullable: false
+    type: VARCHAR(254)
+constraints:
+  check:
+    alembic_version: []
+    db_dbauthinfo: []
+    db_dbcomment: []
+    db_dbcomputer: []
+    db_dbgroup: []
+    db_dbgroup_dbnodes: []
+    db_dblink: []
+    db_dblog: []
+    db_dbnode: []
+    db_dbuser: []
+  primary_keys:
+    alembic_version:
+      constrained_columns:
+      - version_num
+      name: alembic_version_pkc
+    db_dbauthinfo:
+      constrained_columns:
+      - id
+      name: db_dbauthinfo_pkey
+    db_dbcomment:
+      constrained_columns:
+      - id
+      name: db_dbcomment_pkey
+    db_dbcomputer:
+      constrained_columns:
+      - id
+      name: db_dbcomputer_pkey
+    db_dbgroup:
+      constrained_columns:
+      - id
+      name: db_dbgroup_pkey
+    db_dbgroup_dbnodes:
+      constrained_columns:
+      - id
+      name: db_dbgroup_dbnodes_pkey
+    db_dblink:
+      constrained_columns:
+      - id
+      name: db_dblink_pkey
+    db_dblog:
+      constrained_columns:
+      - id
+      name: db_dblog_pkey
+    db_dbnode:
+      constrained_columns:
+      - id
+      name: db_dbnode_pkey
+    db_dbuser:
+      constrained_columns:
+      - id
+      name: db_dbuser_pkey
+  unique:
+    alembic_version: []
+    db_dbauthinfo:
+    - column_names:
+      - aiidauser_id
+      - dbcomputer_id
+      name: uq_db_dbauthinfo_aiidauser_id_dbcomputer_id
+    db_dbcomment:
+    - column_names:
+      - uuid
+      name: uq_db_dbcomment_uuid
+    db_dbcomputer:
+    - column_names:
+      - label
+      name: uq_db_dbcomputer_label
+    - column_names:
+      - uuid
+      name: uq_db_dbcomputer_uuid
+    db_dbgroup:
+    - column_names:
+      - label
+      - type_string
+      name: uq_db_dbgroup_label_type_string
+    - column_names:
+      - uuid
+      name: uq_db_dbgroup_uuid
+    db_dbgroup_dbnodes:
+    - column_names:
+      - dbgroup_id
+      - dbnode_id
+      name: uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
+    db_dblink: []
+    db_dblog:
+    - column_names:
+      - uuid
+      name: uq_db_dblog_uuid
+    db_dbnode:
+    - column_names:
+      - uuid
+      name: uq_db_dbnode_uuid
+    db_dbuser:
+    - column_names:
+      - email
+      name: uq_db_dbuser_email
+foreign_keys:
+  alembic_version: []
+  db_dbauthinfo:
+  - constrained_columns:
+    - aiidauser_id
+    name: fk_db_dbauthinfo_aiidauser_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  - constrained_columns:
+    - dbcomputer_id
+    name: fk_db_dbauthinfo_dbcomputer_id_db_dbcomputer
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbcomputer
+  db_dbcomment:
+  - constrained_columns:
+    - dbnode_id
+    name: fk_db_dbcomment_dbnode_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  - constrained_columns:
+    - user_id
+    name: fk_db_dbcomment_user_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  db_dbcomputer: []
+  db_dbgroup:
+  - constrained_columns:
+    - user_id
+    name: fk_db_dbgroup_user_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  db_dbgroup_dbnodes:
+  - constrained_columns:
+    - dbgroup_id
+    name: fk_db_dbgroup_dbnodes_dbgroup_id_db_dbgroup
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbgroup
+  - constrained_columns:
+    - dbnode_id
+    name: fk_db_dbgroup_dbnodes_dbnode_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dblink:
+  - constrained_columns:
+    - input_id
+    name: fk_db_dblink_input_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  - constrained_columns:
+    - output_id
+    name: fk_db_dblink_output_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dblog:
+  - constrained_columns:
+    - dbnode_id
+    name: fk_db_dblog_dbnode_id_db_dbnode
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: CASCADE
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbnode
+  db_dbnode:
+  - constrained_columns:
+    - dbcomputer_id
+    name: fk_db_dbnode_dbcomputer_id_db_dbcomputer
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: RESTRICT
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbcomputer
+  - constrained_columns:
+    - user_id
+    name: fk_db_dbnode_user_id_db_dbuser
+    options:
+      deferrable: true
+      initially: DEFERRED
+      ondelete: RESTRICT
+    referred_columns:
+    - id
+    referred_schema: null
+    referred_table: db_dbuser
+  db_dbuser: []
+indexes:
+  alembic_version: []
+  db_dbauthinfo:
+  - column_names:
+    - aiidauser_id
+    dialect_options: {}
+    name: ix_db_dbauthinfo_db_dbauthinfo_aiidauser_id
+    unique: 0
+  - column_names:
+    - dbcomputer_id
+    dialect_options: {}
+    name: ix_db_dbauthinfo_db_dbauthinfo_dbcomputer_id
+    unique: 0
+  db_dbcomment:
+  - column_names:
+    - dbnode_id
+    dialect_options: {}
+    name: ix_db_dbcomment_db_dbcomment_dbnode_id
+    unique: 0
+  - column_names:
+    - user_id
+    dialect_options: {}
+    name: ix_db_dbcomment_db_dbcomment_user_id
+    unique: 0
+  db_dbcomputer: []
+  db_dbgroup:
+  - column_names:
+    - label
+    dialect_options: {}
+    name: ix_db_dbgroup_db_dbgroup_label
+    unique: 0
+  - column_names:
+    - type_string
+    dialect_options: {}
+    name: ix_db_dbgroup_db_dbgroup_type_string
+    unique: 0
+  - column_names:
+    - user_id
+    dialect_options: {}
+    name: ix_db_dbgroup_db_dbgroup_user_id
+    unique: 0
+  db_dbgroup_dbnodes:
+  - column_names:
+    - dbgroup_id
+    dialect_options: {}
+    name: ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbgroup_id
+    unique: 0
+  - column_names:
+    - dbnode_id
+    dialect_options: {}
+    name: ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbnode_id
+    unique: 0
+  db_dblink:
+  - column_names:
+    - input_id
+    dialect_options: {}
+    name: ix_db_dblink_db_dblink_input_id
+    unique: 0
+  - column_names:
+    - label
+    dialect_options: {}
+    name: ix_db_dblink_db_dblink_label
+    unique: 0
+  - column_names:
+    - output_id
+    dialect_options: {}
+    name: ix_db_dblink_db_dblink_output_id
+    unique: 0
+  - column_names:
+    - type
+    dialect_options: {}
+    name: ix_db_dblink_db_dblink_type
+    unique: 0
+  db_dblog:
+  - column_names:
+    - dbnode_id
+    dialect_options: {}
+    name: ix_db_dblog_db_dblog_dbnode_id
+    unique: 0
+  - column_names:
+    - levelname
+    dialect_options: {}
+    name: ix_db_dblog_db_dblog_levelname
+    unique: 0
+  - column_names:
+    - loggername
+    dialect_options: {}
+    name: ix_db_dblog_db_dblog_loggername
+    unique: 0
+  db_dbnode:
+  - column_names:
+    - ctime
+    dialect_options: {}
+    name: ix_db_dbnode_db_dbnode_ctime
+    unique: 0
+  - column_names:
+    - dbcomputer_id
+    dialect_options: {}
+    name: ix_db_dbnode_db_dbnode_dbcomputer_id
+    unique: 0
+  - column_names:
+    - label
+    dialect_options: {}
+    name: ix_db_dbnode_db_dbnode_label
+    unique: 0
+  - column_names:
+    - mtime
+    dialect_options: {}
+    name: ix_db_dbnode_db_dbnode_mtime
+    unique: 0
+  - column_names:
+    - node_type
+    dialect_options: {}
+    name: ix_db_dbnode_db_dbnode_node_type
+    unique: 0
+  - column_names:
+    - process_type
+    dialect_options: {}
+    name: ix_db_dbnode_db_dbnode_process_type
+    unique: 0
+  - column_names:
+    - user_id
+    dialect_options: {}
+    name: ix_db_dbnode_db_dbnode_user_id
+    unique: 0
+  db_dbuser: []

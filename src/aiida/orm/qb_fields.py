@@ -1,0 +1,555 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Module which provides decorators for AiiDA ORM entity -> DB field mappings."""
+
+from __future__ import annotations
+
+import datetime
+import typing as t
+from collections.abc import Sequence
+from copy import deepcopy
+from functools import singledispatchmethod
+from pprint import pformat
+from types import UnionType
+from uuid import UUID
+
+from aiida.common.lang import isidentifier
+from aiida.common.warnings import warn_deprecation
+
+__all__ = (
+    'QbField',
+    'QbFieldFilters',
+    'QbFields',
+)
+
+
+def extract_root_type(dtype: t.Any) -> t.Any:
+    """Recursively search for the primitive root type.
+
+    >>> extract_root_type(List[str]) -> list
+    >>> extract_root_type(Optional[List[str]]) -> list
+    >>> extract_root_type(str | None) -> str
+    """
+    origin = t.get_origin(dtype)
+    if origin:
+        # `t.Union` is the origin of `Optional[X]`/`Union[X, Y]`; `UnionType` that of the PEP 604
+        # `X | Y` spelling, which pydantic preserves on the annotations feeding this function.
+        # Both checks are required below Python 3.14: only there do the two unify
+        # (`t.Union is UnionType`), so dropping either silently degrades every `X | None`
+        # annotation to `QbAnyField` on 3.10-3.13.
+        if origin is t.Union or origin is UnionType:
+            return extract_root_type(t.get_args(dtype)[0])
+        else:
+            return origin
+    else:
+        return dtype
+
+
+class QbField:
+    """A field of an ORM entity, accessible via the ``QueryBuilder``"""
+
+    __slots__ = (
+        '_backend_key',
+        '_doc',
+        '_dtype',
+        '_is_attribute',
+        '_is_subscriptable',
+        '_key',
+    )
+
+    def __init__(
+        self,
+        key: str,
+        alias: str | None = None,
+        *,
+        dtype: t.Any | None = None,
+        doc: str = '',
+        is_attribute: bool = True,
+        is_subscriptable: bool = False,
+    ) -> None:
+        """Initialise a ORM entity field, accessible via the ``QueryBuilder``
+
+        :param key: The key of the field on the ORM entity
+        :param alias: The alias in the storage backend for the key, if not equal to ``key``
+        :param dtype: The data type of the field. If None, the field is of variable type.
+        :param doc: A docstring for the field
+        :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
+        :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
+            ``QbDictField`` and its subclasses support nested lookup.
+
+        """
+        self._key = key
+        self._backend_key = alias if alias is not None else key
+        self._doc = doc
+        self._dtype = dtype
+        self._is_attribute = is_attribute
+        self._is_subscriptable = is_subscriptable
+
+    @property
+    def key(self) -> str:
+        return self._key
+
+    @property
+    def backend_key(self) -> str:
+        if self._is_attribute:
+            return f'attributes.{self._backend_key}'
+        return self._backend_key
+
+    @property
+    def doc(self) -> str:
+        """Return the field documentation string."""
+        return self._doc
+
+    @property
+    def dtype(self) -> t.Any | None:
+        """Return the primitive root type."""
+        return extract_root_type(self._dtype)
+
+    @property
+    def annotation(self) -> t.Any | None:
+        """Return the full type annotation."""
+        warn_deprecation(
+            '`QbField.annotation` is deprecated. Inspect the corresponding ORM model field annotation instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return self._dtype
+
+    @property
+    def is_attribute(self) -> bool:
+        """Return whether the field is stored in the attributes namespace."""
+        warn_deprecation(
+            '`QbField.is_attribute` is deprecated. Inspect the corresponding ORM model field metadata instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return self._is_attribute
+
+    @property
+    def is_subscriptable(self) -> bool:
+        """Return whether nested lookup through ``field['key']`` is supported."""
+        warn_deprecation(
+            '`QbField.is_subscriptable` is deprecated. Subscriptability is determined by the field type;'
+            '`QbDictField` and its subclasses support nested lookup.',
+            version=3,
+            stacklevel=2,
+        )
+        return isinstance(self, QbDictField)
+
+    def in_(self, value: t.Iterable[t.Any]):
+        """Return a filter for only values in the list"""
+        try:
+            set(value)
+        except TypeError:
+            raise TypeError('in_ must be iterable')
+        return QbFieldFilters(((self, 'in', value),))
+
+    def __repr__(self) -> str:
+        return (
+            f'{self.__class__.__name__}({self.backend_key!r}'
+            + (f', {self._backend_key!r}' if self._backend_key != self.key else '')
+            + (f', dtype={self._dtype or ""}')
+            + (f', doc={self._doc!r}' if self._doc else '')
+            + ')'
+        )
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.backend_key}) -> {self._dtype}'
+
+    def __hash__(self):
+        return hash((self.key, self.backend_key))
+
+    def __eq__(self, value):
+        return QbFieldFilters(((self, '==', value),))
+
+    def __ne__(self, value):
+        return QbFieldFilters(((self, '!==', value),))
+
+    def __dir__(self) -> list[str]:
+        """Return the field properties for tab completion."""
+        return sorted(set(super().__dir__()) - {'key', 'backend_key', 'dtype'})
+
+    if t.TYPE_CHECKING:
+
+        def __getitem__(self, key: str) -> QbField: ...
+
+
+class QbNumericField(QbField):
+    """A numeric (`int`, `float`, `datetime`) flavor of `QbField`."""
+
+    def __lt__(self, value):
+        return QbFieldFilters(((self, '<', value),))
+
+    def __le__(self, value):
+        return QbFieldFilters(((self, '<=', value),))
+
+    def __gt__(self, value):
+        return QbFieldFilters(((self, '>', value),))
+
+    def __ge__(self, value):
+        return QbFieldFilters(((self, '>=', value),))
+
+
+class QbBoolField(QbField):
+    """A boolean (`bool`) flavor of `QbField`."""
+
+    def as_filter(self) -> QbFieldFilters:
+        """Return a filter for only values that are True."""
+        return QbFieldFilters(((self, '==', True),))
+
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """Return a filter for only values that are True and satisfy the other filter."""
+        return self.as_filter() & other
+
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """Return a filter for only values that are True or satisfy the other filter."""
+        return self.as_filter() | other
+
+    def __invert__(self) -> QbFieldFilters:
+        """Return a filter for only values that are not `True`.
+
+        Some booleans are optional, so not `False`, but rather `None` (absent).
+        """
+        return QbFieldFilters(((self, '!==', True),))
+
+
+class QbArrayField(QbField):
+    """An array (`list`) flavor of `QbField`."""
+
+    def contains(self, value):
+        """Return a filter for only values containing these items"""
+        return QbFieldFilters(((self, 'contains', value),))
+
+    def of_length(self, value: int):
+        """Return a filter for only array values of this length."""
+        if not isinstance(value, int):
+            raise TypeError('of_length must be an integer')
+        return QbFieldFilters(((self, 'of_length', value),))
+
+    def longer(self, value: int):
+        """Return a filter for only array values longer than this length."""
+        if not isinstance(value, int):
+            raise TypeError('longer must be an integer')
+        return QbFieldFilters(((self, 'longer', value),))
+
+    def shorter(self, value: int):
+        """Return a filter for only array values shorter than this length."""
+        if not isinstance(value, int):
+            raise TypeError('shorter must be an integer')
+        return QbFieldFilters(((self, 'shorter', value),))
+
+
+class QbStrField(QbField):
+    """A string (`str`) flavor of `QbField`."""
+
+    def like(self, value: str):
+        """Return a filter for only string values matching the wildcard string.
+
+        - The percent sign (`%`) represents zero, one, or multiple characters
+        - The underscore sign (`_`) represents one, single character
+        """
+        if not isinstance(value, str):
+            raise TypeError('like must be a string')
+        return QbFieldFilters(((self, 'like', value),))
+
+    def ilike(self, value: str):
+        """Return a filter for only string values matching the (case-insensitive) wildcard string.
+
+        - The percent sign (`%`) represents zero, one, or multiple characters
+        - The underscore sign (`_`) represents one, single character
+        """
+        if not isinstance(value, str):
+            raise TypeError('ilike must be a string')
+        return QbFieldFilters(((self, 'ilike', value),))
+
+
+class QbDictField(QbField):
+    """A dictionary (`dict`) flavor of `QbField`."""
+
+    def has_key(self, value):
+        """Return a filter for only values with these keys"""
+        return QbFieldFilters(((self, 'has_key', value),))
+
+    def __getitem__(self, key: str) -> QbField:
+        """Return a new `QbField` with a nested key."""
+        return QbAnyField(
+            key=f'{self.key}.{key}',
+            alias=f'{self._backend_key}.{key}' if self._is_attribute else None,
+            dtype=t.Any,
+            is_attribute=self._is_attribute,
+        )
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.backend_key}[...]) -> {self._dtype}'
+
+
+class QbAttributesField(QbDictField):
+    """The 'attributes' field of an ORM Node.
+
+    Used specifically for `orm.Node.attributes`, where the inner keys
+    are defined by the node's `AttributesModel`.
+    """
+
+    _typed_children: dict[str, QbField]
+
+    def __getattr__(self, key: str) -> QbField:
+        """Return a typed child field if known; otherwise raise AttributeError.
+
+        This enables autocomplete on fields such as:
+            orm.Int.fields.attributes.value
+            orm.Data.fields.attributes.source
+        """
+        if key.startswith('_'):
+            # normal attribute lookup
+            raise AttributeError(key)
+
+        children = getattr(self, '_typed_children', None) or {}
+        if key in children:
+            return children[key]
+
+        raise AttributeError(key)
+
+    def __getitem__(self, key: str) -> QbField:
+        """Return a typed child field if known; otherwise return a generic QbAnyField."""
+        children = getattr(self, '_typed_children', None) or {}
+        if key in children:
+            return children[key]
+        return super().__getitem__(key)
+
+    def __dir__(self) -> list[str]:
+        """Expose typed children for autocompletion."""
+        children = getattr(self, '_typed_children', None) or {}
+        return sorted(set(super().__dir__()) | set(children.keys()))
+
+
+class QbAnyField(QbNumericField, QbArrayField, QbStrField, QbDictField):
+    """A generic flavor of `QbField` covering all operations."""
+
+    def of_type(self, value):
+        """Return a filter for only values of this type."""
+        return QbFieldFilters(((self, 'of_type', value),))
+
+
+class QbFieldFilters:
+    """An representation of a list of fields and their comparators."""
+
+    __slots__ = ('filters',)
+
+    def __init__(
+        self,
+        filters: t.Sequence[tuple[QbField, str, t.Any]] | dict,
+    ):
+        self.filters: dict[str, t.Any] = {}
+        self.add_filters(filters)
+
+    def as_dict(self) -> dict[str, t.Any]:
+        """Return the filters dictionary."""
+        return self.filters
+
+    def items(self):
+        """Return an items view of the filters for use in the QueryBuilder."""
+        return self.filters.items()
+
+    @singledispatchmethod
+    def add_filters(self, filters: dict):
+        self.filters.update(filters)
+
+    @add_filters.register(list)
+    @add_filters.register(tuple)
+    def _(self, filters):
+        field: QbField
+        for field, comparator, value in filters:
+            qb_field = field.backend_key
+            if qb_field in self.filters:
+                self.filters['and'] = [
+                    {qb_field: self.filters.pop(qb_field)},
+                    {qb_field: {comparator: value}},
+                ]
+            else:
+                self.filters[qb_field] = {comparator: value}
+
+    def __repr__(self) -> str:
+        return f'QbFieldFilters({self.filters})'
+
+    def __getitem__(self, key: str) -> t.Any:
+        return self.filters[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.filters
+
+    def __eq__(self, other: object) -> bool:
+        """``a == b`` checks if `a.filters == b.filters`."""
+        if not isinstance(other, QbFieldFilters):
+            msg = f'cannot compare QbFieldFilters to {type(other)}'
+            raise TypeError(msg)
+        return self.filters == other.filters
+
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """``a & b`` -> {'and': [`a.filters`, `b.filters`]}."""
+        qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
+        resolved = self._resolve_redundancy(qb_filters, 'and')
+        return resolved or QbFieldFilters({'and': [self.filters, qb_filters.filters]})
+
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """``a | b`` -> {'or': [`a.filters`, `b.filters`]}."""
+        qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
+        resolved = self._resolve_redundancy(qb_filters, 'or')
+        return resolved or QbFieldFilters({'or': [self.filters, qb_filters.filters]})
+
+    def __invert__(self) -> QbFieldFilters:
+        """~(a > b) -> a !> b; ~(a !> b) -> a > b"""
+        filters = deepcopy(self.filters)
+        if 'and' in filters:
+            filters['!and'] = filters.pop('and')
+        elif 'or' in filters:
+            filters['!or'] = filters.pop('or')
+        elif '!and' in filters:
+            filters['and'] = filters.pop('!and')
+        elif '!or' in filters:
+            filters['or'] = filters.pop('!or')
+        else:
+            key, args = next(iter(filters.items()))
+            operator, value = next(iter(args.items()))
+            operator = operator[1:] if '!' in operator else f'!{operator}'
+            filters[key] = {operator: value}
+        return QbFieldFilters(filters)
+
+    def _resolve_redundancy(self, other: QbFieldFilters, logical: str) -> QbFieldFilters | None:
+        """Resolve redundant filters and nested logical operators."""
+
+        if not isinstance(other, QbFieldFilters):
+            msg = f'cannot combine QbFieldFilters and {type(other)}'  # type: ignore[unreachable]
+            raise TypeError(msg)
+
+        # same filters
+        if other == self:
+            return self
+
+        # self is already wrapped in `logical`
+        # append other to self
+        if logical in self.filters:
+            self[logical].append(other.filters)
+            return self
+
+        # other is already wrapped in `logical`
+        # insert self in other
+        if logical in other:
+            other[logical].insert(0, self.filters)
+            return other
+
+        return None
+
+
+class QbFields:
+    """A readonly class for mapping attributes to database fields of an AiiDA entity."""
+
+    __isabstractmethod__ = False
+
+    def __init__(self, fields: dict[str, QbField] | None = None):
+        self._fields = fields or {}
+
+    def keys(self) -> list[str]:
+        """Return the field keys, sorted, prefixed with 'attribute.' if field is an attribute."""
+        return sorted([field.backend_key for field in self._fields.values()])
+
+    def __repr__(self) -> str:
+        return pformat({key: repr(value) for key, value in self._fields.items()}, width=500)
+
+    def __str__(self) -> str:
+        return str({key: str(value) for key, value in self._fields.items()})
+
+    def __getitem__(self, key: str) -> QbField:
+        """Return an QbField by key."""
+        return self._fields[key]
+
+    def __getattr__(self, key: str) -> QbField:
+        """Return an QbField by key."""
+        try:
+            return self._fields[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __contains__(self, key: str) -> bool:
+        """Return if the field key exists"""
+        return key in self._fields
+
+    def __len__(self) -> int:
+        """Return the number of fields"""
+        return len(self._fields)
+
+    def __iter__(self):
+        """Iterate through the field keys"""
+        return iter(self._fields)
+
+    def __dir__(self):
+        """Return keys for tab competion."""
+        return list(self._fields) + ['_dict']
+
+    @property
+    def _dict(self):
+        """Return a copy of the internal mapping"""
+        return deepcopy(self._fields)
+
+
+class QbFieldArguments(t.TypedDict):
+    key: str
+    alias: str | None
+    dtype: t.Any | None
+    doc: str
+    is_attribute: bool
+    is_subscriptable: bool
+
+
+def add_field(
+    key: str,
+    alias: str | None = None,
+    *,
+    dtype: t.Any | None = None,
+    doc: str = '',
+    is_attribute: bool = False,
+    is_subscriptable: bool = False,
+) -> QbField:
+    """Add a `dtype`-dependent `QbField` representation of a field.
+
+    :param key: The key of the field on the ORM entity
+    :param alias: The alias in the storage backend for the key, if not equal to ``key``
+    :param dtype: The data type of the field. If None, the field is of variable type.
+    :param doc: A docstring for the field
+    :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
+    :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
+        ``QbDictField`` and its subclasses support nested lookup.
+    """
+    kwargs: QbFieldArguments = {
+        'key': key,
+        'alias': alias,
+        'dtype': dtype,
+        'doc': doc,
+        'is_attribute': is_attribute,
+        'is_subscriptable': is_subscriptable,
+    }
+    if not isidentifier(key):
+        msg = f'{key} is not a valid python identifier'
+        raise ValueError(msg)
+    if not is_attribute and alias:
+        raise ValueError('only attribute fields may be aliased')
+    if key == 'attributes':
+        return QbAttributesField(**kwargs)
+    root_type = extract_root_type(dtype) if dtype else None
+    if root_type in (int, float, datetime.datetime):
+        return QbNumericField(**kwargs)
+    elif root_type is bool:
+        return QbBoolField(**kwargs)
+    elif root_type in (list, tuple, Sequence):
+        return QbArrayField(**kwargs)
+    elif root_type in (str, t.Literal, UUID):
+        return QbStrField(**kwargs)
+    elif root_type is dict:
+        return QbDictField(**kwargs)
+    else:
+        return QbAnyField(**kwargs)

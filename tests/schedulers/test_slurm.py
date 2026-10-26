@@ -16,8 +16,9 @@ import uuid
 
 import pytest
 
+from aiida.common.datastructures import JobState
 from aiida.engine import CalcJob
-from aiida.schedulers import JobState, SchedulerError
+from aiida.schedulers import SchedulerError
 from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler
 
 # job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
@@ -199,8 +200,7 @@ class TestSubmitScript:
 
     def test_submit_script(self):
         """Test the creation of a simple submission script."""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -227,8 +227,7 @@ class TestSubmitScript:
 
     def test_submit_script_bad_shebang(self):
         """Test that first line of submit script is as expected."""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
         tmpl_code_info = JobTemplateCodeInfo()
@@ -254,8 +253,7 @@ class TestSubmitScript:
         """Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -284,8 +282,7 @@ class TestSubmitScript:
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
         """Test to verify if scripts works fine if we pass only num_cores_per_mpiproc value"""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -318,8 +315,7 @@ class TestSubmitScript:
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -353,7 +349,7 @@ class TestSubmitScript:
         It should fail in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
 
@@ -371,8 +367,7 @@ class TestSubmitScript:
                 raise ValueError
         and correctly set the memory value in the script with the --mem option.
         """
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
         job_tmpl = JobTemplate()
@@ -403,7 +398,7 @@ class TestSubmitScript:
         """
         import re
 
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
         job_tmpl = JobTemplate()
@@ -417,8 +412,7 @@ class TestSubmitScript:
 
     def test_submit_script_rerunnable(self):
         """Test the creation of a submission script with the `rerunnable` option."""
-        from aiida.common.datastructures import CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+        from aiida.common.datastructures import CodeRunMode, JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 

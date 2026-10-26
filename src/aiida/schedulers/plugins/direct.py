@@ -15,9 +15,9 @@ import typing as t
 
 from typing_extensions import override
 
+from aiida.common.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
@@ -235,7 +235,8 @@ class DirectScheduler(BashCliScheduler):
             this_job.job_id = job[0]
 
             if len(job) < 3:
-                raise SchedulerError(f"Unexpected output from the scheduler, not enough fields in line '{line}'")
+                msg = f"Unexpected output from the scheduler, not enough fields in line '{line}'"
+                raise SchedulerError(msg)
 
             try:
                 job_state_string = job[1][0]  # I just check the first character
@@ -363,7 +364,8 @@ class DirectScheduler(BashCliScheduler):
         """
         if retval != 0:
             self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+            msg = f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+            raise SchedulerError(msg)
 
         if stderr.strip():
             self.logger.warning(
@@ -372,7 +374,8 @@ class DirectScheduler(BashCliScheduler):
 
         if not stdout.strip():
             self.logger.debug(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
+            msg = f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}'
+            raise SchedulerError(msg)
 
         return stdout.strip()
 

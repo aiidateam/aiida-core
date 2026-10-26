@@ -97,7 +97,8 @@ class PluginParamType(EntryPointType):
                 grp = ENTRY_POINT_GROUP_PREFIX + grp  # noqa: PLW2901
 
             if grp not in valid_entry_point_groups:
-                raise ValueError(f'entry point group {grp} is not recognized')
+                msg = f'entry point group {grp} is not recognized'
+                raise ValueError(msg)
 
             groups.append(grp)
 
@@ -221,7 +222,8 @@ class PluginParamType(EntryPointType):
             group = matching_groups.pop()
 
         else:
-            raise ValueError(f'invalid entry point string format: {entry_point_string}')
+            msg = f'invalid entry point string format: {entry_point_string}'
+            raise ValueError(msg)
 
         try:
             return get_entry_point(group, name)
@@ -230,7 +232,8 @@ class PluginParamType(EntryPointType):
 
     def validate_entry_point_group(self, group: str) -> None:
         if group not in self.groups:
-            raise ValueError(f'entry point group `{group}` is not supported by this parameter.')
+            msg = f'entry point group `{group}` is not supported by this parameter.'
+            raise ValueError(msg)
 
     def convert(  # type: ignore[override]
         self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None

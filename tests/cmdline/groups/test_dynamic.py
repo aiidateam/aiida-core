@@ -22,7 +22,7 @@ class CustomClass:
 
 
 class NoCliModelCustomClass:
-    """Test plugin class that does not support CLI-based creation (like the abstract base ``AbstractCode``)."""
+    """Test plugin class that does not support CLI-based creation (like an abstract base class)."""
 
     supports_cli_model = False
 
@@ -63,7 +63,7 @@ def test_subcommand_exposure(entry_points, cmd_name, listed, resolvable):
     """Listing is gated on ``supports_cli_model`` *and* ``cli_exposed``; resolution only on ``supports_cli_model``.
 
     Regression test for https://github.com/aiidateam/aiida-core/issues/7379: a plugin that does not support
-    CLI-based creation (``supports_cli_model = False``, e.g. ``AbstractCode``) used to crash the group with an
+    CLI-based creation (``supports_cli_model = False``, e.g. an abstract base class) used to crash the group with an
     ``UnsupportedSchemaError``; it must now be dropped from the listing and resolve to a user-facing
     :class:`click.exceptions.UsageError`. A ``cli_exposed = False`` plugin, being capable, stays resolvable when
     invoked explicitly, it is only kept out of the listing.

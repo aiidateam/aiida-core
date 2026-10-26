@@ -190,10 +190,12 @@ class SinglefileData(Data):
 
             key = os.path.basename(file)
             if not os.path.isabs(file):
-                raise ValueError(f'path `{file}` is not absolute')
+                msg = f'path `{file}` is not absolute'
+                raise ValueError(msg)
 
             if not os.path.isfile(file):
-                raise ValueError(f'path `{file}` does not correspond to an existing file')
+                msg = f'path `{file}` does not correspond to an existing file'
+                raise ValueError(msg)
         else:
             is_filelike = True
             try:
@@ -238,7 +240,8 @@ class SinglefileData(Data):
         objects = self.base.repository.list_object_names()
 
         if len(objects) != 1:
-            raise exceptions.ValidationError(f'expected exactly one repository file, found {len(objects)}: {objects}')
+            msg = f'expected exactly one repository file, found {len(objects)}: {objects}'
+            raise exceptions.ValidationError(msg)
 
         filename = objects[0]
         fileobj = self.base.repository.get_object(filename)

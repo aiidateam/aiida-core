@@ -66,12 +66,12 @@ def test_fallback_workflow_tools_on_loading_error(monkeypatch, caplog):
     """Test fallback tools when the workflow tools entry point fails to load."""
     from aiida.plugins import entry_point as entry_point_module
 
+    node = WorkChainNode(process_type=f'aiida.workflows:{WORKFLOW_ENTRY_POINT_NAME}')
+
     def raise_loading_entry_point_error(*_, **__):
         raise LoadingEntryPointError('broken tools entry point')
 
     monkeypatch.setattr(entry_point_module, 'load_entry_point', raise_loading_entry_point_error)
-
-    node = WorkChainNode(process_type=f'aiida.workflows:{WORKFLOW_ENTRY_POINT_NAME}')
 
     assert isinstance(node.tools, WorkflowTools)
     assert f'could not load the workflow tools entry point {WORKFLOW_ENTRY_POINT_NAME}' in caplog.text

@@ -16,17 +16,18 @@ from __future__ import annotations
 
 import os
 import shutil
+import typing as t
 from collections.abc import Mapping
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
 
 from aiida.common import AIIDA_LOGGER, exceptions
-from aiida.common.datastructures import CalcInfo, FileCopyOperation
+from aiida.common.datastructures import CalcInfo, FileCopyOperation, JobState
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.typing import FilePath
@@ -35,10 +36,9 @@ from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
-from aiida.schedulers.datastructures import JobState
 from aiida.transports.transport import has_magic
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
@@ -46,7 +46,7 @@ REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
 
-def _find_data_node(inputs: Mapping[str, Any], uuid: str) -> Node | None:
+def _find_data_node(inputs: Mapping[str, t.Any], uuid: str) -> Node | None:
     """Find and return the node with the given UUID from a nested mapping of input nodes.
 
     :param inputs: (nested) mapping of nodes
@@ -71,7 +71,7 @@ async def upload_calculation(
     transport: Transport,
     calc_info: CalcInfo,
     folder: Folder,
-    inputs: Mapping[str, Any] | None = None,
+    inputs: Mapping[str, t.Any] | None = None,
     dry_run: bool = False,
 ) -> RemoteData | None:
     """Upload a `CalcJob` instance
@@ -100,10 +100,11 @@ async def upload_calculation(
     logger = LoggerAdapter(logger=EXEC_LOGGER, extra=logger_extra)
 
     if not dry_run and not node.is_stored:
-        raise ValueError(
+        msg = (
             f'Cannot submit calculation {node.pk} because it is not stored! If you just want to test the submission, '
             'set `metadata.dry_run` to True in the inputs.'
         )
+        raise ValueError(msg)
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
@@ -112,10 +113,11 @@ async def upload_calculation(
         remote_user = await transport.whoami_async()
         remote_working_directory = computer.get_workdir().format(username=remote_user)
         if not remote_working_directory.strip():
-            raise exceptions.ConfigurationError(
+            msg = (
                 f'[submission of calculation {node.pk}] No remote_working_directory '
                 f"configured for computer '{computer.label}'"
             )
+            raise exceptions.ConfigurationError(msg)
 
         # If it already exists, no exception is raised
         if not await transport.path_exists_async(remote_working_directory):
@@ -126,11 +128,12 @@ async def upload_calculation(
             try:
                 await transport.makedirs_async(remote_working_directory)
             except OSError as exc:
-                raise exceptions.ConfigurationError(
+                msg = (
                     f'[submission of calculation {node.pk}] '
                     f'Unable to create the remote directory {remote_working_directory} on '
                     f"computer '{computer.label}': {exc}"
                 )
+                raise exceptions.ConfigurationError(msg)
         # Store remotely with sharding (here is where we choose
         # the folder structure of remote jobs; then I store this
         # in the calculation properties using _set_remote_dir
@@ -156,6 +159,9 @@ async def upload_calculation(
 
             # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
             await transport.mkdir_async(path_lost_found, ignore_existing=True)
+            # Preserve an earlier backup without copying into or overwriting it on subsequent retries.
+            if await transport.path_exists_async(path_target):
+                await transport.rename_async(path_target, f'{path_target}-{uuid4()}')
             await transport.copytree_async(path_existing, path_target)
             await transport.rmtree_async(path_existing)
 
@@ -220,7 +226,8 @@ async def upload_calculation(
             if not dry_run:
                 await _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
         else:
-            raise RuntimeError(f'file copy operation {file_copy_operation} is not yet implemented.')
+            msg = f'file copy operation {file_copy_operation} is not yet implemented.'
+            raise RuntimeError(msg)
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
     if dry_run:
@@ -305,10 +312,11 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
                 )
                 raise
         else:
-            raise NotImplementedError(
+            msg = (
                 f'[submission of calculation {node.pk}] Remote copy between two different machines is '
                 'not implemented yet'
             )
+            raise NotImplementedError(msg)
 
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
         if remote_computer_uuid == computer.uuid:
@@ -327,9 +335,8 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
                 )
                 raise
         else:
-            raise OSError(
-                f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
-            )
+            msg = f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
+            raise OSError(msg)
 
 
 async def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):
@@ -522,12 +529,10 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                                 )
                                 continue
                             else:
-                                raise exceptions.StashingError(
-                                    f'File {source_filepath} does not exist. Stashing failed.'
-                                ) from exc
-                        raise exceptions.StashingError(
-                            f'Failed to copy {source_filepath} to {target_filepath}: {exc}'
-                        ) from exc
+                                msg = f'File {source_filepath} does not exist. Stashing failed.'
+                                raise exceptions.StashingError(msg) from exc
+                        msg = f'Failed to copy {source_filepath} to {target_filepath}: {exc}'
+                        raise exceptions.StashingError(msg) from exc
                     EXEC_LOGGER.debug(f'Stashed from {source_filepath} to {target_filepath}')
 
         try:
@@ -571,9 +576,8 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                         'Stashing with glob patterns is not supported when fail_on_missing is True. Stashing failed.'
                     )
                 if not await transport.path_exists_async(source_filepath):
-                    raise exceptions.StashingError(
-                        f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
-                    )
+                    msg = f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
+                    raise exceptions.StashingError(msg)
 
         remote_stash = RemoteStashCompressedData(
             computer=calculation.computer,
@@ -745,28 +749,26 @@ async def retrieve_calculation(
     EXEC_LOGGER.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
     EXEC_LOGGER.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
 
-    # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
-    # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
-    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
+    # Reuse a persisted output on recovery, but temporary files may need to be retrieved into a new directory.
     link_label = calculation.link_label_retrieved
+    retrieved_files = None
     if calculation.base.links.get_outgoing(FolderData, link_label_filter=link_label).first():
         EXEC_LOGGER.warning(
-            f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping retrieval'
+            f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping permanent retrieval'
         )
-        return
-
-    # Create the FolderData node into which to store the files that are to be retrieved
-    retrieved_files = FolderData()
+    else:
+        retrieved_files = FolderData()
 
     with transport:
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
-        with SandboxFolder(filepath_sandbox) as folder:
-            await retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
-            # Here I retrieved everything; now I store them inside the calculation
-            retrieved_files.base.repository.put_object_from_tree(folder.abspath)
+        if retrieved_files is not None:
+            with SandboxFolder(filepath_sandbox) as folder:
+                await retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
+                # Here I retrieved everything; now I store them inside the calculation
+                retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
@@ -780,11 +782,11 @@ async def retrieve_calculation(
                     extra=logger_extra,
                 )
 
-        # Store everything
-        EXEC_LOGGER.debug(
-            f'[retrieval of calc {calculation.pk}] Storing retrieved_files={retrieved_files.pk}', extra=logger_extra
-        )
-        retrieved_files.store()
+        if retrieved_files is not None:
+            EXEC_LOGGER.debug(
+                f'[retrieval of calc {calculation.pk}] Storing retrieved_files={retrieved_files.pk}', extra=logger_extra
+            )
+            retrieved_files.store()
 
     return retrieved_files
 
@@ -815,7 +817,8 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
         # If the job is returned it is still running and the kill really failed, so we raise
         if job is not None and job.job_state != JobState.DONE:
-            raise exceptions.RemoteOperationError(f'scheduler.kill_job({job_id}) was unsuccessful')
+            msg = f'scheduler.kill_job({job_id}) was unsuccessful'
+            raise exceptions.RemoteOperationError(msg)
         else:
             EXEC_LOGGER.warning(
                 'scheduler.kill_job() failed but job<{%s}> no longer seems to be running regardless', job_id

@@ -9,12 +9,12 @@
 """Module for comment backend classes."""
 
 import abc
+import typing as t
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
 
 from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation.nodes import BackendNode
     from aiida.orm.implementation.users import BackendUser
 
@@ -77,7 +77,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
 
     @abc.abstractmethod
     def create(  # type: ignore[override]
-        self, node: 'BackendNode', user: 'BackendUser', content: str | None = None, **kwargs: Any
+        self, node: 'BackendNode', user: 'BackendUser', content: str | None = None, **kwargs: t.Any
     ) -> BackendComment:
         """Create a Comment for a given node and user
 

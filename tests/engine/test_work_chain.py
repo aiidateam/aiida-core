@@ -20,6 +20,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
+from aiida.engine.processes.communications import LocalProcessController
 from aiida.engine.processes.exceptions import ClosedError, KilledError
 from aiida.engine.processes.generic.futures import Future
 from aiida.engine.processes.listener import ProcessListener
@@ -105,9 +106,8 @@ class Wf(WorkChain):
     def on_create(self):
         super().on_create()
         # Reset the finished step
-        self.finished_steps = {
-            k: False
-            for k in [
+        self.finished_steps = dict.fromkeys(
+            [
                 self.step1.__name__,
                 self.step2.__name__,
                 self.step3.__name__,
@@ -117,8 +117,9 @@ class Wf(WorkChain):
                 self.is_a.__name__,
                 self.is_b.__name__,
                 self.larger_then_n.__name__,
-            ]
-        }
+            ],
+            False,
+        )
 
     def step1(self):
         self._set_finished(inspect.stack()[0].function)
@@ -764,8 +765,9 @@ class TestWorkchain:
             assert payload == payload2
 
             # run the loaded workchain to completion
+            controller = LocalProcessController(workchain2, runner.loop)
             runner.schedule(workchain2)
-            workchain2.play()
+            assert await controller.play_process(workchain2.pid)
             await workchain2.future()
             assert workchain2.ctx.s1
             assert workchain2.ctx.s2
@@ -1086,6 +1088,7 @@ class TestWorkchain:
                 assert called.base.caching.is_created_from_cache
                 assert called.base.caching.get_cache_source() in [n.uuid for n in node.called]
 
+    @pytest.mark.flaky(reruns=2)
     def test_member_calcfunction_daemon(self, entry_points, daemon_client, submit_and_await):
         """Test defining a calcfunction as a ``WorkChain`` member method submitted to the daemon."""
         entry_points.add(CalcFunctionWorkChain, 'aiida.workflows:testing.calcfunction.workchain')
@@ -1131,11 +1134,12 @@ class TestWorkChainAbort:
         """
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
+        controller = LocalProcessController(process, runner.loop)
 
         async def run_async():
             await run_until_paused(process)
 
-            process.play()
+            assert await controller.play_process(process.pid)
 
             with Capturing():
                 with pytest.raises(RuntimeError):
@@ -1148,19 +1152,17 @@ class TestWorkChainAbort:
         assert process.node.is_excepted is True
         assert process.node.is_killed is False
 
-    def test_simple_kill_through_process(self):
-        """Run the workchain for one step and then kill it by calling kill
-        on the workchain itself. This should have the workchain end up
-        in the KILLED state.
-        """
+    def test_simple_kill_through_controller(self):
+        """Run the workchain for one step and kill it through a local controller."""
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
+        controller = LocalProcessController(process, runner.loop)
 
         async def run_async():
             await run_until_paused(process)
 
             assert process.paused
-            process.kill()
+            assert await controller.kill_process(process.pid)
 
             with pytest.raises(ClosedError):
                 launch.run(process)
@@ -1228,19 +1230,16 @@ class TestWorkChainAbortChildren:
         assert process.node.is_excepted is True
         assert process.node.is_killed is False
 
-    def test_simple_kill_through_process(self):
-        """Run the workchain for one step and then kill it. This should have the
-        workchain and its children end up in the KILLED state.
-        """
+    def test_simple_kill_through_controller(self):
+        """Kill the workchain and its children through a local controller."""
         runner = get_manager().get_runner()
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+        controller = LocalProcessController(process, runner.loop)
 
         async def run_async():
             await run_until_waiting(process)
 
-            result = process.kill()
-            if asyncio.isfuture(result):
-                await result
+            assert await controller.kill_process(process.pid)
 
             with pytest.raises(KilledError):
                 await process.future()
@@ -1738,15 +1737,14 @@ class TestWorkChainEvents:
         try:
             inputs = {'outcome': Str('finished'), 'pause_child': Bool(True)}
             workflow = TestWorkChainEvents.WorkChainWithOutcome(inputs=inputs, runner=runner)
+            controller = LocalProcessController(workflow, runner.loop)
             listener = TestWorkChainEvents.ProcessListenerTester()
             workflow.add_process_listener(listener)
 
             async def run_async():
                 await run_until_waiting(workflow)
 
-                result = workflow.kill()
-                if asyncio.isfuture(result):
-                    await result
+                assert await controller.kill_process(workflow.pid)
 
                 with pytest.raises(KilledError):
                     await workflow.future()

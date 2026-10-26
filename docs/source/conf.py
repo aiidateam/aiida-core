@@ -100,7 +100,6 @@ intersphinx_mapping = {
     'click': ('https://click.palletsprojects.com/', None),
     'flask': ('http://flask.pocoo.org/docs/latest/', None),
     'flask_restful': ('https://flask-restful.readthedocs.io/en/latest/', None),
-    'kiwipy': ('https://kiwipy.readthedocs.io/en/latest/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'python': ('https://docs.python.org/3', None),
     'sqlalchemy': ('https://docs.sqlalchemy.org/en/14/', None),

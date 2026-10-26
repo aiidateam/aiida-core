@@ -87,7 +87,8 @@ def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localh
         try:
             orm.load_node(uuid)
         except NotExistent:
-            raise NotExistent(f'Node with UUID {uuid} and label {label} was not found.')
+            msg = f'Node with UUID {uuid} and label {label} was not found.'
+            raise NotExistent(msg)
 
 
 def test_reexport(aiida_profile_clean, tmp_path):

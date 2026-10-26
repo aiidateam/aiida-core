@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import os
+import typing as t
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import click
 
@@ -23,7 +23,7 @@ from aiida.tools._dumping.detect import DumpChangeDetector
 from aiida.tools._dumping.tracking import DumpRecord, DumpTracker
 from aiida.tools._dumping.utils import DUMP_PROGRESS_BAR_FORMAT, DumpChanges, DumpPaths, ProcessingQueue
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools._dumping.config import GroupDumpConfig, ProfileDumpConfig
     from aiida.tools._dumping.executors.process import ProcessDumpExecutor
     from aiida.tools._dumping.mapping import GroupNodeMapping
@@ -232,11 +232,13 @@ class CollectionDumpExecutor:
                 if old_path.exists():
                     try:
                         if not old_path.is_dir():
-                            raise OSError(f'Source path {old_path} is not a directory')
+                            msg = f'Source path {old_path} is not a directory'
+                            raise OSError(msg)
 
                         # Check if new_path already exists (os.rename would fail)
                         if new_path.exists():
-                            raise OSError(f'Destination path {new_path} already exists')
+                            msg = f'Destination path {new_path} already exists'
+                            raise OSError(msg)
 
                         # Only create parent directory right before rename
                         new_path.parent.mkdir(parents=True, exist_ok=True)

@@ -16,9 +16,9 @@ from collections.abc import Callable
 from concurrent.futures import Future
 from pathlib import Path
 
-import kiwipy
 import pytest
 
+from aiida.brokers import exceptions as broker_exceptions
 from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 from aiida.brokers.zeromq.protocol import MessageType
@@ -57,7 +57,8 @@ def await_condition(condition: Callable[[], T], *, timeout: float = 5.0, interva
     start_time = time.monotonic()
     while not (result := condition()):
         if time.monotonic() - start_time > timeout:
-            raise TimeoutError(f'Condition {condition} did not become truthy within {timeout} seconds.')
+            msg = f'Condition {condition} did not become truthy within {timeout} seconds.'
+            raise TimeoutError(msg)
         time.sleep(interval)
     return result
 
@@ -121,7 +122,7 @@ class TestZeromqCommunicatorLifecycle:
     def test_ensure_open_raises_when_closed(self):
         """Test _ensure_open raises when communicator is closed."""
         comm = ZeromqCommunicator(router_endpoint='ipc:///tmp/fake')
-        with pytest.raises(RuntimeError, match='closed'):
+        with pytest.raises(broker_exceptions.CommunicatorClosed):
             comm.task_send({'x': 1})
 
 
@@ -246,7 +247,7 @@ class TestZeromqCommunicatorMessaging:
     def test_duplicate_rpc_subscriber(self, zeromq_comm):
         """Test duplicate RPC subscriber raises."""
         zeromq_comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
-        with pytest.raises(kiwipy.DuplicateSubscriberIdentifier):
+        with pytest.raises(broker_exceptions.DuplicateSubscriberIdentifier):
             zeromq_comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
 
     def test_broadcast_send(self, zeromq_comm):

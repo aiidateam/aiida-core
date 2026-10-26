@@ -9,14 +9,14 @@
 """Abstract `QueryBuilder` definition."""
 
 import abc
+import typing as t
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.entities import EntityTypes
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('BackendQueryBuilder',)
@@ -45,12 +45,12 @@ EntityRelationships: dict[str, set[str]] = {
 }
 
 
-class PathItemType(TypedDict):
+class PathItemType(t.TypedDict):
     """An item on the query path"""
 
     entity_type: str | list[str]
     # this can be derived from the entity_type, but it is more efficient to store
-    orm_base: Literal['node', 'group', 'authinfo', 'comment', 'computer', 'log', 'user']
+    orm_base: t.Literal['node', 'group', 'authinfo', 'comment', 'computer', 'log', 'user']
     tag: str
     joining_keyword: str
     joining_value: str
@@ -58,16 +58,16 @@ class PathItemType(TypedDict):
     edge_tag: str
 
 
-class QueryDictType(TypedDict):
+class QueryDictType(t.TypedDict):
     """A JSON serialisable representation of a ``QueryBuilder`` instance"""
 
     path: list[PathItemType]
     # mapping: tag -> 'and' | 'or' | '~or' | '~and' | '!and' | '!or' -> [] -> operator -> value
     #              -> operator -> value
-    filters: dict[str, dict[str, dict[str, list[dict[str, Any]]] | dict[str, Any]]]
+    filters: dict[str, dict[str, dict[str, list[dict[str, t.Any]]] | dict[str, t.Any]]]
     # mapping: tag -> [] -> field -> 'func' -> 'max' | 'min' | 'count'
     #                                'cast' -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
-    project: dict[str, list[dict[str, dict[str, Any]]]]
+    project: dict[str, list[dict[str, dict[str, t.Any]]]]
     # mapping: tag -> field -> return key for iterdict method
     project_map: dict[str, dict[str, str]]
     # list of mappings: tag  -> [] -> field -> 'order' -> 'asc' | 'desc'
@@ -102,18 +102,18 @@ class BackendQueryBuilder(abc.ABC):
         """Return the number of results of the query"""
 
     @abc.abstractmethod
-    def first(self, data: QueryDictType) -> list[Any] | None:
+    def first(self, data: QueryDictType) -> list[t.Any] | None:
         """Executes query, asking for one instance.
 
         :returns: One row of aiida results
         """
 
     @abc.abstractmethod
-    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[Any]]:
+    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[t.Any]]:
         """Return an iterator over all the results of a list of lists."""
 
     @abc.abstractmethod
-    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, Any]]]:
+    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, t.Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
 
     def as_sql(self, data: QueryDictType, inline: bool = False) -> str:
@@ -139,7 +139,7 @@ class BackendQueryBuilder(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, Any]:
+    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, t.Any]:
         """Return a dictionary with the statistics of node creation, summarized by day.
 
         :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.

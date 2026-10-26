@@ -41,16 +41,18 @@ def migrate_repository(connection, profile):
     container = Container(filepath_container)
 
     if not profile.is_test_profile and (node_count > 0 and not filepath_repository.is_dir()):
-        raise exceptions.StorageMigrationError(
+        msg = (
             f'the file repository `{filepath_repository}` does not exist but the database is not empty, it contains '
             f'{node_count} nodes. Aborting the migration.'
         )
+        raise exceptions.StorageMigrationError(msg)
 
     if not profile.is_test_profile and container.is_initialised:
-        raise exceptions.StorageMigrationError(
+        msg = (
             f'the container {filepath_container} already exists. If you ran this migration before and it failed simply '
             'delete this directory and restart the migration.'
         )
+        raise exceptions.StorageMigrationError(msg)
 
     container.init_container(clear=True, **CONTAINER_DEFAULTS)
 

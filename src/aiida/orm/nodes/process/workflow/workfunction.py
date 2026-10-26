@@ -8,13 +8,13 @@
 ###########################################################################
 """Module with `Node` sub class for workflow function processes."""
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from aiida.common.links import LinkType
 from aiida.orm.nodes.process.workflow.workflow import WorkflowNode, WorkflowNodeLinks
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Node
 
 __all__ = ('WorkFunctionNode',)

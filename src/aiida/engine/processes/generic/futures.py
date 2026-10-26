@@ -17,21 +17,20 @@
 """Generic process-engine future helpers."""
 
 import asyncio
+import typing as t
 from collections.abc import Awaitable, Callable
-from typing import Any
 
-import kiwipy
-
+from aiida.brokers import futures as broker_futures
 from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.engine.processes.exceptions import InvalidStateError
 
 __all__: tuple[str, ...] = ()
 
-CancelledError = kiwipy.CancelledError
+CancelledError = broker_futures.CancelledError
 
 
-copy_future = kiwipy.copy_future
-chain = kiwipy.chain
+copy_future = broker_futures.copy_future
+chain = broker_futures.chain
 gather = asyncio.gather
 
 Future = asyncio.Future
@@ -44,8 +43,8 @@ class CancellableAction(Future):
 
     def __init__(
         self,
-        action: Callable[..., Any],
-        cookie: Any = None,
+        action: Callable[..., t.Any],
+        cookie: t.Any = None,
         loop: asyncio.AbstractEventLoop | None = None,
     ):
         super().__init__(loop=loop)
@@ -53,11 +52,11 @@ class CancellableAction(Future):
         self._cookie = cookie
 
     @property
-    def cookie(self) -> Any:
+    def cookie(self) -> t.Any:
         """A cookie that can be used to correlate the actions with something"""
         return self._cookie
 
-    def run(self, *args: Any, **kwargs: Any) -> None:
+    def run(self, *args: t.Any, **kwargs: t.Any) -> None:
         """Run the action
 
         :param args: the positional arguments to the action
@@ -67,13 +66,13 @@ class CancellableAction(Future):
             raise InvalidStateError('Action has already been ran')
 
         try:
-            with kiwipy.capture_exceptions(self):
+            with broker_futures.capture_exceptions(self):
                 self.set_result(self._action(*args, **kwargs))
         finally:
             self._action = None  # type: ignore[assignment]
 
 
-def create_task(coro: Callable[[], Awaitable[Any]], loop: asyncio.AbstractEventLoop | None = None) -> Future:
+def create_task(coro: Callable[[], Awaitable[t.Any]], loop: asyncio.AbstractEventLoop | None = None) -> Future:
     """
     Schedule a call to a coro in the event loop and wrap the outcome
     in a future.
@@ -88,7 +87,7 @@ def create_task(coro: Callable[[], Awaitable[Any]], loop: asyncio.AbstractEventL
     future = loop.create_future()
 
     async def run_task() -> None:
-        with kiwipy.capture_exceptions(future):
+        with broker_futures.capture_exceptions(future):
             res = await coro()
             future.set_result(res)
 
@@ -96,7 +95,7 @@ def create_task(coro: Callable[[], Awaitable[Any]], loop: asyncio.AbstractEventL
     return future
 
 
-def unwrap_kiwi_future(future: kiwipy.Future) -> kiwipy.Future:
+def unwrap_kiwi_future(future: broker_futures.Future) -> broker_futures.Future:
     """
     Create a kiwi future that represents the final results of a nested series of futures,
     meaning that if the futures provided itself resolves to a future the returned
@@ -108,15 +107,15 @@ def unwrap_kiwi_future(future: kiwipy.Future) -> kiwipy.Future:
     :return: the unwrapping future
 
     """
-    unwrapping = kiwipy.Future()
+    unwrapping: broker_futures.Future[t.Any] = broker_futures.Future()
 
-    def unwrap(fut: kiwipy.Future) -> None:
+    def unwrap(fut: broker_futures.Future) -> None:
         if fut.cancelled():
             unwrapping.cancel()
         else:
-            with kiwipy.capture_exceptions(unwrapping):
+            with broker_futures.capture_exceptions(unwrapping):
                 result = fut.result()
-                if isinstance(result, kiwipy.Future):
+                if isinstance(result, broker_futures.Future):
                     result.add_done_callback(unwrap)
                 else:
                     unwrapping.set_result(result)

@@ -28,7 +28,7 @@ def create_user():
     }
 
 
-@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.usefixtures('aiida_profile_tmp')
 def test_user_list(run_cli_command):
     """Test `verdi user list`."""
     default_user = orm.User.collection.get_default()
@@ -36,7 +36,7 @@ def test_user_list(run_cli_command):
     assert default_user.email in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.usefixtures('aiida_profile_tmp')
 def test_user_configure_create(run_cli_command, create_user):
     """Create a new user with `verdi user configure`."""
     new_user = create_user
@@ -55,7 +55,7 @@ def test_user_configure_create(run_cli_command, create_user):
         assert val == getattr(user, key)
 
 
-@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.usefixtures('aiida_profile_tmp')
 def test_user_configure_update(run_cli_command, create_user):
     """Reconfigure an existing user with `verdi user configure`."""
     new_user = create_user
@@ -77,7 +77,7 @@ def test_user_configure_update(run_cli_command, create_user):
         assert val == getattr(default_user, key)
 
 
-@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.usefixtures('aiida_profile_tmp')
 def test_set_default(run_cli_command, create_user):
     """Reconfigure an existing user with `verdi user configure`."""
     new_user = orm.User(**create_user).store()

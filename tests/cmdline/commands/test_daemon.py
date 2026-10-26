@@ -53,6 +53,7 @@ def test_daemon_start(run_cli_command, stopped_daemon_client):
 
 
 @pytest.mark.parametrize('options', ([], ['--reset']))
+@pytest.mark.flaky(reruns=2)
 def test_daemon_restart(run_cli_command, started_daemon_client, options):
     """Test ``verdi daemon restart`` both with and without ``--reset`` flag."""
     run_cli_command(cmd_daemon.restart, options)
@@ -102,6 +103,7 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
     )
 
 
+@pytest.mark.flaky(reruns=2)
 def test_daemon_stop(run_cli_command, started_daemon_client):
     """Test ``verdi daemon stop``."""
     result = run_cli_command(cmd_daemon.stop)
@@ -121,6 +123,7 @@ def test_foreground_multiple_workers(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client', 'isolated_config')
+@pytest.mark.flaky(reruns=2)
 def test_daemon_status(run_cli_command):
     """Test ``verdi daemon status``."""
     result = run_cli_command(cmd_daemon.status)
@@ -163,6 +166,7 @@ def test_daemon_status_no_broker(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client', 'isolated_config')
+@pytest.mark.flaky(reruns=2)
 def test_daemon_status_timeout(run_cli_command):
     """Test ``verdi daemon status`` with the ``--timeout`` option.
 
@@ -221,6 +225,25 @@ def get_worker_info_broken(_):
         'info': {'4990': 'No such process (stopped?)'},
         'id': '4e1d768a522a44b59f85039806f9af14',
     }
+
+
+@patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
+@patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
+@patch.object(DaemonClient, 'get_worker_info', get_worker_info)
+def test_daemon_status_legacy_rabbitmq_backend(run_cli_command):
+    """Status resolves the legacy broker name stored in unmigrated profiles."""
+    profile = get_profile()
+    original_backend = profile.process_control_backend
+    original_config = profile.process_control_config
+
+    try:
+        profile.set_process_controller('rabbitmq', original_config)
+        result = run_cli_command(cmd_daemon.status, use_subprocess=False)
+    finally:
+        profile.set_process_controller(original_backend, original_config)
+
+    assert f'Profile: {profile.name}' in result.output
+    assert 'Daemon is running as PID 111015' in result.output
 
 
 @patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})

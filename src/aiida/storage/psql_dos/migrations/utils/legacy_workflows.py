@@ -30,7 +30,8 @@ def json_serializer(obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
 
-    raise TypeError(f'Type {type(obj)} not serializable')
+    msg = f'Type {type(obj)} not serializable'
+    raise TypeError(msg)
 
 
 def export_workflow_data(connection, profile):

@@ -4,10 +4,11 @@ import stat
 import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import asyncssh
 import pytest
 
 from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH, get_openssh_version
-from aiida.transports.plugins.ssh_async import AsyncSshTransport
+from aiida.transports.plugins.ssh import AsyncSshTransport
 
 
 class TestAuthenticationScript:
@@ -185,6 +186,38 @@ class TestDataNodeHost:
         assert ssh_commands, 'run() should still be executed over ssh'
         for command in ssh_commands:
             assert command[1] == 'login.hpc'
+
+
+class TestSftpErrorTranslation:
+    """The backend has to report failures as `OSError`, which is what the `Transport` interface promises.
+
+    `asyncssh` raises its own `SFTPError`, which does not derive from `OSError`, so callers that catch
+    `OSError` (e.g. `RemoteData._get_size_on_disk_stat`) would let it escape.
+    """
+
+    @staticmethod
+    def _backend(**sftp_methods):
+        backend = _AsyncSSH('localhost', 'localhost', MagicMock(), 'bash ')
+        backend._sftp = MagicMock(**sftp_methods)
+        return backend
+
+    @pytest.mark.asyncio
+    async def test_listdir_of_missing_path_raises_file_not_found(self):
+        """A missing path is reported as `FileNotFoundError`, as the `openssh` backend does."""
+        backend = self._backend(listdir=AsyncMock(side_effect=asyncssh.sftp.SFTPNoSuchFile('No such file')))
+
+        with pytest.raises(FileNotFoundError, match='/does/not/exist'):
+            await backend.listdir('/does/not/exist')
+
+    @pytest.mark.asyncio
+    async def test_listdir_failure_raises_oserror(self):
+        """Any other SFTP failure is reported as a plain `OSError`, keeping the reason of the server."""
+        backend = self._backend(listdir=AsyncMock(side_effect=asyncssh.sftp.SFTPPermissionDenied('Permission denied')))
+
+        with pytest.raises(OSError, match='Permission denied') as exception:
+            await backend.listdir('/root')
+
+        assert not isinstance(exception.value, FileNotFoundError)
 
 
 class TestSemaphoreBehavior:
@@ -428,3 +461,57 @@ def test_scp_with_special_chars(tmp_path):
         escaped = backend._escape_for_rcp(str(source))
         result = subprocess.run(['scp', '-O', f'localhost:{escaped}', str(dest_rcp)], capture_output=True, check=False)
         assert result.returncode == 0 and dest_rcp.read_text() == f'content of {filename}'
+
+
+class TestAsyncSshIgnoredConfigKwargs:
+    """A computer whose entry relies on a directive ``asyncssh`` reads no value from carries it itself."""
+
+    @pytest.mark.parametrize(
+        'auth_params, expected',
+        (
+            ({'known_hosts': False}, {'known_hosts': None}),
+            ({'client_keys': False}, {'client_keys': None}),
+            ({'gss_host': 'host/myhpc'}, {'gss_host': 'host/myhpc'}),
+            ({}, {}),
+        ),
+    )
+    def test_reaches_the_backend(self, auth_params, expected):
+        transport = AsyncSshTransport(machine='myhpc', **auth_params)
+
+        assert transport.async_backend.connect_kwargs == expected
+
+    @pytest.mark.asyncio
+    async def test_reaches_the_data_transfer_host_too(self):
+        """The parameters belong to the computer, and both of its connections are that computer."""
+        transport = AsyncSshTransport(machine='myhpc', data_node_host='myhpc-data', known_hosts=False)
+
+        with patch('asyncssh.connect', new=AsyncMock()) as connect:
+            await transport.async_backend._connect('myhpc-data')
+
+        assert connect.await_args.kwargs == {'known_hosts': None}
+
+    @pytest.mark.parametrize('auth_params', ({'known_hosts': False}, {'client_keys': False}))
+    def test_is_not_passed_on_by_the_openssh_backend(self, auth_params):
+        """``ssh`` and ``scp`` read the directives themselves, so nothing has to be lifted for them."""
+        transport = AsyncSshTransport(machine='myhpc', backend='openssh', **auth_params)
+
+        assert transport.async_backend.ssh_command_generator('whoami') == ['ssh', 'myhpc', 'bash -l -c "whoami"']
+
+    @pytest.mark.asyncio
+    async def test_is_given_to_asyncssh(self):
+        backend = _AsyncSSH('h', 'h', MagicMock(), 'bash ', connect_kwargs={'known_hosts': None})
+
+        with patch('asyncssh.connect', new=AsyncMock()) as connect:
+            await backend._connect('myhpc')
+
+        assert connect.await_args.kwargs == {'known_hosts': None}
+
+    @pytest.mark.asyncio
+    async def test_a_native_computer_is_given_nothing(self):
+        """Every other computer connects exactly as it did, reading ``~/.ssh/config`` by default."""
+        backend = _AsyncSSH('myhpc', 'myhpc', MagicMock(), 'bash ')
+
+        with patch('asyncssh.connect', new=AsyncMock()) as connect:
+            await backend._connect('myhpc')
+
+        assert connect.await_args.kwargs == {}

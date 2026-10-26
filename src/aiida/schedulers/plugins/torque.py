@@ -67,10 +67,11 @@ class TorqueScheduler(PbsBaseClass):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
+                msg = (
                     'max_wallclock_seconds must be a positive integer (in seconds)! '
                     f"It is instead '{max_wallclock_seconds}'"
                 )
+                raise ValueError(msg)
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
@@ -85,7 +86,8 @@ class TorqueScheduler(PbsBaseClass):
                 if physical_memory_kb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(f'max_memory_kb must be a positive integer (in kB)! It is instead `{max_memory_kb}`')
+                msg = f'max_memory_kb must be a positive integer (in kB)! It is instead `{max_memory_kb}`'
+                raise ValueError(msg)
             # There is always something before, at least the total #
             # of nodes
             select_string += f',mem={physical_memory_kb}kb'

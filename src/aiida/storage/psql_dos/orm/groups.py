@@ -67,7 +67,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
             try:
                 self.model.save()
             except Exception:
-                raise UniquenessError(f'a group of the same type with the label {label} already exists') from Exception
+                msg = f'a group of the same type with the label {label} already exists'
+                raise UniquenessError(msg) from Exception
 
     @property
     def description(self):
@@ -180,7 +181,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         def check_node(given_node):
             """Check if given node is of correct type and stored"""
             if not isinstance(given_node, self.NODE_CLASS):
-                raise TypeError(f'invalid type {type(given_node)}, has to be {self.NODE_CLASS}')
+                msg = f'invalid type {type(given_node)}, has to be {self.NODE_CLASS}'
+                raise TypeError(msg)
 
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -214,7 +216,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
 
         def check_node(node):
             if not isinstance(node, self.NODE_CLASS):
-                raise TypeError(f'invalid type {type(node)}, has to be {self.NODE_CLASS}')
+                msg = f'invalid type {type(node)}, has to be {self.NODE_CLASS}'
+                raise TypeError(msg)
 
             if node.id is None:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')

@@ -346,7 +346,8 @@ class BaseTranslator:
             except ValueError:
                 raise InputValidationError('Limit value must be an integer')
             if limit > self.limit_default:
-                raise RestValidationError(f'Limit and perpage cannot be bigger than {self.limit_default}')
+                msg = f'Limit and perpage cannot be bigger than {self.limit_default}'
+                raise RestValidationError(msg)
         else:
             limit = self.limit_default
 
@@ -460,10 +461,11 @@ class BaseTranslator:
         except MultipleObjectsError:
             raise RestInputValidationError('More than one node found. Provide longer starting pattern for id.')
         except NotExistent:
-            raise RestInputValidationError(
+            msg = (
                 f"either no object's id starts with '{node_id}' "
                 f'or the corresponding object is not of type aiida.orm.{self._aiida_type}'
             )
+            raise RestInputValidationError(msg)
         else:
             # create a permanent filter
             self._id_filter = {'id': {'==': pk}}

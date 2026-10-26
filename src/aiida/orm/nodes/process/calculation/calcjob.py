@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import datetime
+import typing as t
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, AnyStr, cast
 
 from pydantic import field_validator
 
@@ -23,12 +23,12 @@ from aiida.orm.nodes.process.calculation.calculation import CalculationNode
 from aiida.orm.nodes.process.process import ProcessNodeCaching
 from aiida.orm.pydantic import OrmMetadataField
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
+    from aiida.common.datastructures import JobInfo, JobState
     from aiida.orm import FolderData
     from aiida.orm.authinfos import AuthInfo
     from aiida.orm.utils.calcjob import CalcJobResultManager
     from aiida.parsers import Parser
-    from aiida.schedulers.datastructures import JobInfo, JobState
     from aiida.tools.calculations import CalculationTools
     from aiida.transports import Transport
 
@@ -38,7 +38,7 @@ __all__ = ('CalcJobNode',)
 class CalcJobNodeCaching(ProcessNodeCaching):
     """Interface to control caching of a node instance."""
 
-    def get_objects_to_hash(self) -> list[Any]:
+    def get_objects_to_hash(self) -> list[t.Any]:
         """Return a list of objects which should be included in the hash.
 
         This method is purposefully overridden from the base `Node` class, because we do not want to include the
@@ -72,47 +72,47 @@ class CalcJobNode(CalculationNode):
         scheduler_state: str | None = OrmMetadataField(
             None,
             description='The state of the scheduler',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_state(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_scheduler_state(),
         )
         state: str | None = OrmMetadataField(
             None,
             description='The active state of the calculation job',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_state(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_state(),
         )
         remote_workdir: str | None = OrmMetadataField(
             None,
             description='The path to the remote (on cluster) scratch folder',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_remote_workdir(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_remote_workdir(),
         )
         job_id: str | None = OrmMetadataField(
             None,
             description='The scheduler job id',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_job_id(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_job_id(),
         )
         scheduler_lastchecktime: datetime.datetime | None = OrmMetadataField(
             None,
             description='The last time the scheduler was checked, in isoformat',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_lastchecktime(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_scheduler_lastchecktime(),
         )
         last_job_info: dict | None = OrmMetadataField(
             None,
             description='The last job info returned by the scheduler',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_last_job_info(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_last_job_info(),
         )
         detailed_job_info: dict | None = OrmMetadataField(
             None,
             description='The detailed job info returned by the scheduler',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_detailed_job_info(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_detailed_job_info(),
         )
         retrieve_list: Sequence[str | tuple[str, str, int]] | None = OrmMetadataField(
             None,
             description='The list of files to retrieve from the remote cluster',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_list(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_retrieve_list(),
         )
         retrieve_temporary_list: Sequence[str | tuple[str, str, int]] | None = OrmMetadataField(
             None,
             description='The list of temporary files to retrieve from the remote cluster',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_temporary_list(),
+            orm_to_model=lambda node: t.cast(CalcJobNode, node).get_retrieve_temporary_list(),
         )
         imported: bool | None = OrmMetadataField(
             None,
@@ -197,7 +197,7 @@ class CalcJobNode(CalculationNode):
         """Return whether the calculation job was imported instead of being an actual run."""
         return self.base.attributes.get(self.IMMIGRATED_KEY, None) is True
 
-    def get_option(self, name: str) -> Any | None:
+    def get_option(self, name: str) -> t.Any | None:
         """Return the value of an option that was set for this CalcJobNode.
 
         :param name: the option name
@@ -206,7 +206,7 @@ class CalcJobNode(CalculationNode):
         """
         return self.base.attributes.get(name, None)
 
-    def set_option(self, name: str, value: Any) -> None:
+    def set_option(self, name: str, value: t.Any) -> None:
         """Set an option to the given value
 
         :param name: the option name
@@ -216,7 +216,7 @@ class CalcJobNode(CalculationNode):
         """
         self.base.attributes.set(name, value)
 
-    def get_options(self) -> dict[str, Any]:
+    def get_options(self) -> dict[str, t.Any]:
         """Return the dictionary of options set for this CalcJobNode
 
         :return: dictionary of the options and their values
@@ -229,7 +229,7 @@ class CalcJobNode(CalculationNode):
 
         return options
 
-    def set_options(self, options: dict[str, Any]) -> None:
+    def set_options(self, options: dict[str, t.Any]) -> None:
         """Set the options for this CalcJobNode
 
         :param options: dictionary of option and their values to set
@@ -262,7 +262,8 @@ class CalcJobNode(CalculationNode):
         :raise: ValueError if state is invalid
         """
         if not isinstance(state, CalcJobState):
-            raise ValueError(f'{state} is not a valid CalcJobState')
+            msg = f'{state} is not a valid CalcJobState'
+            raise ValueError(msg)
 
         self.base.attributes.set(self.CALC_JOB_STATE_KEY, state.value)
 
@@ -304,7 +305,8 @@ class CalcJobNode(CalculationNode):
 
             # Otherwise, it has to be a tuple of length three with specific requirements
             if not isinstance(directive, (tuple, list)) or len(directive) != 3:
-                raise ValueError(f'invalid directive, not a list or tuple of length three: {directive}')
+                msg = f'invalid directive, not a list or tuple of length three: {directive}'
+                raise ValueError(msg)
 
             if not isinstance(directive[0], str):
                 raise ValueError('invalid directive, first element has to be a string representing remote path')
@@ -373,10 +375,11 @@ class CalcJobNode(CalculationNode):
         :param state: an instance of `JobState`
         """
         from aiida.common import timezone
-        from aiida.schedulers.datastructures import JobState
+        from aiida.common.datastructures import JobState
 
         if not isinstance(state, JobState):
-            raise ValueError(f'scheduler state should be an instance of JobState, got: {state}')
+            msg = f'scheduler state should be an instance of JobState, got: {state}'
+            raise ValueError(msg)
 
         self.base.attributes.set(self.SCHEDULER_STATE_KEY, state.value)
         self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.now().isoformat())
@@ -386,7 +389,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a JobState enum instance, or None if no state has been set.
         """
-        from aiida.schedulers.datastructures import JobState
+        from aiida.common.datastructures import JobState
 
         state = self.base.attributes.get(self.SCHEDULER_STATE_KEY, None)
 
@@ -444,7 +447,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a `JobInfo` object (that closely resembles a dictionary) or None.
         """
-        from aiida.schedulers.datastructures import JobInfo
+        from aiida.common.datastructures import JobInfo
 
         last_job_info_dictserialized = self.base.attributes.get(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
 
@@ -525,7 +528,7 @@ class CalcJobNode(CalculationNode):
 
         return CalcJobResultManager(self)
 
-    def get_scheduler_stdout(self) -> AnyStr | None:
+    def get_scheduler_stdout(self) -> t.AnyStr | None:
         """Return the scheduler stderr output if the calculation has finished and been retrieved, None otherwise.
 
         :return: scheduler stderr output or None
@@ -543,7 +546,7 @@ class CalcJobNode(CalculationNode):
 
         return stdout
 
-    def get_scheduler_stderr(self) -> AnyStr | None:
+    def get_scheduler_stderr(self) -> t.AnyStr | None:
         """Return the scheduler stdout output if the calculation has finished and been retrieved, None otherwise.
 
         :return: scheduler stdout output or None

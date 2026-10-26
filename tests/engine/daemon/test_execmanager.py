@@ -16,8 +16,9 @@ import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
 from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
+from aiida.common.links import LinkType
 from aiida.engine.daemon import execmanager
-from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
+from aiida.orm import CalcJobNode, FolderData, Int, PortableCode, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -46,22 +47,20 @@ def file_hierarchy_simple():
     scope='function',
     params=[
         ('core.local', None),
-        ('core.ssh', None),
-        ('core.ssh_async', 'asyncssh'),
-        ('core.ssh_async', 'openssh'),
+        ('core.ssh', 'asyncssh'),
+        ('core.ssh', 'openssh'),
     ],
 )
-def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_computer_ssh_async, aiida_code_installed, request):
+def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_code_installed, request):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
 
     if request.param[0] == 'core.local':
         node = CalcJobNode(computer=aiida_localhost)
     elif request.param[0] == 'core.ssh':
-        node = CalcJobNode(computer=aiida_computer_ssh())
-    elif request.param[0] == 'core.ssh_async':
-        node = CalcJobNode(computer=aiida_computer_ssh_async(backend=request.param[1]))
+        node = CalcJobNode(computer=aiida_computer_ssh(backend=request.param[1]))
     else:
-        raise ValueError(f'unsupported transport: {request.param}')
+        msg = f'unsupported transport: {request.param}'
+        raise ValueError(msg)
 
     node.store()
 
@@ -143,6 +142,116 @@ async def test_retrieve_files_from_list(
         await execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
     assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('backend', ['local', 'asyncssh', 'openssh'])
+@pytest.mark.parametrize('failures, existing_backup', [(0, False), (1, False), (3, False), (20, False), (3, True)])
+async def test_upload_repeated_failures(
+    backend,
+    failures,
+    existing_backup,
+    aiida_localhost,
+    aiida_computer_ssh,
+    aiida_code_installed,
+    generate_calc_job,
+    fixture_sandbox,
+    monkeypatch,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
+):
+    """Upload retries preserve earlier backups and recover when the transfer error clears (issue #7721).
+
+    Call upload directly so recovery does not depend on the engine's retry limit or caching.
+    """
+    computer = aiida_localhost if backend == 'local' else aiida_computer_ssh(backend=backend)
+    code = aiida_code_installed(computer=computer, default_calc_job_plugin='core.arithmetic.add')
+    process = generate_calc_job(
+        fixture_sandbox,
+        'core.arithmetic.add',
+        inputs={'code': code, 'x': Int(1), 'y': Int(2), 'metadata': {'options': {'withmpi': False}}},
+        return_process=True,
+    )
+    try:
+        node = process.node
+        calc_info = process.presubmit(fixture_sandbox)
+        lost_found = pathlib.Path(computer.get_workdir()) / execmanager.REMOTE_WORK_DIRECTORY_LOST_FOUND
+        expected_backups = []
+        if existing_backup:
+            # Older retries could leave a second backup nested inside the first.
+            legacy_backup = {'old': 'first backup', node.uuid[4:]: {'old': 'nested backup'}}
+            create_file_hierarchy(legacy_backup, lost_found / node.uuid)
+            expected_backups.append(legacy_backup)
+
+        async with computer.get_transport() as transport:
+            original_put = transport.put_async
+
+            async def interrupted_put(localpath, remotepath, *args, **kwargs):
+                await original_put(localpath, remotepath, *args, **kwargs)
+                if pathlib.Path(localpath).name == 'aiida.in':
+                    (pathlib.Path(remotepath).parent / 'failed-attempt').write_text(str(attempt))
+                    raise OSError('injected temporary upload error')
+
+            with monkeypatch.context() as patch:
+                patch.setattr(transport, 'put_async', interrupted_put)
+                for attempt in range(failures):
+                    with pytest.raises(OSError, match='injected temporary upload error'):
+                        await execmanager.upload_calculation(
+                            node, transport, calc_info, fixture_sandbox, process.inputs
+                        )
+                    expected_backups.append(
+                        serialize_file_hierarchy(pathlib.Path(node.get_remote_workdir()), read_bytes=False)
+                    )
+
+            remote = await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox, process.inputs)
+
+        assert isinstance(remote, RemoteData)
+        assert remote.get_remote_path() == node.get_remote_workdir()
+        assert serialize_file_hierarchy(pathlib.Path(remote.get_remote_path()), read_bytes=False) == (
+            serialize_file_hierarchy(pathlib.Path(fixture_sandbox.abspath), read_bytes=False)
+        )
+        assert node.base.repository.get_object_content('aiida.in') == 'echo $((1 + 2))\n'
+
+        backups = list(lost_found.iterdir()) if lost_found.exists() else []
+        assert len(backups) == len(expected_backups)
+        assert all(path.name == node.uuid or path.name.startswith(f'{node.uuid}-') for path in backups)
+        actual_backups = [serialize_file_hierarchy(path, read_bytes=False) for path in backups]
+        for expected in expected_backups:
+            assert expected in actual_backups
+        if failures:
+            assert serialize_file_hierarchy(lost_found / node.uuid, read_bytes=False) == expected_backups[-1]
+    finally:
+        process.close()
+
+
+@pytest.mark.asyncio
+async def test_retrieve_temporary_with_existing_output(node_and_calc_info, tmp_path):
+    """Reuse permanent provenance while populating a fresh temporary folder on recovery."""
+    node, _ = node_and_calc_info
+    remote = tmp_path / 'remote'
+    remote.mkdir()
+    (remote / 'permanent.txt').write_text('permanent output')
+    (remote / 'temporary.txt').write_text('temporary output')
+    node.set_remote_workdir(str(remote))
+    node.set_retrieve_list(['permanent.txt'])
+    node.set_retrieve_temporary_list(['temporary.txt'])
+    before = tmp_path / 'before'
+    after = tmp_path / 'after'
+    before.mkdir()
+    after.mkdir()
+
+    async with node.computer.get_transport() as transport:
+        retrieved = await execmanager.retrieve_calculation(node, transport, before)
+        retrieved.base.links.add_incoming(node, LinkType.CREATE, node.link_label_retrieved)
+        retrieved_uuid = retrieved.uuid
+        (remote / 'permanent.txt').unlink()
+        (remote / 'temporary.txt').write_text('recovered temporary output')
+        result = await execmanager.retrieve_calculation(node, transport, after)
+
+    assert result is None
+    assert (after / 'temporary.txt').read_text() == 'recovered temporary output'
+    assert node.outputs.retrieved.uuid == retrieved_uuid
+    assert node.outputs.retrieved.base.repository.get_object_content('permanent.txt') == 'permanent output'
 
 
 @pytest.mark.asyncio

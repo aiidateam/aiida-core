@@ -23,14 +23,14 @@ library remains an implementation detail of the process engine.
 """
 
 import asyncio
+import typing as t
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
 
 import greenback
 
 __all__: tuple[str, ...] = ()
 
-_T = TypeVar('_T')
+_T = t.TypeVar('_T')
 
 
 def has_portal() -> bool:
@@ -43,7 +43,7 @@ def sync_await(awaitable: Awaitable[_T]) -> _T:
     return greenback.await_(awaitable)
 
 
-async def run_with_portal(fn: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
+async def run_with_portal(fn: Callable[..., _T], *args: t.Any, **kwargs: t.Any) -> _T:
     """Run sync *fn* in a greenback portal so it can call ``sync_await()``."""
     return await greenback.with_portal_run_sync(fn, *args, **kwargs)
 

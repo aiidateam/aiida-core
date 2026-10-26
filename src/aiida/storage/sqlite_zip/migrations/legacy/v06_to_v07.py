@@ -80,7 +80,8 @@ def data_migration_legacy_process_attributes(data):
                 for attr in attrs_to_remove:
                     content.pop(attr, None)
         except KeyError as exc:
-            raise CorruptStorage(f'Your export archive is corrupt! Org. exception: {exc}')
+            msg = f'Your export archive is corrupt! Org. exception: {exc}'
+            raise CorruptStorage(msg)
 
     if illegal_cases:
         headers = ['UUID/PK', 'process_state']

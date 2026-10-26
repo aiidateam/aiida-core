@@ -1,4 +1,4 @@
-"""Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
+"""Implementation of the message broker interface using RabbitMQ."""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
 
 if t.TYPE_CHECKING:
-    from kiwipy.rmq import RmqThreadCommunicator
     from packaging.version import Version
 
+    from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
     from aiida.manage.configuration.profile import Profile
 
 LOGGER = AIIDA_LOGGER.getChild('broker.rabbitmq')
@@ -49,7 +49,7 @@ def _finalize_broker(resources: _BrokerResources, broker_repr: str) -> None:
 
 
 class RabbitmqBroker(Broker):
-    """Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
+    """Implementation of the message broker interface using RabbitMQ."""
 
     _config_fields = (
         BrokerConfigField(
@@ -175,9 +175,8 @@ class RabbitmqBroker(Broker):
         return self._resources.communicator
 
     def _create_communicator(self) -> RmqThreadCommunicator:
-        """Return an instance of :class:`kiwipy.Communicator`."""
-        from kiwipy.rmq import RmqThreadCommunicator
-
+        """Return an instance of :class:`aiida.brokers.communicator.Communicator`."""
+        from aiida.brokers.rabbitmq.threadcomms import RmqThreadCommunicator
         from aiida.orm.utils import serialize
 
         communicator = RmqThreadCommunicator.connect(

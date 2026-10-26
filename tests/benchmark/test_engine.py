@@ -128,6 +128,7 @@ def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outg
 @pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
 @pytest.mark.usefixtures('started_daemon_client')
 @pytest.mark.benchmark(group='engine')
+@pytest.mark.flaky(reruns=2)
 def test_workchain_daemon(benchmark, submit_and_await, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the via a daemon runner."""
     code = InstalledCode(

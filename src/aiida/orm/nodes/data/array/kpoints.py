@@ -283,10 +283,11 @@ class KpointsData(ArrayData):
         from aiida.orm import StructureData
 
         if not isinstance(structuredata, StructureData):
-            raise ValueError(
+            msg = (
                 'An instance of StructureData should be passed to the KpointsData, '
                 f'found instead {structuredata.__class__}'
             )
+            raise ValueError(msg)
         cell = structuredata.cell
         self.set_cell(cell, structuredata.pbc)
 
@@ -439,10 +440,11 @@ class KpointsData(ArrayData):
                 # replace empty list by Gamma point
                 kpoints = numpy.array([[0.0, 0.0, 0.0]])
             else:
-                raise ValueError(
+                msg = (
                     'empty kpoints list is valid only in zero dimension; '
                     f'instead here with have {self._dimension} dimensions'
                 )
+                raise ValueError(msg)
 
         if len(kpoints.shape) <= 1:
             # list of scalars is accepted only in the 0D and 1D cases
@@ -450,23 +452,28 @@ class KpointsData(ArrayData):
                 # replace by singletons
                 kpoints = kpoints.reshape(kpoints.shape[0], 1)
             else:
-                raise ValueError(f'kpoints must be a list of lists in {self._dimension}D case')
+                msg = f'kpoints must be a list of lists in {self._dimension}D case'
+                raise ValueError(msg)
 
         if kpoints.dtype != numpy.dtype(float):
-            raise ValueError(f'kpoints must be an array of type floats. Found instead {kpoints.dtype}')
+            msg = f'kpoints must be an array of type floats. Found instead {kpoints.dtype}'
+            raise ValueError(msg)
 
         if kpoints.shape[1] < self._dimension:
-            raise ValueError(
+            msg = (
                 f'In a system which has {self._dimension} dimensions, '
                 f'kpoint needmore than {self._dimension} coordinates (found instead {kpoints.shape[1]})'
             )
+            raise ValueError(msg)
 
         if weights is not None:
             weights = numpy.array(weights)
             if weights.shape[0] != kpoints.shape[0]:
-                raise ValueError(f'Found {weights.shape[0]} weights but {kpoints.shape[0]} kpoints')
+                msg = f'Found {weights.shape[0]} weights but {kpoints.shape[0]} kpoints'
+                raise ValueError(msg)
             if weights.dtype != numpy.dtype(float):
-                raise ValueError(f'weights must be an array of type floats. Found instead {weights.dtype}')
+                msg = f'weights must be an array of type floats. Found instead {weights.dtype}'
+                raise ValueError(msg)
 
         return kpoints, weights
 
@@ -517,7 +524,8 @@ class KpointsData(ArrayData):
                 fill_values = [fill_values] * (3 - the_kpoints.shape[1])
 
             if len(fill_values) < 3 - the_kpoints.shape[1]:
-                raise ValueError(f'fill_values should be either a scalar or a length-{3 - the_kpoints.shape[1]} list')
+                msg = f'fill_values should be either a scalar or a length-{3 - the_kpoints.shape[1]} list'
+                raise ValueError(msg)
             else:
                 tmp_kpoints = numpy.zeros((the_kpoints.shape[0], 0))
                 i_kpts = 0

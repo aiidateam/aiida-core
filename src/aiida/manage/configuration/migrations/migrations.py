@@ -8,9 +8,9 @@
 ###########################################################################
 """Define the current configuration version and migrations."""
 
+import typing as t
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import Any, ClassVar
 
 from aiida.common import exceptions
 from aiida.common.docs import URL_CONFIG_SCHEMA_COMPATIBILITY
@@ -27,7 +27,7 @@ __all__ = (
     'upgrade_config',
 )
 
-ConfigType = dict[str, Any]
+ConfigType = dict[str, t.Any]
 
 # The expected version of the configuration file and the oldest backwards compatible configuration version.
 # If the configuration file format is changed, the current version number should be upped and a migration added.
@@ -45,16 +45,16 @@ CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 class SingleMigration(ABC):
     """Interface for a single migration of the configuration."""
 
-    down_revision: ClassVar[int]
+    down_revision: t.ClassVar[int]
     """The initial configuration version."""
 
-    down_compatible: ClassVar[int]
+    down_compatible: t.ClassVar[int]
     """The initial oldest backwards compatible configuration version"""
 
-    up_revision: ClassVar[int]
+    up_revision: t.ClassVar[int]
     """The final configuration version."""
 
-    up_compatible: ClassVar[int]
+    up_compatible: t.ClassVar[int]
     """The final oldest backwards compatible configuration version"""
 
     @abstractmethod
@@ -354,9 +354,8 @@ class AddTestProfileKey(SingleMigration):
 
             if profile_name_new is not None:
                 if profile_name_new in profile_names:
-                    raise exceptions.ConfigurationError(
-                        f'cannot change `{profile_name}` to `{profile_name_new}` because it already exists.'
-                    )
+                    msg = f'cannot change `{profile_name}` to `{profile_name_new}` because it already exists.'
+                    raise exceptions.ConfigurationError(msg)
 
                 CONFIG_LOGGER.warning(f'changing profile name from `{profile_name}` to `{profile_name_new}`.')
                 profile_name = profile_name_new  # noqa: PLW2901
@@ -431,7 +430,7 @@ class RenameRmqAndLogging(SingleMigration):
     )
 
     @classmethod
-    def _rename_options(cls, options: dict[str, Any], *, downgrade: bool = False) -> None:
+    def _rename_options(cls, options: dict[str, t.Any], *, downgrade: bool = False) -> None:
         """Rename deprecated options between the version 9 and 10 names."""
         for option_v9, option_v10 in cls.option_renames:
             source, target = (option_v10, option_v9) if downgrade else (option_v9, option_v10)
@@ -439,13 +438,13 @@ class RenameRmqAndLogging(SingleMigration):
                 options.setdefault(target, value)
 
     @classmethod
-    def _remove_v10_only_options(cls, options: dict[str, Any]) -> None:
+    def _remove_v10_only_options(cls, options: dict[str, t.Any]) -> None:
         """Remove options that did not exist before version 10."""
         for option_name in cls.v10_only_options:
             options.pop(option_name, None)
 
     @classmethod
-    def _resolve_inherited_logger_options(cls, options: dict[str, Any], fallback_level: str) -> None:
+    def _resolve_inherited_logger_options(cls, options: dict[str, t.Any], fallback_level: str) -> None:
         """Resolve ``INHERIT`` for advanced logger options to the effective ``logging.aiida_loglevel``."""
         for option_name in cls.advanced_logger_options:
             if options.get(option_name) == 'INHERIT':
@@ -473,23 +472,36 @@ class RenameRmqAndLogging(SingleMigration):
             self._remove_v10_only_options(options)
 
 
-class MergePlumpyLogLevel(SingleMigration):
-    """Merge the plumpy log-level option into the aiida-core log level."""
+class AiidaV3Migration(SingleMigration):
+    """Merge the plumpy and kiwipy log-level options into the aiida-core log level and drop the paramiko one."""
 
     down_revision = 10
     down_compatible = 10
     up_revision = 11
     up_compatible = 11
 
-    @staticmethod
-    def _upgrade_options(options: dict[str, Any]) -> None:
-        if (value := options.pop('logging.plumpy_loglevel', None)) is not None:
-            options.setdefault('logging.aiida_core_loglevel', value)
+    removed_options = (
+        'logging.plumpy_loglevel',
+        'logging.kiwipy_loglevel',
+    )
+    # The `core.ssh` transport plugin no longer uses paramiko, so the logger it configured is gone. The
+    # level is dropped instead of merged: it configured a third-party logger, not an AiiDA one.
+    dropped_options = ('logging.paramiko_loglevel',)
 
-    @staticmethod
-    def _downgrade_options(options: dict[str, Any]) -> None:
+    @classmethod
+    def _upgrade_options(cls, options: dict[str, t.Any]) -> None:
+        for removed_option in cls.removed_options:
+            if (value := options.pop(removed_option, None)) is not None:
+                options.setdefault('logging.aiida_core_loglevel', value)
+
+        for dropped_option in cls.dropped_options:
+            options.pop(dropped_option, None)
+
+    @classmethod
+    def _downgrade_options(cls, options: dict[str, t.Any]) -> None:
         if (value := options.get('logging.aiida_core_loglevel')) is not None:
-            options.setdefault('logging.plumpy_loglevel', value)
+            for removed_option in cls.removed_options:
+                options.setdefault(removed_option, value)
 
     def upgrade(self, config: ConfigType) -> None:
         self._upgrade_options(config.get('options', {}))
@@ -513,7 +525,7 @@ MIGRATIONS = (
     AddTestProfileKey,
     AddPrefixToStorageBackendTypes,
     RenameRmqAndLogging,
-    MergePlumpyLogLevel,
+    AiidaV3Migration,
 )
 
 
@@ -587,16 +599,19 @@ def upgrade_config(
         try:
             migrator = next(m for m in migrations if m.down_revision == current)
         except StopIteration:
-            raise exceptions.ConfigurationError(f'No migration found to upgrade version {current}')
+            msg = f'No migration found to upgrade version {current}'
+            raise exceptions.ConfigurationError(msg)
         if migrator in used:
-            raise exceptions.ConfigurationError(f'Circular migration detected, upgrading to {target}')
+            msg = f'Circular migration detected, upgrading to {target}'
+            raise exceptions.ConfigurationError(msg)
         used.append(migrator)
         migrator().upgrade(config)
         current = migrator.up_revision
         config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current
         config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.up_compatible
     if current != target:
-        raise exceptions.ConfigurationError(f'Could not upgrade to version {target}, current version is {current}')
+        msg = f'Could not upgrade to version {target}, current version is {current}'
+        raise exceptions.ConfigurationError(msg)
     return config
 
 
@@ -624,15 +639,18 @@ def downgrade_config(
         try:
             migrator = next(m for m in migrations if m.up_revision == current)
         except StopIteration:
-            raise exceptions.ConfigurationError(f'No migration found to downgrade version {current}')
+            msg = f'No migration found to downgrade version {current}'
+            raise exceptions.ConfigurationError(msg)
         if migrator in used:
-            raise exceptions.ConfigurationError(f'Circular migration detected, downgrading to {target}')
+            msg = f'Circular migration detected, downgrading to {target}'
+            raise exceptions.ConfigurationError(msg)
         used.append(migrator)
         migrator().downgrade(config)
         config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current = migrator.down_revision
         config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.down_compatible
     if current != target:
-        raise exceptions.ConfigurationError(f'Could not downgrade to version {target}, current version is {current}')
+        msg = f'Could not downgrade to version {target}, current version is {current}'
+        raise exceptions.ConfigurationError(msg)
     return config
 
 

@@ -24,9 +24,9 @@ import xml.dom.minidom
 import xml.parsers.expat
 
 import aiida.schedulers
+from aiida.common.datastructures import JobInfo, JobState, JobTemplate, ParEnvJobResource
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, ParEnvJobResource
 from aiida.schedulers.plugins.bash import BashCliScheduler
 
 if t.TYPE_CHECKING:
@@ -253,10 +253,11 @@ class SgeScheduler(BashCliScheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
+                msg = (
                     'max_wallclock_seconds must be a positive integer (in seconds)! '
                     f"It is instead '{job_tmpl.max_wallclock_seconds}'"
                 )
+                raise ValueError(msg)
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
@@ -286,7 +287,8 @@ class SgeScheduler(BashCliScheduler):
     def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         if retval != 0:
             self.logger.error(f'Error in _parse_joblist_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during joblist retrieval, retval={retval}')
+            msg = f'Error during joblist retrieval, retval={retval}'
+            raise SchedulerError(msg)
 
         if stderr.strip():
             self.logger.warning(
@@ -435,7 +437,8 @@ class SgeScheduler(BashCliScheduler):
         """
         if retval != 0:
             self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
-            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
+            msg = f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}'
+            raise SchedulerError(msg)
 
         if stderr.strip():
             self.logger.warning(

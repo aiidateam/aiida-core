@@ -21,16 +21,15 @@ from __future__ import annotations
 
 import logging
 import pathlib
+import typing as t
 import warnings
-from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.common.typing import FilePath
 from aiida.orm import Computer
-from aiida.orm.nodes.data.code.abstract import AbstractCode
-from aiida.orm.nodes.data.code.legacy import Code
+from aiida.orm.nodes.data.code import Code
 from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('PortableCode',)
@@ -40,29 +39,27 @@ _LOGGER = logging.getLogger(__name__)
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
-    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
-    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class CommonFields(AbstractCode.CommonFields):
+    class CommonFields(Code.CommonFields):
         filepath_executable: str = OrmMetadataField(
             title='Filepath executable',
             description='Relative filepath of executable with directory of code files',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node: str(cast(PortableCode, node).filepath_executable),
+            orm_to_model=lambda node: str(t.cast(PortableCode, node).filepath_executable),
         )
 
-    class AttributesModel(CommonFields, AbstractCode.AttributesModel): ...
+    class AttributesModel(CommonFields, Code.AttributesModel): ...
 
-    class ConstructorArgsModel(CommonFields, AbstractCode.ConstructorArgsModel):
+    class ConstructorArgsModel(CommonFields, Code.ConstructorArgsModel):
         filepath_files: str = OrmMetadataField(
             title='Code directory',
             description='Filepath to directory containing code files',
             short_name='-F',
             priority=2,
             write_only=True,
-            orm_to_model=lambda node, ctx: cast(PortableCode, node)._export_filepath_files_from_repo(
+            orm_to_model=lambda node, ctx: t.cast(PortableCode, node)._export_filepath_files_from_repo(
                 ctx.get('repository_dump_path'),
                 ctx.get('written', False),
             ),
@@ -98,10 +95,12 @@ class PortableCode(Code):
 
             filepath_files_path = pathlib.Path(filepath_files)
             if not filepath_files_path.exists():
-                raise ValueError(f'The filepath `{filepath_files}` does not exist.')
+                msg = f'The filepath `{filepath_files}` does not exist.'
+                raise ValueError(msg)
 
             if not filepath_files_path.is_dir():
-                raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
+                msg = f'The filepath `{filepath_files}` is not a directory.'
+                raise ValueError(msg)
 
             self.base.repository.put_object_from_tree(str(filepath_files))
         else:
@@ -120,7 +119,7 @@ class PortableCode(Code):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
+        super()._validate()
 
         try:
             filepath_executable = self.filepath_executable
@@ -134,9 +133,8 @@ class PortableCode(Code):
                 # since the file could be in a subdirectory
                 pass
         except FileNotFoundError:
-            raise exceptions.ValidationError(
-                f'The executable `{filepath_executable}` is not one of the uploaded files in the node repository.'
-            )
+            msg = f'The executable `{filepath_executable}` is not one of the uploaded files in the node repository.'
+            raise exceptions.ValidationError(msg)
 
     def can_run_on_computer(self, computer: Computer) -> bool:
         """Return whether the code can run on a given computer.
@@ -161,7 +159,7 @@ class PortableCode(Code):
         This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
         calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
         for the calculation to create the input files for the working directory. This method can be overridden by
-        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
+        implementations of the ``Code`` class that need to validate the contents of that folder.
 
         :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
             working directory for the corresponding calculation job instance.
@@ -169,9 +167,8 @@ class PortableCode(Code):
             executable for this portable code.
         """
         if str(self.filepath_executable) in folder.get_content_list():
-            raise exceptions.PluginInternalError(
-                f'The plugin created a file {self.filepath_executable} that is also the executable name!'
-            )
+            msg = f'The plugin created a file {self.filepath_executable} that is also the executable name!'
+            raise exceptions.PluginInternalError(msg)
 
     @property
     def full_label(self) -> str:

@@ -135,7 +135,8 @@ def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
 
     while not (result := condition()):
         if time.time() - start_time > timeout:
-            raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
+            msg = f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.'
+            raise RuntimeError(msg)
         time.sleep(0.1)
 
     return result
@@ -143,7 +144,8 @@ def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_process_kill_failing_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -181,6 +183,7 @@ def test_process_kill_failing_transport(
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_kill_failing_transport_failed_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -225,7 +228,8 @@ def test_process_kill_failing_transport_failed_kill(
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_process_kill_failing_ebm_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -266,7 +270,8 @@ def test_process_kill_failing_ebm_transport(
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_process_kill_failing_ebm_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
@@ -885,6 +890,7 @@ class TestVerdiProcessCallRoot:
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_pause(submit_and_await, run_cli_command):
     """Test the ``verdi process pause`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -902,6 +908,7 @@ def test_process_pause(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_play(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -921,6 +928,7 @@ def test_process_play(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_play_all(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command with the ``--all`` option."""
     node_one = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -937,7 +945,8 @@ def test_process_play_all(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
-@pytest.mark.xfail(reason='Flaky: depends on daemon pick-up and termination timing', strict=False)
+# Flaky: depends on daemon pick-up and termination timing, retry once the daemon has settled.
+@pytest.mark.flaky(reruns=2, reruns_delay=5, only_rerun='(?i)timed out|failed to reach')
 def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     """Test the ``verdi process kill`` command.
     It tries to cover all the possible scenarios of killing a process.
@@ -1005,6 +1014,7 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
 
 @pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_kill_all(submit_and_await, run_cli_command):
     """Test the ``verdi process kill --all`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -1015,6 +1025,7 @@ def test_process_kill_all(submit_and_await, run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def test_process_repair_running_daemon(run_cli_command):
     """Test the ``verdi process repair`` command excepts when the daemon is running."""
     result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
@@ -1048,10 +1059,27 @@ def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
 
+    acknowledged = []
+
+    class FakeOutcome:
+        def set_result(self, value):
+            acknowledged.append(value)
+
+    class FakeTask:
+        body = {'args': {'pid': 3}}
+
+        @contextmanager
+        def processing(self):
+            yield FakeOutcome()
+
+    monkeypatch.setattr(process_control, 'iterate_process_tasks', lambda *args: [FakeTask()])
+
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are process tasks for terminated processes:' in result.output
     assert 'Inconsistencies detected between database and broker.' in result.output
     assert 'Attempting to fix inconsistencies' in result.output
+    assert 'Acknowledged task `3`' in result.output
+    assert acknowledged == [False]
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')

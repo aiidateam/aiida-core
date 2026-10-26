@@ -166,7 +166,8 @@ def cmd_queues_list(client, project, raw, filter_name):
         try:
             re.match(filter_name, '')
         except re.error as exception:
-            raise click.BadParameter(f'invalid regex pattern: {exception}', param_hint='`--filter-name`')
+            msg = f'invalid regex pattern: {exception}'
+            raise click.BadParameter(msg, param_hint='`--filter-name`')
 
     queues = [queue for queue in response.json() if re.match(filter_name or '', queue['name'])]
     output = [

@@ -82,7 +82,7 @@ def test_link_manager():
     # Check that dir() return all keys and nothing else, important
     # for tab competion (we skip anything that starts with an underscore)
     assert len([key for key in dir(calc.inputs) if not key.startswith('_')]) == len(expected_inputs)
-    assert set(key for key in dir(calc.inputs) if not key.startswith('_')) == set(expected_inputs)
+    assert {key for key in dir(calc.inputs) if not key.startswith('_')} == set(expected_inputs)
     # Check that it works also as an iterator
     assert len(list(calc.inputs)) == len(expected_inputs)
     assert set(calc.inputs) == set(expected_inputs)
@@ -117,7 +117,7 @@ def test_link_manager():
     # Check that dir() return all keys and nothing else, important
     # for tab competion (we skip anything that starts with an underscore)
     assert len([key for key in dir(calc.outputs) if not key.startswith('_')]) == len(expected_outputs)
-    assert set(key for key in dir(calc.outputs) if not key.startswith('_')) == set(expected_outputs)
+    assert {key for key in dir(calc.outputs) if not key.startswith('_')} == set(expected_outputs)
     # Check that it works also as an iterator
     assert len(list(calc.outputs)) == len(expected_outputs)
     assert set(calc.outputs) == set(expected_outputs)

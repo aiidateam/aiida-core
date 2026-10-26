@@ -10,11 +10,11 @@
 
 import pytest
 
-from aiida.schedulers.datastructures import NodeNumberJobResource, ParEnvJobResource
+from aiida.common.datastructures import NodeNumberJobResource, ParEnvJobResource
 
 
 class TestNodeNumberJobResource:
-    """Tests for the :class:`~aiida.schedulers.datastructures.NodeNumberJobResource`."""
+    """Tests for the :class:`~aiida.common.datastructures.NodeNumberJobResource`."""
 
     @staticmethod
     def test_validate_resources():
@@ -82,7 +82,7 @@ class TestNodeNumberJobResource:
 
 
 class TestParEnvJobResource:
-    """Tests for the :class:`~aiida.schedulers.datastructures.ParEnvJobResource`."""
+    """Tests for the :class:`~aiida.common.datastructures.ParEnvJobResource`."""
 
     @staticmethod
     def test_validate_resources():
@@ -122,7 +122,7 @@ def test_serialization():
     """Test the serialization/deserialization of JobInfo classes."""
     from datetime import datetime
 
-    from aiida.schedulers.datastructures import JobInfo, JobState
+    from aiida.common.datastructures import JobInfo, JobState
 
     dict_serialized_content = {
         'job_id': '12723',

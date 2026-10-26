@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
+import typing as t
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
 
 from aiida import orm
 from aiida.common import NotExistent
@@ -23,7 +23,7 @@ from aiida.tools._dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.executors.profile')
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.tools._dumping.config import ProfileDumpConfig
     from aiida.tools._dumping.executors.process import ProcessDumpExecutor
     from aiida.tools._dumping.mapping import GroupNodeMapping
@@ -98,7 +98,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
 
         # Specific groups given as orm entities
         if all(isinstance(g, orm.Group) for g in self.config.groups):
-            return cast(list[orm.Group], self.config.groups)
+            return t.cast(list[orm.Group], self.config.groups)
 
         # Specific groups given via identifier
         try:

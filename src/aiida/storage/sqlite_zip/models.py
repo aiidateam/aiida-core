@@ -19,8 +19,8 @@ Also, `varchar_pattern_ops` indexes are not possible in sqlite.
 """
 
 import functools
+import typing as t
 from datetime import datetime, timezone
-from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy import ColumnDefault
@@ -172,7 +172,7 @@ MAP_ENTITY_TYPE_TO_MODEL = {
 
 
 @functools.lru_cache(maxsize=10)
-def get_model_from_entity(entity_type: EntityTypes) -> tuple[Any, set[str]]:
+def get_model_from_entity(entity_type: EntityTypes) -> tuple[t.Any, set[str]]:
     """Return the Sqlalchemy model and column names corresponding to the given entity."""
     model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
     mapper = sa.inspect(model).mapper

@@ -66,7 +66,8 @@ class DummyVerdiDataExportable:
         }
 
         if datatype is None or datatype not in datatype_mapping:
-            raise RuntimeError(f'The listing of the objects {datatype} is not supported')
+            msg = f'The listing of the objects {datatype} is not supported'
+            raise RuntimeError(msg)
 
         export_cmd = datatype_mapping[datatype]
 
@@ -126,7 +127,8 @@ class DummyVerdiDataListable:
         }
 
         if datatype is None or datatype not in datatype_mapping:
-            raise RuntimeError(f'The listing of the objects {datatype} is not supported')
+            msg = f'The listing of the objects {datatype} is not supported'
+            raise RuntimeError(msg)
 
         listing_cmd = datatype_mapping[datatype]
 
@@ -583,6 +585,16 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             # function but not the actual commands through a sub process. Note that this mock needs to happen only for
             # these specific formats, because ``matplotlib`` used in the others _also_ calls ``subprocess.check_output``
             monkeypatch.setattr(sp, 'check_output', mock_check_output)
+
+        if fmt in ['mpl_pos', 'mpl_heatmap']:
+            # Use a headless backend and never open a figure window during tests
+            import matplotlib
+
+            matplotlib.use('Agg')
+            monkeypatch.setattr('matplotlib.pyplot.show', lambda *args, **kwargs: None)
+
+        if fmt == 'mpl_heatmap':
+            monkeypatch.setattr('mayavi.mlab.show', lambda *args, **kwargs: None)
 
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 

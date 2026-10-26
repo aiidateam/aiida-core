@@ -238,7 +238,7 @@ class ZeromqIncomingTask:
         self._task_data = task_data
         self._queue = queue
 
-        self.body = task_data.get('body')
+        self.body: t.Any = task_data.get('body')
 
     @contextmanager
     def processing(self) -> t.Iterator[t.Any]:

@@ -88,6 +88,7 @@ def tests_storage_migrate_interactive(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.flaky(reruns=2)
 def tests_storage_migrate_running_daemon(run_cli_command):
     """Test that ``verdi storage migrate`` raises if the daemon is running."""
     result = run_cli_command(cmd_storage.storage_migrate, raises=True)

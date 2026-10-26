@@ -14,6 +14,7 @@ import pytest
 from click.testing import CliRunner
 
 from aiida import orm
+from aiida.cmdline.commands import cmd_archive
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
 from aiida.common.links import LinkType
@@ -21,7 +22,7 @@ from aiida.engine import ProcessState
 from aiida.orm.nodes.data.remote.base import RemoteData
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
-from tests.utils.archives import import_test_archive
+from tests.utils.archives import get_archive_file
 
 
 def get_result_lines(result):
@@ -32,7 +33,7 @@ class TestVerdiCalculation:
     """Tests for `verdi calcjob`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):
+    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path, run_cli_command):
         """Initialize the profile."""
         self.computer = aiida_localhost
         self.code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
@@ -101,7 +102,8 @@ class TestVerdiCalculation:
         self.calcs.append(calc)
 
         # Load the fixture containing a single ArithmeticAddCalculation node
-        import_test_archive('calcjob/arithmetic.add.aiida')
+        # (imported through the CLI, which migrates the pinned archive to head)
+        run_cli_command(cmd_archive.import_archive, [get_archive_file('arithmetic.add.aiida', filepath='calcjob')])
 
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
@@ -297,10 +299,10 @@ class TestVerdiCalculation:
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         assert result.exception is None
 
-    def test_calcjob_inoutputcat_old(self):
+    def test_calcjob_inoutputcat_old(self, run_cli_command):
         """Test most recent process class / plug-in can be successfully used to find filenames"""
-        # Import old archive of ArithmeticAddCalculation
-        import_test_archive('calcjob/arithmetic.add_old.aiida')
+        # Import old archive of ArithmeticAddCalculation through the CLI, which migrates it to head
+        run_cli_command(cmd_archive.import_archive, [get_archive_file('arithmetic.add_old.aiida', filepath='calcjob')])
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
         add_job = None

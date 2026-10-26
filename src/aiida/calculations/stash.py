@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+import typing as t
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
@@ -21,7 +21,7 @@ from aiida.engine import CalcJob
 EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
 
 
-def validate_source_node(source_node: Any, _: Any) -> str | None:
+def validate_source_node(source_node: t.Any, _: t.Any) -> str | None:
     """Validate the ``source_node`` input.
 
     Checks that the creator of the source_node (i.e., the CalcJob that produced this RemoteData)
@@ -159,7 +159,8 @@ class StashCalculation(CalcJob):
             if 'code' in self.inputs:
                 code_info.code_uuid = self.inputs.code.uuid
             else:
-                raise ValueError(f"Input 'code' is required for `StashMode.{StashMode(stash_mode)}` mode.")
+                msg = f"Input 'code' is required for `StashMode.{StashMode(stash_mode)}` mode."
+                raise ValueError(msg)
 
             calc_info.codes_info = [code_info]
             calc_info.retrieve_list = [self.options.output_filename]
@@ -171,11 +172,12 @@ class StashCalculation(CalcJob):
 
         else:
             if 'code' in self.inputs:
-                raise ValueError(
+                msg = (
                     f"Input 'code' cannot be used for `StashMode.{StashMode(stash_mode)}` mode."
                     ' This Stash mode is performed on the login node, '
                     'no submission is planned therefore no code is needed.'
                 )
+                raise ValueError(msg)
 
             calc_info.skip_submit = True
 

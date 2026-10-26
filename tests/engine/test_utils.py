@@ -132,6 +132,15 @@ class TestInterruptable:
 
         assert interruptable.done()
 
+    def test_interrupt_after_completion(self):
+        """Interrupting a completed future should not overwrite its result."""
+        interruptable = InterruptableFuture()
+        interruptable.set_result('I am done')
+
+        interruptable.interrupt(RuntimeError('STOP'))
+
+        assert interruptable.result() == 'I am done'
+
     def test_inside_interrupted(self):
         """Test interrupt future being interrupted from inside of coroutine"""
         loop = get_or_create_event_loop()

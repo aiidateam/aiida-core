@@ -14,7 +14,6 @@ import collections.abc
 import functools
 import logging
 import typing as t
-from typing import final
 
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
@@ -124,7 +123,7 @@ class WorkChain(Process):
         if self._awaitables:
             self._action_awaitables()
 
-    @final
+    @t.final
     def on_run(self):
         super().on_run()
         self.node.set_stepper_state_info(str(self._stepper))
@@ -153,10 +152,11 @@ class WorkChain(Process):
             # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
             #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
             if type(ctx) is not AttributeDict:
-                raise ValueError(
+                msg = (
                     f'Can not update the context for key `{key}`:'
                     f' found instance of `{type(ctx)}` at `{".".join(ctx_path[: index + 1])}`, expected AttributeDict'
                 )
+                raise ValueError(msg)
 
         return ctx, ctx_path[-1]
 
@@ -176,7 +176,8 @@ class WorkChain(Process):
         elif awaitable.action == AwaitableAction.APPEND:
             ctx.setdefault(key, []).append(awaitable)
         else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
+            msg = f'Unsupported awaitable action: {awaitable.action}'
+            raise AssertionError(msg)
 
         self._awaitables.append(
             awaitable
@@ -202,9 +203,11 @@ class WorkChain(Process):
                     container[index] = value
                     break
             else:
-                raise AssertionError(f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`')
+                msg = f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`'
+                raise AssertionError(msg)
         else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
+            msg = f'Unsupported awaitable action: {awaitable.action}'
+            raise AssertionError(msg)
 
         awaitable.resolved = True
         self._awaitables.remove(awaitable)  # remove only if everything went ok, otherwise we may lose track
@@ -214,7 +217,7 @@ class WorkChain(Process):
             # then we should not try to update it
             self._update_process_status()
 
-    @final
+    @t.final
     def to_context(self, **kwargs: Awaitable | ProcessNode) -> None:
         """Add a dictionary of awaitables to the context.
 
@@ -240,13 +243,13 @@ class WorkChain(Process):
             self.set_status(status)
 
     @override
-    @final
+    @t.final
     async def step(self) -> None:
         """Advance the process state machine by one step."""
         await super().step()
 
     @override
-    @final
+    @t.final
     async def run(self) -> t.Any:
         self._stepper = self.spec().get_outline().create_stepper(self)
         return await run_with_portal(self._do_step)
@@ -305,7 +308,7 @@ class WorkChain(Process):
                 self._store_nodes(value)
 
     @override
-    @final
+    @t.final
     def on_exiting(self) -> None:
         """Ensure that any unstored nodes in the context are stored, before the state is exited
 
@@ -319,7 +322,7 @@ class WorkChain(Process):
             # An uncaught exception here will have bizarre and disastrous consequences
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
-    @final
+    @t.final
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
         """Entering the WAITING state."""
         super().on_wait(awaitables)
@@ -340,7 +343,8 @@ class WorkChain(Process):
                 callback = functools.partial(self.call_soon, self._on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
-                raise AssertionError(f"invalid awaitable target '{awaitable.target}'")
+                msg = f"invalid awaitable target '{awaitable.target}'"
+                raise AssertionError(msg)
 
     def _on_awaitable_finished(self, awaitable: Awaitable) -> None:
         """Callback function, for when an awaitable process instance is completed.
@@ -355,7 +359,8 @@ class WorkChain(Process):
         try:
             node = load_node(awaitable.pk)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
+            msg = f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance'
+            raise ValueError(msg)
 
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}

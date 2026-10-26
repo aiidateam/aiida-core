@@ -67,7 +67,8 @@ def validate_positive_number(ctx, param, value):
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
 
-        raise BadParameter(f'{value} is not a valid positive number')
+        msg = f'{value} is not a valid positive number'
+        raise BadParameter(msg)
 
     return value
 
@@ -85,7 +86,8 @@ def validate_positive_number_with_echo(ctx, param, value):
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
 
-        raise BadParameter(f'{value} is not a valid positive number')
+        msg = f'{value} is not a valid positive number'
+        raise BadParameter(msg)
 
     return value
 

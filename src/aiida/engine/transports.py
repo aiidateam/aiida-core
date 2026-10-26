@@ -13,13 +13,13 @@ import contextlib
 import contextvars
 import logging
 import traceback
+import typing as t
 from collections.abc import AsyncIterator, Awaitable, Hashable
-from typing import TYPE_CHECKING
 
 from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.orm import AuthInfo
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.transports import Transport
 
 _LOGGER = logging.getLogger(__name__)

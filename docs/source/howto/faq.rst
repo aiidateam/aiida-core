@@ -67,6 +67,13 @@ That is to say, if the safe interval is set to 60 seconds, any single worker is 
 Why would a process that runs fine locally raise an exception when submitted to the daemon?
 ===========================================================================================
 This is almost always caused by an import issue.
+
+.. note::
+    A picklable class defined in a Jupyter notebook cell, or in a script run as ``__main__``, is carried in the checkpoint.
+    Modules referenced by the class must still be importable by the daemon workers, and the submitting interpreter and workers need compatible AiiDA, Python and `cloudpickle` environments.
+    Restart the daemon after installing new packages so its workers pick the change up, then resubmit: processes that excepted before the restart stay excepted.
+    Captured objects that cannot be pickled prevent the checkpoint from carrying the class, :ref:`as described with the launchers<topics:processes:usage:launch>`.
+
 To determine exactly what might be going wrong, first :ref:`increase the logging verbosity <intro:increase-logging-verbosity>` by running:
 
 .. code-block:: console
@@ -114,7 +121,7 @@ This will cause all calculations submitted on that computer to pause.
 To restart them, one needs to generate a new SSH key pair and play the paused processes using ``verdi process play --all``.
 Typically, this is all one needs to do - AiiDA will re-establish the connection to the computer and will continue following the calculations.
 
-This manual step can be avoided altogether with the ``core.ssh_async`` transport and a configured ``authentication_script``, which renews the credentials before each connection; see :ref:`how-to:ssh:2fa`.
+This manual step can be avoided altogether with the ``core.ssh`` transport and a configured ``authentication_script``, which renews the credentials before each connection; see :ref:`how-to:ssh:2fa`.
 
 How to back up AiiDA data?
 =============================================================================

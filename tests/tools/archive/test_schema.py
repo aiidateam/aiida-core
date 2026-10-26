@@ -37,7 +37,8 @@ def test_psql_sync_init(tmp_path):
 
         diffs = diff_schemas(psql_insp, sqlite_insp)
         if diffs:
-            raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
+            msg = f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}'
+            raise AssertionError(msg)
 
 
 @pytest.mark.requires_psql
@@ -60,7 +61,8 @@ def test_psql_sync_migrate(tmp_path):
 
         diffs = diff_schemas(psql_insp, sqlite_insp)
         if diffs:
-            raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
+            msg = f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}'
+            raise AssertionError(msg)
 
 
 def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):

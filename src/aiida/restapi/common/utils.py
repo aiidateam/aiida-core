@@ -109,7 +109,8 @@ class Utils:
         if path.startswith(self.prefix):
             return path[len(self.prefix) :]
 
-        raise ValidationError(f'path has to start with {self.prefix}')
+        msg = f'path has to start with {self.prefix}'
+        raise ValidationError(msg)
 
     @staticmethod
     def split_path(path):
@@ -283,9 +284,8 @@ class Utils:
         # previous,
         #  and next page
         if page > last_page or page < 1:
-            raise RestInputValidationError(
-                f'Non existent page requested. The page range is [{first_page} : {last_page}]'
-            )
+            msg = f'Non existent page requested. The page range is [{first_page} : {last_page}]'
+            raise RestInputValidationError(msg)
 
         limit = perpage
         offset = (page - 1) * perpage

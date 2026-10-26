@@ -69,9 +69,7 @@ Below is a list of the core data types already provided with AiiDA, along with t
   +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
   | :ref:`RemoteData <topics:data_types:core:remote>`                                       | ``core.remote``                      | The computer and the absolute path to the folder                    | All files and folders             |
   +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
-  | :ref:`AbstractCode <topics:data_types:core:code>`                                       | ``-``                                | Default plugin, append/prepend text                                 | ``-``                             |
-  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
-  | :ref:`Code <topics:data_types:core:code:legacy>`                                        | ``core.code``                        | The computer and the executable path                                | All files and folders             |
+  | :ref:`Code <topics:data_types:core:code>`                                               | ``-``                                | Default plugin, append/prepend text                                 | ``-``                             |
   +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
   | :ref:`InstalledCode <topics:data_types:core:code:installed>`                            | ``core.code.installed``              | The computer and the executable path                                | ``-``                             |
   +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
@@ -541,37 +539,19 @@ To see the contents of a subdirectory, pass the relative path to the :py:meth:`~
 
 .. _topics:data_types:core:code:
 
-AbstractCode
-------------
-
-.. versionadded:: 2.1
-
-The :class:`aiida.orm.nodes.data.code.abstract.AbstractCode` class provides the abstract class for objects that represent a "code" that can be executed through a :class:`aiida.engine.processes.calcjobs.calcjob.CalcJob` plugin.
-There are currently four implementations of this abstract class:
-
-* :class:`~aiida.orm.nodes.data.code.legacy.Code` (see :ref:`Code <topics:data_types:core:code:legacy>`)
-* :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` (see :ref:`InstalledCode <topics:data_types:core:code:installed>`)
-* :class:`~aiida.orm.nodes.data.code.portable.PortableCode` (see :ref:`PortableCode <topics:data_types:core:code:portable>`)
-* :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` (see :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`)
-
-
-.. _topics:data_types:core:code:legacy:
-
 Code
 ----
 
-.. deprecated:: 2.1
+.. versionadded:: 3.0
 
-Historically, there was only one code implementation, the :class:`~aiida.orm.nodes.data.code.legacy.Code`, which implemented two different types of code:
+The :class:`aiida.orm.Code` class is the base class for executable code plugins used by :class:`aiida.engine.processes.calcjobs.calcjob.CalcJob`.
+It provides the shared behaviour for code plugins and defines their abstract methods.
+Use ``Code`` for type hints, queries and type checks when working with these plugins.
+There are currently three concrete implementations of this abstract base class:
 
-* An executable pre-installed on a computer, represented by a :class:`~aiida.orm.computers.Computer`.
-* A directory containing all code files including an executable which would be uploaded to
-
-These two types were referred to as "remote" and "local" codes.
-However, this nomenclature would lead to confusion as a "remote" code could also refer to an executable on the localhost, i.e., the machine where AiiDA itself runs.
-In addition, having two different concepts implemented by a single class led to a unintuitive interface.
-Therefore, the ``Code`` class was deprecated in ``aiida-core==2.1`` and replaced by the :ref:`InstallCode <topics:data_types:core:code:installed>` and :ref:`InstallCode <topics:data_types:core:code:installed>`, respectively.
-The ``Code`` class is now deprecated and will be removed in ``aiida-core==3.0``.
+* :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` (see :ref:`InstalledCode <topics:data_types:core:code:installed>`)
+* :class:`~aiida.orm.nodes.data.code.portable.PortableCode` (see :ref:`PortableCode <topics:data_types:core:code:portable>`)
+* :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` (see :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`)
 
 
 .. _topics:data_types:core:code:installed:
@@ -581,7 +561,7 @@ InstalledCode
 
 .. versionadded:: 2.1
 
-The :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` class is an implementation of the :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` class that represents an executable code on a remote computer.
+The :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` class is a subclass of :class:`~aiida.orm.Code` that represents an executable code on a remote computer.
 This plugin should be used if an executable is pre-installed on a computer.
 The ``InstalledCode`` represents the code by storing the filepath of the relevant executable and the computer on which it is installed.
 The computer is represented by an instance of :class:`~aiida.orm.computers.Computer`.
@@ -608,7 +588,7 @@ PortableCode
 
 .. versionadded:: 2.1
 
-The :class:`~aiida.orm.nodes.data.code.portable.PortableCode` class is an implementation of the :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` class that represents an executable code stored in AiiDA's storage.
+The :class:`~aiida.orm.nodes.data.code.portable.PortableCode` class is a subclass of :class:`~aiida.orm.Code` that represents an executable code stored in AiiDA's storage.
 This plugin should be used for executables that are not already installed on the target computer, but instead are available on the machine where AiiDA is running.
 The plugin assumes that the code is self-contained by a single directory containing all the necessary files, including a main executable.
 When constructing a ``PortableCode``, passing the absolute filepath as ``filepath_files`` will make sure that all the files contained within are uploaded to AiiDA's storage.
@@ -1572,7 +1552,7 @@ CliModel
    ``CliModel`` is **not defined explicitly**.
 
 The ``CliModel`` is used to define the schema of the arguments that can be passed to the CLI command to create a new instance of the data type.
-In the present version, it is used exclusively to support ``Code`` creation and is derived automatically from the ``ConstructorArgsModel`` of ``AbstractCode`` subclasses.
+In the present version, it is used exclusively to support ``Code`` creation and is derived automatically from the ``ConstructorArgsModel`` of ``Code`` subclasses.
 
 Controlling model behavior
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

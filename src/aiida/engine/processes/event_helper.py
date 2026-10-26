@@ -17,12 +17,12 @@
 """Helpers for process events."""
 
 import logging
+import typing as t
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
 
 from aiida.engine.processes import persistence
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine.processes.listener import ProcessListener
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class EventHelper(persistence.CheckpointSerializable):
     def listeners(self) -> 'set[ProcessListener]':
         return self._listeners
 
-    def fire_event(self, event_function: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
+    def fire_event(self, event_function: Callable[..., t.Any], *args: t.Any, **kwargs: t.Any) -> None:
         """Call an event method on all listeners.
 
         :param event_function: the method of the ProcessListener

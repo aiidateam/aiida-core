@@ -64,7 +64,6 @@ class TestValidateHandler:
             'logging.aiida_loglevel': 'INFO',
             'logging.aiida_core_loglevel': 'INHERIT',
             'logging.disk_objectstore_loglevel': 'INHERIT',
-            'logging.kiwipy_loglevel': 'INHERIT',
         }
         config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
         message = log.validate_handler(config, 'logging.terminal_handler')
@@ -110,7 +109,6 @@ def test_configure_logging_inherits_aiida_loglevel_for_inherited_loggers(monkeyp
     assert captured_config['loggers']['aiida']['level'] == 'ERROR'
     assert captured_config['loggers']['verdi']['level'] == 'ERROR'
     assert captured_config['loggers']['disk_objectstore']['level'] == 'ERROR'
-    assert captured_config['loggers']['kiwipy']['level'] == 'ERROR'
 
 
 @pytest.mark.usefixtures('reset_log_level')

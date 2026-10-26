@@ -83,6 +83,55 @@ def test_profile_reset_storage_isolates_inactive_profile(aiida_config, aiida_pro
         assert orm.User.collection.get_default().email == 'active@localhost'
 
 
+def test_profile_reset_storage_waits_for_daemon_to_stop(aiida_config, aiida_profile_factory, monkeypatch):
+    """Test that storage reset waits for a daemon shutdown to complete."""
+
+    class DaemonClient:
+        def __init__(self, profile):
+            self.running_states = iter((True, True, False))
+
+        @property
+        def is_daemon_running(self):
+            return next(self.running_states)
+
+        def stop_daemon(self, *, wait):
+            assert wait is True
+
+    sleep_calls = []
+    monkeypatch.setattr('aiida.engine.daemon.client.DaemonClient', DaemonClient)
+    monkeypatch.setattr('aiida.tools.pytest_fixtures.configuration.time.monotonic', lambda: 0)
+    monkeypatch.setattr('aiida.tools.pytest_fixtures.configuration.time.sleep', sleep_calls.append)
+
+    with aiida_profile_factory(aiida_config, broker_backend='core.zeromq') as profile:
+        profile.reset_storage()
+
+    assert sleep_calls == [0.1]
+
+
+def test_profile_reset_storage_raises_if_daemon_does_not_stop(aiida_config, aiida_profile_factory, monkeypatch):
+    """Test that storage is not cleared while the daemon remains running."""
+    from aiida.engine.daemon.client import DaemonTimeoutException
+
+    class DaemonClient:
+        def __init__(self, profile):
+            pass
+
+        @property
+        def is_daemon_running(self):
+            return True
+
+        def stop_daemon(self, *, wait):
+            assert wait is True
+
+    monotonic_times = iter((0, 5.1))
+    monkeypatch.setattr('aiida.engine.daemon.client.DaemonClient', DaemonClient)
+    monkeypatch.setattr('aiida.tools.pytest_fixtures.configuration.time.monotonic', lambda: next(monotonic_times))
+
+    with aiida_profile_factory(aiida_config, broker_backend='core.zeromq') as profile:
+        with pytest.raises(DaemonTimeoutException, match='failed to stop before resetting storage'):
+            profile.reset_storage()
+
+
 @pytest.mark.requires_psql
 def test_aiida_profile_factory_psql_dos(aiida_config, aiida_profile_factory, config_psql_dos):
     """Test that the factory creates and resets a ``core.psql_dos`` profile."""

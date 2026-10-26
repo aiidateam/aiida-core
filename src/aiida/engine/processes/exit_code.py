@@ -8,14 +8,14 @@
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
 
-from typing import NamedTuple
+import typing as t
 
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('ExitCode', 'ExitCodesNamespace')
 
 
-class ExitCode(NamedTuple):
+class ExitCode(t.NamedTuple):
     """A simple data class to define an exit code for a :class:`~aiida.engine.processes.process.Process`.
 
     When an instance of this class is returned from a `Process._run()` call, it will be interpreted that the `Process`

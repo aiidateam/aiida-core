@@ -88,7 +88,7 @@ class TestJobsList:
         """
         from unittest.mock import patch
 
-        from aiida.schedulers.datastructures import JobInfo, JobState
+        from aiida.common.datastructures import JobInfo, JobState
 
         jobs_list = self.jobs_list
 

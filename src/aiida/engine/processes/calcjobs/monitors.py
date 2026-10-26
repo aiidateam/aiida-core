@@ -123,14 +123,16 @@ class CalcJobMonitor:
 
         if any(required_parameter not in parameters for required_parameter in ('node', 'transport')):
             correct_signature = '(node: CalcJobNode, transport: Transport, **kwargs) str | None:'
-            raise ValueError(
+            msg = (
                 f'The monitor `{self.entry_point}` has an invalid function signature, it should be: {correct_signature}'
             )
+            raise ValueError(msg)
 
         unsupported_kwargs = [kwarg for kwarg in self.kwargs if kwarg not in parameters]
 
         if unsupported_kwargs:
-            raise ValueError(f'The monitor `{self.entry_point}` does not accept the keywords: {unsupported_kwargs}.')
+            msg = f'The monitor `{self.entry_point}` does not accept the keywords: {unsupported_kwargs}.'
+            raise ValueError(msg)
 
     def load_entry_point(self) -> t.Any:
         """Return the function associated with the entry point of this monitor.

@@ -14,6 +14,7 @@ import json
 import shutil
 import tarfile
 import tempfile
+import typing as t
 import weakref
 import zipfile
 from collections.abc import Iterable, Iterator
@@ -21,7 +22,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import Any, BinaryIO, NoReturn, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import field_validator
@@ -234,7 +234,7 @@ class SqliteZipBackend(StorageBackend):
         return True
 
     @classmethod
-    def migrate(cls, profile: Profile) -> NoReturn:
+    def migrate(cls, profile: Profile) -> t.NoReturn:
         raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
 
     def __init__(self, profile: Profile):
@@ -275,11 +275,13 @@ class SqliteZipBackend(StorageBackend):
                     try:
                         extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
                     except Exception as exc:
-                        raise CorruptStorage(f'database could not be read: {exc}') from exc
+                        msg = f'database could not be read: {exc}'
+                        raise CorruptStorage(msg) from exc
             else:
                 db_file = self._path / DB_FILENAME
                 if not db_file.exists():
-                    raise CorruptStorage(f'database could not be read: non-existent {db_file}')
+                    msg = f'database could not be read: non-existent {db_file}'
+                    raise CorruptStorage(msg)
             self._resources.session = Session(create_sqla_engine(db_file), future=True)
         return self._resources.session
 
@@ -292,7 +294,8 @@ class SqliteZipBackend(StorageBackend):
             elif (self._path / REPO_FOLDER).exists():
                 self._resources.repo = FolderBackendRepository(self._path / REPO_FOLDER)
             else:
-                raise CorruptStorage(f'repository could not be read: non-existent {self._path / REPO_FOLDER}')
+                msg = f'repository could not be read: non-existent {self._path / REPO_FOLDER}'
+                raise CorruptStorage(msg)
         return self._resources.repo
 
     def query(self) -> orm.SqliteQueryBuilder:
@@ -367,18 +370,18 @@ class SqliteZipBackend(StorageBackend):
     def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise ReadOnlyError()
 
-    def get_global_variable(self, key: str) -> NoReturn:
+    def get_global_variable(self, key: str) -> t.NoReturn:
         raise NotImplementedError
 
     def set_global_variable(
-        self, key: str, value: Any, description: str | None = None, overwrite: bool = True
-    ) -> NoReturn:
+        self, key: str, value: t.Any, description: str | None = None, overwrite: bool = True
+    ) -> t.NoReturn:
         raise ReadOnlyError()
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> NoReturn:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> t.NoReturn:
         raise NotImplementedError
 
-    def get_info(self, detailed: bool = False) -> dict[str, Any]:
+    def get_info(self, detailed: bool = False) -> dict[str, t.Any]:
         # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
 
@@ -411,7 +414,8 @@ class SqliteZipBackend(StorageBackend):
 
         inpath = Path(inpath)
         if not (tarfile.is_tarfile(str(inpath)) or zipfile.is_zipfile(str(inpath))):
-            raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
+            msg = f'The input file is neither a tar nor a zip file: {inpath}'
+            raise CorruptStorage(msg)
 
         metadata = extract_metadata(inpath, search_limit=None)
 
@@ -426,17 +430,20 @@ class SqliteZipBackend(StorageBackend):
         from aiida.storage.sqlite_zip.migrator import list_versions
 
         if current_version in ('0.1', '0.2', '0.3') or target_version in ('0.1', '0.2', '0.3'):
-            raise StorageMigrationError(
+            msg = (
                 f"Legacy migration from '{current_version}' -> '{target_version}' "
                 'is not supported in aiida-core v2. First migrate them to the latest '
                 'version in aiida-core v1.'
             )
+            raise StorageMigrationError(msg)
 
         all_versions = list_versions()
         if target_version not in all_versions:
-            raise StorageMigrationError(f"Unknown target version '{target_version}'")
+            msg = f"Unknown target version '{target_version}'"
+            raise StorageMigrationError(msg)
         if current_version not in all_versions:
-            raise StorageMigrationError(f"Unknown current version '{current_version}'")
+            msg = f"Unknown current version '{current_version}'"
+            raise StorageMigrationError(msg)
 
 
 class _RoBackendRepository(AbstractRepositoryBackend):
@@ -462,7 +469,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def key_format(self) -> str | None:
         return 'sha256'
 
-    def initialise(self, **kwargs: Any) -> None:
+    def initialise(self, **kwargs: t.Any) -> None:
         pass
 
     @property
@@ -472,13 +479,13 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def erase(self) -> None:
         raise ReadOnlyError()
 
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         raise ReadOnlyError()
 
     def has_objects(self, keys: list[str]) -> list[bool]:
         return [self.has_object(key) for key in keys]
 
-    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[tuple[str, t.BinaryIO]]:
         for key in keys:
             with self.open(key) as handle:
                 yield key, handle
@@ -489,10 +496,10 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def get_object_hash(self, key: str) -> str:
         return key
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: t.Any) -> None:
         pass
 
-    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
 
@@ -506,7 +513,7 @@ class ZipfileBackendRepository(_RoBackendRepository):
     def __init__(self, path: str | Path):
         super().__init__(path)
         self._folder = REPO_FOLDER
-        self.__zipfile: None | ZipFile = None
+        self.__zipfile: ZipFile | None = None
 
     def close(self) -> None:
         if self.__zipfile:
@@ -517,12 +524,14 @@ class ZipfileBackendRepository(_RoBackendRepository):
     def _zipfile(self) -> ZipFile:
         """Return the open zip file."""
         if self._closed:
-            raise ClosedStorage(f'repository is closed: {self._path}')
+            msg = f'repository is closed: {self._path}'
+            raise ClosedStorage(msg)
         if self.__zipfile is None:
             try:
                 self.__zipfile = ZipFile(self._path, mode='r')
             except Exception as exc:
-                raise CorruptStorage(f'repository could not be read {self._path}: {exc}') from exc
+                msg = f'repository could not be read {self._path}: {exc}'
+                raise CorruptStorage(msg) from exc
         return self.__zipfile
 
     def has_object(self, key: str) -> bool:
@@ -540,13 +549,14 @@ class ZipfileBackendRepository(_RoBackendRepository):
                 yield name[prefix_len:]
 
     @contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> Iterator[t.BinaryIO]:
         handle = None
         try:
             handle = self._zipfile.open(f'{self._folder}/{key}')
-            yield cast(BinaryIO, handle)
+            yield t.cast(t.BinaryIO, handle)
         except KeyError:
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+            msg = f'object with key `{key}` does not exist.'
+            raise FileNotFoundError(msg)
         finally:
             if handle is not None:
                 handle.close()
@@ -567,8 +577,9 @@ class FolderBackendRepository(_RoBackendRepository):
                 yield subpath.name
 
     @contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> Iterator[t.BinaryIO]:
         if not self._path.joinpath(key).is_file():
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+            msg = f'object with key `{key}` does not exist.'
+            raise FileNotFoundError(msg)
         with self._path.joinpath(key).open('rb', encoding='utf-8') as handle:
-            yield cast(BinaryIO, handle)
+            yield t.cast(t.BinaryIO, handle)

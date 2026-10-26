@@ -98,12 +98,12 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     If no expression is specified, a random one will be generated that adheres to these rules
     """
     from aiida.engine import run_get_node
-    from aiida.orm import AbstractCode, Int, Str
+    from aiida.orm import Code, Int, Str
 
     lib_expression = importlib.import_module('lib.expression')
     lib_workchain = importlib.import_module('lib.workchain')
 
-    if use_calculations and not isinstance(code, AbstractCode):
+    if use_calculations and not isinstance(code, Code):
         raise click.BadParameter('if you specify the -C flag, you have to specify a code as well')
 
     if expression is None:

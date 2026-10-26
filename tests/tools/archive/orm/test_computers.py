@@ -13,7 +13,7 @@ import pytest
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.imports import DUPLICATE_LABEL_TEMPLATE
-from tests.utils.archives import import_test_archive
+from tests.utils.archives import get_archive_file
 
 
 def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
@@ -107,8 +107,8 @@ def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
     builder.append(orm.Computer, tag='comp')
     builder.append(orm.CalcJobNode, with_computer='comp', project=['label'])
     assert builder.count() == 2, 'Two calculations should be found.'
-    ret_labels = set(_ for [_] in builder.all())
-    assert ret_labels == set([calc1_label, calc2_label]), 'The labels of the calculations are not correct.'
+    ret_labels = {_ for [_] in builder.all()}
+    assert ret_labels == {calc1_label, calc2_label}, 'The labels of the calculations are not correct.'
 
 
 def test_same_computer_different_name_import(aiida_profile, tmp_path, aiida_localhost):
@@ -309,12 +309,14 @@ def test_import_of_computer_json_params(aiida_profile_clean, tmp_path, aiida_loc
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('backend', ['django', 'sqlalchemy'])
-def test_import_of_django_sqla_export_file(aiida_localhost, backend):
+def test_import_of_django_sqla_export_file(aiida_localhost, backend, run_cli_command):
     """Check that import manages to import the archive file correctly for legacy storage backends."""
-    archive = f'{backend}.aiida'
+    from aiida.cmdline.commands import cmd_archive
 
-    # Import the needed data
-    import_test_archive(archive, filepath='export/compare')
+    archive = get_archive_file(f'{backend}.aiida', filepath='export/compare')
+
+    # Import through the CLI, which migrates the pinned archive to head
+    run_cli_command(cmd_archive.import_archive, [archive])
 
     # The expected metadata
     comp1_metadata = {'workdir': '/tmp/aiida'}

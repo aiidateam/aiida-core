@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
-import typing
+import typing as t
 
 from pydantic import ConfigDict, WithJsonSchema
 
@@ -14,9 +14,9 @@ from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 __all__ = ('JsonableData',)
 
 
-@typing.runtime_checkable
-class JsonSerializableProtocol(typing.Protocol):
-    def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]: ...
+@t.runtime_checkable
+class JsonSerializableProtocol(t.Protocol):
+    def as_dict(self) -> t.MutableMapping[t.Any, t.Any]: ...
 
 
 class JsonableData(Data):
@@ -61,19 +61,19 @@ class JsonableData(Data):
             title='Module name',
             alias='@module',
             description='The module name of the wrapped object',
-            orm_to_model=lambda node: typing.cast(JsonableData, node).the_module,
+            orm_to_model=lambda node: t.cast(JsonableData, node).the_module,
         )
         the_class: str = OrmMetadataField(
             title='Class name',
             alias='@class',
             description='The class name of the wrapped object',
-            orm_to_model=lambda node: typing.cast(JsonableData, node).the_class,
+            orm_to_model=lambda node: t.cast(JsonableData, node).the_class,
         )
 
     class ConstructorArgsModel(OrmModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        obj: typing.Annotated[
+        obj: t.Annotated[
             JsonSerializableProtocol,
             WithJsonSchema(
                 {
@@ -120,7 +120,8 @@ class JsonableData(Data):
         try:
             serialized = json.loads(json.dumps(dictionary), parse_constant=lambda x: x)
         except TypeError as exc:
-            raise TypeError(f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.') from exc
+            msg = f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.'
+            raise TypeError(msg) from exc
 
         self.base.attributes.set_many(serialized)
 
@@ -150,7 +151,7 @@ class JsonableData(Data):
         return self._get_object()
 
     @classmethod
-    def _deserialize_float_constants(cls, data: typing.Any):
+    def _deserialize_float_constants(cls, data: t.Any):
         """Deserialize the contents of a dictionary ``data`` deserializing infinity and NaN string constants.
 
         The ``data`` dictionary is recursively checked for the ``Infinity``, ``-Infinity`` and ``NaN`` strings, which
@@ -187,14 +188,14 @@ class JsonableData(Data):
             try:
                 module = importlib.import_module(module_name)
             except ImportError as exc:
-                raise ImportError(f'the objects module `{module_name}` can not be imported.') from exc
+                msg = f'the objects module `{module_name}` can not be imported.'
+                raise ImportError(msg) from exc
 
             try:
                 cls = getattr(module, class_name)
             except AttributeError as exc:
-                raise ImportError(
-                    f'the objects module `{module_name}` does not contain the class `{class_name}`.'
-                ) from exc
+                msg = f'the objects module `{module_name}` does not contain the class `{class_name}`.'
+                raise ImportError(msg) from exc
 
             deserialized = self._deserialize_float_constants(attributes)
             self._obj = cls.from_dict(deserialized)
@@ -204,10 +205,10 @@ class JsonableData(Data):
     def to_model_field_values(
         self,
         *,
-        context: dict[str, typing.Any] | None = None,
+        context: dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
-    ) -> dict[str, typing.Any]:
+    ) -> dict[str, t.Any]:
         fields = super().to_model_field_values(
             context=context,
             minimal=minimal,

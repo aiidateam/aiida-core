@@ -391,7 +391,8 @@ class IcsdDbImporter(DbImporter):
                 else:
                     self.actual_args[realname] = newv
             except KeyError as exc:
-                raise TypeError(f"ICSDImporter got an unexpected keyword argument '{exc.args[0]}'")
+                msg = f"ICSDImporter got an unexpected keyword argument '{exc.args[0]}'"
+                raise TypeError(msg)
 
         url_values = urlencode(self.actual_args)
         query_url = self.db_parameters['urladd'] + url_values

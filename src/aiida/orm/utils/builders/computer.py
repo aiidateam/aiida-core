@@ -119,7 +119,8 @@ class ComputerBuilder:
             try:
                 computer.set_default_memory_per_machine(def_memory_per_machine)
             except ValidationError as exception:
-                raise self.ComputerValidationError(f'Invalid value for `default_memory_per_machine`: {exception}')
+                msg = f'Invalid value for `default_memory_per_machine`: {exception}'
+                raise self.ComputerValidationError(msg)
 
         mpirun_command_internal = self._get_and_count('mpirun_command', used).strip().split(' ')
         if mpirun_command_internal == ['']:
@@ -129,9 +130,8 @@ class ComputerBuilder:
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.ComputerValidationError(
-                f'Unknown parameters passed to the ComputerBuilder: {", ".join(sorted(passed_keys - used))}'
-            )
+            msg = f'Unknown parameters passed to the ComputerBuilder: {", ".join(sorted(passed_keys - used))}'
+            raise self.ComputerValidationError(msg)
 
         return computer
 
@@ -141,7 +141,8 @@ class ComputerBuilder:
             try:
                 return self._computer_spec[key]
             except KeyError:
-                raise self.ComputerValidationError(f'{key} not set')
+                msg = f'{key} not set'
+                raise self.ComputerValidationError(msg)
         return None
 
     def _get(self, key):

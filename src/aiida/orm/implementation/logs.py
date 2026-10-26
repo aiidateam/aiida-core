@@ -9,14 +9,14 @@
 """Backend group module"""
 
 import abc
+import typing as t
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
 
 from aiida.orm.implementation.entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendLog', 'BackendLogCollection')
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm.querybuilder import FilterType
 
 
@@ -58,7 +58,7 @@ class BackendLog(BackendEntity):
 
     @property
     @abc.abstractmethod
-    def metadata(self) -> dict[str, Any]:
+    def metadata(self) -> dict[str, t.Any]:
         """Return the metadata corresponding to the log entry."""
 
 

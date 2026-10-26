@@ -68,7 +68,7 @@ def test_calc_attributes_keys(perform_migrations: PsqlDosMigrator):
 
     # perform some checks
     DbNode = perform_migrations.get_current_table('db_dbnode')
-    not_found = tuple([0])
+    not_found = (0,)
     with perform_migrations.session() as session:
         node_work = session.query(DbNode).filter(DbNode.id == node_work_id).one()
         assert node_work.attributes.get(KEY_PROCESS_LABEL_NEW) == PROCESS_LABEL

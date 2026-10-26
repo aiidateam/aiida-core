@@ -8,10 +8,6 @@
 ###########################################################################
 """General utilities for Transport classes."""
 
-import time
-
-from paramiko import ProxyCommand
-
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
 
@@ -29,48 +25,6 @@ class FileAttribute(FixedFieldsAttributeDict):
         'st_atime',
         'st_mtime',
     )
-
-
-class _DetachedProxyCommand(ProxyCommand):
-    """Modifies paramiko's ProxyCommand by launching the process in a separate process group."""
-
-    def __init__(self, command_line):
-        # Note that the super().__init__ MUST NOT be called here, otherwise two subprocesses will be created.
-        from shlex import split as shlsplit
-        from subprocess import PIPE, Popen
-
-        self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, start_new_session=True)
-        self.timeout = None
-
-    def close(self):
-        try:
-            self.process.terminate()
-        # In case the process doesn't exist anymore
-        except OSError:
-            pass
-        for _ in range(10):
-            if self.process.poll() is not None:
-                break
-            time.sleep(0.2)
-        else:
-            try:
-                self.process.kill()
-            # In case the process doesn't exist anymore
-            except OSError:
-                pass
-            for _ in range(10):
-                if self.process.poll() is not None:
-                    break
-                time.sleep(0.2)
-
-        for f in [self.process.stdout, self.process.stderr, self.process.stdin]:
-            if f is None:
-                continue
-            try:
-                f.close()
-            except ValueError:
-                pass
 
 
 def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):

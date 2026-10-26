@@ -24,7 +24,7 @@ Quick settings to consider for high-throughput workloads:
    Each daemon worker opens its own SSH connection, and the ``max_io_allowed`` setting (default: 8) limits the concurrent I/O operations *per connection*.
    The total concurrent I/O against a given remote computer is therefore roughly ``number_of_workers × max_io_allowed``.
    When scaling to many daemon workers and/or lowering the SSH cooldown, you may need to reduce ``max_io_allowed`` to keep the total in check and avoid overloading the remote machine.
-   This applies to computers configured with the ``core.ssh_async`` transport (see :ref:`max_io_allowed <max-io-allowed-note>` below).
+   This applies to computers configured with the ``core.ssh`` transport (see :ref:`max_io_allowed <max-io-allowed-note>` below).
 
 To see all available configuration options and their current values, run ``verdi config list``.
 
@@ -65,7 +65,7 @@ If ``verdi daemon status`` constantly warns about a high percentage of the avail
 
    .. code:: console
 
-       $ verdi computer configure core.ssh_async --max-io-allowed <value> <COMPUTER_LABEL>
+       $ verdi computer configure core.ssh --max-io-allowed <value> <COMPUTER_LABEL>
 
 .. _how-to:tune-performance:caching:
 
@@ -103,7 +103,7 @@ If you are running many short tasks and notice performance bottlenecks from the 
 
 .. code:: console
 
-    $ verdi computer configure core.ssh_async <COMPUTER_LABEL>
+    $ verdi computer configure core.ssh <COMPUTER_LABEL>
     ...
     Connection cooldown time (s) [15.0]: <lower-value>
 
@@ -111,7 +111,7 @@ Or non-interactively with ``--safe-interval``:
 
 .. code:: console
 
-    $ verdi computer configure core.ssh_async --safe-interval <lower-value> <COMPUTER_LABEL>
+    $ verdi computer configure core.ssh --safe-interval <lower-value> <COMPUTER_LABEL>
 
 Inspect the current value with:
 

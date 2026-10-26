@@ -13,9 +13,9 @@ from __future__ import annotations
 import abc
 import typing as t
 
+from aiida.common.datastructures import JobInfo
 from aiida.common.escaping import escape_for_bash
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.schedulers.datastructures import JobInfo
 from aiida.schedulers.scheduler import Scheduler, SchedulerError
 
 __all__ = ('BashCliScheduler',)

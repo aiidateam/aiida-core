@@ -37,7 +37,8 @@ class LazyChoice(click.ParamType, t.Generic[T]):
     def __init__(self, get_choices: t.Callable[[], t.Iterable[T]]):
         """Construct a new instance."""
         if not callable(get_choices):
-            raise TypeError(f"Must pass a callable, got '{get_choices}'")
+            msg = f"Must pass a callable, got '{get_choices}'"  # type: ignore[unreachable]
+            raise TypeError(msg)
 
         super().__init__()
         self._get_choices = get_choices

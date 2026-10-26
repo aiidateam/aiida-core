@@ -68,8 +68,7 @@ TEST_GROUP_LABEL = 'test_profile_dump_group'
 
 
 @pytest.fixture
-@pytest.mark.usefixtures('aiida_profile_clean')
-def profile_with_minimal_data():
+def profile_with_minimal_data(aiida_profile_clean):
     """Create a profile with some test data."""
     # Get current profile
     from aiida import load_profile
@@ -88,8 +87,7 @@ def profile_with_minimal_data():
 
 
 @pytest.fixture
-@pytest.mark.usefixtures('aiida_profile_clean')
-def profile_with_actual_data(generate_calculation_node_io, generate_workchain_node_io):
+def profile_with_actual_data(aiida_profile_clean, generate_calculation_node_io, generate_workchain_node_io):
     """Create a profile with some test data."""
     # Get current profile
     from aiida import load_profile

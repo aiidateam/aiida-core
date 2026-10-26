@@ -72,7 +72,8 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     posting = kwargs.pop('posting', CLI_DEFAULTS['POSTING'])
 
     if kwargs:
-        raise ValueError(f'Unknown keyword arguments: {kwargs}')
+        msg = f'Unknown keyword arguments: {kwargs}'
+        raise ValueError(msg)
 
     # Import the configuration file
     spec = importlib.util.spec_from_file_location(os.path.join(config, 'config'), os.path.join(config, 'config.py'))

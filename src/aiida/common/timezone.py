@@ -53,7 +53,8 @@ def timezone_from_name(name: str) -> tzinfo:
     try:
         return pytz.timezone(name)
     except pytz.exceptions.UnknownTimeZoneError as exception:
-        raise ValueError(f'unknown timezone: {name}') from exception
+        msg = f'unknown timezone: {name}'
+        raise ValueError(msg) from exception
 
 
 def delta(from_time: datetime, to_time: datetime | None = None) -> timedelta:

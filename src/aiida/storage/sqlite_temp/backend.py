@@ -14,17 +14,18 @@ import functools
 import hashlib
 import os
 import shutil
+import typing as t
 import weakref
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import TYPE_CHECKING, Any, BinaryIO
 
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
+from aiida.common.folders import SandboxFolder
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration import Profile
@@ -35,7 +36,7 @@ from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.repository.backend.abstract import InfoDictType
 
 __all__ = ('SqliteTempBackend',)
@@ -49,6 +50,7 @@ class _TempBackendResources:
     def __init__(self) -> None:
         self.session: Session | None = None
         self.repo: SandboxShaRepositoryBackend | None = None
+        self.root: SandboxFolder | None = None
 
     def release(self) -> None:
         """Release the resources."""
@@ -58,10 +60,13 @@ class _TempBackendResources:
         if self.repo is not None:
             self.repo.erase()
             self.repo = None
+        if self.root is not None:
+            self.root.erase()
+            self.root = None
 
     @property
     def has_pending_release(self) -> bool:
-        return self.session is not None or self.repo is not None
+        return self.session is not None or self.repo is not None or self.root is not None
 
 
 def _finalize_backend(resources: _TempBackendResources, backend_repr: str) -> None:
@@ -133,9 +138,11 @@ class SqliteTempBackend(StorageBackend):
     def __init__(self, profile: Profile):
         super().__init__(profile)
         self._resources = _TempBackendResources()
-        self._resources.repo = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
+        filepath: str | None = profile.storage_config['filepath']
+        self._resources.root = SandboxFolder(filepath=Path(filepath) if filepath is not None else None)
+        self._resources.repo = SandboxShaRepositoryBackend(filepath=str(self._resources.root.abspath))
         self._finalizer = weakref.finalize(self, _finalize_backend, self._resources, repr(self))
-        self._globals: dict[str, tuple[Any, str | None]] = {}
+        self._globals: dict[str, tuple[t.Any, str | None]] = {}
         self._closed = False
         self.get_session()  # load the database on initialization
 
@@ -168,12 +175,15 @@ class SqliteTempBackend(StorageBackend):
         self._globals = {}
         self._closed = True
 
-    def get_global_variable(self, key: str) -> Any:
+    def get_global_variable(self, key: str) -> t.Any:
         return self._globals[key][0]
 
-    def set_global_variable(self, key: str, value: Any, description: str | None = None, overwrite: bool = True) -> None:
+    def set_global_variable(
+        self, key: str, value: t.Any, description: str | None = None, overwrite: bool = True
+    ) -> None:
         if not overwrite and key in self._globals:
-            raise ValueError(f'global variable {key} already exists')
+            msg = f'global variable {key} already exists'
+            raise ValueError(msg)
         self._globals[key] = (value, description)
 
     def get_session(self) -> Session:
@@ -187,6 +197,11 @@ class SqliteTempBackend(StorageBackend):
             self._session.add(models.DbUser(email=self.profile.default_user_email or 'user@email.com'))  # type: ignore[operator]
             self._session.commit()
         return self._session
+
+    def get_checkpoint_classes_dirpath(self) -> Path:
+        if self._closed or self._resources.root is None:
+            raise ClosedStorage(str(self))
+        return Path(self._resources.root.abspath) / self._CHECKPOINT_CLASSES_DIRNAME
 
     def get_repository(self) -> SandboxShaRepositoryBackend:
         if self._closed or not self._repo:
@@ -217,7 +232,7 @@ class SqliteTempBackend(StorageBackend):
     def _clear(self) -> None:
         raise NotImplementedError
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: t.Any) -> None:
         pass
 
     def query(self) -> orm.SqliteQueryBuilder:
@@ -262,7 +277,7 @@ class SqliteTempBackend(StorageBackend):
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[t.Any, set[t.Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
@@ -306,11 +321,13 @@ class SqliteTempBackend(StorageBackend):
         if allow_defaults:
             for row in rows:
                 if not keys.issuperset(row):
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                    raise IntegrityError(msg)
         else:
             for row in rows:
                 if set(row) != keys:
-                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
+                    msg = f'Incorrect fields given for {entity_type}: {set(row)} != {keys}'
+                    raise IntegrityError(msg)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
@@ -322,9 +339,11 @@ class SqliteTempBackend(StorageBackend):
             return None
         for row in rows:
             if 'id' not in row:
-                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+                msg = f"'id' field not given for {entity_type}: {set(row)}"
+                raise IntegrityError(msg)
             if not keys.issuperset(row):
-                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+                msg = f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}'
+                raise IntegrityError(msg)
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)
@@ -352,7 +371,7 @@ class SandboxShaRepositoryBackend(SandboxRepositoryBackend):
     def get_object_hash(self, key: str) -> str:
         return key
 
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -379,8 +398,8 @@ class SandboxShaRepositoryBackend(SandboxRepositoryBackend):
 
         return key
 
-    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: t.Any) -> None:
         pass

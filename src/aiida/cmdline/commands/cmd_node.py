@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING
+import typing as t
 
 import click
 
@@ -25,7 +25,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.orm import Node
 
 
@@ -698,7 +698,7 @@ def comment_show(user, nodes):
             comments = [comment for comment in all_comments if comment.user.email == user.email]
 
             if not comments:
-                valid_users = ', '.join(set(comment.user.email for comment in all_comments))
+                valid_users = ', '.join({comment.user.email for comment in all_comments})
                 echo.echo_warning(f'no comments found for user {user}')
                 echo.echo_report(f'valid users found for Node<{node.pk}>: {valid_users}')
 

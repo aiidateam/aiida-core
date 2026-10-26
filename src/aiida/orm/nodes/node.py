@@ -471,6 +471,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         self._backend_entity.mtime = value
 
     @column(
+        cli_exclude=True,
         model_field_info=pdt.fields.FieldInfo(
             description='The PK of the associated computer.',
         ),
@@ -493,7 +494,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     @column(
         cli_exclude=True,
         required_once_stored=True,
-        model_field_info=pdt.fields.FieldInfo(description='The PK of the associated user.'),
+        model_field_info=pdt.fields.FieldInfo(
+            description='The PK of the associated user.',
+        ),
         model_adapter=EntityPkAdapter(User),
     )
     def user(self) -> User | None:

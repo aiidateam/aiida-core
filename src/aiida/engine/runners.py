@@ -23,12 +23,13 @@ from aiida.brokers import communicator as broker_communicator
 from aiida.brokers.filters import BroadcastFilter
 from aiida.common import exceptions
 from aiida.engine import transports, utils
-from aiida.engine.processes import FunctionProcess, Process, ProcessBuilder, ProcessState, futures
+from aiida.engine.processes import FunctionProcess, Process, ProcessState, futures
 from aiida.engine.processes.calcjobs import manager
 from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
 from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.engine.processes.greenback import run_until_complete
 from aiida.engine.processes.persistence import CheckpointPersister
+from aiida.engine.utils import Launchable
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
 
@@ -47,9 +48,8 @@ class ResultAndPk(t.NamedTuple):
     pk: int | None
 
 
-TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
-# run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
+TYPE_RUN_PROCESS = Process | type[Process] | Launchable
+TYPE_SUBMIT_PROCESS = Process | type[Process] | Launchable
 
 
 class Runner:
@@ -178,7 +178,7 @@ class Runner:
 
         The return value will be the calculation node of the submitted process
 
-        :param process: the process class to submit
+        :param process: the process class, builder or process function to submit
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
@@ -214,7 +214,7 @@ class Runner:
     ) -> ProcessNode:
         """Schedule a process to be executed by this runner.
 
-        :param process: the process class to submit
+        :param process: the process class, builder or process function to schedule
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
@@ -243,6 +243,8 @@ class Runner:
         inputs = utils.prepare_inputs(inputs, **kwargs)
 
         if utils.is_process_function(process):
+            # Inline shortcut: a process function always runs in-process, so resolving it through
+            # `instantiate_process` first would only rebuild the same call. `schedule` stays on the protocol.
             result, node = process.run_get_node(**inputs)  # type: ignore[union-attr]
             return result, node
 

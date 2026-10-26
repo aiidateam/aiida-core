@@ -14,7 +14,9 @@ import threading
 import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.engine import Process, launch
+from aiida.common import exceptions
+from aiida.engine import Process, calcfunction, launch
+from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.generic.futures import Future
 from aiida.manage.caching import enable_caching
 from aiida.orm import Int, Str, WorkflowNode
@@ -44,6 +46,12 @@ class Proc(Process):
 
     async def run(self):
         pass
+
+
+@calcfunction
+def add_one(value: Int) -> Int:
+    """Add one to the input."""
+    return Int(value.value + 1)
 
 
 def the_hans_klok_comeback(loop):
@@ -86,6 +94,29 @@ def test_submit(runner):
 
     runner.submit(Proc, inputs)
     runner.submit(Proc, **inputs)
+
+
+@pytest.mark.parametrize(
+    'launchable',
+    [
+        pytest.param(add_one, id='function'),
+        pytest.param(add_one.process_class, id='process-class'),
+        pytest.param(ProcessBuilder(add_one.process_class), id='builder'),
+    ],
+)
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_broker_submit_of_process_function_raises(runner, monkeypatch, launchable) -> None:
+    """Daemon submit cannot persist a process function; run it instead."""
+    monkeypatch.setattr(runner, '_broker_submit', True)
+    with pytest.raises(exceptions.InvalidOperation, match='cannot submit a process function'):
+        runner.submit(launchable, {'value': Int(1)})
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_function_process_rejects_persistence(runner) -> None:
+    """Legacy process functions still refuse persistence when asked."""
+    with pytest.raises(RuntimeError, match='Cannot persist'):
+        add_one.process_class(runner=runner, inputs={'value': Int(1)}, enable_persistence=True)
 
 
 def test_run_return_value_cached(aiida_code_installed):

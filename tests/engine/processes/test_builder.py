@@ -463,6 +463,14 @@ def test_builder_preserves_original_nodes() -> None:
     assert builder._inputs()['count'] is original
 
 
+def test_get_launch_inputs_prefers_builder_values() -> None:
+    """Builder inputs take precedence over caller inputs at launch."""
+    builder = NodeWorkChain.get_builder()
+    builder.count = 2
+    assert builder.get_launch_inputs() == {'count': 2}
+    assert builder.get_launch_inputs(count=5) == {'count': 2}
+
+
 def test_builder_accepts_model_namespace() -> None:
     """Builder namespaces accept model instances like namespace mappings."""
     spec = ProcessSpec()

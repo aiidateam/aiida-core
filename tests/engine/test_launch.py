@@ -346,6 +346,16 @@ class TestLaunchersDryRun:
         assert folder.is_dir()
         assert (folder / node.dry_run_info['script_filename']).is_file()
 
+    def test_submit_function_dry_run_matches_run(self):
+        """`submit` forwards dry-run functions to `run`, which rejects launch metadata uniformly."""
+
+        @calcfunction
+        def add(x: orm.Int, y: orm.Int) -> orm.Int:
+            return x + y
+
+        with pytest.raises(ValueError, match=r"validating port 'inputs.metadata'"):
+            launch.submit(add, x=orm.Int(1), y=orm.Int(1), metadata={'dry_run': True})
+
     def test_launchers_dry_run_no_provenance(self):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
         inputs = {
@@ -425,6 +435,21 @@ def test_run_process_function() -> None:
 
     outputs = launch.run(add, count=2)
     assert outputs.value == 3
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_function_launch_inputs_flatten_models() -> None:
+    """Structured inputs flatten to namespace mappings at the launch boundary."""
+    from aiida.engine import PortModel
+
+    class Settings(PortModel):
+        count: int = 2
+
+    @calcfunction
+    def configure(settings: Settings) -> int:
+        return 0
+
+    assert configure.get_launch_inputs(settings=Settings(count=9)) == {'settings': {'count': 9}}
 
 
 @pytest.mark.presto

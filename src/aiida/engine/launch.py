@@ -19,16 +19,13 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.process import Process
-from aiida.engine.runners import ResultAndPk
+from aiida.engine.runners import TYPE_RUN_PROCESS, TYPE_SUBMIT_PROCESS, ResultAndPk
 from aiida.engine.utils import instantiate_process, is_process_scoped, prepare_inputs
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
 __all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
-TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
-# run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
@@ -118,7 +115,8 @@ def submit(
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
     # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
     # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
-    # Builder inputs need to be merged so that detection works for ``submit(builder)`` too.
+    # Builder inputs need to be merged so that detection works for ``submit(builder)`` too. Other launchables carry
+    # no stored inputs, so the passed inputs alone decide.
     if isinstance(process, ProcessBuilder):
         merged_inputs = {**inputs, **process._inputs(prune=True)}
     else:

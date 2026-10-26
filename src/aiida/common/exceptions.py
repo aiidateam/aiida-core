@@ -8,6 +8,8 @@
 ###########################################################################
 """Module that define the exceptions that are thrown by AiiDA's internal code."""
 
+from dataclasses import dataclass
+
 __all__ = (
     'AiidaException',
     'ClosedStorage',
@@ -20,6 +22,10 @@ __all__ = (
     'FailedError',
     'FeatureDisabled',
     'FeatureNotAvailable',
+    'GraphError',
+    'GraphLanguageError',
+    'GraphTypeCheckError',
+    'GraphValidationError',
     'HashingError',
     'IncompatibleStorageSchema',
     'InputValidationError',
@@ -33,6 +39,8 @@ __all__ = (
     'LockingProfileError',
     'MissingConfigurationError',
     'MissingEntryPointError',
+    'MissingGraphInput',
+    'MissingRequiredInputsError',
     'ModificationNotAllowed',
     'MultipleEntryPointError',
     'MultipleObjectsError',
@@ -300,3 +308,45 @@ class LockingProfileError(AiidaException):
 
 class UnsupportedSchemaError(AiidaException):
     """Raised when a schema (model) is not supported by the entity."""
+
+
+@dataclass(frozen=True)
+class MissingGraphInput:
+    """One missing required graph input, located by its port path."""
+
+    identifier: str | None
+    port_path: str
+    help: str | None
+    required: bool
+
+
+class GraphError(AiidaException):
+    """Base for graph errors, also used directly for graph API misuse."""
+
+
+class GraphTypeCheckError(GraphError):
+    """A graph template violates the type checking stage: contracts, wiring, shapes, or structure."""
+
+
+# Shares `ValidationError` so launch handlers catch contract violations; program errors stay outside.
+class GraphValidationError(GraphError, ValidationError):
+    """Launch inputs or execution results violate the graph contract: the input checking stage."""
+
+
+class MissingRequiredInputsError(GraphValidationError):
+    """Required graph inputs are missing.
+    :param missing: the missing inputs, in deterministic path order.
+    """
+
+    def __init__(self, missing: tuple[MissingGraphInput, ...]) -> None:
+        self.missing = missing
+        message = f'missing required graph inputs: {", ".join(item.port_path for item in missing)}.'
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[type, tuple[tuple[MissingGraphInput, ...]]]:
+        """Preserve structured diagnostics when the exception is pickled."""
+        return type(self), (self.missing,)
+
+
+class GraphLanguageError(GraphError):
+    """A registered graph uses constructs outside the supported subset language."""

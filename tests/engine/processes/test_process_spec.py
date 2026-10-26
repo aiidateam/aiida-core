@@ -15,9 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from aiida.engine import PortField, PortModel, ProcessSpec
+from aiida.engine import GraphProcessSpec, PortField, PortModel, ProcessSpec
 from aiida.engine.processes.port_model import field_from_annotation
-from aiida.engine.processes.process_spec import GraphProcessSpec
 from aiida.orm import Int, Str
 
 
@@ -63,6 +62,19 @@ def test_nested_model_default_is_preserved() -> None:
     assert spec.inputs.pre_process({'config': {}})['config']['settings']['count'] == 9
 
 
+def test_enclosing_instance_default_reaches_leaf_ports() -> None:
+    """An instance default on a structured field supplies the leaf port defaults."""
+
+    class ConfigWithInstance(PortModel):
+        settings: Settings = Settings(count=9)
+
+    spec = GraphProcessSpec()
+    spec.input_from_field(
+        'config', field_from_annotation('config', ConfigWithInstance, ConfigWithInstance(settings=Settings(count=5)))
+    )
+    assert spec.inputs.pre_process({'config': {}})['config']['settings']['count'] == 5
+
+
 def test_nonnullable_field_rejects_explicit_none() -> None:
     """A defaulted field without a nullable annotation rejects explicit `None`."""
     spec = ProcessSpec()
@@ -84,6 +96,37 @@ def test_field_factory_is_evaluated_for_each_preprocess() -> None:
     first = spec.inputs.pre_process({'config': {}})['config']['value']
     second = spec.inputs.pre_process({'config': {}})['config']['value']
     assert first != second
+
+
+def test_input_from_field_override_keeps_lazy_default() -> None:
+    """Redeclaring an input keeps per-launch deepcopy semantics for mutable defaults."""
+    spec = GraphProcessSpec()
+    spec.input_from_field('values', field_from_annotation('values', list[int], [1]))
+    spec.input_from_field('values', field_from_annotation('values', list[int], [1]))
+    first = spec.inputs['values'].default()
+    second = spec.inputs['values'].default()
+    assert first == second == [1]
+    assert first is not second
+
+
+def test_input_from_field_override_rejects_namespace() -> None:
+    """Overriding a namespace input with a field default raises instead of asserting."""
+
+    class Nested(PortModel):
+        count: int = 1
+
+    spec = GraphProcessSpec()
+    spec.input_from_field('nested', field_from_annotation('nested', Nested, Nested()))
+    with pytest.raises(TypeError, match='cannot override namespace'):
+        spec.input_from_field('nested', field_from_annotation('nested', Nested, Nested()))
+
+
+def test_str_survives_lazy_defaults() -> None:
+    """`str()` renders sentinel and lazy defaults instead of crashing."""
+    assert isinstance(str(ProcessSpec()), str)
+    spec = GraphProcessSpec()
+    spec.input_from_field('values', field_from_annotation('values', list[int], [1]))
+    assert isinstance(str(spec), str)
 
 
 def test_unpersistable_field_types_fail_at_declaration() -> None:

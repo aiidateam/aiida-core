@@ -37,3 +37,15 @@ def test_logging_configuration(aiida_code_installed, submit_and_await):
     logs = Log.collection.get_logs_for(node)
     assert len(logs) == 1
     assert 'Submitted the `ArithmeticAddCalculation`' in next(log.message for log in logs)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.flaky(reruns=2)
+def test_daemon_graph_with_plain_tasks_completes(submit_and_await) -> None:
+    """A submitted graph dispatches plain `@task` children on daemon workers."""
+    from aiida.engine.processes.graphs.process import GraphProcess
+    from tests.engine.processes.graphs.programs import calls
+
+    node = submit_and_await(GraphProcess, **calls.multiply_add.get_launch_inputs(x=2, y=3, z=4))
+    assert node.is_finished_ok
+    assert node.outputs.result.value == 10

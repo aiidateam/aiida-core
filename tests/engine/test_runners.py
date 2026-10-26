@@ -140,6 +140,27 @@ def test_run_return_value_cached(aiida_code_installed):
     assert sorted(results_cached.keys()) == ['remote_folder', 'retrieved', 'sum']
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_broker_submit_of_task_process_persists(runner, monkeypatch) -> None:
+    """Daemon submit of a graph task persists the checkpoint and dispatches it."""
+    import typing as t
+
+    from tests.engine.processes.graphs.programs import tasks as graph_tasks
+
+    continued: list[int] = []
+
+    class _Controller:
+        def continue_process(self, pid: int, **kwargs: t.Any) -> None:
+            continued.append(pid)
+
+    monkeypatch.setattr(runner, '_broker_submit', True)
+    monkeypatch.setattr(runner, '_controller', _Controller())
+    node = runner.submit(graph_tasks.add, x=2, y=3)
+    assert node.pk is not None
+    assert len(continued) == 1
+    assert runner.persister.load_checkpoint(continued[0]) is not None
+
+
 def test_schedule_accepts_process_function(runner) -> None:
     """Scheduling a process function runs it like a process class instead of rejecting it."""
     from aiida.engine import calcfunction

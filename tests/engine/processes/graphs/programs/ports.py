@@ -10,13 +10,21 @@
 
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm.nodes.data.int import Int
-from tests.engine.processes.graphs.programs.port_models import Configuration, DefaultedSettings
+from tests.engine.processes.graphs.programs.port_models import (
+    Configuration,
+    DefaultedSettings,
+    FlatSettings,
+    PointSettings,
+)
 from tests.engine.processes.graphs.programs.tasks import (
     add,
     arithmetic_pair,
     read_answer,
+    read_flat_count,
+    read_flat_count_defaulted,
     read_nested_count,
     read_orm_node,
+    read_point_count,
     statistics,
 )
 
@@ -157,3 +165,21 @@ def summarize(values: list[float]):
     """Expose summary statistics computed by plain Python, selected by key."""
     stats = statistics(values=values)
     return {'mean': stats['mean'], 'stdev': stats['stdev']}
+
+
+@graph
+def flat_model(config: FlatSettings) -> int:
+    """Select a field from a flat pydantic model."""
+    return read_flat_count(config=config)
+
+
+@graph
+def point_model(config: PointSettings) -> int:
+    """Select a field from a flat named-tuple model."""
+    return read_point_count(config=config)
+
+
+@graph
+def flat_model_defaulted() -> int:
+    """Run an adapted model task on its instance default."""
+    return read_flat_count_defaulted()

@@ -12,7 +12,7 @@ import typing as t
 
 from aiida.engine.processes.graphs.lowering import task
 from aiida.orm.nodes.data.int import Int
-from tests.engine.processes.graphs.programs.port_models import Configuration
+from tests.engine.processes.graphs.programs.port_models import Configuration, FlatSettings, PointSettings
 
 
 def unannotated_function(x: int):  # rejected at decoration
@@ -233,3 +233,21 @@ def mistyped_dict(x: int) -> dict[str, int]:  # rejected at runtime
 def collision_add(x: int, y: int) -> int:
     """Provide a second addition task for collision coverage."""
     return x + y
+
+
+@task
+def read_flat_count(config: FlatSettings) -> int:
+    """Read the count and the label length from a flat pydantic model."""
+    return config['count'] + len(config['label'])
+
+
+@task
+def read_point_count(config: PointSettings) -> int:
+    """Read the count from a flat named-tuple model."""
+    return config['count'] + len(config['label'])
+
+
+@task
+def read_flat_count_defaulted(config: FlatSettings = FlatSettings(count=9)) -> int:
+    """Read a flat pydantic model through its instance default."""
+    return config['count'] + len(config['label'])

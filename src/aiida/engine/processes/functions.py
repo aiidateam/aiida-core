@@ -24,7 +24,7 @@ import docstring_parser
 
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import Field, PortModel, _port_help, _without_marks, is_structured
+from aiida.engine.processes.port_model import Field, _port_help, _without_marks, is_structured
 from aiida.engine.processes.ports import (
     InputPort,
     PortNamespace,
@@ -32,7 +32,7 @@ from aiida.engine.processes.ports import (
     _infer_node_types,
 )
 from aiida.engine.processes.process import Process
-from aiida.engine.processes.process_spec import ProcessSpec, _declare_namespace, _require_storable
+from aiida.engine.processes.process_spec import ProcessSpec, _declare_namespace, _mapping_of, _require_storable
 from aiida.manage import get_manager
 from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
 from aiida.orm.utils.mixins import FunctionCalculationMixin
@@ -670,8 +670,8 @@ class FunctionProcess(FunctionProcessBase):
             return
 
         if is_structured(_without_marks(annotation)):
-            container: type[PortModel] = _without_marks(annotation)
-            defaults = default.as_dict() if isinstance(default, container) else None
+            container = _without_marks(annotation)
+            defaults = _mapping_of(default)
             _declare_namespace(
                 spec,
                 parameter.name,

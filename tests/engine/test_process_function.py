@@ -856,3 +856,14 @@ def test_declare_input_namespace_override_rejects_scalar_default() -> None:
             {'config': Config},
             {},
         )
+
+
+@calcfunction
+def function_model_namespace_mapping_default(config: TaskConfig = {'count': 4}) -> orm.Int:  # type: ignore[assignment]
+    return orm.Int(config['count'].value + 1)
+
+
+def test_structured_parameter_mapping_default_reaches_leaf_ports() -> None:
+    """A mapping default on a structured parameter supplies the leaf port defaults."""
+    spec = function_model_namespace_mapping_default.spec()
+    assert spec.inputs.pre_process({})['config']['count'] == 4

@@ -8,7 +8,10 @@
 ###########################################################################
 """Port models declarations shared by the graph behavior suites."""
 
+import typing as t
 from pathlib import Path
+
+import pydantic
 
 from aiida.engine.processes.port_model import PortModel
 
@@ -37,3 +40,18 @@ class UnsupportedPortModel(PortModel):
     """A namespace with an unpersistable field, for declaration rejection."""
 
     log_path: Path
+
+
+class FlatSettings(pydantic.BaseModel):
+    """A flat structured declaration with defaults and help."""
+
+    count: int = 2
+    label: str = pydantic.Field(default='test', description='A label.')
+    nullable: int | None = None
+
+
+class PointSettings(t.NamedTuple):
+    """A flat named-tuple declaration with defaults."""
+
+    count: int = 2
+    label: str = 'test'

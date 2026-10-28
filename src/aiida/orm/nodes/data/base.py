@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import typing as t
-from functools import singledispatch
+from enum import Enum
+from functools import singledispatch, wraps
 
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
@@ -19,9 +20,37 @@ from aiida.orm.pydantic import OrmMetadataField
 __all__ = ('BaseType', 'to_aiida_type')
 
 
+if t.TYPE_CHECKING:
+    from functools import _SingleDispatchCallable
+
+
+def _enum_first(dispatcher: _SingleDispatchCallable[Data]) -> _SingleDispatchCallable[Data]:
+    """Prefer enum converters to converters for their primitive mixins."""
+
+    def dispatch(cls: type) -> t.Callable[..., Data]:
+        if issubclass(cls, Enum):
+            for base in cls.__mro__:
+                if issubclass(base, Enum) and base in dispatcher.registry:
+                    return dispatcher.registry[base]
+        return dispatcher.dispatch(cls)
+
+    @wraps(dispatcher)
+    def wrapper(value: object) -> Data:
+        return dispatch(type(value))(value)
+
+    wrapper.__dict__['dispatch'] = dispatch
+    return t.cast('_SingleDispatchCallable[Data]', wrapper)
+
+
+@_enum_first
 @singledispatch
-def to_aiida_type(value):
-    """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
+def to_aiida_type(value: object) -> Data:
+    """Turn Python values into AiiDA types, preserving enums before their primitive mixins.
+
+    :param value: The value to serialize.
+    :return: The corresponding AiiDA data node.
+    :raises TypeError: If no converter is registered for the value's type.
+    """
     msg = f'Cannot convert value of type {type(value)} to AiiDA type.'
     raise TypeError(msg)
 

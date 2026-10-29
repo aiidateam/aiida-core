@@ -20,17 +20,12 @@ from typing_extensions import is_typeddict
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.lang import override
 from aiida.engine.processes.calcjobs import CalcJob
-from aiida.engine.processes.functions import (
-    FunctionProcessBase,
-    P,
-    ProcessFunctionType,
-    _declare_output_ports,
-    process_function,
-)
+from aiida.engine.processes.functions import FunctionProcessBase, P, ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.ir import TaskIR, reject_dynamic_inputs
-from aiida.engine.processes.port_model import field_from_annotation, is_structured
-from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.port_model import _without_marks, field_from_annotation, is_structured
+from aiida.engine.processes.ports import PortNamespace, _infer_node_types
+from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.orm import CalcFunctionNode, CalcJobNode, Data, WorkChainNode, to_aiida_type
@@ -46,7 +41,39 @@ __all__ = (
 R = t.TypeVar('R')
 
 
-class TaskProcess(FunctionProcessBase):  # NOTE: converge with FunctionProcess, or keep both leaves (to be decided).
+def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:
+    """Declare static leaf output ports from the return annotation.
+
+    A scalar annotation declares one ``result`` port; a total ``TypedDict`` declares one
+    port per key. Task registration rejects missing declarations and namespace returns.
+
+    :param return_annotation: the return annotation of the wrapped function, if it has one.
+    :param spec: the spec to declare them on.
+    """
+    if return_annotation is None or return_annotation is type(None):
+        return
+    if is_typeddict(return_annotation):
+        hints = t.get_type_hints(return_annotation, include_extras=True)
+        if set(hints) != set(return_annotation.__required_keys__):
+            msg = 'TypedDict task outputs must be total; declare every output.'
+            raise GraphTypeCheckError(msg)
+        for key, hint in hints.items():
+            spec.output(key, valid_type=_infer_node_types(_without_marks(hint)) or (Data,))
+        return
+    if t.get_origin(return_annotation) is tuple:
+        msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
+        raise GraphTypeCheckError(msg)
+    if t.get_origin(return_annotation) in (list, dict):
+        origin = t.get_origin(return_annotation)
+    else:
+        origin = return_annotation
+    spec.output(
+        Process.SINGLE_OUTPUT_LINKNAME,
+        valid_type=_infer_node_types(origin) or (Data,),
+    )
+
+
+class TaskProcess(FunctionProcessBase):
     """Task process with plain Python inputs and static leaf outputs."""
 
     _allow_persistence = True
@@ -96,6 +123,10 @@ class TaskProcess(FunctionProcessBase):  # NOTE: converge with FunctionProcess, 
             missing = [name for name in names if name not in result]
             if missing:
                 msg = f'task omitted declared outputs {missing}; return every declared output.'
+                raise GraphValidationError(msg)
+            extra = [name for name in result if name not in names]
+            if extra:
+                msg = f'task returned undeclared outputs {extra}; return only declared outputs.'
                 raise GraphValidationError(msg)
             values = tuple(result[name] for name in names)
         else:

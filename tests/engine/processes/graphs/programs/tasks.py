@@ -46,9 +46,28 @@ def add(x: int, y: int) -> int:
 
 
 @task
+def subtract(x: int, y: int) -> int:
+    """Subtract the second input from the first."""
+    return x - y
+
+
+@task
 def multiply(x: int, y: int) -> int:
     """Multiply two integers."""
     return x * y
+
+
+class ArithmeticPair(t.TypedDict):
+    """Named outputs of the arithmetic pair task."""
+
+    sum: int
+    product: int
+
+
+@task
+def arithmetic_pair(x: int, y: int) -> ArithmeticPair:
+    """Return sum and product as named outputs."""
+    return {'sum': x + y, 'product': x * y}
 
 
 @task
@@ -86,6 +105,72 @@ def is_positive(value: int) -> bool:
 def decrement(value: int) -> int:
     """Subtract one."""
     return value - 1
+
+
+class SummaryStats(t.TypedDict):
+    """Named outputs of the statistics task."""
+
+    mean: float
+    stdev: float
+
+
+@task
+def statistics(values: list[float]) -> SummaryStats:
+    """Summarize samples; bodies run as plain Python and are never lowered."""
+    import math
+
+    total = 0.0
+    for sample in values:
+        total += sample
+    mean = total / len(values)
+    variance = sum((sample - mean) ** 2 for sample in values) / len(values)
+    return {'mean': mean, 'stdev': math.sqrt(variance)}
+
+
+class Alpha(t.TypedDict):
+    """Single named output."""
+
+    alpha: int
+
+
+@task
+def mismatched_alpha(value: int) -> Alpha:
+    """Return its input under the `alpha` output."""
+    return {'alpha': value}
+
+
+@task
+def scalar_for_named() -> Alpha:
+    """Return a scalar where a named mapping was declared."""
+    return 2
+
+
+@task
+def extra_outputs(value: int) -> Alpha:
+    """Return an undeclared key alongside the named output."""
+    return {'alpha': value, 'extra': value}
+
+
+@task
+def empty_outputs(value: int) -> Alpha:
+    """Return no outputs where a named mapping was declared."""
+    return {}
+
+
+class Partial(t.TypedDict, total=False):
+    """Partial outputs, rejected: every output must be declared."""
+
+    alpha: int
+
+
+def partial_outputs(value: int) -> Partial:
+    """Return a partial mapping; registering the task rejects it."""
+    return {'alpha': value}
+
+
+def pair_outputs(value: int) -> tuple[int, int]:
+    """Return a tuple; registering the task rejects it."""
+    return (value, value)
 
 
 def unhinted(value: t.Any) -> t.Any:

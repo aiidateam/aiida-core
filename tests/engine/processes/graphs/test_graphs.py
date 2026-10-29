@@ -13,7 +13,7 @@ import typing as t
 
 import pytest
 
-from aiida.common.exceptions import GraphError, GraphTypeCheckError, MissingRequiredInputsError
+from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError, MissingRequiredInputsError
 from aiida.common.links import LinkType
 from aiida.engine import task
 from aiida.engine.launch import run_get_node
@@ -40,6 +40,7 @@ pytestmark = pytest.mark.presto
         pytest.param(call_programs.nested_multiply_add, {'x': 2, 'y': 3, 'z': 4}, {'result': 11}, id='nested-graph'),
         pytest.param(call_programs.diamond, {'x': 2}, {'result': 7}, id='diamond'),
         pytest.param(ports.direct_result, {'value': 2}, {'result': 12}, id='direct-result'),
+        pytest.param(ports.named, {'x': 2, 'y': 3}, {'total': 5, 'product': 6}, id='named-outputs'),
         pytest.param(
             ports.selected,
             {'config': {'settings': {'count': 2, 'nullable': None}}},
@@ -54,6 +55,7 @@ pytestmark = pytest.mark.presto
         pytest.param(call_programs.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
         pytest.param(call_programs.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
         pytest.param(call_programs.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
+        pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 1}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
         pytest.param(parameters.signed_literals, {}, {'result': -2}, id='signed-literals'),
         pytest.param(parameters.optional_collection, {'values': [1, 2]}, {'result': 3}, id='optional-list'),
@@ -71,9 +73,16 @@ pytestmark = pytest.mark.presto
             {'result': 7},
             id='keyword-only-default-overridden',
         ),
+        pytest.param(
+            ports.summarize,
+            {'values': [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]},
+            {'mean': 5.0, 'stdev': 2.0},
+            id='plain-python-body',
+        ),
         pytest.param(parameters.positional_only_parameter, {'value': 2}, {'result': 3}, id='positional-only'),
         pytest.param(ports.input_passthrough, {'value': 4}, {'value': 4}, id='input-passthrough'),
         pytest.param(ports.single_named_scalar, {'value': 2}, {'only': 2}, id='single-named-scalar'),
+        pytest.param(ports.single_named_mapping, {'value': 2}, {'only': 2}, id='single-named-mapping'),
     ],
 )
 @pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])
@@ -306,6 +315,59 @@ def test_parameterized_output_annotation_rejects_other_container(function: Funct
 def test_invalid_output_is_rejected_at_runtime() -> None:
     with pytest.raises(ValueError, match='not of the right type'):
         run_get_node(tasks.mistyped_output, x=1)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_task_body_runs_plain_python() -> None:
+    """Task bodies execute with imports, loops, and comprehensions; only graph bodies lower."""
+    outputs, node = run_get_node(tasks.statistics, values=[2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])
+    assert node.is_finished_ok
+    assert outputs['mean'].value == 5.0
+    assert outputs['stdev'].value == 2.0
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_single_key_typeddict_task_unpacks_output() -> None:
+    """A single-key `TypedDict` task stores its value under the named port, not the whole mapping."""
+    outputs, node = run_get_node(tasks.mismatched_alpha, value=2)
+    assert node.is_finished_ok
+    assert isinstance(outputs['alpha'], Int)
+    assert outputs['alpha'].value == 2
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_named_task_rejects_scalar_return() -> None:
+    """A task declaring named outputs must return a mapping, not a scalar."""
+    with pytest.raises(GraphValidationError, match='returned a single value'):
+        tasks.scalar_for_named.run_get_node()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_named_task_rejects_extra_outputs() -> None:
+    """A task returning undeclared outputs fails naming the extras."""
+    with pytest.raises(GraphValidationError, match='returned undeclared outputs'):
+        run_get_node(tasks.extra_outputs, value=2)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_named_task_rejects_empty_mapping() -> None:
+    """A task omitting every declared output fails naming the missing ones."""
+    with pytest.raises(GraphValidationError, match='omitted declared outputs'):
+        run_get_node(tasks.empty_outputs, value=2)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nontotal_typeddict_outputs_rejected() -> None:
+    """A non-total `TypedDict` cannot declare task outputs."""
+    with pytest.raises(GraphTypeCheckError, match='must be total'):
+        task(tasks.partial_outputs)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_tuple_outputs_rejected() -> None:
+    """A tuple cannot declare multiple task outputs."""
+    with pytest.raises(GraphTypeCheckError, match='instead of a tuple'):
+        task(tasks.pair_outputs)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

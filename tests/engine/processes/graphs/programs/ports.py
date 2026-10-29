@@ -11,7 +11,14 @@
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.programs.port_models import Configuration, DefaultedSettings
-from tests.engine.processes.graphs.programs.tasks import add, read_answer, read_nested_count, read_orm_node
+from tests.engine.processes.graphs.programs.tasks import (
+    add,
+    arithmetic_pair,
+    read_answer,
+    read_nested_count,
+    read_orm_node,
+    statistics,
+)
 
 
 @graph
@@ -58,8 +65,22 @@ def direct_result(value: int) -> int:
 
 
 @graph
+def named(x: int, y: int) -> dict[str, int]:
+    """Return multiple named outputs from one task."""
+    pair = arithmetic_pair(x=x, y=y)
+    return {'total': pair.sum, 'product': pair.product}
+
+
+@graph
 def single_named_scalar(value: int) -> int:
     """Return one named output with a scalar-style hint."""
+    out = add(x=value, y=0)
+    return {'only': out}
+
+
+@graph
+def single_named_mapping(value: int) -> dict[str, int]:
+    """Return one named output with a mapping-style hint."""
     out = add(x=value, y=0)
     return {'only': out}
 
@@ -129,3 +150,10 @@ def input_passthrough(value: int) -> int:
 def nested_passthrough(config: Configuration) -> int:
     """Pass a nested input leaf straight to outputs."""
     return config.settings.count
+
+
+@graph
+def summarize(values: list[float]):
+    """Expose summary statistics computed by plain Python, selected by key."""
+    stats = statistics(values=values)
+    return {'mean': stats['mean'], 'stdev': stats['stdev']}

@@ -21,9 +21,7 @@ from collections.abc import Mapping, Sequence
 from inspect import get_annotations
 
 import docstring_parser
-from typing_extensions import is_typeddict
 
-from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.port_model import Field, PortModel, _port_help, _without_marks, is_structured
@@ -297,38 +295,6 @@ def _signature_names(
         if parameter.kind is parameter.VAR_KEYWORD:
             var_keyword = key
     return args, var_positional, var_keyword
-
-
-def _declare_output_ports(return_annotation: t.Any, spec: ProcessSpec) -> None:  # NOTE: PortModel returns as follow-up.
-    """Declare static leaf output ports from the return annotation.
-
-    A scalar annotation declares one ``result`` port; a total ``TypedDict`` declares one
-    port per key. Task registration rejects missing declarations and namespace returns.
-
-    :param return_annotation: the return annotation of the wrapped function, if it has one.
-    :param spec: the spec to declare them on.
-    """
-    if return_annotation is None or return_annotation is type(None):
-        return
-    if is_typeddict(return_annotation):
-        hints = t.get_type_hints(return_annotation, include_extras=True)
-        if set(hints) != set(return_annotation.__required_keys__):
-            msg = 'TypedDict task outputs must be total; declare every output.'
-            raise GraphTypeCheckError(msg)
-        for key, hint in hints.items():
-            spec.output(key, valid_type=_infer_node_types(_without_marks(hint)) or (Data,))
-        return
-    if t.get_origin(return_annotation) is tuple:
-        msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
-        raise GraphTypeCheckError(msg)
-    if t.get_origin(return_annotation) in (list, dict):
-        origin = t.get_origin(return_annotation)
-    else:
-        origin = return_annotation
-    spec.output(
-        Process.SINGLE_OUTPUT_LINKNAME,
-        valid_type=_infer_node_types(origin) or (Data,),
-    )
 
 
 class FunctionProcessBase(Process):

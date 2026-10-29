@@ -9,7 +9,7 @@
 """Assignments declarations shared by the graph behavior suites."""
 
 from aiida.engine.processes.graphs.lowering import graph
-from tests.engine.processes.graphs.programs.tasks import add
+from tests.engine.processes.graphs.programs.tasks import add, arithmetic_pair, subtract
 
 
 @graph
@@ -47,6 +47,13 @@ def annotated_assignment(value: int) -> int:  # rejected at lowering
     """Annotate a local; locals carry no contracts in templates."""
     total: int = add(x=value, y=1)
     return total
+
+
+@graph
+def tuple_assignment(x: int, y: int) -> int:
+    """Bind two names at once from multiple outputs, order-sensitively."""
+    total, product = arithmetic_pair(x=x, y=y)
+    return subtract(x=product, y=total)
 
 
 @graph

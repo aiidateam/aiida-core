@@ -25,7 +25,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError
-from aiida.engine.processes.calcjobs import CalcJob  # > rev-jg: test
+from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.graphs.inputs import _place
 from aiida.engine.processes.graphs.ir import (
     CONDITION_PORT,

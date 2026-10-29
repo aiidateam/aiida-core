@@ -498,8 +498,13 @@ Below is a list with all available subcommands.
       --repository DIRECTORY          Absolute path to the file repository.
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.
-      --config FILEORURL              Load option values from configuration file in yaml
-                                      format (local path or URL).
+      --template-vars TEXT            Values for the Jinja2 template variables in the file
+                                      passed to `--config`: an inline JSON string, a local
+                                      YAML/JSON file path, or a URL. Example: '{"account":
+                                      "my_account"}' or path/to/vars.yaml.
+      --config FILEORURL              Load option values from configuration file in YAML
+                                      format (local path or URL). Supports Jinja2 templates
+                                      with interactive prompting for placeholders.
       --help                          Show this message and exit.
 
 
@@ -601,8 +606,13 @@ Below is a list with all available subcommands.
       --repository DIRECTORY          Absolute path to the file repository.  [required]
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.
-      --config FILEORURL              Load option values from configuration file in yaml
-                                      format (local path or URL).
+      --template-vars TEXT            Values for the Jinja2 template variables in the file
+                                      passed to `--config`: an inline JSON string, a local
+                                      YAML/JSON file path, or a URL. Example: '{"account":
+                                      "my_account"}' or path/to/vars.yaml.
+      --config FILEORURL              Load option values from configuration file in YAML
+                                      format (local path or URL). Supports Jinja2 templates
+                                      with interactive prompting for placeholders.
       --help                          Show this message and exit.
 
 

@@ -109,6 +109,7 @@ __all__ = (
     'SORT',
     'START_DATE',
     'SYMLINK_CALCS',
+    'TEMPLATE_VARS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',

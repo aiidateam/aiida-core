@@ -42,6 +42,7 @@ from aiida.manage.configuration import Profile, load_profile
 @options_setup.SETUP_REPOSITORY_URI()
 @options_setup.SETUP_TEST_PROFILE()
 @options_setup.SETUP_PROFILE_UUID()
+@options.TEMPLATE_VARS()
 @options.CONFIG_FILE()
 @click.pass_context
 def setup(
@@ -173,6 +174,7 @@ def setup(
 @options_setup.QUICKSETUP_BROKER_VIRTUAL_HOST()
 @options_setup.QUICKSETUP_REPOSITORY_URI()
 @options_setup.QUICKSETUP_TEST_PROFILE()
+@options.TEMPLATE_VARS()
 @options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(

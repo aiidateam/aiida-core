@@ -17,7 +17,7 @@ from dataclasses import replace
 import pytest
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError
-from aiida.engine.processes.graphs.ir import Dependency, Endpoint, GraphIR, Route, TaskIR
+from aiida.engine.processes.graphs.ir import Dependency, Endpoint, GraphIR, LoopControl, Route, TaskIR
 from aiida.engine.processes.graphs.lowering import GraphHandle
 from aiida.engine.processes.graphs.shapes import load_shape
 from tests.engine.processes.graphs.programs import (
@@ -25,6 +25,7 @@ from tests.engine.processes.graphs.programs import (
     branches,
     calls,
     expressions,
+    loops,
     parameters,
     ports,
     statements,
@@ -117,6 +118,7 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(calls.expanded_task_arguments, 'name each argument', id='expanded'),
         pytest.param(expressions.arithmetic_expression, 'put this calculation in a task', id='expression'),
         pytest.param(assignments.reassigned_name, 'assign each result a new name', id='rebound'),
+        pytest.param(loops.fanout, 'for loops are not supported', id='fanout'),
         pytest.param(parameters.variadic_parameters, 'list each input separately', id='variadic'),
         pytest.param(ports.literal_return, 'return a task output or graph input', id='literal'),
         pytest.param(ports.namespace_return, 'return a task output or graph input', id='namespace'),
@@ -143,6 +145,7 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(branches.compare_condition, 'put this check in a task', id='compare'),
         pytest.param(branches.inline_conditional, 'as if and else', id='ifexp'),
         pytest.param(branches.walrus_condition, 'on its own line', id='walrus'),
+        pytest.param(loops.list_comprehension, 'must call a task or graph', id='listcomp'),
         pytest.param(parameters.infinite_default, 'finite JSON', id='infinite-default'),
     ],
 )
@@ -167,6 +170,17 @@ def test_branches_build_control_tasks() -> None:
     assert isinstance(spec.tasks[0], BranchControl)
     assert set(spec.tasks[0].body.outputs) == {'result'}
     assert set(spec.tasks[0].otherwise.outputs) == {'result'}
+
+
+def test_loops_build_control_tasks() -> None:
+    from aiida.engine.processes.graphs.ir import LoopControl
+
+    spec = loops.countdown.build()
+    assert isinstance(spec.tasks[0], LoopControl)
+    assert set(spec.tasks[0].body.outputs) == {'value', 'condition'}
+    called = loops.countdown_call.build()
+    assert isinstance(called.tasks[1], LoopControl)
+    assert set(called.tasks[1].body.outputs) == {'value', 'condition'}
 
 
 def test_recursive_call_fails_during_build() -> None:
@@ -384,3 +398,13 @@ def test_task_registration_rejects_local_function() -> None:
 
     with pytest.raises(GraphLanguageError, match='module scope'):
         task(local_function)
+
+
+def test_loop_condition_must_be_threaded_state() -> None:
+    """A loop whose condition is not loop state fails naming the loop."""
+    spec = loops.countdown.build()
+    tasks = list(spec.tasks)
+    index = next(n for n, task in enumerate(tasks) if isinstance(task, LoopControl))
+    tasks[index] = replace(tasks[index], condition_port='zzz')
+    with pytest.raises(GraphTypeCheckError, match='must take its condition as state'):
+        replace(spec, tasks=tuple(tasks))

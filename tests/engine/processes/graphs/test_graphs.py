@@ -27,7 +27,7 @@ from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.process.process import ProcessNode
 from aiida.orm.nodes.process.workflow.graph import GraphNode
-from tests.engine.processes.graphs.programs import assignments, branches, parameters, ports, tasks
+from tests.engine.processes.graphs.programs import assignments, branches, loops, parameters, ports, tasks
 from tests.engine.processes.graphs.programs import calls as call_programs
 
 pytestmark = pytest.mark.presto
@@ -61,6 +61,9 @@ pytestmark = pytest.mark.presto
         pytest.param(branches.computed_choice, {'value': -2}, {'result': 0}, id='computed-false'),
         pytest.param(branches.inline_condition, {'value': 2}, {'result': 3}, id='inline-true'),
         pytest.param(branches.inline_condition, {'value': -2}, {'result': 0}, id='inline-false'),
+        pytest.param(loops.countdown, {'value': 3, 'condition': True}, {'value': 0}, id='loop'),
+        pytest.param(loops.countdown_call, {'value': 3}, {'value': 0}, id='loop-call'),
+        pytest.param(loops.countdown_call, {'value': -2}, {'value': -2}, id='loop-call-zero'),
         pytest.param(call_programs.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
         pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 1}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
@@ -146,6 +149,14 @@ def test_branch_condition_rejects_non_bool() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_loop_condition_rejects_non_bool() -> None:
+    """A loop condition of any other type fails loudly instead of coercing."""
+    state = GraphRun(loops.countdown.build(), given={'value': 3, 'condition': Int(1)})
+    with pytest.raises(GraphTypeCheckError, match='must be a `bool` or `Bool`'):
+        state.step()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_task_can_run_without_retrievable_source(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace = {'__name__': tasks.__name__}
     exec(compile('def generated(value: int) -> int:\n    return value + 1\n', '<generated-task>', 'exec'), namespace)
@@ -160,6 +171,91 @@ def test_task_after_kwarg_rejected_outside_graphs() -> None:
     """`after` orders graph placements; direct task calls reject it."""
     with pytest.raises(GraphError, match='orders placements'):
         tasks.add(x=1, y=1, after='x')
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_zero_iteration_loop_returns_initial_state() -> None:
+    """A never-entered loop returns its initial state like the equivalent Python loop."""
+    outputs, node = run_get_node(loops.countdown, value=3, condition=False)
+    assert node.is_finished_ok
+    assert outputs['value'].value == 3
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_downstream_task_consumes_zero_iteration_loop_output() -> None:
+    """A task consuming a never-entered loop's output reads its passed-through state."""
+    outputs, node = run_get_node(loops.countdown_then_add, value=3, condition=False)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 4
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_downstream_task_consumes_loop_output() -> None:
+    """A task consuming a finished loop's output reads the last iteration's state."""
+    outputs, node = run_get_node(loops.countdown_then_add, value=3, condition=True)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 1
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_loop_max_iterations_must_allow_one_iteration() -> None:
+    """A loop capped below one iteration fails naming the loop."""
+    import dataclasses
+
+    from aiida.engine.processes.graphs.ir import LoopControl
+
+    spec = loops.countdown.build()
+    loop = spec.tasks[0]
+    assert isinstance(loop, LoopControl)
+    tasks = [dataclasses.replace(loop, max_iterations=0) if task is loop else task for task in spec.tasks]
+    with pytest.raises(GraphTypeCheckError, match='allowing at least one iteration'):
+        dataclasses.replace(spec, tasks=tuple(tasks))
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_loop_raises_after_max_iterations(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A never-clearing loop dispatches exactly `max_iterations` iterations, then raises."""
+    import dataclasses
+
+    import aiida.engine.processes.graphs.run as run_module
+    from aiida.engine.processes.graphs.ir import LoopControl
+
+    spec = loops.countdown.build()
+    loop = spec.tasks[0]
+    assert isinstance(loop, LoopControl)
+    capped = dataclasses.replace(spec, tasks=(dataclasses.replace(loop, max_iterations=2),))
+    state = GraphRun(capped, given={'value': 3, 'condition': True})
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0']
+
+    class _Finished:
+        is_finished_ok = True
+
+    monkeypatch.setattr(run_module, 'load_node', lambda _pk: _Finished())
+    monkeypatch.setattr(run_module, '_returned', lambda _node: {'condition': True, 'value': 3})
+    state.completed('loop_1_iteration_0', 111)
+    # One finished iteration below the cap still dispatches: the bound is `>=`, not an early trigger.
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_1']
+    state.completed('loop_1_iteration_1', 112)
+    # At the cap the scheduler raises instead of dispatching: with `>` this would start iteration 2.
+    with pytest.raises(GraphValidationError, match='exceeded 2 iterations'):
+        state.step()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_failed_loop_iteration_dispatches_no_next_iteration(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed loop iteration surfaces the loop as failed without dispatching further."""
+    import aiida.engine.processes.graphs.run as run_module
+
+    state = GraphRun(loops.countdown.build(), given={'value': 3, 'condition': True})
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0']
+
+    class _Failed:
+        is_finished_ok = False
+
+    monkeypatch.setattr(run_module, 'load_node', lambda _pk: _Failed())
+    state.completed('loop_1_iteration_0', 111)
+    assert state.step().starts == []
+    assert state.failed == ['loop_1']
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

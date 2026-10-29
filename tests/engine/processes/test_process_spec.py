@@ -152,3 +152,107 @@ def test_input_from_field_override_widens_valid_type_for_none() -> None:
     spec.input_from_field('count', field_from_annotation('count', int, None))
     assert type(None) in spec.inputs['count'].valid_type
     assert spec.inputs['count'].default is None
+
+
+def test_pydantic_model_declares_ports() -> None:
+    import pydantic
+
+    class FlatSettings(pydantic.BaseModel):
+        count: int = 2
+        label: str = pydantic.Field(default='test', description='A label.')
+        nullable: int | None = None
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', FlatSettings)
+    assert spec.inputs['config']['count'].valid_type == (int,)
+    assert spec.inputs['config']['label'].help == 'A label.'
+    assert spec.inputs.pre_process({'config': {}})['config']['count'] == 2
+
+    class Required(pydantic.BaseModel):
+        name: str
+
+    with pytest.raises(TypeError, match='Use a `PortModel`'):
+        ProcessSpec().input_namespace_from('config', int)
+    spec_required = ProcessSpec()
+    spec_required.input_namespace_from('config', Required)
+    assert spec_required.inputs['config']['name'].required
+
+
+def test_pydantic_rejections_surface_at_declaration() -> None:
+    import pydantic
+    from pydantic import field_validator
+
+    class Validated(pydantic.BaseModel):
+        count: int = 1
+
+        @field_validator('count')
+        @classmethod
+        def _check(cls, value):
+            return value
+
+    with pytest.raises(TypeError, match='move validation'):
+        ProcessSpec().input_namespace_from('config', Validated)
+
+
+def test_pydantic_nested_models_declare_namespaces() -> None:
+    import pydantic
+
+    class Inner(pydantic.BaseModel):
+        count: int = 1
+
+    class Outer(pydantic.BaseModel):
+        inner: Inner = Inner()
+        label: str = 'test'
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', Outer)
+    assert spec.inputs['config']['inner']['count'].valid_type == (int,)
+    assert spec.inputs['config']['label'].valid_type == (str,)
+    assert spec.inputs.pre_process({'config': {}})['config']['inner']['count'] == 1
+    assert spec.inputs.pre_process({'config': {'inner': {'count': 3}}})['config']['inner']['count'] == 3
+
+
+def test_none_default_declares_optional_port_in_both_paths() -> None:
+    """A `None` default stays optional with a nullable type on both declaration paths."""
+
+    class MaybeCount(PortModel):
+        count: int = None  # type: ignore[assignment]
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', MaybeCount)
+    port = spec.inputs['config']['count']
+    assert not port.required
+    assert port.default is None
+    assert type(None) in port.valid_type
+
+    fieldspec = GraphProcessSpec()
+    fieldspec.input_from_field('count', field_from_annotation('count', int, None))
+    leaf = fieldspec.inputs['count']
+    assert not leaf.required
+    assert leaf.default is None
+    assert type(None) in leaf.valid_type
+
+
+def test_optional_model_is_rejected_on_all_paths() -> None:
+    """An optional structured value fails loudly instead of declaring a broken leaf."""
+
+    class MaybeSettings(PortModel):
+        settings: Settings | None = None
+
+    with pytest.raises(TypeError, match='optional namespaces are not supported yet'):
+        ProcessSpec().input_namespace_from('config', MaybeSettings)
+    with pytest.raises(TypeError, match='optional namespaces are not supported yet'):
+        GraphProcessSpec().input_from_field('settings', field_from_annotation('settings', Settings | None, None))
+    with pytest.raises(TypeError, match='optional namespaces are not supported yet'):
+        ProcessSpec().outputs_from(MaybeSettings)
+
+
+def test_nested_factory_default_reaches_leaf_ports() -> None:
+    """A nested default factory supplies the leaf port defaults once at declaration."""
+
+    class ConfigWithFactory(PortModel):
+        settings: Settings = field(default_factory=lambda: Settings(count=9))
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', ConfigWithFactory)
+    assert spec.inputs.pre_process({'config': {}})['config']['settings']['count'] == 9

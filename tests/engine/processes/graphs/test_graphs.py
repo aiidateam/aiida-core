@@ -22,11 +22,12 @@ from aiida.engine.processes.graphs.lowering import GraphHandle
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.run import GraphRun
 from aiida.engine.processes.graphs.tasks import FunctionTaskHandle
+from aiida.orm.nodes.data.bool import Bool
 from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.process.process import ProcessNode
 from aiida.orm.nodes.process.workflow.graph import GraphNode
-from tests.engine.processes.graphs.programs import assignments, parameters, ports, tasks
+from tests.engine.processes.graphs.programs import assignments, branches, parameters, ports, tasks
 from tests.engine.processes.graphs.programs import calls as call_programs
 
 pytestmark = pytest.mark.presto
@@ -54,6 +55,12 @@ pytestmark = pytest.mark.presto
         pytest.param(call_programs.ordered_named, {'value': 2}, {'result': 3}, id='ordering-named'),
         pytest.param(call_programs.multiple_ordered, {'x': 2}, {'result': 3}, id='ordering-on-two'),
         pytest.param(call_programs.chain, {'x': 2, 'y': 3}, {'result': 8}, id='chain'),
+        pytest.param(branches.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
+        pytest.param(branches.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'),
+        pytest.param(branches.computed_choice, {'value': 2}, {'result': 3}, id='computed-true'),
+        pytest.param(branches.computed_choice, {'value': -2}, {'result': 0}, id='computed-false'),
+        pytest.param(branches.inline_condition, {'value': 2}, {'result': 3}, id='inline-true'),
+        pytest.param(branches.inline_condition, {'value': -2}, {'result': 0}, id='inline-false'),
         pytest.param(call_programs.positional_task_arguments, {'value': 2}, {'result': 3}, id='positional-arguments'),
         pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 1}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
@@ -117,6 +124,25 @@ def test_on_wait_registers_each_pending_task_once(monkeypatch: pytest.MonkeyPatc
     process._watch_pending()
     process._watch_pending()
     assert calls == [123]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_branch_condition_accepts_bool_nodes() -> None:
+    """Branch conditions read `Bool` nodes by value like plain booleans."""
+    outputs, node = run_get_node(branches.external_choice, value=2, condition=Bool(True))
+    assert node.is_finished_ok
+    assert outputs['result'].value == 3
+    outputs, node = run_get_node(branches.external_choice, value=2, condition=Bool(False))
+    assert node.is_finished_ok
+    assert outputs['result'].value == 4
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_branch_condition_rejects_non_bool() -> None:
+    """A branch condition of any other type fails loudly instead of coercing."""
+    state = GraphRun(branches.external_choice.build(), given={'value': 2, 'condition': Int(1)})
+    with pytest.raises(GraphTypeCheckError, match='must be a `bool` or `Bool`'):
+        state.step()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

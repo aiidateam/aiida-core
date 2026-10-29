@@ -14,13 +14,33 @@ import typing as t
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from aiida.common.exceptions import GraphTypeCheckError
 from aiida.engine.processes.graphs.inputs import _at, _place
-from aiida.engine.processes.graphs.ir import GraphIR, GraphTask, SubgraphTask, require_version
+from aiida.engine.processes.graphs.ir import (
+    BranchControl,
+    GraphIR,
+    GraphTask,
+    SubgraphTask,
+    require_version,
+)
 from aiida.orm import Node, load_node
+from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
 
 STATE_VERSION = '0.1'
+
+
+def _holds(condition: t.Any) -> bool:
+    """Return whether a condition holds, accepting only `bool` and `Bool` values.
+    Anything else fails loudly: truthiness coercion would silently treat `Int(0)` as false.
+    """
+    if isinstance(condition, bool):
+        return condition
+    if isinstance(condition, Bool):
+        return bool(condition.value)
+    msg = f'graph condition must be a `bool` or `Bool`, not `{type(condition)}`.'
+    raise GraphTypeCheckError(msg)
 
 
 @dataclass(frozen=True)
@@ -103,7 +123,7 @@ class GraphRun:
         return [name for name in self.graph.task_names if name in finished and name not in succeeded]
 
     def step(self) -> Step:
-        """Dispatch every ready task."""
+        """Advance scheduling: continue loops, then dispatch every ready task."""
         step = Step()
         succeeded = self.succeeded
         while ready := self.graph.ready(succeeded | self.passed.keys(), self.instances):
@@ -158,8 +178,18 @@ class GraphRun:
         """Dispatch one ready task."""
         task = self.graph.task(name)
         inputs = self._inputs_for(task)
-        self.instances[name] = [name]
-        step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
+        if isinstance(task, BranchControl):
+            self._begin_branch(task, inputs, step)
+        else:
+            self.instances[name] = [name]
+            step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
+
+    def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
+        """Dispatch the taken side of a branch."""
+        taken = task.body if _holds(inputs.pop(task.condition_port)) else task.otherwise
+        self.instances[task.name] = [task.name]
+        # Each side may consume a different subset of the enclosing inputs.
+        step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
 
     def _inputs_for(self, task: GraphTask) -> dict[str, t.Any]:
         """Wire graph inputs and dependency outputs into one task's declared inputs."""

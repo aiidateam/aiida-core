@@ -20,7 +20,16 @@ from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeChe
 from aiida.engine.processes.graphs.ir import Dependency, Endpoint, GraphIR, Route, TaskIR
 from aiida.engine.processes.graphs.lowering import GraphHandle
 from aiida.engine.processes.graphs.shapes import load_shape
-from tests.engine.processes.graphs.programs import assignments, calls, expressions, parameters, ports, statements, tasks
+from tests.engine.processes.graphs.programs import (
+    assignments,
+    branches,
+    calls,
+    expressions,
+    parameters,
+    ports,
+    statements,
+    tasks,
+)
 
 
 def test_graph_cannot_be_called_directly() -> None:
@@ -119,15 +128,21 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(calls.unknown_call, 'check the spelling', id='unknown'),
         pytest.param(assignments.subscript_assignment, 'assign to a plain name', id='subscript'),
         pytest.param(statements.nested_definition, 'move it into a task', id='nested-def'),
+        pytest.param(branches.early_return, 'assign the same name on both sides', id='early-return'),
         pytest.param(assignments.augmented_assignment, 'move it into a task', id='aug-assign'),
         pytest.param(assignments.annotated_assignment, 'drop the annotation', id='ann-assign'),
         pytest.param(statements.with_block, 'move it into a task', id='with'),
         pytest.param(statements.try_block, 'move it into a task', id='try'),
         pytest.param(statements.raise_statement, 'move it into a task', id='raise'),
         pytest.param(statements.assert_statement, 'move it into a task', id='assert'),
+        pytest.param(branches.match_statement, 'end the graph with a return', id='match'),
         pytest.param(calls.starred_call, 'list each input by name', id='starred'),
         pytest.param(ports.subscript_load, 'pass the whole collection', id='subscript-load'),
         pytest.param(expressions.fstring_argument, 'build this text in a task', id='fstring'),
+        pytest.param(branches.boolean_condition, 'put this check in a task', id='boolop'),
+        pytest.param(branches.compare_condition, 'put this check in a task', id='compare'),
+        pytest.param(branches.inline_conditional, 'as if and else', id='ifexp'),
+        pytest.param(branches.walrus_condition, 'on its own line', id='walrus'),
         pytest.param(parameters.infinite_default, 'finite JSON', id='infinite-default'),
     ],
 )
@@ -145,9 +160,38 @@ def test_nested_graph_builds_subgraph_task() -> None:
     assert spec.tasks[0].body.identifier == f'{calls.__name__}:multiply_add'
 
 
+def test_branches_build_control_tasks() -> None:
+    from aiida.engine.processes.graphs.ir import BranchControl
+
+    spec = branches.external_choice.build()
+    assert isinstance(spec.tasks[0], BranchControl)
+    assert set(spec.tasks[0].body.outputs) == {'result'}
+    assert set(spec.tasks[0].otherwise.outputs) == {'result'}
+
+
 def test_recursive_call_fails_during_build() -> None:
     with pytest.raises(GraphLanguageError, match='Recursive graph call'):
         calls.recursive_call.build()
+
+
+def test_inline_condition_matches_bound_form() -> None:
+    """An inline predicate call lowers like its explicit assignment form."""
+    inline = branches.inline_condition.build().to_dict()
+    bound = branches.computed_choice.build().to_dict()
+    inline.pop('identifier')
+    bound.pop('identifier')
+    assert inline == bound
+
+
+def test_mismatched_branch_outputs_fail_during_build() -> None:
+    with pytest.raises(GraphTypeCheckError, match='same outputs'):
+        branches.mismatched_branches.build()
+
+
+def test_mismatched_branch_types_fail_during_build() -> None:
+    """Branches returning incompatible types fail naming the context."""
+    with pytest.raises(GraphTypeCheckError, match='incompatible types'):
+        branches.mismatched_type_branches.build()
 
 
 def test_ordering_dependency_carries_no_value() -> None:

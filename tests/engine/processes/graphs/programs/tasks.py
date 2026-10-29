@@ -52,6 +52,12 @@ def subtract(x: int, y: int) -> int:
 
 
 @task
+def half(x: int) -> float:
+    """Halve the input."""
+    return x / 2
+
+
+@task
 def multiply(x: int, y: int) -> int:
     """Multiply two integers."""
     return x * y
@@ -133,6 +139,12 @@ class Alpha(t.TypedDict):
     alpha: int
 
 
+class Beta(t.TypedDict):
+    """Single named output."""
+
+    beta: int
+
+
 @task
 def mismatched_alpha(value: int) -> Alpha:
     """Return its input under the `alpha` output."""
@@ -179,6 +191,12 @@ def unhinted(value: t.Any) -> t.Any:
 
 
 unhinted.__annotations__ = {'value': 'int[', 'return': 'int'}
+
+
+@task
+def mismatched_beta(value: int) -> Beta:
+    """Return its input under the `beta` output."""
+    return {'beta': value}
 
 
 @task

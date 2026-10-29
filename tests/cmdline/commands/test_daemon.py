@@ -68,6 +68,25 @@ def test_daemon_restart(run_cli_command, started_daemon_client, options):
     assert len(worker_response['info']) == 1
 
 
+def test_daemon_restart_when_not_running(run_cli_command, monkeypatch):
+    """Test ``verdi daemon restart`` when the daemon is not running.
+
+    The command should not fail if the daemon is not running, but simply stop (noop) and start it.
+    """
+    calls = []
+
+    def mock_execute_client_command(command, **kwargs):
+        calls.append((command, kwargs.get('daemon_not_running_ok', False)))
+        return {'status': 'ok'}
+
+    monkeypatch.setattr('aiida.cmdline.commands.cmd_daemon.execute_client_command', mock_execute_client_command)
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: False))
+
+    result = run_cli_command(cmd_daemon.restart, use_subprocess=False)
+    assert result.exit_code == 0
+    assert calls == [('stop_daemon', True), ('start_daemon', False)]
+
+
 def test_daemon_start_number(run_cli_command, stopped_daemon_client):
     """Test ``verdi daemon start`` with a specific number of workers."""
     number = 4

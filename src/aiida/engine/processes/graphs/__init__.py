@@ -22,6 +22,7 @@ from aiida.engine.processes.graphs.ir import (
 from aiida.engine.processes.graphs.lowering import GraphHandle, graph, task
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.tasks import CalcJobTaskHandle, FunctionTaskHandle, TaskProcess, WorkChainTaskHandle
+from aiida.engine.processes.graphs.viz import to_mermaid
 
 __all__ = (
     'BodyTask',
@@ -41,4 +42,5 @@ __all__ = (
     'WorkChainTaskHandle',
     'graph',
     'task',
+    'to_mermaid',
 )

@@ -115,8 +115,8 @@ class GraphHandle:
 
         Binds the function signature by name first, so every parameter arrives as a keyword.
         """
-        # `metadata` carries per-placement task options, dropped until `CalcJob` tasks arrive.
-        inputs.pop('metadata', None)
+        # `metadata` carries per-placement `CalcJob` options, not a graph input.
+        task_metadata = inputs.pop('metadata', None)
         # Launching binds by name, so positional-only parameters accept keywords at launch.
         # Keyword-only parameters already bind by name and must keep their kind: converting
         # them breaks signatures where a default precedes them.
@@ -127,7 +127,7 @@ class GraphHandle:
             for parameter in inspect.signature(self.function).parameters.values()
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
-        return GraphProcess._launch_inputs(self.build(), dict(bound.arguments))
+        return GraphProcess._launch_inputs(self.build(), dict(bound.arguments), task_metadata=task_metadata)
 
 
 @dataclass(frozen=True)

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import functools
 import typing as t
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
 
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.extendeddicts import AttributesFrozendict
@@ -20,7 +20,8 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.ir import GraphIR, ProcessTask
-from aiida.engine.processes.graphs.run import GraphRun, GraphRunState, Start
+from aiida.engine.processes.graphs.run import GraphRun, _GraphRunState, _Start
+from aiida.engine.processes.graphs.tasks import _merge_task_metadata, _needs_metadata
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
@@ -37,6 +38,7 @@ class GraphProcess(Process):
     _spec_class = GraphProcessSpec
     _GRAPH = 'graph'
     _GRAPH_INPUTS = 'graph_inputs'
+    _TASK_METADATA = 'task_metadata'
 
     @classmethod
     def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
@@ -45,12 +47,14 @@ class GraphProcess(Process):
         spec.input(cls._GRAPH, valid_type=Dict)
         # The stored graph supplies the fixed contract for these per-instance ports.
         spec.input_namespace(cls._GRAPH_INPUTS, dynamic=True, required=False)
+        # Per-placement `CalcJob` metadata, keyed by placement name; never routed as graph inputs.
+        spec.input(cls._TASK_METADATA, valid_type=Dict, required=False, is_metadata=False)
         spec.outputs.dynamic = True
         spec.exit_code(400, 'ERROR_TASK_FAILED', message='The task `{task}` did not finish successfully.')
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         self._run: GraphRun | None = None
-        self._saved: GraphRunState = {}
+        self._saved: _GraphRunState = {}
         self._watched_pks: set[int] = set()
         super().__init__(*args, **kwargs)
 
@@ -66,9 +70,16 @@ class GraphProcess(Process):
         return super()._create_and_setup_db_record()
 
     @classmethod
-    def _launch_inputs(cls, body: GraphIR, inputs: dict[str, t.Any]) -> dict[str, t.Any]:
-        """Fill graph arguments."""
-        return {cls._GRAPH: Dict(dict=body.to_dict()), cls._GRAPH_INPUTS: body.prepare_inputs(inputs)}
+    def _launch_inputs(
+        cls, body: GraphIR, inputs: dict[str, t.Any], task_metadata: Mapping[str, Mapping[str, t.Any]] | None = None
+    ) -> dict[str, t.Any]:
+        """Fill graph arguments and stash per-placement `CalcJob` metadata."""
+        prepared = dict(body.prepare_inputs(inputs))
+        return {
+            cls._GRAPH: Dict(dict=body.to_dict()),
+            cls._GRAPH_INPUTS: prepared,
+            **({cls._TASK_METADATA: Dict(dict=dict(task_metadata))} if task_metadata else {}),
+        }
 
     @property
     @override
@@ -108,7 +119,7 @@ class GraphProcess(Process):
         super().load_instance_state(saved_state, load_context)
         self._run = None
         self._watched_pks = set()
-        self._saved = t.cast(GraphRunState, dict(saved_state.get('run', {})))
+        self._saved = t.cast(_GraphRunState, dict(saved_state.get('run', {})))
         if 'graph_input_sources' in saved_state:
             self._input_sources = AttributesFrozendict(
                 {**self._input_sources, self._GRAPH_INPUTS: self._decode_input_args(saved_state['graph_input_sources'])}
@@ -136,21 +147,32 @@ class GraphProcess(Process):
             return Wait(self._do_step, 'waiting for dispatched tasks')
         return self._finish()
 
-    def _submit(self, start: Start) -> None:
+    def _submit(self, start: _Start) -> None:
         """Submit one task instance as a child process with an explicit call link."""
         process_class: type[Process]
         if start.body is not None:
-            process_class, inputs = GraphProcess, self._launch_inputs(start.body, start.inputs)
+            process_class, inputs = (
+                GraphProcess,
+                self._launch_inputs(start.body, start.inputs, task_metadata=self._stored_task_metadata() or None),
+            )
         elif isinstance(start.task, ProcessTask):
             process_class, inputs = start.task.spec.process_class, start.inputs
         else:
             msg = f'unsupported task `{start.task.name}`.'
             raise GraphTypeCheckError(msg)
+        if _needs_metadata(start.task):
+            stored = self._stored_task_metadata()
+            inputs = _merge_task_metadata(start.task, stored, inputs)
         metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
         node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None
         self._run_state.started(start.instance, node.pk)
         self.report(f'dispatched task `{start.instance}` as {node.pk}')
+
+    def _stored_task_metadata(self) -> dict[str, t.Any]:
+        """Return the launch metadata stashed per placement name."""
+        stored = self.inputs.get(self._TASK_METADATA, None)
+        return stored.get_dict() if stored is not None else {}
 
     @override
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:

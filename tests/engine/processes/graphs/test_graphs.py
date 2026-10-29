@@ -13,6 +13,7 @@ import typing as t
 
 import pytest
 
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError, MissingRequiredInputsError
 from aiida.common.links import LinkType
 from aiida.engine import task
@@ -27,7 +28,16 @@ from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.process.process import ProcessNode
 from aiida.orm.nodes.process.workflow.graph import GraphNode
-from tests.engine.processes.graphs.programs import assignments, branches, loops, parameters, ports, tasks
+from tests.engine.processes.graphs.programs import (
+    assignments,
+    branches,
+    calcjobs,
+    loops,
+    parameters,
+    ports,
+    tasks,
+    workchains,
+)
 from tests.engine.processes.graphs.programs import calls as call_programs
 
 pytestmark = pytest.mark.presto
@@ -397,10 +407,10 @@ def test_checkpointed_scheduler_does_not_repeat_completed_tasks() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_run_state_versions_its_checkpoints() -> None:
     """Scheduler checkpoints carry a version; unknown ones fail loudly, old ones load."""
-    from aiida.engine.processes.graphs.run import STATE_VERSION
+    from aiida.engine.processes.graphs.run import _STATE_VERSION
 
     state = GraphRun(call_programs.chain.build(), given={'x': Int(2), 'y': Int(3)})
-    assert state.to_dict().get('version') == STATE_VERSION
+    assert state.to_dict().get('version') == _STATE_VERSION
     saved = state.to_dict()
     GraphRun.from_dict(state.graph, state.given, {key: value for key, value in saved.items() if key != 'version'})
     with pytest.raises(GraphTypeCheckError, match='cannot read a graph run declaration'):
@@ -505,3 +515,188 @@ def test_task_process_checkpoint_round_trips() -> None:
     assert type(restored) is type(process)
     assert sorted(restored.spec().outputs) == ['result']
     assert restored.inputs['x'] == 2
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_calcjob_task_runs_straight_line_graph(aiida_code_installed) -> None:
+    """A `CalcJob` task wires science inputs and returns the parsed sum."""
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+    outputs, node = run_get_node(
+        calcjobs.add_single,
+        x=2,
+        y=3,
+        code=code,
+        metadata={'add_calc': {'options': {'custom_scheduler_commands': '# sentinel'}}},
+    )
+    assert node.is_finished_ok
+    assert outputs['sum'].value == 5
+    (child,) = node.called
+    assert child.process_type == ArithmeticAddCalculation.build_process_type()
+    assert child.outputs.sum.value == 5
+    assert set(child.inputs) == {'x', 'y', 'code'}
+    assert child.get_option('custom_scheduler_commands') == '# sentinel'
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_calcjob_graph_forwards_task_metadata(aiida_code_installed) -> None:
+    """Stashed placement metadata reaches `CalcJob` tasks in nested graphs."""
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+    outputs, node = run_get_node(calcjobs.add_nested, x=2, y=3, code=code, metadata={'add_calc': {'options': {}}})
+    assert node.is_finished_ok
+    assert outputs['sum'].value == 5
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_calcjob_task_chains_values(aiida_code_installed) -> None:
+    """A downstream `CalcJob` placement consumes the parsed output of another."""
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+    outputs, node = run_get_node(
+        calcjobs.add_twice,
+        x=2,
+        y=3,
+        code=code,
+        metadata={'add_calc': {'options': {}}, 'add_calc_2': {'options': {}}},
+    )
+    assert node.is_finished_ok
+    assert outputs['sum'].value == 8
+    assert {link.link_label for link in node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()} == {
+        'add_calc_2',
+        'add_calc',
+    }
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_calcjob_task_missing_metadata_fails_loudly(aiida_code_installed) -> None:
+    """A `CalcJob` placement without launch metadata names the placement."""
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+    with pytest.raises(GraphValidationError, match='task `add_calc` is a `CalcJob` and needs launch metadata'):
+        run_get_node(calcjobs.add_single, x=2, y=3, code=code)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_calcjob_task_missing_metadata_fails_on_dispatch(aiida_code_installed) -> None:
+    """A graph whose `CalcJob` placement lacks metadata fails at dispatch naming it."""
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+    bound = calcjobs.add_node_inputs.get_launch_inputs(x=Int(2), y=Int(3), code=code)
+    with pytest.raises(GraphValidationError, match='task `add_calc` is a `CalcJob` and needs launch metadata'):
+        run_get_node(GraphProcess, inputs=bound)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_calcjob_handle_registers_static_leaf_outputs() -> None:
+    """`CalcJob` registration exposes science inputs only, with static leaf outputs."""
+    spec = calcjobs.add_calc.spec()
+    assert 'metadata' not in [name for name, _ in calcjobs.add_calc._task_spec.input_shape.fields]
+    assert not spec.outputs.dynamic
+    assert set(spec.outputs) == {'sum', 'remote_folder', 'remote_stash', 'retrieved'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_workchain_task_runs_straight_line_graph() -> None:
+    """A `WorkChain` task wires science inputs and returns the child output."""
+    outputs, node = run_get_node(workchains.add_single, x=Int(2), y=Int(3))
+    assert node.is_finished_ok
+    assert outputs['result'].value == 5
+    (child,) = node.called
+    assert child.process_type == workchains.AddWorkChain.build_process_type()
+    assert child.outputs.result.value == 5
+    assert set(child.inputs) == {'x', 'y'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_workchain_task_chains_values() -> None:
+    """A downstream `WorkChain` placement consumes the output of another."""
+    outputs, node = run_get_node(workchains.add_twice, x=Int(2), y=Int(3))
+    assert node.is_finished_ok
+    assert outputs['result'].value == 8
+    assert {link.link_label for link in node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()} == {
+        'add_chain',
+        'add_chain_2',
+    }
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_workchain_handle_registers_static_leaf_outputs() -> None:
+    """`WorkChain` registration exposes science inputs only, with static leaf outputs."""
+    spec = workchains.add_chain.spec()
+    assert 'metadata' not in {name for name, _ in workchains.add_chain._task_spec.input_shape.fields}
+    assert not spec.outputs.dynamic
+    assert set(spec.outputs) == {'result'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_workchain_handle_accepts_plain_values() -> None:
+    """Process handles pass raw inputs through; the process prepares and validates them."""
+    assert workchains.add_chain.get_launch_inputs(x=2, y=3) == {'x': 2, 'y': 3}
+    outputs, node = run_get_node(workchains.add_chain, x=2, y=3)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 5
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_begin_loop_missing_condition_port_names_loop() -> None:
+    """A loop dispatch without its condition port names the loop instead of raising `KeyError`."""
+    from aiida.engine.processes.graphs.run import _Step
+
+    spec = loops.countdown.build()
+    state = GraphRun(spec, given={'value': 3, 'condition': True})
+    with pytest.raises(GraphTypeCheckError, match='loop `loop_1` is missing its condition port'):
+        state._begin_loop(spec.tasks[0], {}, _Step())
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_continue_loop_missing_condition_port_names_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A loop iteration without its condition port names the loop instead of raising `KeyError`."""
+    import aiida.engine.processes.graphs.run as run_module
+
+    class _Finished:
+        is_finished_ok = True
+
+    monkeypatch.setattr(run_module, 'load_node', lambda _pk: _Finished())
+    monkeypatch.setattr(run_module, '_returned', lambda _node: {})
+    state = GraphRun(loops.countdown.build(), given={'value': 3, 'condition': True})
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0']
+    state.completed('loop_1_iteration_0', 111)
+    with pytest.raises(GraphTypeCheckError, match='loop `loop_1` is missing its condition port'):
+        state.step()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_is_finished_ok_caches_per_node(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Repeated finished checks load each node once."""
+    import aiida.engine.processes.graphs.run as run_module
+
+    calls: list[int] = []
+
+    class _Finished:
+        is_finished_ok = True
+
+    def counting(pk: int):
+        calls.append(pk)
+        return _Finished()
+
+    monkeypatch.setattr(run_module, 'load_node', counting)
+    state = GraphRun(loops.countdown.build(), given={'value': 3, 'condition': True})
+    assert state._is_finished_ok(111) is True
+    assert state._is_finished_ok(111) is True
+    assert calls == [111]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_merge_task_metadata_conflict_raises() -> None:
+    """Wired metadata colliding with the stash raises instead of silently overwriting."""
+    from aiida.engine.processes.graphs.tasks import _merge_task_metadata
+
+    task = calcjobs.add_single.build().tasks[0]
+    with pytest.raises(GraphValidationError, match='refusing to overwrite'):
+        _merge_task_metadata(task, {'add_calc': {'options': {}}}, {'x': 1, 'metadata': {'other': 2}})
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_merge_task_metadata_rejects_non_mapping() -> None:
+    """A non-mapping stash entry fails naming the placement."""
+    from aiida.engine.processes.graphs.tasks import _merge_task_metadata
+
+    task = calcjobs.add_single.build().tasks[0]
+    with pytest.raises(GraphValidationError, match='must be a mapping'):
+        _merge_task_metadata(task, {'add_calc': ['options']}, {'x': 1})

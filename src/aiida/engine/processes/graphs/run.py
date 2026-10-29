@@ -30,7 +30,7 @@ from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
 
-STATE_VERSION = '0.1'
+_STATE_VERSION = '0.1'
 
 
 def _holds(condition: t.Any) -> bool:
@@ -51,7 +51,7 @@ def _returned(node: Node) -> dict[str, t.Any]:
 
 
 @dataclass(frozen=True)
-class Start:
+class _Start:
     """A run to dispatch under an explicit provenance call-link name."""
 
     instance: str
@@ -61,17 +61,17 @@ class Start:
 
 
 @dataclass
-class Step:
+class _Step:
     """The dispatches decided by one scheduling step."""
 
-    starts: list[Start] = field(default_factory=list)
+    starts: list[_Start] = field(default_factory=list)
 
     def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any], body: GraphIR | None = None) -> None:
         """Record the dispatch of one task instance within this step."""
-        self.starts.append(Start(instance=instance, task=task, inputs=inputs, body=body))
+        self.starts.append(_Start(instance=instance, task=task, inputs=inputs, body=body))
 
 
-class GraphRunState(t.TypedDict, total=False):
+class _GraphRunState(t.TypedDict, total=False):
     """The checkpointable scheduling progress of a graph run."""
 
     version: str
@@ -129,9 +129,9 @@ class GraphRun:
         finished, succeeded = self.finished, self.succeeded
         return [name for name in self.graph.task_names if name in finished and name not in succeeded]
 
-    def step(self) -> Step:
+    def step(self) -> _Step:
         """Advance scheduling: continue loops, then dispatch every ready task."""
-        step = Step()
+        step = _Step()
         for task in self.graph.tasks:
             if isinstance(task, LoopControl) and task.name in self.instances:
                 self._continue_loop(task, step)
@@ -161,10 +161,10 @@ class GraphRun:
                 produced[output] = _at(self._produced_by(source.task).outputs, source.port)
         return produced
 
-    def to_dict(self) -> GraphRunState:
+    def to_dict(self) -> _GraphRunState:
         """Return the checkpointable scheduling progress, without the graph or inputs."""
         return {
-            'version': STATE_VERSION,
+            'version': _STATE_VERSION,
             'instances': {name: list(runs) for name, runs in self.instances.items()},
             'dispatched': dict(self.dispatched),
             'done': dict(self.done),
@@ -174,7 +174,7 @@ class GraphRun:
     @classmethod
     def from_dict(cls, graph: GraphIR, given: dict[str, t.Any], data: Mapping[str, t.Any]) -> GraphRun:
         """Rebuild the scheduling progress from a checkpoint."""
-        require_version(data.get('version', STATE_VERSION), STATE_VERSION, 'graph run')
+        require_version(data.get('version', _STATE_VERSION), _STATE_VERSION, 'graph run')
         return cls(
             graph=graph,
             given=given,
@@ -184,7 +184,7 @@ class GraphRun:
             passed={name: dict(outputs) for name, outputs in data.get('passed', {}).items()},
         )
 
-    def _begin(self, name: str, step: Step) -> None:
+    def _begin(self, name: str, step: _Step) -> None:
         """Dispatch one ready task."""
         task = self.graph.task(name)
         inputs = self._inputs_for(task)
@@ -196,14 +196,14 @@ class GraphRun:
             self.instances[name] = [name]
             step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
 
-    def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: Step) -> None:
+    def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: _Step) -> None:
         """Dispatch the taken side of a branch."""
         taken = task.body if _holds(inputs.pop(task.condition_port)) else task.otherwise
         self.instances[task.name] = [task.name]
         # Each side may consume a different subset of the enclosing inputs.
         step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
 
-    def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
+    def _begin_loop(self, task: LoopControl, inputs: dict[str, t.Any], step: _Step) -> None:
         """Start iterating a loop, or pass through never-entered initial state."""
         if task.condition_port not in inputs:
             msg = f'loop `{task.name}` is missing its condition port `{task.condition_port}`.'
@@ -219,7 +219,7 @@ class GraphRun:
         self.instances[task.name] = [task.name]
         self.passed[task.name] = {name: inputs[name] for name in task.body.outputs if name in inputs}
 
-    def _continue_loop(self, task: LoopControl, step: Step) -> None:
+    def _continue_loop(self, task: LoopControl, step: _Step) -> None:
         """Dispatch the next iteration once the previous one finished successfully."""
         runs = self.instances[task.name]
         if not runs or any(instance not in self.done for instance in runs):
@@ -238,7 +238,7 @@ class GraphRun:
             raise GraphValidationError(msg)
         self._begin_iteration(task, {**self._inputs_for(task), **outputs}, step)
 
-    def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: Step) -> None:
+    def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: _Step) -> None:
         """Dispatch one numbered loop iteration over the loop body."""
         instance = f'{task.name}_iteration_{len(self.instances[task.name])}'
         self.instances[task.name].append(instance)

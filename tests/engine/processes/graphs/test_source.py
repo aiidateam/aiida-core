@@ -31,6 +31,7 @@ from tests.engine.processes.graphs.programs import (
     statements,
     tasks,
 )
+from tests.utils.processes import DummyProcess
 
 
 def test_graph_cannot_be_called_directly() -> None:
@@ -378,6 +379,7 @@ def test_dunder_main_task_round_trips_through_pickle() -> None:
         pytest.param(tasks.unannotated_function, GraphTypeCheckError, 'return annotation', id='unannotated'),
         pytest.param(tasks.kwargs_function, GraphTypeCheckError, 'fixed inputs', id='kwargs'),
         pytest.param(tasks.args_function, GraphTypeCheckError, 'fixed inputs', id='args'),
+        pytest.param(DummyProcess, GraphTypeCheckError, 'a `CalcJob` subclass', id='process-class'),
         pytest.param(tasks.after_parameter, GraphError, 'reserved for source graph', id='after-parameter'),
     ],
 )
@@ -387,6 +389,61 @@ def test_task_registration_rejects_excluded_contracts(target, exception, message
 
     with pytest.raises(exception, match=message):
         task(target)
+
+
+def test_task_registration_rejects_workchain_dynamic_outputs() -> None:
+    """Task registration rejects a `WorkChain` with dynamic outputs."""
+    from aiida.engine import WorkChain
+    from aiida.engine.processes.graphs.lowering import task
+    from aiida.orm import Int
+
+    class DynamicOutputsWorkChain(WorkChain):
+        """A `WorkChain` with dynamic outputs, unrepresentable as static leaves."""
+
+        @classmethod
+        def define(cls, spec) -> None:  # type: ignore[override]
+            super().define(spec)
+            spec.input('x', valid_type=Int)
+            spec.output('result', valid_type=Int)
+            spec.outputs.dynamic = True
+            spec.outline(cls.step)
+
+        def step(self):
+            """Placeholder step; registration rejects the spec before running."""
+
+    with pytest.raises(GraphTypeCheckError, match='static leaf outputs'):
+        task(DynamicOutputsWorkChain)
+
+
+def test_task_registration_rejects_workchain_output_namespace() -> None:
+    """Task registration rejects a `WorkChain` exposing an output namespace."""
+    from aiida.engine import WorkChain
+    from aiida.engine.processes.graphs.lowering import task
+    from aiida.orm import Int
+
+    class NamespacedOutputsWorkChain(WorkChain):
+        """A `WorkChain` with a `PortNamespace` output, unrepresentable as static leaves."""
+
+        @classmethod
+        def define(cls, spec) -> None:  # type: ignore[override]
+            super().define(spec)
+            spec.input('x', valid_type=Int)
+            spec.output_namespace('nested', valid_type=Int, dynamic=False)
+            spec.outline(cls.step)
+
+        def step(self):
+            """Placeholder step; registration rejects the spec before running."""
+
+    with pytest.raises(GraphTypeCheckError, match='static leaf outputs'):
+        task(NamespacedOutputsWorkChain)
+
+
+def test_graph_body_rejects_inline_class_definition() -> None:
+    """Inline process class definitions are rejected with module-scope guidance."""
+    from tests.engine.processes.graphs.programs import inline_definitions
+
+    with pytest.raises(GraphLanguageError, match='define process classes at module scope'):
+        inline_definitions.inline_class.build()
 
 
 def test_task_registration_rejects_local_function() -> None:

@@ -30,6 +30,9 @@ from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.orm import CalcFunctionNode, CalcJobNode, Data, WorkChainNode, to_aiida_type
 
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.graphs.ir import ProcessTask
+
 __all__ = (
     'CalcJobTaskHandle',
     'FunctionTaskHandle',
@@ -289,7 +292,7 @@ class WorkChainTaskHandle:
         return self._process_class.spec()
 
 
-def _needs_metadata(task: t.Any) -> bool:
+def _needs_metadata(task: t.Any) -> t.TypeGuard[ProcessTask]:
     """Return whether a placement dispatches a `CalcJob` directly."""
     from aiida.engine.processes.graphs.ir import ProcessTask
 
@@ -298,11 +301,10 @@ def _needs_metadata(task: t.Any) -> bool:
     return issubclass(task.spec.process_class, CalcJob)
 
 
-def _launch_inputs(task: t.Any, provided: Mapping[str, t.Any], inputs: dict[str, t.Any]) -> dict[str, t.Any]:
+def _merge_task_metadata(
+    task: ProcessTask, provided: Mapping[str, t.Any], inputs: dict[str, t.Any]
+) -> dict[str, t.Any]:
     """Merge the stashed per-placement `CalcJob` metadata, failing loudly when absent."""
-    from aiida.engine.processes.graphs.ir import ProcessTask
-
-    assert isinstance(task, ProcessTask)
     placement = task.name
     try:
         metadata = provided[placement]
@@ -315,7 +317,12 @@ def _launch_inputs(task: t.Any, provided: Mapping[str, t.Any], inputs: dict[str,
     if not isinstance(metadata, Mapping):
         msg = f'task `{placement}` metadata must be a mapping of metadata inputs, not `{type(metadata)}`.'
         raise GraphValidationError(msg)
-    return {**inputs, 'metadata': {**dict(metadata), **inputs.get('metadata', {})}}
+    if 'metadata' in inputs:
+        msg = f'task `{placement}` already carries launch metadata; refusing to overwrite it with the stash.'
+        raise GraphValidationError(msg)
+    # The stash wins: graph-wired inputs never carry `metadata` (it is excluded from the
+    # graph contract and popped at launch), so a stray entry here is defensive only.
+    return {**inputs, 'metadata': dict(metadata)}
 
 
 def _check_task_contract(
@@ -360,7 +367,7 @@ def build_task(
         return WorkChainTaskHandle(function)
     assert not inspect.isclass(function)
     decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess)(function)
-    handle = FunctionTaskHandle(t.cast(ProcessFunctionType[P, R, CalcFunctionNode], decorated))
+    handle = FunctionTaskHandle(decorated)
     spec = handle.process_class.spec()
     reject_dynamic_inputs(spec.inputs)
     if any(isinstance(port, PortNamespace) for port in spec.outputs.values()):

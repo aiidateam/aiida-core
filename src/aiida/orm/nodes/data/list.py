@@ -8,12 +8,13 @@
 ###########################################################################
 """`Data` sub class to represent a list."""
 
+import copy
 import typing as t
 from collections.abc import MutableSequence
 
 import pydantic as pdt
 
-from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.base import from_aiida_type, to_aiida_type
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
 
@@ -167,3 +168,8 @@ class List(Data, MutableSequence):
 @to_aiida_type.register(list)
 def _(value):
     return List(value)
+
+
+@from_aiida_type.register(List)
+def _list_from_aiida_type(node: List) -> list[object]:
+    return copy.deepcopy(node.get_list())

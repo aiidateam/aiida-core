@@ -36,6 +36,12 @@ def add(term_a, term_b):
     return term_a + term_b
 
 
+@calcfunction
+def increment(count: int) -> int:
+    """Add one, defined at module scope so the process label is the function name."""
+    return count + 1
+
+
 class FileCalcJob(CalcJob):
     """Calculation that takes single file as input."""
 
@@ -340,6 +346,16 @@ class TestLaunchersDryRun:
         assert folder.is_dir()
         assert (folder / node.dry_run_info['script_filename']).is_file()
 
+    def test_submit_function_dry_run_matches_run(self):
+        """`submit` forwards dry-run functions to `run`, which rejects launch metadata uniformly."""
+
+        @calcfunction
+        def add(x: orm.Int, y: orm.Int) -> orm.Int:
+            return x + y
+
+        with pytest.raises(ValueError, match=r"validating port 'inputs.metadata'"):
+            launch.submit(add, x=orm.Int(1), y=orm.Int(1), metadata={'dry_run': True})
+
     def test_launchers_dry_run_no_provenance(self):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
         inputs = {
@@ -407,3 +423,43 @@ class TestLaunchersDryRun:
         assert 'folder' in node.dry_run_info
         for filename in ['path', 'file_one', 'file_two']:
             assert filename in os.listdir(node.dry_run_info['folder'])
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_run_process_function() -> None:
+    """Local `run` executes a process function and returns its outputs."""
+
+    @calcfunction
+    def add(count: int) -> int:
+        return count + 1
+
+    outputs = launch.run(add, count=2)
+    assert outputs.value == 3
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_function_launch_inputs_flatten_models() -> None:
+    """Structured inputs flatten to namespace mappings at the launch boundary."""
+    from aiida.engine import PortModel
+
+    class Settings(PortModel):
+        count: int = 2
+
+    @calcfunction
+    def configure(settings: Settings) -> int:
+        return 0
+
+    assert configure.get_launch_inputs(settings=Settings(count=9)) == {'settings': {'count': 9}}
+
+
+@pytest.mark.presto
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_submit_process_function(manager) -> None:
+    """Submission accepts and executes a process function without a broker."""
+    with manager.create_runner(communicator=None) as runner:
+        node = runner.submit(increment, count=2)
+        runner.run_until_complete(runner.get_process_future(node.pk))
+    assert node.is_finished_ok
+    assert node.process_label == 'increment'
+    assert node.inputs.count.value == 2
+    assert node.outputs.result.value == 3

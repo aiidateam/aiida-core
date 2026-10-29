@@ -10,17 +10,26 @@
 
 import textwrap
 from collections.abc import Mapping, MutableMapping
+from dataclasses import field
 
 import pytest
 from IPython.lib.pretty import pretty
 
 from aiida import orm
 from aiida.common import LinkType
-from aiida.engine import Process, WorkChain, run_get_node
+from aiida.engine import PortModel, Process, WorkChain, run_get_node
 from aiida.engine.processes.builder import ProcessBuilderNamespace
+from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.plugins import CalculationFactory
 
 DEFAULT_INT = 256
+
+
+class BuilderSettings(PortModel):
+    """A namespace with a factory default, for builder model acceptance."""
+
+    count: int = 2
+    tags: list[str] = field(default_factory=list)
 
 
 class ExampleWorkChain(WorkChain):
@@ -434,3 +443,50 @@ def test_pretty_repr(example_inputs):
     name_spaced: underscored
     """
     assert pretty(builder) == textwrap.dedent(pretty_repr.lstrip('\n'))
+
+
+class NodeWorkChain(WorkChain):
+    """Work chain with a plain runtime input for builder node preservation."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('count', valid_type=int)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_builder_preserves_original_nodes() -> None:
+    """Builder assignment keeps supplied nodes instead of converting them."""
+    original: orm.Int = orm.Int(2)
+    builder = NodeWorkChain.get_builder()
+    builder.count = original
+    assert builder._inputs()['count'] is original
+
+
+def test_get_launch_inputs_prefers_builder_values() -> None:
+    """Builder inputs take precedence over caller inputs at launch."""
+    builder = NodeWorkChain.get_builder()
+    builder.count = 2
+    assert builder.get_launch_inputs() == {'count': 2}
+    assert builder.get_launch_inputs(count=5) == {'count': 2}
+
+
+def test_builder_accepts_model_namespace() -> None:
+    """Builder namespaces accept model instances like namespace mappings."""
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', BuilderSettings)
+    builder = ProcessBuilderNamespace(spec.inputs)
+    builder.config = BuilderSettings(count=9)
+    assert dict(builder.config) == {'count': 9, 'tags': []}
+
+
+def test_builder_rejects_non_engine_namespace_port() -> None:
+    """A generic namespace port fails fast naming the parameter."""
+    from aiida.engine.processes.generic.ports import PortNamespace as GenericPortNamespace
+    from aiida.engine.processes.process_spec import ProcessSpec
+
+    spec = ProcessSpec()
+    spec.inputs['group'] = GenericPortNamespace('group')
+    builder = ProcessBuilderNamespace(spec.inputs)
+    with pytest.raises(TypeError, match='needs an engine port'):
+        builder.group = {}

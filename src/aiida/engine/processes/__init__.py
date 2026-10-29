@@ -17,10 +17,13 @@ from aiida.engine.processes.calcjobs import *
 from aiida.engine.processes.exit_code import *
 from aiida.engine.processes.functions import *
 from aiida.engine.processes.futures import *
+from aiida.engine.processes.graphs import *
+from aiida.engine.processes.port_model import PortField, PortModel
 from aiida.engine.processes.ports import *
 from aiida.engine.processes.process import *
 from aiida.engine.processes.process_spec import *
 from aiida.engine.processes.workchains import *
+from aiida.engine.utils import Launchable
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -32,14 +35,25 @@ __all__ = (
     'CalcJobImporter',
     'CalcJobOutputPort',
     'CalcJobProcessSpec',
+    'CalcJobTaskHandle',
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',
+    'FunctionProcessBase',
+    'FunctionTaskHandle',
+    'GraphHandle',
+    'GraphLanguageError',
+    'GraphProcess',
+    'GraphProcessSpec',
     'InputPort',
     'JobManager',
     'JobsList',
+    'Launchable',
     'OutputPort',
+    'PortField',
+    'PortModel',
     'PortNamespace',
+    'PreparedInputs',
     'Process',
     'ProcessBuilder',
     'ProcessBuilderNamespace',
@@ -47,17 +61,21 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'TaskProcess',
     'ToContext',
     'WithNonDb',
     'WithSerialize',
     'WorkChain',
+    'WorkChainTaskHandle',
     'append_',
     'assign_',
     'calcfunction',
     'construct_awaitable',
+    'graph',
     'if_',
     'process_handler',
     'return_',
+    'task',
     'while_',
     'workfunction',
 )

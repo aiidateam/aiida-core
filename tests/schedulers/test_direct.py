@@ -124,3 +124,30 @@ def test_kill_job(scheduler, tmpdir):
     while bash_process.is_running() or sleep_process.is_running():
         time.sleep(0.1)
     forked_process.join()
+
+
+@pytest.mark.parametrize(
+    'sched_output_path,sched_error_path,sched_join_files,expected_lines,unexpected_lines',
+    (
+        # join files: stdout and stderr directed to same file via exec 2>&1
+        ('out.log', None, True, ['exec > out.log', 'exec 2>&1'], []),
+        ('out.log', 'err.log', True, ['exec > out.log', 'exec 2>&1'], ['exec 2> err.log']),
+        # separate files: stderr redirected to sched_error_path
+        ('out.log', 'err.log', False, ['exec > out.log', 'exec 2> err.log'], ['exec 2>&1']),
+        # no error path and no join: stdout redirected, stderr not merged into stdout
+        ('out.log', None, False, ['exec > out.log'], ['exec 2>&1']),
+    ),
+)
+def test_submit_script_output_redirection(
+    scheduler, template, sched_output_path, sched_error_path, sched_join_files, expected_lines, unexpected_lines
+):
+    """Test output and error redirection in submit script generation."""
+    template.sched_output_path = sched_output_path
+    template.sched_error_path = sched_error_path
+    template.sched_join_files = sched_join_files
+
+    script = scheduler.get_submit_script(template)
+    for line in expected_lines:
+        assert line in script
+    for line in unexpected_lines:
+        assert line not in script

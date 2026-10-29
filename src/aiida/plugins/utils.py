@@ -29,7 +29,7 @@ KEY_VERSION_PLUGIN: str = 'plugin'  # The version of the plugin top level module
 class PluginVersionProvider:
     """Utility class that determines version information about a given plugin resource."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: dict[type | FunctionType, dict[t.Any, dict[t.Any, t.Any]]] = {}
         self._logger: Logger = AIIDA_LOGGER.getChild('plugin_version_provider')
 

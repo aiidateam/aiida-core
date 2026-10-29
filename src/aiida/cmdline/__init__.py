@@ -14,11 +14,14 @@
 
 from aiida.cmdline.groups import *
 from aiida.cmdline.params import *
+from aiida.cmdline.spec import *
 from aiida.cmdline.utils import *
 
 __all__ = (
     'AbsolutePathParamType',
     'CalculationParamType',
+    'CliCreateSpec',
+    'CliParameter',
     'CodeParamType',
     'ComputerParamType',
     'ConfigOptionParamType',
@@ -40,6 +43,7 @@ __all__ = (
     'PluginParamType',
     'ProcessParamType',
     'ProfileParamType',
+    'PydanticCliCreateSpec',
     'ShebangParamType',
     'UserParamType',
     'VerdiCommandGroup',

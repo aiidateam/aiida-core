@@ -150,6 +150,6 @@ class TestComputerConfigure:
 
         assert str(comp.pk) in str(exc)
         assert comp.label in str(exc)
-        assert self.user.get_short_name() in str(exc)
+        assert self.user.short_name in str(exc)
         assert str(self.user.pk) in str(exc)
         assert 'verdi computer configure' in str(exc)

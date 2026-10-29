@@ -14,7 +14,7 @@ import typing as t
 from aiida.common.typing import FilePath
 
 
-def md5_from_filelike(filelike: t.BinaryIO, block_size_factor: int = 128) -> str:
+def md5_from_filelike(filelike: t.IO, block_size_factor: int = 128) -> str:
     """Create the hexdigested md5 checksum of the contents from a filelike object.
 
     :param filelike: the filelike object for whose contents to generate the md5 checksum

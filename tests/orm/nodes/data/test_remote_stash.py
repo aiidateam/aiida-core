@@ -32,7 +32,11 @@ def test_constructor_folder(store):
     target_basepath = '/absolute/path'
     source_list = ['relative/folder', 'relative/file']
 
-    data = RemoteStashFolderData(stash_mode, target_basepath, source_list)
+    data = RemoteStashFolderData(
+        stash_mode=stash_mode,
+        target_basepath=target_basepath,
+        source_list=source_list,
+    )
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath
@@ -81,7 +85,12 @@ def test_constructor_compressed(store, stash_mode, dereference):
     target_basepath = '/absolute/path/foo.tar.gz'
     source_list = ['relative/folder', 'relative/file']
 
-    data = RemoteStashCompressedData(stash_mode, target_basepath, source_list, dereference)
+    data = RemoteStashCompressedData(
+        stash_mode=stash_mode,
+        target_basepath=target_basepath,
+        source_list=source_list,
+        dereference=dereference,
+    )
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath

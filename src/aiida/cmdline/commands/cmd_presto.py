@@ -288,7 +288,8 @@ def verdi_presto(
         transport_type='core.local',
         scheduler_type='core.direct',
         workdir=str(filepath_scratch),
-    ).store()
+    )
+    computer.store()
     computer.configure(safe_interval=0)
     computer.set_minimum_job_poll_interval(1)
     computer.set_default_mpiprocs_per_machine(1)

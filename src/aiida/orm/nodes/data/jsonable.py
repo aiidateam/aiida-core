@@ -6,10 +6,12 @@ import importlib
 import json
 import typing as t
 
-from pydantic import ConfigDict, WithJsonSchema
+import pydantic as pdt
 
+from aiida.common import exceptions
+from aiida.common.lang import type_check
+from aiida.orm.decorators import attribute
 from aiida.orm.nodes.data.data import Data
-from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
 __all__ = ('JsonableData',)
 
@@ -24,116 +26,86 @@ class JsonableData(Data):
 
     Any class that implements the ``as_dict`` method, returning a dictionary that is a JSON serializable representation
     of the object, can be wrapped and stored by this data plugin.
-
-    As an example, take the ``Molecule`` class of the ``pymatgen`` library, which respects the spec described above. To
-    store an instance as a ``JsonableData`` simply pass an instance as an argument to the constructor as follows::
-
-        from pymatgen.core import Molecule
-        molecule = Molecule(['H'], [0, 0, 0])
-        node = JsonableData(molecule)
-        node.store()
-
-    Since ``Molecule.as_dict`` returns a dictionary that is JSON-serializable, the data plugin will call it and store
-    the dictionary as the attributes of the ``JsonableData`` node in the database.
-
-    .. note:: A JSON-serializable dictionary means a dictionary that when passed to ``json.dumps`` does not except but
-        produces a valid JSON string representation of the dictionary.
-
-    If the wrapped class implements a class-method ``from_dict``, the wrapped instance can easily be recovered from a
-    previously stored node that was optionally loaded from the database. The ``from_dict`` method should simply accept
-    a single argument which is the dictionary that is returned by the ``as_dict`` method. If this criteria is satisfied,
-    an instance wrapped and stored in a ``JsonableData`` node can be recovered through the ``obj`` property::
-
-        loaded = load_node(node.pk)
-        molecule = loaded.obj
-
-    Of course, this requires that the class of the originally wrapped instance can be imported in the current
-    environment, or an ``ImportError`` will be raised.
     """
 
-    class AttributesModel(OrmFieldsAsModelDump, Data.AttributesModel):
-        model_config = ConfigDict(
-            arbitrary_types_allowed=True,
-            extra='allow',
-        )
+    _attributes_model_config = pdt.ConfigDict(
+        arbitrary_types_allowed=True,
+        extra='allow',
+    )
 
-        the_module: str = OrmMetadataField(
-            title='Module name',
-            alias='@module',
-            description='The module name of the wrapped object',
-            orm_to_model=lambda node: t.cast(JsonableData, node).the_module,
-        )
-        the_class: str = OrmMetadataField(
-            title='Class name',
-            alias='@class',
-            description='The class name of the wrapped object',
-            orm_to_model=lambda node: t.cast(JsonableData, node).the_class,
-        )
+    _obj: JsonSerializableProtocol | None = None
 
-    class ConstructorArgsModel(OrmModel):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(
+        self,
+        obj: JsonSerializableProtocol | None = None,
+        data: dict[str, t.Any] | None = None,
+        the_class: str | None = None,
+        the_module: str | None = None,
+        **kwargs: t.Any,
+    ) -> None:
+        super().__init__(**kwargs)
 
-        obj: t.Annotated[
-            JsonSerializableProtocol,
-            WithJsonSchema(
+        if obj is not None:
+            if not hasattr(obj, 'as_dict') or not callable(getattr(obj, 'as_dict')):
+                raise TypeError('the `obj` argument does not have the required `as_dict` method.')
+
+            dictionary = obj.as_dict()
+
+            if 'the_class' not in dictionary:
+                dictionary['the_class'] = obj.__class__.__name__
+
+            if 'the_module' not in dictionary:
+                dictionary['the_module'] = obj.__class__.__module__
+
+            try:
+                serialized = json.loads(json.dumps(dictionary), parse_constant=lambda value: value)
+            except TypeError as exc:
+                msg = f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.'
+                raise TypeError(msg) from exc
+
+            self.base.attributes.set_many(serialized)
+            self._obj = obj
+
+        elif data is not None and the_class is not None and the_module is not None:
+            self.base.attributes.set_many(
                 {
-                    'type': 'object',
-                    'title': 'JSON-serializable object',
-                    'description': 'The JSON-serializable object',
+                    'data': data,
+                    'the_class': the_class,
+                    'the_module': the_module,
                 }
-            ),
-            OrmMetadataField(
-                description='The JSON-serializable object',
-                write_only=True,
-            ),
-        ]
+            )
 
-    def __init__(self, obj: JsonSerializableProtocol, *args, **kwargs):
-        """Construct the node for the to be wrapped object."""
-        if obj is None:
-            raise TypeError('the `obj` argument cannot be `None`.')
+    def __str__(self) -> str:
+        return f'{super().__str__()} data: {self.obj.as_dict()}'
 
-        if not hasattr(obj, 'as_dict') or not callable(getattr(obj, 'as_dict')):
-            raise TypeError('the `obj` argument does not have the required `as_dict` method.')
+    @attribute
+    def data(self) -> dict[str, t.Any]:
+        return self.base.attributes.get('data')
 
-        super().__init__(*args, **kwargs)
+    @data.setter
+    def data(self, value: dict[str, t.Any]) -> None:
+        type_check(value, dict)
+        self.base.attributes.set('data', value)
 
-        self._obj = obj
-        dictionary = obj.as_dict()
-
-        if '@class' not in dictionary:
-            dictionary['@class'] = obj.__class__.__name__
-
-        if '@module' not in dictionary:
-            dictionary['@module'] = obj.__class__.__module__
-
-        # Even though the dictionary returned by ``as_dict`` should be JSON-serializable and therefore this should be
-        # sufficient to be able to generate a JSON representation and thus store it in the database, there is a
-        # difference in the JSON serializers used by Python's ``json`` module and those of the PostgreSQL database that
-        # is used for the database backend. Python's ``json`` module automatically serializes the ``inf`` and ``nan``
-        # float constants to the Javascript equivalent strings, however, PostgreSQL does not. If we were to pass the
-        # dictionary from ``as_dict`` straight to the attributes and it were to contain any of these floats, the storing
-        # of the node would fail, even though technically it is JSON-serializable using the default Python module. To
-        # work around this asymmetry, we perform a serialization round-trip with the ``JsonEncoder`` and ``JsonDecoder``
-        # where in the deserialization, the encoded float constants are not deserialized, but instead the string
-        # placeholders are kept. This now ensures that the full dictionary will be serializable by PostgreSQL.
-        try:
-            serialized = json.loads(json.dumps(dictionary), parse_constant=lambda x: x)
-        except TypeError as exc:
-            msg = f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.'
-            raise TypeError(msg) from exc
-
-        self.base.attributes.set_many(serialized)
-
-    @property
+    @attribute
     def the_module(self) -> str:
-        """Return the module name of the wrapped object."""
-        return self.base.attributes.get('@module', '')
+        """The module name of the wrapped object."""
+        return self.base.attributes.get('the_module')
 
-    @property
+    @the_module.setter
+    def the_module(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set('the_module', value)
+
+    @attribute
     def the_class(self) -> str:
-        """Return the class name of the wrapped object."""
-        return self.base.attributes.get('@class', '')
+        """The class name of the wrapped object."""
+        return self.base.attributes.get('the_class')
+
+    @the_class.setter
+    def the_class(self, value: str) -> None:
+        type_check(value, str)
+        self.base.attributes.set('the_class', value)
 
     @property
     def obj(self) -> JsonSerializableProtocol:
@@ -151,18 +123,12 @@ class JsonableData(Data):
         return self._get_object()
 
     @classmethod
-    def _deserialize_float_constants(cls, data: t.Any):
-        """Deserialize the contents of a dictionary ``data`` deserializing infinity and NaN string constants.
-
-        The ``data`` dictionary is recursively checked for the ``Infinity``, ``-Infinity`` and ``NaN`` strings, which
-        are the Javascript string equivalents to the Python ``float('inf')``, ``-float('inf')`` and ``float('nan')``
-        float constants. If one of the strings is encountered, the Python float constant is returned and otherwise the
-        original value is returned.
-        """
+    def _deserialize_float_constants(cls, data: t.Any) -> t.Any:
+        """Deserialize the contents of a dictionary ``data`` deserializing infinity and NaN string constants."""
         if isinstance(data, dict):
-            return {k: cls._deserialize_float_constants(v) for k, v in data.items()}
+            return {key: cls._deserialize_float_constants(value) for key, value in data.items()}
         if isinstance(data, list):
-            return [cls._deserialize_float_constants(v) for v in data]
+            return [cls._deserialize_float_constants(value) for value in data]
         if data == 'Infinity':
             return float('inf')
         if data == '-Infinity':
@@ -172,48 +138,56 @@ class JsonableData(Data):
         return data
 
     def _get_object(self) -> JsonSerializableProtocol:
-        """Return the cached wrapped object.
+        """Return the cached wrapped object."""
+        if self._obj is not None:
+            return self._obj
 
-        .. note:: If the object is not yet present in memory, for example if the node was loaded from the database,
-            the object will first be reconstructed from the state stored in the node attributes.
+        attributes = self.base.attributes.all
+        class_name = attributes.pop('the_class')
+        module_name = attributes.pop('the_module')
 
-        """
         try:
-            return self._obj
-        except AttributeError:
-            attributes = self.base.attributes.all
-            class_name = attributes.pop('@class')
-            module_name = attributes.pop('@module')
+            module = importlib.import_module(module_name)
+        except ImportError as exc:
+            msg = f'the objects module `{module_name}` can not be imported.'
+            raise ImportError(msg) from exc
 
-            try:
-                module = importlib.import_module(module_name)
-            except ImportError as exc:
-                msg = f'the objects module `{module_name}` can not be imported.'
-                raise ImportError(msg) from exc
+        try:
+            cls = getattr(module, class_name)
+        except AttributeError as exc:
+            msg = f'the objects module `{module_name}` does not contain the class `{class_name}`.'
+            raise ImportError(msg) from exc
 
-            try:
-                cls = getattr(module, class_name)
-            except AttributeError as exc:
-                msg = f'the objects module `{module_name}` does not contain the class `{class_name}`.'
-                raise ImportError(msg) from exc
+        deserialized = self._deserialize_float_constants(attributes)
+        self._obj = cls.from_dict(deserialized)
 
-            deserialized = self._deserialize_float_constants(attributes)
-            self._obj = cls.from_dict(deserialized)
+        return self._obj
 
-            return self._obj
+    def _validate(self) -> None:
+        super()._validate()
 
-    def to_model_field_values(
-        self,
-        *,
-        context: dict[str, t.Any] | None = None,
-        minimal: bool = False,
-        schema: type[OrmModel] | None = None,
-    ) -> dict[str, t.Any]:
-        fields = super().to_model_field_values(
-            context=context,
-            minimal=minimal,
-            schema=schema,
-        )
-        if schema and issubclass(schema, self.WritableFields):
-            fields['attributes'] |= self.obj.as_dict()
-        return fields
+        try:
+            module_name = self.the_module
+        except AttributeError as exc:
+            raise exceptions.ValidationError("attribute 'the_module' not set.") from exc
+
+        try:
+            class_name = self.the_class
+        except AttributeError as exc:
+            raise exceptions.ValidationError("attribute 'the_class' not set.") from exc
+
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError as exc:
+            msg = f"module '{module_name}' could not be imported."
+            raise exceptions.ValidationError(msg) from exc
+
+        try:
+            cls = getattr(module, class_name)
+        except AttributeError as exc:
+            msg = f"module '{module_name}' does not contain class '{class_name}'."
+            raise exceptions.ValidationError(msg) from exc
+
+        if not callable(getattr(cls, 'from_dict', None)):
+            msg = f"class '{module_name}.{class_name}' does not define a callable 'from_dict' method."
+            raise exceptions.ValidationError(msg)

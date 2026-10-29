@@ -27,6 +27,7 @@ from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
+from aiida.common.warnings import AiidaDeprecationWarning
 
 if t.TYPE_CHECKING:
     from aiida.orm import Code
@@ -94,7 +95,8 @@ def set_code_builder(ctx: click.Context, _param: t.Any, value: t.Any) -> t.Any:
     from aiida.orm.utils.builders.code import CodeBuilder
 
     # TODO(danielhollas): CodeBuilder is deprecated, rewrite this somehow?
-    with warnings.catch_warnings(record=True):
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', AiidaDeprecationWarning)
         ctx.code_builder = CodeBuilder.from_code(value)  # type: ignore[attr-defined]
     return value
 
@@ -135,7 +137,8 @@ def setup_code(ctx, non_interactive, **kwargs):
         kwargs['input_plugin'] = kwargs['input_plugin'].name
 
     # TODO(danielhollas): CodeBuilder is deprecated
-    with warnings.catch_warnings(record=True):
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', AiidaDeprecationWarning)
         code_builder = CodeBuilder(**kwargs)
 
     try:
@@ -152,7 +155,7 @@ def setup_code(ctx, non_interactive, **kwargs):
 
 
 @verdi_code.command('test')
-@arguments.CODE(callback=set_code_builder)
+@arguments.CODE()
 @with_dbenv()
 def code_test(code):
     """Run tests for the given code to check whether it is usable.

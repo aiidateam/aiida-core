@@ -119,3 +119,26 @@ def test_ambiguous_label_uuid(setup_computers, parameter_type):
     identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_03.uuid
+
+
+def test_label_ambiguity_breaker_as_label(parameter_type):
+    """Verify that a computer with label equal to the ambiguity breaker can be converted (issue #6415)."""
+    computer = orm.Computer(
+        label=OrmEntityLoader.label_ambiguity_breaker,
+        hostname='localhost',
+        transport_type='core.local',
+        scheduler_type='core.direct',
+        workdir='/tmp/aiida',
+    ).store()
+
+    try:
+        # Both '!' and '!!' should resolve to the computer with label '!'
+        assert parameter_type.convert(OrmEntityLoader.label_ambiguity_breaker, None, None).uuid == computer.uuid
+        assert (
+            parameter_type.convert(
+                f'{OrmEntityLoader.label_ambiguity_breaker}{OrmEntityLoader.label_ambiguity_breaker}', None, None
+            ).uuid
+            == computer.uuid
+        )
+    finally:
+        orm.Computer.collection.delete(computer.pk)

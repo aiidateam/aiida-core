@@ -15,7 +15,6 @@ python:
     path: .
     extras:
     - docs
-    - tutorials
     - tests
     - rest
     - atomic_tools

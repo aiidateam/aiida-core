@@ -10,7 +10,6 @@ AiiDA (www.aiida.net) is a workflow manager for computational science with a str
 |Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-core.svg?style=flat)](https://pypistats.org/packages/aiida-core) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/pulse)
 |Community|  [![Discourse](https://img.shields.io/discourse/topics?server=https%3A%2F%2Faiida.discourse.group%2F&logo=discourse)](https://aiida.discourse.group/) [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) [![Twitter](https://img.shields.io/twitter/follow/aiidateam.svg?style=social&label=Follow)](https://twitter.com/aiidateam)
 
-
 ## Features
 
  -   **Workflows:** Write complex, auto-documenting workflows in
@@ -37,9 +36,11 @@ AiiDA (www.aiida.net) is a workflow manager for computational science with a str
 ## Installation
 
 Please see AiiDA's [documentation](https://aiida-core.readthedocs.io/en/latest/).
-**Warning:** Do not use AiiDA directly from the GitHub `main` branch. It changes rapidly and may put your AiiDA storage in an unrecoverable state.
 
 ## How to contribute [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![GitHub issues by-label](https://img.shields.io/github/issues/aiidateam/aiida-core/good%20first%20issue)](https://github.com/aiidateam/aiida-core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+
+> [!WARNING]
+> `main` targets the next major version (v3) and is under active development: expect breaking changes without deprecation. Do not use it for production: it may leave your AiiDA storage in an unrecoverable state. Use the [released versions from PyPI](https://pypi.org/project/aiida-core/#history) instead; stable documentation follows the [released versions](https://aiida.readthedocs.io/projects/aiida-core/en/stable/).
 
 The AiiDA team appreciates help from a wide range of different backgrounds.
 Small improvements of the documentation or minor bug fixes are always welcome.

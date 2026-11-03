@@ -72,6 +72,11 @@ The `core.shell` calculation job and parser entry points keep the names they had
 Because the entry point names are the same, `aiida-shell` must be uninstalled before upgrading: with both installed, every one of the shared entry points resolves to two different values and raises `MultipleEntryPointError`.
 Replace `from aiida_shell import launch_shell_job` with `from aiida.tools import launch_shell_job`; see {ref}`how-to:run-shell-commands`.
 
+#### `verdi notebook install`
+
+A Jupyter kernel is started by the Jupyter server, so it inherits neither the virtual environment active in the shell nor `AIIDA_PATH`. A profile that works in the terminal is then missing in a notebook.
+`verdi notebook install` writes both into a kernel specification and reports where it put it. Reinstalling keeps any other variables in the specification and asks before overwriting a kernel registered under the same name. `verdi status` shows the kernel registered for the current configuration.
+
 ### Behavior changes
 
 #### Checkpoint class files
@@ -83,6 +88,9 @@ Backups must include this directory; storage plugins provide its location throug
 `verdi storage maintain --full` also deletes files whose nodes were deleted.
 
 ### Fixes
+
+A profile that cannot be found now reports the configuration directory it was looked for in, and the closest names there.
+The directory is the answer whenever `AIIDA_PATH` differs between the shell and whatever loaded the profile.
 
 ### Deprecations
 

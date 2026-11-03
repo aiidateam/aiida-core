@@ -244,6 +244,7 @@ docs = [
   'myst-nb~=1.0.0'
 ]
 notebook = [
+  'ipykernel~=6.9',
   'jupyter-client~=8.0',
   'jupyter~=1.0',
   'notebook~=6.1,>=6.1.5'

@@ -201,6 +201,17 @@ This allows one to pass any normal value that one would also be able to pass to 
 Automatic input serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+A port's ``valid_type`` describes the value consumed by the process.
+A port declared as ``str`` receives a Python string, including when its input is an ``orm.Str`` node.
+Database input links retain the original node or serialize the Python value separately, after validation.
+Ports declared with ORM types, and mixed unions already accepting the input node, keep the node at runtime as well.
+Metadata and ``non_db`` ports use the same runtime adaptation rules without creating provenance input links.
+
+For compatibility, ``calcfunction`` and ``workfunction`` still translate Python primitive annotations into ORM port types when declaring their specification.
+Their arguments remain nodes; this change does not require refactoring existing process functions.
+Graph tasks instead declare their Python runtime types directly.
+Outside legacy process functions, ``PortModel`` input namespaces also retain Python field types; use ORM field annotations when nodes are required.
+
 Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a process.
 Doing this manually can be cumbersome, so you can define a function when defining the process specification, which does the conversion automatically.
 This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is not ``None`` *and* not already an AiiDA type.

@@ -1,0 +1,454 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Tests for lowering restricted graph source to GraphSpec."""
+
+import pytest
+
+from aiida.engine import (
+    ExecutionGraphHandle,
+    GraphHandle,
+    PortModel,
+    graph_execution,
+    graph_source,
+    task_execution,
+    task_source,
+)
+from aiida.engine.processes.graphs import build_source as source_authoring
+from aiida.engine.processes.graphs.build_execution import graph as build_graph
+from aiida.engine.processes.graphs.build_execution import task as build_task
+from aiida.engine.processes.graphs.build_source import (
+    SourceGraphHandle,
+    UnsupportedSyntax,
+    build_from_source,
+    graph,
+    task,
+)
+from aiida.engine.processes.graphs.display import format_graph
+from aiida.engine.processes.graphs.process import GraphProcess
+from aiida.engine.processes.graphs.spec import (
+    BranchControl,
+    GraphSpec,
+    LoopControl,
+    MapGraphControl,
+    ProcessTask,
+    SubgraphTask,
+)
+
+
+@task
+def sum_two(x: int, y: int) -> int:
+    return x + y
+
+
+@task
+def make_list(x: int) -> list[int]:
+    return [x]
+
+
+def unresolved_annotation(x: 'missing_orm.Int') -> int:  # noqa: F821 - missing import is intentional
+    return x
+
+
+@graph
+def chain(x: int, y: int) -> int:
+    first = sum_two(x=x, y=y)
+    return sum_two(x=first, y=y)
+
+
+@graph
+def outer(x: int, y: int) -> int:
+    inner = chain(x=x, y=y)
+    return sum_two(x=inner, y=x)
+
+
+@graph
+def recursive(x: int) -> int:
+    return recursive(x=x)
+
+
+def not_registered(x: int) -> int:
+    return x
+
+
+missing = 1  # A Python global is deliberately not a graph input.
+
+
+@graph
+def unknown(x: int) -> int:
+    return not_registered(x=x)
+
+
+@graph
+def arbitrary_code(x: int) -> int:
+    print('this body must not run')
+    return sum_two(x=x, y=1)
+
+
+@graph
+def unbound(x: int) -> int:
+    return sum_two(x=x, y=missing)
+
+
+@graph
+def bad_assignment(x: int) -> int:
+    a = 0
+    return sum_two(x=x, y=a)
+
+
+@task
+def positive(x: int) -> bool:
+    return x > 0
+
+
+@task
+def decrement(x: int) -> int:
+    return x - 1
+
+
+@graph
+def choose(x: int, flag: bool) -> int:
+    if flag:
+        selected = sum_two(x=x, y=1)
+    else:
+        selected = sum_two(x=x, y=2)
+    return sum_two(x=selected, y=x)
+
+
+class BranchPair(PortModel):
+    left: int
+    right: int
+
+
+class SingleBranchNamespace(PortModel):
+    pair: BranchPair
+
+
+@task
+def declared_branch_namespace() -> SingleBranchNamespace:
+    raise AssertionError('Building must not execute task bodies')
+
+
+@graph
+def choose_declared_namespace(condition: bool) -> SingleBranchNamespace:
+    if condition:
+        selected = declared_branch_namespace()
+    else:
+        selected = declared_branch_namespace()
+    return SingleBranchNamespace(pair=BranchPair(left=selected.pair.left, right=selected.pair.right))
+
+
+def test_branch_build_preserves_single_nested_namespace_without_execution():
+    spec = choose_declared_namespace.build()
+    branch = spec.tasks[0]
+    for body in branch.branches:
+        assert set(body.outputs) == {'pair.left', 'pair.right'}
+        assert all(endpoint.port == name for name, endpoint in body.outputs.items())
+    assert spec.outputs['pair.left'].port == 'pair.left'
+    assert spec.outputs['pair.right'].port == 'pair.right'
+
+
+@graph
+def count(x: int, keep_going: bool) -> int:
+    while keep_going:
+        x = decrement(x=x)
+        keep_going = positive(x=x)
+    return x
+
+
+@graph
+def transform(values: list[int], y: int) -> list[int]:
+    for value in values:
+        result = sum_two(x=value, y=y)
+    return result
+
+
+@graph
+def missing_else(x: int, flag: bool) -> int:
+    if flag:
+        chosen = sum_two(x=x, y=1)
+    return chosen
+
+
+@graph
+def unchanged_condition(x: int, flag: bool) -> int:
+    while flag:
+        x = decrement(x=x)
+    return x
+
+
+@graph
+def unsupported_iteration(values: list[int]) -> int:
+    for value in values:
+        result = decrement(x=value)
+        result = decrement(x=result)
+    return result
+
+
+@graph_source
+def positional_only(x: int, /) -> int:
+    return sum_two(x=x, y=1)
+
+
+@graph_source
+def keyword_only(*, x: int) -> int:
+    return sum_two(x=x, y=1)
+
+
+@graph_source
+def variadic_args(*args) -> int:
+    return sum_two(x=1, y=1)
+
+
+@graph_source
+def variadic_kwargs(**kwargs) -> int:
+    return sum_two(x=1, y=1)
+
+
+@graph_source
+def default_parameter(x: int = 1) -> int:
+    return sum_two(x=x, y=1)
+
+
+@graph_source
+def none_default(x: int | None = None) -> int:
+    return sum_two(x=x, y=1)
+
+
+@pytest.mark.parametrize(
+    'handle, message',
+    [
+        (positional_only, 'only ordinary positional parameters are supported'),
+        (keyword_only, 'only ordinary positional parameters are supported'),
+        (variadic_args, 'only ordinary positional parameters are supported'),
+        (variadic_kwargs, 'only ordinary positional parameters are supported'),
+        (default_parameter, 'parameter defaults are not supported'),
+        (none_default, 'parameter defaults are not supported'),
+    ],
+)
+def test_source_signature_restrictions_are_explicit(handle, message):
+    with pytest.raises(UnsupportedSyntax, match=message):
+        handle.build()
+
+
+def test_control_flow_rejections():
+    for function, reason in (
+        (missing_else, 'if requires one assignment'),
+        (unchanged_condition, 'while body must update'),
+        (unsupported_iteration, 'for requires a single item'),
+    ):
+        with pytest.raises(UnsupportedSyntax, match=reason):
+            build_from_source(function)
+
+
+def test_control_flow_specs():
+    chosen = build_from_source(choose)
+    branch = chosen.tasks[0]
+    assert isinstance(branch, BranchControl)
+    assert branch.otherwise is not None
+    assert branch.body.outputs.keys() == branch.otherwise.outputs.keys() == {'result'}
+    assert chosen.dependencies[0].source == branch.name
+
+    counted = build_from_source(count)
+    loop = counted.tasks[0]
+    assert isinstance(loop, LoopControl)
+    assert loop.condition_port == 'keep_going'
+    assert set(loop.body.outputs) == {'x', 'keep_going'}
+    assert counted.outputs['x'].task == loop.name
+
+    mapped = build_from_source(transform)
+    each = mapped.tasks[0]
+    assert isinstance(each, MapGraphControl)
+    assert each.item_port == 'value'
+    assert mapped.inputs['values'] == ((each.name, 'value'),)
+    for spec in (chosen, counted, mapped):
+        assert GraphSpec.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
+def test_format_graph_shows_wiring_and_nested_control_flow():
+    chain_view = format_graph(build_from_source(chain))
+    assert 'graph chain(x, y):' in chain_view
+    assert 'sum_two_2 [process sum_two](x=sum_two.result, y=y)' in chain_view
+    assert 'return result=sum_two_2.result' in chain_view
+
+    branch_view = format_graph(build_from_source(choose))
+    assert 'branch_1 [branch on condition](condition=flag, x=x)' in branch_view
+    assert 'then:' in branch_view and 'otherwise:' in branch_view
+    assert 'y=1' in branch_view and 'y=2' in branch_view
+
+    loop_view = format_graph(build_from_source(count))
+    assert 'loop_1 [loop while keep_going]' in loop_view
+    assert 'return x=loop_1.x' in loop_view
+
+    map_view = format_graph(build_from_source(transform))
+    assert 'each_1 [map over value](value=values, y=y)' in map_view
+    assert 'return result=each_1.result' in map_view
+
+
+def source_registry_task(value: int) -> int:
+    return value
+
+
+def source_registry_graph(value: int) -> int:
+    return source_registry_task(value=value)
+
+
+@graph
+def registry_namespace_build(given: SingleBranchNamespace, condition: bool) -> int:
+    if condition:
+        result = sum_two(x=given.pair.left, y=given.pair.right)
+    else:
+        result = sum_two(x=given.pair.left, y=1)
+    return result
+
+
+def test_registry_is_owned_by_source_decorators_only(monkeypatch):
+    registry = source_authoring._SourceRegistry()
+    monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', registry)
+    graph(source_registry_graph)
+    task(source_registry_task)
+    definition = registry.get_graph(source_authoring._key(source_registry_graph))
+    assert definition.function is source_registry_graph
+    assert definition.hints == {'value': int, 'return': int}
+    assert definition.filename == __file__
+    assert 'return source_registry_task(value=value)' in definition.source
+    with pytest.raises(UnsupportedSyntax, match='is not registered'):
+        registry.get_graph(source_authoring._key(source_registry_task))
+    with pytest.raises(UnsupportedSyntax, match='Duplicate registered function'):
+        graph(source_registry_graph)
+    # Execution authoring does not depend on the source registry being available.
+    monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', object())
+    assert isinstance(build_graph(source_registry_graph), ExecutionGraphHandle)
+    assert build_task(source_registry_task).task_spec is not None
+
+
+def test_failed_registry_capture_does_not_leave_a_partial_definition():
+    registry = source_authoring._SourceRegistry()
+    for _ in range(2):
+        with pytest.raises(NameError, match='missing_orm'):
+            registry.register(unresolved_annotation, kind='graph')
+    with pytest.raises(UnsupportedSyntax, match='is not registered'):
+        registry.get_graph(source_authoring._key(unresolved_annotation))
+
+
+@pytest.mark.parametrize('handle', [registry_namespace_build, unbound])
+def test_lowering_owns_definition_after_registry_lookup(monkeypatch, handle):
+    registry = source_authoring._SOURCE_REGISTRY
+
+    class EntryOnlyRegistry:
+        def get_graph(self, key):
+            definition = registry.get_graph(key)
+            monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', object())
+            return definition
+
+    monkeypatch.setattr(source_authoring, '_SOURCE_REGISTRY', EntryOnlyRegistry())
+    if handle is unbound:
+        with pytest.raises(UnsupportedSyntax, match='unbound name') as caught:
+            handle.build()
+        assert f'{__file__}:' in str(caught.value)
+    else:
+        spec = handle.build()
+        assert GraphSpec.from_dict(spec.to_dict()) == spec
+
+
+def test_nested_graph_retrieves_each_definition_at_lowering_entry(monkeypatch):
+    registry = source_authoring._SOURCE_REGISTRY
+    get_graph = registry.get_graph
+    lookups = []
+
+    def lookup(key):
+        lookups.append(key)
+        return get_graph(key)
+
+    monkeypatch.setattr(registry, 'get_graph', lookup)
+    outer.build()
+    assert lookups == [source_authoring._key(outer._function), source_authoring._key(chain._function)]
+
+
+def test_graph_decorators_are_exported_with_explicit_names():
+    assert graph_execution is build_graph
+    assert graph_source is graph
+    assert task_execution is build_task
+    assert task_source is task
+
+
+def test_source_task_rejects_unresolved_annotations_at_registration():
+    with pytest.raises(TypeError, match=r'task `unresolved_annotation`.*missing_orm') as error:
+        task(unresolved_annotation)
+    assert isinstance(error.value.__cause__, NameError)
+
+
+def test_list_annotation_declares_one_output():
+    assert tuple(make_list.task_spec.outputs) == ('result',)
+
+
+def test_wires_tasks_without_running_graph_body():
+    spec = build_from_source(chain)
+    assert isinstance(spec, GraphSpec)
+    assert [item.name for item in spec.tasks] == ['sum_two', 'sum_two_2']
+    assert all(isinstance(item, ProcessTask) for item in spec.tasks)
+    assert [(edge.source, edge.source_port, edge.target, edge.target_port) for edge in spec.dependencies] == [
+        ('sum_two', 'result', 'sum_two_2', 'x')
+    ]
+    assert spec.inputs == {'x': (('sum_two', 'x'),), 'y': (('sum_two', 'y'), ('sum_two_2', 'y'))}
+    assert spec.outputs['result'].task == 'sum_two_2'
+    assert GraphSpec.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
+def test_nested_graph():
+    spec = build_from_source(outer)
+    assert isinstance(spec.tasks[0], SubgraphTask)
+    assert spec.tasks[0].body.identifier == 'chain'
+    assert spec.dependencies[0].source == 'chain'
+
+
+def test_source_graph_handle_matches_execution_interface():
+    assert isinstance(chain, SourceGraphHandle)
+    assert isinstance(chain, GraphHandle)
+    assert not isinstance(chain, ExecutionGraphHandle)
+    assert chain.build() == build_from_source(chain)
+    assert chain.parameters == ('x', 'y')
+    assert chain.identifier == 'chain'
+    assert chain.process_class is GraphProcess
+    with pytest.raises(TypeError, match='launched rather than called'):
+        chain(x=1, y=2)
+
+
+def test_source_graph_nests_in_execution_graph():
+    @build_graph
+    def outer_exec(x: int, y: int) -> int:
+        inner = chain(x=x, y=y)
+        return sum_two(x=inner.result, y=x)
+
+    spec = outer_exec.build()
+    assert isinstance(outer_exec, GraphHandle)
+    assert isinstance(outer_exec, ExecutionGraphHandle)
+    assert isinstance(spec.tasks[0], SubgraphTask)
+    assert spec.tasks[0].body == build_from_source(chain)
+
+
+@pytest.mark.parametrize(
+    ('function', 'message'),
+    [
+        (recursive, 'Recursive graph call'),
+        (unknown, 'unregistered call'),
+        (arbitrary_code, 'only single-name assignments'),
+        (unbound, 'unbound name'),
+        (bad_assignment, 'graph assignments must call'),
+    ],
+)
+def test_rejects_unsupported_graphs(function, message):
+    with pytest.raises(UnsupportedSyntax, match=message):
+        build_from_source(function)
+
+
+def test_error_points_to_original_source():
+    with pytest.raises(UnsupportedSyntax) as error:
+        build_from_source(bad_assignment)
+    assert f'{__file__}:' in str(error.value)
+    assert '        a = 0\n            ^' in str(error.value)

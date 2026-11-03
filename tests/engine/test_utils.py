@@ -14,10 +14,11 @@ import contextlib
 import pytest
 
 from aiida import orm
-from aiida.engine import calcfunction, workfunction
+from aiida.engine import calcfunction, graph, run_get_node, workfunction
 from aiida.engine.processes.events import get_or_create_event_loop
 from aiida.engine.utils import (
     InterruptableFuture,
+    Launchable,
     ensure_coroutine,
     exponential_backoff_retry,
     get_process_state_change_timestamp,
@@ -79,6 +80,50 @@ def test_instantiate_process_invalid(manager):
     """Test the :func:`aiida.engine.utils.instantiate_process` function for invalid ``process`` argument."""
     with pytest.raises(ValueError, match=r'invalid process <class \'bool\'>, needs to be Process or ProcessBuilder'):
         instantiate_process(manager.get_runner(), True)
+
+
+@calcfunction
+def multiply(x, y):
+    return x * y
+
+
+@graph
+def empty_graph(x):
+    """Declare a graph, which is never built here since only its type is under test."""
+
+
+@pytest.mark.parametrize(
+    'subject',
+    [
+        pytest.param(multiply, id='process_function'),
+        pytest.param(multiply.process_class.get_builder(), id='process_builder'),
+        pytest.param(empty_graph, id='graph'),
+    ],
+)
+def test_launchable_covers_the_core_launch_types(subject):
+    """Each type the engine can launch reaches it through the protocol, so none needs a check of its own."""
+    assert isinstance(subject, Launchable)
+
+
+def test_launchable_custom_type_is_launched(manager):
+    """An object the engine has never heard of is launched by implementing the protocol."""
+
+    class Doubler:
+        """A launchable that supplies one of the inputs itself."""
+
+        @property
+        def process_class(self):
+            return multiply.process_class
+
+        def get_launch_inputs(self, **inputs):
+            return {**inputs, 'y': orm.Int(2)}
+
+    assert isinstance(Doubler(), Launchable)
+
+    results, node = run_get_node(Doubler(), x=orm.Int(21))
+
+    assert node.is_finished_ok, node.exit_message
+    assert results['result'] == 42
 
 
 def test_is_process_function():

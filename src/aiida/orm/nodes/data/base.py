@@ -16,7 +16,7 @@ from functools import singledispatch
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField
 
-__all__ = ('BaseType', 'to_aiida_type')
+__all__ = ('BaseType', 'from_aiida_type', 'to_aiida_type')
 
 
 @singledispatch
@@ -24,6 +24,25 @@ def to_aiida_type(value):
     """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
     msg = f'Cannot convert value of type {type(value)} to AiiDA type.'
     raise TypeError(msg)
+
+
+@singledispatch
+def from_aiida_type(node):
+    """Return the plain Python value a node holds, and the node itself where it holds none.
+
+    The inverse of :func:`to_aiida_type`, and what hands a task's function what it asked for: a plugin that
+    registers how its type is stored registers how it is read back here, beside it.
+
+    >>> @to_aiida_type.register(Molecule)
+    >>> def _(value): return MoleculeData(value)
+    >>>
+    >>> @from_aiida_type.register(MoleculeData)
+    >>> def _(node): return node.get_object()
+
+    Anything with no registration is handed back as the node it is, which is what a port annotated with a
+    ``Data`` subclass asks for.
+    """
+    return node
 
 
 class BaseType(Data):
@@ -61,3 +80,8 @@ class BaseType(Data):
 
     def new(self, value=None):
         return self.__class__(value)
+
+
+@from_aiida_type.register(BaseType)
+def _base_type_from_aiida_type(node):
+    return node.value

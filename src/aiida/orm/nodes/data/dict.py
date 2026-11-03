@@ -17,7 +17,7 @@ import typing as t
 import pydantic as pdt
 
 from aiida.common import exceptions
-from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.base import from_aiida_type, to_aiida_type
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
@@ -192,3 +192,8 @@ class Dict(Data):
 @to_aiida_type.register(dict)
 def _(value):
     return Dict(value)
+
+
+@from_aiida_type.register(Dict)
+def _dict_from_aiida_type(node):
+    return node.get_dict()

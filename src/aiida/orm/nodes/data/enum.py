@@ -22,7 +22,7 @@ from enum import Enum
 
 from aiida.common.lang import type_check
 from aiida.common.loaders import get_object_loader
-from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm.nodes.data.base import from_aiida_type, to_aiida_type
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
@@ -148,3 +148,9 @@ class EnumData(Data):
             return self.base.attributes.all == other.base.attributes.all
 
         return False
+
+
+@from_aiida_type.register(EnumData)
+def _enum_from_aiida_type(node):
+    # The member rather than its value, since the class it belongs to is what was stored.
+    return node.get_member()

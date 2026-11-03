@@ -299,7 +299,8 @@ class Transport(abc.ABC):
                 return logging.LoggerAdapter(logger=self._logger, extra=self._logger_extra)
             return self._logger
         except AttributeError:
-            raise InternalError('No self._logger configured for {}!')
+            msg = f'No self._logger configured for {self.__class__.__name__}!'
+            raise InternalError(msg)
 
     def get_safe_open_interval(self):
         """Get an interval (in seconds) that suggests how long the user should wait

@@ -115,6 +115,7 @@ def get_node_summary(node: orm.Node) -> str:
     """
     from aiida.common.processes import ProcessState
     from aiida.orm import ProcessNode
+    from aiida.tools.query.formatting import format_process_status
 
     table_headers = ['Property', 'Value']
     table: list[list[str | t.Any]] = []
@@ -127,7 +128,7 @@ def get_node_summary(node: orm.Node) -> str:
         except (AttributeError, ValueError):
             pass
         else:
-            process_state_string = process_state.value.capitalize()
+            process_state_string = format_process_status(process_state.value, node.paused)
 
             if process_state == ProcessState.FINISHED and node.exit_message:
                 table.append(['state', f'{process_state_string} [{node.exit_status}] {node.exit_message}'])

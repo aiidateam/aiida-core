@@ -47,7 +47,7 @@ __all__ = ('QueryBuilder',)
 
 # re-usable type annotations
 EntityClsType = type[t.Union[entities.Entity, 'Process']]
-ProjectType = str | dict | Sequence[str | dict]
+ProjectType = str | dict | qb_fields.QbField | Sequence[str | dict | qb_fields.QbField]
 FilterType = dict[str, t.Any] | qb_fields.QbFieldFilters | qb_fields.QbBoolField
 OrderByType = dict | list[dict] | tuple[dict, ...]
 

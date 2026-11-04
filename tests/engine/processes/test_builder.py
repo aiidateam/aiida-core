@@ -470,3 +470,15 @@ def test_builder_accepts_model_namespace() -> None:
     builder = ProcessBuilderNamespace(spec.inputs)
     builder.config = BuilderSettings(count=9)
     assert dict(builder.config) == {'count': 9, 'tags': []}
+
+
+def test_builder_rejects_non_engine_namespace_port() -> None:
+    """A generic namespace port fails fast naming the parameter."""
+    from aiida.engine.processes.generic.ports import PortNamespace as GenericPortNamespace
+    from aiida.engine.processes.process_spec import ProcessSpec
+
+    spec = ProcessSpec()
+    spec.inputs['group'] = GenericPortNamespace('group')
+    builder = ProcessBuilderNamespace(spec.inputs)
+    with pytest.raises(TypeError, match='needs an engine port'):
+        builder.group = {}

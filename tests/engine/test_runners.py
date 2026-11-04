@@ -8,6 +8,7 @@
 ###########################################################################
 """Module to test process runners."""
 
+import asyncio
 import threading
 
 import pytest
@@ -106,3 +107,24 @@ def test_run_return_value_cached(aiida_code_installed):
     assert node_cached.base.caching.get_cache_source() == node_source.uuid
     assert sorted(results_cached.keys()) == sorted(results_source.keys())
     assert sorted(results_cached.keys()) == ['remote_folder', 'retrieved', 'sum']
+
+
+def test_schedule_accepts_process_function(runner) -> None:
+    """Scheduling a process function runs it like a process class instead of rejecting it."""
+    from aiida.engine import calcfunction
+    from aiida.orm import CalcFunctionNode
+
+    @calcfunction
+    def add(x: Int, y: Int) -> Int:
+        return x + y
+
+    node = runner.schedule(add, {'x': Int(1), 'y': Int(2)})
+    assert isinstance(node, CalcFunctionNode)
+
+    async def wait_terminated() -> None:
+        while not node.is_terminated:
+            await asyncio.sleep(0.01)
+
+    runner.loop.run_until_complete(wait_terminated())
+    assert node.is_finished_ok
+    assert node.outputs.result.value == 3

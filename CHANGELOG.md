@@ -30,6 +30,7 @@ pytest_plugins = 'aiida.tools.pytest_fixtures'
 ```
 Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
 
+`infer_valid_type_from_type_annotation` in `aiida.engine.processes.functions` is removed without replacement; it was internal machinery. Declare port types explicitly.
 `UNSPECIFIED` in `aiida.engine.processes.generic.ports` changed from an empty tuple to a dedicated sentinel object; compare by identity.
 
 #### `Code`: the deprecated data plugin has been removed

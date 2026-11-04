@@ -19,6 +19,7 @@ from aiida.engine.persistence import *
 from aiida.engine.processes import *
 from aiida.engine.runners import *
 from aiida.engine.utils import *
+from aiida.engine.utils import Launchable  # kept public; the defining module stays private.
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -39,6 +40,7 @@ __all__ = (
     'InterruptableFuture',
     'JobManager',
     'JobsList',
+    'Launchable',
     'ObjectLoader',
     'OutputPort',
     'PastException',

@@ -12,3 +12,4 @@ An introductory guide to working with workflows can be found in :ref:`"How to ru
 
    concepts
    usage
+   graphs

@@ -331,6 +331,59 @@ A graph returning one value declares one output named ``result``, and a graph re
 A ``TypeVar`` annotation, such as ``def scale(value: T, factor: T) -> T`` with ``T = TypeVar('T', int, float)``, accepts any of its constraints.
 When all values wired to ``T`` share one type, the output takes that type at this call.
 
+.. _topics:workflows:graphs:declared_failures:
+
+Declared task failures
+----------------------
+
+A task that can fail declares it with a ``Result[Success, Errors]`` return annotation.
+``Errors`` is an ``ExitCodeEnum`` subclass holding the ``ExitCode`` values the task may return.
+The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
+
+.. code:: python
+
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, graph, task
+
+    class DivisionErrors(ExitCodeEnum):
+        ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
+
+    @task
+    def divide(numerator: float, denominator: float) -> Result[float, DivisionErrors]:
+        if denominator == 0:
+            return Err(DivisionErrors.ZERO_DENOMINATOR)
+        return Ok(numerator / denominator)
+
+    @task
+    def recover(error: DivisionErrors) -> float:
+        return -float(error.value.status)
+
+    @task
+    def read_ratio(value: float) -> float:
+        return value
+
+    @graph
+    def ratio(numerator: float, denominator: float) -> float:
+        value, error = divide(numerator=numerator, denominator=denominator)
+        if error is not None:
+            selected = recover(error=error)
+        else:
+            selected = read_ratio(value=value)
+        return selected
+
+The call unpacks into ``(value, error)``; exactly one arm is present.
+Only the present arm creates data nodes; the absent arm reaches downstream inputs as ``None``.
+Error inputs take the enum member, so the task reads ``error.value.status`` directly.
+Branches test the arms with ``is None`` and ``is not None``.
+
+A declared failure sets the child's exit status but counts as completed, so dependents still run.
+Undeclared failures, exceptions, and missing outputs keep the previous behavior: dependents never start
+and the graph exits with ``ERROR_TASK_FAILED``.
+A task without ``Result`` keeps its behavior too: returning an ``ExitCode`` exits the child with that status.
+``Err`` accepts a member or its ``ExitCode`` value; anything else fails the task itself,
+as do bare returns from a ``Result`` task.
+
+Error enums need unique positive statuses with string messages; statuses must not clash with the engine exit codes.
+
 .. _topics:workflows:graphs:control_flow:
 
 Subgraphs, branches, and loops
@@ -493,6 +546,7 @@ Failures and restarts
 ---------------------
 
 Tasks that depend on a failed task never start; independent tasks still run, and the graph then exits with ``ERROR_TASK_FAILED``.
+A declared ``Result`` failure is not a failure in this sense: the child exits with the declared status, the graph branches on it, and the graph itself can exit cleanly; see :ref:`topics:workflows:graphs:declared_failures`.
 The graph checkpoint records dispatched and finished tasks and loop iterations, so a restarted graph does not run finished work again.
 Caching applies to tasks as to any other process.
 
@@ -504,7 +558,7 @@ Under development
 
 These are gaps in the current implementation, expected to be closed with further development:
 
-* **Coarse error handling:** any failed task fails the graph, see `Failures and restarts`_. Error handlers, retries, partial reruns, and custom exit codes are not yet available.
+* **Coarse error handling:** an undeclared task failure fails the graph, see `Failures and restarts`_. Declared ``Result`` failures branch in the graph; error handlers, retries, and partial reruns are not yet available.
 * **Stored provenance only:** graphs and their tasks always store their nodes; unstored runs and unstored intermediate nodes are not supported.
 * **No dry runs:** graph metadata rejects ``dry_run``.
 * **No monitors yet:** ``CalcJob`` monitor mappings cannot be wired yet, since dictionary syntax only fills fixed namespaces.

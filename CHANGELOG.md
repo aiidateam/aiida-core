@@ -30,6 +30,8 @@ pytest_plugins = 'aiida.tools.pytest_fixtures'
 ```
 Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
 
+`UNSPECIFIED` in `aiida.engine.processes.generic.ports` changed from an empty tuple to a dedicated sentinel object; compare by identity.
+
 #### `Code`: the deprecated data plugin has been removed
 
 The `Code` class, deprecated since `aiida-core==2.1`, and its `core.code` entry point have been removed.

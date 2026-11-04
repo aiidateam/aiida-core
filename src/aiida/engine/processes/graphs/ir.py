@@ -707,7 +707,9 @@ class GraphIR:
             if origin is None or isinstance(origin, PortNamespace):
                 msg = f'graph output `{name}` must reference a declared leaf.'
                 raise GraphTypeCheckError(msg)
-            namespace[name] = OutputPort(name, valid_type=self._output_types(name, origin) or (Data,))
+            namespace[name] = OutputPort(
+                name, valid_type=self._output_types(name, origin) or (Data,), required=origin.required
+            )
         return namespace
 
     def _output_types(self, name: str, origin: InputPort | OutputPort) -> tuple[type, ...] | type | None:

@@ -58,7 +58,7 @@ The graph body supports:
 * ``if``, with or without ``else`` but without ``elif``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
 * One final ``return`` of a name, a field, or a call, or of a flat ``dict`` of those with literal string keys.
 * ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
-* ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches and loops.
+* ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches; loop bodies rebind unpacked names the same way.
 * Calls through an imported module, such as ``my_module.add(...)``.
 * ``dict`` literals with string keys as arguments: for namespace ports, such as ``nodes={'text': text}``, and for ``dict`` ports when every value is a literal.
 * ``**bundle`` to spread a namespace-typed name across the ports of a call, see :ref:`topics:workflows:graphs:spreading`.

@@ -609,12 +609,12 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
     return names[0]
 
 
-def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
+def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool = False) -> None:
     """Bind each tuple element to one output of a multi-output call."""
     target: ast.expr = statement.targets[0]
     assert isinstance(target, ast.Tuple)
     names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
-    if not names or len(names) != len(target.elts) or any(name in state.names for name in names):
+    if not names or len(names) != len(target.elts) or (not rebind and any(name in state.names for name in names)):
         msg = (
             'unpacking maps positions to declared output ports, so every element needs a fresh name; '
             + 'give each unpacked output a new name instead'
@@ -806,6 +806,9 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
     for node in body:
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             assigned.add(node.targets[0].id)
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+            # A `_` element discards its arm, so it never carries across iterations.
+            assigned.update(elt.id for elt in node.targets[0].elts if isinstance(elt, ast.Name) and elt.id != '_')
         elif isinstance(node, ast.If):
             for arm in (*node.body, *node.orelse):
                 if isinstance(arm, ast.Assign):
@@ -860,6 +863,9 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         if not isinstance(node, ast.Assign):
             msg = 'loop bodies only record task calls, branches, and loops; ' + 'move anything else into a task instead'
             _reject(state, node=node, reason=msg)
+        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+            _lower_unpack(child, node, rebind=True)
+            continue
         _lower_assignment(child, node, rebind=True)
     outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
     body_spec = _lower_region_body(child, outputs=outputs)

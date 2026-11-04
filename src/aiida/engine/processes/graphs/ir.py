@@ -24,6 +24,7 @@ from aiida.common import _callables as callables
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
@@ -222,7 +223,11 @@ class TaskIR:
     declared_outputs: NamespaceShape = field(default_factory=NamespaceShape)
     typevar_inputs: TypevarPositions = field(default_factory=dict, compare=False)
     typevar_output: t.Any = field(default=None, compare=False)
+    exit_codes: dict[str, ExitCode] = field(default_factory=dict)
     version: str = _TASK_IR_VERSION
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'exit_codes', dict(self.exit_codes))
 
     @classmethod
     def from_process(
@@ -233,6 +238,7 @@ class TaskIR:
         declared_outputs: NamespaceShape | None = None,
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass."""
         module, name = process.__module__, process.__name__
@@ -262,6 +268,7 @@ class TaskIR:
             declared_outputs=declared_outputs or NamespaceShape(),
             typevar_inputs=typevar_inputs or {},
             typevar_output=typevar_output,
+            exit_codes=dict(exit_codes or {}),
         )
 
     @cached_property
@@ -322,6 +329,8 @@ class TaskIR:
             data['declared_inputs'] = dump_shape(self.declared_inputs)
         if self.declared_outputs.fields:
             data['declared_outputs'] = dump_shape(self.declared_outputs)
+        if self.exit_codes:
+            data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
         return {**data, 'version': self.version}
 
     @classmethod
@@ -332,6 +341,7 @@ class TaskIR:
             executor=ExecutorReference.from_dict(data['executor']),
             declared_inputs=_load_declared(data.get('declared_inputs')),
             declared_outputs=_load_declared(data.get('declared_outputs')),
+            exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 

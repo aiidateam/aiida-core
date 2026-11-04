@@ -39,6 +39,18 @@ def read_ratio(value: float) -> float:
     return value
 
 
+@task
+def undeclared_error(value: int) -> Result[int, DivisionErrors]:
+    """Return an exit code outside the declared enum."""
+    return Err(ExitCode(999, 'Not declared'))
+
+
+@task
+def missing_result_wrapper(value: int) -> Result[int, DivisionErrors]:
+    """Return bare outputs where a `Result` wrapper is required."""
+    return value  # type: ignore[return-value]
+
+
 @graph
 def ratio(numerator: float, denominator: float) -> float:
     """Divide, recovering with `recover` when the denominator is zero."""

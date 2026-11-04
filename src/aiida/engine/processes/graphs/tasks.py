@@ -21,9 +21,11 @@ from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValida
 from aiida.common.lang import override
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.calcjobs import CalcJob
+from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.functions import FunctionProcessBase, P, ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.ir import TaskIR, TypevarPositions, _reject_dynamic_inputs
+from aiida.engine.processes.graphs.results import Err, Ok, Result, error_types, result_contract
 from aiida.engine.processes.graphs.shapes import (
     LeafShape,
     NamespaceShape,
@@ -37,7 +39,7 @@ from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.engine.utils import is_process_function
-from aiida.orm import CalcFunctionNode, CalcJobNode, Data, WorkChainNode, to_aiida_type
+from aiida.orm import CalcFunctionNode, CalcJobNode, Data, EnumData, WorkChainNode, to_aiida_type
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.graphs.ir import ProcessTask
@@ -179,9 +181,66 @@ class TaskProcess(FunctionProcessBase):
     @classmethod
     @override
     def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
+        returned = annotations.get('return')
+        annotation, codes = result_contract(returned)
+        for label, code in codes.items():
+            if label in spec.exit_codes or any(existing.status == code.status for existing in spec.exit_codes.values()):
+                msg = f'task exit code `{label}` ({code.status}) conflicts with an engine exit code.'
+                raise GraphTypeCheckError(msg)
+            assert code.message is not None
+            spec.exit_code(code.status, label, code.message, invalidates_cache=code.invalidates_cache)
+        if t.get_origin(returned) is Result:
+            if _is_structured(annotation):
+                msg = 'task output namespaces are not supported; declare leaf outputs instead.'
+                raise GraphTypeCheckError(msg)
+            spec.output('value', valid_type=_infer_node_types(annotation) or (Data,), required=False)
+            spec.output('error', valid_type=EnumData, required=False)
+            spec.outputs.dynamic = False
+            cls._named_outputs = False
+            return
         _declare_output_ports(annotations.get('return'), spec)
         spec.outputs.dynamic = False
         cls._named_outputs = is_typeddict(annotations.get('return'))
+
+    @override
+    def _prepare_result(self, result: t.Any) -> t.Any:
+        annotation = t.get_type_hints(self._func, include_extras=True).get('return')
+        _, codes = result_contract(annotation)
+        if t.get_origin(annotation) is not Result:
+            if isinstance(result, Result):
+                msg = 'task exit codes must be declared in a Result return annotation.'
+                raise GraphValidationError(msg)
+            return super()._prepare_result(result)
+        if isinstance(result, Ok):
+            if isinstance(result.value, (ExitCode, Result)):
+                msg = 'Ok must contain task outputs, not an exit code or another Result.'
+                raise GraphValidationError(msg)
+            success = t.get_args(annotation)[0]
+            if result.value is None and success is not type(None) and type(None) not in t.get_args(success):
+                msg = 'the successful Result type does not allow None.'
+                raise GraphValidationError(msg)
+            self.out('value', result.value if isinstance(result.value, Data) else to_aiida_type(result.value))
+            return ExitCode()
+        if isinstance(result, Err):
+            error = result.error
+            if isinstance(error, ExitCodeEnum):
+                if not isinstance(error, error_types(annotation)):
+                    msg = f'task returned an error from an undeclared enum: {error!r}.'
+                    raise GraphValidationError(msg)
+                error = error.value
+            if isinstance(error, ExitCode) and any(
+                error.status == code.status and error.invalidates_cache == code.invalidates_cache
+                for code in codes.values()
+            ):
+                member = next(
+                    member for kind in error_types(annotation) for member in kind if member.value.status == error.status
+                )
+                self.out('error', to_aiida_type(member))
+                return error
+            msg = f'task returned an undeclared exit code: {error!r}.'
+            raise GraphValidationError(msg)
+        msg = 'a task annotated with Result must return `Ok` outputs or `Err` error.'
+        raise GraphValidationError(msg)
 
     @override
     def _out_result(self, result: t.Any) -> None:
@@ -225,10 +284,11 @@ class FunctionTaskHandle(t.Generic[P, R]):
         *,
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
     ) -> None:
         self._function: ProcessFunctionType[P, R, CalcFunctionNode] = function
         self._task_spec: TaskIR = TaskIR.from_process(
-            function, typevar_inputs=typevar_inputs, typevar_output=typevar_output
+            function, typevar_inputs=typevar_inputs, typevar_output=typevar_output, exit_codes=exit_codes
         )
         # Copy name and docstring, not the function state: the handle owns its task spec.
         functools.update_wrapper(self, function, updated=())
@@ -453,9 +513,15 @@ def _check_task_contract(
         msg = '`after` is reserved for source graph ordering dependencies.'
         raise GraphTypeCheckError(msg)
     hints = t.get_type_hints(function, include_extras=True)
-    annotation = hints.get('return', inspect.Signature.empty)
+    returned = hints.get('return', inspect.Signature.empty)
+    annotation, _ = result_contract(returned)
     if _is_structured(annotation):
         msg = 'task output namespaces are not supported; declare leaf outputs instead.'
+        raise GraphTypeCheckError(msg)
+    if t.get_origin(returned) is Result and (
+        is_typeddict(annotation) or t.get_origin(annotation) is tuple or annotation is tuple
+    ):
+        msg = 'Result task outputs are single leaves for now; structured successes are not supported yet.'
         raise GraphTypeCheckError(msg)
     if annotation is inspect.Signature.empty:
         msg = (
@@ -480,7 +546,10 @@ def _build_task(
     assert not inspect.isclass(function)
     decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess)(function)
     typevar_inputs, typevar_output = _typevar_positions(function)
-    handle = FunctionTaskHandle(decorated, typevar_inputs=typevar_inputs, typevar_output=typevar_output)
+    _, exit_codes = result_contract(t.get_type_hints(function, include_extras=True).get('return'))
+    handle = FunctionTaskHandle(
+        decorated, typevar_inputs=typevar_inputs, typevar_output=typevar_output, exit_codes=exit_codes
+    )
     spec = handle.process_class.spec()
     _reject_dynamic_inputs(spec.inputs)
     if any(isinstance(port, PortNamespace) for port in spec.outputs.values()):

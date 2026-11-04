@@ -10,9 +10,11 @@
 
 import pytest
 
-from aiida.common.exceptions import GraphTypeCheckError
+from aiida.common.exceptions import GraphTypeCheckError, GraphValidationError
 from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result
+from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.results import error_types, result_contract
+from tests.engine.processes.graphs.programs import results
 from tests.engine.processes.graphs.programs.results import DivisionErrors
 
 pytestmark = pytest.mark.presto
@@ -102,3 +104,52 @@ def test_ok_err_carry_declared_values() -> None:
     assert Err(DivisionErrors.ZERO_DENOMINATOR).error is DivisionErrors.ZERO_DENOMINATOR
     code = DivisionErrors.ZERO_DENOMINATOR.value.format()
     assert Err(code).error == code
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_result_task_declares_value_and_error_ports() -> None:
+    """A `Result` task stores its arms under `value` and `error`, registering each exit code."""
+    spec = results.divide.spec()
+    assert set(spec.outputs) == {'value', 'error'}
+    assert not spec.outputs['value'].required
+    assert not spec.outputs['error'].required
+    assert spec.exit_codes['ZERO_DENOMINATOR'] == DivisionErrors.ZERO_DENOMINATOR.value
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_ok_result_stores_value_arm() -> None:
+    """A declared success exits cleanly with its value output."""
+    outputs, node = run_get_node(results.divide, numerator=1.0, denominator=2.0)
+    assert node.is_finished_ok
+    assert outputs['value'].value == 0.5
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_err_result_stores_error_arm() -> None:
+    """A declared failure exits with its status and stores the error member."""
+    outputs, node = run_get_node(results.divide, numerator=1.0, denominator=0.0)
+    assert node.exit_status == 410
+    assert node.exit_message == 'The denominator is zero.'
+    assert outputs['error'].get_member() is DivisionErrors.ZERO_DENOMINATOR
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_error_member_feeds_recovery_input() -> None:
+    """The stored error member arrives at the recovery task unwrapped."""
+    outputs, node = run_get_node(results.recover, error=DivisionErrors.ZERO_DENOMINATOR)
+    assert node.is_finished_ok
+    assert outputs.value == -410.0
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_undeclared_err_fails_task() -> None:
+    """An `Err` outside the declared enum fails the task itself."""
+    with pytest.raises(GraphValidationError, match='undeclared exit code'):
+        run_get_node(results.undeclared_error, value=1)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_bare_result_return_fails_task() -> None:
+    """A `Result` task must wrap its outputs in `Ok` or `Err`."""
+    with pytest.raises(GraphValidationError, match='must return `Ok`'):
+        run_get_node(results.missing_result_wrapper, value=1)

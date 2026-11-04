@@ -9,6 +9,7 @@
 """`ShellJob` tasks with declared dynamic ports, shared by the graph behavior suites."""
 
 from aiida.calculations.shell import ShellJob
+from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
 from aiida.orm import Code, SinglefileData
 
@@ -53,3 +54,40 @@ def mistyped(code: Code, arguments: list[str]) -> SinglefileData:
 def double(x: int) -> int:
     """Double a number; registered as a task only by the tests."""
     return 2 * x
+
+
+class ShellErrors(ExitCodeEnum):
+    """Mapped failures of the `fail` task."""
+
+    COMMAND_FAILED = ExitCode(400, 'The command failed.')
+
+
+fail = task(
+    ShellJob,
+    inputs={'nodes': {'text': SinglefileData}},
+    outputs={'stdout': SinglefileData},
+    errors=ShellErrors,
+)
+
+
+@task
+def recover_shell(error: ShellErrors) -> str:
+    """Recover from a failed shell command."""
+    return f'recovered from {error.value.status}'
+
+
+@task
+def read_stdout(content: SinglefileData) -> str:
+    """Read command output."""
+    return content.get_content()
+
+
+@graph
+def recover_failing(text: SinglefileData, code: Code, arguments: list[str]) -> str:
+    """Run a command that may fail, recovering with `recover_shell` when it does."""
+    ran = fail(code=code, arguments=arguments, nodes={'text': text})
+    if ran.error is not None:
+        selected = recover_shell(error=ran.error)
+    else:
+        selected = read_stdout(content=ran.stdout)
+    return selected

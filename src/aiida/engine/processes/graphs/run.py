@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from aiida.common.exceptions import GraphMaxIterationsError, GraphRuntimeError
 from aiida.common.links import LinkType
+from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _at, _place
 from aiida.engine.processes.graphs.ir import (
@@ -164,7 +165,12 @@ class GraphRun:
         }
 
     def _has_result(self, name: str, pk: int) -> bool:
-        """Return whether a finished task completed, counting declared failures as completed."""
+        """Return whether a finished task completed, counting declared failures as completed.
+
+        Function tasks store the declared member on an `error` output. Process
+        tasks cannot gain outputs, so their declaration matches the child exit
+        status alone; the member is synthesized when the arm is read.
+        """
         node = load_node(pk)
         if node.is_finished_ok:
             return True
@@ -172,7 +178,7 @@ class GraphRun:
         if not isinstance(task, ProcessTask) or not task.spec.exit_codes or not node.is_failed:
             return False
         if 'error' not in node.outputs:
-            return False
+            return node.exit_status in {code.status for code in task.spec.exit_codes.values()}
         error = node.outputs['error']
         if not isinstance(error, EnumData):
             return False
@@ -357,12 +363,35 @@ class GraphRun:
         return inputs
 
     def _produced_value(self, name: str, path: str) -> t.Any:
-        """Return the value one task produced at a path, or `None` for an absent `Result` arm."""
+        """Return the value one task produced at a path, or `None` for an absent `Result` arm.
+
+        Process tasks declare no error output, so a mapped failure synthesizes
+        its member from the child exit status instead of reading a link.
+        """
         node = self._produced_by(name)
-        outputs = node.outputs
-        values = {key: outputs[key] for key in outputs}
         task = self.graph.task(name)
-        return self._value_at(values, task.output_ports(), path)
+        ports = task.output_ports()
+        outputs = node.outputs
+        # Only declared outputs travel; the process may attach more.
+        values = {key: outputs[key] for key in ports if key in outputs}
+        if isinstance(task, ProcessTask) and task.spec.error_enums and 'error' not in values and node.is_failed:
+            # Process tasks declare no error output, so a mapped failure
+            # synthesizes its member from the child exit status instead.
+            values['error'] = self._error_member(task, node)
+        return self._value_at(values, ports, path)
+
+    @staticmethod
+    def _error_member(task: ProcessTask, node: Node) -> t.Any:
+        """Return the declared member matching a failed process task's exit status."""
+        from aiida.orm import to_aiida_type
+
+        for identifier in task.spec.error_enums:
+            kind = get_object_loader().load_object(identifier)
+            for member in kind:
+                if member.value.status == node.exit_status:
+                    return to_aiida_type(member)
+        msg = f'task `{task.name}` failed with an unmapped exit status {node.exit_status}.'
+        raise GraphRuntimeError(msg)
 
     @staticmethod
     def _value_at(value: t.Any, ports: PortNamespace, path: str) -> t.Any:

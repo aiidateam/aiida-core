@@ -224,10 +224,12 @@ class TaskIR:
     typevar_inputs: TypevarPositions = field(default_factory=dict, compare=False)
     typevar_output: t.Any = field(default=None, compare=False)
     exit_codes: dict[str, ExitCode] = field(default_factory=dict)
+    error_enums: tuple[str, ...] = field(default_factory=tuple)
     version: str = _TASK_IR_VERSION
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'exit_codes', dict(self.exit_codes))
+        object.__setattr__(self, 'error_enums', tuple(self.error_enums))
 
     @classmethod
     def from_process(
@@ -239,6 +241,7 @@ class TaskIR:
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
         exit_codes: Mapping[str, ExitCode] | None = None,
+        error_enums: tuple[str, ...] | None = None,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass."""
         module, name = process.__module__, process.__name__
@@ -269,6 +272,7 @@ class TaskIR:
             typevar_inputs=typevar_inputs or {},
             typevar_output=typevar_output,
             exit_codes=dict(exit_codes or {}),
+            error_enums=tuple(error_enums or ()),
         )
 
     @cached_property
@@ -287,7 +291,12 @@ class TaskIR:
 
     @property
     def outputs(self) -> PortNamespace:
-        """Return the static leaf output ports of the task process."""
+        """Return the static leaf output ports of the task process.
+
+        Process classes declaring error enums expose a synthetic `error` arm,
+        so failed children branch the same way `Result` tasks do. The arm
+        carries no process port; it only names the declared failure.
+        """
         ports = self.process_class.spec().outputs
         if self.declared_outputs.fields:
             ports = _close_dynamic(ports, self.declared_outputs, OutputPort, narrow=True)
@@ -297,6 +306,14 @@ class TaskIR:
                 'declare the outputs of a dynamic namespace with `task(..., outputs={...})`.'
             )
             raise GraphTypeCheckError(msg)
+        if self.exit_codes and 'error' not in ports:
+            from aiida.orm import EnumData
+
+            fresh = PortNamespace(ports.name, help=ports.help, required=ports.required)
+            for name, child in ports.items():
+                fresh[name] = child
+            fresh['error'] = OutputPort('error', valid_type=EnumData, required=False)
+            ports = fresh
         return ports
 
     def check_ports(self) -> None:
@@ -331,6 +348,8 @@ class TaskIR:
             data['declared_outputs'] = dump_shape(self.declared_outputs)
         if self.exit_codes:
             data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
+        if self.error_enums:
+            data['error_enums'] = list(self.error_enums)
         return {**data, 'version': self.version}
 
     @classmethod
@@ -342,6 +361,7 @@ class TaskIR:
             declared_inputs=_load_declared(data.get('declared_inputs')),
             declared_outputs=_load_declared(data.get('declared_outputs')),
             exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
+            error_enums=tuple(data.get('error_enums', ())),
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 

@@ -23,7 +23,7 @@ from aiida.brokers import communicator as broker_communicator
 from aiida.brokers.filters import BroadcastFilter
 from aiida.common import exceptions
 from aiida.engine import transports, utils
-from aiida.engine.processes import Process, ProcessBuilder, ProcessState, futures
+from aiida.engine.processes import FunctionProcess, Process, ProcessBuilder, ProcessState, futures
 from aiida.engine.processes.calcjobs import manager
 from aiida.engine.processes.communications import RemoteProcessThreadController, wrap_communicator
 from aiida.engine.processes.events import get_or_create_event_loop
@@ -182,7 +182,6 @@ class Runner:
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
-        assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
         inputs = utils.prepare_inputs(inputs, **kwargs)
@@ -195,6 +194,9 @@ class Runner:
             raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
 
         if self._broker_submit:
+            if isinstance(process_inited, FunctionProcess):
+                msg = 'cannot submit a process function to the daemon; run it in this process instead.'
+                raise exceptions.InvalidOperation(msg)
             assert self.persister is not None, 'runner does not have a persister'
             assert self.controller is not None, 'runner does not have a controller'
             self.persister.save_checkpoint(process_inited)
@@ -216,7 +218,6 @@ class Runner:
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
-        assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
         inputs = utils.prepare_inputs(inputs, **kwargs)

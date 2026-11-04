@@ -109,9 +109,10 @@ def submit(
 
     inputs = prepare_inputs(inputs, **kwargs)
 
-    # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
-    # current process in the scope should be an instance of ``FunctionProcess``.
-    if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
+    # Submitting from within another process requires ``self.submit``, unless the current process is a legacy
+    # function process (which always runs inline). Task processes may run in the daemon, so they stay guarded.
+    current = Process.current()
+    if is_process_scoped() and not isinstance(current, FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this

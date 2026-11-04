@@ -294,6 +294,9 @@ class FunctionTaskHandle(t.Generic[P, R]):
         functools.update_wrapper(self, function, updated=())
 
     @t.overload
+    def __call__(self: FunctionTaskHandle[P, Result[t.Any, t.Any]], *args: P.args, **kwargs: P.kwargs) -> t.Any: ...
+
+    @t.overload
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
     @t.overload

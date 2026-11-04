@@ -19,23 +19,20 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.processes.builder import ProcessBuilder
 from aiida.engine.processes.functions import FunctionProcess
 from aiida.engine.processes.process import Process
-from aiida.engine.runners import ResultAndPk
+from aiida.engine.runners import TYPE_RUN_PROCESS, TYPE_SUBMIT_PROCESS, ResultAndPk
 from aiida.engine.utils import instantiate_process, is_process_scoped, prepare_inputs
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
 __all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
-TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
-# run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
 def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> dict[str, t.Any]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
-    :param process: the process class or process function to run
+    :param process: the process class, instance, builder, or process function to run
     :param inputs: the inputs to be passed to the process
     :return: the outputs of the process
     """
@@ -97,7 +94,7 @@ def submit(
 
     .. warning: submission of processes requires ``store_provenance=True``.
 
-    :param process: the process class, instance or builder to submit
+    :param process: the process class, instance, builder, or process function to submit
     :param inputs: the input dictionary to be passed to the process
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
@@ -118,7 +115,8 @@ def submit(
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
     # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
     # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
-    # Builder inputs need to be merged so that detection works for ``submit(builder)`` too.
+    # Builder inputs need to be merged so that detection works for ``submit(builder)`` too. Other launchables carry
+    # no stored inputs, so the passed inputs alone decide.
     if isinstance(process, ProcessBuilder):
         merged_inputs = {**inputs, **process._inputs(prune=True)}
     else:

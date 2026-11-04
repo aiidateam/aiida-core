@@ -8,11 +8,15 @@
 ###########################################################################
 """Declared task failures in source contracts and process runs."""
 
+import json
+
 import pytest
 
 from aiida.common.exceptions import GraphTypeCheckError, GraphValidationError
+from aiida.common.links import LinkType
 from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result
 from aiida.engine.launch import run_get_node
+from aiida.engine.processes.graphs.ir import BranchControl, GraphIR, TaskIR
 from aiida.engine.processes.graphs.results import error_types, result_contract
 from tests.engine.processes.graphs.programs import results
 from tests.engine.processes.graphs.programs.results import DivisionErrors
@@ -153,3 +157,61 @@ def test_bare_result_return_fails_task() -> None:
     """A `Result` task must wrap its outputs in `Ok` or `Err`."""
     with pytest.raises(GraphValidationError, match='must return `Ok`'):
         run_get_node(results.missing_result_wrapper, value=1)
+
+
+def test_result_contract_in_ir() -> None:
+    """The declared exit codes and the presence test survive an IR round trip."""
+    spec = results.ratio.build()
+    task = spec.task('divide').spec
+    assert isinstance(task, TaskIR)
+    assert task.exit_codes == {'ZERO_DENOMINATOR': DivisionErrors.ZERO_DENOMINATOR.value}
+    assert task.outputs['value'].valid_type is not None
+    assert task.outputs['error'].valid_type is not None
+    branch = next(task for task in spec.tasks if isinstance(task, BranchControl))
+    assert branch.condition_test == 'is_not_none'
+    assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
+
+
+def test_legacy_task_ir_without_exit_codes() -> None:
+    """Task declarations stored before exit codes default to no declared failures."""
+    data = results.ratio.build().task('divide').spec.to_dict()
+    data.pop('exit_codes')
+    assert TaskIR.from_dict(data).exit_codes == {}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_zero_denominator_recovers_with_exit_zero() -> None:
+    """A declared failure branches to recovery instead of failing the graph."""
+    outputs, node = run_get_node(results.ratio, numerator=1.0, denominator=0.0)
+    assert node.is_finished_ok
+    assert node.exit_status == 0
+    assert outputs['result'].value == -410.0
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert set(calls) == {'divide'}
+    divided = calls['divide']
+    assert divided.exit_status == 410
+    assert divided.exit_message == 'The denominator is zero.'
+    assert set(divided.outputs) == {'error'}
+    branches = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(branches) == {'branch_2'}
+    recovered = branches['branch_2'].base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert set(recovered) == {'recover'}
+    assert recovered['recover'].is_finished_ok
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nonzero_denominator_reads_ratio() -> None:
+    """A declared success branches past recovery and reads the value arm."""
+    outputs, node = run_get_node(results.ratio, numerator=1.0, denominator=2.0)
+    assert node.is_finished_ok
+    assert node.exit_status == 0
+    assert outputs['result'].value == 0.5
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert set(calls) == {'divide'}
+    assert calls['divide'].is_finished_ok
+    assert set(calls['divide'].outputs) == {'value'}
+    branches = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(branches) == {'branch_2'}
+    read = branches['branch_2'].base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert set(read) == {'read_ratio'}
+    assert read['read_ratio'].is_finished_ok

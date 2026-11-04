@@ -721,6 +721,17 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
         test = _bind_call_condition(state, test=test)
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none'] = 'truthy'
+    if (
+        isinstance(test, ast.Compare)
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], (ast.Is, ast.IsNot))
+        and len(test.comparators) == 1
+        and isinstance(test.comparators[0], ast.Constant)
+        and test.comparators[0].value is None
+    ):
+        condition_test = 'is_none' if isinstance(test.ops[0], ast.Is) else 'is_not_none'
+        test = test.left
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -734,7 +745,11 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
         second = _rekey_alias(second, port) if second.alias else second
     instance = _claim_name(state, f'branch_{len(state.tasks) + 1}')
     given = _wire_branch_inputs(state, instance=instance, first=first, second=second, test=test)
-    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    state.tasks.append(
+        BranchControl(
+            name=instance, inputs=given, body=first.body, otherwise=second.body, condition_test=condition_test
+        )
+    )
     selected = first.child.names[first.name]
     state.names[first.name] = _Reference(instance, port=port or selected.port, shape=selected.shape)
 

@@ -481,6 +481,7 @@ class GraphTask(abc.ABC):
                     body=body,
                     otherwise=GraphIR.from_dict(data['otherwise']),
                     condition_port=data.get('condition_port', _CONDITION_PORT),
+                    condition_test=data.get('condition_test', 'truthy'),
                     **common,
                 )
             if kind == 'loop':
@@ -543,13 +544,21 @@ class SubgraphTask(BodyTask):
 class BranchControl(BodyTask):
     """A condition dispatching exactly one of two nested templates.
 
-    ``condition_port`` is a synthetic port wired directly into the placement inputs; validation
-    rejects it from both side templates, so it never appears in their declared inputs.
+    ``condition_port`` is a synthetic port wired outside either side's declared inputs, so it
+    never appears in their declared inputs. ``condition_test`` decides how the condition
+    selects a side: truthiness, or a presence test against `None`.
     """
 
     KIND: t.ClassVar[_TaskKind] = 'branch'
     condition_port: str = _CONDITION_PORT
     otherwise: GraphIR
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none'] = 'truthy'
+
+    def __post_init__(self) -> None:
+        """Reject stored declarations with an unknown condition test."""
+        if self.condition_test not in ('truthy', 'is_none', 'is_not_none'):
+            msg = f'unsupported branch condition test `{self.condition_test}`.'
+            raise GraphTypeCheckError(msg)
 
     @property
     def branches(self) -> tuple[GraphIR, ...]:
@@ -576,6 +585,7 @@ class BranchControl(BodyTask):
         return {
             **super().to_dict(),
             'condition_port': self.condition_port,
+            'condition_test': self.condition_test,
             'otherwise': self.otherwise.to_dict(),
         }
 

@@ -251,6 +251,7 @@ Output ports declare ORM types and ignore defaults.
 
 The ports validate the values; the model adds no validation of its own.
 Models are frozen, keyword-only dataclasses.
+Pydantic models and named tuples work in the same places; aliases and validators on them raise an error.
 
 Inputs can be given as a mapping or a model instance.
 The process receives an attribute-accessible mapping, not a model instance.

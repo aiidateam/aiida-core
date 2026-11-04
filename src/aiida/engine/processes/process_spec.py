@@ -18,7 +18,13 @@ from collections.abc import Callable, Mapping
 from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 from aiida.engine.processes.generic import spec
 from aiida.engine.processes.generic.ports import UNSPECIFIED
-from aiida.engine.processes.port_model import PortModel, _Field, _fields_of
+from aiida.engine.processes.port_model import (
+    PortModel,
+    _Field,
+    _fields_of,
+    _namespace_value,
+    _reject_optional_structured,
+)
 from aiida.engine.processes.ports import (
     CalcJobOutputPort,
     InputPort,
@@ -44,15 +50,20 @@ def _require_storable(field: _Field) -> None:
 def _as_a_port(field: _Field) -> dict[str, t.Any]:
     """Return how one model field is declared as a port."""
     _require_storable(field)
+    _reject_optional_structured(field.annotation, name=field.name)
     declared = _infer_runtime_types(field.annotation)
-    # Non-nullable fields stay required so no `None` type is added; a default still applies through the port.
-    required = field.required or type(None) not in declared
+    valid_type = declared or (Data,)
+    if field.default is None and type(None) not in valid_type:
+        valid_type = (*valid_type, type(None))
+    # A default always wins: the port coerces defaulted inputs to not required, so `required`
+    # survives only for default-less fields.
+    required = field.required or type(None) not in valid_type
     options: dict[str, t.Any] = {'required': required, 'help': field.help}
 
     if not field.required:
         options['default'] = _lazily(field.default)
 
-    return {**options, 'valid_type': declared or (Data,)}
+    return {**options, 'valid_type': valid_type}
 
 
 def _as_an_output_port(field: _Field) -> dict[str, t.Any]:
@@ -62,6 +73,7 @@ def _as_an_output_port(field: _Field) -> dict[str, t.Any]:
     value is a node by the time it is attached.
     """
     _require_storable(field)
+    _reject_optional_structured(field.annotation, name=field.name)
     declared = _infer_node_types(field.annotation)
 
     return {'required': field.required, 'help': field.help, 'valid_type': declared or (Data,)}
@@ -105,18 +117,35 @@ def _declare_namespace(
     for field in _with_defaults(fields, defaults):
         path = f'{name}{spec.namespace_separator}{field.name}'
         if _fields_of(field.annotation) is not None:
-            nested = field.default.as_dict() if isinstance(field.default, field.annotation) else field.default
+            nested = _namespace_defaults(field.default)
             _declare_namespace(
                 spec,
                 path,
                 field.annotation,
                 leaf_options=leaf_options,
-                defaults=nested if isinstance(nested, Mapping) else None,
+                defaults=nested,
                 required=field.required,
                 help=field.help,
             )
         else:
             spec.input(path, **leaf_options(field))
+
+
+def _namespace_defaults(default: t.Any) -> Mapping[str, t.Any] | None:
+    """Return nested namespace defaults, calling a default factory once at declaration."""
+    if callable(default) and not isinstance(default, (PortModel, Mapping, type)):
+        default = default()
+    return _mapping_of(default)
+
+
+def _mapping_of(default: t.Any) -> Mapping[str, t.Any] | None:
+    """Return an instance default as a mapping, for a structured container."""
+    if isinstance(default, PortModel):
+        return default.as_dict()
+    if isinstance(default, Mapping):
+        return default
+    mapped = _namespace_value(default)
+    return mapped if isinstance(mapped, Mapping) else None
 
 
 class ProcessSpec(spec.ProcessSpec):
@@ -205,8 +234,10 @@ class ProcessSpec(spec.ProcessSpec):
             )
             raise TypeError(msg)
 
+        separator = self.namespace_separator
+        stem = prefix[: -len(separator)] if separator and prefix.endswith(separator) else prefix
         for field in fields:
-            name = f'{prefix}{field.name}'
+            name = field.name if not stem else f'{stem}{separator}{field.name}'
 
             if _fields_of(field.annotation) is not None:
                 self.output_namespace(name, required=field.required, help=field.help)
@@ -293,6 +324,9 @@ class GraphProcessSpec(ProcessSpec):
             if not isinstance(port, InputPort):
                 msg = f'cannot override namespace input `{name}` with a field default; declare it once instead.'
                 raise TypeError(msg)
+            if _fields_of(field.annotation) is not None:
+                msg = f'cannot override leaf input `{name}` with a namespace; declare it once instead.'
+                raise TypeError(msg)
             if field.default is None:
                 current = port.valid_type
                 if current is not None:
@@ -306,18 +340,16 @@ class GraphProcessSpec(ProcessSpec):
             valid_type += (type(None),)
 
         if _fields_of(field.annotation) is not None:
-            container: type[PortModel] = field.annotation
-            default = field.default
-            defaults = default.as_dict() if isinstance(default, container) else default
+            defaults = _namespace_defaults(field.default)
             self.input_namespace_from(
                 name,
                 field.annotation,
-                defaults=defaults if isinstance(defaults, Mapping) else None,
+                defaults=defaults,
                 required=field.required,
                 help=field.help,
             )
             return
-
+        _reject_optional_structured(field.annotation, name=name)
         self.input(
             name,
             valid_type=valid_type,

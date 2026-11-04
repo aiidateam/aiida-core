@@ -42,6 +42,8 @@ __all__ = (
     'ObjectLoader',
     'OutputPort',
     'PastException',
+    'PortField',
+    'PortModel',
     'PortNamespace',
     'Process',
     'ProcessBuilder',

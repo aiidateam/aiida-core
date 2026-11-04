@@ -223,6 +223,41 @@ Note that the module which defines the corresponding AiiDA type must be loaded f
 Of course, you can also use the serialization feature to perform a more complex serialization of the inputs.
 
 
+.. _topics:processes:usage:port_models:
+
+Port models
+^^^^^^^^^^^
+
+A :py:class:`~aiida.engine.processes.port_model.PortModel` declares a fixed port namespace as a class with annotated fields:
+
+.. code:: python
+
+    from typing import Annotated
+    from aiida.engine import PortField, PortModel, ProcessSpec
+
+    class Settings(PortModel):
+        count: Annotated[int, PortField(help='Iteration count.')] = 10
+        label: str
+        offset: int | None
+
+    spec = ProcessSpec()
+    spec.input_namespace_from('settings', Settings)
+    spec.outputs_from(Settings)
+
+Each field becomes a port, and each nested model becomes a nested namespace.
+``PortField`` attaches help text through ``Annotated``.
+A field without a default is required; ``int | None`` accepts ``None`` as a value but keeps the port required.
+Output ports declare ORM types and ignore defaults.
+
+The ports validate the values; the model adds no validation of its own.
+Models are frozen, keyword-only dataclasses.
+
+Inputs can be given as a mapping or a model instance.
+The process receives an attribute-accessible mapping, not a model instance.
+Fields annotated with Python types receive Python values; fields annotated with ORM types receive nodes.
+In both cases the provenance graph links the original input nodes.
+
+
 .. _topics:processes:usage:exit_codes:
 
 Exit codes

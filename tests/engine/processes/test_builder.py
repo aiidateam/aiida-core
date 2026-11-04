@@ -10,17 +10,26 @@
 
 import textwrap
 from collections.abc import Mapping, MutableMapping
+from dataclasses import field
 
 import pytest
 from IPython.lib.pretty import pretty
 
 from aiida import orm
 from aiida.common import LinkType
-from aiida.engine import Process, WorkChain, run_get_node
+from aiida.engine import PortModel, Process, WorkChain, run_get_node
 from aiida.engine.processes.builder import ProcessBuilderNamespace
+from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.plugins import CalculationFactory
 
 DEFAULT_INT = 256
+
+
+class BuilderSettings(PortModel):
+    """A namespace with a factory default, for builder model acceptance."""
+
+    count: int = 2
+    tags: list[str] = field(default_factory=list)
 
 
 class ExampleWorkChain(WorkChain):
@@ -452,3 +461,12 @@ def test_builder_preserves_original_nodes() -> None:
     builder = NodeWorkChain.get_builder()
     builder.count = original
     assert builder._inputs()['count'] is original
+
+
+def test_builder_accepts_model_namespace() -> None:
+    """Builder namespaces accept model instances like namespace mappings."""
+    spec = ProcessSpec()
+    spec.input_namespace_from('config', BuilderSettings)
+    builder = ProcessBuilderNamespace(spec.inputs)
+    builder.config = BuilderSettings(count=9)
+    assert dict(builder.config) == {'count': 9, 'tags': []}

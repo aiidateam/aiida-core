@@ -21,7 +21,8 @@ from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
-from aiida.orm import Data, Node, from_aiida_type, to_aiida_type
+from aiida.engine.processes.port_model import _is_a_plain_class, _is_structured, _namespace_value, _without_marks
+from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -332,6 +333,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
     def _as_mapping(self, value: t.Any) -> Mapping[str, t.Any]:
         """Return model instances as mappings, rejecting other non-mappings."""
+        value = _namespace_value(value)
         if not isinstance(value, Mapping):
             msg = f'port namespace `{self.name}` received `{type(value)}` instead of a dictionary'
             raise TypeError(msg)
@@ -354,6 +356,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         mapping = self._as_mapping(mapping)
 
         def dynamic(value: t.Any) -> t.Any:
+            value = _namespace_value(value)
             if isinstance(value, Mapping):
                 return {key: dynamic(item) for key, item in value.items()}
             return _runtime_value(self.valid_type, value)
@@ -387,12 +390,14 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             return None
 
         breadcrumbs = (*breadcrumbs, self.name)
+        mapping = _namespace_value(mapping)
         if not isinstance(mapping, Mapping):
-            port_name = breadcrumbs_to_port(breadcrumbs)  # type: ignore[unreachable]
+            port_name = breadcrumbs_to_port(breadcrumbs)
             msg = f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary'
             raise TypeError(msg)
 
         def dynamic(item: t.Any) -> t.Any:
+            item = _namespace_value(item)
             if isinstance(item, Mapping):
                 return {key: dynamic(leaf) for key, leaf in item.items()}
             if self._passes_through(item):
@@ -417,6 +422,38 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         return result
 
 
+def _is_storable(annotation: t.Any) -> bool:
+    """Return whether values of an annotation can reach provenance storage.
+
+    Structured models are stored as namespaces, declared nodes pass through, and plain values store through
+    ``to_aiida_type``. Anything else has no storage representation.
+
+    :param annotation: a model field annotation.
+    """
+    annotation = _without_marks(annotation)
+    if annotation is None or annotation is t.Any or annotation is type(None):
+        return True
+    if _is_structured(annotation):
+        return True
+    # `_is_a_plain_class`, not `isinstance(., type)`: parametrized generics pass the latter on some versions.
+    if _is_a_plain_class(annotation):
+        return issubclass(annotation, Data) or _has_conversion(annotation)
+    return _origin_storable(t.get_origin(annotation), annotation)
+
+
+def _has_conversion(annotation: type) -> bool:
+    """Return whether `to_aiida_type` resolves a real converter for a class."""
+    # `dispatch` walks the MRO, so resolving to the `object` registration means no conversion exists.
+    return to_aiida_type.dispatch(annotation) is not to_aiida_type.dispatch(object)
+
+
+def _origin_storable(origin: t.Any, annotation: t.Any) -> bool:
+    """Return whether a generic alias stores through its origin or its members."""
+    if origin in (list, dict, t.Union, UnionType):
+        return all(_is_storable(argument) for argument in t.get_args(annotation))
+    return False
+
+
 def _runtime_value(
     valid_type: type | tuple[type, ...] | None,
     value: t.Any,
@@ -434,6 +471,81 @@ def _runtime_value(
     return value
 
 
+def _infer_node_types(annotation: t.Any) -> tuple[t.Any, ...]:
+    """Infer ORM valid types for stored declarations: legacy function ports and output checks.
+
+    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
+        tuple is returned.
+    """
+    return tuple(kind for declared in _infer_runtime_types(annotation) if (kind := _node_type(declared)) is not None)
+
+
+def _infer_runtime_types(annotation: t.Any) -> tuple[t.Any, ...]:
+    """Infer Python valid types for runtime declarations: graph inputs declare what tasks consume.
+
+    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
+        tuple is returned.
+    """
+    annotation = _without_marks(annotation)
+    origin = t.get_origin(annotation)
+    inferred: tuple[t.Any, ...] = ()
+
+    if _is_a_plain_class(annotation) or origin in (list, dict):
+        inferred = (_runtime_type(annotation),)
+    elif origin is t.Union or origin is UnionType:
+        inferred = tuple(_runtime_type(item) for item in t.get_args(annotation))
+
+    return tuple(kind for kind in inferred if kind is not None)
+
+
+_VALID_TYPE_MAP: dict[t.Any, t.Any] = {
+    bool: Bool,
+    dict: Dict,
+    t.Dict: Dict,  # noqa: UP006 - support legacy annotation spelling
+    float: Float,
+    int: Int,
+    list: List,
+    t.List: List,  # noqa: UP006 - support legacy annotation spelling
+    str: Str,
+    type(None): type(None),
+}
+
+
+def _node_type(annotation: t.Any) -> t.Any | None:
+    """Return the stored type for one annotation, or None when it declares none."""
+    if annotation is t.Any:
+        return None
+    if _is_a_plain_class(annotation):
+        return annotation if issubclass(annotation, Data) else _VALID_TYPE_MAP.get(annotation)
+    return _VALID_TYPE_MAP.get(annotation)
+
+
+def _runtime_type(annotation: t.Any) -> t.Any | None:
+    """Return the runtime type for one annotation, or None when it declares none."""
+    if annotation is t.Any:
+        return None
+    if t.get_origin(annotation) in (list, dict):
+        return t.get_origin(annotation)
+    if _is_a_plain_class(annotation):
+        return annotation
+    return None
+
+
+def _coerce_model_values(value: t.Any) -> t.Any:
+    """Recursively convert ``PortModel`` instances to namespace mappings.
+
+    Declared namespaces hold one port per model field, so a model instance passed as a value reads
+    as the mapping of its fields. Centralizing the conversion here keeps every launch boundary
+    consistent without duplicating model handling.
+    """
+    coerced = _namespace_value(value)
+    if isinstance(coerced, Mapping):
+        return {key: _coerce_model_values(item) for key, item in coerced.items()}
+    return coerced
+
+
 def _source_tree(original: t.Any, runtime: t.Any) -> t.Any:
     """Return the nodes converted values were sourced from, else the converted values.
 
@@ -442,6 +554,7 @@ def _source_tree(original: t.Any, runtime: t.Any) -> t.Any:
     """
     if isinstance(original, Node):
         return original
+    original = _namespace_value(original)
     if isinstance(original, Mapping) and isinstance(runtime, Mapping):
         return {key: _source_tree(value, runtime[key]) for key, value in original.items() if key in runtime}
     return runtime

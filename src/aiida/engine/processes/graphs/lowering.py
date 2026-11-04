@@ -889,6 +889,15 @@ def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) ->
         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
     }
     callees: set[int] = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
+    for stmt in statements:
+        for node in ast.walk(stmt):
+            # Dotted calls read through a module, not a wire; only the base name walks.
+            if isinstance(node, ast.Call):
+                func = node.func
+                while isinstance(func, ast.Attribute):
+                    func = func.value
+                if isinstance(func, ast.Name):
+                    callees.add(id(func))
     reads: dict[str, ast.Name] = {}
     for stmt in statements:
         for node in ast.walk(stmt):

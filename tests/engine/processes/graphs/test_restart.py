@@ -12,8 +12,10 @@ import pytest
 
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
+from aiida.engine.processes.graphs.restart import RestartErrors
 from aiida.orm import StructureData
 from tests.engine.processes.graphs.programs import restart
+from tests.engine.processes.graphs.programs.restart import StepErrors
 
 pytestmark = pytest.mark.presto
 
@@ -46,3 +48,19 @@ def test_restartable_fails_without_attempts(structure: StructureData) -> None:
     outputs, node = run_get_node(restart.restartable, structure=structure, max_attempts=0)
     assert node.exit_status == 400
     assert outputs == {}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_report_unhandled_recovers_value() -> None:
+    """A recovered value exits cleanly under the shared vocabulary."""
+    outputs, node = run_get_node(restart.report_unhandled, value=1.5, error=None)
+    assert node.is_finished_ok
+    assert outputs['value'].value == 1.5
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_report_unhandled_exits_shared_status() -> None:
+    """An unrecovered failure exits with the shared `UNHANDLED_FAILURE` status."""
+    outputs, node = run_get_node(restart.report_unhandled, value=None, error=StepErrors.UNSTABLE)
+    assert node.exit_status == 402
+    assert outputs['error'].get_member() is RestartErrors.UNHANDLED_FAILURE

@@ -18,6 +18,7 @@ from aiida.common.links import LinkType
 from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import BranchControl, GraphIR, ProcessTask, TaskIR
+from aiida.engine.processes.graphs.restart import RestartErrors
 from aiida.engine.processes.graphs.results import error_types, result_contract
 from tests.engine.processes.graphs.programs import results
 from tests.engine.processes.graphs.programs.results import DivisionErrors, InputErrors
@@ -83,6 +84,19 @@ def test_result_contract_rejected(annotation: t.Any, match: str) -> None:
     """Error types outside non-empty `ExitCodeEnum` alternatives fail the contract."""
     with pytest.raises(GraphTypeCheckError, match=match):
         result_contract(annotation)
+
+
+def test_restart_errors_contract() -> None:
+    """The shared machinery vocabulary declares the `BaseRestartWorkChain` statuses."""
+    success, codes = result_contract(Result[float, RestartErrors])
+    assert success is float
+    assert set(codes) == {
+        'SUB_PROCESS_EXCEPTED',
+        'SUB_PROCESS_KILLED',
+        'MAXIMUM_ITERATIONS_EXCEEDED',
+        'UNHANDLED_FAILURE',
+    }
+    assert codes['UNHANDLED_FAILURE'].status == 402
 
 
 def test_plain_annotation_has_no_contract() -> None:

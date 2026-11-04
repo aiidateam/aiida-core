@@ -10,6 +10,7 @@
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
+from aiida.engine.processes.graphs.restart import RestartErrors
 from aiida.engine.processes.graphs.results import Err, Ok, Result
 from aiida.orm import StructureData
 
@@ -52,6 +53,14 @@ def ensure(value: float | None, error: StepErrors | None) -> float:
     if error is not None or value is None:
         raise ValueError('the step never succeeded.')
     return value
+
+
+@task
+def report_unhandled(value: float | None, error: StepErrors | None) -> Result[float, RestartErrors]:
+    """Translate an unrecovered failure into the shared machinery vocabulary."""
+    if error is not None or value is None:
+        return Err(RestartErrors.UNHANDLED_FAILURE)
+    return Ok(value)
 
 
 @graph

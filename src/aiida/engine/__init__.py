@@ -59,6 +59,7 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'RestartErrors',
     'Result',
     'Runner',
     'ToContext',

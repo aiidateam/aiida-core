@@ -79,6 +79,15 @@ Below is a list of the core data types already provided with AiiDA, along with t
   +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
 
 
+.. _topics:data_types:core:conversion:
+
+Converting values and nodes
+---------------------------
+
+:py:func:`~aiida.orm.to_aiida_type` wraps a Python value in a data node, and :py:func:`~aiida.orm.from_aiida_type` returns the Python value of a data node.
+Nodes without a registered conversion pass through ``from_aiida_type`` unchanged.
+Both are ``functools.singledispatch`` functions, so plugins add conversions for their own types with ``to_aiida_type.register`` and ``from_aiida_type.register``.
+
 .. _topics:data_types:core:base:
 
 Base types

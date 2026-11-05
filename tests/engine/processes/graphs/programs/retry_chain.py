@@ -41,7 +41,7 @@ CalculationFailure = MockWorkflowErrors | MockScientificCodeErrors | RestartErro
 
 
 @task
-def mock_pw(attempt: int) -> Result[float, MockScientificCodeErrors]:
+def mock_step(attempt: int) -> Result[float, MockScientificCodeErrors]:
     """Fail twice with handled codes, then succeed."""
     if attempt == 0:
         return Err(MockScientificCodeErrors.OUT_OF_WALLTIME)
@@ -113,12 +113,12 @@ def ensure(value: float | None, error: CalculationFailure | None) -> float:
 def chained_retry(parameters: dict, max_attempts: int) -> float:
     """Retry with the handler chain until the step succeeds."""
     attempt = zero()
-    value, error = mock_pw(attempt=attempt)
+    value, error = mock_step(attempt=attempt)
     fixed = fix_chain(error=error, parameters=parameters)
     retry = should_retry(error=error, attempt=attempt, max_attempts=max_attempts)
     while retry:
         attempt = step(attempt=attempt)
-        value, error = mock_pw(attempt=attempt)
+        value, error = mock_step(attempt=attempt)
         fixed = fix_chain(error=error, parameters=fixed)
         retry = should_retry(error=error, attempt=attempt, max_attempts=max_attempts)
     return ensure(value=value, error=error)

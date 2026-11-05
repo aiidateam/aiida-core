@@ -30,7 +30,7 @@ from aiida.engine.processes.graphs.ir import (
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.engine.processes.ports import PortNamespace
-from aiida.orm import EnumData, Node, load_node
+from aiida.orm import EnumData, Node, load_node, to_aiida_type
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
@@ -178,7 +178,9 @@ class GraphRun:
         if not isinstance(task, ProcessTask) or not task.spec.exit_codes or not node.is_failed:
             return False
         if 'error' not in node.outputs:
-            return node.exit_status in {code.status for code in task.spec.exit_codes.values()}
+            return bool(task.spec.error_enums) and node.exit_status in {
+                code.status for code in task.spec.exit_codes.values()
+            }
         error = node.outputs['error']
         if not isinstance(error, EnumData):
             return False
@@ -383,8 +385,6 @@ class GraphRun:
     @staticmethod
     def _error_member(task: ProcessTask, node: Node) -> t.Any:
         """Return the declared member matching a failed process task's exit status."""
-        from aiida.orm import to_aiida_type
-
         for identifier in task.spec.error_enums:
             kind = get_object_loader().load_object(identifier)
             for member in kind:

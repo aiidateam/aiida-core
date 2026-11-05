@@ -20,14 +20,14 @@ from aiida.engine.processes.graphs.restart import RestartErrors
 from aiida.engine.processes.graphs.results import Err, Ok, Result
 
 
-class PwErrors(ExitCodeEnum):
-    """Workflow failures, mirroring `PwBaseWorkChain` exit codes."""
+class MockWorkflowErrors(ExitCodeEnum):
+    """Workflow failures of the mock calculation."""
 
     KNOWN_UNRECOVERABLE_FAILURE = ExitCode(310, 'The calculation failed with a known unrecoverable error.')
 
 
-class PwCalculationErrors(ExitCodeEnum):
-    """Parser failures the handlers match, mirroring `PwCalculation` exit codes."""
+class MockScientificCodeErrors(ExitCodeEnum):
+    """Calculation failures the handlers match."""
 
     OUT_OF_WALLTIME = ExitCode(400, 'The calculation stopped prematurely because it ran out of walltime.')
     COMPUTING_CHOLESKY = ExitCode(462, 'The code failed during the cholesky factorization.')
@@ -36,24 +36,24 @@ class PwCalculationErrors(ExitCodeEnum):
     )
 
 
-CalculationFailure = PwErrors | PwCalculationErrors | RestartErrors
+CalculationFailure = MockWorkflowErrors | MockScientificCodeErrors | RestartErrors
 """Every failure the chain knows, as one union."""
 
 
 @task
-def mock_pw(attempt: int) -> Result[float, PwCalculationErrors]:
+def mock_pw(attempt: int) -> Result[float, MockScientificCodeErrors]:
     """Fail twice with handled codes, then succeed."""
     if attempt == 0:
-        return Err(PwCalculationErrors.OUT_OF_WALLTIME)
+        return Err(MockScientificCodeErrors.OUT_OF_WALLTIME)
     if attempt == 1:
-        return Err(PwCalculationErrors.COMPUTING_CHOLESKY)
+        return Err(MockScientificCodeErrors.COMPUTING_CHOLESKY)
     return Ok(1.0)
 
 
 @task
 def handle_walltime(error: CalculationFailure | None, parameters: dict) -> dict:
     """Claim walltime failures, passing anything else through unchanged."""
-    if error is not PwCalculationErrors.OUT_OF_WALLTIME:
+    if error is not MockScientificCodeErrors.OUT_OF_WALLTIME:
         return parameters
     updated = dict(parameters)
     updated['restart_mode'] = 'restart'
@@ -64,8 +64,8 @@ def handle_walltime(error: CalculationFailure | None, parameters: dict) -> dict:
 def handle_diagonalization(error: CalculationFailure | None, parameters: dict) -> dict:
     """Claim diagonalization failures, passing anything else through unchanged."""
     if error not in (
-        PwCalculationErrors.COMPUTING_CHOLESKY,
-        PwCalculationErrors.DIAGONALIZATION_TOO_MANY_BANDS_NOT_CONVERGED,
+        MockScientificCodeErrors.COMPUTING_CHOLESKY,
+        MockScientificCodeErrors.DIAGONALIZATION_TOO_MANY_BANDS_NOT_CONVERGED,
     ):
         return parameters
     tried = parameters.get('tried', [])

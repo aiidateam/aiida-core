@@ -25,21 +25,21 @@ pytestmark = pytest.mark.presto
     [
         pytest.param(
             retry_chain.handle_walltime,
-            retry_chain.PwCalculationErrors.OUT_OF_WALLTIME,
+            retry_chain.MockScientificCodeErrors.OUT_OF_WALLTIME,
             'restart_mode',
             'restart',
             id='claims-walltime',
         ),
         pytest.param(
             retry_chain.handle_diagonalization,
-            retry_chain.PwCalculationErrors.COMPUTING_CHOLESKY,
+            retry_chain.MockScientificCodeErrors.COMPUTING_CHOLESKY,
             'diagonalization',
             'cg',
             id='claims-diagonalization',
         ),
         pytest.param(
             retry_chain.handle_walltime,
-            retry_chain.PwErrors.KNOWN_UNRECOVERABLE_FAILURE,
+            retry_chain.MockWorkflowErrors.KNOWN_UNRECOVERABLE_FAILURE,
             'restart_mode',
             None,
             id='declines-unknown',

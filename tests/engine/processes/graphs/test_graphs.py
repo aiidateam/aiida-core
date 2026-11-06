@@ -130,6 +130,7 @@ pytestmark = pytest.mark.presto
         pytest.param(loops.countdown, {'value': 3, 'condition': True}, {'result': 0}, id='loop'),
         pytest.param(loops.countdown_call, {'value': 3}, {'result': 0}, id='loop-call'),
         pytest.param(loops.countdown_call, {'value': -2}, {'result': -2}, id='loop-call-zero'),
+        pytest.param(loops.namespaced_loop, {'value': 3}, {'result': 0}, id='loop-namespaced'),
         pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 1}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
         pytest.param(parameters.signed_literals, {}, {'result': -2}, id='signed-literals'),

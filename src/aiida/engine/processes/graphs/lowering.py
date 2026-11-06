@@ -23,10 +23,12 @@ import typing as t
 from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
+from types import UnionType
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.calcjobs import CalcJob
+from aiida.engine.processes.exit_code import ExitCodeEnum
 from aiida.engine.processes.graphs.inputs import _place
 from aiida.engine.processes.graphs.ir import (
     _CONDITION_PORT,
@@ -249,13 +251,21 @@ class _Arm(t.NamedTuple):
 # the `overload-overlap` ignores below record that this overlap is deliberate.
 @t.overload
 def task(  # type: ignore[overload-overlap]
-    function: type[CalcJob], *, inputs: PortDeclaration | None = None, outputs: PortDeclaration | None = None
+    function: type[CalcJob],
+    *,
+    inputs: PortDeclaration | None = None,
+    outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> CalcJobTaskHandle: ...
 
 
 @t.overload
 def task(  # type: ignore[overload-overlap]
-    function: type[WorkChain], *, inputs: PortDeclaration | None = None, outputs: PortDeclaration | None = None
+    function: type[WorkChain],
+    *,
+    inputs: PortDeclaration | None = None,
+    outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> WorkChainTaskHandle: ...
 
 
@@ -277,6 +287,7 @@ def task(
     *,
     inputs: PortDeclaration | None = None,
     outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> t.Any:
     """Register an importable task with static ports and fixed graph inputs.
 
@@ -288,6 +299,8 @@ def task(
     :param inputs: names and node types inside dynamic input namespaces of a process class,
         e.g. ``{'nodes': {'text': SinglefileData}}``.
     :param outputs: names and node types of the dynamic outputs of a process class.
+    :param errors: an `ExitCodeEnum` subclass, or a union of them, mapping the exit
+        statuses a `CalcJob` or `WorkChain` task may finish with onto declared failures.
     :return: a callable, launchable task handle.
     """
 
@@ -295,7 +308,7 @@ def task(
         """Validate the importable task reference and construct its process wrapper."""
         if not inspect.isclass(target):
             _function_identifier(target)
-        return _build_task(target, inputs=inputs, outputs=outputs)
+        return _build_task(target, inputs=inputs, outputs=outputs, errors=errors)
 
     if function is not None:
         return decorate(function)
@@ -609,12 +622,12 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
     return names[0]
 
 
-def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
+def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool = False) -> None:
     """Bind each tuple element to one output of a multi-output call."""
     target: ast.expr = statement.targets[0]
     assert isinstance(target, ast.Tuple)
     names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
-    if not names or len(names) != len(target.elts) or any(name in state.names for name in names):
+    if not names or len(names) != len(target.elts) or (not rebind and any(name in state.names for name in names)):
         msg = (
             'unpacking maps positions to declared output ports, so every element needs a fresh name; '
             + 'give each unpacked output a new name instead'
@@ -721,6 +734,17 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
         test = _bind_call_condition(state, test=test)
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none'] = 'truthy'
+    if (
+        isinstance(test, ast.Compare)
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], (ast.Is, ast.IsNot))
+        and len(test.comparators) == 1
+        and isinstance(test.comparators[0], ast.Constant)
+        and test.comparators[0].value is None
+    ):
+        condition_test = 'is_none' if isinstance(test.ops[0], ast.Is) else 'is_not_none'
+        test = test.left
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -734,7 +758,11 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
         second = _rekey_alias(second, port) if second.alias else second
     instance = _claim_name(state, f'branch_{len(state.tasks) + 1}')
     given = _wire_branch_inputs(state, instance=instance, first=first, second=second, test=test)
-    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    state.tasks.append(
+        BranchControl(
+            name=instance, inputs=given, body=first.body, otherwise=second.body, condition_test=condition_test
+        )
+    )
     selected = first.child.names[first.name]
     state.names[first.name] = _Reference(instance, port=port or selected.port, shape=selected.shape)
 
@@ -791,6 +819,9 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
     for node in body:
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             assigned.add(node.targets[0].id)
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+            # A `_` element discards its arm, so it never carries across iterations.
+            assigned.update(elt.id for elt in node.targets[0].elts if isinstance(elt, ast.Name) and elt.id != '_')
         elif isinstance(node, ast.If):
             for arm in (*node.body, *node.orelse):
                 if isinstance(arm, ast.Assign):
@@ -845,6 +876,9 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         if not isinstance(node, ast.Assign):
             msg = 'loop bodies only record task calls, branches, and loops; ' + 'move anything else into a task instead'
             _reject(state, node=node, reason=msg)
+        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+            _lower_unpack(child, node, rebind=True)
+            continue
         _lower_assignment(child, node, rebind=True)
     outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
     body_spec = _lower_region_body(child, outputs=outputs)
@@ -868,6 +902,15 @@ def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) ->
         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
     }
     callees: set[int] = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
+    for stmt in statements:
+        for node in ast.walk(stmt):
+            # Dotted calls read through a module, not a wire; only the base name walks.
+            if isinstance(node, ast.Call):
+                func = node.func
+                while isinstance(func, ast.Attribute):
+                    func = func.value
+                if isinstance(func, ast.Name):
+                    callees.add(id(func))
     reads: dict[str, ast.Name] = {}
     for stmt in statements:
         for node in ast.walk(stmt):

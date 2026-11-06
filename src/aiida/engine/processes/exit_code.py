@@ -8,11 +8,12 @@
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
 
+import enum
 import typing as t
 
 from aiida.common.extendeddicts import AttributeDict
 
-__all__ = ('ExitCode', 'ExitCodesNamespace')
+__all__ = ('ExitCode', 'ExitCodeEnum', 'ExitCodesNamespace')
 
 
 class ExitCode(t.NamedTuple):
@@ -46,6 +47,49 @@ class ExitCode(t.NamedTuple):
             raise ValueError(template.format(kwargs, self.message))
 
         return ExitCode(self.status, message, self.invalidates_cache)
+
+
+class ExitCodeEnum(enum.Enum):
+    """An enum whose members must be `ExitCode` values.
+
+    Use this as the error type of a `Result` return annotation::
+
+        class DivisionErrors(ExitCodeEnum):
+            ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
+
+    Invalid values fail when the enum class is defined, not when a task using it is registered.
+    """
+
+    def __new__(cls, *args: object) -> 'ExitCodeEnum':
+        """Validate one member value at class-creation time."""
+        # `Enum` unpacks tuple values into `__new__`, so an `ExitCode` arrives as three arguments.
+        code: object = ExitCode(*t.cast(t.Any, args)) if len(args) != 1 else args[0]
+        if not isinstance(code, ExitCode):
+            msg = f'`{cls.__name__}` members must be `ExitCode` values, got `{code!r}`.'
+            raise TypeError(msg)
+        status, message, invalidates_cache = t.cast('tuple[object, object, object]', tuple(code))
+        if isinstance(status, bool) or not isinstance(status, int) or status <= 0:
+            msg = f'`{cls.__name__}` members must declare a positive exit status, got `{status!r}`.'
+            raise ValueError(msg)
+        if not isinstance(message, str):
+            msg = f'`{cls.__name__}` members must declare a string message, got `{message!r}`.'
+            raise ValueError(msg)
+        if not isinstance(invalidates_cache, bool):
+            msg = f'`{cls.__name__}` members must declare a boolean cache flag, got `{invalidates_cache!r}`.'
+            raise ValueError(msg)
+        obj = object.__new__(cls)
+        obj._value_ = code
+        return obj
+
+    @property
+    def exit_code(self) -> 'ExitCode':
+        """Return the `ExitCode` declared by this member."""
+        return self.value
+
+    @property
+    def status(self) -> int:
+        """Return the exit status declared by this member."""
+        return self.value.status
 
 
 class ExitCodesNamespace(AttributeDict):

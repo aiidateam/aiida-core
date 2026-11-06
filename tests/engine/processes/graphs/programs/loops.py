@@ -9,7 +9,17 @@
 """Loops declarations shared by the graph behavior suites."""
 
 from aiida.engine.processes.graphs.lowering import graph
+from tests.engine.processes.graphs.programs import tasks as task_module
 from tests.engine.processes.graphs.programs.tasks import add, decrement, is_positive
+
+
+@graph
+def namespaced_loop(value: int) -> int:
+    """Call through a module namespace inside a loop body."""
+    total = task_module.add(x=value, y=1)
+    while task_module.is_positive(value=total):
+        total = task_module.decrement(value=total)
+    return total
 
 
 @graph
@@ -69,10 +79,10 @@ def list_comprehension(values: list[int]) -> int:
     return add(x=1, y=1)
 
 
-# rejected at lowering: loop bodies only record task calls and branches.
+# rejected at lowering: loop state comes from enclosing names.
 @graph
 def tuple_targets_in_loop(value: int) -> int:
-    """Unpack in a loop; each line wires one placement to a plain name."""
+    """Unpack fresh names in a loop; state must be bound before the loop."""
     total = add(x=value, y=1)
     while is_positive(value=total):
         fresh_a, _ = add(x=total, y=1)

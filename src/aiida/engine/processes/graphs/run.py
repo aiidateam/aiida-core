@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 
 from aiida.common.exceptions import GraphMaxIterationsError, GraphRuntimeError
 from aiida.common.links import LinkType
+from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _at, _place
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
@@ -27,7 +29,8 @@ from aiida.engine.processes.graphs.ir import (
     _require_version,
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
-from aiida.orm import Node, load_node
+from aiida.engine.processes.ports import PortNamespace
+from aiida.orm import EnumData, Node, load_node, to_aiida_type
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
@@ -145,17 +148,44 @@ class GraphRun:
 
     @property
     def succeeded(self) -> set[str]:
-        """Return the finished tasks whose outputs all finished successfully."""
+        """Return the finished tasks whose outputs all completed successfully.
+
+        A declared `Result` failure counts as completed: the error arm carries the
+        declared outcome, so dependents still run and branch on it.
+        """
         return {
             name
             for name in self.finished
             if name in self.passed
             or (
-                all(self._is_finished_ok(self.done[instance]) for instance in self.instances[name])
+                all(self._has_result(name, self.done[instance]) for instance in self.instances[name])
                 and not self.missing_outputs(name)
                 and not self.mistyped_outputs(name)
             )
         }
+
+    def _has_result(self, name: str, pk: int) -> bool:
+        """Return whether a finished task completed, counting declared failures as completed.
+
+        Function tasks store the declared member on an `error` output. Process
+        tasks cannot gain outputs, so their declaration matches the child exit
+        status alone; the member is synthesized when the arm is read.
+        """
+        node = load_node(pk)
+        if node.is_finished_ok:
+            return True
+        task = self.graph.task(name)
+        if not isinstance(task, ProcessTask) or not task.spec.exit_codes or not node.is_failed:
+            return False
+        if 'error' not in node.outputs:
+            return bool(task.spec.error_enums) and node.exit_status in {
+                code.status for code in task.spec.exit_codes.values()
+            }
+        error = node.outputs['error']
+        if not isinstance(error, EnumData):
+            return False
+        value: ExitCode = error.get_member().value
+        return value in task.spec.exit_codes.values() and value.status == node.exit_status
 
     def missing_outputs(self, name: str) -> list[str]:
         """Return the declared outputs the latest instance of a finished task did not produce."""
@@ -214,8 +244,8 @@ class GraphRun:
             elif source.task in self.passed:
                 produced[output] = _at(self.passed[source.task], source.port)
             else:
-                produced[output] = _at(self._produced_by(source.task).outputs, source.port)
-        return produced
+                produced[output] = self._produced_value(source.task, source.port)
+        return {name: value for name, value in produced.items() if value is not None}
 
     def to_dict(self) -> _GraphRunState:
         """Return the checkpointable scheduling progress, without the graph or inputs."""
@@ -253,8 +283,15 @@ class GraphRun:
             step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
 
     def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: _Step) -> None:
-        """Dispatch the taken side of a branch."""
-        taken = task.body if _holds(inputs.pop(task.condition_port)) else task.otherwise
+        """Dispatch the taken side of a branch, testing presence without truthiness coercion."""
+        condition = inputs.pop(task.condition_port, None)
+        if task.condition_test == 'is_none':
+            selected = condition is None
+        elif task.condition_test == 'is_not_none':
+            selected = condition is not None
+        else:
+            selected = _holds(condition)
+        taken = task.body if selected else task.otherwise
         self.instances[task.name] = [task.name]
         # Each side may consume a different subset of the enclosing inputs.
         step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)
@@ -324,8 +361,52 @@ class GraphRun:
                 if edge.source in self.passed:
                     _place(inputs, target, _at(self.passed[edge.source], source))
                 else:
-                    _place(inputs, target, _at(self._produced_by(edge.source).outputs, source))
+                    _place(inputs, target, self._produced_value(edge.source, source))
         return inputs
+
+    def _produced_value(self, name: str, path: str) -> t.Any:
+        """Return the value one task produced at a path, or `None` for an absent `Result` arm.
+
+        Process tasks declare no error output, so a mapped failure synthesizes
+        its member from the child exit status instead of reading a link.
+        """
+        node = self._produced_by(name)
+        task = self.graph.task(name)
+        ports = task.output_ports()
+        outputs = node.outputs
+        # Only declared outputs travel; the process may attach more.
+        values = {key: outputs[key] for key in ports if key in outputs}
+        if isinstance(task, ProcessTask) and task.spec.error_enums and 'error' not in values and node.is_failed:
+            # Process tasks declare no error output, so a mapped failure
+            # synthesizes its member from the child exit status instead.
+            values['error'] = self._error_member(task, node)
+        return self._value_at(values, ports, path)
+
+    @staticmethod
+    def _error_member(task: ProcessTask, node: Node) -> t.Any:
+        """Return the declared member matching a failed process task's exit status."""
+        for identifier in task.spec.error_enums:
+            kind = get_object_loader().load_object(identifier)
+            for member in kind:
+                if member.value.status == node.exit_status:
+                    return to_aiida_type(member)
+        msg = f'task `{task.name}` failed with an unmapped exit status {node.exit_status}.'
+        raise GraphRuntimeError(msg)
+
+    @staticmethod
+    def _value_at(value: t.Any, ports: PortNamespace, path: str) -> t.Any:
+        """Resolve a path, returning `None` for absent optional leaves or namespace arms."""
+        for segment in path.split('.') if path else ():
+            port = ports[segment]
+            try:
+                value = value[segment]
+            except KeyError:
+                if not port.required:
+                    return None
+                raise
+            if isinstance(port, PortNamespace):
+                ports = port
+        return value
 
     def _produced_by(self, name: str) -> Node:
         """Return the node produced by the latest instance of one task."""

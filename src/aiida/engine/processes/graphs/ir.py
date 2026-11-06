@@ -24,6 +24,7 @@ from aiida.common import _callables as callables
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
@@ -222,7 +223,13 @@ class TaskIR:
     declared_outputs: NamespaceShape = field(default_factory=NamespaceShape)
     typevar_inputs: TypevarPositions = field(default_factory=dict, compare=False)
     typevar_output: t.Any = field(default=None, compare=False)
+    exit_codes: dict[str, ExitCode] = field(default_factory=dict)
+    error_enums: tuple[str, ...] = field(default_factory=tuple)
     version: str = _TASK_IR_VERSION
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'exit_codes', dict(self.exit_codes))
+        object.__setattr__(self, 'error_enums', tuple(self.error_enums))
 
     @classmethod
     def from_process(
@@ -233,6 +240,8 @@ class TaskIR:
         declared_outputs: NamespaceShape | None = None,
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
+        error_enums: tuple[str, ...] | None = None,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass."""
         module, name = process.__module__, process.__name__
@@ -262,6 +271,8 @@ class TaskIR:
             declared_outputs=declared_outputs or NamespaceShape(),
             typevar_inputs=typevar_inputs or {},
             typevar_output=typevar_output,
+            exit_codes=dict(exit_codes or {}),
+            error_enums=tuple(error_enums or ()),
         )
 
     @cached_property
@@ -280,7 +291,12 @@ class TaskIR:
 
     @property
     def outputs(self) -> PortNamespace:
-        """Return the static leaf output ports of the task process."""
+        """Return the static leaf output ports of the task process.
+
+        Process classes declaring error enums expose a synthetic `error` arm,
+        so failed children branch the same way `Result` tasks do. The arm
+        carries no process port; it only names the declared failure.
+        """
         ports = self.process_class.spec().outputs
         if self.declared_outputs.fields:
             ports = _close_dynamic(ports, self.declared_outputs, OutputPort, narrow=True)
@@ -290,6 +306,14 @@ class TaskIR:
                 'declare the outputs of a dynamic namespace with `task(..., outputs={...})`.'
             )
             raise GraphTypeCheckError(msg)
+        if self.exit_codes and 'error' not in ports:
+            from aiida.orm import EnumData
+
+            fresh = PortNamespace(ports.name, help=ports.help, required=ports.required)
+            for name, child in ports.items():
+                fresh[name] = child
+            fresh['error'] = OutputPort('error', valid_type=EnumData, required=False)
+            ports = fresh
         return ports
 
     def check_ports(self) -> None:
@@ -322,6 +346,10 @@ class TaskIR:
             data['declared_inputs'] = dump_shape(self.declared_inputs)
         if self.declared_outputs.fields:
             data['declared_outputs'] = dump_shape(self.declared_outputs)
+        if self.exit_codes:
+            data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
+        if self.error_enums:
+            data['error_enums'] = list(self.error_enums)
         return {**data, 'version': self.version}
 
     @classmethod
@@ -332,6 +360,8 @@ class TaskIR:
             executor=ExecutorReference.from_dict(data['executor']),
             declared_inputs=_load_declared(data.get('declared_inputs')),
             declared_outputs=_load_declared(data.get('declared_outputs')),
+            exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
+            error_enums=tuple(data.get('error_enums', ())),
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 
@@ -471,6 +501,7 @@ class GraphTask(abc.ABC):
                     body=body,
                     otherwise=GraphIR.from_dict(data['otherwise']),
                     condition_port=data.get('condition_port', _CONDITION_PORT),
+                    condition_test=data.get('condition_test', 'truthy'),
                     **common,
                 )
             if kind == 'loop':
@@ -533,13 +564,21 @@ class SubgraphTask(BodyTask):
 class BranchControl(BodyTask):
     """A condition dispatching exactly one of two nested templates.
 
-    ``condition_port`` is a synthetic port wired directly into the placement inputs; validation
-    rejects it from both side templates, so it never appears in their declared inputs.
+    ``condition_port`` is a synthetic port wired outside either side's declared inputs, so it
+    never appears in their declared inputs. ``condition_test`` decides how the condition
+    selects a side: truthiness, or a presence test against `None`.
     """
 
     KIND: t.ClassVar[_TaskKind] = 'branch'
     condition_port: str = _CONDITION_PORT
     otherwise: GraphIR
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none'] = 'truthy'
+
+    def __post_init__(self) -> None:
+        """Reject stored declarations with an unknown condition test."""
+        if self.condition_test not in ('truthy', 'is_none', 'is_not_none'):
+            msg = f'unsupported branch condition test `{self.condition_test}`.'
+            raise GraphTypeCheckError(msg)
 
     @property
     def branches(self) -> tuple[GraphIR, ...]:
@@ -566,6 +605,7 @@ class BranchControl(BodyTask):
         return {
             **super().to_dict(),
             'condition_port': self.condition_port,
+            'condition_test': self.condition_test,
             'otherwise': self.otherwise.to_dict(),
         }
 
@@ -687,7 +727,9 @@ class GraphIR:
             if origin is None or isinstance(origin, PortNamespace):
                 msg = f'graph output `{name}` must reference a declared leaf.'
                 raise GraphTypeCheckError(msg)
-            namespace[name] = OutputPort(name, valid_type=self._output_types(name, origin) or (Data,))
+            namespace[name] = OutputPort(
+                name, valid_type=self._output_types(name, origin) or (Data,), required=origin.required
+            )
         return namespace
 
     def _output_types(self, name: str, origin: InputPort | OutputPort) -> tuple[type, ...] | type | None:

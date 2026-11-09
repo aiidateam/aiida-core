@@ -165,6 +165,7 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
         pytest.param(calls.forwarded_exclude_unknown, 'matches no input here', id='forwarded-exclude-unknown'),
         pytest.param(calls.namespaced_unknown, 'unknown name', id='namespaced-unknown'),
         pytest.param(calls.namespaced_shadowed, 'both a wire and a declaration', id='namespaced-shadowed'),
+        pytest.param(branches.namespaced_shadowed, 'both a wire and a declaration', id='namespaced-shadowed-branch'),
         pytest.param(calls.list_argument, 'provide collections as graph inputs', id='list'),
         pytest.param(expressions.arithmetic_expression, 'put this calculation in a task', id='expression'),
         pytest.param(expressions.nonfinite_literal, 'inline numbers must be finite', id='nonfinite-literal'),

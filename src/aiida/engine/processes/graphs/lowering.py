@@ -867,7 +867,18 @@ def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) ->
         for node in ast.walk(target)
         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
     }
-    callees: set[int] = {id(node.func) for stmt in statements for node in ast.walk(stmt) if isinstance(node, ast.Call)}
+    callees: set[int] = set()
+    for stmt in statements:
+        for node in ast.walk(stmt):
+            # Dotted calls read through a module, not a wire; a base shadowing an
+            # enclosing wire stays a read so the call rejects the ambiguity.
+            if isinstance(node, ast.Call):
+                callees.add(id(node.func))
+                func: ast.expr = node.func
+                while isinstance(func, ast.Attribute):
+                    func = func.value
+                if isinstance(func, ast.Name) and func.id not in state.names:
+                    callees.add(id(func))
     reads: dict[str, ast.Name] = {}
     for stmt in statements:
         for node in ast.walk(stmt):

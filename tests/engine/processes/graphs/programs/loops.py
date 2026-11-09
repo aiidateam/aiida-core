@@ -9,7 +9,17 @@
 """Loops declarations shared by the graph behavior suites."""
 
 from aiida.engine.processes.graphs.lowering import graph
+from tests.engine.processes.graphs.programs import tasks as task_module
 from tests.engine.processes.graphs.programs.tasks import add, decrement, is_positive
+
+
+@graph
+def namespaced_loop(value: int) -> int:
+    """Call through a module namespace inside a loop body."""
+    total = task_module.add(x=value, y=1)
+    while task_module.is_positive(value=total):
+        total = task_module.decrement(value=total)
+    return total
 
 
 @graph

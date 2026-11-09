@@ -9,6 +9,7 @@
 """Branches declarations shared by the graph behavior suites."""
 
 from aiida.engine.processes.graphs.lowering import graph
+from tests.engine.processes.graphs.programs import tasks as task_module
 from tests.engine.processes.graphs.programs.tasks import (
     add,
     branch_2,
@@ -27,6 +28,27 @@ def external_choice(value: int, condition: bool) -> int:
         selected_branch = add(x=value, y=1)
     else:
         selected_branch = add(x=value, y=2)
+    return selected_branch
+
+
+@graph
+def namespaced_shadowed(value: int, condition: bool) -> int:
+    """Call through a module name shadowed by a wire."""
+    task_module = add(x=value, y=1)
+    if condition:
+        selected_branch = task_module.add(x=value, y=2)
+    else:
+        selected_branch = add(x=value, y=3)
+    return selected_branch
+
+
+@graph
+def namespaced_choice(value: int, condition: bool) -> int:
+    """Branch on an input flag, calling through a module namespace."""
+    if condition:
+        selected_branch = task_module.add(x=value, y=1)
+    else:
+        selected_branch = task_module.add(x=value, y=2)
     return selected_branch
 
 

@@ -21,7 +21,7 @@ import inspect
 import textwrap
 import typing as t
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
@@ -856,40 +856,54 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         state.names[name] = _Reference(instance, port=name, shape=child.names[name].shape)
 
 
+def _walk_region(statements: list[ast.stmt]) -> Iterator[ast.AST]:
+    """Yield every node of each region statement, in order."""
+    for stmt in statements:
+        yield from ast.walk(stmt)
+
+
+def _assigned_names(statements: list[ast.stmt]) -> set[str]:
+    """Return the plain names a region body binds."""
+    assigned: set[str] = set()
+    for stmt in statements:
+        if not isinstance(stmt, ast.Assign):
+            continue
+        for target in stmt.targets:
+            for node in ast.walk(target):
+                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                    assigned.add(node.id)
+    return assigned
+
+
+def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference]) -> set[int]:
+    """Return the identities of called expressions and unshadowed module bases."""
+    callees: set[int] = set()
+    for node in _walk_region(statements):
+        if not isinstance(node, ast.Call):
+            continue
+        callees.add(id(node.func))
+        # Dotted calls read through a module, not a wire; a base shadowing an
+        # enclosing wire stays a read so the call rejects the ambiguity.
+        func: ast.expr = node.func
+        while isinstance(func, ast.Attribute):
+            func = func.value
+        if isinstance(func, ast.Name) and func.id not in enclosing:
+            callees.add(id(func))
+    return callees
+
+
 def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
-    assigned: set[str] = {
-        node.id
-        for stmt in statements
-        if isinstance(stmt, ast.Assign)
-        for target in stmt.targets
-        for node in ast.walk(target)
-        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
-    }
-    callees: set[int] = set()
-    for stmt in statements:
-        for node in ast.walk(stmt):
-            # Dotted calls read through a module, not a wire; a base shadowing an
-            # enclosing wire stays a read so the call rejects the ambiguity.
-            if isinstance(node, ast.Call):
-                callees.add(id(node.func))
-                func: ast.expr = node.func
-                while isinstance(func, ast.Attribute):
-                    func = func.value
-                if isinstance(func, ast.Name) and func.id not in state.names:
-                    callees.add(id(func))
+    assigned = _assigned_names(statements)
+    callees = _callee_ids(statements, state.names)
     reads: dict[str, ast.Name] = {}
-    for stmt in statements:
-        for node in ast.walk(stmt):
-            if (
-                isinstance(node, ast.Name)
-                and isinstance(node.ctx, ast.Load)
-                and node.id not in assigned
-                and id(node) not in callees
-                and node.id not in reads
-            ):
-                reads[node.id] = node
+    for node in _walk_region(statements):
+        if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
+            continue
+        if node.id in assigned or id(node) in callees or node.id in reads:
+            continue
+        reads[node.id] = node
     child = _LoweringState(state.definition, stack=state.stack)
     for name in sorted(reads):
         if name not in state.names:

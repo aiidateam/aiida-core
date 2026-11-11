@@ -772,6 +772,15 @@ class TestVerdiComputerCommands:
         # The new label should be available
         orm.Computer.collection.get(label='comp_cli_test_computer')
 
+        # Relabel to '!' (the ambiguity breaker) and verify both directions work (issue #6415)
+        options = ['comp_cli_test_computer', '!']
+        self.cli_runner(computer_relabel, options)
+        orm.Computer.collection.get(label='!')
+
+        options = ['!', 'comp_cli_test_computer']
+        self.cli_runner(computer_relabel, options)
+        orm.Computer.collection.get(label='comp_cli_test_computer')
+
     # Ensures that 'yes' works for backwards compatibility, see issue #6422
     @pytest.mark.parametrize('user_input', ['y', 'yes'])
     def test_computer_delete_existing_computer_successful(self, user_input):

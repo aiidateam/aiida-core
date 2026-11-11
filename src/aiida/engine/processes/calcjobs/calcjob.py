@@ -64,12 +64,30 @@ def validate_calc_job(inputs: t.Any, ctx: PortNamespace) -> str | None:
         # checked for consistency.
         return None
 
-    code = inputs.get('code', None)
-    if not code:
-        # If the namespace no longer contains `code` port we skip validation
-        return None
+    try:
+        ctx.get_port('code')
+        has_code_port = True
+    except ValueError:
+        has_code_port = False
 
-    computer_from_code = code.computer
+    code = inputs.get('code', None)
+
+    is_stash = False
+    try:
+        is_stash = ctx.get_port('metadata.options.stash').required
+    except ValueError:
+        pass
+
+    is_unstash = False
+    try:
+        is_unstash = ctx.get_port('metadata.options.unstash').required
+    except ValueError:
+        pass
+
+    if has_code_port and not code and not (is_stash or is_unstash):
+        return 'neither `code` nor `remote_folder` was specified.'
+
+    computer_from_code = code.computer if code else None
     computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 
     if not computer_from_code and not computer_from_metadata:

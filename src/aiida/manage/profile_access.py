@@ -163,14 +163,21 @@ class ProfileAccessManager:
         for path in self._get_tracking_files('.pid'):
             try:
                 process = psutil.Process(int(path.stem))
-            except psutil.NoSuchProcess:
-                # The process no longer exists, so simply remove the PID file.
-                path.unlink()
+                cmdline = str(process.cmdline())
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                # The process no longer exists, is a zombie, or belongs to another user/system daemon,
+                # which means the PID file is stale and should be removed.
+                path.unlink(missing_ok=True)
             else:
                 # If the process exists but its command is different from what is written in the PID file,
                 # we assume the latter is stale and remove it.
-                if path.read_text() != str(process.cmdline()):
-                    path.unlink()
+                try:
+                    is_stale = path.read_text() != cmdline
+                except FileNotFoundError:
+                    continue
+
+                if is_stale:
+                    path.unlink(missing_ok=True)
 
     def _get_tracking_files(self, ext_string: str, exclude_self: bool = False) -> list[Path]:
         """Return a list of all files that track the accessing and locking of the profile.

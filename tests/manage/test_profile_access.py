@@ -157,6 +157,75 @@ def test_clear_stale_pid_files(profile_access_manager):
     assert fake_filename not in listdir(records_dir)
 
 
+@pytest.mark.parametrize(
+    'exception',
+    (
+        psutil.AccessDenied(pid=12345),
+        psutil.NoSuchProcess(pid=12345),
+        psutil.ZombieProcess(pid=12345),
+    ),
+)
+def test_clear_stale_pid_files_cmdline_exceptions(profile_access_manager, monkeypatch, exception):
+    """Test `_clear_stale_pid_files` removes stale PID files when `cmdline()` raises psutil errors (#6195)."""
+    records_dir = profile_access_manager._dirpath_records
+    fake_file = records_dir / '12345.pid'
+    fake_file.write_text("['some', 'command']", encoding='utf-8')
+
+    class MockProcess:
+        """Mock process whose cmdline raises an exception."""
+
+        def cmdline(self):
+            """Mock cmdline call."""
+            raise exception
+
+    monkeypatch.setattr(psutil, 'Process', lambda pid: MockProcess())
+
+    assert fake_file.name in listdir(records_dir)
+    profile_access_manager._clear_stale_pid_files()
+    assert fake_file.name not in listdir(records_dir)
+
+
+def test_clear_stale_pid_files_process_access_denied(profile_access_manager, monkeypatch):
+    """Test `_clear_stale_pid_files` removes PID file when `psutil.Process(pid)` raises AccessDenied (#6195)."""
+    records_dir = profile_access_manager._dirpath_records
+    fake_file = records_dir / '12345.pid'
+    fake_file.write_text("['some', 'command']", encoding='utf-8')
+
+    def mock_process(pid):
+        """Mock psutil.Process that raises AccessDenied."""
+        raise psutil.AccessDenied(pid=pid)
+
+    monkeypatch.setattr(psutil, 'Process', mock_process)
+
+    assert fake_file.name in listdir(records_dir)
+    profile_access_manager._clear_stale_pid_files()
+    assert fake_file.name not in listdir(records_dir)
+
+
+def test_clear_stale_pid_files_active_process(profile_access_manager, monkeypatch):
+    """Test `_clear_stale_pid_files` preserves PID files of active processes whose cmdline matches."""
+    records_dir = profile_access_manager._dirpath_records
+    fake_file = records_dir / '12345.pid'
+    cmd = "['verdi', 'daemon', 'start']"
+    fake_file.write_text(cmd, encoding='utf-8')
+
+    class MockProcess:
+        """Mock process returning matching cmdline."""
+
+        def cmdline(self):
+            """Mock cmdline call."""
+            return ['verdi', 'daemon', 'start']
+
+    monkeypatch.setattr(psutil, 'Process', lambda pid: MockProcess())
+
+    try:
+        assert fake_file.name in listdir(records_dir)
+        profile_access_manager._clear_stale_pid_files()
+        assert fake_file.name in listdir(records_dir)
+    finally:
+        fake_file.unlink(missing_ok=True)
+
+
 ###########################################################################
 # SEMI INTEGRATION TESTS
 #

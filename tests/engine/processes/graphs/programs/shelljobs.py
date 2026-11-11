@@ -53,3 +53,30 @@ def mistyped(code: Code, arguments: list[str]) -> SinglefileData:
 def double(x: int) -> int:
     """Double a number; registered as a task only by the tests."""
     return 2 * x
+
+
+rerun = task(ShellJob, inputs={'nodes': {'text': SinglefileData}}, outputs={'stdout': SinglefileData})
+
+
+@graph
+def run_remote_none_in_task_call(text: SinglefileData, code: Code, arguments: list[str]) -> SinglefileData:
+    """Run without the optional remote folder; the input is left out of the launch."""
+    reran = rerun(code=code, arguments=arguments, nodes={'text': text}, remote_folder=None)
+    return reran.stdout
+
+
+@graph
+def run_remote_none_in_graph_signature(
+    text: SinglefileData, code: Code, arguments: list[str], remote=None
+) -> SinglefileData:
+    """Run with the remote input passed as `None`; the port stays out of the launch."""
+    reran = rerun(code=code, arguments=arguments, nodes={'text': text}, remote_folder=remote)
+    return reran.stdout
+
+
+@graph
+def run_remote_from_previous_task(text: SinglefileData, code: Code, arguments: list[str]) -> SinglefileData:
+    """Run with the previous remote folder as the optional remote folder."""
+    first = cat(code=code, arguments=arguments, nodes={'text': text})
+    reran = rerun(code=code, arguments=arguments, nodes={'text': text}, remote_folder=first.remote_folder)
+    return reran.stdout

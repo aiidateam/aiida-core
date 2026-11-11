@@ -191,6 +191,10 @@ Every ``CalcJob`` placement needs an entry; a missing one fails the launch with 
 Nested graphs receive the same ``task_metadata``, keyed by their inner placement names, so give placements with different options distinct names.
 Standard ``metadata`` such as ``label`` applies to the graph process itself.
 
+Static optional inputs, such as a restart folder, need no declaration: wire `None`
+and the input stays out of the launch; wire a node and it arrives. Unwired
+optional inputs were already left out; `None` now means the same.
+
 .. _topics:workflows:graphs:dynamic_namespaces:
 
 Dynamic namespaces

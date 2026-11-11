@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 from aiida.common.exceptions import GraphMaxIterationsError, GraphRuntimeError
 from aiida.common.links import LinkType
-from aiida.engine.processes.graphs.inputs import _at, _place
+from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
     GraphIR,
@@ -24,6 +24,7 @@ from aiida.engine.processes.graphs.ir import (
     LoopControl,
     ProcessTask,
     SubgraphTask,
+    _input_ports_at,
     _require_version,
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
@@ -88,6 +89,12 @@ class _Start:
     task: GraphTask
     inputs: dict[str, t.Any]
     body: GraphIR | None = None
+
+
+def _drops_none(task: GraphTask, path: str) -> bool:
+    """Return whether a `None` value leaves an input unwired instead of failing validation."""
+    ports = _input_ports_at(task, path)
+    return bool(ports) and all(_drops_none_value(port) for port in ports)
 
 
 @dataclass
@@ -317,14 +324,21 @@ class GraphRun:
                 continue
             for target, port in targets:
                 if target == task.name:
+                    if value is None and _drops_none(task, port):
+                        # An explicit `None` on an optional input leaves the input unwired.
+                        continue
                     _place(inputs, port, value)
         for edge in self.graph.dependencies:
             if edge.target == task.name and edge.carried_between is not None:
                 source, target = edge.carried_between
                 if edge.source in self.passed:
-                    _place(inputs, target, _at(self.passed[edge.source], source))
+                    value = _at(self.passed[edge.source], source)
                 else:
-                    _place(inputs, target, _at(self._produced_by(edge.source).outputs, source))
+                    value = _at(self._produced_by(edge.source).outputs, source)
+                if value is None and _drops_none(task, target):
+                    # An absent arm on an optional input means the input is unwired.
+                    continue
+                _place(inputs, target, value)
         return inputs
 
     def _produced_by(self, name: str) -> Node:

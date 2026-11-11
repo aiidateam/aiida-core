@@ -1188,6 +1188,38 @@ def test_function_task_rejects_port_declarations() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
+    'declaration, linked, launch',
+    [
+        pytest.param(shelljobs.run_remote_none_in_task_call, False, {}, id='unwired'),
+        pytest.param(shelljobs.run_remote_from_previous_task, True, {}, id='wired'),
+        pytest.param(shelljobs.run_remote_none_in_graph_signature, False, {'remote': None}, id='graph-input-none'),
+        pytest.param(shelljobs.run_remote_none_in_graph_signature, False, {}, id='graph-input-omitted'),
+    ],
+)
+def test_declared_optional_input_runs(
+    shell_code, text_file, declaration: GraphHandle, linked: bool, launch: dict[str, t.Any]
+) -> None:
+    """An unwired optional input stays out of the launch; a wired one arrives."""
+    metadata = {name: {'options': {}} for name in declaration.build().task_names}
+    outputs, node = run_get_node(
+        declaration,
+        text=text_file,
+        code=shell_code('cat'),
+        arguments=['{text}'],
+        task_metadata=metadata,
+        **launch,
+    )
+    assert node.is_finished_ok
+    assert outputs['result'].get_content() == 'one two three\n'
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    incoming = [link.link_label for link in calls['rerun'].base.links.get_incoming().all()]
+    assert ('remote_folder' in incoming) == linked
+    if linked:
+        assert calls['rerun'].inputs.remote_folder.uuid == calls['cat'].outputs.remote_folder.uuid
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
     'declaration',
     [
         pytest.param(tasks.generic_breaks, id='graph-output'),

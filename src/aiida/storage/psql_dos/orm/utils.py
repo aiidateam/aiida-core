@@ -75,8 +75,8 @@ class ModelWrapper:
         # Python 3's implementation of copy.copy does not call __init__ on the new object
         # but manually restores attributes instead. Make sure we never get into a recursive
         # loop by protecting the special variables here
-        if item in ('_model', '_backend'):
-            raise AttributeError()
+        if item in ('_model', '_backend') or '_model' not in self.__dict__ or '_backend' not in self.__dict__:
+            raise AttributeError(item)
 
         if self.is_saved() and self._is_mutable_model_field(item) and not self._in_transaction():
             self._ensure_model_uptodate(fields=(item,))
@@ -95,6 +95,12 @@ class ModelWrapper:
         if self.is_saved() and self._is_mutable_model_field(key):
             fields = {key}
             self._flush(fields=fields)
+
+    def __copy__(self):
+        raise exceptions.InvalidOperation('Copying a ModelWrapper is not supported.')
+
+    def __deepcopy__(self, memo):
+        raise exceptions.InvalidOperation('Copying a ModelWrapper is not supported.')
 
     def is_saved(self):
         """Return whether the wrapped model instance is saved in the database.

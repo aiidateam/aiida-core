@@ -298,6 +298,14 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """Return a copy of the current object to work with, not stored yet."""
         return entities.from_backend_entity(Computer, self._backend_entity.copy())
 
+    def __copy__(self) -> Computer:
+        """Return a copy of the current object to work with, not stored yet."""
+        return self.copy()
+
+    def __deepcopy__(self, memo: t.Any) -> Computer:
+        """Return a copy of the current object to work with, not stored yet."""
+        return self.copy()
+
     def store(self) -> Computer:
         """Store the computer in the DB.
 

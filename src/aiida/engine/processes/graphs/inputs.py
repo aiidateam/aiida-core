@@ -28,6 +28,26 @@ def _at(container: t.Any, path: str) -> t.Any:
     return container
 
 
+def _drops_none_value(contract: InputPort | PortNamespace | Shape) -> bool:
+    """Report whether an explicit `None` must be dropped for a contract.
+
+    Optionality decides first: any non-required contract drops `None` to
+    absent or its default. Required leaves keep `None` only when `NoneType`
+    is in the valid types; an unconstrained required leaf keeps `None` and
+    validation decides. Namespaces never accept `None` as a value.
+    """
+    if isinstance(contract, (PortNamespace, NamespaceShape)):
+        return True
+    if not contract.required:
+        return True
+    types = contract.types if isinstance(contract, LeafShape) else contract.valid_type
+    if types is None:
+        return False
+    if isinstance(types, type):
+        return types is not type(None)
+    return type(None) not in types
+
+
 def _place(inputs: dict[str, t.Any], path: str, value: t.Any) -> None:
     """Place a leaf or namespace reference without flattening dictionary-valued leaves."""
     *namespaces, name = path.split('.')
@@ -94,9 +114,16 @@ class _InputResolver:
         return prepared
 
     def visit(self, port: InputPort | PortNamespace, value: t.Any, path: str) -> t.Any:
-        """Fill one port, recording rather than raising missing required fields."""
+        """Fill one port, recording rather than raising missing required fields.
+
+        An explicit `None` means absent unless the contract accepts it: required
+        non-nullable `None` drops into the missing aggregation, nullable `None`
+        stays a value, and defaulted ports keep the fallback-to-default behavior.
+        """
         absent_namespace = False
         missing_before = len(self.missing)
+        if value is None and _drops_none_value(port):
+            value = UNSPECIFIED
         if value is UNSPECIFIED:
             filled, absent_namespace = self._fill_default(port, path)
             if filled is UNSPECIFIED:
@@ -111,6 +138,8 @@ class _InputResolver:
             prepared = self.visit(child, value.get(name, UNSPECIFIED), child_path)
             if prepared is not UNSPECIFIED:
                 result[name] = prepared
+            else:
+                result.pop(name, None)
         if absent_namespace and len(self.missing) == missing_before and not result:
             # No child recorded anything, so the absent namespace itself is the missing field.
             self.missing.append(MissingGraphInput(self.identifier, path, port.help, port.required))

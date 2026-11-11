@@ -27,7 +27,7 @@ from dataclasses import dataclass, field, replace
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.calcjobs import CalcJob
-from aiida.engine.processes.graphs.inputs import _place
+from aiida.engine.processes.graphs.inputs import _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     _CONDITION_PORT,
     BranchControl,
@@ -1348,7 +1348,13 @@ def _lower_input(
     shape: Shape,
     given: dict[str, _CapturedValue],
 ) -> None:
-    """Expand dictionary syntax only for declared fixed input namespaces."""
+    """Expand dictionary syntax only for declared fixed input namespaces.
+
+    An explicit `None` means absent unless the contract accepts it, so dropped
+    `None` literals read as not provided.
+    """
+    if isinstance(expression, ast.Constant) and expression.value is None and _drops_none_value(shape):
+        return
     if isinstance(expression, ast.Dict) and isinstance(shape, NamespaceShape):
         _place(given, path, {})
         seen: set[str] = set()

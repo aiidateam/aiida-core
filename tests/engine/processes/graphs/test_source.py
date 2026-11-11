@@ -17,7 +17,7 @@ from dataclasses import replace
 
 import pytest
 
-from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError
+from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, MissingRequiredInputsError
 from aiida.engine.processes.graphs.inputs import _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import Dependency, Endpoint, GraphIR, LoopControl, Route, TaskIR
 from aiida.engine.processes.graphs.lowering import GraphHandle
@@ -109,6 +109,22 @@ def test_declared_spec_round_trips_through_json() -> None:
     assert set(restored.outputs) == {'result'}
 
 
+def test_declared_union_input_rejected() -> None:
+    """Union declarations are rejected; optional static inputs need no declaration."""
+    from aiida.calculations.shell import ShellJob
+    from aiida.engine.processes.graphs.lowering import task as declare_task
+    from aiida.orm import RemoteData, SinglefileData
+
+    with pytest.raises(GraphTypeCheckError, match='takes `Data` subclasses'):
+        declare_task(ShellJob, inputs={'x': RemoteData | None}, outputs={'stdout': SinglefileData})
+    with pytest.raises(GraphTypeCheckError, match='takes `Data` subclasses'):
+        declare_task(
+            ShellJob,
+            inputs={'nodes': {'text': SinglefileData}},
+            outputs={'x': RemoteData | None},
+        )
+
+
 @pytest.mark.parametrize(
     'declaration',
     [
@@ -144,6 +160,25 @@ def test_parameter_defaults_fill_missing_inputs() -> None:
     spec = parameters.default_parameter.build()
     assert _prepared(spec, {}) == {'value': 2}
     assert _prepared(spec, {'value': 5}) == {'value': 5}
+
+
+def test_required_non_nullable_none_is_missing() -> None:
+    """An explicit `None` for a required non-nullable port reads as absent."""
+    spec = calls.chain.build()
+    with pytest.raises(MissingRequiredInputsError, match='x'):
+        _prepared(spec, {'x': None, 'y': 2})
+
+
+def test_nullable_none_stays_a_value() -> None:
+    """An explicit `None` for a nullable port stays a value."""
+    spec = parameters.optional_collection.build()
+    assert _prepared(spec, {'values': None}) == {'values': None}
+
+
+def test_defaulted_none_falls_back_to_default() -> None:
+    """An explicit `None` for a defaulted non-nullable port yields the default."""
+    spec = parameters.default_parameter.build()
+    assert _prepared(spec, {'value': None}) == {'value': 2}
 
 
 @pytest.mark.parametrize(

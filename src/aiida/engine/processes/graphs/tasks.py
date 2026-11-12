@@ -240,11 +240,16 @@ class FunctionTaskHandle(t.Generic[P, R]):
     def __call__(self: FunctionTaskHandle[P, R], *args: t.Any, after: t.Any = ..., **kwargs: t.Any) -> R: ...
 
     def __call__(self, *args: t.Any, after: t.Any = None, **kwargs: t.Any) -> t.Any:
-        """Run the task function and return its result."""
+        """Reject direct calls; tasks run as `@graph` placements or through `run` and `run_get_node`."""
         if after is not None:
             msg = '`after` orders placements in a `@graph` body; it is not a task input.'
             raise GraphError(msg)
-        return self._function(*args, **kwargs)
+        name = getattr(self._function, '__name__', 'task')
+        msg = (
+            f'`{name}` declares a task for `@graph` bodies and never runs standalone; '
+            + 'launch it with `run` or `run_get_node`, or place the call in a graph.'
+        )
+        raise GraphError(msg)
 
     @property
     def process_class(self) -> type[TaskProcess]:
@@ -278,7 +283,7 @@ class FunctionTaskHandle(t.Generic[P, R]):
         return self._function.run_get_pk(*args, **kwargs)
 
     def recreate_from(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        """Recreate the task node from cached inputs through the decorated function."""
+        """Rebuild the task from a checkpoint; the persistence layer calls this, not users."""
         return self._function.recreate_from(*args, **kwargs)
 
 

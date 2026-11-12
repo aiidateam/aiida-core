@@ -836,6 +836,12 @@ def test_run_state_versions_its_checkpoints() -> None:
         GraphRun.from_dict(state.graph, state.given, {**saved, 'version': '0.0'})
 
 
+def test_task_handle_call_raises() -> None:
+    """A task handle declares work; a direct call raises and points at `run` and `run_get_node`."""
+    with pytest.raises(GraphError, match='declares a task'):
+        tasks.add(x=1, y=2)
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_tasks_are_cached() -> None:
     from aiida.manage.caching import enable_caching

@@ -138,6 +138,7 @@ Graph outputs can be task outputs or graph inputs.
 A graph is a workflow, so it returns existing data nodes; only tasks create new data (see :ref:`topics:provenance:concepts`).
 
 Tasks can be run independently: ``run_get_node(add, x=1, y=2)`` launches a single task.
+Calling ``add(x=1, y=2)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, as for graphs.
 
 .. _topics:workflows:graphs:where_to_define:
 

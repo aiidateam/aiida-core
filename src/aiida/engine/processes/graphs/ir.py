@@ -266,11 +266,13 @@ class TaskIR:
     typevar_inputs: TypevarPositions = field(default_factory=dict, compare=False)
     typevar_output: t.Any = field(default=None, compare=False)
     exit_codes: dict[str, ExitCode] = field(default_factory=dict)
+    error_enums: tuple[str, ...] = field(default_factory=tuple)
     version: str = _TASK_IR_VERSION
 
     def __post_init__(self) -> None:
         """Normalize containers so copies compare equal on this frozen dataclass."""
         object.__setattr__(self, 'exit_codes', dict(self.exit_codes))
+        object.__setattr__(self, 'error_enums', tuple(self.error_enums))
 
     @classmethod
     def from_process(
@@ -282,6 +284,7 @@ class TaskIR:
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
         exit_codes: Mapping[str, ExitCode] | None = None,
+        error_enums: tuple[str, ...] | None = None,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass.
 
@@ -323,6 +326,7 @@ class TaskIR:
             typevar_inputs=typevar_inputs or {},
             typevar_output=typevar_output,
             exit_codes=dict(exit_codes or {}),
+            error_enums=tuple(error_enums or ()),
         )
 
     @cached_property
@@ -337,8 +341,18 @@ class TaskIR:
 
     @property
     def outputs(self) -> PortNamespace:
-        """Return the static output ports of the task process."""
-        return _static_outputs(self.process_class, self.declared_outputs)
+        """Return the static output ports of the task process.
+
+        Process classes declaring error enums expose a synthetic `error` arm,
+        so failed children branch the same way `Result` tasks do. The arm
+        carries no process port; it only names the declared failure.
+        """
+        ports = _static_outputs(self.process_class, self.declared_outputs)
+        if self.exit_codes and 'error' not in ports:
+            ports = _with_error_arm(ports)
+        if self.error_enums:
+            ports = _optional_success_arms(ports)
+        return ports
 
     @property
     def result_port(self) -> str:
@@ -373,6 +387,8 @@ class TaskIR:
             data['declared_outputs'] = dump_shape(self.declared_outputs)
         if self.exit_codes:
             data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
+        if self.error_enums:
+            data['error_enums'] = list(self.error_enums)
         return {**data, 'version': self.version}
 
     @classmethod
@@ -384,6 +400,7 @@ class TaskIR:
             declared_inputs=_load_declared(data.get('declared_inputs')),
             declared_outputs=_load_declared(data.get('declared_outputs')),
             exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
+            error_enums=tuple(data.get('error_enums', ())),
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 
@@ -424,6 +441,35 @@ def _output_required(origin: InputPort | OutputPort) -> bool:
     if isinstance(types, type):
         return types is not type(None)
     return type(None) not in types
+
+
+def _with_error_arm(ports: PortNamespace) -> PortNamespace:
+    """Return a copy of ``ports`` with a synthetic `error` arm for declared failures."""
+    from aiida.orm import EnumData
+
+    fresh = PortNamespace(ports.name, help=ports.help, required=ports.required)
+    for name, child in ports.items():
+        fresh[name] = child
+    fresh['error'] = OutputPort('error', valid_type=EnumData, required=False)
+    return fresh
+
+
+def _optional_success_arms(ports: PortNamespace) -> PortNamespace:
+    """Return a copy of ``ports`` with every success arm optional for mapped failures.
+
+    A mapped failure leaves its success arms absent; like `Result` arms they travel
+    as `None`. Presence on the success path stays enforced by the runtime
+    missing-output check for declared outputs, not by the port contract.
+    """
+    optional = PortNamespace(ports.name, help=ports.help, required=ports.required)
+    for name, child in ports.items():
+        if name == 'error' or not child.required:
+            optional[name] = child
+            continue
+        relaxed = copy(child)
+        relaxed.required = False
+        optional[name] = relaxed
+    return optional
 
 
 def _load_declared(data: Mapping[str, t.Any] | None) -> NamespaceShape:

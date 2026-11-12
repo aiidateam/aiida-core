@@ -415,8 +415,12 @@ class GraphRun:
         if len(runs) >= task.max_iterations:
             msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations; check that its condition terminates.'
             raise GraphMaxIterationsError(msg)
+        # An iteration stores only the arms it produces; rebind every other body output
+        # to `None` so the next iteration cannot read stale state from before the loop,
+        # and regroup nested outputs from their flat iteration labels.
         carried = _regroup_returned_outputs(task.body, outputs)
-        self._begin_iteration(task, {**self._inputs_for(task), **outputs, **carried}, step)
+        absent = {name: None for name in task.body.outputs if name not in outputs and name not in carried}
+        self._begin_iteration(task, {**self._inputs_for(task), **absent, **outputs, **carried}, step)
 
     def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: _Step) -> None:
         """Dispatch one numbered loop iteration over the loop body."""

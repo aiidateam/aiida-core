@@ -99,24 +99,23 @@ def list_comprehension(values: list[int]) -> int:
     return add(x=1, y=1)
 
 
-# rejected at lowering: loop bodies only record task calls and branches.
+# rejected at lowering: loop state comes from enclosing names.
 @graph
-def tuple_targets_in_loop(value: int) -> int:
-    """Unpack in a loop; each line wires one placement to a plain name."""
+def fresh_name_in_loop(value: int) -> int:
+    """Bind a fresh name in a loop; state must be bound before the loop."""
     total = add(x=value, y=1)
     while is_positive(value=total):
-        fresh_a, _ = add(x=total, y=1)
-        total = add(x=fresh_a, y=1)
+        fresh = add(x=total, y=1)
+        total = add(x=fresh, y=1)
     return total
 
 
 # rejected at lowering: a branch or loop body only sees names defined around it.
 @graph
-def unknown_after_unpack_in_loop(value: int) -> int:
-    """Read an unknown name after unpacking in a loop."""
+def unknown_name_in_loop(value: int) -> int:
+    """Read an unknown name in a loop body; only enclosing names are visible."""
     total = add(x=value, y=1)
     while is_positive(value=total):
-        total, _ = add(x=total, y=1)
         total = add(x=total, y=zz_missing_value)  # noqa: F821 - the undefined name is rejected
     return total
 

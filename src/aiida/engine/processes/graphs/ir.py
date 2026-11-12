@@ -79,6 +79,19 @@ def _reject_dynamic_inputs(ports: PortNamespace) -> None:
             _reject_dynamic_inputs(child)
 
 
+def _reject_dynamic_outputs(ports: PortNamespace) -> None:
+    """Reject dynamic output namespaces at any depth; graph outputs stay fixed."""
+    if ports.dynamic:
+        msg = (
+            'graph tasks require static outputs, not dynamic outputs; '
+            'declare the outputs of a dynamic namespace with `task(..., outputs={...})`.'
+        )
+        raise GraphTypeCheckError(msg)
+    for child in ports.values():
+        if isinstance(child, PortNamespace):
+            _reject_dynamic_outputs(child)
+
+
 def _narrowed_port(port: InputPort | OutputPort | PortNamespace, shape: Shape) -> InputPort | OutputPort | None:
     """Return a copy of a static leaf narrowed to the solved types, or `None` when incompatible."""
     if isinstance(port, PortNamespace) or not isinstance(shape, LeafShape) or shape.types is None:
@@ -281,16 +294,11 @@ class TaskIR:
 
     @property
     def outputs(self) -> PortNamespace:
-        """Return the static leaf output ports of the task process."""
+        """Return the static output ports of the task process."""
         ports = self.process_class.spec().outputs
         if self.declared_outputs.fields:
             ports = _close_dynamic(ports, self.declared_outputs, OutputPort, narrow=True)
-        if ports.dynamic or any(isinstance(port, PortNamespace) for port in ports.values()):
-            msg = (
-                'graph tasks require static leaf outputs, not dynamic outputs or output namespaces; '
-                'declare the outputs of a dynamic namespace with `task(..., outputs={...})`.'
-            )
-            raise GraphTypeCheckError(msg)
+        _reject_dynamic_outputs(ports)
         return ports
 
     def check_ports(self) -> None:
@@ -299,8 +307,13 @@ class TaskIR:
 
     @property
     def result_port(self) -> str:
-        """Return the single output port, or `''` when there is not exactly one."""
-        return next(iter(self.outputs)) if len(self.outputs) == 1 else ''
+        """Return the single leaf output port, or `''` when the result is the whole outputs namespace."""
+        outputs: PortNamespace = self.outputs
+        if len(outputs) != 1:
+            return ''
+        name, port = next(iter(outputs.items()))
+        # A namespace result binds whole, so dotted reads select from the task outputs.
+        return '' if isinstance(port, PortNamespace) else name
 
     @property
     def input_shape(self) -> NamespaceShape:
@@ -642,7 +655,7 @@ class ProcessTask(GraphTask):
 
     @override
     def output_ports(self) -> PortNamespace:
-        """Return the static leaf outputs of the task process."""
+        """Return the static outputs of the task process."""
         return self.spec.outputs
 
     @override

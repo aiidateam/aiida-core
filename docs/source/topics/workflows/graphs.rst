@@ -312,6 +312,7 @@ Task outputs are fixed by the return annotation:
 
 * A single-value annotation, such as ``-> int`` or ``-> list[int]``, declares one output named ``result``.
 * A ``TypedDict`` annotation with all keys required declares one output per key.
+* A ``PortModel`` annotation declares a nested output namespace, stored field by field.
 * ``-> None`` declares no outputs, for tasks run for their side effects.
 
 .. code:: python
@@ -519,7 +520,6 @@ These are gaps in the current implementation, expected to be closed with further
 * **Local function tasks:** a function task runs in the interpreter that runs the graph, on a daemon worker when submitted. Running it on a remote computer is not yet supported.
 * **Serial loops:** a ``while`` runs one iteration at a time. Running a task over each item of a collection in parallel requires container data types, which are in development.
 * **No per-iteration outputs:** a graph output holds one node, so a loop cannot return one result per iteration, such as the trajectory of each relaxation step. A task can copy the values into one list node, without links to the original nodes. Container data types, in development, will hold the original nodes in one output.
-* **Flat task outputs:** function tasks cannot return nested output namespaces or ``PortModel`` annotations.
 * **No value validators:** port types are checked, and ``PortModel`` fields reject pydantic validators; check values inside a task.
 * **Source-only authoring:** graphs are written as Python source. A graphical editor is planned.
 

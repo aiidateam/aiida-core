@@ -637,15 +637,24 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
             )
             _reject(state, node=statement, reason=msg)
     if not isinstance(statement.value, ast.Call):
+        ref = _lower_alias(state, statement)
+    else:
+        ref = _lower_call(state, expression=statement.value)
+    for name in names:
+        state.names[name] = ref
+    return names[0]
+
+
+def _lower_alias(state: _LoweringState, statement: ast.Assign) -> _Reference:
+    """Lower a non-call assignment to its wire, rejecting plain values."""
+    reference = _lower_value(state, statement.value)
+    if not isinstance(reference, _Reference):
         msg = (
             'only calls are recorded as work; plain values would run without leaving a trace; '
             + 'each line must call a task or graph instead'
         )
         _reject(state, node=statement.value, reason=msg)
-    ref: _Reference = _lower_call(state, expression=statement.value)
-    for name in names:
-        state.names[name] = ref
-    return names[0]
+    return reference
 
 
 def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
@@ -697,8 +706,9 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
         outer = state.names[statement.value.id]  # _collect_region_inputs rejects unknown reads above
         if isinstance(outer.shape, NamespaceShape):
             return _namespace_arm(child, name=name, value=child.names[statement.value.id], alias=True)
-        child.names[name] = _Reference(None, port=outer.port, shape=outer.shape)
-        body = _lower_region_body(child, {outer.port: _Reference(None, port=statement.value.id, shape=outer.shape)})
+        # The outer port may be a dotted field path, so the region output takes the assigned name.
+        child.names[name] = _Reference(None, port=name, shape=outer.shape)
+        body = _lower_region_body(child, {name: _Reference(None, port=statement.value.id, shape=outer.shape)})
         return _Arm(name, child=child, body=body, alias=True)
     elif (
         isinstance(statement, ast.Assign)
@@ -1020,8 +1030,24 @@ def _route_region(
 ) -> None:
     """Route the enclosing values a nested region reads."""
     for name in child.inputs:
-        if name in state.names:
-            _wire(state, instance=instance, port=name, value=state.names[name], given=given)
+        base, _, sub = name.partition('.')
+        if base not in state.names:
+            continue
+        value = state.names[base]
+        if sub:
+            value = _select_subpath(value, sub)
+        _wire(state, instance=instance, port=name, value=value, given=given)
+
+
+def _select_subpath(value: _Reference, sub: str) -> _Reference:
+    """Carry a dotted read into a region, selecting each segment."""
+    port = f'{value.port}.{sub}' if value.port else sub
+    shape = value.shape
+    for segment in sub.split('.'):
+        # Dotted region inputs arrive through `_select_field`, so the base shape is a namespace.
+        assert isinstance(shape, NamespaceShape)
+        shape = shape.select(segment)
+    return _Reference(value.task, port=port, shape=shape)
 
 
 def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:

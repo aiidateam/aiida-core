@@ -1003,7 +1003,7 @@ def test_single_key_typeddict_task_unpacks_output() -> None:
     [
         pytest.param(tasks.scalar_for_named, {}, 'returned a single value', id='scalar-return'),
         pytest.param(tasks.extra_outputs, {'value': 2}, 'returned undeclared outputs', id='extra-outputs'),
-        pytest.param(tasks.empty_outputs, {'value': 2}, 'omitted declared outputs', id='empty-mapping'),
+        pytest.param(tasks.empty_outputs, {'value': 2}, 'omitted required outputs', id='empty-mapping'),
     ],
 )
 def test_named_task_output_mismatches_fail(declaration: t.Any, inputs: dict[str, t.Any], match: str) -> None:

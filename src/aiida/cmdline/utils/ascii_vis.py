@@ -29,13 +29,16 @@ def calc_info(node: orm.ProcessNode, call_link_label: bool = False) -> str:
     :param call_link_label: Include the call link label if other from the default ``CALL``.
     """
     from aiida.orm import ProcessNode, WorkChainNode
+    from aiida.tools.query.formatting import format_process_status
 
     if not isinstance(node, ProcessNode):
         msg = f'Unknown type: {type(node)}'  # type: ignore[unreachable]
         raise TypeError(msg)
 
     process_label = node.process_label
-    process_state = 'None' if node.process_state is None else node.process_state.value.capitalize()
+    process_state = format_process_status(
+        node.process_state.value if node.process_state is not None else None, node.paused
+    )
     exit_status = node.exit_status
 
     if call_link_label and (caller := node.caller):

@@ -688,10 +688,26 @@ def test_nested_graph_has_child_workflow_provenance() -> None:
     assert set(calls) == {'multiply_add'}
     child = calls['multiply_add']
     assert isinstance(child, GraphNode)
+    assert child.process_label == 'tests.engine.processes.graphs.programs.calls:multiply_add'
     assert child.is_finished_ok
     assert child.outputs.result.value == 10
     children: dict[str, ProcessNode] = child.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
     assert set(children) == {'multiply', 'add'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_branch_children_carry_placement_labels() -> None:
+    """Branch control children show their placement name instead of a bare class name."""
+    _, node = run_get_node(branches.external_choice, value=2, condition=True)
+    assert node.is_finished_ok
+    labels: set[str] = set()
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        for child in current.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested().values():
+            labels.add(child.process_label)
+            stack.append(child)
+    assert labels == {'branch_1'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

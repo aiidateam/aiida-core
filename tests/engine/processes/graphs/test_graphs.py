@@ -149,6 +149,7 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(loops.namespaced_loop, {'value': 3}, {'result': 0}, id='loop-namespaced'),
         pytest.param(branches.field_select_arm, {'value': 2, 'flag': True}, {'result': 5}, id='branch-field-true'),
         pytest.param(branches.field_select_arm, {'value': 2, 'flag': False}, {'result': 6}, id='branch-field-false'),
+        pytest.param(branches.forward_pair, {'value': 2}, {'result': 11}, id='branch-namespace-forward'),
         pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 1}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
         pytest.param(parameters.signed_literals, {}, {'result': -2}, id='signed-literals'),
@@ -200,6 +201,7 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
             {'result': 6},
             id='branch-declared-false',
         ),
+        pytest.param(workchains.forward_declared, {'x': 2, 'y': 3}, {'result': 11}, id='forward-declared'),
     ],
 )
 @pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])

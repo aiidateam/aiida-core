@@ -1336,7 +1336,12 @@ def _is_routed(state: _LoweringState, instance: str, path: str) -> bool:
     routed = [entry for targets in state.inputs.values() for target, entry in targets if target == instance]
     if any(path == entry or path.startswith(f'{entry}.') for entry in routed):
         return True
-    return any(edge.target == instance and edge.target_port == path for edge in state.dependencies)
+    return any(
+        edge.target == instance
+        and edge.target_port is not None
+        and (edge.target_port == path or path.startswith(f'{edge.target_port}.'))
+        for edge in state.dependencies
+    )
 
 
 def _wire(

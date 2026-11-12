@@ -12,6 +12,7 @@ import typing as t
 
 from aiida.engine import calcfunction
 from aiida.engine.processes.graphs.lowering import graph, task
+from aiida.engine.processes.port_model import PortModel
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.programs.port_models import Configuration, FlatSettings, PointSettings
 
@@ -63,6 +64,31 @@ class ArithmeticPair(t.TypedDict):
 def arithmetic_pair(x: int, y: int) -> ArithmeticPair:
     """Return sum and product as named outputs."""
     return {'sum': x + y, 'product': x * y}
+
+
+class PairInput(PortModel):
+    """A whole namespace input matching the arithmetic pair outputs."""
+
+    sum: int
+    product: int
+
+
+@task
+def combine_model(pair: PairInput) -> int:
+    """Consume a whole structured input."""
+    return pair.sum + pair.product
+
+
+class SumInput(PortModel):
+    """A whole namespace input declaring only the sum of a pair."""
+
+    sum: int
+
+
+@task
+def read_sum(pair: SumInput) -> int:
+    """Consume a namespace that declares one field."""
+    return pair.sum
 
 
 @task

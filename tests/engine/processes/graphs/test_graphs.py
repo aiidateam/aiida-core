@@ -688,10 +688,42 @@ def test_nested_graph_has_child_workflow_provenance() -> None:
     assert set(calls) == {'multiply_add'}
     child = calls['multiply_add']
     assert isinstance(child, GraphNode)
+    assert child.process_label == 'tests.engine.processes.graphs.programs.calls:multiply_add'
     assert child.is_finished_ok
     assert child.outputs.result.value == 10
     children: dict[str, ProcessNode] = child.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
     assert set(children) == {'multiply', 'add'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_branch_children_carry_placement_labels() -> None:
+    """Branch control children show their placement name instead of a bare class name."""
+    _, node = run_get_node(branches.external_choice, value=2, condition=True)
+    assert node.is_finished_ok
+    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(calls) == {'branch_1'}
+    assert calls['branch_1'].process_label == 'branch_1'
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_loop_children_carry_placement_labels() -> None:
+    """Loop iterations show their placement name instead of a bare class name."""
+    _, node = run_get_node(loops.countdown, value=2, condition=True)
+    assert node.is_finished_ok
+    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert set(calls) == {'loop_1_iteration_0', 'loop_1_iteration_1'}
+    assert all(label == child.process_label for label, child in calls.items())
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_identifierless_top_level_falls_back_to_class_name() -> None:
+    """A parentless graph without identifier keeps the default process label."""
+    import dataclasses
+
+    spec = dataclasses.replace(call_programs.chain.build(), identifier=None)
+    _, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, {'x': 2, 'y': 3}))
+    assert node.is_finished_ok
+    assert node.process_label == 'GraphProcess'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

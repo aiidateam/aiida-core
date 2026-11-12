@@ -10,7 +10,7 @@
 
 import re
 
-from aiida.engine.processes.graphs.ir import BodyTask, BranchControl, GraphIR
+from aiida.engine.processes.graphs.ir import BodyTask, BranchControl, GraphIR, OutputTree
 
 __all__ = ('to_mermaid',)
 
@@ -36,9 +36,9 @@ def to_mermaid(spec: GraphIR) -> str:
     """Return the graph template as a Mermaid flowchart.
 
     Placements render flat with path-prefixed ids, so nested regions need no
-    subgraph semantics: region inputs hang off their control task, and only
-    top-level outputs render. Ordering edges without ports render without labels; literal
-    task inputs leave no wiring behind, so they do not render.
+    subgraph semantics: region inputs hang off their control task, and nested
+    outputs render one node per leaf. Ordering edges without ports render without
+    labels; literal task inputs leave no wiring behind, so they do not render.
 
     :param spec: the graph template to draw.
     :return: the flowchart source, pasteable into issues, reviews, and docs.
@@ -95,10 +95,19 @@ def _render_body(spec: GraphIR, prefix: tuple[str, ...], lines: list[str], seen:
                 )
             )
     if not prefix:
-        for name, endpoint in spec.outputs.items():
-            output = _node_id('out', name)
-            lines.append(f'    {output}[/{_label(name)}/]')
-            if endpoint.task is None:
-                lines.append(_edge(_node_id('in', endpoint.port.split('.')[0]), output, endpoint.port))
-            else:
-                lines.append(_edge(_node_id(endpoint.task), output, endpoint.port))
+        for name, tree in spec.outputs.items():
+            _render_output(tree, (name,), lines)
+
+
+def _render_output(tree: OutputTree, path: tuple[str, ...], lines: list[str]) -> None:
+    """Draw one output leaf, or each leaf of a nested mapping, at its declared path."""
+    if isinstance(tree, dict):
+        for field, child in tree.items():
+            _render_output(child, (*path, field), lines)
+        return
+    output = _node_id('out', *path)
+    lines.append(f'    {output}[/{_label(".".join(path))}/]')
+    if tree.task is None:
+        lines.append(_edge(_node_id('in', tree.port.split('.')[0]), output, tree.port))
+    else:
+        lines.append(_edge(_node_id(tree.task), output, tree.port))

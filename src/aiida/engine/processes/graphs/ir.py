@@ -38,6 +38,7 @@ __all__ = (
     'GraphIR',
     'GraphTask',
     'LoopControl',
+    'OutputTree',
     'ProcessTask',
     'Route',
     'SubgraphTask',
@@ -336,6 +337,25 @@ class TaskIR:
         )
 
 
+def _dump_output_tree(source: OutputTree) -> dict[str, t.Any]:
+    """Serialize one output leaf or nested mapping, preserving the endpoint shape."""
+    if isinstance(source, dict):
+        return {'nested': {name: _dump_output_tree(child) for name, child in source.items()}}
+    return source.to_dict()
+
+
+def _load_output_tree(data: Mapping[str, t.Any]) -> OutputTree:
+    """Rebuild one output leaf or nested mapping from its serialized form."""
+    if 'nested' in data:
+        nested = data['nested']
+        if not isinstance(nested, Mapping):
+            msg = 'malformed graph declaration; nested outputs must form a mapping.'
+            raise GraphTypeCheckError(msg)
+        children: Mapping[str, t.Any] = nested
+        return {name: _load_output_tree(child) for name, child in children.items()}
+    return Endpoint.from_dict(data)
+
+
 def _output_required(origin: InputPort | OutputPort) -> bool:
     """Return whether a regrouped output leaf always holds a stored node.
 
@@ -631,15 +651,19 @@ class ProcessTask(GraphTask):
         return {**super().to_dict(), 'spec': self.spec.to_dict()}
 
 
+OutputTree: t.TypeAlias = 'Endpoint | dict[str, OutputTree]'
+"""A leaf endpoint or a nested mapping of those regrouping existing nodes."""
+
+
 @dataclass(frozen=True)
 class GraphIR:
-    """A static graph template, with fixed input namespaces and named leaf outputs."""
+    """A static graph template, with fixed inputs and nested outputs regrouping nodes."""
 
     tasks: tuple[GraphTask, ...]
     input_shape: NamespaceShape
     dependencies: tuple[Dependency, ...] = ()
     inputs: dict[str, tuple[Route, ...]] = field(default_factory=dict)
-    outputs: dict[str, Endpoint] = field(default_factory=dict)
+    outputs: dict[str, OutputTree] = field(default_factory=dict)
     identifier: str | None = None
     version: str = _GRAPH_IR_VERSION
     output_typehints: dict[str, tuple[type, ...]] = field(default_factory=dict)
@@ -691,24 +715,42 @@ class GraphIR:
         return _shape_from_port(selected)
 
     def build_output_namespace(self) -> PortNamespace:
-        """Return the named leaf outputs with their stored types."""
+        """Return the nested outputs with their stored types.
+
+        Outputs regroup existing nodes instead of creating data; every leaf keeps
+        the stored node its task or graph input already holds.
+        """
         namespace = PortNamespace('outputs')
         for name, source in self.outputs.items():
-            if source.task is None:
-                origin = _port_at(self.build_input_namespace(), source.port)
-            else:
-                try:
-                    task = self.task(source.task)
-                except KeyError as exception:
-                    msg = f'graph output `{name}` refers to unknown task `{source.task}`.'
-                    raise GraphTypeCheckError(msg) from exception
-                origin = _port_at(task.output_ports(), source.port)
-            if origin is None or isinstance(origin, PortNamespace):
-                msg = f'graph output `{name}` must reference a declared leaf.'
-                raise GraphTypeCheckError(msg)
-            valid_type = self._output_types(name, origin) or (Data,)
-            namespace[name] = OutputPort(name, valid_type=valid_type, required=_output_required(origin))
+            namespace[name] = self._build_output_port(name, source, path=name)
         return namespace
+
+    def _build_output_port(self, name: str, source: OutputTree, path: str) -> OutputPort | PortNamespace:
+        """Return one output leaf or namespace, preserving the stored node types.
+
+        Outputs regroup their source nodes instead of creating data, so a leaf
+        whose source accepts `None` or stays unwired is optional downstream.
+        """
+        if isinstance(source, dict):
+            nested = PortNamespace(name)
+            for field, child in source.items():
+                nested[field] = self._build_output_port(field, child, path=f'{path}.{field}')
+            return nested
+        if source.task is None:
+            origin = _port_at(self.build_input_namespace(), source.port)
+        else:
+            try:
+                task = self.task(source.task)
+            except KeyError as exception:
+                msg = f'graph output `{path}` refers to unknown task `{source.task}`.'
+                raise GraphTypeCheckError(msg) from exception
+            origin = _port_at(task.output_ports(), source.port)
+        if origin is None or isinstance(origin, PortNamespace):
+            msg = f'graph output `{path}` must reference a declared leaf.'
+            raise GraphTypeCheckError(msg)
+        top = path.split('.', maxsplit=1)[0]
+        valid_type = self._output_types(top, origin) or (Data,)
+        return OutputPort(name, valid_type=valid_type, required=_output_required(origin))
 
     def _output_types(self, name: str, origin: InputPort | OutputPort) -> tuple[type, ...] | type | None:
         """Return the stored types of a graph output, normalizing runtime declarations."""
@@ -732,7 +774,7 @@ class GraphIR:
             'tasks': [task.to_dict() for task in self.tasks],
             'dependencies': [edge.to_dict() for edge in self.dependencies],
             'inputs': {name: [list(route) for route in targets] for name, targets in self.inputs.items()},
-            'outputs': {name: source.to_dict() for name, source in self.outputs.items()},
+            'outputs': {name: _dump_output_tree(source) for name, source in self.outputs.items()},
             'identifier': self.identifier,
             'version': self.version,
             'input_namespace': dump_shape(self.input_shape),
@@ -762,7 +804,7 @@ class GraphIR:
             inputs={
                 name: tuple(Route(*target) for target in targets) for name, targets in data.get('inputs', {}).items()
             },
-            outputs={name: Endpoint.from_dict(source) for name, source in data.get('outputs', {}).items()},
+            outputs={name: _load_output_tree(source) for name, source in data.get('outputs', {}).items()},
             identifier=data.get('identifier'),
             version=version,
             output_typehints={

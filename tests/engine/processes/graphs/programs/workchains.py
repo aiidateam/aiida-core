@@ -123,3 +123,9 @@ def forward_declared(x: Int, y: Int) -> int:
     """Wire a dynamic namespace whole; only its declared outputs reach the static input."""
     pair = bonus_pair_chain(x=x, y=y)
     return combine_model(pair=pair)
+
+
+@graph
+def forward_optional_namespace(bundle: t.Annotated[t.Any, Forward(optional_input_chain)]):
+    """Return a forwarded namespace; an omitted optional field stays out of it."""
+    return bundle

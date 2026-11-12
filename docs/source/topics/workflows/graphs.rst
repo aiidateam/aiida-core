@@ -56,7 +56,7 @@ The graph body supports:
 * Graph inputs and names bound on an earlier line, such as ``product`` in ``add(x=product, y=z)``, as arguments.
 * Literal numbers, strings, booleans, and ``None`` as arguments, such as ``y=1``.
 * ``if``, with or without ``else`` but without ``elif``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
-* One final ``return`` of a name, a field, or a call, or of a flat ``dict`` of those with literal string keys.
+* One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys.
 * ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
 * ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches and loops.
 * Calls through an imported module, such as ``my_module.add(...)``.
@@ -331,7 +331,8 @@ Task outputs are fixed by the return annotation:
         return {'total': pair.sum, 'product': pair.product}
 
 A graph returning one value declares one output named ``result``, and a graph returning a ``dict`` declares one output per key.
-An output whose source holds no node, such as an optional input left at ``None``, stays out of the emitted outputs.
+A nested ``dict`` declares nested outputs, and returning a whole namespace regroups its existing leaves under one output without creating data.
+A leaf without a node, such as a ``None`` value for a nullable field, stays out of the emitted outputs.
 
 A ``TypeVar`` annotation, such as ``def scale(value: T, factor: T) -> T`` with ``T = TypeVar('T', int, float)``, accepts any of its constraints.
 When all values wired to ``T`` share one type, the output takes that type at this call.

@@ -13,8 +13,8 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.exceptions import GraphTypeCheckError
-from aiida.engine.processes.graphs.ir import BranchControl, LoopControl, _input_ports_at, _port_at
-from aiida.engine.processes.ports import PortNamespace, _infer_node_types
+from aiida.engine.processes.graphs.ir import BranchControl, Endpoint, LoopControl, OutputTree, _input_ports_at, _port_at
+from aiida.engine.processes.ports import OutputPort, PortNamespace, _infer_node_types
 from aiida.orm import Data
 
 if t.TYPE_CHECKING:
@@ -141,13 +141,30 @@ def _validate_region(task: GraphTask) -> None:
 def _validate_outputs(graph: GraphIR, boundary: PortNamespace) -> None:
     """Check that graph outputs reference declared leaves of compatible types."""
     outputs = graph.build_output_namespace()
-    for name, endpoint in graph.outputs.items():
-        origin = (
-            _port_at(boundary, endpoint.port)
-            if endpoint.task is None
-            else _port_at(graph.task(endpoint.task).output_ports(), endpoint.port)
-        )
-        _check_types(origin, outputs[name], f'graph output `{name}`')
+    for name, tree in graph.outputs.items():
+        port = outputs[name]
+        assert isinstance(port, (OutputPort, PortNamespace))
+        _validate_output_tree(graph, boundary, tree, port, f'graph output `{name}`')
+
+
+def _validate_output_tree(
+    graph: GraphIR, boundary: PortNamespace, tree: OutputTree, port: OutputPort | PortNamespace, context: str
+) -> None:
+    """Check one output leaf or nested mapping against its declared contracts."""
+    if isinstance(tree, dict):
+        assert isinstance(port, PortNamespace)  # `build_output_namespace` mirrors the output tree
+        for field, child in tree.items():
+            child_port = port[field]
+            assert isinstance(child_port, (OutputPort, PortNamespace))
+            _validate_output_tree(graph, boundary, child, child_port, f'{context}.{field}')
+        return
+    assert isinstance(tree, Endpoint)
+    origin = (
+        _port_at(boundary, tree.port)
+        if tree.task is None
+        else _port_at(graph.task(tree.task).output_ports(), tree.port)
+    )
+    _check_types(origin, port, context)
 
 
 def _validate_acyclic(graph: GraphIR) -> None:

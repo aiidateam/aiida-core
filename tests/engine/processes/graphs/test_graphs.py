@@ -371,6 +371,53 @@ def test_alias_inputs_runs() -> None:
     assert outputs['result'].value == 10
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('nullable', [pytest.param(3, id='value'), pytest.param(None, id='none')])
+def test_namespace_return_runs(nullable: int | None) -> None:
+    """A whole input namespace returns its existing nodes without creating data."""
+    config = {'settings': {'count': 5, 'nullable': nullable}, 'label': 'ab'}
+    outputs, node = run_get_node(ports.namespace_return, config=config)
+    assert node.is_finished_ok
+    assert outputs['result']['settings']['count'].value == 5
+    if nullable is None:
+        assert 'nullable' not in outputs['result']['settings']
+    else:
+        assert outputs['result']['settings']['nullable'].value == 3
+    assert outputs['result']['label'].value == 'ab'
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
+    assert outputs['result']['settings']['count'].uuid == node.inputs.graph_inputs__config__settings__count.uuid
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_outputs_run() -> None:
+    """A nested dict return groups one task output without creating data."""
+    outputs, node = run_get_node(ports.nested_outputs, x=2)
+    assert node.is_finished_ok
+    assert outputs['outer']['inner'].value == 3
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_return_pair_runs() -> None:
+    """A whole task-outputs namespace returns the task's own nodes."""
+    outputs, node = run_get_node(ports.return_pair, x=2, y=3)
+    assert node.is_finished_ok
+    assert outputs['result']['sum'].value == 5
+    assert outputs['result']['product'].value == 6
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
+    (child,) = node.called
+    assert outputs['result']['sum'].uuid == child.outputs.sum.uuid
+    assert outputs['result']['product'].uuid == child.outputs.product.uuid
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_forward_namespace_omits_absent_field() -> None:
+    """A returned namespace leaves out an optional field the caller omitted."""
+    outputs, node = run_get_node(workchains.forward_optional_namespace, bundle={'x': 1})
+    assert node.is_finished_ok
+    assert {name: value.value for name, value in outputs['result'].items()} == {'x': 1}
+
+
 def test_trailing_underscore_task_name_rejected() -> None:
     """A task class name must be a valid link label."""
     from aiida.engine.processes.calcjobs.calcjob import CalcJob

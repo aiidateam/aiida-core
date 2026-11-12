@@ -19,9 +19,11 @@ from aiida.common.links import LinkType
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
+    Endpoint,
     GraphIR,
     GraphTask,
     LoopControl,
+    OutputTree,
     ProcessTask,
     SubgraphTask,
     _input_ports_at,
@@ -226,16 +228,27 @@ class GraphRun:
 
     def outputs(self) -> dict[str, t.Any]:
         """Collect the graph outputs from passthrough inputs and task results."""
-        produced = {}
-        for output, source in self.graph.outputs.items():
-            if source.task is None:
-                produced[output] = _at_or_none(self.given, source.port)
-            elif source.task in self.passed:
-                produced[output] = _at_or_none(self.passed[source.task], source.port)
-            else:
-                produced[output] = self._produced_value(source.task, source.port)
-        # A `None` value means the source was legitimately absent, never a stored node.
-        return {output: value for output, value in produced.items() if value is not None}
+        return self._resolve_output_tree(self.graph.outputs)
+
+    def _resolve_output_tree(self, tree: OutputTree) -> t.Any:
+        """Resolve one output leaf or nested mapping to its stored nodes.
+
+        Leaves without a node stay out of the emitted outputs; a `None` value
+        means the source was legitimately absent, never a stored node.
+        """
+        if isinstance(tree, dict):
+            regrouped = {}
+            for name, child in tree.items():
+                resolved = self._resolve_output_tree(child)
+                if resolved is not None:
+                    regrouped[name] = resolved
+            return regrouped
+        assert isinstance(tree, Endpoint)
+        if tree.task is None:
+            return _at_or_none(self.given, tree.port)
+        if tree.task in self.passed:
+            return _at_or_none(self.passed[tree.task], tree.port)
+        return self._produced_value(tree.task, tree.port)
 
     def to_dict(self) -> _GraphRunState:
         """Return the checkpointable scheduling progress, without the graph or inputs."""

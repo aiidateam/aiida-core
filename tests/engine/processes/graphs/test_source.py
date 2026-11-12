@@ -218,8 +218,6 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(parameters.variadic_parameters, 'list each input separately', id='variadic'),
         pytest.param(parameters.infinite_default, 'finite JSON', id='infinite-default'),
         pytest.param(ports.literal_return, 'return a task output or graph input', id='literal'),
-        pytest.param(ports.namespace_return, 'return a task output or graph input', id='namespace'),
-        pytest.param(ports.nested_outputs, 'list each output by name', id='nested-output'),
         pytest.param(ports.make_config, "unregistered call 'Configuration'", id='make-config'),
         pytest.param(ports.missing_final_return, 'end the graph with a return', id='missing-return'),
         pytest.param(ports.subscript_load, 'pass the whole collection', id='subscript-load'),
@@ -283,6 +281,29 @@ def test_inline_condition_matches_bound_form() -> None:
 def test_mismatched_branch_outputs_fail_during_build() -> None:
     with pytest.raises(GraphTypeCheckError, match='same outputs'):
         branches.mismatched_branches.build()
+
+
+def test_namespace_return_builds_namespace_output() -> None:
+    """A whole input namespace lowers to a namespace output."""
+    spec = ports.namespace_return.build()
+    assert set(spec.outputs) == {'result'}
+    outputs = spec.build_output_namespace()
+    assert outputs['result']['settings']['nullable'].required is False
+    assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
+def test_nested_outputs_build_nested_output() -> None:
+    """A nested dict return lowers to a nested output."""
+    spec = ports.nested_outputs.build()
+    assert set(spec.outputs) == {'outer'}
+    assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
+def test_return_pair_builds_namespace_output() -> None:
+    """A whole task-outputs namespace lowers to a namespace output."""
+    spec = ports.return_pair.build()
+    assert set(spec.outputs) == {'result'}
+    assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
 
 
 @pytest.mark.parametrize(

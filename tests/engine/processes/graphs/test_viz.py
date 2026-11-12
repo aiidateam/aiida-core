@@ -59,6 +59,15 @@ pytestmark = pytest.mark.presto
             id='branch',
         ),
         pytest.param(
+            ports.nested_outputs.build(),
+            [
+                'out__outer__inner[/outer.inner/]',
+                'add -->|result| out__outer__inner',
+            ],
+            ['out__outer[/outer/]'],
+            id='nested-output',
+        ),
+        pytest.param(
             loops.countdown.build(),
             [
                 'loop_1["loop_1"]',

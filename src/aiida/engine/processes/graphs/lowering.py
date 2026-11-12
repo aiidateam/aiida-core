@@ -35,6 +35,7 @@ from aiida.engine.processes.graphs.ir import (
     Endpoint,
     GraphIR,
     LoopControl,
+    OutputTree,
     ProcessTask,
     Route,
     SubgraphTask,
@@ -213,6 +214,7 @@ class _Reference:
 
 
 _CapturedValue: t.TypeAlias = '_Reference | int | float | str | bool | dict[str, _CapturedValue] | None'
+_ReferenceTree: t.TypeAlias = '_Reference | dict[str, _ReferenceTree]'
 
 
 @dataclass
@@ -516,32 +518,73 @@ def _lower_function(state: _LoweringState) -> GraphIR:
     )
 
 
-def _lower_outputs(state: _LoweringState, result: ast.expr) -> tuple[dict[str, Endpoint], dict[str, tuple[type, ...]]]:
+def _lower_outputs(
+    state: _LoweringState, result: ast.expr
+) -> tuple[dict[str, OutputTree], dict[str, tuple[type, ...]]]:
     """Lower the return statement to named endpoints and their type hints."""
     hints = state.definition.hints
     references = _lower_return(state, expression=result)
     returned = shape_for_annotation(hints.get('return'))
-    if isinstance(returned, NamespaceShape):
-        msg = (
-            'each output links one stored node, and a group has no single node; '
-            + 'graphs cannot return a whole group; return single values instead'
-        )
-        _reject(state, node=result, reason=msg)
-    outputs = {name: Endpoint(task=reference.task, port=reference.port) for name, reference in references.items()}
+    outputs: dict[str, OutputTree] = {name: _endpoint_tree(reference) for name, reference in references.items()}
     if len(outputs) == 1 and not isinstance(result, ast.Dict):
         outputs = {'result': next(iter(outputs.values()))}
     typehints: dict[str, tuple[type, ...]] = (
         {next(iter(outputs)): returned.types}
-        if len(outputs) == 1 and returned.types and not isinstance(result, ast.Dict)
+        if len(outputs) == 1
+        and isinstance(returned, LeafShape)
+        and returned.types
+        and not isinstance(result, ast.Dict)
+        and isinstance(next(iter(outputs.values())), Endpoint)
         else {}
     )
     return outputs, typehints
 
 
-def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Reference]:
-    """Return a leaf reference or an explicit mapping of named leaf outputs."""
+def _endpoint_tree(reference: _ReferenceTree) -> OutputTree:
+    """Expand a leaf or namespace reference to endpoints regrouping existing nodes.
+
+    Namespaces regroup their existing leaves instead of creating data; every leaf
+    keeps its stored node, so workflows return but never create data.
+    """
+    if isinstance(reference, dict):
+        return {name: _endpoint_tree(item) for name, item in reference.items()}
+    if isinstance(reference.shape, NamespaceShape):
+        return {name: _endpoint_tree(field) for name, field in _fields(reference).items()}
+    return Endpoint(task=reference.task, port=reference.port)
+
+
+def _fields(reference: _Reference) -> dict[str, _Reference]:
+    """Return one reference per field of a namespace reference."""
+    assert isinstance(reference.shape, NamespaceShape)
+    prefix = f'{reference.port}.' if reference.port else ''
+    return {
+        name: _Reference(reference.task, port=f'{prefix}{name}', shape=shape) for name, shape in reference.shape.fields
+    }
+
+
+def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _ReferenceTree]:
+    """Return a leaf reference, a namespace reference, or a nested mapping of those."""
     if isinstance(expression, ast.Dict):
-        outputs: dict[str, _Reference] = {}
+        lowered = _lower_return_value(state, expression)
+        assert isinstance(lowered, dict)
+        return lowered
+    reference = _lower_value(state, expression, allow_call=True)
+    if not isinstance(reference, _Reference) or (
+        not reference.port and not isinstance(reference.shape, NamespaceShape)
+    ):
+        msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
+        _reject(state, node=expression, reason=msg)
+    assert isinstance(reference, _Reference)
+    if isinstance(reference.shape, NamespaceShape):
+        return {'result': reference}
+    port = reference.port.split('.')[-1]
+    return {port: reference}
+
+
+def _lower_return_value(state: _LoweringState, expression: ast.expr) -> _ReferenceTree:
+    """Lower one output mapping value to a leaf, a namespace, or a nested mapping."""
+    if isinstance(expression, ast.Dict):
+        nested: dict[str, _ReferenceTree] = {}
         for key, value in zip(expression.keys, expression.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str) or not key.value.isidentifier():
                 msg = (
@@ -549,21 +592,17 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
                     + 'output names must be quoted names; write them out instead'
                 )
                 _reject(state, node=expression, reason=msg)
-            if key.value in outputs:
+            if key.value in nested:
                 msg = 'each output name points at one stored value; ' + 'duplicate graph output; name each output once'
                 _reject(state, node=expression, reason=msg)
-            reference = _lower_value(state, value, allow_call=True)
-            if not isinstance(reference, _Reference) or isinstance(reference.shape, NamespaceShape):
-                msg = 'outputs are flat leaves; return single values, not a whole group'
-                _reject(state, node=value, reason=msg)
-            outputs[key.value] = reference
-        return outputs
+            nested[key.value] = _lower_return_value(state, value)
+        return nested
     reference = _lower_value(state, expression, allow_call=True)
-    if not isinstance(reference, _Reference) or not reference.port or isinstance(reference.shape, NamespaceShape):
+    if not isinstance(reference, _Reference):
         msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
         _reject(state, node=expression, reason=msg)
-    port = reference.port.split('.')[-1]
-    return {port: reference}
+    assert isinstance(reference, _Reference)
+    return reference
 
 
 def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
@@ -967,9 +1006,7 @@ def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) ->
     if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
         msg = 'control-flow outputs must be static leaves, not namespaces.'
         raise GraphLanguageError(msg)
-    endpoints: dict[str, Endpoint] = {
-        name: Endpoint(task=reference.task, port=reference.port) for name, reference in outputs.items()
-    }
+    endpoints: dict[str, OutputTree] = {name: _endpoint_tree(value) for name, value in outputs.items()}
     return GraphIR(
         tasks=tuple(state.tasks),
         dependencies=tuple(state.dependencies),

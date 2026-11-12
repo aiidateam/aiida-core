@@ -20,6 +20,7 @@ from tests.engine.processes.graphs.programs.port_models import (
     Settings,
 )
 from tests.engine.processes.graphs.programs.tasks import (
+    ArithmeticPair,
     add,
     arithmetic_pair,
     read_answer,
@@ -178,19 +179,24 @@ def literal_return() -> int:
     return 42
 
 
-# rejected at lowering: outputs are flat leaves.
 @graph
 def namespace_return(config: Configuration) -> Configuration:
-    """Return a whole namespace; outputs are flat leaves."""
+    """Return a whole namespace; outputs regroup existing nodes."""
     return config
 
 
-# rejected at lowering: outputs are flat leaves.
 @graph
 def nested_outputs(x: int) -> dict[str, dict[str, int]]:
-    """Return nested outputs; outputs are flat leaves."""
+    """Return nested outputs; outputs regroup existing nodes."""
     value = add(x=x, y=1)
     return {'outer': {'inner': value}}
+
+
+@graph
+def return_pair(x: int, y: int) -> ArithmeticPair:
+    """Return a whole task-outputs namespace."""
+    produced = arithmetic_pair(x=x, y=y)
+    return produced
 
 
 # rejected at lowering: graphs declare their outputs explicitly.

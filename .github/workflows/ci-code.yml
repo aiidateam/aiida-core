@@ -18,6 +18,47 @@ env:
 
 jobs:
 
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      utils: ${{ steps.filter.outputs.utils }}
+    steps:
+    - uses: actions/checkout@v6
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          utils:
+          - utils/**
+          - utils/tests/**
+          - .github/workflows/ci-code.yml
+
+  tests-utils:
+    name: test utils
+    needs: changes
+    if: ${{ needs.changes.outputs.utils == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Install test dependencies
+      run: |
+        uv pip install --system pytest~=7.0
+
+    - name: Run utils tests
+      run: pytest utils/tests
+
   tests:
 
     runs-on: ubuntu-24.04

@@ -166,6 +166,26 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
             id='keyword-only-default-overridden',
         ),
         pytest.param(parameters.positional_only_parameter, {'value': 2}, {'result': 3}, id='positional-only'),
+        pytest.param(ports.nullable_return, {'value': 3}, {'result': 3}, id='return-nullable-value'),
+        pytest.param(ports.nullable_return, {}, {}, id='return-nullable-none'),
+        pytest.param(ports.nullable_forward, {'value': 3}, {'result': 3}, id='forward-nullable-value'),
+        pytest.param(ports.nullable_forward, {}, {}, id='forward-nullable-none'),
+        pytest.param(ports.nullable_chain, {'value': 3}, {'result': 3}, id='chain-nullable-value'),
+        pytest.param(ports.nullable_chain, {}, {}, id='chain-nullable-none'),
+        pytest.param(
+            workchains.forward_optional_field, {'bundle': {'x': 1, 'y': 2}}, {'result': 2}, id='forward-optional-given'
+        ),
+        pytest.param(workchains.forward_optional_field, {'bundle': {'x': 1}}, {}, id='forward-optional-omitted'),
+        pytest.param(loops.never_entered_optional, {'rounds': 1}, {'direct': 1, 'wired': 1}, id='loop-optional-run'),
+        pytest.param(
+            loops.never_entered_optional,
+            {'rounds': 0, 'value': 3},
+            {'direct': 3, 'wired': 3},
+            id='loop-optional-skipped-value',
+        ),
+        pytest.param(loops.never_entered_optional, {'rounds': 0}, {}, id='loop-optional-skipped-none'),
+        pytest.param(ports.unrestricted_return, {'value': 3}, {'result': 3}, id='return-unrestricted-value'),
+        pytest.param(ports.unrestricted_return, {'value': None}, {}, id='return-unrestricted-none'),
     ],
 )
 @pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])

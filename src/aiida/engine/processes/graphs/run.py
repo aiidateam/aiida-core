@@ -81,6 +81,18 @@ def _returned(node: Node) -> dict[str, t.Any]:
     return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
 
 
+def _at_or_none(container: t.Any, path: str) -> t.Any:
+    """Read a value inside a namespace, or `None` where an optional source left it absent.
+
+    Input filling, loop entry, and output validation reject a missing
+    required value earlier, so a missing key marks an absent optional one.
+    """
+    try:
+        return _at(container, path)
+    except KeyError:
+        return None
+
+
 @dataclass(frozen=True)
 class _Start:
     """A run to dispatch under an explicit provenance call-link name."""
@@ -217,12 +229,13 @@ class GraphRun:
         produced = {}
         for output, source in self.graph.outputs.items():
             if source.task is None:
-                produced[output] = _at(self.given, source.port)
+                produced[output] = _at_or_none(self.given, source.port)
             elif source.task in self.passed:
-                produced[output] = _at(self.passed[source.task], source.port)
+                produced[output] = _at_or_none(self.passed[source.task], source.port)
             else:
-                produced[output] = _at(self._produced_by(source.task).outputs, source.port)
-        return produced
+                produced[output] = self._produced_value(source.task, source.port)
+        # A `None` value means the source was legitimately absent, never a stored node.
+        return {output: value for output, value in produced.items() if value is not None}
 
     def to_dict(self) -> _GraphRunState:
         """Return the checkpointable scheduling progress, without the graph or inputs."""
@@ -332,14 +345,18 @@ class GraphRun:
             if edge.target == task.name and edge.carried_between is not None:
                 source, target = edge.carried_between
                 if edge.source in self.passed:
-                    value = _at(self.passed[edge.source], source)
+                    value = _at_or_none(self.passed[edge.source], source)
                 else:
-                    value = _at(self._produced_by(edge.source).outputs, source)
+                    value = self._produced_value(edge.source, source)
                 if value is None and _drops_none(task, target):
                     # An absent arm on an optional input means the input is unwired.
                     continue
                 _place(inputs, target, value)
         return inputs
+
+    def _produced_value(self, name: str, path: str) -> t.Any:
+        """Return the value one task produced at a path, or `None` for an omitted output."""
+        return _at_or_none(self._produced_by(name).outputs, path)
 
     def _produced_by(self, name: str) -> Node:
         """Return the node produced by the latest instance of one task."""

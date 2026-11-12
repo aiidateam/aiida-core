@@ -10,6 +10,7 @@
 
 from aiida.engine.processes.graphs.lowering import graph
 from tests.engine.processes.graphs.programs import tasks as task_module
+from tests.engine.processes.graphs.programs.ports import nullable_return
 from tests.engine.processes.graphs.programs.tasks import add, decrement, is_positive
 
 
@@ -114,3 +115,13 @@ def nested_loops(value: int) -> int:
         step = decrement(value=total)
         rough = is_positive(value=total)
     return total
+
+
+@graph
+def never_entered_optional(rounds: int, value: int | None = None) -> dict[str, int | None]:
+    """Carry an optional input through a loop; an unset one stays absent when the loop never runs."""
+    count = add(x=rounds, y=0)
+    while is_positive(value=count):
+        value = nullable_return(value=count)
+        count = decrement(value=count)
+    return {'direct': value, 'wired': nullable_return(value=value)}

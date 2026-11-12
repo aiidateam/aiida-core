@@ -8,7 +8,9 @@
 ###########################################################################
 """`WorkChain` tasks shared by the graph behavior suites."""
 
-from aiida.engine import WorkChain, calcfunction, task
+import typing as t
+
+from aiida.engine import Forward, WorkChain, calcfunction, task
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm import Int
 
@@ -36,6 +38,31 @@ class AddWorkChain(WorkChain):
 
 
 add_chain = task(AddWorkChain)
+
+
+class OptionalInputWorkChain(WorkChain):
+    """Return `x`; `y` is optional and has no default."""
+
+    @classmethod
+    def define(cls, spec) -> None:  # type: ignore[override]
+        super().define(spec)
+        spec.input('x', valid_type=Int)
+        spec.input('y', valid_type=Int, required=False)
+        spec.output('result', valid_type=Int)
+        spec.outline(cls.return_x)
+
+    def return_x(self):
+        """Return the required input unchanged."""
+        self.out('result', self.inputs.x)
+
+
+optional_input_chain = task(OptionalInputWorkChain)
+
+
+@graph
+def forward_optional_field(bundle: t.Annotated[t.Any, Forward(optional_input_chain)]) -> int | None:
+    """Return an optional forwarded field without a default; an omitted one emits no output."""
+    return bundle.y
 
 
 @graph

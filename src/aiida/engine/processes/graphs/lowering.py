@@ -810,6 +810,9 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
         test = _bind_call_condition(state, test=test)
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none'] = 'truthy'
+    if (none_test := _match_none_test(test)) is not None:
+        test, condition_test = none_test
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -823,13 +826,41 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
         second = _rekey_alias(second, port) if second.alias else second
     instance = _claim_name(state, f'branch_{len(state.tasks) + 1}')
     given = _wire_branch_inputs(state, instance=instance, first=first, second=second, test=test)
-    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    state.tasks.append(
+        BranchControl(
+            name=instance, inputs=given, body=first.body, otherwise=second.body, condition_test=condition_test
+        )
+    )
     selected = first.child.names[first.name]
     # Namespace arms expose their fields at the branch root, so the carried
     # name restarts at the whole branch namespace instead of the call port.
     carried = '' if _is_namespace_arm(first) or _is_namespace_arm(second) else port or selected.port
     state.names[first.name] = _Reference(instance, port=carried, shape=selected.shape)
     return first.name
+
+
+def _identity_compare(node: ast.AST) -> tuple[ast.expr, ast.expr, bool] | None:
+    """Split a single `is` or `is not` comparison into its sides and whether it is `is`."""
+    if (
+        isinstance(node, ast.Compare)
+        and len(node.ops) == 1
+        and isinstance(node.ops[0], (ast.Is, ast.IsNot))
+        and len(node.comparators) == 1
+    ):
+        return node.left, node.comparators[0], isinstance(node.ops[0], ast.Is)
+    return None
+
+
+def _match_none_test(test: ast.expr) -> tuple[ast.expr, t.Literal['is_none', 'is_not_none']] | None:
+    """Split `wire is None` into its wire and test kind, or return `None`."""
+    compared = _identity_compare(test)
+    if compared is None:
+        return None
+    wire, other, is_test = compared
+    if not (isinstance(other, ast.Constant) and other.value is None):
+        return None
+    kind: t.Literal['is_none', 'is_not_none'] = 'is_none' if is_test else 'is_not_none'
+    return wire, kind
 
 
 def _check_branch_shape(state: _LoweringState, statement: ast.If) -> None:

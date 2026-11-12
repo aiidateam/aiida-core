@@ -22,6 +22,7 @@ from enum import Enum
 
 from aiida.common.lang import type_check
 from aiida.common.loaders import get_object_loader
+from aiida.orm.implementation.utils import clean_value
 from aiida.orm.nodes.data.base import from_aiida_type, to_aiida_type
 from aiida.orm.nodes.data.data import Data
 from aiida.orm.pydantic import OrmMetadataField, OrmModel
@@ -131,6 +132,10 @@ class EnumData(Data):
         try:
             return enum(value)
         except ValueError as exc:
+            # Tuple-valued enums (including `ExitCode`) normalize to JSON lists in storage.
+            member = enum.__members__.get(self.name)
+            if member is not None and clean_value(member.value) == value:
+                return member
             msg = (
                 f'The stored value `{value}` is no longer a valid value for the enum `{enum}`. The definition must '
                 'have changed since storing the node.'

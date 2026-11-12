@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from aiida.common.exceptions import GraphMaxIterationsError, GraphRuntimeError
 from aiida.common.links import LinkType
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
@@ -31,7 +32,7 @@ from aiida.engine.processes.graphs.ir import (
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
-from aiida.orm import Node, load_node
+from aiida.orm import EnumData, Node, load_node
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
@@ -193,17 +194,40 @@ class GraphRun:
 
     @property
     def succeeded(self) -> set[str]:
-        """Return the finished tasks whose outputs all finished successfully."""
+        """Return the finished tasks whose outputs all completed successfully.
+
+        A declared `Result` failure counts as completed: the error arm carries the
+        declared outcome, so dependents still run and branch on it.
+        """
         return {
             name
             for name in self.finished
             if name in self.passed
             or (
-                all(self._is_finished_ok(self.done[instance]) for instance in self.instances[name])
+                all(self._has_result(name, self.done[instance]) for instance in self.instances[name])
                 and not self.missing_outputs(name)
                 and not self.mistyped_outputs(name)
             )
         }
+
+    def _has_result(self, name: str, pk: int) -> bool:
+        """Return whether a finished task completed, counting declared failures as completed.
+
+        Function tasks store the declared member on an `error` output.
+        """
+        node = load_node(pk)
+        if node.is_finished_ok:
+            return True
+        task = self.graph.task(name)
+        if not isinstance(task, ProcessTask) or not task.spec.exit_codes or not node.is_failed:
+            return False
+        if 'error' not in node.outputs:
+            return False
+        error = node.outputs['error']
+        if not isinstance(error, EnumData):
+            return False
+        value: ExitCode = error.get_member().value
+        return value in task.spec.exit_codes.values() and value.status == node.exit_status
 
     def missing_outputs(self, name: str) -> list[str]:
         """Return the declared outputs the latest instance of a finished task did not produce."""
@@ -313,8 +337,15 @@ class GraphRun:
             step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
 
     def _begin_branch(self, task: BranchControl, inputs: dict[str, t.Any], step: _Step) -> None:
-        """Dispatch the taken side of a branch."""
-        taken = task.body if _holds(inputs.pop(task.condition_port)) else task.otherwise
+        """Dispatch the taken side of a branch, testing presence without truthiness coercion."""
+        condition = inputs.pop(task.condition_port, None)
+        if task.condition_test == 'is_none':
+            selected = condition is None
+        elif task.condition_test == 'is_not_none':
+            selected = condition is not None
+        else:
+            selected = _holds(condition)
+        taken = task.body if selected else task.otherwise
         self.instances[task.name] = [task.name]
         # Each side may consume a different subset of the enclosing inputs.
         step.begin(task.name, task, {key: value for key, value in inputs.items() if key in taken.inputs}, taken)

@@ -24,6 +24,7 @@ from aiida.common import _callables as callables
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
@@ -223,7 +224,12 @@ class TaskIR:
     declared_outputs: NamespaceShape = field(default_factory=NamespaceShape)
     typevar_inputs: TypevarPositions = field(default_factory=dict, compare=False)
     typevar_output: t.Any = field(default=None, compare=False)
+    exit_codes: dict[str, ExitCode] = field(default_factory=dict)
     version: str = _TASK_IR_VERSION
+
+    def __post_init__(self) -> None:
+        """Normalize containers so copies compare equal on this frozen dataclass."""
+        object.__setattr__(self, 'exit_codes', dict(self.exit_codes))
 
     @classmethod
     def from_process(
@@ -234,6 +240,7 @@ class TaskIR:
         declared_outputs: NamespaceShape | None = None,
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass."""
         module, name = process.__module__, process.__name__
@@ -263,6 +270,7 @@ class TaskIR:
             declared_outputs=declared_outputs or NamespaceShape(),
             typevar_inputs=typevar_inputs or {},
             typevar_output=typevar_output,
+            exit_codes=dict(exit_codes or {}),
         )
 
     @cached_property
@@ -330,6 +338,8 @@ class TaskIR:
             data['declared_inputs'] = dump_shape(self.declared_inputs)
         if self.declared_outputs.fields:
             data['declared_outputs'] = dump_shape(self.declared_outputs)
+        if self.exit_codes:
+            data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
         return {**data, 'version': self.version}
 
     @classmethod
@@ -340,6 +350,7 @@ class TaskIR:
             executor=ExecutorReference.from_dict(data['executor']),
             declared_inputs=_load_declared(data.get('declared_inputs')),
             declared_outputs=_load_declared(data.get('declared_outputs')),
+            exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 
@@ -517,6 +528,7 @@ class GraphTask(abc.ABC):
                     body=body,
                     otherwise=GraphIR.from_dict(data['otherwise']),
                     condition_port=data.get('condition_port', _CONDITION_PORT),
+                    condition_test=data.get('condition_test', 'truthy'),
                     **common,
                 )
             if kind == 'loop':
@@ -579,13 +591,21 @@ class SubgraphTask(BodyTask):
 class BranchControl(BodyTask):
     """A condition dispatching exactly one of two nested templates.
 
-    ``condition_port`` is a synthetic port wired directly into the placement inputs; validation
-    rejects it from both side templates, so it never appears in their declared inputs.
+    ``condition_port`` is a synthetic port wired outside either side's declared inputs, so it
+    never appears in their declared inputs. ``condition_test`` decides how the condition
+    selects a side: truthiness, or a presence test against `None`.
     """
 
     KIND: t.ClassVar[_TaskKind] = 'branch'
     condition_port: str = _CONDITION_PORT
     otherwise: GraphIR
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none'] = 'truthy'
+
+    def __post_init__(self) -> None:
+        """Reject unknown condition tests."""
+        if self.condition_test not in ('truthy', 'is_none', 'is_not_none'):
+            msg = f'unsupported branch condition test `{self.condition_test}`.'
+            raise GraphTypeCheckError(msg)
 
     @property
     def branches(self) -> tuple[GraphIR, ...]:
@@ -612,6 +632,7 @@ class BranchControl(BodyTask):
         return {
             **super().to_dict(),
             'condition_port': self.condition_port,
+            'condition_test': self.condition_test,
             'otherwise': self.otherwise.to_dict(),
         }
 

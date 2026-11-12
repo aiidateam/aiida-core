@@ -55,6 +55,18 @@ from tests.engine.processes.graphs.programs import calls as call_programs
 pytestmark = pytest.mark.presto
 
 
+def _roundtrip(declaration: GraphHandle) -> GraphIR:
+    """Rebuild one graph template the way a stored declaration node returns it.
+
+    The daemon persists the template in a `graph` `Dict` node and rebuilds it with
+    `from_dict` on restarts and loop continuations, so running from `build()` alone
+    never exercises that path. The JSON step is the fidelity check: it rejects live
+    objects a direct `from_dict(to_dict())` would silently accept but the database
+    would mangle, such as tuples, sets, or non-string keys.
+    """
+    return GraphIR.from_dict(json.loads(json.dumps(declaration.build().to_dict())))
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
     'declaration, inputs, expected',
@@ -162,7 +174,7 @@ def test_supported_graph_syntax_executes(
 ) -> None:
     """Supported declarations and their JSON representations return exact named values."""
     if serialized:
-        spec = GraphIR.from_dict(json.loads(json.dumps(declaration.build().to_dict())))
+        spec = _roundtrip(declaration)
         outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, inputs))
     else:
         outputs, node = run_get_node(declaration, **inputs)
@@ -1131,7 +1143,7 @@ def test_shelljob_task_declarations_round_trip() -> None:
     """Declared ports survive serialization, and the shared class spec stays dynamic."""
     from aiida.calculations.shell import ShellJob
 
-    rebuilt = GraphIR.from_dict(json.loads(json.dumps(shelljobs.copy_and_count.build().to_dict())))
+    rebuilt = _roundtrip(shelljobs.copy_and_count)
     task = rebuilt.task('cat')
     assert sorted(task.spec.outputs) == ['remote_folder', 'remote_stash', 'retrieved', 'stdout']
     assert list(task.spec.inputs['nodes']) == ['text']

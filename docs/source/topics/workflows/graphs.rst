@@ -339,6 +339,171 @@ A leaf without a node, such as a ``None`` value for a nullable field, stays out 
 A ``TypeVar`` annotation, such as ``def scale(value: T, factor: T) -> T`` with ``T = TypeVar('T', int, float)``, accepts any of its constraints.
 When all values wired to ``T`` share one type, the output takes that type at this call.
 
+.. _topics:workflows:graphs:declared_failures:
+
+Declared task failures
+----------------------
+
+A task that can fail declares it with a ``Result[Success, Errors]`` return annotation.
+``Errors`` is an ``ExitCodeEnum`` subclass holding the ``ExitCode`` values the task may return.
+The body returns ``Ok`` with the outputs, or ``Err`` with the declared member:
+
+.. code:: python
+
+    from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, PortModel, Result, graph, task
+
+    class DivisionErrors(ExitCodeEnum):
+        ZERO_DENOMINATOR = ExitCode(410, 'The denominator is zero.')
+
+    class InputErrors(ExitCodeEnum):
+        NEGATIVE_NUMERATOR = ExitCode(411, 'Negative numerator: {value}')
+
+    @task
+    def divide_signed(numerator: float, denominator: float) -> Result[float, DivisionErrors | InputErrors]:
+        if denominator == 0:
+            return Err(DivisionErrors.ZERO_DENOMINATOR)
+        if numerator < 0:
+            return Err(InputErrors.NEGATIVE_NUMERATOR.exit_code.format(value=str(numerator)))
+        return Ok(numerator / denominator)
+
+    @task
+    def recover_zero(error: DivisionErrors) -> float:
+        return 0.0  # neutral fallback
+
+    @task
+    def recover_negative(numerator: float, error: InputErrors) -> float:
+        return abs(numerator)  # fall back to the magnitude
+
+    @graph
+    def ratio_signed(numerator: float, denominator: float) -> float:
+        value, error = divide_signed(numerator=numerator, denominator=denominator)
+        if error is None:
+            selected = value
+        elif error is DivisionErrors.ZERO_DENOMINATOR:
+            selected = recover_zero(error=error)
+        else:
+            selected = recover_negative(numerator=numerator, error=error)
+        return selected
+
+The call unpacks into ``(value, error)``; exactly one arm is present.
+The success arm passes the value through, and each declared member routes to its own handler task.
+Only the present arm creates data nodes; the absent arm reaches downstream inputs as ``None``.
+The success type may be structured: a ``PortModel`` declares a ``value`` namespace,
+stored field by field, and consuming tasks take the model as their input type:
+
+.. code:: python
+
+    class Quotient(PortModel):
+        ratio: float
+
+    @task
+    def divide_quotient(numerator: float, denominator: float) -> Result[Quotient, DivisionErrors]:
+        if denominator == 0:
+            return Err(DivisionErrors.ZERO_DENOMINATOR)
+        return Ok(Quotient(ratio=numerator / denominator))
+
+    @task
+    def read_quotient(value: Quotient) -> float:
+        return value.ratio
+
+Only static namespaces are supported; dynamic outputs stay out of graph tasks.
+Error inputs arrive as the enum member itself, typed by the annotation, so handlers
+match on members directly instead of reading storage nodes.
+Branches test the arms with ``is None`` and ``is not None``, or match one declared
+member with ``is`` and ``is not``, such as ``if error is DivisionErrors.ZERO_DENOMINATOR``.
+An unknown compared name fails when the graph is built. A branch nests inside an error arm,
+so each declared member routes to its own handler task with the dispatch visible in the body.
+
+A declared failure sets the child's exit status but counts as completed, so dependents still run;
+its absent success arms read as ``None`` downstream. Undeclared failures, exceptions, and outputs
+missing from a completed task keep the previous behavior: dependents never start and the graph exits
+with ``ERROR_TASK_FAILED``.
+A task without ``Result`` keeps its behavior too: returning an ``ExitCode`` exits the child with that status.
+``Err`` accepts a member or its ``ExitCode`` value, formatted to fill a message template;
+anything else fails the task itself, as do bare returns from a ``Result`` task.
+
+Error enums need unique positive statuses with string messages; statuses must not clash with the engine exit codes.
+
+Process classes cannot annotate their returns, so a ``CalcJob`` or ``WorkChain`` task declares its failures with ``errors``.
+The enum maps the exit statuses the process may finish with onto declared members, and the call gains an ``error`` arm:
+
+.. code:: python
+
+    from aiida.calculations.shell import ShellJob
+    from aiida.orm import Code, SinglefileData
+
+    class ShellErrors(ExitCodeEnum):
+        COMMAND_FAILED = ExitCode(400, 'The command failed.')
+
+    fail = task(
+        ShellJob,
+        inputs={'nodes': {'text': SinglefileData}},
+        outputs={'stdout': SinglefileData},
+        errors=ShellErrors,
+    )
+
+    @task
+    def recover_shell(error: ShellErrors) -> str:
+        return f'recovered from {error.status}'
+
+    @task
+    def read_stdout(content: SinglefileData) -> str:
+        return content.get_content()
+
+    @graph
+    def recover_failing(text: SinglefileData, code: Code, arguments: list[str]) -> str:
+        ran = fail(code=code, arguments=arguments, nodes={'text': text})
+        if ran.error is not None:
+            selected = recover_shell(error=ran.error)
+        else:
+            selected = read_stdout(content=ran.stdout)
+        return selected
+
+A child finishing with a mapped status counts as completed, with its success outputs absent; other statuses fail the task as before.
+``errors`` takes one enum or a union of them, and a process class that already declares an ``error`` output cannot take it.
+
+.. _topics:workflows:graphs:retries:
+
+Retrying declared failures
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``while`` loop retries a fallible task: its body unpacks the ``Result`` on every iteration, and the condition reads the latest error arm.
+
+.. code:: python
+
+    from aiida.engine import RestartErrors
+    from aiida.orm import StructureData
+
+    class StepErrors(ExitCodeEnum):
+        UNSTABLE = ExitCode(410, 'Unstable step.')
+
+    @task
+    def run_step(structure: StructureData, attempt: int) -> Result[float, StepErrors]:
+        if attempt < 2:
+            return Err(StepErrors.UNSTABLE)
+        return Ok(1.5)
+
+    @task
+    def should_restart(error: StepErrors | None, attempt: int, max_attempts: int) -> bool:
+        return error is not None and attempt < max_attempts
+
+    @graph
+    def restartable(structure: StructureData, max_attempts: int) -> float:
+        attempt = zero()
+        value, error = run_step(structure=structure, attempt=attempt)
+        retry = should_restart(error=error, attempt=attempt, max_attempts=max_attempts)
+        while retry:
+            attempt = step(attempt=attempt)
+            value, error = run_step(structure=structure, attempt=attempt)
+            retry = should_restart(error=error, attempt=attempt, max_attempts=max_attempts)
+        return ensure(value=value, error=error)
+
+Here ``zero`` seeds the counter, ``step`` increments it, and ``ensure`` returns the value or fails when no attempt succeeded.
+Each iteration rebinds every unpacked name, so an arm the latest attempt left absent reads as ``None``.
+``_`` discards an arm without carrying it into the next iteration.
+``RestartErrors`` names the failures of the restart machinery itself, with the statuses ``BaseRestartWorkChain`` uses (301, 302, 401, 402),
+so a task that gives up after the last attempt can return ``Err(RestartErrors.UNHANDLED_FAILURE)``.
+
 .. _topics:workflows:graphs:control_flow:
 
 Subgraphs, branches, and loops
@@ -502,6 +667,7 @@ Failures and restarts
 ---------------------
 
 Tasks that depend on a failed task never start; independent tasks still run, and the graph then exits with ``ERROR_TASK_FAILED``.
+A declared ``Result`` failure is not a failure in this sense: the child exits with the declared status, the graph branches on it, and the graph itself can exit cleanly; see :ref:`topics:workflows:graphs:declared_failures`.
 The graph checkpoint records dispatched and finished tasks and loop iterations, so a restarted graph does not run finished work again.
 Caching applies to tasks as to any other process.
 
@@ -513,7 +679,7 @@ Under development
 
 These are gaps in the current implementation, expected to be closed with further development:
 
-* **Coarse error handling:** any failed task fails the graph, see `Failures and restarts`_. Error handlers, retries, partial reruns, and custom exit codes are not yet available.
+* **Coarse error handling:** an undeclared task failure fails the graph, see `Failures and restarts`_. Declared failures branch and retry in the graph, see :ref:`topics:workflows:graphs:retries`; reusable error handlers and partial reruns are not yet available.
 * **Stored provenance only:** graphs and their tasks always store their nodes; unstored runs and unstored intermediate nodes are not supported.
 * **No dry runs:** graph metadata rejects ``dry_run``.
 * **No monitors yet:** ``CalcJob`` monitor mappings cannot be wired yet, since dictionary syntax only fills fixed namespaces.

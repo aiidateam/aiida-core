@@ -56,6 +56,7 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'RestartErrors',
     'Result',
     'ToContext',
     'WithNonDb',

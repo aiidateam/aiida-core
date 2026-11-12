@@ -695,6 +695,8 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
     ):
         name = statement.targets[0].id
         outer = state.names[statement.value.id]  # _collect_region_inputs rejects unknown reads above
+        if isinstance(outer.shape, NamespaceShape):
+            return _namespace_arm(child, name=name, value=child.names[statement.value.id], alias=True)
         child.names[name] = _Reference(None, port=outer.port, shape=outer.shape)
         body = _lower_region_body(child, {outer.port: _Reference(None, port=statement.value.id, shape=outer.shape)})
         return _Arm(name, child=child, body=body, alias=True)
@@ -710,6 +712,8 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
         name = statement.targets[0].id
         field = _lower_value(child, statement.value)
         assert isinstance(field, _Reference)  # `_select_field` returns a reference or rejects
+        if isinstance(field.shape, NamespaceShape):
+            return _namespace_arm(child, name=name, value=field, alias=True)
         child.names[name] = _Reference(None, port=name, shape=field.shape)
         body = _lower_region_body(child, {name: _Reference(None, port=field.port, shape=field.shape)})
         return _Arm(name, child=child, body=body, alias=True)
@@ -727,7 +731,24 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
     else:
         name = _lower_assignment(child, statement=statement, rebind=True)
         reference = child.names[name]
+    if isinstance(reference.shape, NamespaceShape):
+        return _namespace_arm(child, name=name, value=reference, alias=False)
     return _Arm(name, child=child, body=_lower_region_body(child, {reference.port: reference}))
+
+
+def _namespace_arm(child: _LoweringState, *, name: str, value: _Reference, alias: bool) -> _Arm:
+    """Bind a namespace arm, exposing its fields at the region root.
+
+    `_lower_branch` restarts the carried name at the branch root, so every
+    namespace arm takes this layout, whichever statement binds it.
+    """
+    child.names[name] = value
+    return _Arm(name, child=child, body=_lower_region_body(child, _fields(value)), alias=alias)
+
+
+def _is_namespace_arm(arm: _Arm) -> bool:
+    """Return whether an arm binds a namespace, so its fields sit at the region root."""
+    return isinstance(arm.child.names[arm.name].shape, NamespaceShape)
 
 
 def _single_assign_target(statement: ast.stmt) -> str | None:
@@ -743,14 +764,19 @@ def _passthrough_arm(state: _LoweringState, *, name: str, port: str, shape: Shap
     child.inputs[name] = []
     child.input_shapes[name] = shape
     child.names[name] = _Reference(None, port=name, shape=shape)
+    if isinstance(shape, NamespaceShape):
+        return _namespace_arm(child, name=name, value=child.names[name], alias=False)
     return _Arm(name, child=child, body=_lower_region_body(child, {port: _Reference(None, port=name, shape=shape)}))
 
 
 def _merge_port(first: _Arm, second: _Arm) -> str | None:
     """Return the port alias arms rewire to: the call arm's port, or the first alias port.
 
-    Rekeying is unconditional; validation judges whether the types agree.
+    Rekeying is unconditional; validation judges whether the types agree. Namespace
+    outputs already share field names, so they never rekey.
     """
+    if _is_namespace_arm(first) or _is_namespace_arm(second):
+        return None
     call_ports = {port for arm in (first, second) if not arm.alias for port in arm.body.outputs}
     if len(call_ports) == 1:
         return next(iter(call_ports))
@@ -766,6 +792,7 @@ def _merge_port(first: _Arm, second: _Arm) -> str | None:
 def _rekey_alias(arm: _Arm, port: str) -> _Arm:
     """Expose an alias arm's passthrough value under the merged port."""
     [(_, endpoint)] = list(arm.body.outputs.items())
+    assert isinstance(endpoint, Endpoint)
     return arm._replace(body=replace(arm.body, outputs={port: endpoint}))
 
 
@@ -790,7 +817,10 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     given = _wire_branch_inputs(state, instance=instance, first=first, second=second, test=test)
     state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
     selected = first.child.names[first.name]
-    state.names[first.name] = _Reference(instance, port=port or selected.port, shape=selected.shape)
+    # Namespace arms expose their fields at the branch root, so the carried
+    # name restarts at the whole branch namespace instead of the call port.
+    carried = '' if _is_namespace_arm(first) or _is_namespace_arm(second) else port or selected.port
+    state.names[first.name] = _Reference(instance, port=carried, shape=selected.shape)
 
 
 def _check_branch_shape(state: _LoweringState, statement: ast.If) -> None:
@@ -1003,9 +1033,6 @@ def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
 
 def _lower_region_body(state: _LoweringState, outputs: dict[str, _Reference]) -> GraphIR:
     """Lower collected region state to a nested graph template."""
-    if any(isinstance(reference.shape, NamespaceShape) for reference in outputs.values()):
-        msg = 'control-flow outputs must be static leaves, not namespaces.'
-        raise GraphLanguageError(msg)
     endpoints: dict[str, OutputTree] = {name: _endpoint_tree(value) for name, value in outputs.items()}
     return GraphIR(
         tasks=tuple(state.tasks),

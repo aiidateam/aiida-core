@@ -269,6 +269,24 @@ def test_loops_build_control_tasks() -> None:
     assert set(called.tasks[1].body.outputs) == {'value', 'condition'}
 
 
+def test_namespace_loop_body_builds_nested_outputs() -> None:
+    """A namespace rebound in a loop lowers to nested body outputs."""
+    from aiida.engine.processes.graphs.ir import LoopControl
+
+    spec = loops.loop_pair_sum.build()
+    [task] = [task for task in spec.tasks if isinstance(task, LoopControl)]
+    assert set(task.body.outputs) == {'pair', 'count', 'condition'}
+    assert isinstance(task.body.outputs['pair'], dict)
+    assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
+def test_call_namespace_arms_build() -> None:
+    """Namespace graph calls on both arms lower to root branch outputs."""
+    spec = branches.call_namespace_both.build()
+    assert set(spec.outputs) == {'result'}
+    assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
 def test_inline_condition_matches_bound_form() -> None:
     """An inline predicate call lowers like its explicit assignment form."""
     inline = branches.inline_condition.build().to_dict()
@@ -278,9 +296,17 @@ def test_inline_condition_matches_bound_form() -> None:
     assert inline == bound
 
 
-def test_mismatched_branch_outputs_fail_during_build() -> None:
+@pytest.mark.parametrize(
+    'declaration',
+    [
+        pytest.param(branches.mismatched_branches, id='leaf-names'),
+        pytest.param(branches.alias_namespace_mismatched, id='namespace-leaf'),
+        pytest.param(branches.alias_namespace_call_mismatched, id='namespace-call'),
+    ],
+)
+def test_mismatched_branch_outputs_fail_during_build(declaration: GraphHandle) -> None:
     with pytest.raises(GraphTypeCheckError, match='same outputs'):
-        branches.mismatched_branches.build()
+        declaration.build()
 
 
 def test_namespace_return_builds_namespace_output() -> None:
@@ -304,6 +330,16 @@ def test_return_pair_builds_namespace_output() -> None:
     spec = ports.return_pair.build()
     assert set(spec.outputs) == {'result'}
     assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
+
+
+def test_namespace_alias_arms_build() -> None:
+    """Whole-namespace alias arms lower with merged namespace outputs."""
+    from aiida.engine.processes.graphs.ir import BranchControl
+
+    for declaration in (branches.alias_namespace_both, branches.alias_namespace_mixed):
+        spec = declaration.build()
+        assert any(isinstance(task, BranchControl) for task in spec.tasks)
+        assert GraphIR.from_dict(spec.to_dict()).to_dict() == spec.to_dict()
 
 
 @pytest.mark.parametrize(

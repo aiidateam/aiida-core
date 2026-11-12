@@ -9,8 +9,11 @@
 """Branches declarations shared by the graph behavior suites."""
 
 from aiida.engine.processes.graphs.lowering import graph
+from tests.engine.processes.graphs.programs import ports as ports_module
 from tests.engine.processes.graphs.programs import tasks as task_module
+from tests.engine.processes.graphs.programs.port_models import Configuration, PartialBundle
 from tests.engine.processes.graphs.programs.tasks import (
+    ArithmeticPair,
     add,
     arithmetic_pair,
     branch_2,
@@ -322,3 +325,91 @@ def alias_mismatched(value: int, label: str, flag: bool) -> int:
     else:
         chosen = label
     return chosen
+
+
+@graph
+def alias_namespace_both(value: int, flag: bool) -> ArithmeticPair:
+    """Select between two whole task-output namespaces."""
+    first = arithmetic_pair(x=value, y=3)
+    second = arithmetic_pair(x=value, y=4)
+    if flag:
+        chosen = first
+    else:
+        chosen = second
+    return chosen
+
+
+@graph
+def alias_namespace_mixed(value: int, flag: bool) -> ArithmeticPair:
+    """Select between a whole namespace alias and a call producing the same shape."""
+    pair = arithmetic_pair(x=value, y=3)
+    if flag:
+        chosen = pair
+    else:
+        chosen = arithmetic_pair(x=value, y=4)
+    return chosen
+
+
+# rejected at lowering: branch outputs must agree on namespace shapes.
+@graph
+def alias_namespace_mismatched(value: int, flag: bool) -> int:
+    """Alias a namespace on one arm and a leaf on the other; arms must agree."""
+    pair = arithmetic_pair(x=value, y=3)
+    single = add(x=value, y=1)
+    if flag:
+        chosen = pair
+    else:
+        chosen = single
+    return chosen
+
+
+# rejected at lowering: branch outputs must agree on namespace shapes.
+@graph
+def alias_namespace_call_mismatched(value: int, flag: bool) -> int:
+    """Alias a namespace on one arm and call a leaf on the other; arms must agree."""
+    pair = arithmetic_pair(x=value, y=3)
+    if flag:
+        chosen = pair
+    else:
+        chosen = add(x=value, y=1)
+    return chosen
+
+
+@graph
+def call_namespace_both(value: int, flag: bool) -> int:
+    """Call a namespace graph on both arms, then select one field."""
+    if flag:
+        chosen = ports_module.return_pair(x=value, y=3)
+    else:
+        chosen = ports_module.return_pair(x=value, y=4)
+    return chosen.sum
+
+
+@graph
+def alias_namespace_single(first: PartialBundle, second: PartialBundle, flag: bool) -> int:
+    """Select between two one-field namespaces; one field still forms a namespace."""
+    if flag:
+        chosen = first
+    else:
+        chosen = second
+    return chosen.x
+
+
+@graph
+def field_select_namespace_arm(first: Configuration, second: Configuration, flag: bool) -> int:
+    """Select one nested namespace field per arm, then read its leaf."""
+    if flag:
+        chosen = first.settings
+    else:
+        chosen = second.settings
+    return chosen.count
+
+
+@graph
+def loop_arm_namespace(value: int, flag: bool) -> int:
+    """Rebind a namespace in a loop arm; the missing `else` passes it through."""
+    pair = arithmetic_pair(x=value, y=1)
+    if flag:
+        while is_positive(value=pair.product):
+            pair = arithmetic_pair(x=pair.product, y=0)
+    return pair.sum

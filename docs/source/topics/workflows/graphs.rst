@@ -376,7 +376,8 @@ Without an ``else``, the arm rebinds a name bound before the ``if``; when the te
             total = add(x=total, y=10)
         return total
 
-Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, or a ``while`` loop that rebinds one name bound before the ``if``.
+Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, or a ``while`` loop that rebinds one name bound before the ``if``.
+Whole-namespace arms on both sides must share the same fields.
 The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
 
 A ``while`` tests a bound name or a task call before every iteration.

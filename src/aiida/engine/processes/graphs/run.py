@@ -30,6 +30,7 @@ from aiida.engine.processes.graphs.ir import (
     _require_version,
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
+from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
 from aiida.orm import Node, load_node
 from aiida.orm.nodes.data.bool import Bool
 
@@ -81,6 +82,32 @@ def _mistyped_declared_outputs(declared: NamespaceShape, node: Node) -> list[str
 def _returned(node: Node) -> dict[str, t.Any]:
     """Read the returned outputs of one loop iteration."""
     return {entry.link_label: entry.node for entry in node.base.links.get_outgoing(link_type=LinkType.RETURN).all()}
+
+
+def _regroup_returned_outputs(body: GraphIR, returned: dict[str, t.Any]) -> dict[str, t.Any]:
+    """Regroup nested loop outputs from their flat iteration link labels.
+
+    A finished iteration stores nested outputs under separator-joined
+    labels (`pair__sum`), but the next iteration wires whole namespaces.
+    Without regrouping, the carried name keeps its initial value and a
+    second iteration reuses stale namespace state.
+    """
+    return {
+        name: _regroup_returned(tree, name, returned) for name, tree in body.outputs.items() if isinstance(tree, dict)
+    }
+
+
+def _regroup_returned(tree: dict[str, OutputTree], prefix: str, returned: dict[str, t.Any]) -> dict[str, t.Any]:
+    """Regroup one nested output from its separator-joined iteration labels.
+
+    An iteration omits absent leaves; each regroups as `None`, which input
+    filling resolves per port to absent, a default, or a nullable value.
+    """
+    regrouped = {}
+    for name, child in tree.items():
+        label = f'{prefix}{PORT_NAMESPACE_SEPARATOR}{name}'
+        regrouped[name] = _regroup_returned(child, label, returned) if isinstance(child, dict) else returned.get(label)
+    return regrouped
 
 
 def _at_or_none(container: t.Any, path: str) -> t.Any:
@@ -325,7 +352,8 @@ class GraphRun:
         if len(runs) >= task.max_iterations:
             msg = f'loop `{task.name}` exceeded {task.max_iterations} iterations; check that its condition terminates.'
             raise GraphMaxIterationsError(msg)
-        self._begin_iteration(task, {**self._inputs_for(task), **outputs}, step)
+        carried = _regroup_returned_outputs(task.body, outputs)
+        self._begin_iteration(task, {**self._inputs_for(task), **outputs, **carried}, step)
 
     def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: _Step) -> None:
         """Dispatch one numbered loop iteration over the loop body."""

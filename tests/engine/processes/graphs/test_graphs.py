@@ -150,6 +150,50 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(branches.field_select_arm, {'value': 2, 'flag': True}, {'result': 5}, id='branch-field-true'),
         pytest.param(branches.field_select_arm, {'value': 2, 'flag': False}, {'result': 6}, id='branch-field-false'),
         pytest.param(branches.forward_pair, {'value': 2}, {'result': 11}, id='branch-namespace-forward'),
+        pytest.param(
+            branches.alias_namespace_single,
+            {'first': {'x': 1}, 'second': {'x': 2}, 'flag': True},
+            {'result': 1},
+            id='branch-namespace-single-true',
+        ),
+        pytest.param(
+            branches.alias_namespace_single,
+            {'first': {'x': 1}, 'second': {'x': 2}, 'flag': False},
+            {'result': 2},
+            id='branch-namespace-single-false',
+        ),
+        pytest.param(
+            branches.field_select_namespace_arm,
+            {
+                'first': {'settings': {'count': 3, 'nullable': None}},
+                'second': {'settings': {'count': 4, 'nullable': None}},
+                'flag': True,
+            },
+            {'result': 3},
+            id='branch-field-namespace-true',
+        ),
+        pytest.param(
+            branches.field_select_namespace_arm,
+            {
+                'first': {'settings': {'count': 3, 'nullable': None}},
+                'second': {'settings': {'count': 4, 'nullable': None}},
+                'flag': False,
+            },
+            {'result': 4},
+            id='branch-field-namespace-false',
+        ),
+        pytest.param(
+            branches.loop_arm_namespace, {'value': 2, 'flag': True}, {'result': 2}, id='branch-loop-namespace-true'
+        ),
+        pytest.param(
+            branches.loop_arm_namespace, {'value': 2, 'flag': False}, {'result': 3}, id='branch-loop-namespace-false'
+        ),
+        pytest.param(
+            loops.loop_nullable_namespace,
+            {'first': {'count': 3, 'nullable': None}, 'second': {'count': 4, 'nullable': None}, 'rounds': 2},
+            {'result': 4},
+            id='loop-namespace-nullable',
+        ),
         pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 1}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
         pytest.param(parameters.signed_literals, {}, {'result': -2}, id='signed-literals'),
@@ -418,6 +462,21 @@ def test_forward_namespace_omits_absent_field() -> None:
     assert {name: value.value for name, value in outputs['result'].items()} == {'x': 1}
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration',
+    [pytest.param(branches.alias_namespace_mixed, id='mixed'), pytest.param(branches.alias_namespace_both, id='both')],
+)
+@pytest.mark.parametrize('flag', [pytest.param(True, id='true'), pytest.param(False, id='false')])
+def test_namespace_alias_arms_run(declaration: GraphHandle, flag: bool) -> None:
+    """Whole-namespace alias arms return the taken side's existing nodes."""
+    outputs, node = run_get_node(declaration, value=2, flag=flag)
+    assert node.is_finished_ok
+    expected = {'sum': 5, 'product': 6} if flag else {'sum': 6, 'product': 8}
+    assert {name: value.value for name, value in outputs['result'].items()} == expected
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
+
+
 def test_trailing_underscore_task_name_rejected() -> None:
     """A task class name must be a valid link label."""
     from aiida.engine.processes.calcjobs.calcjob import CalcJob
@@ -471,6 +530,28 @@ def test_nested_loops_run() -> None:
     outputs, node = run_get_node(loops.nested_loops, value=2)
     assert node.is_finished_ok
     assert outputs['result'].value == -1
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'rounds', [pytest.param(0, id='never'), pytest.param(1, id='once'), pytest.param(2, id='twice')]
+)
+def test_loop_pair_sum_runs(rounds: int) -> None:
+    """A namespace rebound across iterations carries fresh state into each pass."""
+    outputs, node = run_get_node(loops.loop_pair_sum, value=2, rounds=rounds)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 2 + rounds
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('flag', [pytest.param(True, id='true'), pytest.param(False, id='false')])
+def test_call_namespace_arms_run(flag: bool) -> None:
+    """A field selected after namespace graph calls on both arms reads the branch root."""
+    outputs, node = run_get_node(branches.call_namespace_both, value=2, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == (5 if flag else 6)
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

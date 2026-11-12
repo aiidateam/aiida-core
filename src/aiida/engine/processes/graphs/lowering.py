@@ -23,10 +23,12 @@ import typing as t
 from collections import Counter
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
+from types import UnionType
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.calcjobs import CalcJob
+from aiida.engine.processes.exit_code import ExitCodeEnum
 from aiida.engine.processes.graphs.inputs import _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     _CONDITION_PORT,
@@ -251,13 +253,21 @@ class _Arm(t.NamedTuple):
 # the `overload-overlap` ignores below record that this overlap is deliberate.
 @t.overload
 def task(  # type: ignore[overload-overlap]
-    function: type[CalcJob], *, inputs: PortDeclaration | None = None, outputs: PortDeclaration | None = None
+    function: type[CalcJob],
+    *,
+    inputs: PortDeclaration | None = None,
+    outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> CalcJobTaskHandle: ...
 
 
 @t.overload
 def task(  # type: ignore[overload-overlap]
-    function: type[WorkChain], *, inputs: PortDeclaration | None = None, outputs: PortDeclaration | None = None
+    function: type[WorkChain],
+    *,
+    inputs: PortDeclaration | None = None,
+    outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> WorkChainTaskHandle: ...
 
 
@@ -279,6 +289,7 @@ def task(
     *,
     inputs: PortDeclaration | None = None,
     outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> t.Any:
     """Register an importable task with static ports and fixed graph inputs.
 
@@ -290,6 +301,8 @@ def task(
     :param inputs: names and node types inside dynamic input namespaces of a process class,
         e.g. ``{'nodes': {'text': SinglefileData}}``.
     :param outputs: names and node types of the dynamic outputs of a process class.
+    :param errors: an `ExitCodeEnum` subclass, or a union of them, mapping the exit
+        statuses a `CalcJob` or `WorkChain` task may finish with onto declared failures.
     :return: a callable, launchable task handle.
     """
 
@@ -297,7 +310,7 @@ def task(
         """Validate the importable task reference and construct its process wrapper."""
         if not inspect.isclass(target):
             _function_identifier(target)
-        return _build_task(target, inputs=inputs, outputs=outputs)
+        return _build_task(target, inputs=inputs, outputs=outputs, errors=errors)
 
     if function is not None:
         return decorate(function)

@@ -14,18 +14,20 @@ import functools
 import inspect
 import typing as t
 from collections.abc import Callable, Mapping
+from types import UnionType
 
 from typing_extensions import is_typeddict
 
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.lang import override
 from aiida.common.links import validate_link_label
+from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.functions import FunctionProcessBase, P, ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import UNSPECIFIED, Port
 from aiida.engine.processes.graphs.ir import TaskIR, TypevarPositions, _reject_dynamic_inputs
-from aiida.engine.processes.graphs.results import Err, Ok, Result, _error_types, _result_contract
+from aiida.engine.processes.graphs.results import Err, Ok, Result, _error_contract, _error_types, _result_contract
 from aiida.engine.processes.graphs.shapes import (
     LeafShape,
     NamespaceShape,
@@ -431,12 +433,16 @@ class CalcJobTaskHandle:
         *,
         inputs: PortDeclaration | None = None,
         outputs: PortDeclaration | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
+        error_enums: tuple[str, ...] | None = None,
     ) -> None:
         self._process_class: type[CalcJob] = process_class
         self._task_spec: TaskIR = TaskIR.from_process(
             process_class,
             declared_inputs=_declared_shape(inputs),
             declared_outputs=_declared_shape(outputs, leaves=True),
+            exit_codes=exit_codes,
+            error_enums=error_enums,
         )
         self._task_spec.check_ports()
         # Copy name and docstring, not the class state: the handle owns its task spec.
@@ -485,12 +491,16 @@ class WorkChainTaskHandle:
         *,
         inputs: PortDeclaration | None = None,
         outputs: PortDeclaration | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
+        error_enums: tuple[str, ...] | None = None,
     ) -> None:
         self._process_class: type[WorkChain] = process_class
         self._task_spec: TaskIR = TaskIR.from_process(
             process_class,
             declared_inputs=_declared_shape(inputs),
             declared_outputs=_declared_shape(outputs, leaves=True),
+            exit_codes=exit_codes,
+            error_enums=error_enums,
         )
         self._task_spec.check_ports()
         # Copy name and docstring, not the class state: the handle owns its task spec.
@@ -558,10 +568,21 @@ def _merge_task_metadata(
     return {**inputs, 'metadata': dict(metadata)}
 
 
+def _error_codes(errors: type[ExitCodeEnum] | UnionType) -> tuple[dict[str, ExitCode], tuple[str, ...]]:
+    """Validate a task-level error declaration and return its codes and enum identifiers.
+
+    The declaration mirrors the error half of a `Result` annotation, so unions
+    qualify their labels and duplicate statuses fail here, not at runtime.
+    """
+    kinds = _error_types(errors)
+    return _error_contract(kinds), tuple(get_object_loader().identify_object(kind) for kind in kinds)
+
+
 def _check_task_contract(
     function: type[CalcJob] | type[WorkChain] | Callable[..., t.Any],
     *,
     declares_ports: bool,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> None:
     """Reject task declarations the graph runtime cannot represent.
 
@@ -569,6 +590,9 @@ def _check_task_contract(
     """
     if is_process_function(function):
         msg = 'tasks take plain functions, not decorated process functions; pass the undecorated function instead.'
+        raise GraphTypeCheckError(msg)
+    if errors is not None and not (inspect.isclass(function) and issubclass(function, (CalcJob, WorkChain))):
+        msg = 'task errors belong in the `Result` return annotation; `errors` applies to process classes.'
         raise GraphTypeCheckError(msg)
     if inspect.isclass(function) and issubclass(function, (CalcJob, WorkChain)):
         try:
@@ -579,6 +603,12 @@ def _check_task_contract(
                 + 'use alphanumerics and underscores without leading or trailing underscores instead'
             )
             raise GraphTypeCheckError(msg) from exception
+        if errors is not None and 'error' in function.spec().outputs:
+            msg = (
+                f'`{function.__name__}` already declares an `error` output, which the declared failure arm needs; '
+                + 'map its failures with a wrapping work chain, or drop `errors`'
+            )
+            raise GraphTypeCheckError(msg)
         return
     if declares_ports:
         msg = 'task functions declare their ports through annotations; `inputs` and `outputs` apply to process classes.'
@@ -609,13 +639,20 @@ def _build_task(
     *,
     inputs: PortDeclaration | None = None,
     outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> CalcJobTaskHandle | WorkChainTaskHandle | FunctionTaskHandle[P, R]:
     """Construct a task handle with static leaf outputs and fixed graph inputs."""
-    _check_task_contract(function, declares_ports=bool(inputs or outputs))
+    _check_task_contract(function, declares_ports=bool(inputs or outputs), errors=errors)
     if inspect.isclass(function) and issubclass(function, CalcJob):
-        return CalcJobTaskHandle(function, inputs=inputs, outputs=outputs)
+        exit_codes, error_enums = _error_codes(errors) if errors is not None else ({}, ())
+        return CalcJobTaskHandle(
+            function, inputs=inputs, outputs=outputs, exit_codes=exit_codes, error_enums=error_enums
+        )
     if inspect.isclass(function) and issubclass(function, WorkChain):
-        return WorkChainTaskHandle(function, inputs=inputs, outputs=outputs)
+        exit_codes, error_enums = _error_codes(errors) if errors is not None else ({}, ())
+        return WorkChainTaskHandle(
+            function, inputs=inputs, outputs=outputs, exit_codes=exit_codes, error_enums=error_enums
+        )
     assert not inspect.isclass(function)
     decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess)(function)
     typevar_inputs, typevar_output = _typevar_positions(function)

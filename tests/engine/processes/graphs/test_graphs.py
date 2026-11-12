@@ -1342,6 +1342,33 @@ def test_shelljob_task_missing_declared_output_fails_task(shell_code, text_file)
     )
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'command, arguments, expected, status',
+    [
+        pytest.param('false', [], 'recovered from 400', 0, id='mapped-failure'),
+        pytest.param('cat', ['{text}'], 'one two three\n', 0, id='success'),
+        pytest.param('sh', ['-c', 'echo boom 1>&2'], None, 400, id='unmapped-failure'),
+    ],
+)
+def test_shelljob_task_declared_failure_branches(shell_code, text_file, command, arguments, expected, status) -> None:
+    """A mapped calculation failure recovers; an unmapped one fails the graph."""
+    outputs, node = run_get_node(
+        shelljobs.recover_failing,
+        text=text_file,
+        code=shell_code(command),
+        arguments=arguments,
+        task_metadata={'fail': {'options': {}}},
+    )
+    assert node.exit_status == status
+    if expected is None:
+        assert outputs == {}
+        assert node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels() == ['fail']
+    else:
+        assert node.is_finished_ok
+        assert outputs['result'].value == expected
+
+
 def test_shelljob_task_declarations_round_trip() -> None:
     """Declared ports survive serialization, and the shared class spec stays dynamic."""
     from aiida.calculations.shell import ShellJob

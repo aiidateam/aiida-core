@@ -13,13 +13,16 @@ import typing as t
 
 import pytest
 
+from aiida.calculations.shell import ShellJob
 from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import LinkType
+from aiida.common.loaders import get_object_loader
 from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import BranchControl, GraphIR, ProcessTask, TaskIR
 from aiida.engine.processes.graphs.results import _error_types, _result_contract
-from tests.engine.processes.graphs.programs import results
+from aiida.orm import SinglefileData
+from tests.engine.processes.graphs.programs import results, shelljobs, workchains
 from tests.engine.processes.graphs.programs.results import DivisionErrors, InputErrors
 
 pytestmark = pytest.mark.presto
@@ -84,6 +87,69 @@ def test_contract_rejected(annotation: t.Any, match: str) -> None:
 def test_plain_annotation_has_no_contract() -> None:
     """A task without `Result` declares no failures."""
     assert _result_contract(float) == (float, {})
+
+
+def test_calcjob_task_declares_error_mapping() -> None:
+    """A `CalcJob` task maps exit statuses onto declared failures without touching its spec."""
+    placed = shelljobs.recover_failing.build().task('fail')
+    assert isinstance(placed, ProcessTask)
+    assert placed.spec.exit_codes == {'COMMAND_FAILED': shelljobs.ShellErrors.COMMAND_FAILED.value}
+    assert placed.spec.error_enums == (get_object_loader().identify_object(shelljobs.ShellErrors),)
+    assert 'error' in placed.spec.outputs
+    assert not placed.spec.outputs['error'].required
+    assert set(ShellJob.spec().exit_codes) >= {'ERROR_COMMAND_FAILED'}
+    assert 'COMMAND_FAILED' not in ShellJob.spec().exit_codes
+
+
+def test_calcjob_task_ir_round_trips_error_mapping() -> None:
+    """The exit codes and enum identifiers survive an IR round trip."""
+    placed = shelljobs.recover_failing.build().task('fail')
+    assert isinstance(placed, ProcessTask)
+    data = placed.spec.to_dict()
+    assert set(data['exit_codes']) == {'COMMAND_FAILED'}
+    assert data['error_enums'] == [get_object_loader().identify_object(shelljobs.ShellErrors)]
+    rebuilt = TaskIR.from_dict(json.loads(json.dumps(data)))
+    assert rebuilt.exit_codes == placed.spec.exit_codes
+    assert rebuilt.error_enums == placed.spec.error_enums
+
+
+def test_legacy_task_ir_without_error_mapping() -> None:
+    """Task declarations stored before error enums default to no mapping."""
+    placed = shelljobs.copy_and_count.build().task('cat')
+    assert isinstance(placed, ProcessTask)
+    data = placed.spec.to_dict()
+    assert 'exit_codes' not in data
+    assert 'error_enums' not in data
+    assert TaskIR.from_dict(data).error_enums == ()
+
+
+@pytest.mark.parametrize(
+    'declaration, errors, match',
+    [
+        pytest.param(
+            shelljobs.double,
+            shelljobs.ShellErrors,
+            'belong in the `Result` return annotation',
+            id='function-task',
+        ),
+        pytest.param(ShellJob, int, 'non-empty ExitCodeEnum', id='unresolvable'),
+    ],
+)
+def test_task_errors_rejected(declaration: t.Any, errors: t.Any, match: str) -> None:
+    """Error mappings belong on process classes, with resolvable enums."""
+    with pytest.raises(GraphTypeCheckError, match=match):
+        task(
+            declaration,
+            inputs={'nodes': {'text': SinglefileData}},
+            outputs={'stdout': SinglefileData},
+            errors=errors,
+        )
+
+
+def test_task_errors_rejected_on_error_output() -> None:
+    """A process class declaring its own `error` output cannot take an error mapping."""
+    with pytest.raises(GraphTypeCheckError, match='`ErrorOutputChain` already declares an `error` output'):
+        task(workchains.ErrorOutputChain, errors=workchains.ChainErrors)
 
 
 @pytest.mark.parametrize(
@@ -433,6 +499,30 @@ def test_result_task_handle_call_raises() -> None:
     """A `Result` task handle declares work like any other task, so a direct call raises."""
     with pytest.raises(GraphError, match='declares a task'):
         results.divide(numerator=1.0, denominator=2.0)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration',
+    [
+        pytest.param(workchains.recover_unproduced, id='mapped-undeclared'),
+        pytest.param(workchains.read_absent_arm, id='absent-arm'),
+        pytest.param(workchains.recover_static, id='static-mapped'),
+        pytest.param(workchains.read_absent_static, id='static-absent'),
+    ],
+)
+@pytest.mark.parametrize(
+    'fail, expected',
+    [
+        pytest.param(True, 'recovered from 410', id='mapped-failure'),
+        pytest.param(False, 'result:1.0', id='success'),
+    ],
+)
+def test_workchain_mapped_failure_recovers_without_outputs(declaration: t.Any, fail: bool, expected: str) -> None:
+    """Mapped failures without declared outputs complete; absent arms read as `None`."""
+    outputs, node = run_get_node(declaration, fail=fail)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

@@ -9,13 +9,14 @@
 """Declare source graphs and execute their static task dependencies."""
 
 from aiida.engine.processes.graphs.lowering import Forward, GraphHandle, graph, task
-from aiida.engine.processes.graphs.results import Err, Ok, Result
+from aiida.engine.processes.graphs.results import Err, Ok, RestartErrors, Result
 
 __all__ = (
     'Err',
     'Forward',
     'GraphHandle',
     'Ok',
+    'RestartErrors',
     'Result',
     'graph',
     'task',

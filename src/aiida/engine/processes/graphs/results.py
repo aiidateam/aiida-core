@@ -17,7 +17,7 @@ from types import UnionType
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 
-__all__ = ('Err', 'Ok', 'Result')
+__all__ = ('Err', 'Ok', 'RestartErrors', 'Result')
 
 T = t.TypeVar('T')
 E = t.TypeVar('E')
@@ -44,6 +44,15 @@ class Err(Result[T, E]):
     """A declared error enum member, or its optionally formatted exit code."""
 
     error: E | ExitCode
+
+
+class RestartErrors(ExitCodeEnum):
+    """Failures reported by the restart machinery, not by the retried step."""
+
+    SUB_PROCESS_EXCEPTED = ExitCode(301, 'The sub process excepted.')
+    SUB_PROCESS_KILLED = ExitCode(302, 'The sub process was killed.')
+    MAXIMUM_ITERATIONS_EXCEEDED = ExitCode(401, 'The maximum number of iterations was exceeded.')
+    UNHANDLED_FAILURE = ExitCode(402, 'The process failed with an unhandled failure.')
 
 
 def _result_contract(annotation: object) -> tuple[object, dict[str, ExitCode]]:

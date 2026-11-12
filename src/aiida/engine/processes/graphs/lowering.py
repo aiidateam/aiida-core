@@ -637,11 +637,16 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
             )
             _reject(state, node=statement, reason=msg)
     if not isinstance(statement.value, ast.Call):
-        msg = (
-            'only calls are recorded as work; plain values would run without leaving a trace; '
-            + 'each line must call a task or graph instead'
-        )
-        _reject(state, node=statement.value, reason=msg)
+        reference = _lower_value(state, statement.value)
+        if not isinstance(reference, _Reference):
+            msg = (
+                'only calls are recorded as work; plain values would run without leaving a trace; '
+                + 'each line must call a task or graph instead'
+            )
+            _reject(state, node=statement.value, reason=msg)
+        for name in names:
+            state.names[name] = reference
+        return names[0]
     ref: _Reference = _lower_call(state, expression=statement.value)
     for name in names:
         state.names[name] = ref
@@ -1015,8 +1020,19 @@ def _route_region(
 ) -> None:
     """Route the enclosing values a nested region reads."""
     for name in child.inputs:
-        if name in state.names:
-            _wire(state, instance=instance, port=name, value=state.names[name], given=given)
+        base, _, sub = name.partition('.')
+        if base not in state.names:
+            continue
+        value = state.names[base]
+        if sub:
+            # A dotted read selects from the enclosing wire; carry the sub-path along.
+            port = f'{value.port}.{sub}' if value.port else sub
+            shape = value.shape
+            for segment in sub.split('.'):
+                assert isinstance(shape, NamespaceShape)
+                shape = shape.select(segment)
+            value = _Reference(value.task, port=port, shape=shape)
+        _wire(state, instance=instance, port=name, value=value, given=given)
 
 
 def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
@@ -1260,7 +1276,13 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         )
         _reject(state, node=expression, reason=msg)
     state.tasks.append(task)
-    return _Reference(instance, port=result_port, shape=result_shape)
+    if isinstance(result_shape, LeafShape):
+        return _Reference(instance, port=result_port, shape=result_shape)
+    if isinstance(target, GraphHandle):
+        # A graph names its outputs; fields select under that name.
+        return _Reference(instance, port=result_port, shape=result_shape)
+    # A namespace result binds whole; re-root a single-port subtree at the outputs.
+    return _Reference(instance, port='', shape=narrowed.output_shape)
 
 
 def _bind_positional(

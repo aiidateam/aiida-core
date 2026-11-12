@@ -285,9 +285,9 @@ class TaskIR:
         ports = self.process_class.spec().outputs
         if self.declared_outputs.fields:
             ports = _close_dynamic(ports, self.declared_outputs, OutputPort, narrow=True)
-        if ports.dynamic or any(isinstance(port, PortNamespace) for port in ports.values()):
+        if ports.dynamic or any(isinstance(port, PortNamespace) and port.dynamic for port in ports.values()):
             msg = (
-                'graph tasks require static leaf outputs, not dynamic outputs or output namespaces; '
+                'graph tasks require static outputs, not dynamic outputs; '
                 'declare the outputs of a dynamic namespace with `task(..., outputs={...})`.'
             )
             raise GraphTypeCheckError(msg)
@@ -315,6 +315,13 @@ class TaskIR:
         selected = self.outputs[self.result_port] if self.result_port else self.outputs
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
         return _shape_from_port(selected)
+
+    @property
+    def output_shape(self) -> NamespaceShape:
+        """Return the whole outputs contract as a nested shape."""
+        shape = _shape_from_port(self.outputs)
+        assert isinstance(shape, NamespaceShape)
+        return shape
 
     def to_dict(self) -> dict[str, t.Any]:
         """Return the task declaration without the live process class."""

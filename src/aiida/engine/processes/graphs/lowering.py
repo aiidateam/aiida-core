@@ -637,14 +637,24 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
             )
             _reject(state, node=statement, reason=msg)
     if not isinstance(statement.value, ast.Call):
+        return _lower_alias(state, statement, names)
+    ref: _Reference = _lower_call(state, expression=statement.value)
+    for name in names:
+        state.names[name] = ref
+    return names[0]
+
+
+def _lower_alias(state: _LoweringState, statement: ast.Assign, names: list[str]) -> str:
+    """Bind plain names to an existing wire without recording work."""
+    reference = _lower_value(state, statement.value)
+    if not isinstance(reference, _Reference):
         msg = (
             'only calls are recorded as work; plain values would run without leaving a trace; '
             + 'each line must call a task or graph instead'
         )
         _reject(state, node=statement.value, reason=msg)
-    ref: _Reference = _lower_call(state, expression=statement.value)
     for name in names:
-        state.names[name] = ref
+        state.names[name] = reference
     return names[0]
 
 
@@ -1020,8 +1030,24 @@ def _route_region(
 ) -> None:
     """Route the enclosing values a nested region reads."""
     for name in child.inputs:
-        if name in state.names:
-            _wire(state, instance=instance, port=name, value=state.names[name], given=given)
+        base, _, sub = name.partition('.')
+        if base not in state.names:
+            continue
+        value = state.names[base]
+        if sub:
+            value = _select_subpath(value, sub)
+        _wire(state, instance=instance, port=name, value=value, given=given)
+
+
+def _select_subpath(value: _Reference, sub: str) -> _Reference:
+    """Carry a dotted read into a region, selecting each segment."""
+    port = f'{value.port}.{sub}' if value.port else sub
+    shape = value.shape
+    for segment in sub.split('.'):
+        # Dotted region inputs arrive through `_select_field`, so the base shape is a namespace.
+        assert isinstance(shape, NamespaceShape)
+        shape = shape.select(segment)
+    return _Reference(value.task, port=port, shape=shape)
 
 
 def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
@@ -1231,6 +1257,7 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         _registered_target(state, expression=expression, name=name)
     )
     instance: str = _claim_name(state, name=name)
+    narrowed: TaskIR | None = None  # graphs have no task spec; only tasks narrow output types
     if isinstance(target, GraphHandle):
         body: GraphIR = _lower_graph(target, stack=state.stack)
         task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)
@@ -1265,7 +1292,25 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         )
         _reject(state, node=expression, reason=msg)
     state.tasks.append(task)
-    return _Reference(instance, port=result_port, shape=result_shape)
+    return _result_reference(
+        instance, target=target, result_port=result_port, result_shape=result_shape, narrowed=narrowed
+    )
+
+
+def _result_reference(
+    instance: str,
+    *,
+    target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle,
+    result_port: str,
+    result_shape: Shape,
+    narrowed: TaskIR | None,
+) -> _Reference:
+    """Bind a call result: leaves and graphs under their port, namespaces whole."""
+    if isinstance(result_shape, LeafShape) or isinstance(target, GraphHandle):
+        return _Reference(instance, port=result_port, shape=result_shape)
+    # Namespace results only come from tasks, which always narrow their spec above.
+    assert narrowed is not None
+    return _Reference(instance, port='', shape=narrowed.output_shape)
 
 
 def _bind_positional(

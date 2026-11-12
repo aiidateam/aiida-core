@@ -255,7 +255,7 @@ Avoid the parameter name ``inputs``: ``run``, ``run_get_node``, and ``submit`` u
 
 The launch value can be a mapping or a model instance.
 Tasks receive the namespace as an attribute-accessible mapping, so methods defined on the model are unavailable inside the task.
-Graphs pass whole namespaces or single fields on to tasks; the original input nodes are kept.
+Graphs pass whole namespaces or single fields on to tasks, either by naming the whole output or by spreading it with ``**``; the original input nodes are kept.
 Missing required inputs are reported together in one ``MissingRequiredInputsError``.
 Default factories run once, when the intermediate representation is built, and must return JSON values; each launch receives its own copy.
 

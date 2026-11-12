@@ -87,7 +87,18 @@ def _validate_edge(graph: GraphIR, edge: Dependency) -> None:
         return
     origin = _port_at(source.output_ports(), edge.source_port or '')
     ports = _input_ports_at(target, edge.target_port or '')
-    if origin is None or (isinstance(origin, PortNamespace) and not _accepts_region(target, edge.target_port)):
+    if origin is None:
+        msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
+        raise GraphTypeCheckError(msg)
+    if (
+        isinstance(origin, PortNamespace)
+        and not _accepts_region(target, edge.target_port)
+        and not any(isinstance(port, PortNamespace) for port in ports)
+        and (not ports or _accepts_condition(target, edge.target_port))
+    ):
+        # A whole namespace always names stored outputs; without a namespace
+        # to land in, the type check below reports the mismatch instead.
+        # Unwired conditions keep the unknown-output rejection.
         msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
         raise GraphTypeCheckError(msg)
     if not ports and not _accepts_condition(target, edge.target_port):
@@ -177,12 +188,18 @@ def _check_compatible(first: PortNamespace, second: PortNamespace, context: str)
 
 
 def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str) -> None:
-    """Check that shared fields agree and required fields exist."""
+    """Check that shared fields agree, required fields exist, and a static target declares every field."""
     for name, child in target.items():
         if name in source:
             _check_types(source[name], child, context)
         elif child.required:
             msg = f'{context} is missing required field `{name}`.'
+            raise GraphTypeCheckError(msg)
+    if target.dynamic:
+        return
+    for name in source:
+        if name not in target:
+            msg = f'{context} has unexpected field `{name}`.'
             raise GraphTypeCheckError(msg)
 
 
@@ -191,7 +208,7 @@ def _accepts_region(task: GraphTask, port: str | None) -> bool:
 
     Branch and loop bodies select fields from region inputs themselves, so the
     enclosing graph routes the whole namespace instead of one leaf.
-    Task-to-task edges keep the leaf-only contract.
+    Task-to-task edges accept whole namespaces only into matching namespaces.
     """
     return isinstance(task, (BranchControl, LoopControl)) and port is not None and port != task.condition_port
 

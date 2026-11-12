@@ -303,6 +303,16 @@ def test_mismatched_branch_outputs_fail_during_build() -> None:
             'branch `branch_1` has incompatible types: `Int` cannot feed `Str`.',
             id='alias-mismatched',
         ),
+        pytest.param(
+            branches.forward_mismatch,
+            'dependency `arithmetic_pair` to `add` has incompatible value and namespace shapes.',
+            id='namespace-to-leaf',
+        ),
+        pytest.param(
+            branches.forward_extra_field,
+            'dependency `arithmetic_pair` to `read_sum` has unexpected field `product`.',
+            id='namespace-extra-field',
+        ),
     ],
 )
 def test_mismatched_contracts_fail_during_build(declaration: GraphHandle, message: str) -> None:

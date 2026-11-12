@@ -14,11 +14,13 @@ from tests.engine.processes.graphs.programs.tasks import (
     add,
     arithmetic_pair,
     branch_2,
+    combine_model,
     decrement,
     half,
     is_positive,
     mismatched_alpha,
     mismatched_beta,
+    read_sum,
 )
 
 
@@ -180,6 +182,29 @@ def field_select_arm(value: int, flag: bool) -> int:
     else:
         selected = pair['product']
     return selected
+
+
+@graph
+def forward_pair(value: int) -> int:
+    """Wire a whole task outputs namespace into a whole task input namespace."""
+    produced = arithmetic_pair(x=value, y=3)
+    return combine_model(pair=produced)
+
+
+# rejected at lowering: a whole namespace feeds only a namespace port.
+@graph
+def forward_mismatch(value: int) -> int:
+    """Wire a whole namespace into a leaf port; a namespace must land in a namespace."""
+    produced = arithmetic_pair(x=value, y=3)
+    return add(x=produced, y=1)
+
+
+# rejected at lowering: a static namespace must declare every forwarded field.
+@graph
+def forward_extra_field(value: int) -> int:
+    """Wire a pair into a namespace declaring only `sum`; `product` has no port to land in."""
+    produced = arithmetic_pair(x=value, y=3)
+    return read_sum(pair=produced)
 
 
 # rejected at lowering: both sides must agree on types.

@@ -13,6 +13,7 @@ import typing as t
 from aiida.engine import Forward, WorkChain, calcfunction, task
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm import Int
+from tests.engine.processes.graphs.programs.tasks import combine_model
 
 
 @calcfunction
@@ -115,3 +116,10 @@ def add_twice(x: Int, y: Int) -> int:
     first = add_chain(x=x, y=y)
     second = add_chain(x=first.result, y=y)
     return second.result
+
+
+@graph
+def forward_declared(x: Int, y: Int) -> int:
+    """Wire a dynamic namespace whole; only its declared outputs reach the static input."""
+    pair = bonus_pair_chain(x=x, y=y)
+    return combine_model(pair=pair)

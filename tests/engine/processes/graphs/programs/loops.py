@@ -10,8 +10,9 @@
 
 from aiida.engine.processes.graphs.lowering import graph
 from tests.engine.processes.graphs.programs import tasks as task_module
+from tests.engine.processes.graphs.programs.port_models import Settings
 from tests.engine.processes.graphs.programs.ports import nullable_return
-from tests.engine.processes.graphs.programs.tasks import add, decrement, is_positive
+from tests.engine.processes.graphs.programs.tasks import add, arithmetic_pair, decrement, is_positive
 
 
 @graph
@@ -125,3 +126,25 @@ def never_entered_optional(rounds: int, value: int | None = None) -> dict[str, i
         value = nullable_return(value=count)
         count = decrement(value=count)
     return {'direct': value, 'wired': nullable_return(value=value)}
+
+
+@graph
+def loop_pair_sum(value: int, rounds: int) -> int:
+    """Rebind a namespace across loop iterations; each pass adds one."""
+    pair = arithmetic_pair(x=value, y=0)
+    count = add(x=rounds, y=0)
+    while is_positive(value=count):
+        pair = arithmetic_pair(x=pair.sum, y=1)
+        count = decrement(value=count)
+    return pair.sum
+
+
+@graph
+def loop_nullable_namespace(first: Settings, second: Settings, rounds: int) -> int:
+    """Carry a namespace with a `None` leaf across loop iterations."""
+    count = add(x=rounds, y=0)
+    while is_positive(value=count):
+        if is_positive(value=count):
+            first = second
+        count = decrement(value=count)
+    return first.count

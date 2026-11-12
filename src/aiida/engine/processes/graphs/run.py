@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from aiida.common.exceptions import GraphMaxIterationsError, GraphRuntimeError
 from aiida.common.links import LinkType
+from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
@@ -32,7 +33,7 @@ from aiida.engine.processes.graphs.ir import (
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
-from aiida.orm import EnumData, Node, load_node
+from aiida.orm import EnumData, Node, load_node, to_aiida_type
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
@@ -121,6 +122,17 @@ def _at_or_none(container: t.Any, path: str) -> t.Any:
         return _at(container, path)
     except KeyError:
         return None
+
+
+def _error_member(task: ProcessTask, node: Node) -> t.Any:
+    """Return the declared member matching a failed process task's exit status."""
+    for identifier in task.spec.error_enums:
+        kind = get_object_loader().load_object(identifier)
+        for member in kind:
+            if member.value.status == node.exit_status:
+                return to_aiida_type(member)
+    msg = f'task `{task.name}` failed with an unmapped exit status {node.exit_status}.'
+    raise GraphRuntimeError(msg)
 
 
 @dataclass(frozen=True)
@@ -213,7 +225,9 @@ class GraphRun:
     def _has_result(self, name: str, pk: int) -> bool:
         """Return whether a finished task completed, counting declared failures as completed.
 
-        Function tasks store the declared member on an `error` output.
+        Function tasks store the declared member on an `error` output. Process
+        tasks cannot gain outputs, so their declaration matches the child exit
+        status alone; the member is synthesized when the arm is read.
         """
         node = load_node(pk)
         if node.is_finished_ok:
@@ -222,17 +236,35 @@ class GraphRun:
         if not isinstance(task, ProcessTask) or not task.spec.exit_codes or not node.is_failed:
             return False
         if 'error' not in node.outputs:
-            return False
+            return bool(task.spec.error_enums) and node.exit_status in {
+                code.status for code in task.spec.exit_codes.values()
+            }
         error = node.outputs['error']
         if not isinstance(error, EnumData):
             return False
         value: ExitCode = error.get_member().value
         return value in task.spec.exit_codes.values() and value.status == node.exit_status
 
+    def _is_mapped_failure(self, name: str) -> bool:
+        """Return whether the latest instance of a finished task failed with a declared error mapping.
+
+        The success arms of such a failure are absent by design, like the missing
+        arm of a `Result` task, so they read as `None` downstream.
+        """
+        node = self._produced_by(name)
+        assert node.pk is not None
+        return node.is_failed and self._has_result(name, node.pk)
+
     def missing_outputs(self, name: str) -> list[str]:
-        """Return the declared outputs the latest instance of a finished task did not produce."""
+        """Return the declared outputs the latest instance of a finished task did not produce.
+
+        A mapped failure carries its outcome on the `error` arm; its absent
+        success arms are not missing outputs.
+        """
         task = self.graph.task(name)
         if not isinstance(task, ProcessTask) or not task.spec.declared_outputs.fields:
+            return []
+        if self._is_mapped_failure(name):
             return []
         return _missing_declared_outputs(task.spec.declared_outputs, self._produced_by(name))
 
@@ -432,13 +464,18 @@ class GraphRun:
         An empty path names the whole declared outputs namespace, resolved to
         a plain mapping so region inputs receive values instead of a link
         manager. Undeclared outputs of a dynamic namespace stay behind, since
-        validation checked the edge against the declared ports only.
+        validation checked the edge against the declared ports only. Process
+        tasks declare no error output, so a mapped failure synthesizes its
+        member from the child exit status. Absent success arms read as `None`,
+        like the missing arm of a `Result` task.
         """
-        outputs = self._produced_by(name).outputs
-        if not path:
-            declared = self.graph.task(name).output_ports()
-            return {key: outputs[key] for key in outputs if key in declared}
-        return _at_or_none(outputs, path)
+        node = self._produced_by(name)
+        task = self.graph.task(name)
+        outputs = node.outputs
+        values = {key: outputs[key] for key in task.output_ports() if key in outputs}
+        if isinstance(task, ProcessTask) and 'error' not in values and self._is_mapped_failure(name):
+            values['error'] = _error_member(task, node)
+        return _at_or_none(values, path)
 
     def _produced_by(self, name: str) -> Node:
         """Return the node produced by the latest instance of one task."""

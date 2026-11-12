@@ -11,8 +11,9 @@
 import typing as t
 
 from aiida.engine import Forward, WorkChain, calcfunction, task
+from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph
-from aiida.orm import Int
+from aiida.orm import Bool, Float, Int
 from tests.engine.processes.graphs.programs.tasks import combine_model
 
 
@@ -129,3 +130,125 @@ def forward_declared(x: Int, y: Int) -> int:
 def forward_optional_namespace(bundle: t.Annotated[t.Any, Forward(optional_input_chain)]):
     """Return a forwarded namespace; an omitted optional field stays out of it."""
     return bundle
+
+
+class ChainErrors(ExitCodeEnum):
+    """Declared failures of the `flaky_chain` task."""
+
+    UNSTABLE = ExitCode(410, 'Unstable chain.')
+
+
+@calcfunction
+def make_result() -> Float:
+    """Store the successful result."""
+    return Float(1.0)
+
+
+class FlakyChain(WorkChain):
+    """Fail with a mapped status or store one result, leaving the other arm absent."""
+
+    @classmethod
+    def define(cls, spec) -> None:  # type: ignore[override]
+        super().define(spec)
+        spec.input('fail', valid_type=Bool)
+        spec.outputs.dynamic = True
+        spec.outline(cls.produce)
+
+    def produce(self):
+        """Exit mapped without outputs, or store the result."""
+        if self.inputs.fail.value:
+            return ChainErrors.UNSTABLE.value
+        self.out('result', make_result())
+
+
+flaky_chain = task(FlakyChain, outputs={'result': Float}, errors=ChainErrors)
+
+
+@task
+def recover_chain(error: ChainErrors) -> str:
+    """Recover from the declared chain failure."""
+    return f'recovered from {error.value.status}'
+
+
+@task
+def read_result(result: float) -> str:
+    """Read the successful result."""
+    return f'result:{result}'
+
+
+@task
+def ensure_result(value: float | None, error: ChainErrors | None) -> str:
+    """Read both arms; the absent success arm arrives as `None`."""
+    if error is not None:
+        return f'recovered from {error.value.status}'
+    assert value is not None
+    return f'result:{value}'
+
+
+@graph
+def recover_unproduced(fail: bool) -> str:
+    """Run a chain that may fail mapped without outputs, recovering on its error arm."""
+    ran = flaky_chain(fail=fail)
+    if ran.error is not None:
+        selected = recover_chain(error=ran.error)
+    else:
+        selected = read_result(result=ran.result)
+    return selected
+
+
+@graph
+def read_absent_arm(fail: bool) -> str:
+    """Read both arms unconditionally; the absent success arm arrives as `None`."""
+    ran = flaky_chain(fail=fail)
+    return ensure_result(value=ran.result, error=ran.error)
+
+
+class FlakyStaticChain(WorkChain):
+    """Fail with a mapped status or store one static result, leaving the other arm absent."""
+
+    @classmethod
+    def define(cls, spec) -> None:  # type: ignore[override]
+        super().define(spec)
+        spec.input('fail', valid_type=Bool)
+        spec.output('result', valid_type=Float)
+        spec.outline(cls.produce)
+
+    def produce(self):
+        """Exit mapped without outputs, or store the static result."""
+        if self.inputs.fail.value:
+            return ChainErrors.UNSTABLE.value
+        self.out('result', make_result())
+
+
+flaky_static_chain = task(FlakyStaticChain, errors=ChainErrors)
+
+
+class ErrorOutputChain(WorkChain):
+    """Declare an `error` output of its own, the name a declared failure arm takes."""
+
+    @classmethod
+    def define(cls, spec) -> None:  # type: ignore[override]
+        super().define(spec)
+        spec.output('error', valid_type=Int, required=False)
+        spec.outline(cls.finish)
+
+    def finish(self) -> None:
+        """Finish without outputs."""
+
+
+@graph
+def recover_static(fail: bool) -> str:
+    """Recover from a mapped failure that leaves a static output absent."""
+    ran = flaky_static_chain(fail=fail)
+    if ran.error is not None:
+        selected = recover_chain(error=ran.error)
+    else:
+        selected = read_result(result=ran.result)
+    return selected
+
+
+@graph
+def read_absent_static(fail: bool) -> str:
+    """Read a static success arm unconditionally; absence arrives as `None`."""
+    ran = flaky_static_chain(fail=fail)
+    return ensure_result(value=ran.result, error=ran.error)

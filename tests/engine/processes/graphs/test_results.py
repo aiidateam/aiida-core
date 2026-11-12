@@ -14,7 +14,7 @@ import typing as t
 import pytest
 
 from aiida.calculations.shell import ShellJob
-from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValidationError
+from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import LinkType
 from aiida.common.loaders import get_object_loader
 from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, task
@@ -312,6 +312,12 @@ def test_legacy_exit_code_preserved() -> None:
     'declaration, handle, labels',
     [
         pytest.param(
+            results.ratio_signed,
+            results.divide_signed,
+            {'DivisionErrors_ZERO_DENOMINATOR', 'InputErrors_NEGATIVE_NUMERATOR'},
+            id='ratio',
+        ),
+        pytest.param(
             results.ratio_fallback,
             results.divide_signed,
             {'DivisionErrors_ZERO_DENOMINATOR', 'InputErrors_NEGATIVE_NUMERATOR'},
@@ -330,12 +336,54 @@ def test_contract_in_ir(declaration: t.Any, handle: t.Any, labels: set[str]) -> 
     branch = next(entry for entry in spec.tasks if isinstance(entry, BranchControl))
     assert isinstance(branch, BranchControl)
     assert branch.condition_test in ('is_none', 'is_not_none')
+    assert branch.condition_member is None
     assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
+
+
+@pytest.mark.parametrize(
+    'declaration, test',
+    [
+        pytest.param(results.matched_signed, 'is_member', id='matched'),
+        pytest.param(results.matched_negated, 'is_not_member', id='negated'),
+    ],
+)
+def test_matched_condition_in_ir(declaration: t.Any, test: str) -> None:
+    """A member test stores its enum identifier and member name through a round trip."""
+    spec = declaration.build()
+
+    def branches(template: t.Any) -> t.Iterator[BranchControl]:
+        for entry in template.tasks:
+            if isinstance(entry, BranchControl):
+                yield entry
+                yield from branches(entry.body)
+                yield from branches(entry.otherwise)
+
+    branch = next(entry for entry in branches(spec) if entry.condition_test in ('is_member', 'is_not_member'))
+    assert branch.condition_test == test
+    assert branch.condition_member is not None
+    identifier, name = branch.condition_member
+    assert name == 'ZERO_DENOMINATOR'
+    assert get_object_loader().load_object(identifier) is DivisionErrors
+    assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
+
+
+@pytest.mark.parametrize(
+    'declaration, match',
+    [
+        pytest.param(results.matched_equality, 'put this check in a task', id='equality-test'),
+        pytest.param(results.matched_unknown_member, 'not a known enum member', id='unknown-member'),
+        pytest.param(results.matched_member_typo, 'not a member of its enum', id='member-typo'),
+    ],
+)
+def test_matched_condition_rejected(declaration: t.Any, match: str) -> None:
+    """Only `is` tests against declared enum members lower to member branches."""
+    with pytest.raises(GraphLanguageError, match=match):
+        declaration.build()
 
 
 def test_legacy_task_ir_without_exit_codes() -> None:
     """Task declarations stored before exit codes default to no declared failures."""
-    divide = results.ratio_fallback.build().task('divide_signed')
+    divide = results.ratio_signed.build().task('divide_signed')
     assert isinstance(divide, ProcessTask)
     data = divide.spec.to_dict()
     data.pop('exit_codes')
@@ -365,6 +413,27 @@ def test_legacy_task_ir_without_exit_codes() -> None:
             id='quotient-ok',
         ),
         pytest.param(
+            results.ratio_signed,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='ratio-zero-denominator',
+        ),
+        pytest.param(
+            results.ratio_signed,
+            {'numerator': -1.0, 'denominator': 2.0},
+            1.0,
+            411,
+            'error',
+            'recover_negative',
+            id='ratio-negative-numerator',
+        ),
+        pytest.param(
+            results.ratio_signed, {'numerator': 1.0, 'denominator': 2.0}, 0.5, 0, 'value', None, id='ratio-ok'
+        ),
+        pytest.param(
             results.ratio_fallback,
             {'numerator': 1.0, 'denominator': 0.0},
             0.0,
@@ -390,6 +459,78 @@ def test_legacy_task_ir_without_exit_codes() -> None:
             'value',
             None,
             id='signed-ok',
+        ),
+        pytest.param(
+            results.matched_signed,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='matched-zero-denominator',
+        ),
+        pytest.param(
+            results.matched_signed,
+            {'numerator': -1.0, 'denominator': 2.0},
+            0.0,
+            411,
+            'error',
+            'union_fallback',
+            id='matched-negative-numerator',
+        ),
+        pytest.param(
+            results.matched_signed,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            None,
+            id='matched-ok',
+        ),
+        pytest.param(
+            results.matched_negated,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='negated-zero-denominator',
+        ),
+        pytest.param(
+            results.matched_negated,
+            {'numerator': -1.0, 'denominator': 2.0},
+            0.0,
+            411,
+            'error',
+            'union_fallback',
+            id='negated-negative-numerator',
+        ),
+        pytest.param(
+            results.matched_negated,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            None,
+            id='negated-ok',
+        ),
+        pytest.param(
+            results.matched_distinct_enum,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='distinct-zero-denominator',
+        ),
+        pytest.param(
+            results.matched_distinct_enum,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            None,
+            id='distinct-ok',
         ),
     ],
 )

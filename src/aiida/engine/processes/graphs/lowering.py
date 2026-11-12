@@ -16,6 +16,7 @@ from __future__ import annotations
 import ast
 import builtins
 import copy
+import enum
 import functools
 import inspect
 import textwrap
@@ -27,6 +28,7 @@ from types import UnionType
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
+from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.exit_code import ExitCodeEnum
 from aiida.engine.processes.graphs.inputs import _drops_none_value, _place
@@ -825,9 +827,12 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
         test = _bind_call_condition(state, test=test)
-    condition_test: t.Literal['truthy', 'is_none', 'is_not_none'] = 'truthy'
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
+    condition_member: tuple[str, str] | None = None
     if (none_test := _match_none_test(test)) is not None:
         test, condition_test = none_test
+    elif (matched := _match_member_test(state, test)) is not None:
+        test, condition_test, condition_member = matched
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -843,7 +848,12 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     given = _wire_branch_inputs(state, instance=instance, first=first, second=second, test=test)
     state.tasks.append(
         BranchControl(
-            name=instance, inputs=given, body=first.body, otherwise=second.body, condition_test=condition_test
+            name=instance,
+            inputs=given,
+            body=first.body,
+            otherwise=second.body,
+            condition_test=condition_test,
+            condition_member=condition_member,
         )
     )
     selected = first.child.names[first.name]
@@ -866,6 +876,15 @@ def _identity_compare(node: ast.AST) -> tuple[ast.expr, ast.expr, bool] | None:
     return None
 
 
+def _attribute_path(node: ast.expr) -> tuple[ast.expr, list[str]]:
+    """Return the base of an attribute chain and its attribute names, base first."""
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    return node, parts[::-1]
+
+
 def _match_none_test(test: ast.expr) -> tuple[ast.expr, t.Literal['is_none', 'is_not_none']] | None:
     """Split `wire is None` into its wire and test kind, or return `None`."""
     compared = _identity_compare(test)
@@ -876,6 +895,88 @@ def _match_none_test(test: ast.expr) -> tuple[ast.expr, t.Literal['is_none', 'is
         return None
     kind: t.Literal['is_none', 'is_not_none'] = 'is_none' if is_test else 'is_not_none'
     return wire, kind
+
+
+def _match_member_test(
+    state: _LoweringState, test: ast.expr
+) -> tuple[ast.expr, t.Literal['is_member', 'is_not_member'], tuple[str, str]] | None:
+    """Lower `wire is Enum.MEMBER` to a member test, or reject an unknown member.
+
+    The first side resolving to an enum member wins; the other side is the
+    wire, checked as usual when it is lowered. A wire tested against an
+    unknown name reports the missing member instead of a generic rejection.
+    """
+    compared = _identity_compare(test)
+    if compared is None:
+        return None
+    left, right, is_test = compared
+    for wire, other in ((left, right), (right, left)):
+        member = _resolve_enum_member(state, other)
+        if member is not None and not isinstance(wire, ast.Constant):
+            kind: t.Literal['is_member', 'is_not_member'] = 'is_member' if is_test else 'is_not_member'
+            return wire, kind, member
+    _reject_unknown_member(state, left, right)
+    return None
+
+
+def _reject_unknown_member(state: _LoweringState, left: ast.expr, right: ast.expr) -> None:
+    """Reject a wire compared against a name that is no declared enum member."""
+    for value, other in ((left, right), (right, left)):
+        reason = _unknown_member(state, other) if _compares_wire_to_name(state, value, other) else None
+        if reason is not None:
+            msg = (
+                'conditions test declared error members, so the compared name must be one; '
+                + f'{ast.unparse(other)!r} {reason}; check the spelling instead'
+            )
+            _reject(state, node=other, reason=msg)
+
+
+def _compares_wire_to_name(state: _LoweringState, value: ast.expr, other: ast.expr) -> bool:
+    """Return whether one side is a known wire and the other a plain or dotted name."""
+    return isinstance(value, ast.Name) and value.id in state.names and isinstance(other, (ast.Name, ast.Attribute))
+
+
+def _unknown_member(state: _LoweringState, node: ast.expr) -> str | None:
+    """Return why a compared name is no enum member, or `None` when it may be one."""
+    if not _known_name(state, node):
+        return 'is not a known enum member'
+    if isinstance(node, ast.Attribute) and _resolve_enum_member(state, node) is None and _enum_base(state, node):
+        return 'is not a member of its enum'
+    return None
+
+
+def _enum_base(state: _LoweringState, node: ast.Attribute) -> type | None:
+    """Return the enum class a dotted member reference starts from, or `None`."""
+    base, _ = _attribute_path(node)
+    if not isinstance(base, ast.Name) or base.id in state.names:
+        return None
+    resolved = state.definition.function.__globals__.get(base.id)
+    return resolved if isinstance(resolved, type) and issubclass(resolved, enum.Enum) else None
+
+
+def _known_name(state: _LoweringState, node: ast.expr) -> bool:
+    """Return whether a name or dotted path starts from a known wire or module."""
+    base, _ = _attribute_path(node)
+    if not isinstance(base, ast.Name):
+        return True
+    return base.id in state.names or base.id in state.definition.function.__globals__
+
+
+def _resolve_enum_member(state: _LoweringState, node: ast.expr) -> tuple[str, str] | None:
+    """Return the enum identifier and member name behind a reference, or `None`."""
+    base, parts = _attribute_path(node)
+    # A base shadowing an enclosing wire stays a wire, as with dotted calls.
+    if not isinstance(base, ast.Name) or base.id in state.names:
+        return None
+    try:
+        resolved: t.Any = state.definition.function.__globals__[base.id]
+        for part in parts:
+            resolved = getattr(resolved, part)
+    except (KeyError, AttributeError):
+        return None
+    if isinstance(resolved, enum.Enum):
+        return get_object_loader().identify_object(type(resolved)), resolved.name
+    return None
 
 
 def _check_branch_shape(state: _LoweringState, statement: ast.If) -> None:
@@ -1035,16 +1136,39 @@ def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference])
     return callees
 
 
+def _member_test_skips(state: _LoweringState, statements: list[ast.stmt]) -> set[int]:
+    """Return the identities of names in a member-test position.
+
+    A compared enum member resolves when the graph is built and never
+    travels as a region input, so collection skips it; the wire side
+    still collects as usual. An unknown compared name skips too, so the
+    member matcher reports the spelling instead of a generic rejection.
+    """
+    skipped: set[int] = set()
+    for node in _walk_region(statements):
+        compared = _identity_compare(node)
+        if compared is None:
+            continue
+        left, right, _ = compared
+        for value, other in ((left, right), (right, left)):
+            if _resolve_enum_member(state, other) is not None or (
+                _compares_wire_to_name(state, value, other) and not _known_name(state, other)
+            ):
+                skipped.update(id(part) for part in ast.walk(other) if isinstance(part, ast.Name))
+    return skipped
+
+
 def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
     assigned = _assigned_names(statements)
     callees = _callee_ids(statements, state.names)
+    skipped = _member_test_skips(state, statements)
     reads: dict[str, ast.Name] = {}
     for node in _walk_region(statements):
         if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
             continue
-        if node.id in assigned or id(node) in callees or node.id in reads:
+        if node.id in assigned or id(node) in callees or id(node) in skipped or node.id in reads:
             continue
         reads[node.id] = node
     child = _LoweringState(state.definition, stack=state.stack)

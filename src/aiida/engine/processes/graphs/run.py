@@ -33,7 +33,7 @@ from aiida.engine.processes.graphs.ir import (
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
-from aiida.orm import EnumData, Node, load_node, to_aiida_type
+from aiida.orm import EnumData, Node, from_aiida_type, load_node, to_aiida_type
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
@@ -122,6 +122,15 @@ def _at_or_none(container: t.Any, path: str) -> t.Any:
         return _at(container, path)
     except KeyError:
         return None
+
+
+def _holds_member(task: BranchControl, condition: t.Any) -> bool:
+    """Return whether a condition is the member a branch test names."""
+    assert task.condition_member is not None
+    identifier, name = task.condition_member
+    expected = get_object_loader().load_object(identifier).__members__[name]
+    actual = from_aiida_type(condition) if isinstance(condition, EnumData) else condition
+    return actual is expected
 
 
 def _error_member(task: ProcessTask, node: Node) -> t.Any:
@@ -375,6 +384,9 @@ class GraphRun:
             selected = condition is None
         elif task.condition_test == 'is_not_none':
             selected = condition is not None
+        elif task.condition_test in ('is_member', 'is_not_member'):
+            matched = _holds_member(task, condition)
+            selected = matched if task.condition_test == 'is_member' else not matched
         else:
             selected = _holds(condition)
         taken = task.body if selected else task.otherwise

@@ -91,6 +91,19 @@ def missing_result_wrapper(value: int) -> Result[int, DivisionErrors]:
 
 
 @graph
+def ratio_signed(numerator: float, denominator: float) -> float:
+    """Divide, routing each declared failure to its own handler."""
+    value, error = divide_signed(numerator=numerator, denominator=denominator)
+    if error is None:
+        selected = value
+    elif error is DivisionErrors.ZERO_DENOMINATOR:
+        selected = recover_zero(error=error)
+    else:
+        selected = recover_negative(numerator=numerator, error=error)
+    return selected
+
+
+@graph
 def ratio_fallback(numerator: float, denominator: float) -> float:
     """Divide, recovering failures from either error enum."""
     value, error = divide_signed(numerator=numerator, denominator=denominator)
@@ -98,6 +111,93 @@ def ratio_fallback(numerator: float, denominator: float) -> float:
         selected = union_fallback(error=error)
     else:
         selected = value
+    return selected
+
+
+@graph
+def matched_signed(numerator: float, denominator: float) -> float:
+    """Branch on one declared member; a union handler takes the rest."""
+    value, error = divide_signed(numerator=numerator, denominator=denominator)
+    if error is None:
+        selected = value
+    elif error is DivisionErrors.ZERO_DENOMINATOR:
+        selected = recover_zero(error=error)
+    else:
+        selected = union_fallback(error=error)
+    return selected
+
+
+@graph
+def matched_negated(numerator: float, denominator: float) -> float:
+    """Branch away from one declared member; a union handler takes the rest."""
+    value, error = divide_signed(numerator=numerator, denominator=denominator)
+    if error is None:
+        selected = value
+    elif error is not DivisionErrors.ZERO_DENOMINATOR:
+        selected = union_fallback(error=error)
+    else:
+        selected = recover_zero(error=error)
+    return selected
+
+
+class AliasErrors(ExitCodeEnum):
+    """A distinct enum reusing the zero-denominator status."""
+
+    ALSO_ZERO = ExitCode(410, 'Same status, different enum.')
+
+
+@task
+def recover_alias(error: AliasErrors) -> float:
+    """Recover from the alias enum's same-status failure."""
+    return -1.0
+
+
+@graph
+def matched_distinct_enum(numerator: float, denominator: float) -> float:
+    """Branch against a same-valued member of another enum; identity decides."""
+    value, error = divide(numerator=numerator, denominator=denominator)
+    if error is None:
+        selected = value
+    elif error is AliasErrors.ALSO_ZERO:
+        selected = recover_alias(error=error)
+    else:
+        selected = recover_zero(error=error)
+    return selected
+
+
+# rejected at lowering: conditions test enum members with is, not ==.
+@graph
+def matched_equality(value: float) -> float:
+    """Compare an error arm for equality; only `is` tests members."""
+    outcome, error = divide(numerator=value, denominator=0.0)
+    if error == 1:
+        selected = recover_zero(error=error)
+    else:
+        selected = outcome
+    return selected
+
+
+# rejected at lowering: conditions compare against declared enum members.
+@graph
+def matched_unknown_member(value: float) -> float:
+    """Test an unknown name; the compared member must exist."""
+    outcome, error = divide(numerator=value, denominator=0.0)
+    if error is MISSING:  # noqa: F821 - the unknown member is rejected
+        selected = recover_zero(error=error)
+    else:
+        selected = outcome
+    return selected
+
+
+# rejected at lowering: compared members must exist on the enum.
+@graph
+def matched_member_typo(value: float) -> float:
+    """Test a misspelled member of a known enum; the member must exist."""
+    outcome, error = divide(numerator=value, denominator=0.0)
+    if error is DivisionErrors.ZERO_DENOMINATORR:
+        selected = recover_zero(error=error)
+    else:
+        selected = outcome
     return selected
 
 

@@ -659,6 +659,21 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
         child.names[name] = _Reference(None, port=outer.port, shape=outer.shape)
         body = _lower_region_body(child, {outer.port: _Reference(None, port=statement.value.id, shape=outer.shape)})
         return _Arm(name, child=child, body=body, alias=True)
+    elif (
+        isinstance(statement, ast.Assign)
+        and len(statement.targets) == 1
+        and isinstance(statement.targets[0], ast.Name)
+        and isinstance(statement.value, (ast.Attribute, ast.Subscript))
+    ):
+        # A field selection reads like an alias but names a field inside a namespace.
+        # A leaf re-keys the region output under the assigned name; dotted paths are
+        # references, not port names, and only the assigned name is a port.
+        name = statement.targets[0].id
+        field = _lower_value(child, statement.value)
+        assert isinstance(field, _Reference)  # `_select_field` returns a reference or rejects
+        child.names[name] = _Reference(None, port=name, shape=field.shape)
+        body = _lower_region_body(child, {name: _Reference(None, port=field.port, shape=field.shape)})
+        return _Arm(name, child=child, body=body, alias=True)
     elif isinstance(statement, ast.While):
         _lower_loop(child, statement=statement)
         rebound = [name for name in _body_state_names(statement.body) if name in state.names]

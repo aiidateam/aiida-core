@@ -65,6 +65,43 @@ def forward_optional_field(bundle: t.Annotated[t.Any, Forward(optional_input_cha
     return bundle.y
 
 
+@calcfunction
+def pair_with_bonus(x: Int, y: Int) -> dict[str, Int]:
+    """Return the sum and product, plus an extra `bonus` node."""
+    return {'sum': Int(x.value + y.value), 'product': Int(x.value * y.value), 'bonus': Int(0)}
+
+
+class BonusPairWorkChain(WorkChain):
+    """Emit the pair outputs and an undeclared `bonus` on dynamic outputs."""
+
+    @classmethod
+    def define(cls, spec) -> None:  # type: ignore[override]
+        super().define(spec)
+        spec.input('x', valid_type=Int)
+        spec.input('y', valid_type=Int)
+        spec.outputs.dynamic = True
+        spec.outline(cls.emit)
+
+    def emit(self):
+        """Return every node of the calculation, declared or not."""
+        for label, node in pair_with_bonus(self.inputs.x, self.inputs.y).items():
+            self.out(label, node)
+
+
+bonus_pair_chain = task(BonusPairWorkChain, outputs={'sum': Int, 'product': Int})
+
+
+@graph
+def select_declared(x: Int, y: Int, flag: bool) -> int:
+    """Route a dynamic namespace into a branch; only its declared outputs enter the region."""
+    pair = bonus_pair_chain(x=x, y=y)
+    if flag:
+        selected = pair.sum
+    else:
+        selected = pair.product
+    return selected
+
+
 @graph
 def add_single(x: Int, y: Int) -> int:
     """Add two numbers through a single `WorkChain` placement."""

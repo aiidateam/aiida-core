@@ -147,6 +147,8 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(loops.countdown_call, {'value': 3}, {'result': 0}, id='loop-call'),
         pytest.param(loops.countdown_call, {'value': -2}, {'result': -2}, id='loop-call-zero'),
         pytest.param(loops.namespaced_loop, {'value': 3}, {'result': 0}, id='loop-namespaced'),
+        pytest.param(branches.field_select_arm, {'value': 2, 'flag': True}, {'result': 5}, id='branch-field-true'),
+        pytest.param(branches.field_select_arm, {'value': 2, 'flag': False}, {'result': 6}, id='branch-field-false'),
         pytest.param(assignments.tuple_assignment, {'x': 2, 'y': 3}, {'result': 1}, id='tuple-unpacking'),
         pytest.param(assignments.chained_assignment, {'value': 2}, {'result': 6}, id='chained-assignment'),
         pytest.param(parameters.signed_literals, {}, {'result': -2}, id='signed-literals'),
@@ -186,6 +188,18 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(loops.never_entered_optional, {'rounds': 0}, {}, id='loop-optional-skipped-none'),
         pytest.param(ports.unrestricted_return, {'value': 3}, {'result': 3}, id='return-unrestricted-value'),
         pytest.param(ports.unrestricted_return, {'value': None}, {}, id='return-unrestricted-none'),
+        pytest.param(
+            workchains.select_declared,
+            {'x': 2, 'y': 3, 'flag': True},
+            {'result': 5},
+            id='branch-declared-true',
+        ),
+        pytest.param(
+            workchains.select_declared,
+            {'x': 2, 'y': 3, 'flag': False},
+            {'result': 6},
+            id='branch-declared-false',
+        ),
     ],
 )
 @pytest.mark.parametrize('serialized', [pytest.param(False, id='declaration'), pytest.param(True, id='serialized')])

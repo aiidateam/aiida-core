@@ -12,6 +12,7 @@ from aiida.engine.processes.graphs.lowering import graph
 from tests.engine.processes.graphs.programs import tasks as task_module
 from tests.engine.processes.graphs.programs.tasks import (
     add,
+    arithmetic_pair,
     branch_2,
     decrement,
     half,
@@ -168,6 +169,17 @@ def alias_inputs(value: int, other: int, flag: bool) -> int:
     else:
         chosen = other
     return chosen
+
+
+@graph
+def field_select_arm(value: int, flag: bool) -> int:
+    """Bind one field of a namespaced result directly in each arm."""
+    pair = arithmetic_pair(x=value, y=3)
+    if flag:
+        selected = pair.sum
+    else:
+        selected = pair['product']
+    return selected
 
 
 # rejected at lowering: both sides must agree on types.

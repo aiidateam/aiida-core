@@ -10,7 +10,7 @@
 
 import pytest
 
-from aiida.engine import ExitCode
+from aiida.engine import ExitCode, ExitCodesNamespace
 
 
 def test_exit_code_defaults():
@@ -105,3 +105,17 @@ def test_exit_code_expand_tuple():
     assert status == status_exp
     assert message == message_exp
     assert invalidates_cache == invalidates_cache_exp
+
+
+@pytest.mark.parametrize(
+    'identifier, match',
+    [
+        pytest.param(999, 'exit code status 999 does not correspond', id='status'),
+        pytest.param('MISSING', 'exit code label MISSING does not correspond', id='label'),
+    ],
+)
+def test_exit_codes_namespace_names_unknown_identifier(identifier: int | str, match: str) -> None:
+    """An unknown status or label appears in the error message."""
+    namespace = ExitCodesNamespace({'KNOWN': ExitCode(400, 'Known failure.')})
+    with pytest.raises(ValueError, match=match):
+        namespace(identifier)

@@ -21,9 +21,11 @@ from aiida.common.exceptions import GraphError, GraphTypeCheckError, GraphValida
 from aiida.common.lang import override
 from aiida.common.links import validate_link_label
 from aiida.engine.processes.calcjobs import CalcJob
+from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.functions import FunctionProcessBase, P, ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import UNSPECIFIED, Port
 from aiida.engine.processes.graphs.ir import TaskIR, TypevarPositions
+from aiida.engine.processes.graphs.results import Err, Ok, Result, _error_types, _result_contract
 from aiida.engine.processes.graphs.shapes import (
     LeafShape,
     NamespaceShape,
@@ -32,6 +34,7 @@ from aiida.engine.processes.graphs.shapes import (
     _is_type_var,
 )
 from aiida.engine.processes.port_model import (
+    _as_port_model,
     _field_from_annotation,
     _is_structured,
     _namespace_value,
@@ -42,7 +45,7 @@ from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.workchains.workchain import WorkChain
 from aiida.engine.utils import is_process_function
-from aiida.orm import CalcFunctionNode, CalcJobNode, Data, WorkChainNode, to_aiida_type
+from aiida.orm import CalcFunctionNode, CalcJobNode, Data, EnumData, WorkChainNode, to_aiida_type
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.graphs.ir import ProcessTask
@@ -57,6 +60,8 @@ __all__ = (
 
 
 R = t.TypeVar('R')
+_V = t.TypeVar('_V')
+_E = t.TypeVar('_E')
 
 
 def _typevar_solution(
@@ -188,9 +193,61 @@ class TaskProcess(FunctionProcessBase):
     @override
     def _declare_outputs(cls, spec: ProcessSpec, annotations: dict[str, t.Any]) -> None:
         return_annotation = annotations.get('return')
+        annotation, codes = _result_contract(return_annotation)
+        for label, code in codes.items():
+            if label in spec.exit_codes or any(existing.status == code.status for existing in spec.exit_codes.values()):
+                msg = f'task exit code `{label}` ({code.status}) conflicts with an engine exit code.'
+                raise GraphTypeCheckError(msg)
+            assert code.message is not None
+            spec.exit_code(code.status, label, code.message, invalidates_cache=code.invalidates_cache)
+        if t.get_origin(return_annotation) is Result:
+            success = _as_port_model(annotation)
+            if _is_structured(success):
+                spec.outputs_from(t.cast(type, success), prefix='value.')
+                spec.outputs['value'].required = False
+            else:
+                spec.output('value', valid_type=_infer_node_types(annotation) or (Data,), required=False)
+            spec.output('error', valid_type=EnumData, required=False)
+            spec.outputs.dynamic = False
+            cls._named_outputs = False
+            return
         _declare_output_ports(return_annotation, spec)
         spec.outputs.dynamic = False
         cls._named_outputs = is_typeddict(return_annotation) or _is_structured(return_annotation)
+
+    @override
+    def _prepare_result(self, result: t.Any) -> t.Any:
+        annotation = t.get_type_hints(self._func, include_extras=True).get('return')
+        _, codes = _result_contract(annotation)
+        if t.get_origin(annotation) is not Result:
+            if isinstance(result, Result):
+                msg = 'task exit codes must be declared in a Result return annotation.'
+                raise GraphValidationError(msg)
+            return super()._prepare_result(result)
+        if isinstance(result, Ok):
+            return self._prepare_ok(result, annotation)
+        if isinstance(result, Err):
+            return self._prepare_error(result, annotation, codes)
+        msg = 'a task annotated with Result must return `Ok` outputs or `Err` error.'
+        raise GraphValidationError(msg)
+
+    def _prepare_ok(self, result: Ok[t.Any, t.Any], annotation: t.Any) -> ExitCode:
+        """Store successful outputs and exit cleanly."""
+        if isinstance(result.value, (ExitCode, Result)):
+            msg = 'Ok must contain task outputs, not an exit code or another Result.'
+            raise GraphValidationError(msg)
+        success = t.get_args(annotation)[0]
+        if result.value is None and success is not type(None) and type(None) not in t.get_args(success):
+            msg = 'the successful Result type does not allow None.'
+            raise GraphValidationError(msg)
+        if result.value is None:
+            # No value arm is stored; dependents read the absent arm as `None`.
+            return ExitCode()
+        if _is_structured(_as_port_model(success)):
+            self._store_value(self.spec().outputs['value'], result.value, 'value')
+            return ExitCode()
+        self.out('value', result.value if isinstance(result.value, Data) else to_aiida_type(result.value))
+        return ExitCode()
 
     def _store_value(self, port: Port | PortNamespace, value: t.Any, path: str) -> None:
         """Store one success arm under its dotted path, expanding namespaces."""
@@ -251,6 +308,26 @@ class TaskProcess(FunctionProcessBase):
             if name in value:
                 self._store_value(port, value[name], name)
 
+    def _prepare_error(self, result: Err[t.Any, t.Any], annotation: t.Any, codes: Mapping[str, ExitCode]) -> ExitCode:
+        """Store the declared error member and exit with its code."""
+        error = result.error
+        kinds = _error_types(t.get_args(annotation)[1])
+        if isinstance(error, ExitCodeEnum):
+            if not isinstance(error, kinds):
+                msg = f'task returned an error from an undeclared enum: {error!r}.'
+                raise GraphValidationError(msg)
+            error = error.value
+        if isinstance(error, ExitCode) and any(
+            error.status == code.status and error.invalidates_cache == code.invalidates_cache for code in codes.values()
+        ):
+            member = next(member for kind in kinds for member in kind if member.value.status == error.status)
+            stored = to_aiida_type(member)
+            stored.label = f'{type(member).__name__}.{member.name}'
+            self.out('error', stored)
+            return error
+        msg = f'task returned an undeclared exit code: {error!r}.'
+        raise GraphValidationError(msg)
+
     @override
     def _out_result(self, result: t.Any) -> None:
         outputs = self.spec().outputs
@@ -288,13 +365,19 @@ class FunctionTaskHandle(t.Generic[P, R]):
         *,
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
     ) -> None:
         self._function: ProcessFunctionType[P, R, CalcFunctionNode] = function
         self._task_spec: TaskIR = TaskIR.from_process(
-            function, typevar_inputs=typevar_inputs, typevar_output=typevar_output
+            function, typevar_inputs=typevar_inputs, typevar_output=typevar_output, exit_codes=exit_codes
         )
         # Copy name and docstring, not the function state: the handle owns its task spec.
         functools.update_wrapper(self, function, updated=())
+
+    @t.overload
+    def __call__(
+        self: FunctionTaskHandle[P, Result[_V, _E]], *args: P.args, **kwargs: P.kwargs
+    ) -> tuple[_V, _E | None]: ...
 
     @t.overload
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
@@ -519,7 +602,11 @@ def _check_task_contract(
         msg = '`after` is reserved for source graph ordering dependencies.'
         raise GraphTypeCheckError(msg)
     hints = t.get_type_hints(function, include_extras=True)
-    annotation = hints.get('return', inspect.Signature.empty)
+    returned = hints.get('return', inspect.Signature.empty)
+    annotation, _ = _result_contract(returned)
+    if t.get_origin(returned) is Result and (t.get_origin(annotation) is tuple or annotation is tuple):
+        msg = 'name multiple task outputs with a TypedDict instead of a tuple.'
+        raise GraphTypeCheckError(msg)
     if annotation is inspect.Signature.empty:
         msg = (
             'tasks require a return annotation to wire their outputs; '
@@ -543,4 +630,7 @@ def _build_task(
     assert not inspect.isclass(function)
     decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess)(function)
     typevar_inputs, typevar_output = _typevar_positions(function)
-    return FunctionTaskHandle(decorated, typevar_inputs=typevar_inputs, typevar_output=typevar_output)
+    _, exit_codes = _result_contract(t.get_type_hints(function, include_extras=True).get('return'))
+    return FunctionTaskHandle(
+        decorated, typevar_inputs=typevar_inputs, typevar_output=typevar_output, exit_codes=exit_codes
+    )

@@ -282,7 +282,7 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'tests'", specifier = "~=3.6" },
     { name = "python-memcached", marker = "extra == 'rest'", specifier = "~=1.59" },
     { name = "pytray", specifier = ">=0.3.4,<0.4.0" },
-    { name = "pytz", specifier = "~=2021.1" },
+    { name = "pytz" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "requests", specifier = "~=2.0" },
     { name = "seekpath", marker = "extra == 'atomic-tools'", specifier = "~=1.9,>=1.9.3" },
@@ -306,7 +306,7 @@ requires-dist = [
     { name = "types-click-spinner", marker = "extra == 'pre-commit'", specifier = "~=0.1.8" },
     { name = "types-docutils", marker = "extra == 'pre-commit'", specifier = "~=0.20" },
     { name = "types-psutil", marker = "extra == 'pre-commit'", specifier = "~=5.6" },
-    { name = "types-pytz", marker = "extra == 'pre-commit'", specifier = "~=2021.1" },
+    { name = "types-pytz", marker = "extra == 'pre-commit'" },
     { name = "types-pyyaml", marker = "extra == 'pre-commit'", specifier = "~=6.0" },
     { name = "types-requests", marker = "extra == 'pre-commit'", specifier = "~=2.0" },
     { name = "types-tabulate", marker = "extra == 'pre-commit'", specifier = ">=0.9.0,<0.10.0" },
@@ -5508,11 +5508,11 @@ wheels = [
 
 [[package]]
 name = "pytz"
-version = "2021.3"
+version = "2026.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e3/8e/1cde9d002f48a940b9d9d38820aaf444b229450c0854bdf15305ce4a3d1a/pytz-2021.3.tar.gz", hash = "sha256:acad2d8b20a1af07d4e4c9d2e9285c5ed9104354062f275f3fcd88dcef4f1326", size = 320512, upload-time = "2021-10-02T03:56:32.818Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/21/d83d6ef28c4c912c4bb4d1dcf591f7b8c6bde87b9c66f9f454677314e16d/pytz-2026.5.tar.gz", hash = "sha256:fa23724b9c486543b9ff54a327ee7569ac83ade54bb9afd0fc18676620401c86", size = 318572, upload-time = "2026-10-04T02:37:58.719Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/e3/d9f046b5d1c94a3aeab15f1f867aa414f8ee9d196fae6865f1d6a0ee1a0b/pytz-2021.3-py2.py3-none-any.whl", hash = "sha256:3672058bc3453457b622aab7a1c3bfd5ab0bdae451512f6cf25f64ed37f5b87c", size = 503471, upload-time = "2021-10-02T03:56:30.247Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/ef/c66110d46fb800dda0bf33164182dfadabe26a90e4476844d502a23dca8e/pytz-2026.5-py2.py3-none-any.whl", hash = "sha256:e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03", size = 506342, upload-time = "2026-10-04T02:37:56.814Z" },
 ]
 
 [[package]]

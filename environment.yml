@@ -31,7 +31,7 @@ dependencies:
 - psutil~=7.0
 - psycopg[binary]<4,>=3.0.2
 - pydantic~=2.12
-- pytz~=2021.1
+- pytz
 - pyyaml~=6.0
 - requests~=2.0
 - shortuuid

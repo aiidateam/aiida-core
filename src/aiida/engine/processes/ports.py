@@ -15,6 +15,7 @@ import re
 import typing as t
 import warnings
 from collections.abc import Callable, Mapping, Sequence
+from enum import Enum
 from types import UnionType
 
 from aiida.common.extendeddicts import AttributesFrozendict
@@ -22,7 +23,7 @@ from aiida.common.links import validate_link_label
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.engine.processes.port_model import _is_a_plain_class, _is_structured, _namespace_value, _without_marks
-from aiida.orm import Bool, Data, Dict, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
+from aiida.orm import Bool, Data, Dict, EnumData, Float, Int, List, Node, Str, from_aiida_type, to_aiida_type
 
 __all__ = (
     'PORT_NAMESPACE_SEPARATOR',
@@ -518,7 +519,11 @@ def _node_type(annotation: t.Any) -> t.Any | None:
     if annotation is t.Any:
         return None
     if _is_a_plain_class(annotation):
-        return annotation if issubclass(annotation, Data) else _VALID_TYPE_MAP.get(annotation)
+        if issubclass(annotation, Data):
+            return annotation
+        if issubclass(annotation, Enum):
+            return EnumData
+        return _VALID_TYPE_MAP.get(annotation)
     return _VALID_TYPE_MAP.get(annotation)
 
 

@@ -42,6 +42,7 @@ from aiida.storage.ownership import (
     expand_ownership_closure,
     is_container_node_type,
     is_data_node_type,
+    is_ownable_node_type,
     resolve_element_type,
     validate_deletion_set,
     validate_membership_spec,
@@ -95,7 +96,12 @@ class TestEligibility:
     def test_data_types_eligible_as_children(self):
         assert is_data_node_type('data.Data.')
         assert is_data_node_type(FLOAT_TYPE)
-        assert is_data_node_type(LIST_OWNER_TYPE)
+        # Containers share node identity but are decoupled from ``Data``: they are ownable children via
+        # ``is_ownable_node_type``, not leaf data.
+        assert not is_data_node_type(LIST_OWNER_TYPE)
+        assert is_ownable_node_type(LIST_OWNER_TYPE)
+        assert is_ownable_node_type(DICT_OWNER_TYPE)
+        assert is_ownable_node_type(FLOAT_TYPE)
 
     def test_non_data_rejected_as_children(self):
         assert not is_data_node_type(PROCESS_TYPE)

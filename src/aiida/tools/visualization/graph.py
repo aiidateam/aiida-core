@@ -282,7 +282,7 @@ def get_node_id_label(node: orm.Node, id_type: IdentifierType | list[IdentifierT
 
 def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierType] = 'pk') -> str:
     """Return a label text of node and the return format is '<NodeType> (<id>)'."""
-    if isinstance(node, orm.Data):
+    if isinstance(node, orm.DataNode):
         label = f'{node.__class__.__name__} ({get_node_id_label(node, id_type)})'
     elif isinstance(node, orm.ProcessNode):
         label = (

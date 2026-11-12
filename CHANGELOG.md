@@ -33,6 +33,13 @@ Some fixtures have analogs in `aiida.tools.pytest_fixtures` that are drop-in rep
 `infer_valid_type_from_type_annotation` in `aiida.engine.processes.functions` is removed without replacement; it was internal machinery. Declare port types explicitly.
 `UNSPECIFIED` in `aiida.engine.processes.generic.ports` changed from an empty tuple to a dedicated sentinel object; compare by identity.
 
+#### Owned containers are decoupled from `Data`
+
+`aiida.orm.DataList` and `aiida.orm.DataDict` now derive from `aiida.orm.Container`, not `aiida.orm.Data`. Use their shared base `aiida.orm.DataNode` for type checks, process ports and queries that should accept both data and containers. Queries for `Data` now exclude containers.
+
+The `core.data_list` and `core.data_dict` entry points have moved from `aiida.data` to `aiida.container`. Use `aiida.plugins.ContainerFactory` instead of `DataFactory` to load them. The ORM import paths are unchanged.
+Archive export and import reject containers, including empty ones: ownership cannot round-trip through `.aiida` files yet.
+
 #### `Code`: the deprecated data plugin has been removed
 
 The `Code` class, deprecated since `aiida-core==2.1`, and its `core.code` entry point have been removed.

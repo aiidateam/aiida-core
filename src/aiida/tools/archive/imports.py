@@ -526,7 +526,8 @@ def _validate_ownership_agreement(
     ``db_dbmembership`` (``orm-container-adr-01.md`` §3); ``db_dbnode`` carries only the
     ``owner_id`` reference. Archives carry the node-level ``owner_id`` (archive-local, hence
     compared by presence); container/membership rows have no archive representation, so any
-    ownership information in the archive cannot round-trip: archive rows carrying ownership are
+    ownership information in the archive cannot round-trip: archive rows carrying ownership or
+    a container ``node_type`` (including empty containers with no membership rows) are
     rejected outright. Otherwise, UUID reuse requires agreement — a stored node is reused only
     when both sides are standalone with no container state; any ownership/membership/type mismatch
     under one UUID is an integrity error. Runs before any import write, so rejection rolls back
@@ -548,10 +549,17 @@ def _validate_ownership_agreement(
         # Storages predating the ownership schema (old archives) lack the ownership columns; their
         # rows predate owned containers and are all standalone, so only the stored-side check applies.
         archive_by_uuid = {uuid: {'uuid': uuid} for uuid in set(input_id_uuid.values())}
+    from aiida.storage.ownership import is_container_node_type
+
     owned_in_archive = sorted(uuid for uuid, entity in archive_by_uuid.items() if entity.get('owner_id') is not None)
+    containers_in_archive = sorted(
+        uuid for uuid, entity in archive_by_uuid.items() if is_container_node_type(entity.get('node_type'))
+    )
     container_tables = _archive_container_tables(backend_from)
-    if owned_in_archive or container_tables:
-        shown = ', '.join(owned_in_archive[:5]) or f'{len(container_tables)} container/membership row(s)'
+    if owned_in_archive or containers_in_archive or container_tables:
+        shown = ', '.join((owned_in_archive + containers_in_archive)[:5]) or (
+            f'{len(container_tables)} container/membership row(s)'
+        )
         msg = (
             'Archive contains owned data containers (or container state) without a membership '
             'representation (e.g. node(s) with UUID(s) '

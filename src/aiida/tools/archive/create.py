@@ -669,14 +669,31 @@ def _assert_no_ownership_members(backend: StorageBackend, node_ids: set[int]) ->
 
     Ownership units have no archive representation yet (deferred archive integration per
     ``orm-container-spec.md`` section 12): exporting them would silently drop ownership on
-    round-trip, so the export is explicitly rejected instead. Uses raw SQL against the
-    backend's session when available; backends without session access are assumed to hold
-    no ownership rows.
+    round-trip, so the export is explicitly rejected instead. This includes empty
+    containers: they carry ``db_dbcontainer``/kind state but no membership rows, so a
+    membership-only check would silently export a bare container row. Uses raw SQL against
+    the backend's session when available; backends without session access are assumed to
+    hold no ownership rows.
 
-    :raises ExportValidationError: if any node is an owner or an owned child.
+    :raises ExportValidationError: if any node is a container, an owner, or an owned child.
     """
     if not node_ids:
         return
+    from aiida.storage.ownership import is_container_node_type
+
+    # Backend-agnostic container-type check: every container (including empty ones with no
+    # membership rows) carries a reserved container ``node_type`` and must be rejected.
+    node_types = (
+        orm.QueryBuilder(backend=backend)
+        .append(orm.Node, filters={'id': {'in': list(node_ids)}}, project='node_type')
+        .all(batch_size=500, flat=True)
+    )
+    if any(is_container_node_type(node_type) for node_type in node_types):
+        msg = (
+            'Cannot export owned data containers: archive round-trip of ownership units '
+            'is not supported yet (deferred archive integration).'
+        )
+        raise ExportValidationError(msg)
     get_session = getattr(backend, 'get_session', None)
     if get_session is None:
         return
@@ -706,6 +723,21 @@ def _assert_no_ownership_members(backend: StorageBackend, node_ids: set[int]) ->
                     params,
                 ).first()
                 if hit is not None:
+                    msg = (
+                        'Cannot export owned data containers: archive round-trip of ownership units '
+                        'is not supported yet (deferred archive integration).'
+                    )
+                    raise ExportValidationError(msg)
+                try:
+                    container_hit = session.execute(
+                        text(f'SELECT 1 FROM db_dbcontainer WHERE node_id IN ({placeholders}) LIMIT 1'),
+                        params,
+                    ).first()
+                except Exception:
+                    # The container table may not exist (storage predating the ownership schema
+                    # that has not been migrated); absence of the table means no container rows.
+                    container_hit = None
+                if container_hit is not None:
                     msg = (
                         'Cannot export owned data containers: archive round-trip of ownership units '
                         'is not supported yet (deferred archive integration).'

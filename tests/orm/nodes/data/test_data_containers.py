@@ -24,8 +24,8 @@ def test_entry_points():
     """The new types are registered without changing existing ``List``/``Dict`` behavior."""
     from aiida.plugins import entry_point
 
-    assert entry_point.load_entry_point('aiida.data', 'core.data_list') is DataList
-    assert entry_point.load_entry_point('aiida.data', 'core.data_dict') is DataDict
+    assert entry_point.load_entry_point('aiida.container', 'core.data_list') is DataList
+    assert entry_point.load_entry_point('aiida.container', 'core.data_dict') is DataDict
     plain_list = List([1, 2])
     plain_dict = Dict({'a': 1})
     assert plain_list.get_list() == [1, 2]
@@ -333,3 +333,40 @@ def test_equality_and_hash_are_uuid_identity():
     container.store()
     assert load_node(container.pk) == container
     assert hash(load_node(container.pk)) == hash(container)
+
+
+def test_store_membership_failure_leaves_no_partial_graph_and_retryable():
+    """A membership failure during storage recovers the retained subtree, editable and retryable."""
+    outer = DataList([DataList([Int(1)]), DataList([Int(2)])])
+    nested = list(outer)
+
+    backend = outer.backend
+    real_create = backend.create_container_membership
+    calls = []
+
+    def fail_on_second(owner_id, members, assert_element_type=None, **kwargs):
+        calls.append(owner_id)
+        if len(calls) == 2:
+            raise RuntimeError('simulated membership failure')
+        return real_create(owner_id, members, assert_element_type, **kwargs)
+
+    from unittest import mock
+
+    with mock.patch.object(backend, 'create_container_membership', fail_on_second):
+        with pytest.raises(RuntimeError, match='simulated membership failure'):
+            outer.store()
+
+    assert len(calls) == 2
+    # Nothing was partially stored: the same retained objects are unstored and editable.
+    assert not outer.is_stored
+    assert not any(child.is_stored for child in outer)
+    assert [[child.value for child in nested] for nested in outer] == [[1], [2]]
+    assert list(outer) == nested
+    outer.append(DataList([Int(3)]))
+    assert len(outer) == 3
+
+    # Retry without fresh objects stores the complete nested subtree atomically.
+    outer.store()
+    assert outer.is_stored
+    assert [[child.value for child in nested] for nested in outer] == [[1], [2], [3]]
+    assert list(outer)[:2] == nested

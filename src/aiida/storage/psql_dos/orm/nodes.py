@@ -18,6 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation import BackendNode, BackendNodeCollection
+from aiida.orm.implementation.containers import BackendContainer
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 from aiida.storage.psql_dos.models import node as models
 from aiida.storage.psql_dos.orm import entities
@@ -182,7 +183,10 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     def add_incoming(self, source, link_type, link_label):
         session = self.backend.get_session()
 
-        type_check(source, self.__class__)
+        # Backend-node interface, not the concrete subclass: provenance links routinely connect
+        # different backend entities (e.g. a calculation ``SqlaNode`` CREATEs a ``SqlaContainer``),
+        # so restricting ``source`` to ``self.__class__`` wrongly rejects whole-container links.
+        type_check(source, SqlaNode)
 
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('node has to be stored when adding an incoming link')
@@ -332,18 +336,85 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         yield from self.model.attributes.keys()
 
 
+class SqlaContainer(SqlaNode, BackendContainer):
+    """SQLA backend entity for an owned data container.
+
+    Shares the ``DbNode`` row (common node identity) but persists through
+    :meth:`store_container`, never :meth:`SqlaNode.store`. The generic
+    ``store`` raises so containers cannot silently take the data path.
+    """
+
+    def store(self, links=None, clean=True):  # type: ignore[override]
+        msg = (
+            'Cannot store a container with `BackendNode.store`: use `BackendContainer.store_container` '
+            '(via `backend.store_container_subtree`) so container persistence stays decoupled from data.'
+        )
+        raise exceptions.IntegrityError(msg)
+
+    def store_container(self, links=None, clean=True):
+        """Store this container node row without any membership edges.
+
+        Dedicated container persistence (no delegation to ``SqlaNode.store``):
+        writes the ``DbNode`` row plus optional incoming provenance links for
+        the ownership root. Membership rows and container state are frozen
+        separately via ``backend.create_container_membership``.
+        """
+        session = self.backend.get_session()
+
+        if getattr(self.model, 'owner_id', None) is not None:
+            msg = (
+                'Cannot store an owned container independently: ownership references are created '
+                'atomically with membership rows via `create_container_membership`.'
+            )
+            raise exceptions.IntegrityError(msg)
+
+        if clean:
+            self.clean_values()
+
+        session.add(self.model)
+
+        if links:
+            for link_triple in links:
+                self._add_link(*link_triple)
+
+        if not session.in_nested_transaction():
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise
+        else:
+            session.flush()
+
+        return self
+
+
+def _is_container_node_type(node_type: str | None) -> bool:
+    """Return whether a backend ``node_type`` string identifies a container (no ORM import)."""
+    from aiida.storage import ownership as ownership_contract
+
+    # Closed container set: the shared storage identifier mapping is the single source of truth.
+    return ownership_contract.is_container_node_type(node_type)
+
+
 class SqlaNodeCollection(BackendNodeCollection):
     """The collection of Node entries."""
 
     ENTITY_CLASS: type[SqlaNode] = SqlaNode
+    CONTAINER_CLASS: type[SqlaContainer] = SqlaContainer
+
+    def create(self, **kwargs):
+        """Create an unstored backend node, branching to ``SqlaContainer`` for containers."""
+        entity_class = self.CONTAINER_CLASS if _is_container_node_type(kwargs.get('node_type')) else self.ENTITY_CLASS
+        return entity_class(backend=self._backend, **kwargs)
 
     def get(self, pk):
         session = self.backend.get_session()
 
         try:
-            return self.ENTITY_CLASS.from_dbmodel(
-                session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one(), self.backend
-            )
+            model = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+            entity_class = self.CONTAINER_CLASS if _is_container_node_type(model.node_type) else self.ENTITY_CLASS
+            return entity_class.from_dbmodel(model, self.backend)
         except NoResultFound:
             msg = f"Node with pk '{pk}' not found"
             raise exceptions.NotExistent(msg) from NoResultFound

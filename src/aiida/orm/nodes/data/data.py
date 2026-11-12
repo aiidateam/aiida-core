@@ -14,13 +14,13 @@ from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.orm.entities import from_backend_entity
-from aiida.orm.nodes.node import Node
+from aiida.orm.nodes.data.datanode import DataNode
 from aiida.orm.pydantic import OrmMetadataField
 
 __all__ = ('Data',)
 
 
-class Data(Node):
+class Data(DataNode):
     """The base class for all Data nodes.
 
     AiiDA Data classes are subclasses of Node and must support multiple inheritance.
@@ -45,7 +45,7 @@ class Data(Node):
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
-    class AttributesModel(Node.AttributesModel):
+    class AttributesModel(DataNode.AttributesModel):
         source: dict | None = OrmMetadataField(
             None,
             description='Source of the data',
@@ -68,6 +68,7 @@ class Data(Node):
         """
         return self.clone()
 
+    @override
     def clone(self):
         """Create a clone of the Data node.
 

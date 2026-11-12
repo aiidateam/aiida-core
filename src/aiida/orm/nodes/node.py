@@ -631,8 +631,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """Copying a Node is not supported in general, but only for the Data sub class."""
         raise exceptions.InvalidOperation('copying a base Node is not supported')
 
-    def __deepcopy__(self, memo: t.Any) -> t.NoReturn:
-        """Deep copying a Node is not supported in general, but only for the Data sub class."""
+    def __deepcopy__(self, memo: t.Any) -> Self:
+        """Reject deep copying unless a subclass implements it."""
         raise exceptions.InvalidOperation('deep copying a base Node is not supported')
 
     def _validate(self) -> bool:
@@ -658,7 +658,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if not self._storable:
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
-        if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
+        if not is_registered_entry_point(
+            self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data', 'aiida.container')
+        ):
             msg = (
                 f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
                 'Check that the corresponding plugin is installed '

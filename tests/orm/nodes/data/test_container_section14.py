@@ -383,12 +383,8 @@ class TestProcessBoundariesStrict:
         assert not is_owned(recorded_out)
         assert [child.value for child in container] == [7]
 
-    @pytest.mark.xfail(
-        reason='spec §7: exposed output handle should be the recorded copy (stale-handle gap, filed by verify agent)',
-        strict=False,
-    )
     def test_exposed_output_handle_is_recorded_copy(self):
-        """GAP: ``run_get_node`` returns the pre-copy handle, not the CREATE'd copy."""
+        """Exposing an owned child records a standalone copy and the caller receives that recorded copy."""
         from aiida.common.links import LinkType
         from aiida.engine import calcfunction
 

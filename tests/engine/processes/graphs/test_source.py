@@ -115,9 +115,9 @@ def test_declared_union_input_rejected() -> None:
     from aiida.engine.processes.graphs.lowering import task as declare_task
     from aiida.orm import RemoteData, SinglefileData
 
-    with pytest.raises(GraphTypeCheckError, match='takes `Data` subclasses'):
+    with pytest.raises(GraphTypeCheckError, match='takes `DataNode` subclasses'):
         declare_task(ShellJob, inputs={'x': RemoteData | None}, outputs={'stdout': SinglefileData})
-    with pytest.raises(GraphTypeCheckError, match='takes `Data` subclasses'):
+    with pytest.raises(GraphTypeCheckError, match='takes `DataNode` subclasses'):
         declare_task(
             ShellJob,
             inputs={'nodes': {'text': SinglefileData}},
@@ -470,7 +470,6 @@ def test_failing_default_factory_rejected() -> None:
 
 
 def test_cyclic_and_invalid_ordering_dependencies() -> None:
-
     spec = calls.chain.build()
     with pytest.raises(GraphTypeCheckError, match='contain a cycle between'):
         replace(spec, dependencies=(*spec.dependencies, Dependency('add_2', 'add')))

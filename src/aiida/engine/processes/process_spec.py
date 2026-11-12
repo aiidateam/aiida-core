@@ -33,7 +33,8 @@ from aiida.engine.processes.ports import (
     _infer_runtime_types,
     _is_storable,
 )
-from aiida.orm import Data, Dict, to_aiida_type
+from aiida.orm import Dict, to_aiida_type
+from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = ('CalcJobProcessSpec', 'GraphProcessSpec', 'ProcessSpec')
 
@@ -52,7 +53,7 @@ def _as_a_port(field: _Field) -> dict[str, t.Any]:
     _require_storable(field)
     _reject_optional_structured(field.annotation, name=field.name)
     declared = _infer_runtime_types(field.annotation)
-    valid_type = declared or (Data,)
+    valid_type = declared or (DataNode,)
     if field.default is None and type(None) not in valid_type:
         valid_type = (*valid_type, type(None))
     # A default always wins: the port coerces defaulted inputs to not required, so `required`
@@ -76,7 +77,7 @@ def _as_an_output_port(field: _Field) -> dict[str, t.Any]:
     _reject_optional_structured(field.annotation, name=field.name)
     declared = _infer_node_types(field.annotation)
 
-    return {'required': field.required, 'help': field.help, 'valid_type': declared or (Data,)}
+    return {'required': field.required, 'help': field.help, 'valid_type': declared or (DataNode,)}
 
 
 def _with_defaults(fields: tuple[_Field, ...], defaults: Mapping[str, t.Any] | None) -> tuple[_Field, ...]:
@@ -91,7 +92,7 @@ def _with_defaults(fields: tuple[_Field, ...], defaults: Mapping[str, t.Any] | N
 
 def _lazily(default: t.Any) -> t.Any:
     """Copy Python defaults per launch; provenance serialization happens after runtime validation."""
-    if default is None or isinstance(default, Data) or callable(default):
+    if default is None or isinstance(default, DataNode) or callable(default):
         return default
 
     return lambda: copy.deepcopy(default)
@@ -317,7 +318,7 @@ class GraphProcessSpec(ProcessSpec):
         :param name: the input port or namespace name, dotted for nested fields.
         :param field: the extracted annotation, default and help for the input.
         """
-        valid_type = _infer_runtime_types(field.annotation) or (Data,)
+        valid_type = _infer_runtime_types(field.annotation) or (DataNode,)
 
         if self.has_input(name):
             port = self.inputs[name]

@@ -915,3 +915,44 @@ class TestNodeList:
 
         result = run_cli_command(cmd_node.node_list, ['--project', 'id', '--raw'] + options)
         assert result.output.strip() == '\n'.join(expected_projections)
+
+
+@pytest.fixture(scope='class')
+def create_nodes_datanode(aiida_profile_clean_class):
+    return (
+        orm.Int(0).store(),
+        orm.DataList([orm.Int(1)]).store(),
+        orm.DataDict({'a': orm.Int(2)}).store(),
+    )
+
+
+@pytest.mark.usefixtures('create_nodes_datanode')
+class TestVerdiNodeDataNode:
+    """Tests for ``verdi node`` commands over the shared ``DataNode`` base."""
+
+    def test_node_list_container_entry_point(self, run_cli_command):
+        """``verdi node list -e core.data_list`` resolves through the container factory fallback."""
+        result = run_cli_command(cmd_node.node_list, ['-e', 'core.data_list', '--project', 'id', '--raw'])
+        assert result.exit_code == 0
+        assert len(result.output.strip().splitlines()) == 1
+
+    def test_node_list_data_entry_point_excludes_containers(self, run_cli_command):
+        """``verdi node list -e core.int`` lists data only, never containers."""
+        result = run_cli_command(cmd_node.node_list, ['-e', 'core.int', '--project', 'id', '--raw'])
+        assert result.exit_code == 0
+        listed = {int(pk) for pk in result.output.strip().splitlines()}
+        expected = set(orm.QueryBuilder().append(orm.Int, project='id').all(flat=True))
+        assert listed == expected
+        containers = set(orm.QueryBuilder().append(orm.Container, project='id').all(flat=True))
+        assert listed.isdisjoint(containers)
+
+    def test_rehash_default_includes_containers(self, run_cli_command):
+        """The default ``verdi node rehash`` set covers data and containers (``DataNode``)."""
+        result = run_cli_command(cmd_node.rehash, ['-f'])
+        # Standalone ``Int`` plus both containers plus their two owned ``Int`` children: all are data nodes.
+        assert '5 nodes re-hashed' in result.output
+
+    def test_rehash_container_entry_point(self, run_cli_command):
+        """``verdi node rehash -e aiida.container:core.data_list`` rehashes just the list container."""
+        result = run_cli_command(cmd_node.rehash, ['-f', '-e', 'aiida.container:core.data_list'])
+        assert '1 nodes re-hashed' in result.output

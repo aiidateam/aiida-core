@@ -74,6 +74,7 @@ What this module does NOT do (deferred to later iterations):
 from __future__ import annotations
 
 import typing as t
+from dataclasses import dataclass, field
 
 from aiida.common.exceptions import IntegrityError
 
@@ -84,6 +85,8 @@ __all__ = (
     'LAYOUT_ROW',
     'LIST_NODE_TYPE',
     'OWNERSHIP_INTEGRATION_NOTES',
+    'OwnedContainerSpec',
+    'OwnedMemberSpec',
     'assert_no_provenance_link_to_owned',
     'attach_dict_membership',
     'attach_list_membership',
@@ -94,9 +97,11 @@ __all__ = (
     'expand_ownership_closure',
     'is_container_node_type',
     'is_data_node_type',
+    'is_ownable_node_type',
     'read_container_state',
     'require_container_kind',
     'resolve_element_type',
+    'store_container_subtree',
     'validate_bulk_node_insert',
     'validate_bulk_node_update',
     'validate_deletion_set',
@@ -105,12 +110,13 @@ __all__ = (
     'validate_ownership_graph',
 )
 
-#: Exact ``node_type`` identifiers eligible to own nodes. Only the new
-#: container types may own nodes; the shared container base (if any) stays
-#: internal. These must equal ``DataList.class_node_type`` /
-#: ``DataDict.class_node_type`` (entry-point preserving underscore, e.g.
-#: ``data.core.data_list.DataList.``); comparison is always exact string
-#: equality, never plugin loading (storage must not import the ORM).
+#: Exact ``node_type`` identifiers eligible to own nodes. This is the single source of truth for the
+#: supported container set, which is finite and closed: only ``DataList`` and ``DataDict`` (no
+#: third-party containers). The shared container base stays internal and owns nothing. These must equal
+#: ``DataList.class_node_type`` / ``DataDict.class_node_type`` (entry-point preserving underscore, e.g.
+#: ``data.core.data_list.DataList.``); comparison is always exact string equality, never plugin
+#: loading (storage must not import the ORM). Backend dispatch, class loading and QueryBuilder all
+#: consult this mapping instead of duplicating the identifiers.
 CONTAINER_NODE_TYPES: frozenset[str] = frozenset(
     {
         'data.core.data_list.DataList.',
@@ -142,15 +148,29 @@ OWNERSHIP_INTEGRATION_NOTES: str = (
 
 
 def is_data_node_type(node_type: str | None) -> bool:
-    """Return whether a ``node_type`` string is eligible as an owned child.
+    """Return whether a ``node_type`` string is leaf data (owned-child eligible, not a container).
 
-    Any data subclass is eligible, including nested containers (which are
-    themselves data nodes). Process nodes and other non-data nodes are
-    rejected. The check is a string-prefix test so no plugin is loaded.
+    Containers share the ``data.`` type-string prefix (common node identity)
+    but are decoupled from ``Data`` semantics: they are identified by
+    :data:`CONTAINER_NODE_TYPES` and excluded here. Use
+    :func:`is_ownable_node_type` for owned-child eligibility (leaf data or
+    nested containers). The check is a string test so no plugin is loaded.
 
     :param node_type: the stored ``node_type`` identifier.
     """
-    return isinstance(node_type, str) and node_type.startswith('data.')
+    return isinstance(node_type, str) and node_type.startswith('data.') and node_type not in CONTAINER_NODE_TYPES
+
+
+def is_ownable_node_type(node_type: str | None) -> bool:
+    """Return whether a ``node_type`` string is eligible as an owned child.
+
+    Any leaf data subclass is eligible, plus nested containers (which share
+    node identity but not ``Data`` semantics). Process nodes and other
+    non-data nodes are rejected. String test only, no plugin loading.
+
+    :param node_type: the stored ``node_type`` identifier.
+    """
+    return is_data_node_type(node_type) or is_container_node_type(node_type)
 
 
 def is_container_node_type(node_type: str | None) -> bool:
@@ -330,8 +350,8 @@ def validate_membership_spec(
     if not is_container_node_type(owner_node_type):
         msg = f'Ineligible owner node type: {owner_node_type!r}. Only containers may own nodes.'
         raise IntegrityError(msg)
-    if not is_data_node_type(child_node_type):
-        msg = f'Ineligible child node type: {child_node_type!r}. Only data nodes may be owned.'
+    if not is_ownable_node_type(child_node_type):
+        msg = f'Ineligible child node type: {child_node_type!r}. Only data nodes and containers may be owned.'
         raise IntegrityError(msg)
     if not isinstance(position, int) or isinstance(position, bool) or position < 0:
         msg = f'Invalid membership position: {position!r}. Position must be an integer >= 0.'
@@ -867,6 +887,105 @@ def attach_dict_membership(
     :func:`attach_membership`.
     """
     return attach_membership(backend, owner_id, members, assert_element_type, kind='dict')
+
+
+@dataclass
+class OwnedMemberSpec:
+    """Narrow storage input describing one owned-child edge.
+
+    References the child by backend entity (pk/``node_type`` are read after
+    the node rows exist) so the storage layer never depends on ORM container
+    objects or callbacks. ``position``/``key`` carry the persisted iteration
+    order (``key`` is ``None`` for lists, a string for dicts).
+    """
+
+    entity: t.Any
+    position: int
+    key: str | None = None
+
+
+@dataclass
+class OwnedContainerSpec:
+    """Narrow storage input describing one container's membership edges.
+
+    ``members`` must already be in persisted position order. ``element_type``
+    is the pre-locked element ``node_type`` (``None`` when the container never
+    held an element); ``kind``/``layout`` are asserted against the stored
+    container row exactly as in :func:`attach_membership`.
+    """
+
+    owner: t.Any
+    members: list[OwnedMemberSpec] = field(default_factory=list)
+    element_type: str | None = None
+    kind: ContainerKind | None = None
+    layout: str | None = None
+
+
+def store_container_subtree(
+    backend,
+    entities: t.Sequence[t.Any],
+    containers: t.Sequence[OwnedContainerSpec],
+    root_links: t.Sequence[t.Any] | None = None,
+    *,
+    clean: bool = True,
+) -> list[str | None]:
+    """Persist a complete owned-container subtree atomically.
+
+    Stores every node row (``entities`` in post-order, children before their
+    owner, ownership root last) and then freezes every container edge in
+    ``containers`` (nested containers first) inside a single backend
+    transaction that joins an enclosing transaction when present. Only the
+    ownership root receives ``root_links`` (opaque link triples in the format
+    accepted by the backend entity store methods; forwarded without inspection).
+    Repository content must already be prepared by the caller (repo-first).
+
+    Leaf data rows go through :meth:`BackendNode.store
+    <aiida.orm.implementation.nodes.BackendNode.store>`; container rows go
+    through :meth:`BackendContainer.store_container
+    <aiida.orm.implementation.containers.BackendContainer.store_container>`
+    (never ``BackendNode.store``), and membership edges through
+    :meth:`backend.create_container_membership
+    <aiida.storage.psql_dos.backend.PsqlDosBackend.create_container_membership>`.
+    Backend-contract validation runs at the storage level. On failure the
+    transaction rolls back and nothing is written; in-memory entity state is
+    left to the caller for recovery.
+
+    :param backend: the storage backend (owns the transaction).
+    :param entities: backend entities in post-order (root last), non-empty.
+    :param containers: per-container membership specs, nested containers first.
+    :param root_links: incoming links applied to the ownership root only.
+    :returns: the resolved (possibly newly locked) element type per container,
+        in the same order as ``containers``.
+    """
+    if not entities:
+        msg = 'Cannot store an empty container subtree: at least the ownership root is required.'
+        raise IntegrityError(msg)
+    root = entities[-1]
+    resolved: list[str | None] = []
+    with backend.transaction():
+        for entity in entities:
+            links = root_links if entity is root else None
+            store_container = getattr(entity, 'store_container', None)
+            if callable(store_container):
+                store_container(links, clean=clean)
+            else:
+                entity.store(links, clean=clean)
+        for spec in containers:
+            members = [
+                {
+                    'child_id': member.entity.pk,
+                    'child_node_type': member.entity.node_type,
+                    'position': member.position,
+                    'key': member.key,
+                }
+                for member in spec.members
+            ]
+            resolved.append(
+                backend.create_container_membership(
+                    spec.owner.pk, members, spec.element_type, kind=spec.kind, assert_layout=spec.layout
+                )
+            )
+    return resolved
 
 
 def assert_no_provenance_link_to_owned(session, node_model, *, endpoint_id: int, role: str = 'endpoint') -> None:

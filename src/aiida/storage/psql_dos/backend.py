@@ -295,26 +295,35 @@ class PsqlDosBackend(StorageBackend):
         """Open a transaction to be used as a context manager.
 
         If there is an exception within the context then the changes will be rolled back and the state will be as before
-        entering. Transactions can be nested.
+        entering. Transactions can be nested. Rollback callbacks registered via
+        :meth:`add_rollback_callback <aiida.orm.implementation.storage_backend.StorageBackend.add_rollback_callback>`
+        fire when their scope rolls back and are handed to the parent scope on a clean nested exit.
         """
         session = self.get_session()
-        if session.in_nested_transaction():
-            # Already inside an explicit transaction: join it through a savepoint and let the outermost transaction
-            # own the commit, so nested work rolls back together with the outer transaction on failure.
-            with session.begin_nested():
-                yield session
-        elif session.in_transaction():
-            # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
-            # transaction owns the commit, so commit on successful exit as before.
-            with session.begin_nested() as savepoint:
-                yield session
-                savepoint.commit()
-            session.commit()
-        else:
-            with session.begin():
+        scope = self._push_rollback_scope()
+        try:
+            if session.in_nested_transaction():
+                # Already inside an explicit transaction: join it through a savepoint and let the outermost
+                # transaction own the commit, so nested work rolls back together with the outer transaction on failure.
+                with session.begin_nested():
+                    yield session
+            elif session.in_transaction():
+                # An autobegun transaction (for example from preceding reads) is active, but no explicit outer
+                # transaction owns the commit, so commit on successful exit as before.
                 with session.begin_nested() as savepoint:
                     yield session
                     savepoint.commit()
+                session.commit()
+            else:
+                with session.begin():
+                    with session.begin_nested() as savepoint:
+                        yield session
+                        savepoint.commit()
+        except BaseException:
+            self._fail_rollback_scope(scope)
+            raise
+        else:
+            self._merge_rollback_scope(scope)
 
     @property
     def in_transaction(self) -> bool:
@@ -436,6 +445,32 @@ class PsqlDosBackend(StorageBackend):
         from aiida.storage import ownership as ownership_contract
 
         return ownership_contract.attach_dict_membership(self, owner_id, members, assert_element_type)
+
+    def store_container_subtree(
+        self,
+        entities: t.Sequence[t.Any],
+        containers: t.Sequence[t.Any],
+        root_links: t.Sequence[t.Any] | None = None,
+        *,
+        clean: bool = True,
+    ) -> list[str | None]:
+        """Persist a complete owned-container subtree atomically.
+
+        Stores every node row (``entities`` in post-order, ownership root last,
+        which alone receives ``root_links``) and freezes every container edge in
+        ``containers`` (narrow :class:`~aiida.storage.ownership.OwnedContainerSpec`
+        inputs referencing backend entities, nested containers first) inside a
+        single transaction joining an enclosing transaction when present.
+        Repository content must already be prepared by the caller (repo-first).
+
+        :param entities: backend entities in post-order (root last), non-empty.
+        :param containers: per-container membership specs, nested containers first.
+        :param root_links: opaque incoming link triples applied to the root only.
+        :returns: the resolved element type per container, in input order.
+        """
+        from aiida.storage import ownership as ownership_contract
+
+        return ownership_contract.store_container_subtree(self, entities, containers, root_links, clean=clean)
 
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)

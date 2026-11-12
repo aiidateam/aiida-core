@@ -135,6 +135,15 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(ports.single_named_mapping, {'value': 2}, {'only': 2}, id='single-named-mapping'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': True, 'flip': True}, {'result': 11}, id='nested-plain-both'
+        ),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': True, 'flip': False}, {'result': 3}, id='nested-plain-inner'
+        ),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': False, 'flip': True}, {'result': 4}, id='nested-plain-outer'
+        ),
         pytest.param(branches.namespaced_choice, {'value': 2, 'condition': True}, {'result': 3}, id='namespaced-true'),
         pytest.param(
             branches.namespaced_choice, {'value': 2, 'condition': False}, {'result': 4}, id='namespaced-false'
@@ -520,6 +529,14 @@ def test_loop_condition_rejects_non_bool() -> None:
 def test_branch_in_loop_runs() -> None:
     """A branch inside a loop body rebinds loop state per iteration."""
     outputs, node = run_get_node(loops.nested_branch_in_loop, value=2)
+    assert node.is_finished_ok
+    assert outputs['result'].value == -1
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_branch_updates_loop_check() -> None:
+    """A loop check updated only inside nested branches still ends the loop."""
+    outputs, node = run_get_node(loops.nested_condition_update, value=3, running=True)
     assert node.is_finished_ok
     assert outputs['result'].value == -1
 

@@ -728,6 +728,9 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
             _reject(state, node=statement, reason=msg)
         name = rebound[0]
         reference = child.names[name]
+    elif isinstance(statement, ast.If):
+        name = _lower_branch(child, statement=statement)
+        reference = child.names[name]
     else:
         name = _lower_assignment(child, statement=statement, rebind=True)
         reference = child.names[name]
@@ -796,8 +799,8 @@ def _rekey_alias(arm: _Arm, port: str) -> _Arm:
     return arm._replace(body=replace(arm.body, outputs={port: endpoint}))
 
 
-def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
-    """Lower an if statement to a branch control task."""
+def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
+    """Lower an if statement to a branch control task, returning the exposed wire."""
     _check_branch_shape(state, statement=statement)
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
@@ -821,6 +824,7 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     # name restarts at the whole branch namespace instead of the call port.
     carried = '' if _is_namespace_arm(first) or _is_namespace_arm(second) else port or selected.port
     state.names[first.name] = _Reference(instance, port=carried, shape=selected.shape)
+    return first.name
 
 
 def _check_branch_shape(state: _LoweringState, statement: ast.If) -> None:
@@ -876,9 +880,7 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             assigned.add(node.targets[0].id)
         elif isinstance(node, ast.If):
-            for arm in (*node.body, *node.orelse):
-                if isinstance(arm, ast.Assign):
-                    assigned.update(target.id for target in arm.targets if isinstance(target, ast.Name))
+            assigned.update(_body_state_names([*node.body, *node.orelse]))
         elif isinstance(node, ast.While):
             assigned.update(_body_state_names(node.body))
     return assigned

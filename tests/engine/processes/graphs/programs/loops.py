@@ -61,6 +61,24 @@ def nested_branch_in_loop(value: int) -> int:
     return total
 
 
+@graph
+def nested_condition_update(value: int, running: bool) -> int:
+    """Rebind the loop check only inside nested branches; every path updates it."""
+    while running:
+        if is_positive(value=value):
+            if is_positive(value=value):
+                running = is_positive(value=value)
+            else:
+                running = is_positive(value=value)
+        else:  # noqa: PLR5501 - the nested branch is the regression under test
+            if is_positive(value=value):
+                running = is_positive(value=value)
+            else:
+                running = is_positive(value=value)
+        value = decrement(value=value)
+    return value
+
+
 # rejected at lowering: cannot loop over a list of unknown length.
 @graph
 def fanout(values: list[int]) -> int:

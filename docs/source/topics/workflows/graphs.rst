@@ -55,7 +55,7 @@ The graph body supports:
 * ``name = task(...)`` assignments, with keyword or positional arguments; positional arguments follow the declared input order. Calling another graph works the same way.
 * Graph inputs and names bound on an earlier line, such as ``product`` in ``add(x=product, y=z)``, as arguments.
 * Literal numbers, strings, booleans, and ``None`` as arguments, such as ``y=1``.
-* ``if``, with or without ``else`` but without ``elif``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
+* ``if``, with or without ``elif`` and ``else``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
 * One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys.
 * ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
 * ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches and loops.

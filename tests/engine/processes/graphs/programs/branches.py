@@ -413,3 +413,16 @@ def loop_arm_namespace(value: int, flag: bool) -> int:
         while is_positive(value=pair.product):
             pair = arithmetic_pair(x=pair.product, y=0)
     return pair.sum
+
+
+@graph
+def nested_plain(value: int, flag: bool, flip: bool) -> int:
+    """Branch inside a branch arm; the inner dispatch stays in the body."""
+    if flag:
+        if flip:
+            selected = add(x=value, y=9)
+        else:
+            selected = add(x=value, y=1)
+    else:
+        selected = add(x=value, y=2)
+    return selected

@@ -355,8 +355,18 @@ class GraphRun:
         return inputs
 
     def _produced_value(self, name: str, path: str) -> t.Any:
-        """Return the value one task produced at a path, or `None` for an omitted output."""
-        return _at_or_none(self._produced_by(name).outputs, path)
+        """Return the value one task produced at a path, or `None` for an omitted output.
+
+        An empty path names the whole declared outputs namespace, resolved to
+        a plain mapping so region inputs receive values instead of a link
+        manager. Undeclared outputs of a dynamic namespace stay behind, since
+        validation checked the edge against the declared ports only.
+        """
+        outputs = self._produced_by(name).outputs
+        if not path:
+            declared = self.graph.task(name).output_ports()
+            return {key: outputs[key] for key in outputs if key in declared}
+        return _at_or_none(outputs, path)
 
     def _produced_by(self, name: str) -> Node:
         """Return the node produced by the latest instance of one task."""

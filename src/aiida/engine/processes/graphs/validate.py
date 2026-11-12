@@ -87,7 +87,7 @@ def _validate_edge(graph: GraphIR, edge: Dependency) -> None:
         return
     origin = _port_at(source.output_ports(), edge.source_port or '')
     ports = _input_ports_at(target, edge.target_port or '')
-    if origin is None or isinstance(origin, PortNamespace):
+    if origin is None or (isinstance(origin, PortNamespace) and not _accepts_region(target, edge.target_port)):
         msg = f'dependency refers to unknown output `{edge.source}.{edge.source_port}`.'
         raise GraphTypeCheckError(msg)
     if not ports and not _accepts_condition(target, edge.target_port):
@@ -184,6 +184,16 @@ def _check_namespaces(source: PortNamespace, target: PortNamespace, context: str
         elif child.required:
             msg = f'{context} is missing required field `{name}`.'
             raise GraphTypeCheckError(msg)
+
+
+def _accepts_region(task: GraphTask, port: str | None) -> bool:
+    """Return whether a placement wires a whole namespace into a control-flow region.
+
+    Branch and loop bodies select fields from region inputs themselves, so the
+    enclosing graph routes the whole namespace instead of one leaf.
+    Task-to-task edges keep the leaf-only contract.
+    """
+    return isinstance(task, (BranchControl, LoopControl)) and port is not None and port != task.condition_port
 
 
 def _accepts_condition(task: GraphTask, port: str | None) -> bool:

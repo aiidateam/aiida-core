@@ -8,6 +8,8 @@
 ###########################################################################
 """Ports declarations shared by the graph behavior suites."""
 
+import typing as t
+
 from aiida.engine.processes.graphs.lowering import graph
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.programs.port_models import (
@@ -142,6 +144,31 @@ def point_model(config: PointSettings) -> int:
 def flat_model_defaulted() -> int:
     """Run an adapted model task on its instance default."""
     return read_flat_count_defaulted()
+
+
+@graph
+def nullable_return(value: int | None = None) -> int | None:
+    """Return an optional input; an absent value emits no output."""
+    return value
+
+
+@graph
+def nullable_forward(value: int | None = None) -> int | None:
+    """Forward the optional output of a child graph; an absent value emits no output."""
+    return nullable_return(value=value)
+
+
+@graph
+def nullable_chain(value: int | None = None) -> int | None:
+    """Wire the optional output of a child graph; an absent value leaves the next input unwired."""
+    forwarded = nullable_return(value=value)
+    return nullable_return(value=forwarded)
+
+
+@graph
+def unrestricted_return(value: t.Any) -> t.Any:
+    """Return an unrestricted required input; a `None` value emits no output."""
+    return value
 
 
 # rejected at lowering: workflows return existing nodes, they never create data.

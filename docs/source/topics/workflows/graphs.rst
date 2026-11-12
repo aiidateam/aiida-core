@@ -331,6 +331,7 @@ Task outputs are fixed by the return annotation:
         return {'total': pair.sum, 'product': pair.product}
 
 A graph returning one value declares one output named ``result``, and a graph returning a ``dict`` declares one output per key.
+An output whose source holds no node, such as an optional input left at ``None``, stays out of the emitted outputs.
 
 A ``TypeVar`` annotation, such as ``def scale(value: T, factor: T) -> T`` with ``T = TypeVar('T', int, float)``, accepts any of its constraints.
 When all values wired to ``T`` share one type, the output takes that type at this call.

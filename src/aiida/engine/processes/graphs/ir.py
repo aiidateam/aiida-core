@@ -336,6 +336,25 @@ class TaskIR:
         )
 
 
+def _output_required(origin: InputPort | OutputPort) -> bool:
+    """Return whether a regrouped output leaf always holds a stored node.
+
+    Outputs regroup existing nodes instead of creating data. A leaf stays
+    required only when its source must hold a node: a required contract whose
+    types exclude `None`. Anything else may resolve to no node and stays out
+    of the required contract, so the emission simply omits it.
+    """
+    if not origin.required:
+        return False
+    types = origin.valid_type
+    if types is None:
+        # An unrestricted input accepts `None`; a required process output always holds a node.
+        return isinstance(origin, OutputPort)
+    if isinstance(types, type):
+        return types is not type(None)
+    return type(None) not in types
+
+
 def _load_declared(data: Mapping[str, t.Any] | None) -> NamespaceShape:
     """Restore a dynamic-namespace declaration, empty when none was stored."""
     if data is None:
@@ -687,7 +706,8 @@ class GraphIR:
             if origin is None or isinstance(origin, PortNamespace):
                 msg = f'graph output `{name}` must reference a declared leaf.'
                 raise GraphTypeCheckError(msg)
-            namespace[name] = OutputPort(name, valid_type=self._output_types(name, origin) or (Data,))
+            valid_type = self._output_types(name, origin) or (Data,)
+            namespace[name] = OutputPort(name, valid_type=valid_type, required=_output_required(origin))
         return namespace
 
     def _output_types(self, name: str, origin: InputPort | OutputPort) -> tuple[type, ...] | type | None:

@@ -39,12 +39,14 @@ from aiida.engine.processes.graphs.ir import (
     Endpoint,
     GraphIR,
     LoopControl,
+    MapControl,
     OutputTree,
     ProcessTask,
     Route,
     SubgraphTask,
     TaskIR,
 )
+from aiida.engine.processes.graphs.par_map import par_map
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.shapes import (
     Forward,
@@ -65,8 +67,9 @@ from aiida.engine.processes.graphs.tasks import (
 )
 from aiida.engine.processes.ports import _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
+from aiida.orm import DataDict, DataList
 
-__all__ = ('Forward', 'GraphHandle', 'graph', 'task')
+__all__ = ('Forward', 'GraphHandle', 'graph', 'par_map', 'task')
 
 P = t.ParamSpec('P')
 R = t.TypeVar('R')
@@ -227,7 +230,7 @@ class _LoweringState:
 
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl | MapControl] = field(default_factory=list)
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     input_shapes: dict[str, Shape] = field(default_factory=dict)
@@ -1129,8 +1132,31 @@ def _assigned_names(statements: list[ast.stmt]) -> set[str]:
     }
 
 
-def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference]) -> set[int]:
-    """Return the identities of called expressions and unshadowed module bases."""
+def _is_par_map_call(state: _LoweringState, node: ast.Call) -> bool:
+    """Return whether a region call targets the `par_map` authoring operation, without rejecting."""
+    try:
+        if isinstance(node.func, ast.Attribute):
+            target, _ = _resolve_dotted(state, expression=node)
+            return target is par_map
+        if isinstance(node.func, ast.Name):
+            return state.definition.function.__globals__.get(node.func.id) is par_map
+    except GraphLanguageError:
+        return False
+    return False
+
+
+def _par_map_callable_expr(node: ast.Call) -> ast.expr | None:
+    """Return the mapped callable expression of a `par_map` call, without validating the collection."""
+    if node.args:
+        return node.args[0]
+    for keyword in node.keywords:
+        if keyword.arg == 'func':
+            return keyword.value
+    return None
+
+
+def _callee_ids(state: _LoweringState, statements: list[ast.stmt], enclosing: Mapping[str, _Reference]) -> set[int]:
+    """Return the identities of called expressions, unshadowed module bases, and mapped callables."""
     callees: set[int] = set()
     for node in _walk_region(statements):
         if not isinstance(node, ast.Call):
@@ -1143,6 +1169,14 @@ def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference])
             func = func.value
         if isinstance(func, ast.Name) and func.id not in enclosing:
             callees.add(id(func))
+        if _is_par_map_call(state, node):
+            callable_expr = _par_map_callable_expr(node)
+            if isinstance(callable_expr, ast.Name):
+                callees.add(id(callable_expr))
+            elif isinstance(callable_expr, ast.Attribute):
+                for inner in ast.walk(callable_expr):
+                    if isinstance(inner, ast.Name) and isinstance(inner.ctx, ast.Load) and inner.id not in enclosing:
+                        callees.add(id(inner))
     return callees
 
 
@@ -1172,7 +1206,7 @@ def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) ->
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
     assigned = _assigned_names(statements)
-    callees = _callee_ids(statements, state.names)
+    callees = _callee_ids(state, statements, state.names)
     skipped = _member_test_skips(state, statements)
     reads: dict[str, ast.Name] = {}
     for node in _walk_region(statements):
@@ -1425,10 +1459,167 @@ def _solved_spec(
     return replace(spec, declared_outputs=narrowed)
 
 
+def _resolves_to_par_map(state: _LoweringState, expression: ast.Call, name: str) -> bool:
+    """Return whether a call targets the `par_map` authoring operation."""
+    if isinstance(expression.func, ast.Attribute):
+        target, _ = _resolve_dotted(state, expression=expression)
+        return target is par_map
+    return state.definition.function.__globals__.get(name) is par_map
+
+
+def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
+    """Place a fan-out map over an owned container."""
+    func_expr, collection_expr, after_keyword = _bind_par_map_arguments(state, expression=expression)
+    target = _resolve_par_map_callable(state, expression=func_expr)
+    if isinstance(func_expr, ast.Attribute):
+        call_name = func_expr.attr
+    else:
+        assert isinstance(func_expr, ast.Name)
+        call_name = func_expr.id
+    if isinstance(target, CalcJobTaskHandle):
+        msg = (
+            'maps dispatch one child per element with shared inputs, so per-item launch metadata has no placement '
+            f'to key by; `CalcJob` task `{call_name}` cannot run under `par_map`; map a task function, '
+            'a `WorkChain`, or a nested graph instead'
+        )
+        _reject(state, node=func_expr, reason=msg)
+    if isinstance(target, GraphHandle):
+        mapped_body: GraphIR | None = _lower_graph(target, stack=state.stack)
+        mapped_spec: TaskIR | None = None
+    else:
+        mapped_body = None
+        mapped_spec = target._task_spec
+    _check_par_map_callable(state, node=func_expr, label=call_name, spec=mapped_spec, body=mapped_body)
+    collection = _lower_value(state, collection_expr)
+    container = _check_par_map_collection(state, node=collection_expr, value=collection)
+    instance = _claim_name(state, f'map_{call_name}')
+    given: dict[str, _CapturedValue] = {}
+    _wire(state, instance=instance, port='collection', value=collection, given=given)
+    state.tasks.append(MapControl(name=instance, inputs=given, spec=mapped_spec, body=mapped_body, container=container))
+    if after_keyword is not None:
+        _wire_after(state, instance=instance, keyword=after_keyword)
+    collected = DataList if container == 'list' else DataDict
+    return _Reference(instance, port='result', shape=LeafShape(types=(collected,)))
+
+
+def _bind_par_map_arguments(
+    state: _LoweringState, expression: ast.Call
+) -> tuple[ast.expr, ast.expr, ast.keyword | None]:
+    """Bind `par_map(func, values)` positionally or by keyword, separating `after` ordering."""
+    after: ast.keyword | None = None
+    positional: list[ast.expr] = list(expression.args)
+    named: dict[str, ast.expr] = {}
+    for keyword in expression.keywords:
+        if keyword.arg is None:
+            msg = 'inputs wire by name, so spreading hides which is which; pass `func` and `values` explicitly instead.'
+            _reject(state, node=keyword, reason=msg)
+        if keyword.arg == 'after':
+            if after is not None:
+                msg = 'one port takes one value; duplicate input `after`; pass it once.'
+                _reject(state, node=keyword, reason=msg)
+            after = keyword
+            continue
+        named[keyword.arg] = keyword.value
+    for key in ('func', 'values'):
+        if key in named and positional:
+            msg = f'`{key}` is given twice, positionally and by keyword; pass it once instead.'
+            _reject(state, node=expression, reason=msg)
+    if positional and named:
+        msg = 'pass the callable and the collection positionally as `par_map(func, values)`, or by keyword instead.'
+        _reject(state, node=expression, reason=msg)
+    if len(positional) == 2:
+        return positional[0], positional[1], after
+    if len(positional) == 1 or len(positional) > 2 or set(named) != {'func', 'values'}:
+        msg = 'maps apply one callable to one collection; call `par_map(func, values)` with both instead.'
+        _reject(state, node=expression, reason=msg)
+    return named['func'], named['values'], after
+
+
+def _resolve_par_map_callable(
+    state: _LoweringState, expression: ast.expr
+) -> FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle:
+    """Resolve the mapped callable to its task handle or graph, rejecting anything else."""
+    if isinstance(expression, ast.Name):
+        name = expression.id
+        if name in state.names:
+            msg = (
+                'a name cannot be both a wire and a declaration; '
+                f'{name!r} is also used as a result name; pass the task or graph by its declared name instead'
+            )
+            _reject(state, node=expression, reason=msg)
+        target = state.definition.function.__globals__.get(name)
+        label: str = name
+    elif isinstance(expression, ast.Attribute):
+        as_call = ast.Call(func=expression, args=[], keywords=[])
+        ast.copy_location(as_call, expression)
+        target, label = _resolve_dotted(state, expression=as_call)
+    else:
+        msg = 'maps apply a registered declaration per element; pass a `@task` or `@graph` by name instead.'
+        _reject(state, node=expression, reason=msg)
+    if isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle)):
+        return target
+    if target is None and label not in vars(builtins):
+        msg = 'calls must name an importable declaration; ' + f'unknown name {label!r}; check the spelling instead'
+        _reject(state, node=expression, reason=msg)
+    msg = (
+        'only registered declarations carry input and output contracts; '
+        + f'unregistered call {label!r}; add `@task` or `@graph` above it instead'
+    )
+    _reject(state, node=expression, reason=msg)
+
+
+def _check_par_map_callable(
+    state: _LoweringState, node: ast.AST, label: str, spec: TaskIR | None, body: GraphIR | None
+) -> None:
+    """Reject mapped callables that are not unary with exactly one leaf output."""
+    shape = spec.input_shape if spec is not None else body.input_shape  # type: ignore[union-attr]
+    assert isinstance(shape, NamespaceShape)
+    if len(shape.fields) != 1:
+        msg = (
+            'maps wire one element into one input, so the callable takes exactly one input; '
+            + f'`{label}` declares {len(shape.fields)} inputs; map a unary task or graph instead'
+        )
+        _reject(state, node=node, reason=msg)
+    result_port = spec.result_port if spec is not None else body.result_port  # type: ignore[union-attr]
+    result_shape = spec.result_shape if spec is not None else body.result_shape  # type: ignore[union-attr]
+    if not result_port or not isinstance(result_shape, LeafShape):
+        msg = (
+            'maps collect one output per element into the result container, so the callable returns exactly one value; '
+            + f'`{label}` must declare a single output; map a unary task or graph with one output instead'
+        )
+        _reject(state, node=node, reason=msg)
+
+
+def _check_par_map_collection(
+    state: _LoweringState,
+    node: ast.AST,
+    value: _Reference | int | float | str | bool | dict[str, _CapturedValue] | None,
+) -> t.Literal['list', 'dict']:
+    """Reject collections that are not a `DataList`/`DataDict` wire, returning the container kind."""
+    if not isinstance(value, _Reference) or not isinstance(value.shape, LeafShape):
+        msg = (
+            'maps iterate a stored collection, so literals and namespaces cannot drive them; '
+            + 'pass a `DataList` or `DataDict` input or task output instead'
+        )
+        _reject(state, node=node, reason=msg)
+    kinds = value.shape.types
+    if kinds is not None and len(kinds) == 1 and issubclass(kinds[0], DataList):
+        return 'list'
+    if kinds is not None and len(kinds) == 1 and issubclass(kinds[0], DataDict):
+        return 'dict'
+    msg = (
+        'maps iterate owned containers element by element, so the collection contract must name its kind; '
+        + 'annotate the collection as `DataList` or `DataDict` instead'
+    )
+    _reject(state, node=node, reason=msg)
+
+
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
     """Place a task or graph call with wired graph inputs."""
     name: str = _call_target_name(state, expression=expression)
     assert isinstance(expression, ast.Call)
+    if _resolves_to_par_map(state, expression, name):
+        return _lower_par_map(state, expression)
     target: FunctionTaskHandle[t.Any, t.Any] | CalcJobTaskHandle | WorkChainTaskHandle | GraphHandle = (
         _registered_target(state, expression=expression, name=name)
     )

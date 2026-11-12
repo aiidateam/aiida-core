@@ -25,6 +25,7 @@ from aiida.engine.processes.graphs.ir import (
     GraphIR,
     GraphTask,
     LoopControl,
+    MapControl,
     OutputTree,
     ProcessTask,
     SubgraphTask,
@@ -33,7 +34,7 @@ from aiida.engine.processes.graphs.ir import (
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
-from aiida.orm import EnumData, Node, from_aiida_type, load_node, to_aiida_type
+from aiida.orm import DataDict, DataList, EnumData, Node, from_aiida_type, load_node, to_aiida_type
 from aiida.orm.nodes.data.bool import Bool
 
 __all__ = ('GraphRun',)
@@ -198,14 +199,59 @@ class GraphRun:
         """Return the dispatched instances that have not completed yet."""
         return {instance: pk for instance, pk in self.dispatched.items() if instance not in self.done}
 
+    def _collect_instance(self, name: str) -> str:
+        """Return the aggregator instance collecting one map's item outputs.
+
+        Ordinary placements claim `name`, `name_2`, and any explicit function name, so the
+        defaults `name_{index}` and `name_collect` can collide with them (e.g. a task
+        function literally named `map_increment_0` or `map_increment_collect`). Suffix with
+        `_map` until the label leaves every placement name free. The result depends only on
+        the static `task_names`, so checkpoints rebuild the same labels."""
+        taken = set(self.graph.task_names)
+        candidate = f'{name}_collect'
+        while candidate in taken:
+            candidate = f'{candidate}_map'
+        return candidate
+
+    def _item_instance(self, name: str, index: int) -> str:
+        """Return one map item instance, avoiding placement names and every map collector."""
+        taken = set(self.graph.task_names)
+        collects = {self._collect_instance(task.name) for task in self.graph.tasks if isinstance(task, MapControl)}
+        candidate = f'{name}_{index}'
+        while candidate in taken or candidate in collects:
+            candidate = f'{candidate}_map'
+        return candidate
+
+    def _map_items(self, name: str) -> list[str]:
+        """Return the item instances of one map, excluding its collector."""
+        collect = self._collect_instance(name)
+        return [instance for instance in self.instances.get(name, []) if instance != collect]
+
     @property
     def finished(self) -> set[str]:
         """Return the tasks whose instances all completed or passed state through."""
-        return {
-            name
-            for name, runs in self.instances.items()
-            if name in self.passed or all(instance in self.done for instance in runs)
-        }
+        done: set[str] = set()
+        for name, runs in self.instances.items():
+            if isinstance(self.graph.task(name), MapControl):
+                # Maps finish when their collector created the result container, or as failed
+                # once every item completed with at least one failure (no collector ever runs).
+                # Declared-output problems fail the same way: every item finished but the
+                # collector never runs, so the map is finished-failed.
+                collect = self._collect_instance(name)
+                items = [instance for instance in runs if instance != collect]
+                if collect in self.done or (
+                    items
+                    and all(instance in self.done for instance in items)
+                    and (
+                        any(not self._is_finished_ok(self.done[instance]) for instance in items)
+                        or self.missing_outputs(name)
+                        or self.mistyped_outputs(name)
+                    )
+                ):
+                    done.add(name)
+            elif name in self.passed or all(instance in self.done for instance in runs):
+                done.add(name)
+        return done
 
     def _is_finished_ok(self, pk: int) -> bool:
         """Return whether a finished node succeeded, caching the answer per node."""
@@ -215,21 +261,37 @@ class GraphRun:
 
     @property
     def succeeded(self) -> set[str]:
-        """Return the finished tasks whose outputs all completed successfully.
+        """Return the finished tasks whose outputs all finished successfully."""
+        ok: set[str] = set()
+        for name in self.finished:
+            if name in self.passed:
+                ok.add(name)
+                continue
+            if isinstance(self.graph.task(name), MapControl):
+                collect = self._collect_instance(name)
+                items = [instance for instance in self.instances[name] if instance != collect]
+                if (
+                    collect in self.done
+                    and all(self._is_finished_ok(self.done[instance]) for instance in (*items, collect))
+                    and not self.missing_outputs(name)
+                    and not self.mistyped_outputs(name)
+                ):
+                    ok.add(name)
+                continue
+            if all(self._has_result(name, self.done[instance]) for instance in self.instances[name]) and not (
+                self.missing_outputs(name) or self.mistyped_outputs(name)
+            ):
+                ok.add(name)
+        return ok
 
-        A declared `Result` failure counts as completed: the error arm carries the
-        declared outcome, so dependents still run and branch on it.
-        """
-        return {
-            name
-            for name in self.finished
-            if name in self.passed
-            or (
-                all(self._has_result(name, self.done[instance]) for instance in self.instances[name])
-                and not self.missing_outputs(name)
-                and not self.mistyped_outputs(name)
-            )
-        }
+    def failed_map_items(self, name: str) -> list[str]:
+        """Return the item instances of a map that did not finish successfully."""
+        collect = self._collect_instance(name)
+        return [
+            instance
+            for instance in self.instances.get(name, [])
+            if instance != collect and instance in self.done and not self._is_finished_ok(self.done[instance])
+        ]
 
     def _has_result(self, name: str, pk: int) -> bool:
         """Return whether a finished task completed, counting declared failures as completed.
@@ -271,6 +333,18 @@ class GraphRun:
         success arms are not missing outputs.
         """
         task = self.graph.task(name)
+        if isinstance(task, MapControl):
+            if task.spec is None or not task.spec.declared_outputs.fields:
+                return []
+            declared = task.spec.declared_outputs
+            missing: list[str] = []
+            for instance in self._map_items(name):
+                if instance not in self.done:
+                    continue
+                for port in _missing_declared_outputs(declared, load_node(self.done[instance])):
+                    if port not in missing:
+                        missing.append(port)
+            return missing
         if not isinstance(task, ProcessTask) or not task.spec.declared_outputs.fields:
             return []
         if self._is_mapped_failure(name):
@@ -280,6 +354,18 @@ class GraphRun:
     def mistyped_outputs(self, name: str) -> list[str]:
         """Return a message per declared output the latest instance of a finished task produced with another type."""
         task = self.graph.task(name)
+        if isinstance(task, MapControl):
+            if task.spec is None or not task.spec.declared_outputs.fields:
+                return []
+            declared = task.spec.declared_outputs
+            messages: list[str] = []
+            for instance in self._map_items(name):
+                if instance not in self.done:
+                    continue
+                for message in _mistyped_declared_outputs(declared, load_node(self.done[instance])):
+                    if message not in messages:
+                        messages.append(message)
+            return messages
         if not isinstance(task, ProcessTask) or not task.spec.declared_outputs.fields:
             return []
         return _mistyped_declared_outputs(task.spec.declared_outputs, self._produced_by(name))
@@ -291,11 +377,13 @@ class GraphRun:
         return [name for name in self.graph.task_names if name in finished and name not in succeeded]
 
     def step(self) -> _Step:
-        """Advance scheduling: continue loops, then dispatch every ready task."""
+        """Advance scheduling: continue loops and maps, then dispatch every ready task."""
         step = _Step()
         for task in self.graph.tasks:
             if isinstance(task, LoopControl) and task.name in self.instances:
                 self._continue_loop(task, step)
+            if isinstance(task, MapControl) and task.name in self.instances:
+                self._continue_map(task, step)
         succeeded = self.succeeded
         while ready := self._ready(succeeded | self.passed.keys()):
             for name in ready:
@@ -373,6 +461,8 @@ class GraphRun:
             self._begin_branch(task, inputs, step)
         elif isinstance(task, LoopControl):
             self._begin_loop(task, inputs, step)
+        elif isinstance(task, MapControl):
+            self._begin_map(task, inputs, step)
         else:
             self.instances[name] = [name]
             step.begin(name, task, inputs, task.body if isinstance(task, SubgraphTask) else None)
@@ -433,6 +523,88 @@ class GraphRun:
         carried = _regroup_returned_outputs(task.body, outputs)
         absent = {name: None for name in task.body.outputs if name not in outputs and name not in carried}
         self._begin_iteration(task, {**self._inputs_for(task), **absent, **outputs, **carried}, step)
+
+    def _map_collection(self, task: MapControl, inputs: dict[str, t.Any]) -> DataList | DataDict:
+        """Return the owned container one map iterates, failing loudly on anything else."""
+        collection = inputs.get('collection')
+        if not isinstance(collection, (DataList, DataDict)):
+            msg = (
+                f'map `{task.name}` iterates an owned container, but received '
+                f'`{type(collection).__name__}`; pass a `DataList` or `DataDict` instead.'
+            )
+            raise GraphRuntimeError(msg)
+        actual = 'list' if isinstance(collection, DataList) else 'dict'
+        if actual != task.container:
+            msg = (
+                f'map `{task.name}` was lowered for `{task.container}` collections but received `{actual}`; '
+                'annotate the collection as the matching container instead.'
+            )
+            raise GraphRuntimeError(msg)
+        return collection
+
+    def _begin_map(self, task: MapControl, inputs: dict[str, t.Any], step: _Step) -> None:
+        """Dispatch one child per element in a single step, collecting empty maps at once."""
+        collection = self._map_collection(task, inputs)
+        if isinstance(collection, DataList):
+            elements = list(collection)
+        else:
+            elements = [collection[key] for key in collection]
+        item_input = task.mapped_inputs.fields[0][0]
+        self.instances[task.name] = []
+        for index, element in enumerate(elements):
+            instance = self._item_instance(task.name, index)
+            # Belt-and-braces against cross-map runtime collisions; the static derivation
+            # above already avoids every placement name and collector.
+            while instance in self.dispatched or instance in self.instances[task.name]:
+                instance = f'{instance}_map'
+            self.instances[task.name].append(instance)
+            item_inputs = {item_input: element}
+            if task.spec is not None:
+                step.begin(instance, ProcessTask(name=instance, inputs={}, spec=task.spec), item_inputs)
+            else:
+                assert task.body is not None
+                step.begin(
+                    instance,
+                    SubgraphTask(name=instance, inputs={}, body=task.body),
+                    item_inputs,
+                    task.body,
+                )
+        if not elements:
+            self._begin_collect(task, inputs, step)
+
+    def _begin_collect(self, task: MapControl, inputs: dict[str, t.Any], step: _Step) -> None:
+        """Dispatch the collector creating the result container from every item output."""
+        result_port = task.mapped_result_port
+        collected: dict[str, t.Any] = {}
+        runs = self.instances[task.name]
+        collect = self._collect_instance(task.name)
+        items = [instance for instance in runs if instance != collect]
+        for index, instance in enumerate(items):
+            collected[f'item_{index}'] = _at(load_node(self.done[instance]).outputs, result_port)
+        if task.container == 'dict':
+            keys = list(self._map_collection(task, inputs))
+            if len(keys) != len(items):
+                msg = f'map `{task.name}` collected {len(items)} outputs for {len(keys)} keys.'
+                raise GraphRuntimeError(msg)
+            collected['keys'] = keys
+        self.instances[task.name].append(collect)
+        step.begin(collect, task, collected)
+
+    def _continue_map(self, task: MapControl, step: _Step) -> None:
+        """Dispatch the collector once every item finished successfully."""
+        collect = self._collect_instance(task.name)
+        if collect in self.dispatched:
+            return
+        runs = [instance for instance in self.instances.get(task.name, []) if instance != collect]
+        if any(instance not in self.done for instance in runs):
+            return
+        if any(not self._is_finished_ok(self.done[instance]) for instance in runs):
+            # A failed item fails the map; the collector never runs.
+            return
+        if self.missing_outputs(task.name) or self.mistyped_outputs(task.name):
+            # Declared-output problems fail the map like an unsuccessful item.
+            return
+        self._begin_collect(task, self._inputs_for(task), step)
 
     def _begin_iteration(self, task: LoopControl, inputs: dict[str, t.Any], step: _Step) -> None:
         """Dispatch one numbered loop iteration over the loop body."""

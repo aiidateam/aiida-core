@@ -77,6 +77,7 @@ __all__ = (
     'if_',
     'interruptable_task',
     'is_process_function',
+    'par_map',
     'process_handler',
     'return_',
     'run',

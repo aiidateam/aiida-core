@@ -54,6 +54,12 @@ Loading a node whose storage has not been migrated now raises `IncompatibleStora
 
 ### New features
 
+#### Parallel maps in source graphs
+
+`aiida.engine.par_map(task_or_graph, values)` maps a unary task or graph over an `orm.DataList` or the values of an `orm.DataDict` inside a `@graph` body.
+Items run independently, results preserve list order or dictionary keys, and a collector calculation creates the output container with full provenance.
+Empty containers, checkpoint restarts, and serialized graph declarations are supported.
+
 #### Processes defined in a notebook cell
 
 A `calcfunction`, `workfunction`, `CalcJob` or `WorkChain` defined in a Jupyter notebook, or in any script run as `__main__`, can now be submitted to the daemon.

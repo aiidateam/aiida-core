@@ -13,7 +13,15 @@ from __future__ import annotations
 import typing as t
 
 from aiida.common.exceptions import GraphTypeCheckError
-from aiida.engine.processes.graphs.ir import BranchControl, Endpoint, LoopControl, OutputTree, _input_ports_at, _port_at
+from aiida.engine.processes.graphs.ir import (
+    BranchControl,
+    Endpoint,
+    LoopControl,
+    MapControl,
+    OutputTree,
+    _input_ports_at,
+    _port_at,
+)
 from aiida.engine.processes.ports import OutputPort, PortNamespace, _infer_node_types
 from aiida.orm.nodes.data.datanode import DataNode
 
@@ -123,6 +131,8 @@ def _validate_region(task: GraphTask) -> None:
         _check_compatible(
             task.body.build_output_namespace(), task.otherwise.build_output_namespace(), f'branch `{task.name}`'
         )
+    if isinstance(task, MapControl):
+        _validate_map(task)
     if isinstance(task, LoopControl) and type(task.max_iterations) is not int:
         msg = f'loop `{task.name}` needs an integer `max_iterations`.'
         raise GraphTypeCheckError(msg)
@@ -134,6 +144,29 @@ def _validate_region(task: GraphTask) -> None:
         msg = (
             f'loop `{task.name}` must take its condition as state and return it updated, '
             'allowing at least one iteration.'
+        )
+        raise GraphTypeCheckError(msg)
+
+
+def _validate_map(task: MapControl) -> None:
+    """Check that a map carries one unary callable with a single leaf output."""
+
+    if (task.spec is None) == (task.body is None):
+        msg = f'map `{task.name}` carries exactly one mapped callable: a task `spec` or a nested graph `body`.'
+        raise GraphTypeCheckError(msg)
+    if task.body is not None:
+        validate_graph(task.body)
+    fields = task.mapped_inputs.fields
+    if len(fields) != 1:
+        msg = (
+            f'map `{task.name}` wires one element into one input, so the callable takes exactly one input; '
+            'map a unary task or graph instead.'
+        )
+        raise GraphTypeCheckError(msg)
+    if not task.mapped_result_port:
+        msg = (
+            f'map `{task.name}` collects one output per element, so the callable returns exactly one value; '
+            'map a unary task or graph with one output instead.'
         )
         raise GraphTypeCheckError(msg)
 

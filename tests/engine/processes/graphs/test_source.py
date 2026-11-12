@@ -434,7 +434,7 @@ def test_spec_version_and_unknown_task_kind_rejection() -> None:
     with pytest.raises(GraphTypeCheckError, match='cannot read a task declaration'):
         TaskIR.from_dict(task_data)
     data = calls.chain.build().to_dict()
-    data['tasks'][0]['kind'] = 'map'
+    data['tasks'][0]['kind'] = 'scatter'
     with pytest.raises(GraphTypeCheckError, match='unsupported graph task kind'):
         GraphIR.from_dict(data)
     with pytest.raises(GraphTypeCheckError, match='Unknown graph value shape'):

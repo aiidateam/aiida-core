@@ -20,7 +20,8 @@ from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _at, _prepare_graph_inputs
-from aiida.engine.processes.graphs.ir import GraphIR, ProcessTask, _input_ports_at
+from aiida.engine.processes.graphs.ir import GraphIR, MapControl, ProcessTask, _input_ports_at
+from aiida.engine.processes.graphs.par_map import _collect_dict, _collect_list
 from aiida.engine.processes.graphs.run import GraphRun, _GraphRunState, _Start
 from aiida.engine.processes.graphs.tasks import _merge_task_metadata, _needs_metadata
 from aiida.engine.processes.ports import PortNamespace
@@ -175,6 +176,7 @@ class GraphProcess(Process):
         step = self._run_state.step()
         for start in step.starts:
             self._submit(start)
+
         if self._run_state.pending:
             return Wait(self._do_step, 'waiting for dispatched tasks')
         return self._finish()
@@ -188,6 +190,8 @@ class GraphProcess(Process):
             inputs[self._GRAPH] = self._stored_body(start.body, inputs[self._GRAPH])
         elif isinstance(start.task, ProcessTask):
             process_class, inputs = start.task.spec.process_class, start.inputs
+        elif isinstance(start.task, MapControl):
+            process_class, inputs = self._collector_for(start.task, start.inputs)
         else:
             msg = f'unsupported task `{start.task.name}`.'
             raise GraphTypeCheckError(msg)
@@ -211,6 +215,15 @@ class GraphProcess(Process):
         if key not in self._body_nodes:
             self._body_nodes[key] = declaration.store()
         return self._body_nodes[key]
+
+    def _collector_for(self, task: MapControl, inputs: dict[str, t.Any]) -> tuple[type[Process], dict[str, t.Any]]:
+        """Return the collector creating one map's result container from its item outputs.
+
+        The collector is a calculation, so the result container carries a `CREATE` link from it
+        while the graph only ever returns that existing container.
+        """
+        collected = _collect_list if task.container == 'list' else _collect_dict
+        return collected.process_class, dict(inputs)
 
     def _stored_task_metadata(self) -> dict[str, t.Any]:
         """Return the launch metadata stashed per placement name."""
@@ -244,6 +257,9 @@ class GraphProcess(Process):
         state = self._run_state
         if state.failed:
             failed = state.failed[0]
+            if isinstance(state.graph.task(failed), MapControl):
+                for instance in state.failed_map_items(failed):
+                    self.report(f'map `{failed}` item `{instance}` did not finish successfully')
             if missing := state.missing_outputs(failed):
                 self.report(f'task `{failed}` finished without its declared outputs {missing}')
             for message in state.mistyped_outputs(failed):

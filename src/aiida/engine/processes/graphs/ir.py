@@ -29,6 +29,7 @@ from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_po
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
 from aiida.engine.processes.process import Process
+from aiida.orm import DataDict, DataList
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -39,6 +40,7 @@ __all__ = (
     'GraphIR',
     'GraphTask',
     'LoopControl',
+    'MapControl',
     'OutputTree',
     'ProcessTask',
     'Route',
@@ -49,7 +51,7 @@ __all__ = (
 _GRAPH_IR_VERSION: t.Final = '0.1'
 _TASK_IR_VERSION: t.Final = '0.1'
 _CONDITION_PORT: t.Final = 'condition'
-_TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop']
+_TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop', 'map']
 
 
 def _require_version(version: object, supported: str, what: str) -> str:
@@ -634,6 +636,10 @@ class GraphTask(abc.ABC):
                     max_iterations=data['max_iterations'],
                     **common,
                 )
+            if kind == 'map':
+                nested = GraphIR.from_dict(data['body']) if data.get('body') is not None else None
+                mapped = TaskIR.from_dict(data['spec']) if data.get('spec') is not None else None
+                return MapControl(spec=mapped, body=nested, container=data['container'], **common)
         except KeyError as exception:
             msg = f'malformed graph task declaration; missing key {exception}.'
             raise GraphTypeCheckError(msg) from exception
@@ -754,6 +760,73 @@ class LoopControl(BodyTask):
     @override
     def to_dict(self) -> dict[str, t.Any]:
         return {**super().to_dict(), 'condition_port': self.condition_port, 'max_iterations': self.max_iterations}
+
+
+@dataclass(frozen=True, kw_only=True)
+class MapControl(GraphTask):
+    """A fan-out applying one unary task or graph to every element of an owned container.
+
+    ``collection`` is the input port receiving the ``DataList``/``DataDict`` wire; exactly one
+    of ``spec`` (a unary task) or ``body`` (a unary nested graph) carries the mapped callable.
+    ``container`` records the lowered collection kind, so the single ``result`` output keeps it.
+    The scheduler dispatches one child per element plus a collector calculation that creates
+    the result container; the graph itself only returns that existing container.
+    """
+
+    KIND: t.ClassVar[_TaskKind] = 'map'
+    spec: TaskIR | None = None
+    body: GraphIR | None = None
+    container: t.Literal['list', 'dict'] = 'list'
+
+    def __post_init__(self) -> None:
+        """Reject maps that do not carry exactly one mapped callable of a known container kind."""
+        if (self.spec is None) == (self.body is None):
+            msg = 'maps carry exactly one mapped callable: a task `spec` or a nested graph `body`.'
+            raise GraphTypeCheckError(msg)
+        if self.container not in ('list', 'dict'):
+            msg = f'maps collect `list` or `dict` containers, not `{self.container}`.'
+            raise GraphTypeCheckError(msg)
+
+    @property
+    def mapped_inputs(self) -> NamespaceShape:
+        """Return the input contract the mapped callable applies to each element."""
+        if self.spec is not None:
+            return self.spec.input_shape
+        assert self.body is not None
+        return self.body.input_shape
+
+    @property
+    def mapped_result_port(self) -> str:
+        """Return the single output port the mapped callable produces per element."""
+        if self.spec is not None:
+            return self.spec.result_port
+        assert self.body is not None
+        return self.body.result_port
+
+    @override
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the collection input accepting owned lists and mappings."""
+        namespace = PortNamespace('inputs')
+        namespace['collection'] = InputPort('collection', valid_type=(DataList, DataDict))
+        return (namespace,)
+
+    @override
+    def output_ports(self) -> PortNamespace:
+        """Return the single result container of the lowered collection kind."""
+        collected = (DataList,) if self.container == 'list' else (DataDict,)
+        namespace = PortNamespace('outputs')
+        namespace['result'] = OutputPort('result', valid_type=collected)
+        return namespace
+
+    @override
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its mapped callable and container kind."""
+        return {
+            **super().to_dict(),
+            'spec': self.spec.to_dict() if self.spec is not None else None,
+            'body': self.body.to_dict() if self.body is not None else None,
+            'container': self.container,
+        }
 
 
 @dataclass(frozen=True, kw_only=True)

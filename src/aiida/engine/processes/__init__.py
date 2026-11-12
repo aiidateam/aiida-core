@@ -68,6 +68,7 @@ __all__ = (
     'construct_awaitable',
     'graph',
     'if_',
+    'par_map',
     'process_handler',
     'return_',
     'task',

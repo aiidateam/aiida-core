@@ -585,6 +585,59 @@ The reserved ``after`` argument makes a task wait for another task without using
 ``after=(first, second)`` waits for both.
 Task functions cannot have a parameter named ``after``.
 
+Parallel maps over containers
+-----------------------------
+
+``par_map`` dispatches a unary task or graph for every element of an ``orm.DataList`` or every value of an ``orm.DataDict``.
+All items are dispatched before waiting for their results.
+The result has the same container kind, preserving list order or dictionary keys and insertion order.
+
+.. code:: python
+
+    from aiida import orm
+    from aiida.engine import graph, par_map, run, task
+
+    @task
+    def increment(value: int) -> int:
+        return value + 1
+
+    @graph
+    def increment_all(values: orm.DataList) -> orm.DataList:
+        mapped = par_map(increment, values)
+        return mapped
+
+    result = run(increment_all, values=orm.DataList([orm.Int(1), orm.Int(2)]))
+    assert [item.value for item in result['result']] == [2, 3]
+
+The mapped callable can also be a multi-step graph:
+
+.. code:: python
+
+    @graph
+    def increment_twice(value: int) -> int:
+        first = increment(value=value)
+        return increment(value=first)
+
+    @graph
+    def apply_graph(values: orm.DataList) -> orm.DataList:
+        return par_map(increment_twice, values)
+
+Each list element then runs its own child graph, including all of that graph's tasks.
+Graphs containing ``par_map`` can themselves be mapped over lists of lists.
+``par_map`` also works inside ``if`` branches and ``while`` bodies.
+
+The callable must declare exactly one input and one leaf output.
+The collection must be a wire annotated as ``DataList`` or ``DataDict``; plain Python lists and dictionaries are not owned containers.
+A task can produce the collection before it is mapped, and downstream tasks can consume the mapped result.
+Element types are checked when each child receives its input.
+Mapped ``CalcJob`` tasks and per-item metadata are not supported yet.
+
+Empty collections produce empty containers without dispatching any item tasks.
+A collector calculation creates the result container from the child outputs; the graph only returns it, preserving calculation/workflow provenance rules.
+If any item fails or omits its declared output, the graph fails with ``ERROR_TASK_FAILED`` and does not run the collector.
+Map progress is checkpointed, so restarting does not resubmit completed items.
+Like task calls, ``par_map`` accepts ``after=placement`` for explicit ordering.
+
 Provenance
 ----------
 
@@ -677,7 +730,7 @@ These are gaps in the current implementation, expected to be closed with further
 * **No dry runs:** graph metadata rejects ``dry_run``.
 * **No monitors yet:** ``CalcJob`` monitor mappings cannot be wired yet, since dictionary syntax only fills fixed namespaces.
 * **Local function tasks:** a function task runs in the interpreter that runs the graph, on a daemon worker when submitted. Running it on a remote computer is not yet supported.
-* **Serial loops:** a ``while`` runs one iteration at a time. Running a task over each item of a collection in parallel requires container data types, which are in development.
+* **Serial loops:** a ``while`` runs one iteration at a time. Use ``par_map`` to run independent items of an owned container in parallel.
 * **No per-iteration outputs:** a graph output holds one node, so a loop cannot return one result per iteration, such as the trajectory of each relaxation step. A task can copy the values into one list node, without links to the original nodes. Container data types, in development, will hold the original nodes in one output.
 * **No value validators:** port types are checked, and ``PortModel`` fields reject pydantic validators; check values inside a task.
 * **Source-only authoring:** graphs are written as Python source. A graphical editor is planned.

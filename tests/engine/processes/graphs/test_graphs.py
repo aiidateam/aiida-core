@@ -668,18 +668,22 @@ def test_downstream_task_consumes_loop_output() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_loop_iterations_share_one_body_node() -> None:
-    """Loop iterations share one stored body declaration instead of one copy each."""
+def test_loop_iterations_share_one_graph_process() -> None:
+    """Loop iterations run as scopes of one graph process with hierarchical call labels."""
     outputs, node = run_get_node(loops.countdown, value=3, condition=True)
     assert node.is_finished_ok
     assert outputs['result'].value == 0
-    children: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert len(children) == 3
-    pks = {
-        child.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('graph').pk
-        for child in children.values()
+    assert isinstance(node, GraphNode)
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    labels = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
+    assert set(labels) == {
+        'loop_1_iteration_0__decrement',
+        'loop_1_iteration_0__is_positive',
+        'loop_1_iteration_1__decrement',
+        'loop_1_iteration_1__is_positive',
+        'loop_1_iteration_2__decrement',
+        'loop_1_iteration_2__is_positive',
     }
-    assert len(pks) == 1
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -717,17 +721,21 @@ def test_loop_raises_after_max_iterations(monkeypatch: pytest.MonkeyPatch) -> No
     assert isinstance(loop, LoopControl)
     capped = dataclasses.replace(spec, tasks=(dataclasses.replace(loop, max_iterations=2),))
     state = GraphRun(capped, given={'value': 3, 'condition': True})
-    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0']
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0__decrement']
 
     class _Finished:
         is_finished_ok = True
+        outputs = {'result': True}
 
     monkeypatch.setattr(run_module, 'load_node', lambda _pk: _Finished())
-    monkeypatch.setattr(run_module, '_returned', lambda _node: {'condition': True, 'value': 3})
-    state.completed('loop_1_iteration_0', 111)
+    state.completed('loop_1_iteration_0__decrement', 111)
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0__is_positive']
+    state.completed('loop_1_iteration_0__is_positive', 112)
     # One finished iteration below the cap still dispatches: the bound is `>=`, not an early trigger.
-    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_1']
-    state.completed('loop_1_iteration_1', 112)
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_1__decrement']
+    state.completed('loop_1_iteration_1__decrement', 113)
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_1__is_positive']
+    state.completed('loop_1_iteration_1__is_positive', 114)
     # At the cap the scheduler raises instead of dispatching: with `>` this would start iteration 2.
     with pytest.raises(GraphMaxIterationsError, match='exceeded 2 iterations'):
         state.step()
@@ -739,52 +747,63 @@ def test_failed_loop_iteration_dispatches_no_next_iteration(monkeypatch: pytest.
     import aiida.engine.processes.graphs.run as run_module
 
     state = GraphRun(loops.countdown.build(), given={'value': 3, 'condition': True})
-    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0']
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0__decrement']
 
     class _Failed:
         is_finished_ok = False
 
     monkeypatch.setattr(run_module, 'load_node', lambda _pk: _Failed())
-    state.completed('loop_1_iteration_0', 111)
+    state.completed('loop_1_iteration_0__decrement', 111)
     assert state.step().starts == []
-    assert state.failed == ['loop_1']
+    assert state.failed == ['loop_1_iteration_0__decrement']
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_nested_graph_has_child_workflow_provenance() -> None:
-    """A nested declaration executes as a child graph with its own task call_programs."""
+def test_nested_graph_runs_in_single_graph_process() -> None:
+    """A nested declaration executes as a scope of the root graph with hierarchical call labels."""
     outputs, node = run_get_node(call_programs.nested_multiply_add, x=2, y=3, z=4)
     assert node.is_finished_ok
     assert outputs['result'].value == 11
-    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert set(calls) == {'multiply_add'}
-    child = calls['multiply_add']
-    assert isinstance(child, GraphNode)
-    assert child.process_label == 'tests.engine.processes.graphs.programs.calls:multiply_add'
-    assert child.is_finished_ok
-    assert child.outputs.result.value == 10
-    children: dict[str, ProcessNode] = child.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
-    assert set(children) == {'multiply', 'add'}
+    assert isinstance(node, GraphNode)
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    graph_nodes = [child for child in node.called_descendants if isinstance(child, GraphNode)]
+    assert graph_nodes == []
+    assert set(node.called) == set(node.called_descendants)
+    by_label = {link.link_label: link.node for link in node.base.links.get_outgoing().all()}
+    assert {label for label, child in by_label.items() if isinstance(child, ProcessNode)} == {
+        'multiply_add__multiply',
+        'multiply_add__add',
+        'add',
+    }
+    assert all(child.is_finished_ok for child in node.called)
+    assert by_label['multiply_add__add'].outputs.result.value == 10
+    assert outputs['result'].uuid == by_label['add'].outputs.result.uuid
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_branch_children_carry_placement_labels() -> None:
-    """Branch control children show their placement name instead of a bare class name."""
-    _, node = run_get_node(branches.external_choice, value=2, condition=True)
+    """Tasks in branch scopes retain their placement in the root call labels."""
+    outputs, node = run_get_node(branches.external_choice, value=2, condition=True)
     assert node.is_finished_ok
-    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert set(calls) == {'branch_1'}
-    assert calls['branch_1'].process_label == 'branch_1'
+    assert outputs['result'].value == 3
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert [entry.link_label for entry in calls] == ['branch_1__add']
+    assert calls[0].node.is_finished_ok
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_loop_children_carry_placement_labels() -> None:
-    """Loop iterations show their placement name instead of a bare class name."""
-    _, node = run_get_node(loops.countdown, value=2, condition=True)
+    """Tasks in loop scopes retain their iteration in the root call labels."""
+    outputs, node = run_get_node(loops.countdown, value=2, condition=True)
     assert node.is_finished_ok
-    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert set(calls) == {'loop_1_iteration_0', 'loop_1_iteration_1'}
-    assert all(label == child.process_label for label, child in calls.items())
+    assert outputs['result'].value == 0
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert {entry.link_label for entry in calls} == {
+        f'loop_1_iteration_{index}__{task}' for index in range(2) for task in ('decrement', 'is_positive')
+    }
+    assert all(entry.node.is_finished_ok for entry in calls)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -1237,12 +1256,10 @@ def test_workchain_handle_accepts_plain_values() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_begin_loop_missing_condition_port_names_loop() -> None:
     """A loop dispatch without its condition port names the loop instead of raising `KeyError`."""
-    from aiida.engine.processes.graphs.run import _Step
-
     spec = loops.countdown.build()
     state = GraphRun(spec, given={'value': 3, 'condition': True})
     with pytest.raises(GraphRuntimeError, match='loop `loop_1` is missing its condition port'):
-        state._begin_loop(spec.tasks[0], {}, _Step())
+        state._begin_loop('root', spec.tasks[0], {})
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -1252,12 +1269,15 @@ def test_continue_loop_missing_condition_port_names_loop(monkeypatch: pytest.Mon
 
     class _Finished:
         is_finished_ok = True
+        outputs = {'result': 3}
 
     monkeypatch.setattr(run_module, 'load_node', lambda _pk: _Finished())
-    monkeypatch.setattr(run_module, '_returned', lambda _node: {})
     state = GraphRun(loops.countdown.build(), given={'value': 3, 'condition': True})
-    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0']
-    state.completed('loop_1_iteration_0', 111)
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0__decrement']
+    state.completed('loop_1_iteration_0__decrement', 111)
+    assert [start.instance for start in state.step().starts] == ['loop_1_iteration_0__is_positive']
+    state.completed('loop_1_iteration_0__is_positive', 112)
+    monkeypatch.setattr(GraphRun, '_scope_outputs', lambda self, _key: {})
     with pytest.raises(GraphRuntimeError, match='loop `loop_1` is missing its condition port'):
         state.step()
 

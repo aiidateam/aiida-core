@@ -20,6 +20,7 @@ from types import UnionType
 
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.links import validate_link_label
+from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.generic import ports
 from aiida.engine.processes.generic.ports import breadcrumbs_to_port
 from aiida.engine.processes.port_model import _is_a_plain_class, _is_structured, _namespace_value, _without_marks
@@ -458,6 +459,33 @@ def _origin_storable(origin: t.Any, annotation: t.Any) -> bool:
     return False
 
 
+def _canonical_enum_member(valid_type: type | tuple[type, ...] | None, value: t.Any) -> Enum | None:
+    """Resolve a stored member onto the declared enum class duplicated by executor serialization."""
+    kinds = valid_type if isinstance(valid_type, tuple) else (valid_type,)
+    enums = tuple(kind for kind in kinds if isinstance(kind, type) and issubclass(kind, Enum))
+    if not enums or not isinstance(value, (Enum, EnumData)):
+        return None
+    loader = get_object_loader()
+    if isinstance(value, EnumData):
+        identifier = value.identifier
+    else:
+        try:
+            identifier = loader.identify_object(type(value))
+        except ImportError:
+            return None
+    for kind in enums:
+        try:
+            declared_identifier = loader.identify_object(kind)
+        except ImportError:
+            continue
+        if declared_identifier != identifier:
+            continue
+        member = kind.__members__.get(value.name)
+        if member is not None and member.value == value.value:
+            return member
+    return None
+
+
 def _runtime_value(
     valid_type: type | tuple[type, ...] | None,
     value: t.Any,
@@ -466,6 +494,9 @@ def _runtime_value(
     """Preserve accepted nodes and unwrap only values matching the runtime declaration."""
     if valid_type is None or isinstance(value, valid_type):
         return value
+    canonical = _canonical_enum_member(valid_type, value)
+    if canonical is not None:
+        return canonical
     if isinstance(value, DataNode):
         converted = from_aiida_type(value)
         return converted if isinstance(converted, valid_type) else value

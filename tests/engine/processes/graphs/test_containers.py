@@ -28,7 +28,6 @@ from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.orm import DataDict, DataList
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.process.process import ProcessNode
-from aiida.orm.nodes.process.workflow.graph import GraphNode
 from tests.engine.processes.graphs.programs import containers
 
 pytestmark = pytest.mark.presto
@@ -201,18 +200,17 @@ def test_dict_chain_provenance() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_nested_graph_container_provenance() -> None:
-    """A nested container graph executes as a child graph returning the existing sum."""
+    """A nested container graph executes as a scope of the root graph returning the existing sum."""
     original = DataList([Int(1), Int(2)])
     outputs, node = run_get_node(containers.outer_sum, values=original)
     assert node.is_finished_ok
     assert outputs['result'].value == 3
-    calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert set(calls) == {'inner_sum'}
-    child = calls['inner_sum']
-    assert isinstance(child, GraphNode)
-    assert child.is_finished_ok
-    assert child.outputs.result.value == 3
-    assert outputs['result'].uuid == child.outputs.result.uuid
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
+    assert set(calls) == {'inner_sum__list_sum'}
+    summed = node.base.links.get_outgoing(link_label_filter='inner_sum__list_sum').one().node
+    assert summed.is_finished_ok
+    assert outputs['result'].uuid == summed.outputs.result.uuid
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
 
 

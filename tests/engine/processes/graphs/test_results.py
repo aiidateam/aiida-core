@@ -553,17 +553,14 @@ def test_declared_failure_branches(
     outputs, node = run_get_node(declaration, **inputs)
     assert node.is_finished_ok
     assert outputs['result'].value == expected
-    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
-    assert len(calls) == 1
-    (fallible,) = calls.values()
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert len(calls) == 1 + (branch_child is not None)
+    (fallible,) = [link.node for link in calls if '__' not in link.link_label]
     assert fallible.exit_status == task_status
     assert set(fallible.outputs) == {task_arm}
-    branches = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert len(branches) == 1
-    (branch,) = branches.values()
-    assert branch.is_finished_ok
-    placed = _placed_call_labels(branch)
-    assert placed == ({branch_child} if branch_child is not None else set())
+    assert all(link.node.is_finished_ok for link in calls if '__' in link.link_label)
+    assert _placed_call_labels(node) == ({branch_child} if branch_child is not None else set())
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -657,23 +654,23 @@ def test_single_name_binding_selects_arms(
     outputs, node = run_get_node(results.selected_ratio, **inputs)
     assert node.is_finished_ok
     assert outputs['result'].value == expected
-    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
-    assert len(calls) == 1
-    (fallible,) = calls.values()
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+    assert len(calls) == 2
+    (fallible,) = [link.node for link in calls if '__' not in link.link_label]
     assert fallible.exit_status == task_status
-    branches = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert len(branches) == 1
-    (branch,) = branches.values()
-    assert _placed_call_labels(branch) == {handler}
+    assert set(fallible.outputs) == ({'value'} if task_status == 0 else {'error'})
+    assert all(link.node.is_finished_ok for link in calls if '__' in link.link_label)
+    assert _placed_call_labels(node) == {handler}
 
 
 def _placed_call_labels(node: t.Any) -> set[str]:
-    """Return the calc labels placed below a branch, descending into nested branches."""
-    labels = set(node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested())
-    nested = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    for child in nested.values():
-        labels.update(_placed_call_labels(child))
-    return labels
+    """Return task names placed inside branch scopes of the single graph root."""
+    return {
+        link.link_label.split('__')[-1]
+        for link in node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()
+        if '__' in link.link_label
+    }
 
 
 def test_result_task_handle_call_raises() -> None:

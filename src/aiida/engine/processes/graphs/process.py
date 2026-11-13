@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Execute static graphs and Python-valued task functions on the process engine."""
+"""Execute static graphs with one process owning every nested scope."""
 
 from __future__ import annotations
 
@@ -28,9 +28,29 @@ from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
 from aiida.engine.processes.states import Wait
-from aiida.orm import Dict, GraphNode
+from aiida.orm import Dict, GraphNode, Node
 
 __all__ = ('GraphProcess',)
+
+
+def _store_run_nodes(data: t.Any) -> None:
+    """Store every unstored node in checkpointable run state, without adding provenance links.
+
+    Nested scopes normalize their inputs into ORM nodes (defaults included), mirroring what a nested
+    child process used to store as its own inputs. The single root process never links these scope
+    inputs: workflows must not `CREATE` scientific outputs, and scope labels would collide with the
+    root inputs. Standalone storage keeps the nodes YAML-serializable for checkpoints while leaving
+    provenance to the child tasks that consume them.
+    """
+    if isinstance(data, Node):
+        if not data.is_stored:
+            data.store()
+    elif isinstance(data, Mapping):
+        for value in data.values():
+            _store_run_nodes(value)
+    elif isinstance(data, (list, tuple)):
+        for value in data:
+            _store_run_nodes(value)
 
 
 def _serialize_graph_inputs(graph: GraphIR, given: Mapping[str, t.Any]) -> dict[str, t.Any]:
@@ -84,7 +104,6 @@ class GraphProcess(Process):
         self._run: GraphRun | None = None
         self._saved: _GraphRunState = {}
         self._watched_pks: set[int] = set()
-        self._body_nodes: dict[int, Dict] = {}
         super().__init__(*args, **kwargs)
 
     @override
@@ -137,7 +156,10 @@ class GraphProcess(Process):
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         """Checkpoint the scheduling progress and the graph input sources."""
         super().save_instance_state(out_state, save_context)
-        out_state['run'] = self._run_state.to_dict()
+        run_state = self._run_state.to_dict()
+        # Scope inputs must be stored before encoding: YAML checkpoints reference nodes by UUID.
+        _store_run_nodes(run_state)
+        out_state['run'] = self._encode_input_args(t.cast(dict[str, t.Any], run_state))
         out_state['graph_input_sources'] = self._encode_input_args(
             dict(self._input_sources.get(self._GRAPH_INPUTS, {}))
         )
@@ -148,8 +170,10 @@ class GraphProcess(Process):
         super().load_instance_state(saved_state, load_context)
         self._run = None
         self._watched_pks = set()
-        self._body_nodes = {}
-        self._saved = t.cast(_GraphRunState, dict(saved_state.get('run', {})))
+        saved_run = saved_state.get('run', {})
+        if isinstance(saved_run, str):
+            saved_run = self._decode_input_args(saved_run)
+        self._saved = t.cast(_GraphRunState, dict(saved_run))
         if 'graph_input_sources' in saved_state:
             self._input_sources = AttributesFrozendict(
                 {**self._input_sources, self._GRAPH_INPUTS: self._decode_input_args(saved_state['graph_input_sources'])}
@@ -182,13 +206,9 @@ class GraphProcess(Process):
         return self._finish()
 
     def _submit(self, start: _Start) -> None:
-        """Submit one task instance as a child process with an explicit call link."""
+        """Submit one task run as a child process with an explicit hierarchical call link."""
         process_class: type[Process]
-        if start.body is not None:
-            process_class = GraphProcess
-            inputs = self._launch_inputs(start.body, start.inputs, task_metadata=self._stored_task_metadata() or None)
-            inputs[self._GRAPH] = self._stored_body(start.body, inputs[self._GRAPH])
-        elif isinstance(start.task, ProcessTask):
+        if isinstance(start.task, ProcessTask):
             process_class, inputs = start.task.spec.process_class, start.inputs
         elif isinstance(start.task, MapControl):
             process_class, inputs = self._collector_for(start.task, start.inputs)
@@ -203,18 +223,6 @@ class GraphProcess(Process):
         assert node.pk is not None
         self._run_state.started(start.instance, node.pk)
         self.report(f'dispatched task `{start.instance}` as {node.pk}')
-
-    def _stored_body(self, body: GraphIR, declaration: Dict) -> Dict:
-        """Return the stored declaration node for a body, storing it on first dispatch.
-
-        Loop iterations redispatch the same body object, so they share one node. Bodies stay
-        alive on the run graph, so `id` keys cannot be reused. A restored process resets the
-        cache and stores one extra copy at most.
-        """
-        key: int = id(body)
-        if key not in self._body_nodes:
-            self._body_nodes[key] = declaration.store()
-        return self._body_nodes[key]
 
     def _collector_for(self, task: MapControl, inputs: dict[str, t.Any]) -> tuple[type[Process], dict[str, t.Any]]:
         """Return the collector creating one map's result container from its item outputs.
@@ -255,16 +263,16 @@ class GraphProcess(Process):
     def _finish(self) -> ExitCode | None:
         """Return the task failure exit code, or expose the graph outputs."""
         state = self._run_state
-        if state.failed:
-            failed = state.failed[0]
-            if isinstance(state.graph.task(failed), MapControl):
-                for instance in state.failed_map_items(failed):
-                    self.report(f'map `{failed}` item `{instance}` did not finish successfully')
-            if missing := state.missing_outputs(failed):
-                self.report(f'task `{failed}` finished without its declared outputs {missing}')
-            for message in state.mistyped_outputs(failed):
-                self.report(f'task `{failed}` {message}')
-            return self.exit_codes.ERROR_TASK_FAILED.format(task=failed)
+        if failures := state.failures():
+            failure = failures[0]
+            if failure.items:
+                for instance in failure.items:
+                    self.report(f'map `{failure.label}` item `{instance}` did not finish successfully')
+            if failure.missing:
+                self.report(f'task `{failure.label}` finished without its declared outputs {list(failure.missing)}')
+            for message in failure.mistyped:
+                self.report(f'task `{failure.label}` {message}')
+            return self.exit_codes.ERROR_TASK_FAILED.format(task=failure.label)
         for name, value in state.outputs().items():
             self.out(name, value)
         return None

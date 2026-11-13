@@ -502,7 +502,7 @@ Each iteration rebinds every unpacked name, so an arm the latest attempt left ab
 Subgraphs, branches, and loops
 ------------------------------
 
-Calling a graph inside another graph places it as a subgraph, which runs as a child graph process:
+Calling a graph inside another graph places it as a subgraph, which runs as a scope of the same graph process:
 
 .. code:: python
 
@@ -512,7 +512,7 @@ Calling a graph inside another graph places it as a subgraph, which runs as a ch
         return add(x=inner, y=x)
 
 An ``if`` tests a bound name, a field, or a task call.
-The intermediate representation holds both arms; at runtime, only the selected arm runs, as a child graph process.
+The intermediate representation holds both arms; at runtime, only the selected arm runs, as a scope of the same graph process.
 With an ``else``, both arms bind the same name to values of the same type:
 
 .. code:: python
@@ -562,7 +562,8 @@ A tested name must be rebound in the body; a tested call runs again after every 
         return x
 
 ``while`` takes no ``else``.
-Each iteration runs as a numbered child graph process.
+Each iteration runs as a numbered scope of the same graph process, with hierarchical call labels such as
+``loop_1_iteration_0__subtract`` that preserve the iteration identity.
 A loop that never runs leaves its names at their values from before the loop, as in Python.
 A loop still running after 1000 iterations fails the graph process.
 
@@ -622,7 +623,7 @@ The mapped callable can also be a multi-step graph:
     def apply_graph(values: orm.DataList) -> orm.DataList:
         return par_map(increment_twice, values)
 
-Each list element then runs its own child graph, including all of that graph's tasks.
+Each list element then runs as its own scope of the same graph process, including all of that graph's tasks dispatched with hierarchical call labels.
 Graphs containing ``par_map`` can themselves be mapped over lists of lists.
 ``par_map`` also works inside ``if`` branches and ``while`` bodies.
 
@@ -643,8 +644,8 @@ Provenance
 
 AiiDA records the graph run, the task runs, and their data:
 
-* The graph run is a process node.
-* Each task run is a child process node, with a call link named after its placement in the graph.
+* The graph run is a single process node: nested graphs, loop iterations, branch arms, and map elements never create intermediate process nodes.
+* Each task run is a child process node, with a call link named after its placement in the graph. Tasks inside nested scopes carry hierarchical labels, such as ``multiply_add__multiply`` or ``loop_1_iteration_0__subtract``, that preserve their scope and iteration identity.
 * Each annotated task input and output is a data node linked to the task node.
 
 AiiDA stores plain Python inputs and outputs as nodes automatically; passing an existing node reuses it.
@@ -714,7 +715,7 @@ Failures and restarts
 
 Tasks that depend on a failed task never start; independent tasks still run, and the graph then exits with ``ERROR_TASK_FAILED``.
 A declared ``Result`` failure is not a failure in this sense: the child exits with the declared status, the graph branches on it, and the graph itself can exit cleanly; see :ref:`topics:workflows:graphs:declared_failures`.
-The graph checkpoint records dispatched and finished tasks and loop iterations, so a restarted graph does not run finished work again.
+The graph checkpoint records dispatched and finished tasks with their scope hierarchy, so a restarted graph reattaches pending children and reuses finished work instead of resubmitting it.
 Caching applies to tasks as to any other process.
 
 Known limitations

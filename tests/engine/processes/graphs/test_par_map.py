@@ -178,15 +178,13 @@ def test_map_mapping_provenance() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_map_nested_graph_provenance() -> None:
-    """Mapped nested graphs run as child graphs per element under one collector."""
+    """Mapped nested graphs run as scopes of the root graph under one collector."""
     original = DataList([Int(1), Int(2)])
     outputs, node = run_get_node(par_maps.map_nested, values=original)
     assert node.is_finished_ok
-    work_calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
-    assert set(work_calls) == {'map_add_one_0', 'map_add_one_1'}
-    assert all(child.is_finished_ok for child in work_calls.values())
-    calc_calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
-    assert set(calc_calls) == {'map_add_one_collect'}
+    assert node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all() == []
+    calc_calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels()
+    assert set(calc_calls) == {'map_add_one_0__increment', 'map_add_one_1__increment', 'map_add_one_collect'}
     assert [member.value for member in outputs['result']] == [2, 3]
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
 

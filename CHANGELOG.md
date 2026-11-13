@@ -4,6 +4,10 @@
 
 ### Breaking changes
 
+#### Graphs run as a single process
+
+One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors remain child processes, dispatched with hierarchical call labels (for example `multiply_add__multiply` or `loop_1_iteration_0__decrement`). Provenance that previously contained intermediate `GraphNode` children now shows the task runs directly under the single graph node, and `GraphRun` checkpoints use a new `0.2` scope format; existing `0.1` checkpoints cannot be resumed after upgrading. The run state is checkpointed YAML-encoded (like the other process inputs), and nested scope inputs normalized from defaults are stored standalone so checkpoints can reference them; they carry no provenance links. Finish or terminate all active graph processes before upgrading.
+
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 
 Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.

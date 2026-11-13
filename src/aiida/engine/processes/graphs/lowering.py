@@ -728,6 +728,14 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
             _reject(state, node=statement, reason=msg)
         name = rebound[0]
         reference = child.names[name]
+    elif isinstance(statement, ast.If):
+        name = _lower_branch(child, statement=statement)
+        reference = child.names[name]
+        if isinstance(reference.shape, NamespaceShape):
+            return _namespace_arm(child, name=name, value=reference, alias=False)
+        # A nested branch only forwards its exposed wire, so the enclosing
+        # branch may rekey it like an alias arm when the other arm calls.
+        return _Arm(name, child=child, body=_lower_region_body(child, {reference.port: reference}), alias=True)
     else:
         name = _lower_assignment(child, statement=statement, rebind=True)
         reference = child.names[name]
@@ -796,8 +804,8 @@ def _rekey_alias(arm: _Arm, port: str) -> _Arm:
     return arm._replace(body=replace(arm.body, outputs={port: endpoint}))
 
 
-def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
-    """Lower an if statement to a branch control task."""
+def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
+    """Lower an if statement to a branch control task, returning the exposed wire."""
     _check_branch_shape(state, statement=statement)
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
@@ -806,6 +814,12 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
     else:
+        if first.name not in state.names:
+            msg = (
+                'without an `else` arm the branch keeps the prior binding, so '
+                + f'`{first.name}` must be assigned before the `if`; assign it first or add an `else` arm instead'
+            )
+            _reject(state, node=statement, reason=msg)
         selected = first.child.names[first.name]
         second = _passthrough_arm(state, name=first.name, port=selected.port, shape=selected.shape)
     _check_arms_agree(state, statement=statement, first=first, second=second)
@@ -821,6 +835,7 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
     # name restarts at the whole branch namespace instead of the call port.
     carried = '' if _is_namespace_arm(first) or _is_namespace_arm(second) else port or selected.port
     state.names[first.name] = _Reference(instance, port=carried, shape=selected.shape)
+    return first.name
 
 
 def _check_branch_shape(state: _LoweringState, statement: ast.If) -> None:
@@ -876,9 +891,7 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             assigned.add(node.targets[0].id)
         elif isinstance(node, ast.If):
-            for arm in (*node.body, *node.orelse):
-                if isinstance(arm, ast.Assign):
-                    assigned.update(target.id for target in arm.targets if isinstance(target, ast.Name))
+            assigned.update(_body_state_names([*node.body, *node.orelse]))
         elif isinstance(node, ast.While):
             assigned.update(_body_state_names(node.body))
     return assigned
@@ -947,16 +960,10 @@ def _walk_region(statements: list[ast.stmt]) -> Iterator[ast.AST]:
 
 
 def _assigned_names(statements: list[ast.stmt]) -> set[str]:
-    """Return the plain names a region body binds."""
-    assigned: set[str] = set()
-    for stmt in statements:
-        if not isinstance(stmt, ast.Assign):
-            continue
-        for target in stmt.targets:
-            for node in ast.walk(target):
-                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
-                    assigned.add(node.id)
-    return assigned
+    """Return the plain names a region body binds, at any nesting depth."""
+    return {
+        node.id for node in _walk_region(statements) if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+    }
 
 
 def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference]) -> set[int]:

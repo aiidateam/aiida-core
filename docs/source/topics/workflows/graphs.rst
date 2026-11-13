@@ -55,7 +55,7 @@ The graph body supports:
 * ``name = task(...)`` assignments, with keyword or positional arguments; positional arguments follow the declared input order. Calling another graph works the same way.
 * Graph inputs and names bound on an earlier line, such as ``product`` in ``add(x=product, y=z)``, as arguments.
 * Literal numbers, strings, booleans, and ``None`` as arguments, such as ``y=1``.
-* ``if``, with or without ``else`` but without ``elif``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
+* ``if``, with or without ``elif`` and ``else``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
 * One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys.
 * ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
 * ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches and loops.
@@ -377,7 +377,7 @@ Without an ``else``, the arm rebinds a name bound before the ``if``; when the te
             total = add(x=total, y=10)
         return total
 
-Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, or a ``while`` loop that rebinds one name bound before the ``if``.
+Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, a ``while`` loop that rebinds one name bound before the ``if``, or another ``if``, such as an ``elif``, whose arms follow the same rules.
 Whole-namespace arms on both sides must share the same fields.
 The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
 

@@ -16,11 +16,19 @@ from aiida.common.exceptions import GraphTypeCheckError
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
     Endpoint,
+    InlineOperation,
     LoopControl,
     MapControl,
     OutputTree,
     _input_ports_at,
     _port_at,
+)
+from aiida.engine.processes.graphs.operations import (
+    BINARY_OPERATIONS,
+    LEFT_PORT,
+    OPERAND_PORT,
+    RIGHT_PORT,
+    infer_operation_shape,
 )
 from aiida.engine.processes.ports import OutputPort, PortNamespace, _infer_node_types
 from aiida.orm.nodes.data.datanode import DataNode
@@ -46,6 +54,8 @@ def validate_graph(graph: GraphIR) -> None:
             msg = f'task `{task.name}` declares ports the spec cannot represent.'
             raise GraphTypeCheckError(msg) from exception
         _validate_region(task)
+        if isinstance(task, InlineOperation):
+            _validate_operation(task)
     _validate_outputs(graph, boundary)
     _validate_acyclic(graph)
 
@@ -167,6 +177,28 @@ def _validate_map(task: MapControl) -> None:
         msg = (
             f'map `{task.name}` collects one output per element, so the callable returns exactly one value; '
             'map a unary task or graph with one output instead.'
+        )
+        raise GraphTypeCheckError(msg)
+
+
+def _validate_operation(task: InlineOperation) -> None:
+    """Check that an inline operation declares the operand contracts and result its operator infers."""
+    by_name = dict(task.input_shape.fields)
+    operands = (
+        (by_name[LEFT_PORT], by_name[RIGHT_PORT]) if task.operation in BINARY_OPERATIONS else (by_name[OPERAND_PORT],)
+    )
+    try:
+        inferred = infer_operation_shape(task.operation, operands)
+    except GraphTypeCheckError as exception:
+        msg = f'inline operation `{task.name}` misdeclares its operands: {exception}.'
+        raise GraphTypeCheckError(msg) from exception
+    declared = task.result_shape.types or ()
+    produced = inferred.types or ()
+    if tuple(declared) != tuple(produced):
+        declared_names = _type_names(tuple(declared)) if declared else 'unconstrained types'
+        msg = (
+            f'inline operation `{task.name}` declares result {declared_names} '
+            f'but `{task.operation}` produces {_type_names(tuple(produced))}.'
         )
         raise GraphTypeCheckError(msg)
 

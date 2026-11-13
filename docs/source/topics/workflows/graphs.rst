@@ -56,7 +56,8 @@ The graph body supports:
 * Graph inputs and names bound on an earlier line, such as ``product`` in ``add(x=product, y=z)``, as arguments.
 * Literal numbers, strings, booleans, and ``None`` as arguments, such as ``y=1``.
 * ``if``, with or without ``elif`` and ``else``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
-* One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys.
+* Inline expressions for orchestration state: numeric arithmetic ``+ - * // %``, comparisons ``< <= > >= == !=``, and unary ``+ - not``, such as ``iterations - 1`` or ``iterations > 0``, see :ref:`topics:workflows:graphs:inline`.
+* One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys; a graph with no outputs ends with an explicit ``return {}``.
 * ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
 * ``a, b = task(...)`` to bind every output of a multi-output call, in declaration order, outside branches; loop bodies rebind unpacked names the same way.
 * Calls through an imported module, such as ``my_module.add(...)``.
@@ -65,10 +66,10 @@ The graph body supports:
 * ``after=first`` or ``after=(first, second)`` to wait for earlier calls without passing their values.
 * A docstring as the first statement.
 
-Every call is assigned to a name, including calls to tasks without outputs; only ``return`` and the test of an ``if`` or ``while`` take a call directly.
+Every call is assigned to a name, including calls to tasks without outputs; ``return`` and the tests of ``if`` and ``while`` also take inline expressions and calls directly.
 Each name is bound once; only ``if`` arms and ``while`` bodies rebind names bound before them.
 Any other construct raises a ``GraphLanguageError`` naming its source line when the intermediate representation is built.
-For example, an inline comparison in an ``if`` condition:
+For example, an inline comparison in an ``if`` condition just runs:
 
 .. code:: python
 
@@ -80,36 +81,47 @@ For example, an inline comparison in an ``if`` condition:
             chosen = add(x=x, y=2)
         return chosen
 
-fails with:
+.. _topics:workflows:graphs:inline:
 
-.. code:: text
+Inline operations
+^^^^^^^^^^^^^^^^^^
 
-    GraphLanguageError my_module.py:3:8: my_module:choose_by_sign: operators compute a new value, which only a task can create and record; put this check in a task and use its result instead
-        if x > 0:
-           ^
-
-Computations such as ``x > 0`` belong in tasks for three reasons:
-
-* **Provenance:** every data node in AiiDA is created by a calculation that records its inputs (see :ref:`topics:provenance:concepts`). The ``Bool`` result of ``x > 0`` computed inline would have no creator.
-* **Explicit tasks:** every calculation in the provenance graph is a call written in the graph body. Compiling ``x > 0`` into an implicit task would record a calculation absent from the source.
-* **Non-blocking execution:** tasks run as separate processes, on daemon workers when submitted. Inline code would run inside the graph process and could block it, and AiiDA cannot tell in advance how expensive an expression is.
-
-Instead, a task returning the check creates the node, and the ``if`` branches on it:
+Arithmetic, comparisons, and unary operators compute orchestration state inline, without a task:
+``+ - * // %``, ``< <= > >= == !=``, and unary ``+ - not``. Operands are graph inputs, names bound
+on an earlier line, or literals. A ``while`` tests an inline comparison directly and steps its
+counter with inline arithmetic:
 
 .. code:: python
 
-    @task
-    def is_positive(x: int) -> bool:
-        return x > 0
-
     @graph
-    def choose_by_sign(x: int) -> int:
-        positive = is_positive(x=x)
-        if positive:
-            chosen = add(x=x, y=1)
-        else:
-            chosen = add(x=x, y=2)
-        return chosen
+    def count_down(n: int) -> None:
+        while n > 0:
+            n = n - 1
+        return {}
+
+Inline results are ephemeral orchestration state, not scientific data:
+
+* **No provenance:** inline values never become data nodes and never carry links. Only task outputs
+  are stored.
+* **Checkpointed, not stored:** the scheduler keeps inline values in its scope state, so restarts
+  resume counters and conditions, but the provenance graph shows only the tasks that ran.
+* **Root graphs never return a newly computed scalar:** returning ``n`` above would publish a value
+  with no creator, breaking the rule that workflows return existing data while only tasks create new
+data. A root graph returns task outputs, graph inputs, or collector-built containers -- or nothing,
+declared explicitly with ``return {}`` like a work chain returning nothing. Use an explicit task
+for a scientific result computed from inline state.
+* **Nested helpers may return control state:** a subgraph can return an inline value for its caller to
+consume as orchestration state, since the caller scope -- not the provenance -- receives it.
+* **Explicit tasks are never inlined:** a ``@task`` function always runs as its own child process,
+even when its body is a single expression. Inlining never invents a calculation absent from the source.
+* **Cheap by construction:** inline expressions run inside the graph process, so keep them to the
+supported operators. Anything else -- formatting, indexing, comprehensions, nested calls -- belongs
+in a task and still raises ``GraphLanguageError``. Division by zero and non-finite results fail the run.
+
+Loop iterations run one at a time and each iteration completes its whole scope before the next
+begins, so placements without a data dependency still run sequentially. For example, stepping an
+inline counter after a calculation needs no ``after`` edge: the next iteration starts only after the
+calculation scope completes.
 
 Launching
 ---------
@@ -134,7 +146,7 @@ Calling ``multiply_add(x=2, y=3, z=4)`` directly raises a :py:class:`~aiida.comm
 
 Graph inputs are the function parameters; an input omitted at launch takes its literal default.
 Graphs and tasks take no ``*args`` or ``**kwargs``, because every input needs its own declared port.
-Graph outputs can be task outputs or graph inputs.
+Graph outputs can be task outputs or graph inputs; a graph with no outputs ends with an explicit ``return {}``. A root graph never returns a newly computed inline scalar -- use an explicit task for a scientific result -- while a nested graph may return inline control state for its caller; see :ref:`topics:workflows:graphs:inline`.
 A graph is a workflow, so it returns existing data nodes; only tasks create new data (see :ref:`topics:provenance:concepts`).
 
 Tasks can be run independently: ``run_get_node(add, x=1, y=2)`` launches a single task.
@@ -511,7 +523,7 @@ Calling a graph inside another graph places it as a subgraph, which runs as a sc
         inner = multiply_add(x=x, y=y, z=z)
         return add(x=inner, y=x)
 
-An ``if`` tests a bound name, a field, or a task call.
+An ``if`` tests a bound name, a field, an inline expression such as ``x > 0``, or a task call.
 The intermediate representation holds both arms; at runtime, only the selected arm runs, as a scope of the same graph process.
 With an ``else``, both arms bind the same name to values of the same type:
 
@@ -536,13 +548,13 @@ Without an ``else``, the arm rebinds a name bound before the ``if``; when the te
             total = add(x=total, y=10)
         return total
 
-Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, a ``while`` loop that rebinds one name bound before the ``if``, or another ``if``, such as an ``elif``, whose arms follow the same rules.
+Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, an assignment of an inline expression, such as ``n = n - 1``, a ``while`` loop that rebinds one name bound before the ``if``, or another ``if``, such as an ``elif``, whose arms follow the same rules.
 Whole-namespace arms on both sides must share the same fields.
 The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
 
-A ``while`` tests a bound name or a task call before every iteration.
-The body rebinds names bound before the loop, with task calls, ``if`` branches, or nested ``while`` loops.
-A tested name must be rebound in the body; a tested call runs again after every iteration:
+A ``while`` tests a bound name, an inline expression such as ``n > 0``, or a task call before every iteration.
+The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, ``if`` branches, or nested ``while`` loops.
+A tested name must be rebound in the body; a tested call runs again after every iteration. An inline test re-evaluates from the rebound names:
 
 .. code:: python
 

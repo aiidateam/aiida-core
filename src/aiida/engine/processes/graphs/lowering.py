@@ -38,6 +38,7 @@ from aiida.engine.processes.graphs.ir import (
     Dependency,
     Endpoint,
     GraphIR,
+    InlineOperation,
     LoopControl,
     MapControl,
     OutputTree,
@@ -45,6 +46,14 @@ from aiida.engine.processes.graphs.ir import (
     Route,
     SubgraphTask,
     TaskIR,
+)
+from aiida.engine.processes.graphs.operations import (
+    LEFT_PORT,
+    OPERAND_PORT,
+    RESULT_PORT,
+    RIGHT_PORT,
+    OperationKind,
+    infer_operation_shape,
 )
 from aiida.engine.processes.graphs.par_map import par_map
 from aiida.engine.processes.graphs.process import GraphProcess
@@ -67,7 +76,7 @@ from aiida.engine.processes.graphs.tasks import (
 )
 from aiida.engine.processes.ports import _node_type
 from aiida.engine.processes.workchains.workchain import WorkChain
-from aiida.orm import DataDict, DataList
+from aiida.orm import Bool, DataDict, DataList
 
 __all__ = ('Forward', 'GraphHandle', 'graph', 'par_map', 'task')
 
@@ -84,7 +93,7 @@ R = t.TypeVar('R')
 # Value forms the language rejects, with the guidance each carries. The key sets
 # are the unsupported list; anything missing here reports the generic fallback.
 _VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
-    (ast.BoolOp, ast.Compare): (
+    (ast.BoolOp,): (
         'operators compute a new value, which only a task can create and record; '
         + 'put this check in a task and use its result instead'
     ),
@@ -109,6 +118,31 @@ _VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
     (ast.Await, ast.Yield, ast.YieldFrom): (
         'tasks run to completion on workers; tasks cannot wait or pause; write plain steps instead'
     ),
+}
+
+
+# Source operators lowering to fixed inline operations. Only these spellings run without a task:
+# `+`, `-`, `*`, `//`, `%`, comparisons, and unary `-`, `+`, `not`. Anything else stays a task call.
+# In-place updates reuse the same binary operators, so `/=`, `**=`, and shifts stay tasks.
+_BINARY_OPERATIONS: dict[type[ast.operator], OperationKind] = {
+    ast.Add: 'add',
+    ast.Sub: 'sub',
+    ast.Mult: 'mul',
+    ast.FloorDiv: 'floordiv',
+    ast.Mod: 'mod',
+}
+_COMPARISON_OPERATIONS: dict[type[ast.cmpop], OperationKind] = {
+    ast.Lt: 'lt',
+    ast.LtE: 'le',
+    ast.Gt: 'gt',
+    ast.GtE: 'ge',
+    ast.Eq: 'eq',
+    ast.NotEq: 'ne',
+}
+_UNARY_OPERATIONS: dict[type[ast.unaryop], OperationKind] = {
+    ast.USub: 'neg',
+    ast.UAdd: 'pos',
+    ast.Not: 'not',
 }
 
 
@@ -243,7 +277,9 @@ class _LoweringState:
 
     definition: _SourceDefinition
     stack: tuple[str, ...]
-    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl | MapControl] = field(default_factory=list)
+    tasks: list[ProcessTask | SubgraphTask | BranchControl | LoopControl | MapControl | InlineOperation] = field(
+        default_factory=list
+    )
     dependencies: list[Dependency] = field(default_factory=list)
     inputs: dict[str, list[Route]] = field(default_factory=dict)
     input_shapes: dict[str, Shape] = field(default_factory=dict)
@@ -636,11 +672,60 @@ def _lower_return_value(state: _LoweringState, expression: ast.expr) -> _Referen
     return reference
 
 
+def _is_inline_operation(value: ast.expr) -> bool:
+    """Return whether an assignment value computes an inline operation rather than a literal."""
+    if isinstance(value, (ast.BinOp, ast.Compare)):
+        return True
+    if not isinstance(value, ast.UnaryOp):
+        return False
+    try:
+        ast.literal_eval(value)
+    except (ValueError, TypeError):
+        return True
+    return False
+
+
+def _lower_augmented(state: _LoweringState, statement: ast.AugAssign, *, rebind: bool) -> str:
+    """Lower an in-place update to a rebinding through the matching inline operation."""
+    if not rebind:
+        msg = (
+            'the body declares a template and never executes, so only calls, branches, and loops belong here; '
+            + 'this statement is not supported here; move it into a task instead'
+        )
+        _reject(state, node=statement, reason=msg)
+    if not isinstance(statement.target, ast.Name):
+        msg = (
+            'each line wires one placement, so targets cannot nest or repeat; '
+            + 'assign to a plain name instead, one per line'
+        )
+        _reject(state, node=statement, reason=msg)
+    operation = _BINARY_OPERATIONS.get(type(statement.op))
+    if operation is None:
+        _reject(state, node=statement, reason=_unsupported_operation_reason())
+    target = statement.target.id
+    if target not in state.names:
+        msg = (
+            'names only exist after a call or an input introduces them; '
+            + f'{target!r} is not known here; assign it on an earlier line instead'
+        )
+        _reject(state, node=statement.target, reason=msg)
+    reference = _place_operation(
+        state,
+        operation=operation,
+        operands=(state.names[target], _lower_operand(state, statement.value)),
+        node=statement,
+    )
+    state.names[target] = reference
+    return target
+
+
 def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: bool = False) -> str:
-    """Bind a call result to new placement names."""
+    """Bind a call or inline operation result to new placement names."""
     if isinstance(statement, ast.AnnAssign):
         msg = 'drop the annotation; types come from the task or input instead'
         _reject(state, node=statement, reason=msg)
+    if isinstance(statement, ast.AugAssign):
+        return _lower_augmented(state, statement=statement, rebind=rebind)
     if not isinstance(statement, ast.Assign) or not statement.targets:
         msg = (
             'the body declares a template and never executes, so only calls, branches, and loops belong here; '
@@ -667,10 +752,26 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
                 + 'assign each result a new name instead of reusing one'
             )
             _reject(state, node=statement, reason=msg)
-    if not isinstance(statement.value, ast.Call):
-        ref = _lower_alias(state, statement)
+    value = statement.value
+    if isinstance(value, ast.Call):
+        ref: _Reference = _lower_call(state, expression=value)
+    elif _is_inline_operation(value):
+        assert isinstance(value, (ast.BinOp, ast.Compare, ast.UnaryOp))
+        ref = _lower_operation(state, node=value)
     else:
-        ref = _lower_call(state, expression=statement.value)
+        # A plain name or dotted field aliases an existing wire (structured outputs
+        # bind whole namespaces this way); literals stay rejection-worthy traces.
+        reference = _lower_value(state, value)
+        if not isinstance(reference, _Reference):
+            msg = (
+                'only calls and inline operations are recorded as work; '
+                + 'plain values would run without leaving a trace; '
+                + 'each line must call a task or graph, or compute an inline operation instead'
+            )
+            _reject(state, node=value, reason=msg)
+        for name in names:
+            state.names[name] = reference
+        return names[0]
     for name in names:
         state.names[name] = ref
     return names[0]
@@ -701,8 +802,8 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool 
         _reject(state, node=statement, reason=msg)
     if not isinstance(statement.value, ast.Call):
         msg = (
-            'only calls are recorded as work; plain values would run without leaving a trace; '
-            + 'each line must call a task or graph instead'
+            'unpacking maps positions to declared output ports, so only a multi-output call unpacks; '
+            + 'call a task or graph with one output per name instead'
         )
         _reject(state, node=statement.value, reason=msg)
     ref: _Reference = _lower_call(state, expression=statement.value)
@@ -806,6 +907,8 @@ def _single_assign_target(statement: ast.stmt) -> str | None:
     """Return the assigned plain name, or `None` for other statements."""
     if isinstance(statement, ast.Assign) and len(statement.targets) == 1 and isinstance(statement.targets[0], ast.Name):
         return statement.targets[0].id
+    if isinstance(statement, ast.AugAssign) and isinstance(statement.target, ast.Name):
+        return statement.target.id
     return None
 
 
@@ -852,13 +955,17 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     _check_branch_shape(state, statement=statement)
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
-        test = _bind_call_condition(state, test=test)
+        test = _bind_test_condition(state, test=test)
     condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
     condition_member: tuple[str, str] | None = None
     if (none_test := _match_none_test(test)) is not None:
         test, condition_test = none_test
     elif (matched := _match_member_test(state, test)) is not None:
         test, condition_test, condition_member = matched
+    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp)):
+        # Numeric inline operations bind to a fresh boolean wire; `is`/`is not`
+        # presence and member tests above must win over this numeric path.
+        test = _bind_test_condition(state, test=test)
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -1066,6 +1173,8 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
         elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
             # A `_` element discards its arm, so it never carries across iterations.
             assigned.update(elt.id for elt in node.targets[0].elts if isinstance(elt, ast.Name) and elt.id != '_')
+        elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
+            assigned.add(node.target.id)
         elif isinstance(node, ast.If):
             assigned.update(_body_state_names([*node.body, *node.orelse]))
         elif isinstance(node, ast.While):
@@ -1078,7 +1187,16 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     body: list[ast.stmt] = list(statement.body)
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
-        test = _bind_call_condition(state, test=test)
+        test = _bind_test_condition(state, test=test)
+        update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
+        ast.copy_location(update, statement.test)
+        ast.copy_location(update.targets[0], statement.test)
+        body.append(update)
+    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp)) and _identity_compare(test) is None:
+        # Numeric inline operations bind to a boolean wire and recompute each pass;
+        # `is`/`is not` presence and member tests stay branch-only, since loop
+        # control carries a truthy check rather than a member selection.
+        test = _bind_test_condition(state, test=test)
         update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
@@ -1115,10 +1233,13 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         if isinstance(node, ast.While):
             _lower_loop(child, statement=node)
             continue
-        if not isinstance(node, ast.Assign):
-            msg = 'loop bodies only record task calls, branches, and loops; ' + 'move anything else into a task instead'
+        if not isinstance(node, (ast.Assign, ast.AugAssign)):
+            msg = (
+                'loop bodies only record task calls, inline operations, branches, and loops; '
+                + 'move anything else into a task instead'
+            )
             _reject(state, node=node, reason=msg)
-        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
             _lower_unpack(child, node, rebind=True)
             continue
         _lower_assignment(child, node, rebind=True)
@@ -1273,8 +1394,18 @@ def _select_subpath(value: _Reference, sub: str) -> _Reference:
     return _Reference(value.task, port=port, shape=shape)
 
 
-def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
-    """Lower a call condition to a fresh binding."""
+def _is_bool_reference(value: _Reference | int | float | str | bool | None) -> bool:
+    """Return whether a lowered test statically reads as a boolean."""
+    if isinstance(value, bool):
+        return True
+    if not isinstance(value, _Reference) or not isinstance(value.shape, LeafShape):
+        return False
+    types = [kind for kind in value.shape.types or () if kind is not type(None)]
+    return bool(types) and all(kind is bool or kind is Bool for kind in types)
+
+
+def _bind_test_condition(state: _LoweringState, test: ast.Call | ast.BinOp | ast.Compare | ast.UnaryOp) -> ast.Name:
+    """Lower a call or inline comparison test to a fresh binding."""
     name = 'condition'
     count = 2
     while name in state.names:
@@ -1284,6 +1415,12 @@ def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
     ast.copy_location(bound, test)
     ast.copy_location(bound.targets[0], test)
     _lower_assignment(state, statement=bound)
+    if not isinstance(test, ast.Call) and not _is_bool_reference(state.names[name]):
+        msg = (
+            'conditions decide between two sides, so they must be true or false; '
+            + 'compare values or call a task returning a boolean instead'
+        )
+        _reject(state, node=test, reason=msg)
     return ast.Name(id=name, ctx=ast.Load())
 
 
@@ -1423,18 +1560,71 @@ def _claim_name(state: _LoweringState, name: str) -> str:
     return instance
 
 
-def _wired_type(value: t.Any) -> type | None:
-    """Return the ORM type a wired value carries, or `None` without evidence."""
-    if isinstance(value, _Reference):
-        shape = value.shape
-        if not isinstance(shape, LeafShape) or not shape.types:
+def _probe_shape(state: _LoweringState, expression: ast.expr) -> Shape | None:
+    """Return the static contract of a generic-call argument without placing anything."""
+    if isinstance(expression, ast.Name):
+        reference = state.names.get(expression.id)
+        if reference is None:
             return None
-        mapped = [_node_type(kind) for kind in shape.types]
-        mapped = [kind for kind in mapped if kind is not None and kind is not type(None)]
-        return mapped[0] if len(mapped) == 1 else None
-    if value is None:
+        return reference.shape
+    if isinstance(expression, ast.Attribute):
+        return _probe_field(state, expression.value, expression.attr)
+    if (
+        isinstance(expression, ast.Subscript)
+        and isinstance(expression.slice, ast.Constant)
+        and isinstance(expression.slice.value, str)
+    ):
+        return _probe_field(state, expression.value, expression.slice.value)
+    if isinstance(expression, (ast.Constant, ast.UnaryOp)):
+        try:
+            value = ast.literal_eval(expression)
+        except (ValueError, TypeError):
+            return _probe_operation_shape(state, expression) if isinstance(expression, ast.UnaryOp) else None
+        if value is None or isinstance(value, (int, float, str, bool)):
+            return LeafShape(types=(type(value),))
         return None
-    return _node_type(type(value))
+    if isinstance(expression, (ast.BinOp, ast.Compare, ast.UnaryOp)):
+        return _probe_operation_shape(state, expression)
+    return None
+
+
+def _probe_field(state: _LoweringState, parent: ast.expr, attr: str) -> Shape | None:
+    """Return the declared contract of a selected field, or `None` without evidence."""
+    shape = _probe_shape(state, parent)
+    if not isinstance(shape, NamespaceShape):
+        return None
+    try:
+        return shape.select(attr)
+    except KeyError:
+        return None
+
+
+def _probe_operation_shape(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp) -> Shape | None:
+    """Infer an operation result without placing it; `None` means solving stays generic."""
+    try:
+        operation, raw = _operation_parts(state, node=node)
+    except GraphLanguageError:
+        return None
+    shapes: list[Shape] = []
+    for item in raw:
+        probed = _probe_shape(state, item)
+        if probed is None:
+            return None
+        shapes.append(probed)
+    try:
+        return infer_operation_shape(operation, tuple(shapes))
+    except GraphTypeCheckError:
+        return None
+
+
+def _probe_wired_type(state: _LoweringState, expression: ast.expr) -> type | None:
+    """Return the ORM type a generic-call argument carries, or `None` without evidence."""
+    shape = _probe_shape(state, expression)
+    if not isinstance(shape, LeafShape) or not shape.types:
+        return None
+    mapped = [_node_type(kind) for kind in shape.types]
+    mapped = [kind for kind in mapped if kind is not None and kind is not type(None)]
+    return mapped[0] if len(mapped) == 1 else None
 
 
 def _solved_spec(
@@ -1447,7 +1637,7 @@ def _solved_spec(
 ) -> TaskIR:
     """Copy a generic task spec with solved output types, or return it unchanged.
 
-    Solving reads the argument expressions because wiring routes references
+    Solving probes the argument expressions because wiring routes references
     outside the placed inputs, so the placed mapping alone cannot solve.
     """
     typevars, output_var = _typevar_solution(target)
@@ -1459,7 +1649,7 @@ def _solved_spec(
         keyword = next((keyword for keyword in keywords if keyword.arg == name), None)
         if keyword is None:
             continue
-        kind = _wired_type(_lower_value(state, keyword.value))
+        kind = _probe_wired_type(state, keyword.value)
         if kind is None:
             tainted = True
         else:
@@ -1625,6 +1815,98 @@ def _check_par_map_collection(
         + 'annotate the collection as `DataList` or `DataDict` instead'
     )
     _reject(state, node=node, reason=msg)
+
+
+def _unsupported_operation_reason() -> str:
+    """Explain that only the fixed scalar operators run inline."""
+    return (
+        'only `+`, `-`, `*`, `//`, `%`, comparisons, and unary `-`, `+`, `not` run inline; '
+        + 'put this calculation in a task instead'
+    )
+
+
+def _operation_parts(
+    state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp
+) -> tuple[OperationKind, tuple[ast.expr, ...]]:
+    """Split one operation node into its operator and operand expressions."""
+    if isinstance(node, ast.BinOp):
+        operation = _BINARY_OPERATIONS.get(type(node.op))
+        if operation is None:
+            _reject(state, node=node, reason=_unsupported_operation_reason())
+        return operation, (node.left, node.right)
+    if isinstance(node, ast.Compare):
+        if len(node.ops) != 1 or len(node.comparators) != 1:
+            msg = (
+                'comparisons compare two values at a time, so chained comparisons never run; '
+                + 'compare two values per line instead'
+            )
+            _reject(state, node=node, reason=msg)
+        operation = _COMPARISON_OPERATIONS.get(type(node.ops[0]))
+        if operation is None:
+            _reject(state, node=node, reason=_unsupported_operation_reason())
+        return operation, (node.left, node.comparators[0])
+    operation = _UNARY_OPERATIONS.get(type(node.op))
+    if operation is None:
+        _reject(state, node=node, reason=_unsupported_operation_reason())
+    return operation, (node.operand,)
+
+
+def _operand_shape(value: _Reference | int | float | str | bool | None) -> Shape:
+    """Return the static contract of a lowered operand."""
+    if isinstance(value, _Reference):
+        return value.shape
+    return LeafShape(types=(type(value),))
+
+
+def _lower_operand(state: _LoweringState, expression: ast.expr) -> _Reference | int | float | str | bool | None:
+    """Lower one operation operand, rejecting hidden placements."""
+    if isinstance(expression, ast.Call):
+        msg = 'nested calls hide a placement; put the inner call on its own line first'
+        _reject(state, node=expression, reason=msg)
+    # Signed literals fold in `_lower_value`; anything else unary places an operation there.
+    return _lower_value(state, expression)
+
+
+def _place_operation(
+    state: _LoweringState,
+    *,
+    operation: OperationKind,
+    operands: tuple[_Reference | int | float | str | bool | None, ...],
+    node: ast.AST,
+) -> _Reference:
+    """Infer, place, and wire one inline operation, returning its result."""
+    shapes = tuple(_operand_shape(value) for value in operands)
+    try:
+        result_shape = infer_operation_shape(operation, shapes)
+    except GraphTypeCheckError as exception:
+        _reject(state, node=node, reason=str(exception))
+    ports = (LEFT_PORT, RIGHT_PORT) if len(operands) == 2 else (OPERAND_PORT,)
+    instance = _claim_name(state, f'operation_{len(state.tasks) + 1}')
+    given: dict[str, _CapturedValue] = {}
+    for port, value in zip(ports, operands, strict=True):
+        _wire(state, instance=instance, port=port, value=value, given=given)
+    state.tasks.append(
+        InlineOperation(
+            name=instance,
+            inputs=given,
+            operation=operation,
+            input_shape=NamespaceShape(fields=tuple(zip(ports, shapes, strict=True))),
+            result_shape=result_shape,
+        )
+    )
+    return _Reference(instance, port=RESULT_PORT, shape=result_shape)
+
+
+def _lower_operation(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp) -> _Reference:
+    """Place one inline operation and return its result reference.
+
+    Operands lower first, so nested operations become their own placements with dependency
+    wires into the outer one. Primitive results are orchestration state, never `Data` nodes:
+    the placement only records the operator and its operand contracts for the engine.
+    """
+    operation, raw = _operation_parts(state, node=node)
+    lowered = tuple(_lower_operand(state, item) for item in raw)
+    return _place_operation(state, operation=operation, operands=lowered, node=node)
 
 
 def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
@@ -1916,6 +2198,8 @@ def _lower_value(
     """Lower a value expression to a reference or literal."""
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression=expression)
+    if isinstance(expression, (ast.BinOp, ast.Compare)):
+        return _lower_operation(state, node=expression)
     if isinstance(expression, ast.Name):
         if expression.id not in state.names:
             msg = (
@@ -1936,6 +2220,8 @@ def _lower_value(
         try:
             value = ast.literal_eval(expression)
         except (ValueError, TypeError):
+            if isinstance(expression, ast.UnaryOp):
+                return _lower_operation(state, node=expression)
             _reject(state, node=expression, reason=_unsupported_reason(expression))
         if value is None or isinstance(value, (int, float, str, bool)):
             try:

@@ -378,7 +378,11 @@ def test_matched_condition_in_ir(declaration: t.Any, test: str) -> None:
 @pytest.mark.parametrize(
     'declaration, match',
     [
-        pytest.param(results.matched_equality, 'put this check in a task', id='equality-test'),
+        pytest.param(
+            results.matched_equality,
+            'inline operation `eq` works on numbers, got `EnumData` and `int`',
+            id='equality-test',
+        ),
         pytest.param(results.matched_unknown_member, 'not a known enum member', id='unknown-member'),
         pytest.param(results.matched_member_typo, 'not a member of its enum', id='member-typo'),
     ],

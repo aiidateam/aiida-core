@@ -14,13 +14,13 @@ import functools
 import typing as t
 from collections.abc import Mapping, MutableMapping
 
-from aiida.common.exceptions import GraphTypeCheckError, GraphValidationError
+from aiida.common.exceptions import GraphRuntimeError, GraphTypeCheckError, GraphValidationError
 from aiida.common.extendeddicts import AttributesFrozendict
 from aiida.common.lang import override
 from aiida.common.processes import ProcessState
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _at, _prepare_graph_inputs
-from aiida.engine.processes.graphs.ir import GraphIR, MapControl, ProcessTask, _input_ports_at
+from aiida.engine.processes.graphs.ir import GraphIR, InlineOperation, MapControl, ProcessTask, _input_ports_at
 from aiida.engine.processes.graphs.par_map import _collect_dict, _collect_list
 from aiida.engine.processes.graphs.run import GraphRun, _GraphRunState, _Start
 from aiida.engine.processes.graphs.tasks import _merge_task_metadata, _needs_metadata
@@ -212,6 +212,12 @@ class GraphProcess(Process):
             process_class, inputs = start.task.spec.process_class, start.inputs
         elif isinstance(start.task, MapControl):
             process_class, inputs = self._collector_for(start.task, start.inputs)
+        elif isinstance(start.task, InlineOperation):
+            msg = (
+                f'inline operation `{start.task.name}` evaluates inside the graph run; '
+                'it must never dispatch a child process.'
+            )
+            raise GraphRuntimeError(msg)
         else:
             msg = f'unsupported task `{start.task.name}`.'
             raise GraphTypeCheckError(msg)
@@ -274,8 +280,25 @@ class GraphProcess(Process):
                 self.report(f'task `{failure.label}` {message}')
             return self.exit_codes.ERROR_TASK_FAILED.format(task=failure.label)
         for name, value in state.outputs().items():
+            self._validate_output(name, value)
             self.out(name, value)
         return None
+
+    def _validate_output(self, path: str, value: t.Any) -> None:
+        """Reject newly computed primitives, allowing nested namespaces of existing nodes."""
+        if isinstance(value, Node):
+            return
+        if isinstance(value, Mapping):
+            for field, child in value.items():
+                self._validate_output(f'{path}.{field}', child)
+            return
+        msg = (
+            f'graph output `{path}` is a Python `{type(value).__name__}` computed inside the graph; '
+            'graphs cannot RETURN a newly computed scalar as scientific data: '
+            'create the value in a `@task` and return the task output instead. '
+            'Passthrough of existing data and real task outputs stays allowed.'
+        )
+        raise GraphRuntimeError(msg)
 
     @override
     def _build_process_label(self) -> str:

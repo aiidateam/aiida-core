@@ -26,6 +26,15 @@ from aiida.common.lang import override
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
+from aiida.engine.processes.graphs.operations import (
+    BINARY_OPERATIONS,
+    LEFT_PORT,
+    OPERAND_PORT,
+    OPERATIONS,
+    RESULT_PORT,
+    RIGHT_PORT,
+    OperationKind,
+)
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
 from aiida.engine.processes.process import Process
@@ -39,6 +48,7 @@ __all__ = (
     'Endpoint',
     'GraphIR',
     'GraphTask',
+    'InlineOperation',
     'LoopControl',
     'MapControl',
     'OutputTree',
@@ -48,10 +58,11 @@ __all__ = (
     'TaskIR',
 )
 
-_GRAPH_IR_VERSION: t.Final = '0.1'
+_GRAPH_IR_VERSION: t.Final = '0.2'
+_GRAPH_IR_LEGACY_VERSION: t.Final = '0.1'
 _TASK_IR_VERSION: t.Final = '0.1'
 _CONDITION_PORT: t.Final = 'condition'
-_TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop', 'map']
+_TaskKind: t.TypeAlias = t.Literal['process', 'graph', 'branch', 'loop', 'map', 'operation']
 
 
 def _require_version(version: object, supported: str, what: str) -> str:
@@ -636,6 +647,8 @@ class GraphTask(abc.ABC):
                     max_iterations=data['max_iterations'],
                     **common,
                 )
+            if kind == 'operation':
+                return InlineOperation.from_dict(data)
             if kind == 'map':
                 nested = GraphIR.from_dict(data['body']) if data.get('body') is not None else None
                 mapped = TaskIR.from_dict(data['spec']) if data.get('spec') is not None else None
@@ -856,6 +869,106 @@ OutputTree: t.TypeAlias = 'Endpoint | dict[str, OutputTree]'
 """A leaf endpoint or a nested mapping of those regrouping existing nodes."""
 
 
+@dataclass(frozen=True, kw_only=True)
+class InlineOperation(GraphTask):
+    """A scalar operator evaluated inline by the engine, without a child process.
+
+    The operand contracts live in ``input_shape`` (``left`` and ``right`` for binary
+    operators, ``operand`` for unary ones); ``result_shape`` types the single ``result``
+    output. Both shapes serialize with the shared shape helpers, like every other task.
+    """
+
+    KIND: t.ClassVar[_TaskKind] = 'operation'
+    operation: OperationKind
+    input_shape: NamespaceShape
+    result_shape: LeafShape
+
+    def __post_init__(self) -> None:
+        """Reject unknown operators and operand contracts the operator cannot read."""
+        if self.operation not in OPERATIONS:
+            msg = f'unknown operation `{self.operation}`; expected one of {sorted(OPERATIONS)}.'
+            raise GraphTypeCheckError(msg)
+        expected = (LEFT_PORT, RIGHT_PORT) if self.operation in BINARY_OPERATIONS else (OPERAND_PORT,)
+        names = tuple(name for name, _ in self.input_shape.fields)
+        if sorted(names) != sorted(expected):
+            msg = f'operation `{self.operation}` reads operand(s) {list(expected)}, not {list(names)}.'
+            raise GraphTypeCheckError(msg)
+        for name, shape in self.input_shape.fields:
+            if not isinstance(shape, LeafShape):
+                msg = f'operation `{self.operation}` reads scalar leaves; `{name}` is a namespace.'
+                raise GraphTypeCheckError(msg)
+
+    @property
+    def result_port(self) -> str:
+        """Return the single output port."""
+        return RESULT_PORT
+
+    @override
+    def input_ports(self) -> tuple[PortNamespace, ...]:
+        """Return the fixed operand contracts of the operator."""
+        namespace = _port_for_shape('inputs', self.input_shape)
+        assert isinstance(namespace, PortNamespace)
+        return (namespace,)
+
+    @override
+    def output_ports(self) -> PortNamespace:
+        """Return the single result output of the operator."""
+        namespace = PortNamespace('outputs')
+        namespace[RESULT_PORT] = OutputPort(RESULT_PORT, valid_type=self.result_shape.types)
+        return namespace
+
+    @override
+    def to_dict(self) -> dict[str, t.Any]:
+        """Return the placement with its operator and operand contracts."""
+        return {
+            **super().to_dict(),
+            'operation': self.operation,
+            'input_shape': dump_shape(self.input_shape),
+            'result_shape': dump_shape(self.result_shape),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, t.Any]) -> InlineOperation:
+        """Rebuild an operation placement from its serialized form."""
+        try:
+            input_shape = load_shape(data['input_shape'])
+            result_shape = load_shape(data['result_shape'])
+            if not isinstance(input_shape, NamespaceShape):
+                msg = 'malformed operation task declaration; operands form a namespace of scalar leaves.'
+                raise GraphTypeCheckError(msg)
+            if not isinstance(result_shape, LeafShape):
+                msg = 'malformed operation task declaration; the result is one scalar leaf.'
+                raise GraphTypeCheckError(msg)
+            return cls(
+                name=data['name'],
+                inputs=data.get('inputs', {}),
+                operation=data['operation'],
+                input_shape=input_shape,
+                result_shape=result_shape,
+            )
+        except KeyError as exception:
+            msg = f'malformed operation task declaration; missing key {exception}.'
+            raise GraphTypeCheckError(msg) from exception
+
+
+def _task_contains_operation(task: GraphTask) -> bool:
+    """Return whether a placement evaluates an inline operation, at any nesting depth."""
+    if isinstance(task, InlineOperation):
+        return True
+    if isinstance(task, MapControl):
+        return task.body is not None and _graph_contains_operation(task.body)
+    if isinstance(task, BranchControl):
+        return _graph_contains_operation(task.body) or _graph_contains_operation(task.otherwise)
+    if isinstance(task, BodyTask):
+        return _graph_contains_operation(task.body)
+    return False
+
+
+def _graph_contains_operation(graph: GraphIR) -> bool:
+    """Return whether any placement of a template evaluates an inline operation."""
+    return any(_task_contains_operation(task) for task in graph.tasks)
+
+
 @dataclass(frozen=True)
 class GraphIR:
     """A static graph template, with fixed inputs and nested outputs regrouping nodes."""
@@ -874,6 +987,9 @@ class GraphIR:
         from aiida.engine.processes.graphs.validate import validate_graph
 
         validate_graph(self)
+        version = _GRAPH_IR_VERSION if _graph_contains_operation(self) else _GRAPH_IR_LEGACY_VERSION
+        if self.version != version:
+            object.__setattr__(self, 'version', version)
 
     @property
     def task_names(self) -> tuple[str, ...]:
@@ -991,7 +1107,13 @@ class GraphIR:
     @classmethod
     def from_dict(cls, data: Mapping[str, t.Any]) -> GraphIR:
         """Rebuild a graph template from its serialized form."""
-        version = _require_version(data.get('version'), _GRAPH_IR_VERSION, 'graph')
+        version = data.get('version')
+        if version not in (_GRAPH_IR_VERSION, _GRAPH_IR_LEGACY_VERSION):
+            msg = (
+                f'cannot read a graph declaration of version `{version}`; supported versions are '
+                f'`{_GRAPH_IR_LEGACY_VERSION}` and `{_GRAPH_IR_VERSION}`.'
+            )
+            raise GraphTypeCheckError(msg)
         try:
             boundary = load_shape(data['input_namespace'])
             tasks = tuple(GraphTask.from_dict(task) for task in data['tasks'])

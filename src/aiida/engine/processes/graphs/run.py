@@ -26,12 +26,14 @@ from aiida.common.exceptions import GraphMaxIterationsError, GraphRuntimeError, 
 from aiida.common.links import LinkType
 from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.exit_code import ExitCode
+from aiida.engine.processes.generic.ports import UNSPECIFIED
 from aiida.engine.processes.graphs.inputs import _at, _drops_none_value, _place, _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import (
     BranchControl,
     Endpoint,
     GraphIR,
     GraphTask,
+    InlineOperation,
     LoopControl,
     MapControl,
     OutputTree,
@@ -41,6 +43,7 @@ from aiida.engine.processes.graphs.ir import (
     _input_ports_at,
     _require_version,
 )
+from aiida.engine.processes.graphs.operations import evaluate_operation
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.manage import get_manager
 from aiida.orm import DataDict, DataList, EnumData, Node, from_aiida_type, load_node, to_aiida_type
@@ -57,26 +60,27 @@ def _prepared_scope_given(body: GraphIR, raw: dict[str, t.Any]) -> dict[str, t.A
 
     Nested graphs previously launched as child `GraphProcess` nodes, so every boundary ran
     `_prepare_graph_inputs` plus input-namespace and per-consumer validation. Scopes keep the
-    same contract: defaults fill here, unknown or mistyped inputs fail loudly on entry, and the
-    stored `given` mirrors the root's serialized inputs.
+    same contract: defaults fill here and unknown or mistyped inputs fail loudly on entry.
+    Wired values keep their runtime identity: nodeifying a computed inline primitive into
+    a standalone `Data` node would let the root `RETURN` it as scientific data without a
+    `CREATE` link. Only filled defaults serialize into nodes for checkpoint checkout, like
+    root inputs serialize for their own `INPUT_WORK` links; existing `Node` inputs keep
+    their identity. Real tasks convert their inputs through the process machinery at
+    dispatch time.
     """
     namespace = body.build_input_namespace()
     prepared = _prepare_graph_inputs(namespace, raw, body.identifier)
     if get_manager().get_profile() is None:
-        # Profile-free scheduling probes cannot serialize inputs into ORM nodes.
+        # Profile-free scheduling probes cannot touch ORM storage.
         return prepared
-    serialized = namespace.serialize(prepared)
-    if serialized is None:
-        msg = 'graph inputs serialized to `None`; expected a mapping.'
-        raise GraphValidationError(msg)
-    runtime = namespace.prepare(serialized).runtime
+    runtime = namespace.prepare(prepared).runtime
     assert isinstance(runtime, Mapping)
     error = namespace.validate(runtime)
     if error is not None:
         raise GraphValidationError(error)
     for name, targets in body.inputs.items():
         try:
-            value = _at(serialized, name)
+            value = _at(prepared, name)
         except KeyError:
             continue
         for task_name, path in targets:
@@ -84,8 +88,20 @@ def _prepared_scope_given(body: GraphIR, raw: dict[str, t.Any]) -> dict[str, t.A
                 error = port.validate(port.prepare(value).runtime)
                 if error is not None:
                     raise GraphValidationError(error)
+    assert isinstance(prepared, dict)
+    serialized = namespace.serialize(prepared)
+    if serialized is None:
+        msg = 'graph inputs serialized to `None`; expected a mapping.'
+        raise GraphValidationError(msg)
     assert isinstance(serialized, dict)
-    return serialized
+    # Filled defaults were absent from the wired inputs: checkpoint them as nodes, mirroring
+    # what a nested child launch used to store as its own inputs. Anything the caller wired
+    # keeps its identity, so computed primitives survive every boundary as primitives.
+    given = dict(prepared)
+    for name in prepared:
+        if name not in raw and name in serialized:
+            given[name] = serialized[name]
+    return given
 
 
 def _holds(condition: t.Any) -> bool:
@@ -239,6 +255,7 @@ class _ScopeState(t.TypedDict, total=False):
     frames: dict[str, list[str]]
     collectors: dict[str, str]
     passed: dict[str, dict[str, t.Any]]
+    values: dict[str, t.Any]
 
 
 class _GraphRunState(t.TypedDict, total=False):
@@ -270,6 +287,7 @@ def _new_scope_state(
         'frames': {},
         'collectors': {},
         'passed': {},
+        'values': {},
     }
     if given is not None:
         state['given'] = given
@@ -305,6 +323,7 @@ class GraphRun:
             root.setdefault('frames', {})
             root.setdefault('collectors', {})
             root.setdefault('passed', {})
+            root.setdefault('values', {})
 
     @property
     def instances(self) -> dict[str, list[str]]:
@@ -560,6 +579,8 @@ class GraphRun:
         """Return whether a placement finished successfully with nothing left to run."""
         scope = self.scopes[scope_key]
         task = self._template_of(scope_key).task(name)
+        if isinstance(task, InlineOperation):
+            return name in scope.get('values', {})
         if isinstance(task, ProcessTask):
             labels = scope.get('instances', {}).get(name, [])
             return (
@@ -606,6 +627,8 @@ class GraphRun:
         """Return whether a placement has nothing left to run, successfully or not."""
         scope = self.scopes[scope_key]
         task = self._template_of(scope_key).task(name)
+        if isinstance(task, InlineOperation):
+            return name in scope.get('values', {})
         if isinstance(task, ProcessTask):
             labels = scope.get('instances', {}).get(name, [])
             return bool(labels) and all(label in self.done for label in labels)
@@ -667,7 +690,12 @@ class GraphRun:
     def _scope_complete(self, key: str) -> bool:
         """Return whether a scope has nothing left to run, successfully or not."""
         scope = self.scopes[key]
-        begun = set(scope.get('instances', {})) | set(scope.get('frames', {})) | set(scope.get('passed', {}))
+        begun = (
+            set(scope.get('instances', {}))
+            | set(scope.get('frames', {}))
+            | set(scope.get('passed', {}))
+            | set(scope.get('values', {}))
+        )
         return not self._ready(key) and all(self._placement_complete(key, name) for name in begun)
 
     def _scope_ok(self, key: str) -> bool:
@@ -677,7 +705,10 @@ class GraphRun:
         template = self._template_of(key)
         scope = self.scopes[key]
         for task in template.tasks:
-            if isinstance(task, ProcessTask):
+            if isinstance(task, InlineOperation):
+                if task.name not in scope.get('values', {}):
+                    return False
+            elif isinstance(task, ProcessTask):
                 for label in scope.get('instances', {}).get(task.name, []):
                     if not self._label_completed(task.spec, label) or any(self._label_problems(task.spec, label)):
                         return False
@@ -709,6 +740,8 @@ class GraphRun:
     def _resolve_placement_outputs(self, scope_key: str, name: str) -> t.Any:
         scope = self.scopes[scope_key]
         task = self._template_of(scope_key).task(name)
+        if isinstance(task, InlineOperation):
+            return {task.result_port: scope.get('values', {})[name]}
         if isinstance(task, ProcessTask):
             node = self._node(self.done[scope['instances'][name][-1]])
             if 'error' not in node.outputs and self._is_mapped_failure(task.spec, scope['instances'][name][-1]):
@@ -795,6 +828,17 @@ class GraphRun:
         """Return the failed placements, in scope creation and graph order."""
         return [failure.label for failure in self.failures()]
 
+    def _progress(self, starts: int) -> tuple[int, int, int, int, int]:
+        """Return the scheduling progress settling the fixed point: scopes, starts, and entries."""
+        scopes = list(self.scopes.values())
+        return (
+            len(scopes),
+            starts,
+            sum(len(scope.get('passed', {})) for scope in scopes),
+            sum(len(labels) for scope in scopes for labels in scope.get('instances', {}).values()),
+            sum(len(scope.get('values', {})) for scope in scopes),
+        )
+
     def step(self) -> _Step:
         """Advance scheduling until synchronous control flow settles, then return dispatches."""
         result = _Step()
@@ -804,12 +848,7 @@ class GraphRun:
         try:
             while True:
                 self._invalidate()
-                scopes_before = len(self.scopes)
-                starts_before = len(result.starts)
-                passed_before = sum(len(scope.get('passed', {})) for scope in self.scopes.values())
-                instances_before = sum(
-                    len(labels) for scope in self.scopes.values() for labels in scope.get('instances', {}).values()
-                )
+                before = self._progress(len(result.starts))
                 for key in list(self.scopes):
                     scope = self.scopes[key]
                     template = self._template_of(key)
@@ -824,14 +863,8 @@ class GraphRun:
                 for key in list(self.scopes):
                     for name in self._ready(key):
                         self._begin(key, name, result)
-                scopes_after = len(self.scopes)
-                passed_after = sum(len(scope.get('passed', {})) for scope in self.scopes.values())
-                instances_after = sum(
-                    len(labels) for scope in self.scopes.values() for labels in scope.get('instances', {}).values()
-                )
-                if scopes_after == scopes_before and len(result.starts) == starts_before:
-                    if passed_after == passed_before and instances_after == instances_before:
-                        break
+                if self._progress(len(result.starts)) == before:
+                    break
             return result
         finally:
             self._invalidate()
@@ -840,7 +873,12 @@ class GraphRun:
         """Return the undispatched placements of one scope whose predecessors all succeeded."""
         template = self._template_of(scope_key)
         scope = self.scopes[scope_key]
-        begun = set(scope.get('instances', {})) | set(scope.get('frames', {})) | set(scope.get('passed', {}))
+        begun = (
+            set(scope.get('instances', {}))
+            | set(scope.get('frames', {}))
+            | set(scope.get('passed', {}))
+            | set(scope.get('values', {}))
+        )
         succeeded = {name for name in template.task_names if self._placement_ok(scope_key, name)}
         return [name for name in template.task_names if name not in begun and template.predecessors(name) <= succeeded]
 
@@ -893,6 +931,7 @@ class GraphRun:
                     'frames': {name: list(keys) for name, keys in scope.get('frames', {}).items()},
                     'collectors': dict(scope.get('collectors', {})),
                     'passed': {name: dict(outputs) for name, outputs in scope.get('passed', {}).items()},
+                    'values': dict(scope.get('values', {})),
                 }
                 for key, scope in self.scopes.items()
             },
@@ -919,6 +958,7 @@ class GraphRun:
             state['frames'] = {name: list(keys) for name, keys in saved.get('frames', {}).items()}
             state['collectors'] = dict(saved.get('collectors', {}))
             state['passed'] = {name: dict(outputs) for name, outputs in saved.get('passed', {}).items()}
+            state['values'] = dict(saved.get('values', {}))
             scopes[key] = state
         # Checkpoints before scopes existed cannot resume; the version gate rejects them loudly.
         if not scopes:
@@ -935,6 +975,9 @@ class GraphRun:
         """Dispatch one ready placement of one scope."""
         scope = self.scopes[scope_key]
         task = self._template_of(scope_key).task(name)
+        if isinstance(task, InlineOperation):
+            self._run_inline(scope_key, task)
+            return
         inputs = self._inputs_for(scope_key, task)
         if isinstance(task, SubgraphTask):
             self._begin_subgraph(scope_key, task, inputs)
@@ -948,6 +991,28 @@ class GraphRun:
             label = self._claim(scope['prefix'] + name)
             scope.setdefault('instances', {}).setdefault(name, []).append(label)
             step.begin(label, task, inputs)
+        self._invalidate()
+
+    def _run_inline(self, scope_key: str, task: InlineOperation) -> None:
+        """Evaluate one inline operation synchronously inside the scheduling fixed point.
+
+        Inline operations never dispatch child processes: their Python inputs evaluate
+        through `evaluate_operation` and the primitive result checkpoints in the scope's
+        `values`, separate from loop `passed` state. Restores reuse completed values
+        instead of reevaluating them because `_ready` skips begun `values` entries.
+        """
+        scope = self.scopes[scope_key]
+        inputs = self._inputs_for(scope_key, task)
+        for port_name, port_shape in task.input_shape.fields:
+            if port_name not in inputs:
+                default = port_shape.default
+                if default is not UNSPECIFIED:
+                    inputs[port_name] = default
+                else:
+                    msg = f'inline operation `{task.name}` is missing required input `{port_name}`.'
+                    raise GraphRuntimeError(msg)
+        result = evaluate_operation(task.operation, inputs)
+        scope.setdefault('values', {})[task.name] = result
         self._invalidate()
 
     def _begin_subgraph(self, scope_key: str, task: SubgraphTask, inputs: dict[str, t.Any]) -> None:
@@ -1103,6 +1168,11 @@ class GraphRun:
                 collected[f'item_{index}'] = _at(self._node(self.done[item]).outputs, result_port)
             else:
                 collected[f'item_{index}'] = _at(self._scope_outputs(item), result_port)
+        for key, value in collected.items():
+            if key != 'keys' and not isinstance(value, Node):
+                # Collectors are real calculations: primitive item results produced by
+                # inline operations materialize into data here, at the calculation boundary.
+                collected[key] = to_aiida_type(value)
         if task.container == 'dict':
             keys = list(self._map_collection(scope_key, task, inputs))
             if len(keys) != len(items):

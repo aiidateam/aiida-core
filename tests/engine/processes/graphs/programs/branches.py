@@ -301,6 +301,18 @@ def missing_else_unbound(value: int, flag: bool) -> int:
     return total
 
 
+# rejected at lowering: without an outer `else` the nested name may stay unbound.
+@graph
+def nested_missing_else_unbound(value: int, flag: bool, flip: bool) -> int:
+    """Nest a branch without an outer `else`; the kept value would not exist."""
+    if flag:
+        if flip:
+            selected = add(x=value, y=9)
+        else:
+            selected = add(x=value, y=1)
+    return selected
+
+
 # rejected at lowering: a loop arm exposes one wire.
 @graph
 def loop_arm_two_names(value: int, flag: bool) -> int:
@@ -413,3 +425,52 @@ def loop_arm_namespace(value: int, flag: bool) -> int:
         while is_positive(value=pair.product):
             pair = arithmetic_pair(x=pair.product, y=0)
     return pair.sum
+
+
+@graph
+def nested_plain(value: int, flag: bool, flip: bool) -> int:
+    """Branch inside a branch arm; the inner dispatch stays in the body."""
+    if flag:
+        if flip:
+            selected = add(x=value, y=9)
+        else:
+            selected = add(x=value, y=1)
+    else:
+        selected = add(x=value, y=2)
+    return selected
+
+
+@graph
+def nested_alias_call(value: int, other: int, flag: bool, flip: bool) -> int:
+    """Select between two existing values in a nested branch, or a task output."""
+    if flag:
+        if flip:
+            selected = value
+        else:
+            selected = other
+    else:
+        selected = add(x=value, y=1)
+    return selected
+
+
+@graph
+def nested_namespace(value: int, flag: bool, flip: bool) -> int:
+    """Select a whole namespace through a nested branch; fields read the branch root."""
+    if flag:
+        if flip:
+            pair = arithmetic_pair(x=value, y=1)
+        else:
+            pair = arithmetic_pair(x=value, y=2)
+    else:
+        pair = arithmetic_pair(x=value, y=3)
+    return pair.sum
+
+
+@graph
+def nested_overwrite_missing_inner_else(value: int, flag: bool, flip: bool) -> int:
+    """Overwrite a prior binding only when both flags take; otherwise keep it."""
+    total = add(x=value, y=1)
+    if flag:
+        if flip:
+            total = add(x=value, y=2)
+    return total

@@ -135,6 +135,63 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(ports.single_named_mapping, {'value': 2}, {'only': 2}, id='single-named-mapping'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': True, 'flip': True}, {'result': 11}, id='nested-plain-both'
+        ),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': True, 'flip': False}, {'result': 3}, id='nested-plain-inner'
+        ),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': False, 'flip': True}, {'result': 4}, id='nested-plain-outer'
+        ),
+        pytest.param(
+            branches.nested_alias_call,
+            {'value': 2, 'other': 5, 'flag': True, 'flip': True},
+            {'result': 2},
+            id='nested-alias-first',
+        ),
+        pytest.param(
+            branches.nested_alias_call,
+            {'value': 2, 'other': 5, 'flag': True, 'flip': False},
+            {'result': 5},
+            id='nested-alias-second',
+        ),
+        pytest.param(
+            branches.nested_alias_call,
+            {'value': 2, 'other': 5, 'flag': False, 'flip': True},
+            {'result': 3},
+            id='nested-alias-call',
+        ),
+        pytest.param(
+            branches.nested_namespace,
+            {'value': 2, 'flag': True, 'flip': False},
+            {'result': 4},
+            id='nested-namespace-inner',
+        ),
+        pytest.param(
+            branches.nested_namespace,
+            {'value': 2, 'flag': False, 'flip': True},
+            {'result': 5},
+            id='nested-namespace-outer',
+        ),
+        pytest.param(
+            branches.nested_overwrite_missing_inner_else,
+            {'value': 2, 'flag': True, 'flip': True},
+            {'result': 4},
+            id='nested-overwrite-taken',
+        ),
+        pytest.param(
+            branches.nested_overwrite_missing_inner_else,
+            {'value': 2, 'flag': True, 'flip': False},
+            {'result': 3},
+            id='nested-overwrite-inner-skipped',
+        ),
+        pytest.param(
+            branches.nested_overwrite_missing_inner_else,
+            {'value': 2, 'flag': False, 'flip': True},
+            {'result': 3},
+            id='nested-overwrite-outer-skipped',
+        ),
         pytest.param(branches.namespaced_choice, {'value': 2, 'condition': True}, {'result': 3}, id='namespaced-true'),
         pytest.param(
             branches.namespaced_choice, {'value': 2, 'condition': False}, {'result': 4}, id='namespaced-false'
@@ -339,6 +396,13 @@ def test_missing_else_unbound_rejected() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_missing_else_unbound_rejected() -> None:
+    """A nested branch without an outer `else` or prior binding fails naming the fix."""
+    with pytest.raises(GraphLanguageError, match='assign it first or add an `else` arm'):
+        branches.nested_missing_else_unbound.build()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_loop_in_branch_runs() -> None:
     """A loop in one arm rebinds loop state per iteration."""
     outputs, node = run_get_node(branches.loop_in_branch, value=2, flag=True)
@@ -520,6 +584,14 @@ def test_loop_condition_rejects_non_bool() -> None:
 def test_branch_in_loop_runs() -> None:
     """A branch inside a loop body rebinds loop state per iteration."""
     outputs, node = run_get_node(loops.nested_branch_in_loop, value=2)
+    assert node.is_finished_ok
+    assert outputs['result'].value == -1
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_branch_updates_loop_check() -> None:
+    """A loop check updated only inside nested branches still ends the loop."""
+    outputs, node = run_get_node(loops.nested_condition_update, value=3, running=True)
     assert node.is_finished_ok
     assert outputs['result'].value == -1
 

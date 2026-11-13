@@ -11,9 +11,10 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 import warnings
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager, nullcontext, suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
 jsonb_typeof = sa_func.jsonb_typeof
 jsonb_array_length = sa_func.jsonb_array_length
 array_length = sa_func.array_length
+LOGGER = logging.getLogger(__name__)
 
 PROJECT_MAP = {
     'db_dbauthinfo': {
@@ -279,7 +281,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         try:
             yield query
         except Exception:
-            self.get_session().close()
+            try:
+                self.get_session().rollback()
+            except Exception:
+                with suppress(Exception):
+                    LOGGER.exception('Failed to roll back the SQLAlchemy session after a QueryBuilder error.')
             raise
 
     def _build(self, data: QueryDictType) -> BuiltQuery:

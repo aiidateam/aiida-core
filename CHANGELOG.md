@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Keep previously committed SQLAlchemy ORM entities attached to their session when a QueryBuilder operation fails, while rolling back the failed transaction.
+
 ## v2.9.4 - 2026-10-22
 
 This patch fixes `CalcJob` upload and retrieval robustness after partial transfers and restarts, and relaxes the type of the `structurelist` argument of `TrajectoryData`.

@@ -94,19 +94,21 @@ def test_submit_wait(arithmetic_add_builder):
     assert node.is_finished_ok, node.exit_code
 
 
-def test_submit_no_broker(arithmetic_add_builder, monkeypatch, manager):
+def test_submit_no_broker(aiida_config_tmp, aiida_profile_factory, config_sqlite_dos):
     """Test that ``submit`` raises ``InvalidOperation`` if the runner does not have a controller.
 
     The runner does not have a controller if the runner was not provided a communicator which is the case for profiles
     that do not define a broker.
     """
-    runner = manager.get_runner()
-    monkeypatch.setattr(runner, '_controller', None)
-
-    with pytest.raises(
-        exceptions.InvalidOperation, match=r'Cannot submit because the runner does not have a process controller.*'
+    with aiida_profile_factory(
+        aiida_config_tmp,
+        storage_backend='core.sqlite_dos',
+        storage_config=config_sqlite_dos(),
     ):
-        launch.submit(arithmetic_add_builder)
+        with pytest.raises(
+            exceptions.InvalidOperation, match=r'Cannot submit because the runner does not have a process controller.*'
+        ):
+            launch.submit(AddWorkChain, term_a=orm.Int(1), term_b=orm.Int(2))
 
 
 def test_submit_without_daemon(aiida_config_tmp, aiida_profile_factory, config_sqlite_dos):

@@ -180,6 +180,7 @@ def _validate_acyclic(graph: GraphIR) -> None:
 
 
 def _check_types(source: t.Any, target: t.Any, context: str) -> None:
+    """Check that a produced value fits the accepting port, descending into namespaces."""
     if isinstance(source, PortNamespace) or isinstance(target, PortNamespace):
         if not isinstance(source, PortNamespace) or not isinstance(target, PortNamespace):
             msg = f'{context} has incompatible value and namespace shapes.'

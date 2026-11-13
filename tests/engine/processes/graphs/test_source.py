@@ -212,7 +212,7 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(assignments.augmented_assignment, 'move it into a task', id='aug-assign'),
         pytest.param(assignments.annotated_assignment, 'drop the annotation', id='ann-assign'),
         pytest.param(loops.fanout, 'for loops are not supported', id='fanout'),
-        pytest.param(loops.list_comprehension, 'must call a task or graph', id='listcomp'),
+        pytest.param(loops.list_comprehension, 'write out one call per value', id='listcomp'),
         pytest.param(loops.tuple_targets_in_loop, 'assign to a plain name', id='loop-tuple'),
         pytest.param(branches.loop_arm_two_names, 'exposes one wire', id='loop-arm-names'),
         pytest.param(parameters.variadic_parameters, 'list each input separately', id='variadic'),
@@ -611,31 +611,56 @@ def test_task_registration_rejects_workchain_dynamic_outputs() -> None:
         def step(self):
             """Placeholder step; registration rejects the spec before running."""
 
-    with pytest.raises(GraphTypeCheckError, match='static leaf outputs'):
+    with pytest.raises(GraphTypeCheckError, match='static outputs'):
         task(DynamicOutputsWorkChain)
 
 
-def test_task_registration_rejects_workchain_output_namespace() -> None:
-    """Task registration rejects a `WorkChain` exposing an output namespace."""
+def test_task_registration_accepts_workchain_output_namespace() -> None:
+    """Task registration accepts a `WorkChain` exposing a static output namespace."""
     from aiida.engine import WorkChain
     from aiida.engine.processes.graphs.lowering import task
     from aiida.orm import Int
 
     class NamespacedOutputsWorkChain(WorkChain):
-        """A `WorkChain` with a `PortNamespace` output, unrepresentable as static leaves."""
+        """A `WorkChain` with a static `PortNamespace` output."""
 
         @classmethod
         def define(cls, spec) -> None:  # type: ignore[override]
             super().define(spec)
             spec.input('x', valid_type=Int)
-            spec.output_namespace('nested', valid_type=Int, dynamic=False)
+            spec.output_namespace('nested')
+            spec.output('nested.value', valid_type=Int)
+            spec.outline(cls.step)
+
+        def step(self):
+            """Placeholder step; registration only checks the spec."""
+
+    handle = task(NamespacedOutputsWorkChain)
+    assert 'nested' in handle.spec().outputs
+
+
+def test_task_registration_rejects_nested_dynamic_output_namespace() -> None:
+    """Task registration rejects a static namespace holding a dynamic namespace."""
+    from aiida.engine import WorkChain
+    from aiida.engine.processes.graphs.lowering import task
+    from aiida.orm import Int
+
+    class NestedDynamicOutputsWorkChain(WorkChain):
+        """A `WorkChain` with a dynamic namespace nested in a static one."""
+
+        @classmethod
+        def define(cls, spec) -> None:  # type: ignore[override]
+            super().define(spec)
+            spec.input('x', valid_type=Int)
+            spec.output_namespace('nested')
+            spec.output_namespace('nested.inner', dynamic=True)
             spec.outline(cls.step)
 
         def step(self):
             """Placeholder step; registration rejects the spec before running."""
 
-    with pytest.raises(GraphTypeCheckError, match='static leaf outputs'):
-        task(NamespacedOutputsWorkChain)
+    with pytest.raises(GraphTypeCheckError, match='static outputs'):
+        task(NestedDynamicOutputsWorkChain)
 
 
 def test_graph_body_rejects_inline_class_definition() -> None:

@@ -24,6 +24,7 @@ from aiida.common import _callables as callables
 from aiida.common.exceptions import GraphTypeCheckError
 from aiida.common.lang import override
 from aiida.common.loaders import get_object_loader
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
@@ -223,7 +224,14 @@ class TaskIR:
     declared_outputs: NamespaceShape = field(default_factory=NamespaceShape)
     typevar_inputs: TypevarPositions = field(default_factory=dict, compare=False)
     typevar_output: t.Any = field(default=None, compare=False)
+    exit_codes: dict[str, ExitCode] = field(default_factory=dict)
+    error_enums: tuple[str, ...] = field(default_factory=tuple)
     version: str = _TASK_IR_VERSION
+
+    def __post_init__(self) -> None:
+        """Normalize containers so copies compare equal on this frozen dataclass."""
+        object.__setattr__(self, 'exit_codes', dict(self.exit_codes))
+        object.__setattr__(self, 'error_enums', tuple(self.error_enums))
 
     @classmethod
     def from_process(
@@ -234,6 +242,8 @@ class TaskIR:
         declared_outputs: NamespaceShape | None = None,
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
+        exit_codes: Mapping[str, ExitCode] | None = None,
+        error_enums: tuple[str, ...] | None = None,
     ) -> TaskIR:
         """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass."""
         module, name = process.__module__, process.__name__
@@ -263,6 +273,8 @@ class TaskIR:
             declared_outputs=declared_outputs or NamespaceShape(),
             typevar_inputs=typevar_inputs or {},
             typevar_output=typevar_output,
+            exit_codes=dict(exit_codes or {}),
+            error_enums=tuple(error_enums or ()),
         )
 
     @cached_property
@@ -281,16 +293,25 @@ class TaskIR:
 
     @property
     def outputs(self) -> PortNamespace:
-        """Return the static leaf output ports of the task process."""
+        """Return the static leaf output ports of the task process.
+
+        Process classes declaring error enums expose a synthetic `error` arm,
+        so failed children branch the same way `Result` tasks do. The arm
+        carries no process port; it only names the declared failure.
+        """
         ports = self.process_class.spec().outputs
         if self.declared_outputs.fields:
             ports = _close_dynamic(ports, self.declared_outputs, OutputPort, narrow=True)
-        if ports.dynamic or any(isinstance(port, PortNamespace) for port in ports.values()):
+        if ports.dynamic or any(isinstance(port, PortNamespace) and port.dynamic for port in ports.values()):
             msg = (
-                'graph tasks require static leaf outputs, not dynamic outputs or output namespaces; '
+                'graph tasks require static outputs, not dynamic outputs; '
                 'declare the outputs of a dynamic namespace with `task(..., outputs={...})`.'
             )
             raise GraphTypeCheckError(msg)
+        if self.exit_codes and 'error' not in ports:
+            ports = _with_error_arm(ports)
+        if self.error_enums:
+            ports = _optional_success_arms(ports)
         return ports
 
     def check_ports(self) -> None:
@@ -316,6 +337,13 @@ class TaskIR:
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
         return _shape_from_port(selected)
 
+    @property
+    def output_shape(self) -> NamespaceShape:
+        """Return the whole outputs contract as a nested shape."""
+        shape = _shape_from_port(self.outputs)
+        assert isinstance(shape, NamespaceShape)
+        return shape
+
     def to_dict(self) -> dict[str, t.Any]:
         """Return the task declaration without the live process class."""
         data: dict[str, t.Any] = {'identifier': self.identifier, 'executor': self.executor.to_dict()}
@@ -323,6 +351,10 @@ class TaskIR:
             data['declared_inputs'] = dump_shape(self.declared_inputs)
         if self.declared_outputs.fields:
             data['declared_outputs'] = dump_shape(self.declared_outputs)
+        if self.exit_codes:
+            data['exit_codes'] = {label: code._asdict() for label, code in self.exit_codes.items()}
+        if self.error_enums:
+            data['error_enums'] = list(self.error_enums)
         return {**data, 'version': self.version}
 
     @classmethod
@@ -333,6 +365,8 @@ class TaskIR:
             executor=ExecutorReference.from_dict(data['executor']),
             declared_inputs=_load_declared(data.get('declared_inputs')),
             declared_outputs=_load_declared(data.get('declared_outputs')),
+            exit_codes={label: ExitCode(**code) for label, code in data.get('exit_codes', {}).items()},
+            error_enums=tuple(data.get('error_enums', ())),
             version=_require_version(data.get('version'), _TASK_IR_VERSION, 'task'),
         )
 
@@ -373,6 +407,47 @@ def _output_required(origin: InputPort | OutputPort) -> bool:
     if isinstance(types, type):
         return types is not type(None)
     return type(None) not in types
+
+
+def _with_error_arm(ports: PortNamespace) -> PortNamespace:
+    """Return a copy of ``ports`` with a synthetic `error` arm for declared failures."""
+    from aiida.orm import EnumData
+
+    fresh = PortNamespace(ports.name, help=ports.help, required=ports.required)
+    for name, child in ports.items():
+        fresh[name] = child
+    fresh['error'] = OutputPort('error', valid_type=EnumData, required=False)
+    return fresh
+
+
+def _optional_success_arms(ports: PortNamespace) -> PortNamespace:
+    """Return a copy of ``ports`` with every success arm optional for mapped failures.
+
+    A mapped failure leaves its success arms absent; like `Result` arms they travel
+    as `None`. Presence on the success path stays enforced by the runtime
+    missing-output check for declared outputs, not by the port contract.
+    """
+    optional = PortNamespace(ports.name, help=ports.help, required=ports.required)
+    for name, child in ports.items():
+        if name == 'error' or not child.required:
+            optional[name] = child
+            continue
+        relaxed = copy(child)
+        relaxed.required = False
+        optional[name] = relaxed
+    return optional
+
+
+def _branch_condition(
+    data: Mapping[str, t.Any],
+) -> tuple[t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'], tuple[str, str] | None]:
+    """Return the stored branch condition, defaulting to the pre-test truthiness check."""
+    stored_member = data.get('condition_member')
+    member = tuple(stored_member) if stored_member is not None else None
+    if member is not None and len(member) != 2:
+        msg = 'a branch `condition_member` names an enum identifier and member name pair.'
+        raise GraphTypeCheckError(msg)
+    return data.get('condition_test', 'truthy'), t.cast('tuple[str, str] | None', member)
 
 
 def _load_declared(data: Mapping[str, t.Any] | None) -> NamespaceShape:
@@ -506,10 +581,13 @@ class GraphTask(abc.ABC):
                 if body is None:
                     msg = 'malformed graph task declaration; missing body.'
                     raise GraphTypeCheckError(msg)
+                condition_test, condition_member = _branch_condition(data)
                 return BranchControl(
                     body=body,
                     otherwise=GraphIR.from_dict(data['otherwise']),
                     condition_port=data.get('condition_port', _CONDITION_PORT),
+                    condition_test=condition_test,
+                    condition_member=condition_member,
                     **common,
                 )
             if kind == 'loop':
@@ -572,13 +650,27 @@ class SubgraphTask(BodyTask):
 class BranchControl(BodyTask):
     """A condition dispatching exactly one of two nested templates.
 
-    ``condition_port`` is a synthetic port wired directly into the placement inputs; validation
-    rejects it from both side templates, so it never appears in their declared inputs.
+    ``condition_port`` is a synthetic port wired outside either side's declared inputs, so it
+    never appears in their declared inputs. ``condition_test`` decides how the condition
+    selects a side: truthiness, a presence test against `None`, or an identity
+    test against one declared error member, named by ``condition_member`` as an
+    enum identifier and member name pair.
     """
 
     KIND: t.ClassVar[_TaskKind] = 'branch'
     condition_port: str = _CONDITION_PORT
     otherwise: GraphIR
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
+    condition_member: tuple[str, str] | None = None
+
+    def __post_init__(self) -> None:
+        """Reject unknown condition tests and member tests without exactly one error member."""
+        if self.condition_test not in ('truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'):
+            msg = f'unsupported branch condition test `{self.condition_test}`.'
+            raise GraphTypeCheckError(msg)
+        if (self.condition_test in ('is_member', 'is_not_member')) != (self.condition_member is not None):
+            msg = 'member tests need exactly one declared error member.'
+            raise GraphTypeCheckError(msg)
 
     @property
     def branches(self) -> tuple[GraphIR, ...]:
@@ -605,6 +697,8 @@ class BranchControl(BodyTask):
         return {
             **super().to_dict(),
             'condition_port': self.condition_port,
+            'condition_test': self.condition_test,
+            'condition_member': list(self.condition_member) if self.condition_member is not None else None,
             'otherwise': self.otherwise.to_dict(),
         }
 

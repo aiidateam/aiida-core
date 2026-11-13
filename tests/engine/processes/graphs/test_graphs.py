@@ -135,6 +135,15 @@ def _roundtrip(declaration: GraphHandle) -> GraphIR:
         pytest.param(ports.single_named_mapping, {'value': 2}, {'only': 2}, id='single-named-mapping'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': True}, {'result': 3}, id='external-true'),
         pytest.param(branches.external_choice, {'value': 2, 'condition': False}, {'result': 4}, id='external-false'),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': True, 'flip': True}, {'result': 11}, id='nested-plain-both'
+        ),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': True, 'flip': False}, {'result': 3}, id='nested-plain-inner'
+        ),
+        pytest.param(
+            branches.nested_plain, {'value': 2, 'flag': False, 'flip': True}, {'result': 4}, id='nested-plain-outer'
+        ),
         pytest.param(branches.namespaced_choice, {'value': 2, 'condition': True}, {'result': 3}, id='namespaced-true'),
         pytest.param(
             branches.namespaced_choice, {'value': 2, 'condition': False}, {'result': 4}, id='namespaced-false'
@@ -525,6 +534,14 @@ def test_branch_in_loop_runs() -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_branch_updates_loop_check() -> None:
+    """A loop check updated only inside nested branches still ends the loop."""
+    outputs, node = run_get_node(loops.nested_condition_update, value=3, running=True)
+    assert node.is_finished_ok
+    assert outputs['result'].value == -1
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_nested_loops_run() -> None:
     """A loop inside a loop body threads inner state through the region."""
     outputs, node = run_get_node(loops.nested_loops, value=2)
@@ -688,10 +705,26 @@ def test_nested_graph_has_child_workflow_provenance() -> None:
     assert set(calls) == {'multiply_add'}
     child = calls['multiply_add']
     assert isinstance(child, GraphNode)
+    assert child.process_label == 'tests.engine.processes.graphs.programs.calls:multiply_add'
     assert child.is_finished_ok
     assert child.outputs.result.value == 10
     children: dict[str, ProcessNode] = child.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
     assert set(children) == {'multiply', 'add'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_branch_children_carry_placement_labels() -> None:
+    """Branch control children show their placement name instead of a bare class name."""
+    _, node = run_get_node(branches.external_choice, value=2, condition=True)
+    assert node.is_finished_ok
+    labels: set[str] = set()
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        for child in current.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested().values():
+            labels.add(child.process_label)
+            stack.append(child)
+    assert labels == {'branch_1'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -1307,6 +1340,33 @@ def test_shelljob_task_missing_declared_output_fails_task(shell_code, text_file)
     assert any(
         report.endswith("task `unproduced` finished without its declared outputs ['missing_txt']") for report in reports
     )
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'command, arguments, expected, status',
+    [
+        pytest.param('false', [], 'recovered from 400', 0, id='mapped-failure'),
+        pytest.param('cat', ['{text}'], 'one two three\n', 0, id='success'),
+        pytest.param('sh', ['-c', 'echo boom 1>&2'], None, 400, id='unmapped-failure'),
+    ],
+)
+def test_shelljob_task_declared_failure_branches(shell_code, text_file, command, arguments, expected, status) -> None:
+    """A mapped calculation failure recovers; an unmapped one fails the graph."""
+    outputs, node = run_get_node(
+        shelljobs.recover_failing,
+        text=text_file,
+        code=shell_code(command),
+        arguments=arguments,
+        task_metadata={'fail': {'options': {}}},
+    )
+    assert node.exit_status == status
+    if expected is None:
+        assert outputs == {}
+        assert node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all_link_labels() == ['fail']
+    else:
+        assert node.is_finished_ok
+        assert outputs['result'].value == expected
 
 
 def test_shelljob_task_declarations_round_trip() -> None:

@@ -1,0 +1,694 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Declared task failures in source contracts, IR and process runs."""
+
+import json
+import typing as t
+
+import pytest
+
+from aiida.calculations.shell import ShellJob
+from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
+from aiida.common.links import LinkType
+from aiida.common.loaders import get_object_loader
+from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, task
+from aiida.engine.launch import run_get_node
+from aiida.engine.processes.graphs.ir import BranchControl, GraphIR, ProcessTask, TaskIR
+from aiida.engine.processes.graphs.results import RestartErrors, _error_types, _result_contract
+from aiida.orm import SinglefileData
+from tests.engine.processes.graphs.programs import results, shelljobs, workchains
+from tests.engine.processes.graphs.programs.results import DivisionErrors, InputErrors
+
+pytestmark = pytest.mark.presto
+
+
+@pytest.mark.parametrize(
+    'annotation, success, labels',
+    [
+        pytest.param(Result[float, DivisionErrors], float, {'ZERO_DENOMINATOR'}, id='single-enum'),
+        pytest.param(
+            Result[float, DivisionErrors | InputErrors],
+            float,
+            {'DivisionErrors_ZERO_DENOMINATOR', 'InputErrors_NEGATIVE_NUMERATOR'},
+            id='union-enums',
+        ),
+    ],
+)
+def test_contract_supported(annotation: t.Any, success: t.Any, labels: set[str]) -> None:
+    """A `Result` annotation declares its success type and its exit codes."""
+    resolved, codes = _result_contract(annotation)
+    assert resolved is success
+    assert set(codes) == labels
+
+
+def test_result_union_qualifies_shared_member_names() -> None:
+    """Union alternatives keep their enum name, so shared member names stay distinct."""
+    assert _error_types(DivisionErrors | InputErrors) == (DivisionErrors, InputErrors)
+
+
+class DuplicateFirst(ExitCodeEnum):
+    """First enum with a status shared with `DuplicateSecond`."""
+
+    FAILURE = ExitCode(410, 'first')
+
+
+class DuplicateSecond(ExitCodeEnum):
+    """Second enum with a status shared with `DuplicateFirst`."""
+
+    FAILURE = ExitCode(410, 'second')
+
+
+class EmptyErrors(ExitCodeEnum):
+    """An enum without members declares no failure."""
+
+
+@pytest.mark.parametrize(
+    'annotation, match',
+    [
+        pytest.param(Result, 'requires a success type', id='bare-result'),
+        pytest.param(Result[Result[float, DivisionErrors], DivisionErrors], 'nested Result', id='nested-result'),
+        pytest.param(Result[float, DivisionErrors | None], 'non-empty ExitCodeEnum', id='none-alternative'),
+        pytest.param(Result[float, EmptyErrors], 'non-empty ExitCodeEnum', id='empty-enum'),
+        pytest.param(Result[float, DuplicateFirst | DuplicateSecond], 'duplicate exit status', id='shared-status'),
+    ],
+)
+def test_contract_rejected(annotation: t.Any, match: str) -> None:
+    """Error types outside non-empty `ExitCodeEnum` alternatives fail the contract."""
+    with pytest.raises(GraphTypeCheckError, match=match):
+        _result_contract(annotation)
+
+
+def test_restart_errors_contract() -> None:
+    """The shared machinery vocabulary declares the `BaseRestartWorkChain` statuses."""
+    success, codes = _result_contract(Result[float, RestartErrors])
+    assert success is float
+    assert set(codes) == {
+        'SUB_PROCESS_EXCEPTED',
+        'SUB_PROCESS_KILLED',
+        'MAXIMUM_ITERATIONS_EXCEEDED',
+        'UNHANDLED_FAILURE',
+    }
+    assert codes['UNHANDLED_FAILURE'].status == 402
+
+
+def test_plain_annotation_has_no_contract() -> None:
+    """A task without `Result` declares no failures."""
+    assert _result_contract(float) == (float, {})
+
+
+def test_calcjob_task_declares_error_mapping() -> None:
+    """A `CalcJob` task maps exit statuses onto declared failures without touching its spec."""
+    placed = shelljobs.recover_failing.build().task('fail')
+    assert isinstance(placed, ProcessTask)
+    assert placed.spec.exit_codes == {'COMMAND_FAILED': shelljobs.ShellErrors.COMMAND_FAILED.value}
+    assert placed.spec.error_enums == (get_object_loader().identify_object(shelljobs.ShellErrors),)
+    assert 'error' in placed.spec.outputs
+    assert not placed.spec.outputs['error'].required
+    assert set(ShellJob.spec().exit_codes) >= {'ERROR_COMMAND_FAILED'}
+    assert 'COMMAND_FAILED' not in ShellJob.spec().exit_codes
+
+
+def test_calcjob_task_ir_round_trips_error_mapping() -> None:
+    """The exit codes and enum identifiers survive an IR round trip."""
+    placed = shelljobs.recover_failing.build().task('fail')
+    assert isinstance(placed, ProcessTask)
+    data = placed.spec.to_dict()
+    assert set(data['exit_codes']) == {'COMMAND_FAILED'}
+    assert data['error_enums'] == [get_object_loader().identify_object(shelljobs.ShellErrors)]
+    rebuilt = TaskIR.from_dict(json.loads(json.dumps(data)))
+    assert rebuilt.exit_codes == placed.spec.exit_codes
+    assert rebuilt.error_enums == placed.spec.error_enums
+
+
+def test_legacy_task_ir_without_error_mapping() -> None:
+    """Task declarations stored before error enums default to no mapping."""
+    placed = shelljobs.copy_and_count.build().task('cat')
+    assert isinstance(placed, ProcessTask)
+    data = placed.spec.to_dict()
+    assert 'exit_codes' not in data
+    assert 'error_enums' not in data
+    assert TaskIR.from_dict(data).error_enums == ()
+
+
+@pytest.mark.parametrize(
+    'declaration, errors, match',
+    [
+        pytest.param(
+            shelljobs.double,
+            shelljobs.ShellErrors,
+            'belong in the `Result` return annotation',
+            id='function-task',
+        ),
+        pytest.param(ShellJob, int, 'non-empty ExitCodeEnum', id='unresolvable'),
+    ],
+)
+def test_task_errors_rejected(declaration: t.Any, errors: t.Any, match: str) -> None:
+    """Error mappings belong on process classes, with resolvable enums."""
+    with pytest.raises(GraphTypeCheckError, match=match):
+        task(
+            declaration,
+            inputs={'nodes': {'text': SinglefileData}},
+            outputs={'stdout': SinglefileData},
+            errors=errors,
+        )
+
+
+def test_task_errors_rejected_on_error_output() -> None:
+    """A process class declaring its own `error` output cannot take an error mapping."""
+    with pytest.raises(GraphTypeCheckError, match='`ErrorOutputChain` already declares an `error` output'):
+        task(workchains.ErrorOutputChain, errors=workchains.ChainErrors)
+
+
+@pytest.mark.parametrize(
+    'value, message',
+    [
+        pytest.param(400, 'must be `ExitCode` values', id='int'),
+        pytest.param(ExitCode(0, 'success'), 'positive exit status', id='zero'),
+        pytest.param(ExitCode(400), 'string message', id='missing-message'),
+        pytest.param(ExitCode(400, 'ok', invalidates_cache='yes'), 'boolean cache flag', id='cache-flag'),
+    ],
+)
+def test_invalid_error_values_rejected_at_definition(value: object, message: str) -> None:
+    """Invalid enum members fail when the enum class is defined."""
+    with pytest.raises((TypeError, ValueError), match=message):
+        ExitCodeEnum('Errors', {'BAD': value})
+
+
+def test_ok_err_carry_declared_values() -> None:
+    """`Ok` holds outputs and `Err` holds a member or a formatted exit code."""
+    assert Ok(0.5).value == 0.5
+    assert Err(DivisionErrors.ZERO_DENOMINATOR).error is DivisionErrors.ZERO_DENOMINATOR
+    code = DivisionErrors.ZERO_DENOMINATOR.value.format()
+    assert Err(code).error == code
+
+
+@pytest.mark.parametrize(
+    'declaration, match',
+    [
+        pytest.param(results.bare_result, 'requires a success type', id='bare-result'),
+        pytest.param(results.nested_result, 'nested Result', id='nested-result'),
+        pytest.param(results.tuple_success, 'name multiple task outputs', id='tuple-success'),
+    ],
+)
+def test_result_declaration_rejected(declaration: t.Any, match: str) -> None:
+    """Success types outside single leaves fail at decoration."""
+    with pytest.raises(GraphTypeCheckError, match=match):
+        task(declaration)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, labels',
+    [
+        pytest.param(results.divide, {'ZERO_DENOMINATOR'}, id='single-enum'),
+        pytest.param(
+            results.divide_signed,
+            {'DivisionErrors_ZERO_DENOMINATOR', 'InputErrors_NEGATIVE_NUMERATOR'},
+            id='union-enums',
+        ),
+    ],
+)
+def test_result_task_declares_value_and_error_ports(declaration: t.Any, labels: set[str]) -> None:
+    """A `Result` task stores its arms under `value` and `error`, registering each exit code."""
+    spec = declaration.spec()
+    assert set(spec.outputs) == {'value', 'error'}
+    assert not spec.outputs['value'].required
+    assert not spec.outputs['error'].required
+    assert labels <= set(spec.exit_codes)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, inputs, expected',
+    [
+        pytest.param(results.divide, {'numerator': 1.0, 'denominator': 2.0}, 0.5, id='value-arm'),
+        pytest.param(results.divide_signed, {'numerator': 3.0, 'denominator': 2.0}, 1.5, id='union-value-arm'),
+    ],
+)
+def test_ok_result_stores_value_arm(declaration: t.Any, inputs: dict[str, t.Any], expected: float) -> None:
+    """A declared success exits cleanly with its value output."""
+    outputs, node = run_get_node(declaration, **inputs)
+    assert node.is_finished_ok
+    assert outputs['value'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, inputs, status, member',
+    [
+        pytest.param(
+            results.divide,
+            {'numerator': 1.0, 'denominator': 0.0},
+            410,
+            DivisionErrors.ZERO_DENOMINATOR,
+            id='declared-member',
+        ),
+        pytest.param(
+            results.divide_signed,
+            {'numerator': -1.0, 'denominator': 2.0},
+            411,
+            InputErrors.NEGATIVE_NUMERATOR,
+            id='union-member',
+        ),
+    ],
+)
+def test_err_result_stores_error_arm(
+    declaration: t.Any, inputs: dict[str, t.Any], status: int, member: ExitCodeEnum
+) -> None:
+    """A declared failure exits with its status and stores the error member."""
+    outputs, node = run_get_node(declaration, **inputs)
+    assert node.exit_status == status
+    assert node.exit_message == member.value.message
+    assert outputs['error'].get_member() is member
+    assert set(node.outputs) == {'error'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_error_member_feeds_recovery_input() -> None:
+    """The stored error member arrives at the recovery task unwrapped."""
+    outputs, node = run_get_node(results.recover_zero, error=DivisionErrors.ZERO_DENOMINATOR)
+    assert node.is_finished_ok
+    assert t.cast(t.Any, outputs).value == 0.0
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_error_member_carries_member_label() -> None:
+    """The stored error member is labeled with its dotted enum name."""
+    outputs, node = run_get_node(results.divide, numerator=1.0, denominator=0.0)
+    assert node.exit_status == 410
+    assert outputs['error'].label == 'DivisionErrors.ZERO_DENOMINATOR'
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, inputs, match',
+    [
+        pytest.param(results.undeclared_error, {'value': 1}, 'undeclared exit code', id='undeclared-enum'),
+        pytest.param(results.missing_result_wrapper, {'value': 1}, 'must return `Ok`', id='bare-return'),
+        pytest.param(results.stray_ok, {'value': 1}, 'must be declared', id='stray-ok'),
+        pytest.param(results.extra_field, {'value': 1.0}, 'undeclared outputs', id='extra-field'),
+    ],
+)
+def test_result_task_misuse_fails_task(declaration: t.Any, inputs: dict[str, t.Any], match: str) -> None:
+    """Undeclared errors and unwrapped returns fail the task itself."""
+    with pytest.raises(GraphValidationError, match=match):
+        run_get_node(declaration, **inputs)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_legacy_exit_code_preserved() -> None:
+    """A task without `Result` keeps exiting with a returned `ExitCode`."""
+    _, node = run_get_node(results.legacy_exit, value=1)
+    assert node.exit_status == 500
+
+
+@pytest.mark.parametrize(
+    'declaration, handle, labels',
+    [
+        pytest.param(
+            results.ratio_signed,
+            results.divide_signed,
+            {'DivisionErrors_ZERO_DENOMINATOR', 'InputErrors_NEGATIVE_NUMERATOR'},
+            id='ratio',
+        ),
+        pytest.param(
+            results.ratio_fallback,
+            results.divide_signed,
+            {'DivisionErrors_ZERO_DENOMINATOR', 'InputErrors_NEGATIVE_NUMERATOR'},
+            id='signed-ratio',
+        ),
+    ],
+)
+def test_contract_in_ir(declaration: t.Any, handle: t.Any, labels: set[str]) -> None:
+    """The declared exit codes and the presence test survive an IR round trip."""
+    spec = declaration.build()
+    placed = next(entry for entry in spec.tasks if isinstance(entry, ProcessTask))
+    assert isinstance(placed, ProcessTask)
+    assert isinstance(placed.spec, TaskIR)
+    assert set(placed.spec.exit_codes) == labels
+    assert placed.spec.exit_codes == {label: handle.spec().exit_codes[label] for label in labels}
+    branch = next(entry for entry in spec.tasks if isinstance(entry, BranchControl))
+    assert isinstance(branch, BranchControl)
+    assert branch.condition_test in ('is_none', 'is_not_none')
+    assert branch.condition_member is None
+    assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
+
+
+@pytest.mark.parametrize(
+    'declaration, test',
+    [
+        pytest.param(results.matched_signed, 'is_member', id='matched'),
+        pytest.param(results.matched_negated, 'is_not_member', id='negated'),
+    ],
+)
+def test_matched_condition_in_ir(declaration: t.Any, test: str) -> None:
+    """A member test stores its enum identifier and member name through a round trip."""
+    spec = declaration.build()
+
+    def branches(template: t.Any) -> t.Iterator[BranchControl]:
+        for entry in template.tasks:
+            if isinstance(entry, BranchControl):
+                yield entry
+                yield from branches(entry.body)
+                yield from branches(entry.otherwise)
+
+    branch = next(entry for entry in branches(spec) if entry.condition_test in ('is_member', 'is_not_member'))
+    assert branch.condition_test == test
+    assert branch.condition_member is not None
+    identifier, name = branch.condition_member
+    assert name == 'ZERO_DENOMINATOR'
+    assert get_object_loader().load_object(identifier) is DivisionErrors
+    assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
+
+
+@pytest.mark.parametrize(
+    'declaration, match',
+    [
+        pytest.param(results.matched_equality, 'put this check in a task', id='equality-test'),
+        pytest.param(results.matched_unknown_member, 'not a known enum member', id='unknown-member'),
+        pytest.param(results.matched_member_typo, 'not a member of its enum', id='member-typo'),
+    ],
+)
+def test_matched_condition_rejected(declaration: t.Any, match: str) -> None:
+    """Only `is` tests against declared enum members lower to member branches."""
+    with pytest.raises(GraphLanguageError, match=match):
+        declaration.build()
+
+
+def test_legacy_task_ir_without_exit_codes() -> None:
+    """Task declarations stored before exit codes default to no declared failures."""
+    divide = results.ratio_signed.build().task('divide_signed')
+    assert isinstance(divide, ProcessTask)
+    data = divide.spec.to_dict()
+    data.pop('exit_codes')
+    assert TaskIR.from_dict(data).exit_codes == {}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration, inputs, expected, task_status, task_arm, branch_child',
+    [
+        pytest.param(
+            results.quotient_ratio,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='quotient-zero-denominator',
+        ),
+        pytest.param(
+            results.quotient_ratio,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            'read_quotient',
+            id='quotient-ok',
+        ),
+        pytest.param(
+            results.ratio_signed,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='ratio-zero-denominator',
+        ),
+        pytest.param(
+            results.ratio_signed,
+            {'numerator': -1.0, 'denominator': 2.0},
+            1.0,
+            411,
+            'error',
+            'recover_negative',
+            id='ratio-negative-numerator',
+        ),
+        pytest.param(
+            results.ratio_signed, {'numerator': 1.0, 'denominator': 2.0}, 0.5, 0, 'value', None, id='ratio-ok'
+        ),
+        pytest.param(
+            results.ratio_fallback,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'union_fallback',
+            id='signed-zero-denominator',
+        ),
+        pytest.param(
+            results.ratio_fallback,
+            {'numerator': -1.0, 'denominator': 2.0},
+            0.0,
+            411,
+            'error',
+            'union_fallback',
+            id='signed-negative-numerator',
+        ),
+        pytest.param(
+            results.ratio_fallback,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            None,
+            id='signed-ok',
+        ),
+        pytest.param(
+            results.matched_signed,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='matched-zero-denominator',
+        ),
+        pytest.param(
+            results.matched_signed,
+            {'numerator': -1.0, 'denominator': 2.0},
+            0.0,
+            411,
+            'error',
+            'union_fallback',
+            id='matched-negative-numerator',
+        ),
+        pytest.param(
+            results.matched_signed,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            None,
+            id='matched-ok',
+        ),
+        pytest.param(
+            results.matched_negated,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='negated-zero-denominator',
+        ),
+        pytest.param(
+            results.matched_negated,
+            {'numerator': -1.0, 'denominator': 2.0},
+            0.0,
+            411,
+            'error',
+            'union_fallback',
+            id='negated-negative-numerator',
+        ),
+        pytest.param(
+            results.matched_negated,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            None,
+            id='negated-ok',
+        ),
+        pytest.param(
+            results.matched_distinct_enum,
+            {'numerator': 1.0, 'denominator': 0.0},
+            0.0,
+            410,
+            'error',
+            'recover_zero',
+            id='distinct-zero-denominator',
+        ),
+        pytest.param(
+            results.matched_distinct_enum,
+            {'numerator': 1.0, 'denominator': 2.0},
+            0.5,
+            0,
+            'value',
+            None,
+            id='distinct-ok',
+        ),
+    ],
+)
+def test_declared_failure_branches(
+    declaration: t.Any,
+    inputs: dict[str, t.Any],
+    expected: float,
+    task_status: int,
+    task_arm: str,
+    branch_child: str | None,
+) -> None:
+    """A declared failure branches to recovery with exit zero; a success reads the value arm."""
+    outputs, node = run_get_node(declaration, **inputs)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert len(calls) == 1
+    (fallible,) = calls.values()
+    assert fallible.exit_status == task_status
+    assert set(fallible.outputs) == {task_arm}
+    branches = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert len(branches) == 1
+    (branch,) = branches.values()
+    assert branch.is_finished_ok
+    placed = _placed_call_labels(branch)
+    assert placed == ({branch_child} if branch_child is not None else set())
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_ok_none_stores_no_arm() -> None:
+    """A `None` success stores nothing; the value arm is simply absent."""
+    outputs, node = run_get_node(results.noop)
+    assert node.is_finished_ok
+    assert dict(outputs) == {}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_formatted_error_keeps_message_on_child() -> None:
+    """A formatted `ExitCode` keeps its message on the child; the member stays canonical."""
+    outputs, node = run_get_node(results.divide_reported, numerator=-2.0, denominator=4.0)
+    assert node.exit_status == 411
+    assert node.exit_message == 'Negative numerator: -2.0'
+    assert outputs['error'].get_member() is InputErrors.NEGATIVE_NUMERATOR
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nullable_model_field_stores_nothing() -> None:
+    """A `None` model field stores nothing; the empty struct reads as an absent arm."""
+    outputs, node = run_get_node(results.divide_maybe, numerator=0.0, denominator=2.0)
+    assert node.is_finished_ok
+    assert dict(outputs) == {}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('inputs', 'expected', 'present'),
+    [
+        pytest.param({'numerator': 1.0, 'denominator': 2.0}, 0.5, True, id='present'),
+        pytest.param({'numerator': 1.0, 'denominator': 0.0}, None, False, id='absent'),
+    ],
+)
+def test_graph_returns_only_present_arm(inputs: dict[str, t.Any], expected: float | None, present: bool) -> None:
+    """A graph output names the success arm; it is missing when the arm is absent."""
+    outputs, node = run_get_node(results.direct_arm, **inputs)
+    assert node.is_finished_ok
+    if present:
+        assert outputs['result'].value == expected
+    else:
+        assert 'result' not in outputs
+
+
+@pytest.mark.parametrize(
+    ('declaration', 'match'),
+    [
+        pytest.param(results.engine_clash_status, 'conflicts with an engine exit code', id='reserved-status'),
+        pytest.param(results.engine_clash_label, 'conflicts with an engine exit code', id='reserved-label'),
+    ],
+)
+def test_engine_exit_code_conflicts(declaration: t.Any, match: str) -> None:
+    """Error codes clashing with engine codes fail at decoration."""
+    with pytest.raises(GraphTypeCheckError, match=match):
+        task(declaration)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('inputs', 'expected', 'task_status', 'handler'),
+    [
+        pytest.param({'numerator': 1.0, 'denominator': 2.0}, 0.5, 0, 'read_quotient', id='selected-ok'),
+        pytest.param({'numerator': 1.0, 'denominator': 0.0}, 0.0, 410, 'recover_zero', id='selected-zero-denominator'),
+    ],
+)
+def test_single_name_binding_selects_arms(
+    inputs: dict[str, t.Any], expected: float, task_status: int, handler: str
+) -> None:
+    """A bound whole result selects arms and fields through dotted paths."""
+    outputs, node = run_get_node(results.selected_ratio, **inputs)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+    calls = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
+    assert len(calls) == 1
+    (fallible,) = calls.values()
+    assert fallible.exit_status == task_status
+    branches = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    assert len(branches) == 1
+    (branch,) = branches.values()
+    assert _placed_call_labels(branch) == {handler}
+
+
+def _placed_call_labels(node: t.Any) -> set[str]:
+    """Return the calc labels placed below a branch, descending into nested branches."""
+    labels = set(node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested())
+    nested = node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).nested()
+    for child in nested.values():
+        labels.update(_placed_call_labels(child))
+    return labels
+
+
+def test_result_task_handle_call_raises() -> None:
+    """A `Result` task handle declares work like any other task, so a direct call raises."""
+    with pytest.raises(GraphError, match='declares a task'):
+        results.divide(numerator=1.0, denominator=2.0)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'declaration',
+    [
+        pytest.param(workchains.recover_unproduced, id='mapped-undeclared'),
+        pytest.param(workchains.read_absent_arm, id='absent-arm'),
+        pytest.param(workchains.recover_static, id='static-mapped'),
+        pytest.param(workchains.read_absent_static, id='static-absent'),
+    ],
+)
+@pytest.mark.parametrize(
+    'fail, expected',
+    [
+        pytest.param(True, 'recovered from 410', id='mapped-failure'),
+        pytest.param(False, 'result:1.0', id='success'),
+    ],
+)
+def test_workchain_mapped_failure_recovers_without_outputs(declaration: t.Any, fail: bool, expected: str) -> None:
+    """Mapped failures without declared outputs complete; absent arms read as `None`."""
+    outputs, node = run_get_node(declaration, fail=fail)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    'numerator, denominator, expected',
+    [
+        pytest.param(1.0, 2.0, 0.5, id='selected-field'),
+        pytest.param(1.0, 0.0, 0.0, id='recovered-field'),
+    ],
+)
+def test_field_selection_arm_merges(numerator: float, denominator: float, expected: float) -> None:
+    """A field-select arm merges with a recovery call arm on one wire."""
+    outputs, node = run_get_node(results.field_ratio, numerator=numerator, denominator=denominator)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected

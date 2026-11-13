@@ -16,6 +16,7 @@ from __future__ import annotations
 import ast
 import builtins
 import copy
+import enum
 import functools
 import inspect
 import textwrap
@@ -23,10 +24,13 @@ import typing as t
 from collections import Counter
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
+from types import UnionType
 
 from aiida.common.exceptions import GraphError, GraphLanguageError, GraphTypeCheckError, GraphValidationError
 from aiida.common.links import validate_link_label
+from aiida.common.loaders import get_object_loader
 from aiida.engine.processes.calcjobs import CalcJob
+from aiida.engine.processes.exit_code import ExitCodeEnum
 from aiida.engine.processes.graphs.inputs import _drops_none_value, _place
 from aiida.engine.processes.graphs.ir import (
     _CONDITION_PORT,
@@ -251,13 +255,21 @@ class _Arm(t.NamedTuple):
 # the `overload-overlap` ignores below record that this overlap is deliberate.
 @t.overload
 def task(  # type: ignore[overload-overlap]
-    function: type[CalcJob], *, inputs: PortDeclaration | None = None, outputs: PortDeclaration | None = None
+    function: type[CalcJob],
+    *,
+    inputs: PortDeclaration | None = None,
+    outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> CalcJobTaskHandle: ...
 
 
 @t.overload
 def task(  # type: ignore[overload-overlap]
-    function: type[WorkChain], *, inputs: PortDeclaration | None = None, outputs: PortDeclaration | None = None
+    function: type[WorkChain],
+    *,
+    inputs: PortDeclaration | None = None,
+    outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> WorkChainTaskHandle: ...
 
 
@@ -279,6 +291,7 @@ def task(
     *,
     inputs: PortDeclaration | None = None,
     outputs: PortDeclaration | None = None,
+    errors: type[ExitCodeEnum] | UnionType | None = None,
 ) -> t.Any:
     """Register an importable task with static ports and fixed graph inputs.
 
@@ -290,6 +303,8 @@ def task(
     :param inputs: names and node types inside dynamic input namespaces of a process class,
         e.g. ``{'nodes': {'text': SinglefileData}}``.
     :param outputs: names and node types of the dynamic outputs of a process class.
+    :param errors: an `ExitCodeEnum` subclass, or a union of them, mapping the exit
+        statuses a `CalcJob` or `WorkChain` task may finish with onto declared failures.
     :return: a callable, launchable task handle.
     """
 
@@ -297,7 +312,7 @@ def task(
         """Validate the importable task reference and construct its process wrapper."""
         if not inspect.isclass(target):
             _function_identifier(target)
-        return _build_task(target, inputs=inputs, outputs=outputs)
+        return _build_task(target, inputs=inputs, outputs=outputs, errors=errors)
 
     if function is not None:
         return decorate(function)
@@ -637,23 +652,28 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
             )
             _reject(state, node=statement, reason=msg)
     if not isinstance(statement.value, ast.Call):
-        msg = (
-            'only calls are recorded as work; plain values would run without leaving a trace; '
-            + 'each line must call a task or graph instead'
-        )
-        _reject(state, node=statement.value, reason=msg)
+        reference = _lower_value(state, statement.value)
+        if not isinstance(reference, _Reference):
+            msg = (
+                'only calls are recorded as work; plain values would run without leaving a trace; '
+                + 'each line must call a task or graph instead'
+            )
+            _reject(state, node=statement.value, reason=msg)
+        for name in names:
+            state.names[name] = reference
+        return names[0]
     ref: _Reference = _lower_call(state, expression=statement.value)
     for name in names:
         state.names[name] = ref
     return names[0]
 
 
-def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
+def _lower_unpack(state: _LoweringState, statement: ast.Assign, *, rebind: bool = False) -> None:
     """Bind each tuple element to one output of a multi-output call."""
     target: ast.expr = statement.targets[0]
     assert isinstance(target, ast.Tuple)
     names: list[str] = [elt.id for elt in target.elts if isinstance(elt, ast.Name)]
-    if not names or len(names) != len(target.elts) or any(name in state.names for name in names):
+    if not names or len(names) != len(target.elts) or (not rebind and any(name in state.names for name in names)):
         msg = (
             'unpacking maps positions to declared output ports, so every element needs a fresh name; '
             + 'give each unpacked output a new name instead'
@@ -680,7 +700,9 @@ def _lower_unpack(state: _LoweringState, statement: ast.Assign) -> None:
         msg = 'leaving ports unwired would drop declared outputs; ' + f'name all {len(fields)} outputs, one name each'
         _reject(state, node=statement, reason=msg)
     for name, (field_name, field_shape) in zip(names, fields):
-        state.names[name] = _Reference(ref.task, port=field_name, shape=field_shape)
+        # `_` discards its arm: it never becomes a wire, so regions never route it.
+        if name != '_':
+            state.names[name] = _Reference(ref.task, port=field_name, shape=field_shape)
 
 
 def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
@@ -727,6 +749,9 @@ def _lower_arm(state: _LoweringState, statements: list[ast.stmt]) -> _Arm:
             )
             _reject(state, node=statement, reason=msg)
         name = rebound[0]
+        reference = child.names[name]
+    elif isinstance(statement, ast.If):
+        name = _lower_branch(child, statement=statement)
         reference = child.names[name]
     else:
         name = _lower_assignment(child, statement=statement, rebind=True)
@@ -796,12 +821,18 @@ def _rekey_alias(arm: _Arm, port: str) -> _Arm:
     return arm._replace(body=replace(arm.body, outputs={port: endpoint}))
 
 
-def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
-    """Lower an if statement to a branch control task."""
+def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
+    """Lower an if statement to a branch control task, returning the exposed wire."""
     _check_branch_shape(state, statement=statement)
     test: ast.expr = statement.test
     if isinstance(test, ast.Call):
         test = _bind_call_condition(state, test=test)
+    condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
+    condition_member: tuple[str, str] | None = None
+    if (none_test := _match_none_test(test)) is not None:
+        test, condition_test = none_test
+    elif (matched := _match_member_test(state, test)) is not None:
+        test, condition_test, condition_member = matched
     first = _lower_arm(state, statements=statement.body)
     if statement.orelse:
         second = _lower_arm(state, statements=statement.orelse)
@@ -815,12 +846,137 @@ def _lower_branch(state: _LoweringState, statement: ast.If) -> None:
         second = _rekey_alias(second, port) if second.alias else second
     instance = _claim_name(state, f'branch_{len(state.tasks) + 1}')
     given = _wire_branch_inputs(state, instance=instance, first=first, second=second, test=test)
-    state.tasks.append(BranchControl(name=instance, inputs=given, body=first.body, otherwise=second.body))
+    state.tasks.append(
+        BranchControl(
+            name=instance,
+            inputs=given,
+            body=first.body,
+            otherwise=second.body,
+            condition_test=condition_test,
+            condition_member=condition_member,
+        )
+    )
     selected = first.child.names[first.name]
     # Namespace arms expose their fields at the branch root, so the carried
     # name restarts at the whole branch namespace instead of the call port.
     carried = '' if _is_namespace_arm(first) or _is_namespace_arm(second) else port or selected.port
     state.names[first.name] = _Reference(instance, port=carried, shape=selected.shape)
+    return first.name
+
+
+def _identity_compare(node: ast.AST) -> tuple[ast.expr, ast.expr, bool] | None:
+    """Split a single `is` or `is not` comparison into its sides and whether it is `is`."""
+    if (
+        isinstance(node, ast.Compare)
+        and len(node.ops) == 1
+        and isinstance(node.ops[0], (ast.Is, ast.IsNot))
+        and len(node.comparators) == 1
+    ):
+        return node.left, node.comparators[0], isinstance(node.ops[0], ast.Is)
+    return None
+
+
+def _attribute_path(node: ast.expr) -> tuple[ast.expr, list[str]]:
+    """Return the base of an attribute chain and its attribute names, base first."""
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    return node, parts[::-1]
+
+
+def _match_none_test(test: ast.expr) -> tuple[ast.expr, t.Literal['is_none', 'is_not_none']] | None:
+    """Split `wire is None` into its wire and test kind, or return `None`."""
+    compared = _identity_compare(test)
+    if compared is None:
+        return None
+    wire, other, is_test = compared
+    if not (isinstance(other, ast.Constant) and other.value is None):
+        return None
+    kind: t.Literal['is_none', 'is_not_none'] = 'is_none' if is_test else 'is_not_none'
+    return wire, kind
+
+
+def _match_member_test(
+    state: _LoweringState, test: ast.expr
+) -> tuple[ast.expr, t.Literal['is_member', 'is_not_member'], tuple[str, str]] | None:
+    """Lower `wire is Enum.MEMBER` to a member test, or reject an unknown member.
+
+    The first side resolving to an enum member wins; the other side is the
+    wire, checked as usual when it is lowered. A wire tested against an
+    unknown name reports the missing member instead of a generic rejection.
+    """
+    compared = _identity_compare(test)
+    if compared is None:
+        return None
+    left, right, is_test = compared
+    for wire, other in ((left, right), (right, left)):
+        member = _resolve_enum_member(state, other)
+        if member is not None and not isinstance(wire, ast.Constant):
+            kind: t.Literal['is_member', 'is_not_member'] = 'is_member' if is_test else 'is_not_member'
+            return wire, kind, member
+    _reject_unknown_member(state, left, right)
+    return None
+
+
+def _reject_unknown_member(state: _LoweringState, left: ast.expr, right: ast.expr) -> None:
+    """Reject a wire compared against a name that is no declared enum member."""
+    for value, other in ((left, right), (right, left)):
+        reason = _unknown_member(state, other) if _compares_wire_to_name(state, value, other) else None
+        if reason is not None:
+            msg = (
+                'conditions test declared error members, so the compared name must be one; '
+                + f'{ast.unparse(other)!r} {reason}; check the spelling instead'
+            )
+            _reject(state, node=other, reason=msg)
+
+
+def _compares_wire_to_name(state: _LoweringState, value: ast.expr, other: ast.expr) -> bool:
+    """Return whether one side is a known wire and the other a plain or dotted name."""
+    return isinstance(value, ast.Name) and value.id in state.names and isinstance(other, (ast.Name, ast.Attribute))
+
+
+def _unknown_member(state: _LoweringState, node: ast.expr) -> str | None:
+    """Return why a compared name is no enum member, or `None` when it may be one."""
+    if not _known_name(state, node):
+        return 'is not a known enum member'
+    if isinstance(node, ast.Attribute) and _resolve_enum_member(state, node) is None and _enum_base(state, node):
+        return 'is not a member of its enum'
+    return None
+
+
+def _enum_base(state: _LoweringState, node: ast.Attribute) -> type | None:
+    """Return the enum class a dotted member reference starts from, or `None`."""
+    base, _ = _attribute_path(node)
+    if not isinstance(base, ast.Name) or base.id in state.names:
+        return None
+    resolved = state.definition.function.__globals__.get(base.id)
+    return resolved if isinstance(resolved, type) and issubclass(resolved, enum.Enum) else None
+
+
+def _known_name(state: _LoweringState, node: ast.expr) -> bool:
+    """Return whether a name or dotted path starts from a known wire or module."""
+    base, _ = _attribute_path(node)
+    if not isinstance(base, ast.Name):
+        return True
+    return base.id in state.names or base.id in state.definition.function.__globals__
+
+
+def _resolve_enum_member(state: _LoweringState, node: ast.expr) -> tuple[str, str] | None:
+    """Return the enum identifier and member name behind a reference, or `None`."""
+    base, parts = _attribute_path(node)
+    # A base shadowing an enclosing wire stays a wire, as with dotted calls.
+    if not isinstance(base, ast.Name) or base.id in state.names:
+        return None
+    try:
+        resolved: t.Any = state.definition.function.__globals__[base.id]
+        for part in parts:
+            resolved = getattr(resolved, part)
+    except (KeyError, AttributeError):
+        return None
+    if isinstance(resolved, enum.Enum):
+        return get_object_loader().identify_object(type(resolved)), resolved.name
+    return None
 
 
 def _check_branch_shape(state: _LoweringState, statement: ast.If) -> None:
@@ -875,10 +1031,11 @@ def _body_state_names(body: list[ast.stmt]) -> set[str]:
     for node in body:
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             assigned.add(node.targets[0].id)
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+            # A `_` element discards its arm, so it never carries across iterations.
+            assigned.update(elt.id for elt in node.targets[0].elts if isinstance(elt, ast.Name) and elt.id != '_')
         elif isinstance(node, ast.If):
-            for arm in (*node.body, *node.orelse):
-                if isinstance(arm, ast.Assign):
-                    assigned.update(target.id for target in arm.targets if isinstance(target, ast.Name))
+            assigned.update(_body_state_names([*node.body, *node.orelse]))
         elif isinstance(node, ast.While):
             assigned.update(_body_state_names(node.body))
     return assigned
@@ -929,6 +1086,9 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         if not isinstance(node, ast.Assign):
             msg = 'loop bodies only record task calls, branches, and loops; ' + 'move anything else into a task instead'
             _reject(state, node=node, reason=msg)
+        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+            _lower_unpack(child, node, rebind=True)
+            continue
         _lower_assignment(child, node, rebind=True)
     outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
     body_spec = _lower_region_body(child, outputs=outputs)
@@ -976,16 +1136,39 @@ def _callee_ids(statements: list[ast.stmt], enclosing: Mapping[str, _Reference])
     return callees
 
 
+def _member_test_skips(state: _LoweringState, statements: list[ast.stmt]) -> set[int]:
+    """Return the identities of names in a member-test position.
+
+    A compared enum member resolves when the graph is built and never
+    travels as a region input, so collection skips it; the wire side
+    still collects as usual. An unknown compared name skips too, so the
+    member matcher reports the spelling instead of a generic rejection.
+    """
+    skipped: set[int] = set()
+    for node in _walk_region(statements):
+        compared = _identity_compare(node)
+        if compared is None:
+            continue
+        left, right, _ = compared
+        for value, other in ((left, right), (right, left)):
+            if _resolve_enum_member(state, other) is not None or (
+                _compares_wire_to_name(state, value, other) and not _known_name(state, other)
+            ):
+                skipped.update(id(part) for part in ast.walk(other) if isinstance(part, ast.Name))
+    return skipped
+
+
 def _collect_region_inputs(state: _LoweringState, statements: list[ast.stmt]) -> _LoweringState:
     """Collect the enclosing values a nested body reads as region inputs."""
     # Names read in the body become inputs of the nested graph. Calls are not values.
     assigned = _assigned_names(statements)
     callees = _callee_ids(statements, state.names)
+    skipped = _member_test_skips(state, statements)
     reads: dict[str, ast.Name] = {}
     for node in _walk_region(statements):
         if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
             continue
-        if node.id in assigned or id(node) in callees or node.id in reads:
+        if node.id in assigned or id(node) in callees or id(node) in skipped or node.id in reads:
             continue
         reads[node.id] = node
     child = _LoweringState(state.definition, stack=state.stack)
@@ -1013,8 +1196,19 @@ def _route_region(
 ) -> None:
     """Route the enclosing values a nested region reads."""
     for name in child.inputs:
-        if name in state.names:
-            _wire(state, instance=instance, port=name, value=state.names[name], given=given)
+        base, _, sub = name.partition('.')
+        if base not in state.names:
+            continue
+        value = state.names[base]
+        if sub:
+            # A dotted read selects from the enclosing wire; carry the sub-path along.
+            port = f'{value.port}.{sub}' if value.port else sub
+            shape = value.shape
+            for segment in sub.split('.'):
+                assert isinstance(shape, NamespaceShape)
+                shape = shape.select(segment)
+            value = _Reference(value.task, port=port, shape=shape)
+        _wire(state, instance=instance, port=name, value=value, given=given)
 
 
 def _bind_call_condition(state: _LoweringState, test: ast.Call) -> ast.Name:
@@ -1258,7 +1452,13 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         )
         _reject(state, node=expression, reason=msg)
     state.tasks.append(task)
-    return _Reference(instance, port=result_port, shape=result_shape)
+    if isinstance(result_shape, LeafShape):
+        return _Reference(instance, port=result_port, shape=result_shape)
+    if isinstance(target, GraphHandle):
+        # A graph names its outputs; fields select under that name.
+        return _Reference(instance, port=result_port, shape=result_shape)
+    # A namespace result binds whole; re-root a single-port subtree at the outputs.
+    return _Reference(instance, port='', shape=narrowed.output_shape)
 
 
 def _bind_positional(

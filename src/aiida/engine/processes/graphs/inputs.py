@@ -88,6 +88,9 @@ def _port_for_shape(name: str, shape: Shape) -> InputPort | PortNamespace:
         port = InputPort(name, valid_type=shape.types, **options)
         # The constructor normalizes `valid_type`; restore the exact shape.
         port.valid_type = shape.types
+        if not shape.required and port.valid_type is not None and type(None) not in port.valid_type:
+            # An optional leaf carries absent `Result` arms as `None`.
+            port.valid_type = (*port.valid_type, type(None))
         return port
     namespace = PortNamespace(name, populate_defaults=shape.required, **options)
     for field, child in shape.fields:

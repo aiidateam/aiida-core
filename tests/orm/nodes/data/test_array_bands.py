@@ -28,6 +28,41 @@ def alternate_user():
         return User(email='alternate@localhost').store()
 
 
+class TestBandsDataMetadata:
+    """Tests for metadata handling in ``BandsData``."""
+
+    @staticmethod
+    def test_constructor_defaults():
+        """Test that omitted metadata is stored as ``None``."""
+        bands = BandsData()
+        assert bands.units is None
+        assert bands.array_labels is None
+
+    @staticmethod
+    def test_constructor_metadata():
+        """Test that the constructor stores ``units`` and ``array_labels``."""
+        bands = BandsData(units='eV', array_labels=['alpha'])
+        assert bands.units == 'eV'
+        assert bands.array_labels == ['alpha']
+
+    @staticmethod
+    def test_constructor_labels_survive_set_bands():
+        """Test that constructor labels are returned with the bands."""
+        bands = BandsData(array_labels=['alpha'])
+        bands.set_kpoints([[0.0, 0.0, 0.0]])
+        bands.set_bands([[1.0]])
+        _, labels = bands.get_bands(also_labels=True)
+        assert labels == ['alpha']
+
+    @staticmethod
+    def test_set_bands_without_units():
+        """Test that omitted units are stored as ``None``, not ``'None'``."""
+        bands = BandsData()
+        bands.set_kpoints([[0.0, 0.0, 0.0]])
+        bands.set_bands([[1.0]])
+        assert bands.units is None
+
+
 class TestGetBandsAndParentsStructure:
     """Tests for the :meth:`~aiida.orm.nodes.data.array.bands.get_bands_and_parents_structure` function."""
 

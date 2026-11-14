@@ -18,6 +18,13 @@
 
 One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors remain child processes, dispatched with hierarchical call labels (for example `multiply_add__multiply` or `loop_1_iteration_0__decrement`). Provenance that previously contained intermediate `GraphNode` children now shows the task runs directly under the single graph node, and `GraphRun` checkpoints use a new `0.2` scope format; existing `0.1` checkpoints cannot be resumed after upgrading. The run state is checkpointed YAML-encoded (like the other process inputs), and nested scope inputs normalized from defaults are stored standalone so checkpoints can reference them; they carry no provenance links. Finish or terminate all active graph processes before upgrading.
 
+#### Iteration-local bindings in loop bodies
+
+Loop bodies now accept iteration-local bindings such as `step = trial(...)` without requiring an initial `step` before the loop.
+Previously every name assigned in a loop body had to be bound before the loop; now only names read before any write, the loop condition, and pre-bound names become carried state, while the rest are declared on their first write, stay fresh every pass, and never leak out of the loop.
+Reads before the first write, assignments on only one branch path, and post-loop reads of locals fail at build time.
+Stored declarations and checkpoints need no migration: locals live in the existing per-iteration scopes, and templates without locals keep their previous shape.
+
 #### Scalar literal bindings in source graphs
 
 Graph bodies now accept scalar literal bindings such as `attempts = 0`, `running = False`, or `mode = 'square'`.

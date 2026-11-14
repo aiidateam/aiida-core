@@ -98,15 +98,89 @@ def list_comprehension(values: list[int]) -> int:
     return add(x=1, y=1)
 
 
-# rejected at lowering: loop state comes from enclosing names.
 @graph
 def fresh_name_in_loop(value: int) -> int:
-    """Bind a fresh name in a loop; state must be bound before the loop."""
+    """Bind a fresh name in a loop; each iteration declares it anew as iteration-local state."""
     total = add(x=value, y=1)
     while is_positive(value=total):
-        fresh = add(x=total, y=1)
-        total = add(x=fresh, y=1)
+        fresh = decrement(value=total)
+        total = add(x=fresh, y=0)
     return total
+
+
+@graph
+def iteration_local(value: int, flag: bool) -> int:
+    """Rebind a carried total from an iteration-local step; no initial step is needed."""
+    total = add(x=value, y=0)
+    while flag:
+        step = decrement(value=total)
+        total = add(x=step, y=0)
+        flag = is_positive(value=total)
+    return total
+
+
+@graph
+def branch_local_join(value: int, flag: bool) -> int:
+    """Bind an iteration-local step on both branch arms; the join stays iteration-local."""
+    total = add(x=value, y=0)
+    while flag:
+        if is_positive(value=total):
+            step = decrement(value=total)
+        else:
+            step = add(x=total, y=0)
+        total = add(x=step, y=0)
+        flag = is_positive(value=total)
+    return total
+
+
+@graph
+def nested_local_loop(value: int, flag: bool) -> int:
+    """Carry an iteration-local step through a nested loop; each outer pass starts fresh."""
+    total = add(x=value, y=0)
+    while flag:
+        step = decrement(value=total)
+        while is_positive(value=step):
+            step = decrement(value=step)
+        total = add(x=step, y=0)
+        flag = is_positive(value=total)
+    return total
+
+
+# rejected at lowering: reads before any write need an initial value.
+@graph
+def local_use_before_def(value: int, flag: bool) -> int:
+    """Read a loop-local before its first write; iteration state starts from enclosing names."""
+    total = add(x=value, y=0)
+    while flag:
+        total = add(x=step, y=1)  # noqa: F821 - the undefined name is rejected
+        step = add(x=total, y=1)  # noqa: F841 - the write after the rejected read never runs
+        flag = is_positive(value=total)
+    return total
+
+
+# rejected at lowering: a conditionally assigned name may stay unbound.
+@graph
+def local_conditional_assign(value: int, flag: bool) -> int:
+    """Read a name assigned on one branch arm only; the other path leaves it unbound."""
+    total = add(x=value, y=0)
+    while flag:
+        if is_positive(value=total):
+            step = add(x=total, y=1)
+        total = add(x=step, y=0)
+        flag = is_positive(value=total)
+    return total
+
+
+# rejected at lowering: iteration-locals never leave the loop.
+@graph
+def local_leaks_after_loop(value: int, flag: bool) -> int:
+    """Return an iteration-local after the loop; locals are fresh each pass and unbound outside."""
+    total = add(x=value, y=0)
+    while flag:
+        step = add(x=total, y=1)
+        total = add(x=step, y=1)
+        flag = is_positive(value=total)
+    return step
 
 
 # rejected at lowering: a branch or loop body only sees names defined around it.

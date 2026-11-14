@@ -559,8 +559,24 @@ Whole-namespace arms on both sides must share the same fields.
 The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
 
 A ``while`` tests a bound name, an inline expression such as ``n > 0``, or a task call before every iteration.
-The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, ``if`` branches, or nested ``while`` loops.
-A tested name must be rebound in the body; a tested call runs again after every iteration. An inline test re-evaluates from the rebound names:
+The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, scalar literal bindings such as ``attempts = 0``, ``if`` branches, or nested ``while`` loops.
+A tested name must be rebound in the body; a tested call runs again after every iteration. An inline test re-evaluates from the rebound names.
+Names the body assigns without an enclosing binding are iteration-local, such as ``step`` below: declared on their first write, fresh every pass, never carried across iterations or visible after the loop.
+Reading one before its write, assigning it on only one branch path, or reading it after the loop fails when the graph is built:
+
+.. code:: python
+
+    @task
+    def trial(x: int) -> int:
+        return x - 1
+
+    @graph
+    def stepped(x: int, keep_going: bool) -> int:
+        while keep_going:
+            step = trial(x=x)
+            x = step
+            keep_going = positive(x=x)
+        return x
 
 .. code:: python
 

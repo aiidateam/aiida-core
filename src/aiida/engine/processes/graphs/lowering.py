@@ -1212,13 +1212,20 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
     # Branches in the body assign loop state through their arms, and nested loops through
     # their own state, so both join it; every name still starts from an enclosing binding.
     assigned = _body_state_names(body)
+    live = _loop_live_in(state, body)
+    carried: set[str] = set()
     for name in assigned:
+        if name != condition and name not in live and name not in state.names:
+            # Iteration-local: declared on its first write, fresh every pass, never routed
+            # in, carried, or exported. Reads before that write fail at the use instead.
+            continue
         if name not in state.names:
             msg = (
                 'loop state comes from enclosing names, so unknown names have nothing to start from; '
                 + f'set {name!r} before the loop instead'
             )
             _reject(state, node=statement, reason=msg)
+        carried.add(name)
         child.inputs.setdefault(name, [])
         child.input_shapes[name] = state.names[name].shape
         child.names[name] = _Reference(None, port=name, shape=state.names[name].shape)
@@ -1242,14 +1249,71 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
             _lower_unpack(child, node, rebind=True)
             continue
         _lower_assignment(child, node, rebind=True)
-    outputs: dict[str, _Reference] = {name: child.names[name] for name in assigned}
+    outputs: dict[str, _Reference] = {name: child.names[name] for name in carried}
     body_spec = _lower_region_body(child, outputs=outputs)
     instance = _claim_name(state, f'loop_{len(state.tasks) + 1}')
     given: dict[str, _CapturedValue] = {}
     _route_region(state, child=child, instance=instance, given=given)
     state.tasks.append(LoopControl(name=instance, inputs=given, body=body_spec, condition_port=condition))
-    for name in assigned:
+    for name in carried:
         state.names[name] = _Reference(instance, port=name, shape=child.names[name].shape)
+
+
+def _loop_live_in(state: _LoweringState, body: list[ast.stmt]) -> set[str]:
+    """Return the body names read before any write on some path, excluding declarations.
+
+    Called names, dotted-module bases, and enum members in member tests resolve without
+    enclosing state, so they never count as loop-carried reads.
+    """
+    skipped = _callee_ids(state, body, state.names) | _member_test_skips(state, body)
+    live: set[str] = set()
+    _collect_live(body, written=set(), live=live, skipped=skipped)
+    return live
+
+
+def _collect_loads(node: ast.AST, *, written: set[str], live: set[str], skipped: set[int]) -> None:
+    """Add the names a value expression reads before they are written."""
+    for child in ast.walk(node):
+        if (
+            isinstance(child, ast.Name)
+            and isinstance(child.ctx, ast.Load)
+            and child.id not in written
+            and id(child) not in skipped
+        ):
+            live.add(child.id)
+
+
+def _collect_live(statements: list[ast.stmt], *, written: set[str], live: set[str], skipped: set[int]) -> None:
+    """Accumulate read-before-write names in order, threading definite writes through branches."""
+    for statement in statements:
+        if isinstance(statement, ast.If):
+            _collect_loads(statement.test, written=written, live=live, skipped=skipped)
+            definite: set[str] | None = None
+            for arm in (statement.body, statement.orelse):
+                arm_written = set(written)
+                _collect_live(arm, written=arm_written, live=live, skipped=skipped)
+                delta = arm_written - written
+                definite = delta if definite is None else definite & delta
+            written |= definite or set()
+        elif isinstance(statement, ast.While):
+            _collect_loads(statement.test, written=written, live=live, skipped=skipped)
+            # Zero iterations are possible, so nested writes never count as definite here,
+            # but nested reads still observe the enclosing iteration state.
+            _collect_live(statement.body, written=set(written), live=live, skipped=skipped)
+        elif isinstance(statement, ast.AugAssign) and isinstance(statement.target, ast.Name):
+            if statement.target.id not in written and id(statement.target) not in skipped:
+                live.add(statement.target.id)
+            _collect_loads(statement.value, written=written, live=live, skipped=skipped)
+            written.add(statement.target.id)
+        elif isinstance(statement, ast.Assign):
+            _collect_loads(statement.value, written=written, live=live, skipped=skipped)
+            for target in statement.targets:
+                if isinstance(target, ast.Name):
+                    written.add(target.id)
+                elif isinstance(target, ast.Tuple):
+                    for element in target.elts:
+                        if isinstance(element, ast.Name):
+                            written.add(element.id)
 
 
 def _walk_region(statements: list[ast.stmt]) -> Iterator[ast.AST]:

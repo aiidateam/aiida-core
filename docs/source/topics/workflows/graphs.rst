@@ -532,7 +532,11 @@ Calling a graph inside another graph places it as a subgraph, which runs as a sc
 An ``if`` tests a bound name, a field, an inline expression such as ``x > 0``, a task call, or boolean combinations of those with ``and`` and ``or``, such as ``value != target and attempts < max_steps``.
 Each ``and``/``or`` pair selects one side at runtime with short-circuit semantics: the right side runs only when the left side selects it, so a task call or a guarded operation there never runs when skipped.
 Every operand must read as a boolean; Python operand tricks such as ``1 and 2`` fail when the graph is built.
-Presence and member tests (``is None``, ``is`` against a declared error member) stay branch tests: they work in an ``if`` or ``while`` test and on the left of ``and``/``or``, while the right side must be a boolean value.
+Presence and member tests (``is None``, ``is not None``, ``is`` and ``is not`` against a declared error
+member, optionally under ``not``) lower to ephemeral boolean control values wherever a boolean reads:
+they work in an ``if`` or ``while`` test, on either side of ``and``/``or``, as named wires such as
+``present = value is not None``, and inside selections. Only these supported identity forms read as
+booleans; arbitrary ``x is y`` identities never run and fail when the graph is built.
 The intermediate representation holds both arms; at runtime, only the selected arm runs, as a scope of the same graph process.
 With an ``else``, both arms bind the same name to values of the same type:
 

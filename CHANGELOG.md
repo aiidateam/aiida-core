@@ -30,9 +30,17 @@ Stored declarations and checkpoints need no migration: selections reuse the exis
 Graph bodies now accept boolean `and`/`or` over boolean-valued inline expressions, references, and task calls.
 Previously every `and`/`or` failed at build time with a diagnostic claiming only tasks can compute booleans; each pair now lowers to a branch selecting the joined boolean, so the right side evaluates only when the left side selects it, with real short-circuit semantics.
 Task calls on the right never run when skipped, and guarded operations such as a remainder behind a non-zero check never evaluate when skipped.
-Every operand must statically read as a boolean: Python operand tricks such as `1 and 2` fail at build time, as do presence tests in value position.
-Presence and member tests stay branch tests, working in `if`/`while` tests and on the left of `and`/`or`.
+Every operand must statically read as a boolean: Python operand tricks such as `1 and 2` fail at build time, as do arbitrary `x is y` identities.
+Presence and member tests compose as branch conditions and as boolean values on either side of `and`/`or`.
 Stored declarations and checkpoints need no migration: combinations reuse the existing branch machinery and checkpoint in the existing scope state.
+
+#### Presence and member predicates as boolean values in source graphs
+
+Graph bodies now accept presence and member tests (`is None`, `is not None`, `is`/`is not` against a declared error member, optionally under `not`) wherever a boolean reads.
+Previously tests such as `flag and value is None` or `present = value is not None` failed at build time with a diagnostic claiming presence tests only select a side; each test now lowers to an ephemeral boolean control value reusing the branch machinery to select `True`/`False`, so the joined wire reads as a boolean without running any task.
+Named predicates, right-hand `and`/`or` operands, negations, `while` tests, selections, and declared-member values all compose, with real short-circuit semantics preserved: task calls on an unselected side never run.
+Only the already-supported `None`/member identity forms read as booleans; arbitrary `x is y` identities still fail at build time, and returning a computed boolean as a root output still fails at run time since only task outputs enter the provenance.
+Stored declarations and checkpoints need no migration: predicates reuse the existing branch machinery and checkpoint in the existing scope state.
 
 #### Iteration-local bindings in loop bodies
 

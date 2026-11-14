@@ -1172,6 +1172,56 @@ def _match_member_test(
     return None
 
 
+def _is_supported_predicate(state: _LoweringState, expression: ast.expr) -> bool:
+    """Return whether an expression is a supported presence or member test, optionally negated.
+
+    Only the already-supported `is None`, `is not None`, and declared error-member forms count;
+    arbitrary `x is y` identities never do. A leading `not` inverts the boolean without changing
+    which identities are supported, so `not (value is None)` counts while `not flag` does not.
+    """
+    if _match_none_test(expression) is not None:
+        return True
+    if _match_member_test(state, expression) is not None:
+        return True
+    if isinstance(expression, ast.UnaryOp) and isinstance(expression.op, ast.Not):
+        return _is_supported_predicate(state, expression.operand)
+    return False
+
+
+def _lower_predicate_value(state: _LoweringState, expression: ast.expr, node: ast.AST) -> _Reference | None:
+    """Lower a presence or member test to an ephemeral boolean control value, or return `None`.
+
+    The test reuses the branch selection machinery to choose between `True` and `False`, so the
+    joined wire reads as a boolean without running any task. `None` means the expression is no
+    supported predicate and the caller falls through to its usual rejection.
+    """
+    if isinstance(expression, ast.UnaryOp) and isinstance(expression.op, ast.Not):
+        if not _is_supported_predicate(state, expression.operand):
+            return None
+        inner = _lower_predicate_value(state, expression.operand, node=expression.operand)
+        assert inner is not None
+        return _place_operation(state, operation='not', operands=(inner,), node=node)
+    matched_none = _match_none_test(expression)
+    matched_member = None if matched_none is not None else _match_member_test(state, expression)
+    if matched_none is None and matched_member is None:
+        return None
+    armed = _fresh_wire(state, 'predicate')
+    test = copy.deepcopy(expression)
+    taken: ast.expr = ast.Constant(value=True)
+    skipped: ast.expr = ast.Constant(value=False)
+    ast.copy_location(taken, node)
+    ast.copy_location(skipped, node)
+    statement = ast.If(
+        test=test,
+        body=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=taken)],
+        orelse=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=skipped)],
+    )
+    ast.copy_location(statement, node)
+    ast.fix_missing_locations(statement)
+    _lower_branch(state, statement=statement)
+    return state.names[armed]
+
+
 def _reject_unknown_member(state: _LoweringState, left: ast.expr, right: ast.expr) -> None:
     """Reject a wire compared against a name that is no declared enum member."""
     for value, other in ((left, right), (right, left)):
@@ -1306,13 +1356,12 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
         body.append(update)
-    elif (
-        isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp, ast.BoolOp, ast.IfExp))
-        and _identity_compare(test) is None
+    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp, ast.BoolOp, ast.IfExp)) and (
+        _identity_compare(test) is None or _is_supported_predicate(state, test)
     ):
-        # Numeric inline operations bind to a boolean wire and recompute each pass;
-        # `is`/`is not` presence and member tests stay branch-only, since loop
-        # control carries a truthy check rather than a member selection.
+        # Inline conditions bind to a boolean wire and recompute each pass, including supported
+        # presence and member predicates, which lower to ephemeral boolean control values; other
+        # `is`/`is not` identities stay rejected when the binding lowers them.
         test = _bind_test_condition(state, test=test)
         update = ast.Assign(targets=[ast.Name(id=test.id, ctx=ast.Store())], value=copy.deepcopy(statement.test))
         ast.copy_location(update, statement.test)
@@ -2026,8 +2075,9 @@ def _operation_parts(
             _reject(state, node=node, reason=msg)
         if isinstance(node.ops[0], (ast.Is, ast.IsNot)):
             msg = (
-                'presence tests select a side instead of computing a value; '
-                + 'test `is None`, `is not None`, or an error member in an `if` or `while` test instead'
+                'only `is None`, `is not None`, and `is` against a declared error member are supported; '
+                + 'arbitrary `is` identity tests never run; '
+                + 'test presence or a declared member instead, or put the comparison in a task'
             )
             _reject(state, node=node, reason=msg)
         operation = _COMPARISON_OPERATIONS.get(type(node.ops[0]))
@@ -2142,10 +2192,21 @@ def _place_operation(
 def _lower_operation(state: _LoweringState, node: ast.BinOp | ast.Compare | ast.UnaryOp) -> _Reference:
     """Place one inline operation and return its result reference.
 
-    Operands lower first, so nested operations become their own placements with dependency
-    wires into the outer one. Primitive results are orchestration state, never `Data` nodes:
-    the placement only records the operator and its operand contracts for the engine.
+    Supported presence and member tests lower to ephemeral boolean control values through the
+    branch machinery instead of computing inline, so `x is y` arbitrary identities still reject
+    below while `value is None` and declared members return booleans. Operands lower first, so
+    nested operations become their own placements with dependency wires into the outer one.
+    Primitive results are orchestration state, never `Data` nodes: the placement only records
+    the operator and its operand contracts for the engine.
     """
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        predicate = _lower_predicate_value(state, node, node=node)
+        if predicate is not None:
+            return predicate
+    if isinstance(node, ast.Compare) and isinstance(node.ops[0], (ast.Is, ast.IsNot)):
+        predicate = _lower_predicate_value(state, node, node=node)
+        if predicate is not None:
+            return predicate
     operation, raw = _operation_parts(state, node=node)
     lowered = tuple(_lower_operand(state, item) for item in raw)
     return _place_operation(state, operation=operation, operands=lowered, node=node)

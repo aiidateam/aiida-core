@@ -10,7 +10,9 @@
 
 Each pair lowers to a branch evaluating the right side only when the left side selects it, so
 task calls and guarded operations on the right never run when skipped. Operands must statically
-read as booleans; Python operand tricks and presence tests in value position fail at build.
+read as booleans, including presence and member predicates which lower to ephemeral boolean
+control values wherever a boolean reads. Python operand tricks and arbitrary identities fail
+at build.
 """
 
 import json
@@ -43,6 +45,21 @@ pytestmark = pytest.mark.presto
         pytest.param(booleans.bounded_count, id='bounded-loop'),
         pytest.param(booleans.none_guarded, id='none-guard'),
         pytest.param(booleans.member_guarded, id='member-guard'),
+        pytest.param(booleans.presence_rhs, id='presence-rhs'),
+        pytest.param(booleans.or_presence_rhs, id='or-presence-rhs'),
+        pytest.param(booleans.presence_value, id='presence-value'),
+        pytest.param(booleans.named_present, id='named-present'),
+        pytest.param(booleans.negated_present, id='negated-present'),
+        pytest.param(booleans.negated_rhs, id='negated-rhs'),
+        pytest.param(booleans.member_value, id='member-value'),
+        pytest.param(booleans.member_not_value, id='member-not-value'),
+        pytest.param(booleans.negated_member_rhs, id='negated-member-rhs'),
+        pytest.param(booleans.lazy_presence_and, id='lazy-presence-and'),
+        pytest.param(booleans.lazy_presence_or, id='lazy-presence-or'),
+        pytest.param(booleans.conditional_present, id='conditional-present'),
+        pytest.param(booleans.conditional_joined_present, id='conditional-joined'),
+        pytest.param(booleans.while_present, id='while-present'),
+        pytest.param(booleans.while_named_present, id='while-named'),
     ],
 )
 def test_boolop_templates_round_trip_through_json(declaration: GraphHandle) -> None:
@@ -82,12 +99,20 @@ def test_task_calls_stay_visible_in_taken_arms() -> None:
     [
         pytest.param(booleans.int_operands, 'must be boolean', id='int-operand'),
         pytest.param(booleans.literal_operands, 'must be boolean', id='literal-operands'),
-        pytest.param(booleans.presence_value, 'select a side instead of computing a value', id='presence-value'),
-        pytest.param(booleans.presence_rhs, 'select a side instead of computing a value', id='presence-rhs'),
+        pytest.param(
+            booleans.arbitrary_identity_value,
+            'arbitrary `is` identity tests never run',
+            id='arbitrary-identity-value',
+        ),
+        pytest.param(
+            booleans.arbitrary_identity_rhs,
+            'arbitrary `is` identity tests never run',
+            id='arbitrary-identity-rhs',
+        ),
     ],
 )
 def test_rejected_operands_fail_during_build(declaration: GraphHandle, message: str) -> None:
-    """Non-boolean operands and presence tests in value position fail at build."""
+    """Non-boolean operands and arbitrary identities fail at build."""
     with pytest.raises(GraphLanguageError, match=message):
         declaration.build()
 
@@ -256,6 +281,247 @@ def test_member_guarded_runs(value: int, fallback: int, expected: int) -> None:
     assert outputs['result'].value == expected
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'flag', 'expected'),
+    [
+        pytest.param(None, True, 2, id='absent-taken'),
+        pytest.param(None, False, 3, id='absent-flag-skipped'),
+        pytest.param(5, True, 3, id='present-skipped'),
+        pytest.param(5, False, 3, id='flag-skipped'),
+    ],
+)
+def test_presence_rhs_runs(value: int | None, flag: bool, expected: int) -> None:
+    """Presence on the right selects the side through an ephemeral boolean value."""
+    outputs, node = run_get_node(booleans.presence_rhs, value=value, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'flag', 'expected'),
+    [
+        pytest.param(None, False, 2, id='absent-taken'),
+        pytest.param(5, False, 3, id='present-skipped'),
+        pytest.param(5, True, 2, id='flag-taken'),
+    ],
+)
+def test_or_presence_rhs_runs(value: int | None, flag: bool, expected: int) -> None:
+    """Presence on the right of `or` selects the side like any other boolean."""
+    outputs, node = run_get_node(booleans.or_presence_rhs, value=value, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        pytest.param(None, 2, id='absent'),
+        pytest.param(5, 3, id='present'),
+    ],
+)
+def test_presence_value_runs(value: int | None, expected: int) -> None:
+    """A named presence predicate wires into a branch like a bound boolean."""
+    outputs, node = run_get_node(booleans.presence_value, value=value)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'flag', 'expected'),
+    [
+        pytest.param(None, True, 3, id='absent'),
+        pytest.param(5, True, 2, id='present-taken'),
+        pytest.param(5, False, 3, id='flag-skipped'),
+    ],
+)
+def test_named_present_runs(value: int | None, flag: bool, expected: int) -> None:
+    """A named `is not None` wire joins with a flag on the left."""
+    outputs, node = run_get_node(booleans.named_present, value=value, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'flag', 'expected'),
+    [
+        pytest.param(None, True, 3, id='absent'),
+        pytest.param(5, True, 2, id='present-taken'),
+        pytest.param(5, False, 3, id='flag-skipped'),
+    ],
+)
+def test_negated_present_runs(value: int | None, flag: bool, expected: int) -> None:
+    """A named `not (value is None)` wire joins like any other boolean."""
+    outputs, node = run_get_node(booleans.negated_present, value=value, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'flag', 'expected'),
+    [
+        pytest.param(None, True, 3, id='absent'),
+        pytest.param(5, True, 2, id='present-taken'),
+        pytest.param(5, False, 3, id='flag-skipped'),
+    ],
+)
+def test_negated_rhs_runs(value: int | None, flag: bool, expected: int) -> None:
+    """A negated presence test on the right selects through its boolean value."""
+    outputs, node = run_get_node(booleans.negated_rhs, value=value, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'fallback', 'expected'),
+    [
+        pytest.param(3, 5, 6, id='member-taken'),
+        pytest.param(3, 0, 0, id='bound-skipped'),
+        pytest.param(4, 5, 5, id='member-skipped'),
+    ],
+)
+def test_member_value_runs(value: int, fallback: int, expected: int) -> None:
+    """A named `is` member wire joins with a comparison on the right."""
+    outputs, node = run_get_node(booleans.member_value, value=value, fallback=fallback)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'fallback', 'expected'),
+    [
+        pytest.param(4, 0, 1, id='member-taken'),
+        pytest.param(3, 0, 0, id='bound-skipped'),
+        pytest.param(3, -1, -1, id='both-skipped'),
+    ],
+)
+def test_member_not_value_runs(value: int, fallback: int, expected: int) -> None:
+    """A named `is not` member wire joins on the left of `or`."""
+    outputs, node = run_get_node(booleans.member_not_value, value=value, fallback=fallback)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'fallback', 'expected'),
+    [
+        pytest.param(4, 5, 6, id='member-taken'),
+        pytest.param(3, 5, 5, id='member-skipped'),
+        pytest.param(4, -1, -1, id='bound-skipped'),
+    ],
+)
+def test_negated_member_rhs_runs(value: int, fallback: int, expected: int) -> None:
+    """A negated member test on the right selects through its boolean value."""
+    outputs, node = run_get_node(booleans.negated_member_rhs, value=value, fallback=fallback)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'other', 'expected', 'runs_check'),
+    [
+        pytest.param(None, 5, 7, False, id='absent-skipped'),
+        pytest.param(5, 5, 6, True, id='present-taken'),
+        pytest.param(5, -5, -3, True, id='present-false'),
+    ],
+)
+def test_lazy_presence_and_runs(value: int | None, other: int, expected: int, runs_check: bool) -> None:
+    """The right-hand task runs only when presence selects it."""
+    outputs, node = run_get_node(booleans.lazy_presence_and, value=value, other=other)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+    labels = [entry.link_label for entry in node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()]
+    assert any('is_positive' in label for label in labels) == runs_check
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'other', 'expected', 'runs_check'),
+    [
+        pytest.param(None, 5, 6, False, id='absent-short-circuit'),
+        pytest.param(5, 5, 6, True, id='present-taken'),
+        pytest.param(5, -5, -3, True, id='present-false'),
+    ],
+)
+def test_lazy_presence_or_runs(value: int | None, other: int, expected: int, runs_check: bool) -> None:
+    """Presence on the left of `or` short-circuits the right-hand task."""
+    outputs, node = run_get_node(booleans.lazy_presence_or, value=value, other=other)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+    labels = [entry.link_label for entry in node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()]
+    assert any('is_positive' in label for label in labels) == runs_check
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        pytest.param(None, 3, id='absent'),
+        pytest.param(5, 2, id='present'),
+    ],
+)
+def test_conditional_present_runs(value: int | None, expected: int) -> None:
+    """A selection tests presence directly in its condition."""
+    outputs, node = run_get_node(booleans.conditional_present, value=value)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'flag', 'expected'),
+    [
+        pytest.param(5, True, 2, id='taken'),
+        pytest.param(None, True, 3, id='absent'),
+        pytest.param(5, False, 3, id='flag-skipped'),
+    ],
+)
+def test_conditional_joined_present_runs(value: int | None, flag: bool, expected: int) -> None:
+    """A selection guards on a joined presence predicate on the right."""
+    outputs, node = run_get_node(booleans.conditional_joined_present, value=value, flag=flag)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        pytest.param(3, 0, id='absent'),
+        pytest.param(4, 1, id='present'),
+    ],
+)
+def test_while_present_runs(value: int, expected: int) -> None:
+    """A direct presence test re-evaluates before every iteration."""
+    outputs, node = run_get_node(booleans.while_present, value=value)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        pytest.param(3, 0, id='absent'),
+        pytest.param(4, 1, id='present'),
+    ],
+)
+def test_while_named_present_runs(value: int, expected: int) -> None:
+    """A named presence wire recomputes before every iteration."""
+    outputs, node = run_get_node(booleans.while_named_present, value=value)
+    assert node.is_finished_ok
+    assert outputs['result'].value == expected
+
+
 def _drive_to_completion(state: run_mod.GraphRun) -> dict[str, t.Any]:
     """Complete every pending task with a real run until the graph settles."""
     from aiida.engine import run_get_node as launch
@@ -325,3 +591,40 @@ def test_guarded_task_loop_restores_mid_loop() -> None:
         for label, pk in run.pending.items():
             run.completed(label, pk)
         assert _drive_to_completion(run)['result'].value == 0
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_while_present_restores_mid_loop() -> None:
+    """A checkpoint inside a direct-presence loop restores the pending iteration."""
+    spec = compile_graph(booleans.while_present)
+    state = run_mod.GraphRun(spec, given={'value': 4})
+    first = state.step()
+    assert [start.instance for start in first.starts] == ['check_even']
+    for start in first.starts:
+        assert isinstance(start.task, ProcessTask)
+        from aiida.engine import run_get_node as launch
+
+        _, node = launch(start.task.spec.process_class, **start.inputs)
+        assert node.pk is not None
+        state.started(start.instance, node.pk)
+        state.completed(start.instance, node.pk)
+    second = state.step()
+    assert {start.instance for start in second.starts} == {
+        'loop_4_iteration_0__add',
+        'loop_4_iteration_0__add_2',
+    }
+    for start in second.starts:
+        assert isinstance(start.task, ProcessTask)
+        from aiida.engine import run_get_node as launch
+
+        _, node = launch(start.task.spec.process_class, **start.inputs)
+        assert node.pk is not None
+        state.started(start.instance, node.pk)
+    saved = deepcopy(state.to_dict())
+    restored = run_mod.GraphRun.from_dict(spec, dict(state.given), saved)
+    assert restored.to_dict() == saved
+    assert restored.pending == state.pending
+    for run in (state, restored):
+        for label, pk in run.pending.items():
+            run.completed(label, pk)
+        assert _drive_to_completion(run)['result'].value == 1

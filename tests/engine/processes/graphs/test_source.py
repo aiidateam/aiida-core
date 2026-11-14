@@ -231,7 +231,6 @@ def test_defaulted_none_falls_back_to_default() -> None:
         pytest.param(branches.early_return, 'only calls, branches, and loops belong here', id='early-return'),
         pytest.param(branches.match_statement, 'end the graph with a return', id='match'),
         pytest.param(branches.boolean_condition, 'must be boolean', id='boolop-int-operand'),
-        pytest.param(branches.inline_conditional, 'as if and else', id='ifexp'),
         pytest.param(branches.walrus_condition, 'on its own line', id='walrus'),
     ],
 )

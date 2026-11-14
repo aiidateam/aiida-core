@@ -56,7 +56,7 @@ The graph body supports:
 * Graph inputs and names bound on an earlier line, such as ``product`` in ``add(x=product, y=z)``, as arguments.
 * Literal numbers, strings, booleans, and ``None`` as arguments, such as ``y=1``.
 * Scalar literals bound to names, such as ``attempts = 0`` or ``mode = 'square'``, see :ref:`topics:workflows:graphs:inline`.
-* ``if``, with or without ``elif`` and ``else``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
+* ``if``, with or without ``elif`` and ``else``, and ``while``, as well as conditional expressions ``x if condition else y``, see :ref:`topics:workflows:graphs:control_flow`.
 * Inline expressions for orchestration state: numeric arithmetic ``+ - * // %``, comparisons ``< <= > >= == !=``, and unary ``+ - not``, such as ``iterations - 1`` or ``iterations > 0``, see :ref:`topics:workflows:graphs:inline`.
 * One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys; a graph with no outputs ends with an explicit ``return {}``.
 * ``.key`` or ``['key']`` to select an output of a multi-output call or a field of a namespace input; ``.result`` on a single-output call is optional.
@@ -560,6 +560,23 @@ Without an ``else``, the arm rebinds a name bound before the ``if``; when the te
 Each arm holds one statement: an assignment of a call, an assignment of a name bound earlier, such as ``chosen = first``, which runs no task, an assignment of one field of those, such as ``chosen = pair.sum``, an assignment of a whole namespace, such as ``chosen = pair``, an assignment of an inline expression, such as ``n = n - 1``, a ``while`` loop that rebinds one name bound before the ``if``, or another ``if``, such as an ``elif``, whose arms follow the same rules.
 Whole-namespace arms on both sides must share the same fields.
 The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
+A conditional expression ``x if condition else y`` selects one value the same way, without running the unselected side:
+
+.. code:: python
+
+    @graph
+    def choose_either(x: int, y: int, flag: bool) -> int:
+        return add(x=x, y=1) if flag else add(x=y, y=2)
+
+The condition follows the same rules as an ``if`` test, and each arm follows the same rules as an ``if`` arm: calls, constants, names, fields, namespaces, and inline expressions.
+Both arms must expose the same wire, and only the taken arm ever runs, as a scope of the same graph process:
+
+.. code:: python
+
+    @graph
+    def choose_scaled(value: int, flag: bool) -> int:
+        chosen = (value + 1) if flag else (value - 1)
+        return add(x=chosen, y=0)
 
 A ``while`` tests a bound name, an inline expression such as ``n > 0``, a task call, or boolean combinations of those with ``and`` and ``or`` before every iteration.
 A joined test re-evaluates from the rebound names each pass, so a bounded loop steps toward its target until it matches or the attempt budget runs out:

@@ -18,6 +18,13 @@
 
 One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors remain child processes, dispatched with hierarchical call labels (for example `multiply_add__multiply` or `loop_1_iteration_0__decrement`). Provenance that previously contained intermediate `GraphNode` children now shows the task runs directly under the single graph node, and `GraphRun` checkpoints use a new `0.2` scope format; existing `0.1` checkpoints cannot be resumed after upgrading. The run state is checkpointed YAML-encoded (like the other process inputs), and nested scope inputs normalized from defaults are stored standalone so checkpoints can reference them; they carry no provenance links. Finish or terminate all active graph processes before upgrading.
 
+#### Conditional expressions in source graphs
+
+Graph bodies now accept conditional expressions such as `add(x=x, y=1) if flag else add(x=y, y=2)`.
+Previously every `x if condition else y` failed at build time with a diagnostic telling authors to write `if` and `else` instead; each selection now lowers to a branch holding both arms, so only the taken arm ever runs.
+Arms cover calls, scalar constants, references, and inline expressions, and the condition follows the same rules as an `if` test.
+Stored declarations and checkpoints need no migration: selections reuse the existing branch machinery and checkpoint in the existing scope state.
+
 #### Short-circuit boolean composition in source graphs
 
 Graph bodies now accept boolean `and`/`or` over boolean-valued inline expressions, references, and task calls.

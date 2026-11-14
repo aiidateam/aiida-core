@@ -95,7 +95,6 @@ R = t.TypeVar('R')
 # Value forms the language rejects, with the guidance each carries. The key sets
 # are the unsupported list; anything missing here reports the generic fallback.
 _VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
-    (ast.IfExp,): 'an inline conditional evaluates Python instead of branching; write this as if and else instead',
     (ast.NamedExpr,): 'bindings must stay visible as wires; give it a name on its own line before the if instead',
     (ast.Subscript,): (
         'collections travel whole through ports and indexing is computation; '
@@ -1042,11 +1041,29 @@ def _lower_boolop(state: _LoweringState, node: ast.BoolOp) -> _Reference:
     return combined
 
 
+def _lower_ifexp(state: _LoweringState, node: ast.IfExp) -> _Reference:
+    """Lower a conditional expression to a branch selecting one arm, returning the joined wire.
+
+    Only the taken arm ever runs: each arm lowers inside its own region, so task calls there
+    become placements of the taken side alone. Both arms must expose the same wire.
+    """
+    armed = _fresh_wire(state, 'conditional')
+    statement = ast.If(
+        test=node.test,
+        body=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=node.body)],
+        orelse=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=node.orelse)],
+    )
+    ast.copy_location(statement, node)
+    ast.fix_missing_locations(statement)
+    _lower_branch(state, statement=statement)
+    return state.names[armed]
+
+
 def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     """Lower an if statement to a branch control task, returning the exposed wire."""
     _check_branch_shape(state, statement=statement)
     test: ast.expr = statement.test
-    if isinstance(test, (ast.Call, ast.BoolOp)):
+    if isinstance(test, (ast.Call, ast.BoolOp, ast.IfExp)):
         test = _bind_test_condition(state, test=test)
     condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
     condition_member: tuple[str, str] | None = None
@@ -1284,7 +1301,10 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
         body.append(update)
-    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp, ast.BoolOp)) and _identity_compare(test) is None:
+    elif (
+        isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp, ast.BoolOp, ast.IfExp))
+        and _identity_compare(test) is None
+    ):
         # Numeric inline operations bind to a boolean wire and recompute each pass;
         # `is`/`is not` presence and member tests stay branch-only, since loop
         # control carries a truthy check rather than a member selection.
@@ -1561,9 +1581,9 @@ def _is_bool_reference(value: _Reference | int | float | str | bool | None) -> b
 
 
 def _bind_test_condition(
-    state: _LoweringState, test: ast.Call | ast.BinOp | ast.Compare | ast.UnaryOp | ast.BoolOp
+    state: _LoweringState, test: ast.Call | ast.BinOp | ast.Compare | ast.UnaryOp | ast.BoolOp | ast.IfExp
 ) -> ast.Name:
-    """Lower a call, inline comparison, or boolean combination test to a fresh binding."""
+    """Lower a call, inline comparison, boolean combination, or conditional test to a fresh binding."""
     name = 'condition'
     count = 2
     while name in state.names:
@@ -2417,6 +2437,8 @@ def _lower_value(
         return _lower_call(state, expression=expression)
     if isinstance(expression, ast.BoolOp):
         return _lower_boolop(state, node=expression)
+    if isinstance(expression, ast.IfExp):
+        return _lower_ifexp(state, node=expression)
     if isinstance(expression, (ast.BinOp, ast.Compare)):
         return _lower_operation(state, node=expression)
     if isinstance(expression, ast.Name):

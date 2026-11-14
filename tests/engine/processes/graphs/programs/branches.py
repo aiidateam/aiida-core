@@ -253,10 +253,9 @@ def compare_condition(value: int) -> int:
     return chosen
 
 
-# rejected at lowering: branch explicitly instead.
 @graph
 def inline_conditional(value: int, flag: bool) -> int:
-    """Select inline; branch explicitly instead."""
+    """Select between two calls; the conditional lowers to a branch selecting one side."""
     return add(x=value, y=1) if flag else add(x=value, y=2)
 
 

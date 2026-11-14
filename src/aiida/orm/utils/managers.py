@@ -13,6 +13,7 @@ to access members of other classes via TAB-completable attributes
 
 from aiida.common import AttributeDict
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
+from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 
@@ -26,13 +27,14 @@ class NodeLinksManager:
 
     _namespace_separator = '__'
 
-    def __init__(self, node, link_type, incoming):
+    def __init__(self, node, link_type, incoming, *, namespace: str | None = None):
         """Initialise the link manager.
 
         :param node: the reference node object
         :param link_type: the link_type to inspect
         :param incoming: if True, inspect incoming links, otherwise inspect
             outgoing links
+        :param namespace: optional top-level link namespace to project flat, hiding sibling links
         """
         # This import is here to avoid circular imports
         from aiida.orm import Node
@@ -44,6 +46,9 @@ class NodeLinksManager:
             raise TypeError('link_type must be a valid LinkType')
         self._link_type = link_type
         self._incoming = incoming
+        self._namespace = type_check(
+            namespace, str, msg=f'namespace must be a link label string or None, got {namespace!r}', allow_none=True
+        )
 
     def _construct_attribute_dict(self, incoming):
         """Construct an attribute dict from all links of the node, recreating nested namespaces from flat link labels.
@@ -55,7 +60,15 @@ class NodeLinksManager:
         else:
             links = self._node.base.links.get_outgoing(link_type=self._link_type)
 
-        return AttributeDict(links.nested())
+        attribute_dict = AttributeDict(links.nested())
+        if self._namespace is None:
+            return attribute_dict
+        namespace = attribute_dict.get(self._namespace, {})
+        if isinstance(namespace, AttributeDict):
+            return namespace
+        if isinstance(namespace, dict):
+            return AttributeDict(namespace)
+        return AttributeDict({})
 
     def _get_keys(self):
         """Return the valid link labels, used e.g. to make getattr() work"""

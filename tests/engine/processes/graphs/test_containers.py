@@ -137,7 +137,7 @@ def test_list_passthrough_preserves_identity() -> None:
     result = outputs['result']
     assert isinstance(result, DataList)
     assert [member.value for member in result] == [1, 2]
-    assert node.inputs.graph_inputs['values'].uuid == original.uuid
+    assert node.inputs['values'].uuid == original.uuid
     assert result.uuid == original.uuid
 
 
@@ -150,7 +150,7 @@ def test_dict_passthrough_preserves_identity() -> None:
     result = outputs['result']
     assert isinstance(result, DataDict)
     assert {key: member.value for key, member in result.items()} == {'a': 1, 'b': 2}
-    assert node.inputs.graph_inputs['values'].uuid == original.uuid
+    assert node.inputs['values'].uuid == original.uuid
     assert result.uuid == original.uuid
 
 

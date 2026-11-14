@@ -501,7 +501,7 @@ def test_namespace_return_runs(nullable: int | None) -> None:
         assert outputs['result']['settings']['nullable'].value == 3
     assert outputs['result']['label'].value == 'ab'
     assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
-    assert outputs['result']['settings']['count'].uuid == node.inputs.graph_inputs__config__settings__count.uuid
+    assert outputs['result']['settings']['count'].uuid == node.inputs.config.settings.count.uuid
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -835,7 +835,7 @@ def test_multiply_add_preserves_named_outputs_and_original_input() -> None:
     assert outputs['result'].value == 10
     calls: dict[str, ProcessNode] = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).nested()
     assert set(calls) == {'multiply', 'add'}
-    assert node.inputs.graph_inputs.x.uuid == original.uuid
+    assert node.inputs.x.uuid == original.uuid
     assert calls['multiply'].inputs.x.uuid == original.uuid
     assert calls['multiply'].outputs.result.value == 6
     assert calls['add'].inputs.x.uuid == calls['multiply'].outputs.result.uuid

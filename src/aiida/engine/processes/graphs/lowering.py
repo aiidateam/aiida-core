@@ -48,11 +48,13 @@ from aiida.engine.processes.graphs.ir import (
     TaskIR,
 )
 from aiida.engine.processes.graphs.operations import (
+    CONSTANT_PORT,
     LEFT_PORT,
     OPERAND_PORT,
     RESULT_PORT,
     RIGHT_PORT,
     OperationKind,
+    const_result_shape,
     infer_operation_shape,
 )
 from aiida.engine.processes.graphs.par_map import par_map
@@ -642,6 +644,7 @@ def _lower_return(state: _LoweringState, expression: ast.expr) -> dict[str, _Ref
         msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
         _reject(state, node=expression, reason=msg)
     assert isinstance(reference, _Reference)
+    _reject_const_return(state, reference, node=expression)
     if isinstance(reference.shape, NamespaceShape):
         return {'result': reference}
     port = reference.port.split('.')[-1]
@@ -669,6 +672,7 @@ def _lower_return_value(state: _LoweringState, expression: ast.expr) -> _Referen
         msg = 'graphs return existing nodes rather than creating data; ' + 'return a task output or graph input instead'
         _reject(state, node=expression, reason=msg)
     assert isinstance(reference, _Reference)
+    _reject_const_return(state, reference, node=expression)
     return reference
 
 
@@ -760,18 +764,13 @@ def _lower_assignment(state: _LoweringState, statement: ast.stmt, *, rebind: boo
         ref = _lower_operation(state, node=value)
     else:
         # A plain name or dotted field aliases an existing wire (structured outputs
-        # bind whole namespaces this way); literals stay rejection-worthy traces.
+        # bind whole namespaces this way); a scalar literal binds ephemeral control state.
         reference = _lower_value(state, value)
-        if not isinstance(reference, _Reference):
-            msg = (
-                'only calls and inline operations are recorded as work; '
-                + 'plain values would run without leaving a trace; '
-                + 'each line must call a task or graph, or compute an inline operation instead'
-            )
-            _reject(state, node=value, reason=msg)
-        for name in names:
-            state.names[name] = reference
-        return names[0]
+        if isinstance(reference, _Reference):
+            for name in names:
+                state.names[name] = reference
+            return names[0]
+        ref = _place_constant(state, value=reference, node=value)
     for name in names:
         state.names[name] = ref
     return names[0]
@@ -1865,6 +1864,59 @@ def _lower_operand(state: _LoweringState, expression: ast.expr) -> _Reference | 
         _reject(state, node=expression, reason=msg)
     # Signed literals fold in `_lower_value`; anything else unary places an operation there.
     return _lower_value(state, expression)
+
+
+def _const_task(state: _LoweringState, reference: _Reference) -> InlineOperation | None:
+    """Return the `const` placement a reference resolves to, or `None` for other wires."""
+    if reference.task is None:
+        return None
+    for placed in state.tasks:
+        if placed.name == reference.task:
+            return placed if isinstance(placed, InlineOperation) and placed.operation == 'const' else None
+    return None
+
+
+def _reject_const_return(state: _LoweringState, reference: _Reference, node: ast.AST) -> None:
+    """Reject a bound scalar literal as a root graph output.
+
+    Constants are ephemeral orchestration state, never stored data: returning one would publish
+    a value with no creating task, breaking the rule that workflows return existing data while
+    only tasks create new data. Only the root return is rejected here: a nested graph lowers
+    through this same path with a deeper stack, and may thread constants as control state for
+    its caller to consume, with the runtime root boundary still guarding the final outputs.
+    """
+    if len(state.stack) != 1 or _const_task(state, reference) is None:
+        return
+    msg = (
+        'graphs return existing nodes rather than creating data; '
+        + 'this name binds a scalar constant held as orchestration state, not a stored node; '
+        + 'create the value in a `@task` and return the task output instead'
+    )
+    _reject(state, node=node, reason=msg)
+
+
+def _place_constant(state: _LoweringState, *, value: int | float | str | bool | None, node: ast.AST) -> _Reference:
+    """Bind one scalar literal as ephemeral orchestration state, returning its result.
+
+    The literal is finite JSON by the time it arrives here (`_lower_value` validates), so the
+    placement checkpoints with the scope and serializes with the template, but the runtime
+    evaluates it to a plain Python value that is never stored or linked.
+    """
+    try:
+        result_shape = const_result_shape(value)
+    except GraphTypeCheckError as exception:
+        _reject(state, node=node, reason=str(exception))
+    instance = _claim_name(state, f'constant_{len(state.tasks) + 1}')
+    state.tasks.append(
+        InlineOperation(
+            name=instance,
+            inputs={CONSTANT_PORT: value},
+            operation='const',
+            input_shape=NamespaceShape(fields=((CONSTANT_PORT, result_shape),)),
+            result_shape=result_shape,
+        )
+    )
+    return _Reference(instance, port=RESULT_PORT, shape=result_shape)
 
 
 def _place_operation(

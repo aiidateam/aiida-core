@@ -183,6 +183,10 @@ def _validate_map(task: MapControl) -> None:
 
 def _validate_operation(task: InlineOperation) -> None:
     """Check that an inline operation declares the operand contracts and result its operator infers."""
+    if task.operation == 'const':
+        # `InlineOperation.__post_init__` already checks the bound value, its port, and the
+        # result contract; inference below would re-derive the same identity shape.
+        return
     by_name = dict(task.input_shape.fields)
     operands = (
         (by_name[LEFT_PORT], by_name[RIGHT_PORT]) if task.operation in BINARY_OPERATIONS else (by_name[OPERAND_PORT],)

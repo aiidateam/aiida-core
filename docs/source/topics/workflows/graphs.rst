@@ -55,6 +55,7 @@ The graph body supports:
 * ``name = task(...)`` assignments, with keyword or positional arguments; positional arguments follow the declared input order. Calling another graph works the same way.
 * Graph inputs and names bound on an earlier line, such as ``product`` in ``add(x=product, y=z)``, as arguments.
 * Literal numbers, strings, booleans, and ``None`` as arguments, such as ``y=1``.
+* Scalar literals bound to names, such as ``attempts = 0`` or ``mode = 'square'``, see :ref:`topics:workflows:graphs:inline`.
 * ``if``, with or without ``elif`` and ``else``, and ``while``, see :ref:`topics:workflows:graphs:control_flow`.
 * Inline expressions for orchestration state: numeric arithmetic ``+ - * // %``, comparisons ``< <= > >= == !=``, and unary ``+ - not``, such as ``iterations - 1`` or ``iterations > 0``, see :ref:`topics:workflows:graphs:inline`.
 * One final ``return`` of a name, a field, or a call, or of a ``dict`` of those, possibly nested, with literal string keys; a graph with no outputs ends with an explicit ``return {}``.
@@ -99,6 +100,10 @@ counter with inline arithmetic:
             n = n - 1
         return {}
 
+Scalar literals bind the same way, without a task, such as ``attempts = 0``, ``running = False``, or ``mode = 'square'``.
+A bound name wires its value into task arguments, branch arms, and loop state exactly like a computed inline result.
+Only finite numbers, strings, booleans, and ``None`` bind; anything else -- collections, formatting, indexing -- still belongs in a task or a graph input.
+
 Inline results are ephemeral orchestration state, not scientific data:
 
 * **No provenance:** inline values never become data nodes and never carry links. Only task outputs
@@ -110,6 +115,7 @@ Inline results are ephemeral orchestration state, not scientific data:
 data. A root graph returns task outputs, graph inputs, or collector-built containers -- or nothing,
 declared explicitly with ``return {}`` like a work chain returning nothing. Use an explicit task
 for a scientific result computed from inline state.
+Returning a bound literal directly fails when the graph is built, for the same reason.
 * **Nested helpers may return control state:** a subgraph can return an inline value for its caller to
 consume as orchestration state, since the caller scope -- not the provenance -- receives it.
 * **Explicit tasks are never inlined:** a ``@task`` function always runs as its own child process,
@@ -676,6 +682,7 @@ Inspecting the intermediate representation
 
 ``multiply_add.build()`` returns the intermediate representation without running any task.
 Errors in the graph source surface here, before launch.
+Call ``build()`` while developing a graph, or from a test, to catch rejected syntax, missing inputs, and contract mismatches without launching anything: it lowers the source exactly as a launch would.
 
 ``to_dict()`` returns it as a JSON-serializable ``dict``, and ``GraphIR.from_dict`` reads it back.
 The ``payload`` of each task holds its pickled copy, see :ref:`topics:workflows:graphs:where_to_define`.

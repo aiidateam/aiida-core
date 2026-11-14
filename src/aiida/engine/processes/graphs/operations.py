@@ -8,15 +8,16 @@
 ###########################################################################
 """Static contracts and evaluation for inline scalar operations.
 
-Inline operations compute orchestration state (counters, flags, scaled values) without recording
-scientific provenance: their outputs are plain Python values held by the engine, never `Data` nodes,
-so lowering must not fabricate `DataNode` outputs or `CREATE` links for them. The runtime evaluates
-each placement from its wired inputs and keeps the result as control state; returning such a value
-as a root graph output fails when the graph exposes its outputs, not here, so nested scopes may
-freely thread operation results as loop and branch state.
+Inline operations compute orchestration state (counters, flags, scaled values, bound literals)
+without recording scientific provenance: their outputs are plain Python values held by the engine,
+never `Data` nodes, so lowering must not fabricate `DataNode` outputs or `CREATE` links for them.
+The runtime evaluates each placement from its wired inputs and keeps the result as control state;
+returning such a value as a root graph output fails when the graph exposes its outputs, not here,
+so nested scopes may freely thread operation results as loop and branch state.
 
 :func:`infer_operation_shape` captures the static result contract of one operation for lowering and
 validation. :func:`evaluate_operation` applies the operator to runtime values for the engine.
+:func:`const_result_shape` captures the result contract of one bound scalar literal.
 """
 
 from __future__ import annotations
@@ -28,29 +29,32 @@ from collections.abc import Mapping
 
 from aiida.common.exceptions import GraphRuntimeError, GraphTypeCheckError
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape
-from aiida.orm import Bool, Float, Int
+from aiida.orm import Bool, Float, Int, Str
 
 __all__ = (
     'BINARY_OPERATIONS',
+    'CONSTANT_PORT',
     'LEFT_PORT',
     'OPERAND_PORT',
     'OPERATIONS',
     'RESULT_PORT',
     'RIGHT_PORT',
     'OperationKind',
+    'const_result_shape',
     'evaluate_operation',
     'infer_operation_shape',
 )
 
 #: The inline operations, matching the source operators `+`, `-`, `*`, `//`, `%`,
-#: `<`, `<=`, `>`, `>=`, `==`, `!=`, unary `-`, unary `+`, and `not`, in order.
+#: `<`, `<=`, `>`, `>=`, `==`, `!=`, unary `-`, unary `+`, and `not`, in order, plus `const`
+#: for scalar literal bindings, which bind no operator spelling.
 OperationKind: t.TypeAlias = t.Literal[
-    'add', 'sub', 'mul', 'floordiv', 'mod', 'lt', 'le', 'gt', 'ge', 'eq', 'ne', 'neg', 'pos', 'not'
+    'add', 'sub', 'mul', 'floordiv', 'mod', 'lt', 'le', 'gt', 'ge', 'eq', 'ne', 'neg', 'pos', 'not', 'const'
 ]
 
 #: Every supported inline operation.
 OPERATIONS: t.Final = frozenset(
-    {'add', 'sub', 'mul', 'floordiv', 'mod', 'lt', 'le', 'gt', 'ge', 'eq', 'ne', 'neg', 'pos', 'not'}
+    {'add', 'sub', 'mul', 'floordiv', 'mod', 'lt', 'le', 'gt', 'ge', 'eq', 'ne', 'neg', 'pos', 'not', 'const'}
 )
 
 #: Operations reading two operands from the `left` and `right` ports.
@@ -64,6 +68,10 @@ RIGHT_PORT: t.Final = 'right'
 
 #: Input port of the single operand of a unary operation.
 OPERAND_PORT: t.Final = 'operand'
+
+#: Input port holding the bound literal of a `const` operation. The value is given with the
+#: placement, never wired, so `const` reads no operand ports and dispatches no dependencies.
+CONSTANT_PORT: t.Final = 'value'
 
 #: Output port of every inline operation.
 RESULT_PORT: t.Final = 'result'
@@ -125,6 +133,54 @@ def _check_scalar(operation: str, shape: Shape) -> t.Literal['int', 'float', 'bo
     return kind
 
 
+def const_result_shape(value: object) -> LeafShape:
+    """Return the result contract of one bound scalar literal.
+
+    Only finite `int`, `float`, `str`, and `bool` scalars and `None` bind: every other value
+    stays a task concern. `bool` binds before `int` because `bool` subclasses `int`.
+
+    :param value: the literal bound by a `const` placement.
+    :return: the result leaf with the literal's exact type.
+    :raises GraphTypeCheckError: for non-scalar or non-finite values.
+    """
+    if type(value) is bool:
+        return LeafShape(types=(bool,))
+    if type(value) is int:
+        return LeafShape(types=(int,))
+    if type(value) is float:
+        if not math.isfinite(value):
+            msg = 'inline constant must be finite; compute non-finite values in tasks instead.'
+            raise GraphTypeCheckError(msg)
+        return LeafShape(types=(float,))
+    if type(value) is str:
+        return LeafShape(types=(str,))
+    if value is None:
+        return LeafShape(types=(type(None),))
+    msg = (
+        'inline constants bind finite numbers, strings, booleans, and `None`; '
+        + f'got `{type(value).__name__}`; compute this value in a task instead.'
+    )
+    raise GraphTypeCheckError(msg)
+
+
+def _check_const_operand(shape: Shape) -> LeafShape:
+    """Return one `const` operand contract unchanged, rejecting non-scalar literals."""
+    if not isinstance(shape, LeafShape) or not shape.types:
+        msg = f'inline operation `const` needs declared scalar types, got {_describe(shape)}.'
+        raise GraphTypeCheckError(msg)
+    for kind in shape.types:
+        if kind is type(None):
+            continue
+        if kind in (int, float, str, bool, Int, Float, Bool, Str):
+            continue
+        msg = (
+            'inline constants bind finite numbers, strings, booleans, and `None`; '
+            + f'got {_describe(shape)}; compute this value in a task instead.'
+        )
+        raise GraphTypeCheckError(msg)
+    return shape
+
+
 def infer_operation_shape(operation: OperationKind, operands: tuple[Shape, ...]) -> LeafShape:
     """Infer the result contract of one inline operation from its operand contracts.
 
@@ -132,10 +188,11 @@ def infer_operation_shape(operation: OperationKind, operands: tuple[Shape, ...])
     pure `float` promotes the result to `float`, unioning `float`/`Float` spellings; `int |
     float` unions without a pure float stay unions so an `int` runtime is never narrowed to
     `float`. Comparisons and `not` always produce `Bool`. Equality keeps booleans apart
-    from numbers, unlike Python's `True == 1`.
+    from numbers, unlike Python's `True == 1`. `const` keeps its bound literal's contract.
 
     :param operation: the fixed operation to apply.
-    :param operands: the operand contracts, two for binary operations and one for unary ones.
+    :param operands: the operand contracts, two for binary operations and one for unary ones;
+        one bound literal contract for `const`.
     :return: the result leaf with its scalar type.
     :raises GraphTypeCheckError: for unknown operations, wrong arity, collections, unknown or
         non-scalar types, boolean operands where numbers are required, and mixed equality.
@@ -143,6 +200,11 @@ def infer_operation_shape(operation: OperationKind, operands: tuple[Shape, ...])
     if operation not in OPERATIONS:
         msg = f'unknown operation `{operation}`; expected one of {sorted(OPERATIONS)}.'
         raise GraphTypeCheckError(msg)
+    if operation == 'const':
+        if len(operands) != 1:
+            msg = f'inline operation `const` takes 1 bound value, got {len(operands)}.'
+            raise GraphTypeCheckError(msg)
+        return _check_const_operand(operands[0])
     if operation in BINARY_OPERATIONS:
         if len(operands) != 2:
             msg = f'inline operation `{operation}` takes 2 operands, got {len(operands)}.'
@@ -297,7 +359,7 @@ def _primitive(value: object) -> object:
     return value
 
 
-def evaluate_operation(operation: OperationKind, inputs: Mapping[str, object]) -> int | float | bool:
+def evaluate_operation(operation: OperationKind, inputs: Mapping[str, object]) -> int | float | str | bool | None:
     """Evaluate one inline operation over plain runtime values.
 
     Scalar nodes evaluate through their `.value`; the result is always a plain Python value,
@@ -314,7 +376,13 @@ def evaluate_operation(operation: OperationKind, inputs: Mapping[str, object]) -
     if operation not in OPERATIONS:
         msg = f'unknown operation `{operation}`; expected one of {sorted(OPERATIONS)}.'
         raise GraphRuntimeError(msg)
-    expected = (LEFT_PORT, RIGHT_PORT) if operation in BINARY_OPERATIONS else (OPERAND_PORT,)
+    expected: tuple[str, ...]
+    if operation in BINARY_OPERATIONS:
+        expected = (LEFT_PORT, RIGHT_PORT)
+    elif operation == 'const':
+        expected = (CONSTANT_PORT,)
+    else:
+        expected = (OPERAND_PORT,)
     for name in expected:
         if name not in inputs:
             msg = f'inline operation `{operation}` is missing operand `{name}`.'
@@ -325,6 +393,8 @@ def evaluate_operation(operation: OperationKind, inputs: Mapping[str, object]) -
             raise GraphRuntimeError(msg)
     if operation in BINARY_OPERATIONS:
         return _evaluate_binary(operation, _primitive(inputs[LEFT_PORT]), _primitive(inputs[RIGHT_PORT]))
+    if operation == 'const':
+        return _evaluate_const(inputs[CONSTANT_PORT])
     return _evaluate_unary(operation, _primitive(inputs[OPERAND_PORT]))
 
 
@@ -334,6 +404,21 @@ def _require_finite(operation: str, value: int | float) -> int | float:
         msg = f'inline operation `{operation}` got a non-finite operand.'
         raise GraphRuntimeError(msg)
     return value
+
+
+def _evaluate_const(value: object) -> int | float | str | bool | None:
+    """Return one bound literal unchanged, rejecting nodes and non-scalar values.
+
+    Constants stay ephemeral orchestration state: only exact primitives pass, so stored nodes
+    can never smuggle provenance-free data through a bound value, and non-finite floats can
+    never leak into finite checkpoint state.
+    """
+    if value is None or type(value) is bool or type(value) is int or type(value) is str:
+        return value
+    if type(value) is float:
+        return _require_finite('const', value)
+    msg = f'inline operation `const` binds finite scalars, not `{type(value).__name__}`.'
+    raise GraphRuntimeError(msg)
 
 
 def _require_number(operation: str, value: object) -> int | float:

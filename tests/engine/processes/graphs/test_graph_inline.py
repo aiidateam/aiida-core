@@ -39,6 +39,7 @@ from aiida.engine.processes.graphs.ir import (
     Route,
     SubgraphTask,
 )
+from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape
 from aiida.orm import Bool, DataList, Int
 from tests.engine.processes.graphs.programs import tasks as program_tasks
@@ -624,3 +625,182 @@ def test_failed_real_task_blocks_downstream_but_keeps_inline_values(monkeypatch:
     assert state.failed == ['bad']
     assert state.scopes['root']['values'] == {'total': 5}
     assert state.step().starts == []
+
+
+def _const(name: str, value: t.Any, types: tuple[type, ...]) -> InlineOperation:
+    """Return a constant placement binding one scalar literal."""
+    leaf = LeafShape(types=types)
+    return InlineOperation(
+        name=name,
+        inputs={'value': value},
+        operation='const',
+        input_shape=NamespaceShape(fields=(('value', leaf),)),
+        result_shape=leaf,
+    )
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_bound_scalars_run_through_task() -> None:
+    """Bound integers wire into tasks and return task outputs."""
+    from tests.engine.processes.graphs.programs import constants
+
+    outputs, node = run_get_node(constants.bound_scalars, value=5)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 5
+    outputs, node = run_get_node(constants.aliased_constant, value=0)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 0
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_const_fallback_selects_side() -> None:
+    """The taken side, constant or task, feeds the downstream task."""
+    from tests.engine.processes.graphs.programs import constants
+
+    outputs, node = run_get_node(constants.const_fallback, value=5, flag=True)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 11
+    outputs, node = run_get_node(constants.const_fallback, value=5, flag=False)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 5
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_bound_mode_runs_both_branches() -> None:
+    """A bound string wires through branch regions into task arguments."""
+    from tests.engine.processes.graphs.programs import constants
+
+    for flag in (True, False):
+        outputs, node = run_get_node(constants.bound_mode, value=3, flag=flag)
+        assert node.is_finished_ok
+        assert outputs['result'].value == 6
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_looped_counter_runs_to_completion() -> None:
+    """A bound counter carries across iterations and survives zero iterations."""
+    from tests.engine.processes.graphs.programs import constants
+
+    outputs, node = run_get_node(constants.looped_counter, value=1, rounds=3)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 7
+    outputs, node = run_get_node(constants.looped_counter, value=4, rounds=0)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 4
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_nested_const_threads_control_state() -> None:
+    """A nested graph returns orchestration state the caller consumes in a task."""
+    from tests.engine.processes.graphs.programs import constants
+
+    outputs, node = run_get_node(constants.nested_const, value=5)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 7
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_none_condition_fails_loudly() -> None:
+    """A bound `None` is a value, not a decision: branching on it fails instead of coercing."""
+    from tests.engine.processes.graphs.programs import constants
+
+    state = run_mod.GraphRun(compile_graph(constants.none_condition), given={'value': 2})
+    with pytest.raises(GraphRuntimeError, match='must be a `bool` or `Bool`'):
+        state.step()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_const_creates_no_nodes_or_links() -> None:
+    """Constants leave no provenance: only task runs create nodes under the graph."""
+    from tests.engine.processes.graphs.programs import constants
+
+    outputs, node = run_get_node(constants.looped_counter, value=1, rounds=3)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 7
+    assert node.base.links.get_outgoing(link_type=LinkType.CREATE).all() == []
+    labels = [entry.link_label for entry in node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()]
+    assert labels
+    assert all(not label.startswith('constant') for label in labels)
+    roots = set()
+    for label in labels:
+        leaf = label.split('__')[-1]
+        head, _, tail = leaf.rpartition('_')
+        roots.add(head if tail.isdigit() else leaf)
+    assert roots <= {'add', 'is_positive', 'decrement'}
+
+
+def test_const_values_round_trip_through_run_state() -> None:
+    """Checkpointed constant results restore without the bound literal revalidating."""
+    const = _const('attempts', 0, (int,))
+    first = _process('first', program_tasks.add)
+    graph = _graph(
+        [const, first],
+        {'x': (int,)},
+        [Dependency('attempts', 'first', source_port='result', target_port='y')],
+        {'x': [Route('first', 'x')]},
+        {'result': Endpoint(task='first', port='result')},
+    )
+    state = run_mod.GraphRun(graph, given={'x': 2})
+    assert [start.instance for start in state.step().starts] == ['first']
+    assert state.scopes['root']['values'] == {'attempts': 0}
+    restored = run_mod.GraphRun.from_dict(graph, dict(state.given), deepcopy(state.to_dict()))
+    assert restored.scopes['root']['values'] == {'attempts': 0}
+    assert restored.step().starts == []
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_checkpoint_persister_keeps_const_values_without_reevaluation() -> None:
+    """The daemon checkpoint keeps bound literals beside a pending task without reevaluating."""
+    from aiida.engine.persistence import AiidaCheckpointPersister
+    from aiida.manage import get_manager
+
+    calls: list[t.Any] = []
+    real_evaluate = run_mod.evaluate_operation
+
+    def counting(operation: t.Any, inputs: t.Any) -> t.Any:
+        calls.append((operation, dict(inputs)))
+        return real_evaluate(operation, inputs)
+
+    const = _const('attempts', 0, (int,))
+    first = _process('first', program_tasks.add)
+    graph = _graph(
+        [const, first],
+        {'x': (int,)},
+        [Dependency('attempts', 'first', source_port='result', target_port='y')],
+        {'x': [Route('first', 'x')]},
+        {'result': Endpoint(task='first', port='result')},
+    )
+    runner = get_manager().create_runner(communicator=None)
+    try:
+        from aiida.engine.processes.graphs.process import GraphProcess
+
+        process = GraphProcess(inputs=GraphProcess._launch_inputs(graph, {'x': 2}), runner=runner)
+        restores = None
+        run_mod.evaluate_operation = counting  # type: ignore[method-assign]
+        try:
+            assert [start.instance for start in process._run_state.step().starts] == ['first']
+            assert calls == [('const', {'value': 0})]
+            assert process._run_state.scopes['root']['values'] == {'attempts': 0}
+            _, completed = program_tasks.add.run_get_node(x=2, y=0)
+            assert completed.pk is not None
+            process._run_state.started('first', completed.pk)
+            persister = AiidaCheckpointPersister()
+            persister.save_checkpoint(process)
+            loaded = persister.load_checkpoint(process.node.pk)
+            from aiida.common.loaders import get_object_loader
+            from aiida.engine.processes.persistence import CheckpointContext
+
+            restores = loaded.decode(CheckpointContext(loader=get_object_loader(), runner=runner, loop=runner.loop))
+            assert restores._run_state.to_dict() == process._run_state.to_dict()
+            assert restores._run_state.scopes['root']['values'] == {'attempts': 0}
+            assert restores._run_state.step().starts == []
+            assert calls == [('const', {'value': 0})]
+            restores._run_state.completed('first', completed.pk)
+            assert restores._run_state.outputs()['result'].value == 2
+        finally:
+            run_mod.evaluate_operation = real_evaluate  # type: ignore[method-assign]
+            process.close()
+            if restores is not None:
+                restores.close()
+    finally:
+        runner.close()

@@ -28,12 +28,14 @@ from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.processes.graphs.inputs import _port_for_shape, _shape_from_port
 from aiida.engine.processes.graphs.operations import (
     BINARY_OPERATIONS,
+    CONSTANT_PORT,
     LEFT_PORT,
     OPERAND_PORT,
     OPERATIONS,
     RESULT_PORT,
     RIGHT_PORT,
     OperationKind,
+    const_result_shape,
 )
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
@@ -888,6 +890,9 @@ class InlineOperation(GraphTask):
         if self.operation not in OPERATIONS:
             msg = f'unknown operation `{self.operation}`; expected one of {sorted(OPERATIONS)}.'
             raise GraphTypeCheckError(msg)
+        if self.operation == 'const':
+            self._check_const()
+            return
         expected = (LEFT_PORT, RIGHT_PORT) if self.operation in BINARY_OPERATIONS else (OPERAND_PORT,)
         names = tuple(name for name, _ in self.input_shape.fields)
         if sorted(names) != sorted(expected):
@@ -897,6 +902,23 @@ class InlineOperation(GraphTask):
             if not isinstance(shape, LeafShape):
                 msg = f'operation `{self.operation}` reads scalar leaves; `{name}` is a namespace.'
                 raise GraphTypeCheckError(msg)
+
+    def _check_const(self) -> None:
+        """Reject bound values that are no finite scalar, and results outside their contract."""
+        names = tuple(name for name, _ in self.input_shape.fields)
+        if sorted(names) != [CONSTANT_PORT]:
+            msg = f'operation `const` binds one value under `{CONSTANT_PORT}`, not {list(names)}.'
+            raise GraphTypeCheckError(msg)
+        if set(self.inputs) != {CONSTANT_PORT}:
+            msg = f'operation `const` carries its bound value under `{CONSTANT_PORT}`.'
+            raise GraphTypeCheckError(msg)
+        bound = const_result_shape(self.inputs[CONSTANT_PORT])
+        bound_types = bound.types or ()
+        if tuple(self.result_shape.types or ()) != tuple(bound_types):
+            declared = ', '.join(f'`{kind.__name__}`' for kind in self.result_shape.types or ()) or 'untyped'
+            bound_name = bound_types[0].__name__ if bound_types else 'untyped'
+            msg = f'operation `const` declares result {declared} but binds `{bound_name}`.'
+            raise GraphTypeCheckError(msg)
 
     @property
     def result_port(self) -> str:

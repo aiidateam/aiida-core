@@ -403,3 +403,44 @@ def test_operation_wires_through_ports() -> None:
             inputs={'flag': (Route('op', 'left'),)},
             outputs={},
         )
+
+
+def test_infer_const_keeps_bound_literal_contract() -> None:
+    """A bound literal infers exactly its own scalar contract, including strings and `None`."""
+    assert infer_operation_shape('const', _operands(int)).types == (int,)
+    assert infer_operation_shape('const', _operands(str)).types == (str,)
+    assert infer_operation_shape('const', _operands(bool)).types == (bool,)
+    assert infer_operation_shape('const', _operands(type(None))).types == (type(None),)
+
+
+def test_infer_const_rejects_non_scalars() -> None:
+    """Constants bind finite scalars only; collections and unknown types stay task concerns."""
+    with pytest.raises(GraphTypeCheckError, match='finite numbers, strings, booleans'):
+        infer_operation_shape('const', _operands(list))
+    with pytest.raises(GraphTypeCheckError, match='takes 1 bound value'):
+        infer_operation_shape('const', (*_operands(int), *_operands(int)))
+    with pytest.raises(GraphTypeCheckError, match='declared scalar types'):
+        infer_operation_shape(
+            'const',
+            (NamespaceShape(fields=(('value', LeafShape(types=(int,))),)),),
+        )
+
+
+def test_evaluate_const_returns_bound_literal() -> None:
+    """A bound literal evaluates to itself without unwrapping or creating data."""
+    assert evaluate_operation('const', {'value': 0}) == 0
+    assert evaluate_operation('const', {'value': 'square'}) == 'square'
+    assert evaluate_operation('const', {'value': True}) is True
+    assert evaluate_operation('const', {'value': None}) is None
+
+
+def test_evaluate_const_rejects_nodes_nonfinite_and_extra_ports() -> None:
+    """Stored nodes, non-finite floats, and misplaced ports never pass as constants."""
+    with pytest.raises(GraphRuntimeError, match='binds finite scalars'):
+        evaluate_operation('const', {'value': Int(1)})
+    with pytest.raises(GraphRuntimeError, match='non-finite'):
+        evaluate_operation('const', {'value': float('inf')})
+    with pytest.raises(GraphRuntimeError, match='missing operand'):
+        evaluate_operation('const', {})
+    with pytest.raises(GraphRuntimeError, match='takes no operand'):
+        evaluate_operation('const', {'value': 1, 'operand': 2})

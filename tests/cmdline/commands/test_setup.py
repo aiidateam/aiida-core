@@ -340,3 +340,20 @@ repository: {tmp_path}"""
 
         profile = config.get_profile(profile_name)
         assert profile.uuid == profile_uuid
+
+    def test_setup_profile_uuid_invalid(self):
+        """Test ``verdi setup`` explicitly defining an invalid ``--profile-uuid`` option."""
+        profile_name = 'profile-invalid-uuid'
+        options = [
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--profile-uuid',
+            'invalid-uuid',
+            '--db-backend',
+            self.storage_backend_name,
+        ]
+
+        result = self.cli_runner(cmd_setup.setup, options, raises=True)
+        assert result.exit_code != 0
+        assert 'is not a valid UUID' in result.output

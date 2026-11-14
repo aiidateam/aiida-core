@@ -529,7 +529,10 @@ Calling a graph inside another graph places it as a subgraph, which runs as a sc
         inner = multiply_add(x=x, y=y, z=z)
         return add(x=inner, y=x)
 
-An ``if`` tests a bound name, a field, an inline expression such as ``x > 0``, or a task call.
+An ``if`` tests a bound name, a field, an inline expression such as ``x > 0``, a task call, or boolean combinations of those with ``and`` and ``or``, such as ``value != target and attempts < max_steps``.
+Each ``and``/``or`` pair selects one side at runtime with short-circuit semantics: the right side runs only when the left side selects it, so a task call or a guarded operation there never runs when skipped.
+Every operand must read as a boolean; Python operand tricks such as ``1 and 2`` fail when the graph is built.
+Presence and member tests (``is None``, ``is`` against a declared error member) stay branch tests: they work in an ``if`` or ``while`` test and on the left of ``and``/``or``, while the right side must be a boolean value.
 The intermediate representation holds both arms; at runtime, only the selected arm runs, as a scope of the same graph process.
 With an ``else``, both arms bind the same name to values of the same type:
 
@@ -558,7 +561,18 @@ Each arm holds one statement: an assignment of a call, an assignment of a name b
 Whole-namespace arms on both sides must share the same fields.
 The branch reserves the name ``condition`` for its test, so the arms cannot read a value of that name.
 
-A ``while`` tests a bound name, an inline expression such as ``n > 0``, or a task call before every iteration.
+A ``while`` tests a bound name, an inline expression such as ``n > 0``, a task call, or boolean combinations of those with ``and`` and ``or`` before every iteration.
+A joined test re-evaluates from the rebound names each pass, so a bounded loop steps toward its target until it matches or the attempt budget runs out:
+
+.. code:: python
+
+    @graph
+    def bounded_count(value: int, target: int, max_steps: int) -> int:
+        attempts = 0
+        while value != target and attempts < max_steps:
+            value = value - 1
+            attempts = attempts + 1
+        return add(x=value, y=attempts)
 The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, scalar literal bindings such as ``attempts = 0``, ``if`` branches, or nested ``while`` loops.
 A tested name must be rebound in the body; a tested call runs again after every iteration. An inline test re-evaluates from the rebound names.
 Names the body assigns without an enclosing binding are iteration-local, such as ``step`` below: declared on their first write, fresh every pass, never carried across iterations or visible after the loop.

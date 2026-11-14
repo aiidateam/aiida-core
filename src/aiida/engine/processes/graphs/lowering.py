@@ -95,10 +95,6 @@ R = t.TypeVar('R')
 # Value forms the language rejects, with the guidance each carries. The key sets
 # are the unsupported list; anything missing here reports the generic fallback.
 _VALUE_REJECTIONS: dict[tuple[type[ast.expr], ...], str] = {
-    (ast.BoolOp,): (
-        'operators compute a new value, which only a task can create and record; '
-        + 'put this check in a task and use its result instead'
-    ),
     (ast.IfExp,): 'an inline conditional evaluates Python instead of branching; write this as if and else instead',
     (ast.NamedExpr,): 'bindings must stay visible as wires; give it a name on its own line before the if instead',
     (ast.Subscript,): (
@@ -949,11 +945,108 @@ def _rekey_alias(arm: _Arm, port: str) -> _Arm:
     return arm._replace(body=replace(arm.body, outputs={port: endpoint}))
 
 
+def _fresh_wire(state: _LoweringState, base: str) -> str:
+    """Return a wire name unused by any enclosing binding."""
+    name = base
+    count = 2
+    while name in state.names:
+        name = f'{base}_{count}'
+        count += 1
+    return name
+
+
+def _lower_bool_operand(state: _LoweringState, expression: ast.expr, *, op: str) -> _Reference:
+    """Lower one `and`/`or` operand to a boolean reference, rejecting non-boolean values.
+
+    Python returns the operand itself (`1 and 2` gives `2`); graphs have no such values, so
+    every operand must statically read as a boolean instead.
+    """
+    if isinstance(expression, ast.BoolOp):
+        return _lower_boolop(state, node=expression)
+    if isinstance(expression, ast.Call):
+        reference = _lower_call(state, expression=expression)
+    elif isinstance(expression, (ast.BinOp, ast.Compare, ast.UnaryOp)):
+        reference = _lower_operation(state, node=expression)
+    else:
+        lowered = _lower_value(state, expression)
+        if not isinstance(lowered, _Reference):
+            if not isinstance(lowered, bool):
+                msg = (
+                    f'boolean `{op}` combines true/false values, so operands must be boolean; '
+                    + 'compare values or call a task returning a boolean instead'
+                )
+                _reject(state, node=expression, reason=msg)
+            return _place_constant(state, value=lowered, node=expression)
+        reference = lowered
+    if not _is_bool_reference(reference):
+        msg = (
+            f'boolean `{op}` combines true/false values, so operands must be boolean; '
+            + 'compare values or call a task returning a boolean instead'
+        )
+        _reject(state, node=expression, reason=msg)
+    return reference
+
+
+def _combine_bool(state: _LoweringState, op: str, left: ast.expr, right: ast.expr, node: ast.BoolOp) -> _Reference:
+    """Lower one `and`/`or` pair to a branch selecting the joined boolean.
+
+    The right side lowers inside the taken arm, so it never runs when skipped: `and` evaluates
+    it only when the left side holds, `or` only when it does not. Presence and member tests on
+    the left stay branch tests instead of values, reusing the same selection machinery.
+    """
+    armed = _fresh_wire(state, 'conjunction')
+    if _match_none_test(left) is None and _match_member_test(state, left) is None:
+        # A computed left side wires through an alias the branch test reads.
+        state.names[armed] = _lower_bool_operand(state, left, op=op)
+        test: ast.expr = ast.Name(id=armed, ctx=ast.Load())
+        ast.copy_location(test, left)
+    else:
+        test = left
+    taken: ast.expr = right
+    skipped: ast.expr = ast.Constant(value=op == 'or')
+    ast.copy_location(skipped, node)
+    if op == 'and':
+        body, orelse = taken, skipped
+    else:
+        body, orelse = skipped, taken
+    statement = ast.If(
+        test=test,
+        body=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=body)],
+        orelse=[ast.Assign(targets=[ast.Name(id=armed, ctx=ast.Store())], value=orelse)],
+    )
+    ast.copy_location(statement, node)
+    ast.fix_missing_locations(statement)
+    _lower_branch(state, statement=statement)
+    if not _is_bool_reference(state.names[armed]):
+        # Alias arms carry the right side through unchecked, so a non-boolean right side only
+        # shows up in the joined shape here; reject it with the operator diagnostic instead of a
+        # downstream condition or contract failure.
+        msg = (
+            f'boolean `{op}` combines true/false values, so operands must be boolean; '
+            + 'compare values or call a task returning a boolean instead'
+        )
+        _reject(state, node=node, reason=msg)
+    return state.names[armed]
+
+
+def _lower_boolop(state: _LoweringState, node: ast.BoolOp) -> _Reference:
+    """Lower an `and`/`or` chain to left-folded branch selections, returning the joined boolean."""
+    op = 'and' if isinstance(node.op, ast.And) else 'or'
+    combined = _combine_bool(state, op, node.values[0], node.values[1], node)
+    for extra in node.values[2:]:
+        alias = _fresh_wire(state, 'conjunction')
+        state.names[alias] = combined
+        name = ast.Name(id=alias, ctx=ast.Load())
+        ast.copy_location(name, node)
+        combined = _combine_bool(state, op, name, extra, node)
+    return combined
+
+
 def _lower_branch(state: _LoweringState, statement: ast.If) -> str:
     """Lower an if statement to a branch control task, returning the exposed wire."""
     _check_branch_shape(state, statement=statement)
     test: ast.expr = statement.test
-    if isinstance(test, ast.Call):
+    if isinstance(test, (ast.Call, ast.BoolOp)):
         test = _bind_test_condition(state, test=test)
     condition_test: t.Literal['truthy', 'is_none', 'is_not_none', 'is_member', 'is_not_member'] = 'truthy'
     condition_member: tuple[str, str] | None = None
@@ -1191,7 +1284,7 @@ def _lower_loop(state: _LoweringState, statement: ast.While) -> None:
         ast.copy_location(update, statement.test)
         ast.copy_location(update.targets[0], statement.test)
         body.append(update)
-    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp)) and _identity_compare(test) is None:
+    elif isinstance(test, (ast.BinOp, ast.Compare, ast.UnaryOp, ast.BoolOp)) and _identity_compare(test) is None:
         # Numeric inline operations bind to a boolean wire and recompute each pass;
         # `is`/`is not` presence and member tests stay branch-only, since loop
         # control carries a truthy check rather than a member selection.
@@ -1467,8 +1560,10 @@ def _is_bool_reference(value: _Reference | int | float | str | bool | None) -> b
     return bool(types) and all(kind is bool or kind is Bool for kind in types)
 
 
-def _bind_test_condition(state: _LoweringState, test: ast.Call | ast.BinOp | ast.Compare | ast.UnaryOp) -> ast.Name:
-    """Lower a call or inline comparison test to a fresh binding."""
+def _bind_test_condition(
+    state: _LoweringState, test: ast.Call | ast.BinOp | ast.Compare | ast.UnaryOp | ast.BoolOp
+) -> ast.Name:
+    """Lower a call, inline comparison, or boolean combination test to a fresh binding."""
     name = 'condition'
     count = 2
     while name in state.names:
@@ -1904,6 +1999,12 @@ def _operation_parts(
                 + 'compare two values per line instead'
             )
             _reject(state, node=node, reason=msg)
+        if isinstance(node.ops[0], (ast.Is, ast.IsNot)):
+            msg = (
+                'presence tests select a side instead of computing a value; '
+                + 'test `is None`, `is not None`, or an error member in an `if` or `while` test instead'
+            )
+            _reject(state, node=node, reason=msg)
         operation = _COMPARISON_OPERATIONS.get(type(node.ops[0]))
         if operation is None:
             _reject(state, node=node, reason=_unsupported_operation_reason())
@@ -2314,6 +2415,8 @@ def _lower_value(
     """Lower a value expression to a reference or literal."""
     if allow_call and isinstance(expression, ast.Call):
         return _lower_call(state, expression=expression)
+    if isinstance(expression, ast.BoolOp):
+        return _lower_boolop(state, node=expression)
     if isinstance(expression, (ast.BinOp, ast.Compare)):
         return _lower_operation(state, node=expression)
     if isinstance(expression, ast.Name):

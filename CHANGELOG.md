@@ -18,6 +18,15 @@
 
 One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors remain child processes, dispatched with hierarchical call labels (for example `multiply_add__multiply` or `loop_1_iteration_0__decrement`). Provenance that previously contained intermediate `GraphNode` children now shows the task runs directly under the single graph node, and `GraphRun` checkpoints use a new `0.2` scope format; existing `0.1` checkpoints cannot be resumed after upgrading. The run state is checkpointed YAML-encoded (like the other process inputs), and nested scope inputs normalized from defaults are stored standalone so checkpoints can reference them; they carry no provenance links. Finish or terminate all active graph processes before upgrading.
 
+#### Short-circuit boolean composition in source graphs
+
+Graph bodies now accept boolean `and`/`or` over boolean-valued inline expressions, references, and task calls.
+Previously every `and`/`or` failed at build time with a diagnostic claiming only tasks can compute booleans; each pair now lowers to a branch selecting the joined boolean, so the right side evaluates only when the left side selects it, with real short-circuit semantics.
+Task calls on the right never run when skipped, and guarded operations such as a remainder behind a non-zero check never evaluate when skipped.
+Every operand must statically read as a boolean: Python operand tricks such as `1 and 2` fail at build time, as do presence tests in value position.
+Presence and member tests stay branch tests, working in `if`/`while` tests and on the left of `and`/`or`.
+Stored declarations and checkpoints need no migration: combinations reuse the existing branch machinery and checkpoint in the existing scope state.
+
 #### Iteration-local bindings in loop bodies
 
 Loop bodies now accept iteration-local bindings such as `step = trial(...)` without requiring an initial `step` before the loop.

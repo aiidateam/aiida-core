@@ -232,10 +232,10 @@ def mismatched_branches(value: int, condition: bool) -> int:
     return selected_branch
 
 
-# rejected at lowering: conditions are calls or names.
+# rejected at lowering: boolean operators combine true/false values only.
 @graph
 def boolean_condition(value: int, flag: bool) -> int:
-    """Combine conditions with operators; conditions are calls or names."""
+    """Combine a flag with an integer; operands must read as booleans."""
     if flag and value:
         chosen = add(x=value, y=1)
     else:
@@ -243,10 +243,9 @@ def boolean_condition(value: int, flag: bool) -> int:
     return chosen
 
 
-# rejected at lowering: conditions are calls or names.
 @graph
 def compare_condition(value: int) -> int:
-    """Compare inline; conditions are calls or names."""
+    """Compare inline; the comparison binds a boolean wire for the branch."""
     if value > 0:
         chosen = add(x=value, y=1)
     else:

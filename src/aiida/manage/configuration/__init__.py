@@ -207,8 +207,8 @@ def create_default_user(
 ) -> 'User':
     """Create a default user for the given profile.
 
-    If the profile's storage is read only, a random existing user will be queried and set as default. Otherwise a new
-    user is created with the provided details and set as user.
+    If the profile's storage is read only, a random existing user will be queried and set as default. Otherwise the user
+    with the normalized email is reused, preserving their details, or created with the provided details if missing.
 
     :param profile: The profile to create the user in.
     :param email: Email for the default user.
@@ -228,8 +228,11 @@ def create_default_user(
             # Check if the storage contains any users, and just set a random one as default user.
             user = User.collection.query().first(flat=True)
         else:
-            # Otherwise create a user and store it
-            user = User(email=email, first_name=first_name, last_name=last_name, institution=institution).store()
+            created, user = User.collection.get_or_create(
+                email=User.normalize_email(email), first_name=first_name, last_name=last_name, institution=institution
+            )
+            if created:
+                user.store()
 
         # The user can be ``None`` if the storage is read-only and doesn't contain any users. This shouldn't happen in
         # real situations, but this safe guard is added to be safe.

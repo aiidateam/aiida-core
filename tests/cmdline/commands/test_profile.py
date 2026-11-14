@@ -22,6 +22,7 @@ from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine.daemon.client import DaemonException, DaemonStalePidException, DaemonTimeoutException
 from aiida.manage import configuration
 from aiida.manage.configuration import profile_context
+from aiida.manage.configuration.config import Config
 from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
 
@@ -317,6 +318,59 @@ def test_setup(config_psql_dos, run_cli_command, isolated_config, tmp_path, entr
     assert f'Created new profile `{profile_name}`.' in result.output
     assert profile_name in isolated_config.profile_names
     assert isolated_config.default_profile_name == profile_name
+
+
+@pytest.mark.parametrize('email', ('user@example.com', 'user@EXAMPLE.COM'))
+def test_setup_existing_storage(config_psql_dos, run_cli_command, isolated_config, email):
+    """Attaching a profile to existing storage preserves its user and leaves the profile usable."""
+    storage_config = config_psql_dos()
+    original = configuration.create_profile(
+        isolated_config,
+        name='original',
+        email='user@example.com',
+        first_name='Original',
+        last_name='User',
+        institution='Original institution',
+        storage_backend='core.psql_dos',
+        storage_config=storage_config,
+    )
+    with profile_context(original):
+        original_node = orm.Int(1).store()
+        original_uuid = original_node.uuid
+        original_user_pk = original_node.user.pk
+
+    options = [
+        'core.psql_dos',
+        '-n',
+        '--profile-name',
+        'attached',
+        '--email',
+        email,
+        '--first-name',
+        'Replacement',
+        '--last-name',
+        'Name',
+        '--institution',
+        'Replacement institution',
+        '--broker',
+        'none',
+    ]
+    for key, value in storage_config.items():
+        options.extend([f'--{key.replace("_", "-")}', str(value)])
+
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert 'Created new profile `attached`.' in result.output
+
+    config = Config.from_file(configuration.get_config_path())
+    profile = config.get_profile('attached')
+    assert profile.default_user_email == 'user@example.com'
+    with profile_context(profile):
+        assert orm.User.collection.count() == 1
+        user = orm.User.collection.get_default()
+        assert user.pk == original_user_pk
+        assert (user.first_name, user.last_name, user.institution) == ('Original', 'User', 'Original institution')
+        assert orm.load_node(original_uuid).user.pk == original_user_pk
+        assert orm.Int(2).store().user.pk == original_user_pk
 
 
 @pytest.mark.parametrize('set_as_default', (True, False))

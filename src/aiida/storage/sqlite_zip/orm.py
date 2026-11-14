@@ -368,8 +368,10 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             expr = database_entity <= value
         elif operator == 'like':
             # the like operator expects a string, so we cast to avoid problems
-            # with fields like UUID, which don't support the like operator
-            expr = database_entity.cast(String).like(value, escape='\\')
+            # with the UUID field, which don't support the like operator
+            if getattr(column, 'key', None) != 'uuid':
+                database_entity = database_entity.cast(String)
+            expr = database_entity.like(value, escape='\\')
         elif operator == 'ilike':
             expr = database_entity.ilike(value, escape='\\')
         elif operator == 'in':

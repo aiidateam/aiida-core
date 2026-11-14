@@ -71,6 +71,12 @@ from aiida.orm import DataDict, DataList
 
 __all__ = ('Forward', 'GraphHandle', 'graph', 'par_map', 'task')
 
+# `compile_graph` is intentionally absent from `__all__` and from the
+# `aiida.engine.processes.graphs` and `aiida.engine` re-exports: it is the
+# core-only compilation entrypoint for the engine, shapes, IR, and test
+# helpers. User code validates with `GraphHandle.build`, which returns
+# `None`, and launches with `run`/`submit`.
+
 P = t.ParamSpec('P')
 R = t.TypeVar('R')
 
@@ -129,14 +135,15 @@ class GraphHandle(t.Generic[P, R]):
         """Return the declared function for the lowering pipeline."""
         return self._definition.function
 
-    def build(self) -> GraphIR:
-        """Lower the declaration once and return the cached template.
+    def build(self) -> None:
+        """Validate the declaration without executing it.
 
-        Lowering validates the source, so this raises its diagnostics early.
+        Checking raises the declaration diagnostics early. It runs no placement, stores no node, and creates no data;
+        use `run` or `submit` to execute. The validated template stays private to the implementation.
+
+        :return: `None`.
         """
-        if self._template is None:
-            self._template = _lower_graph(self, stack=())
-        return self._template
+        compile_graph(self)
 
     @property
     def process_class(self) -> type[GraphProcess]:
@@ -145,6 +152,10 @@ class GraphHandle(t.Generic[P, R]):
 
     def get_launch_inputs(self, **inputs: t.Any) -> dict[str, t.Any]:
         """Validate graph arguments and prepare the declaration and provenance inputs.
+
+        Engine `Launchable` adapter consumed by `run`/`submit`; not an
+        authoring or inspection API. It serializes the compiled template into
+        the stored `graph` input alongside the `graph_inputs` namespace.
 
         Binds the function signature by name first, so every parameter arrives as a keyword.
         Per-placement `CalcJob` options ride under `task_metadata`; standard `metadata` passes through.
@@ -170,7 +181,9 @@ class GraphHandle(t.Generic[P, R]):
             for parameter in inspect.signature(self.function).parameters.values()
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
-        launch_inputs = GraphProcess._launch_inputs(self.build(), dict(bound.arguments), task_metadata=task_metadata)
+        launch_inputs = GraphProcess._launch_inputs(
+            compile_graph(self), dict(bound.arguments), task_metadata=task_metadata
+        )
         if metadata is not None:
             launch_inputs['metadata'] = metadata
         return launch_inputs
@@ -1971,6 +1984,23 @@ def _select_field(
         )
         _reject(state, node=node, reason=msg)
     return _Reference(reference.task, port=path, shape=shape)
+
+
+def compile_graph(handle: GraphHandle) -> GraphIR:
+    """Lower a handle to its cached template without executing or storing anything.
+
+    Core-only compilation entrypoint for the engine, shapes, IR tooling, and
+    tests. Not re-exported through the user API: user code validates with
+    `GraphHandle.build`, which returns `None`, and launches with `run` or
+    `submit`. Compiling fabricates no `Data` nodes; it only reads declared
+    annotations and source.
+
+    :param handle: the graph handle to compile.
+    :return: the cached static template.
+    """
+    if handle._template is None:
+        handle._template = _lower_graph(handle, stack=())
+    return handle._template
 
 
 def _lower_graph(handle: GraphHandle, stack: tuple[str, ...]) -> GraphIR:

@@ -24,7 +24,7 @@ from aiida.common.exceptions import GraphLanguageError, GraphTypeCheckError, Gra
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import GraphIR
-from aiida.engine.processes.graphs.lowering import GraphHandle
+from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.run import GraphRun
 from aiida.orm import DataDict, DataList
@@ -40,7 +40,7 @@ def _launch(
 ) -> tuple[dict[str, t.Any], ProcessNode]:
     """Run a graph declaration directly or from its serialized IR."""
     if serialized:
-        spec = GraphIR.from_dict(json.loads(json.dumps(declaration.build().to_dict())))
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
         return run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, inputs))
     return run_get_node(declaration, **inputs)
 
@@ -139,7 +139,7 @@ def test_map_keyword_and_after_execute() -> None:
     assert [member.value for member in outputs['result']] == [5]
     assert any(
         edge.source == 'increment' and edge.target == 'map_increment' and edge.carried_between is None
-        for edge in par_maps.map_after.build().dependencies
+        for edge in compile_graph(par_maps.map_after).dependencies
     )
 
 
@@ -241,7 +241,7 @@ def test_map_invalid_declarations_rejected(declaration: GraphHandle, match: str)
 def test_scheduler_dispatches_all_items_before_waiting() -> None:
     """One scheduling step fans out to every item before any completion."""
     original = DataList([Int(1), Int(2), Int(3)])
-    state = GraphRun(par_maps.map_list.build(), given={'values': original})
+    state = GraphRun(compile_graph(par_maps.map_list), given={'values': original})
     step = state.step()
     assert [start.instance for start in step.starts] == [
         'map_increment_0',
@@ -272,7 +272,7 @@ def test_map_avoids_placement_name_collisions() -> None:
         'map_increment_collect_map',
     }
     assert [member.value for member in calls['map_increment_collect_map'].outputs.result] == [2, 3]
-    state = GraphRun(par_maps.map_avoids_placement_names.build(), given={'values': original, 'x': 10})
+    state = GraphRun(compile_graph(par_maps.map_avoids_placement_names), given={'values': original, 'x': 10})
     assert state._collect_instance('map_increment') == 'map_increment_collect_map'
     assert state._item_instance('map_increment', 0) == 'map_increment_0_map'
     assert state._item_instance('map_increment', 1) == 'map_increment_1'
@@ -322,7 +322,7 @@ def test_map_mistyped_workchain_output_fails_without_collector() -> None:
 def test_scheduler_checkpoint_restores_expansion() -> None:
     """Checkpointing between fan-out and completion resumes without redispatching."""
     original = DataList([Int(1), Int(2)])
-    state = GraphRun(par_maps.map_list.build(), given={'values': original})
+    state = GraphRun(compile_graph(par_maps.map_list), given={'values': original})
     state.step()
     _, first_node = par_maps.increment.run_get_node(x=1)
     _, second_node = par_maps.increment.run_get_node(x=2)

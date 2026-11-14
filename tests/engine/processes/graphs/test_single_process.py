@@ -21,6 +21,7 @@ from aiida.common.exceptions import GraphMaxIterationsError
 from aiida.common.links import LinkType
 from aiida.engine import graph, par_map, task
 from aiida.engine.launch import run_get_node
+from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.engine.processes.graphs.run import GraphRun
 from aiida.orm import DataList
@@ -213,7 +214,7 @@ def test_nested_checkpoint_restores_scopes_and_rearms_callbacks(runner, monkeypa
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_nested_completed_work_reused_across_restart() -> None:
     """Restoring a nested run reuses finished scope tasks instead of resubmitting them."""
-    state = GraphRun(calls.nested.build(), given={'x': Int(2), 'y': Int(3)})
+    state = GraphRun(compile_graph(calls.nested), given={'x': Int(2), 'y': Int(3)})
     assert [start.instance for start in state.step().starts] == ['chain__add']
     _, first = task_programs.add.run_get_node(x=2, y=3)
     state.started('chain__add', first.pk)
@@ -232,7 +233,7 @@ def test_nested_completed_work_reused_across_restart() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_branch_decision_survives_restart() -> None:
     """A restored branch keeps its taken side instead of re-entering the other arm."""
-    state = GraphRun(branches.external_choice.build(), given={'value': 2, 'condition': True})
+    state = GraphRun(compile_graph(branches.external_choice), given={'value': 2, 'condition': True})
     assert [start.instance for start in state.step().starts] == ['branch_1__add']
     restored = GraphRun.from_dict(state.graph, state.given, state.to_dict())
     assert restored.step().starts == []
@@ -247,7 +248,7 @@ def test_branch_decision_survives_restart() -> None:
 def test_map_pending_items_reattach_without_resubmission() -> None:
     """A restored map with one finished item dispatches only its collector, never items twice."""
     original = DataList([Int(1), Int(2)])
-    state = GraphRun(par_maps.map_list.build(), given={'values': original})
+    state = GraphRun(compile_graph(par_maps.map_list), given={'values': original})
     assert [start.instance for start in state.step().starts] == ['map_increment_0', 'map_increment_1']
     _, first = par_maps.increment.run_get_node(x=1)
     _, second = par_maps.increment.run_get_node(x=2)
@@ -268,7 +269,7 @@ def test_map_pending_items_reattach_without_resubmission() -> None:
 def test_nested_graph_map_collects_synchronously() -> None:
     """A map over a task-free graph dispatches its collector without child tasks."""
     values = DataList([Int(1), Int(2)])
-    state = GraphRun(map_passthrough_graph.build(), given={'values': values})
+    state = GraphRun(compile_graph(map_passthrough_graph), given={'values': values})
     starts = state.step().starts
     assert [start.instance for start in starts] == ['map_passthrough_identity_collect']
     assert [starts[0].inputs['item_0'], starts[0].inputs['item_1']] == [1, 2]
@@ -281,7 +282,7 @@ def test_nested_graph_map_collects_synchronously() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_loop_with_synchronous_body_settles_without_dispatch() -> None:
     """A loop whose body is task-free iterates and settles with no child processes."""
-    state = GraphRun(loop_sync_terminates.build(), given={'value': 7, 'go': True, 'flag': True, 'other': False})
+    state = GraphRun(compile_graph(loop_sync_terminates), given={'value': 7, 'go': True, 'flag': True, 'other': False})
     assert state.step().starts == []
     assert state.outputs()['result'] == 7
     outputs, node = run_get_node(loop_sync_terminates, value=7, go=True, flag=True, other=False)
@@ -296,7 +297,7 @@ def test_loop_with_synchronous_body_raises_at_cap() -> None:
 
     from aiida.engine.processes.graphs.ir import LoopControl
 
-    spec = loop_sync_persists.build()
+    spec = compile_graph(loop_sync_persists)
     loop = spec.tasks[0]
     assert isinstance(loop, LoopControl)
     capped = dataclasses.replace(spec, tasks=(dataclasses.replace(loop, max_iterations=2),))
@@ -308,7 +309,7 @@ def test_loop_with_synchronous_body_raises_at_cap() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_nested_graph_default_fills_scope_inputs() -> None:
     """Entering a nested graph fills defaults the caller omits, like a child launch."""
-    state = GraphRun(outer_uses_default.build(), given={})
+    state = GraphRun(compile_graph(outer_uses_default), given={})
     starts = state.step().starts
     assert [start.instance for start in starts] == ['inner_with_default__add']
     assert starts[0].inputs['x'] == 5
@@ -337,7 +338,7 @@ def test_yaml_persister_roundtrip_pending_nested_work(monkeypatch) -> None:
     monkeypatch.setattr(Runner, 'call_on_process_finish', lambda self, pk, _callback: seen.append(pk))
     runner = _local_runner()
     try:
-        process = GraphProcess(inputs=GraphProcess._launch_inputs(outer_uses_default.build(), {}), runner=runner)
+        process = GraphProcess(inputs=GraphProcess._launch_inputs(compile_graph(outer_uses_default), {}), runner=runner)
         restores = None
         try:
             assert [start.instance for start in process._run_state.step().starts] == ['inner_with_default__add']
@@ -368,7 +369,7 @@ def test_yaml_persister_stores_defaulted_scope_inputs_without_links() -> None:
 
     runner = _local_runner()
     try:
-        process = GraphProcess(inputs=GraphProcess._launch_inputs(outer_uses_default.build(), {}), runner=runner)
+        process = GraphProcess(inputs=GraphProcess._launch_inputs(compile_graph(outer_uses_default), {}), runner=runner)
         restores = None
         try:
             assert [start.instance for start in process._run_state.step().starts] == ['inner_with_default__add']
@@ -404,7 +405,7 @@ def test_yaml_persister_completed_nested_work_continues_identically() -> None:
 
     runner = _local_runner()
     try:
-        process = GraphProcess(inputs=GraphProcess._launch_inputs(outer_uses_default.build(), {}), runner=runner)
+        process = GraphProcess(inputs=GraphProcess._launch_inputs(compile_graph(outer_uses_default), {}), runner=runner)
         restores = None
         try:
             state = process._run_state
@@ -443,7 +444,7 @@ def test_run_state_checkpoint_encodes_nodes_and_retains_identity() -> None:
 
     runner = _local_runner()
     try:
-        process = GraphProcess(inputs=GraphProcess._launch_inputs(outer_uses_default.build(), {}), runner=runner)
+        process = GraphProcess(inputs=GraphProcess._launch_inputs(compile_graph(outer_uses_default), {}), runner=runner)
         try:
             assert [start.instance for start in process._run_state.step().starts] == ['inner_with_default__add']
             payload = CheckpointPayload.from_object(process)

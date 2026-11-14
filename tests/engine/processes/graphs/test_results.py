@@ -20,6 +20,7 @@ from aiida.common.loaders import get_object_loader
 from aiida.engine import Err, ExitCode, ExitCodeEnum, Ok, Result, task
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import BranchControl, GraphIR, ProcessTask, TaskIR
+from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.results import RestartErrors, _error_types, _result_contract
 from aiida.orm import Int, SinglefileData
 from tests.engine.processes.graphs.programs import results, shelljobs, workchains
@@ -104,7 +105,7 @@ def test_plain_annotation_has_no_contract() -> None:
 
 def test_calcjob_task_declares_error_mapping() -> None:
     """A `CalcJob` task maps exit statuses onto declared failures without touching its spec."""
-    placed = shelljobs.recover_failing.build().task('fail')
+    placed = compile_graph(shelljobs.recover_failing).task('fail')
     assert isinstance(placed, ProcessTask)
     assert placed.spec.exit_codes == {'COMMAND_FAILED': shelljobs.ShellErrors.COMMAND_FAILED.value}
     assert placed.spec.error_enums == (get_object_loader().identify_object(shelljobs.ShellErrors),)
@@ -116,7 +117,7 @@ def test_calcjob_task_declares_error_mapping() -> None:
 
 def test_calcjob_task_ir_round_trips_error_mapping() -> None:
     """The exit codes and enum identifiers survive an IR round trip."""
-    placed = shelljobs.recover_failing.build().task('fail')
+    placed = compile_graph(shelljobs.recover_failing).task('fail')
     assert isinstance(placed, ProcessTask)
     data = placed.spec.to_dict()
     assert set(data['exit_codes']) == {'COMMAND_FAILED'}
@@ -128,7 +129,7 @@ def test_calcjob_task_ir_round_trips_error_mapping() -> None:
 
 def test_legacy_task_ir_without_error_mapping() -> None:
     """Task declarations stored before error enums default to no mapping."""
-    placed = shelljobs.copy_and_count.build().task('cat')
+    placed = compile_graph(shelljobs.copy_and_count).task('cat')
     assert isinstance(placed, ProcessTask)
     data = placed.spec.to_dict()
     assert 'exit_codes' not in data
@@ -334,7 +335,7 @@ def test_legacy_exit_code_preserved() -> None:
 )
 def test_contract_in_ir(declaration: t.Any, handle: t.Any, labels: set[str]) -> None:
     """The declared exit codes and the presence test survive an IR round trip."""
-    spec = declaration.build()
+    spec = compile_graph(declaration)
     placed = next(entry for entry in spec.tasks if isinstance(entry, ProcessTask))
     assert isinstance(placed, ProcessTask)
     assert isinstance(placed.spec, TaskIR)
@@ -356,7 +357,7 @@ def test_contract_in_ir(declaration: t.Any, handle: t.Any, labels: set[str]) -> 
 )
 def test_matched_condition_in_ir(declaration: t.Any, test: str) -> None:
     """A member test stores its enum identifier and member name through a round trip."""
-    spec = declaration.build()
+    spec = compile_graph(declaration)
 
     def branches(template: t.Any) -> t.Iterator[BranchControl]:
         for entry in template.tasks:
@@ -390,7 +391,7 @@ def test_matched_condition_rejected(declaration: t.Any, match: str) -> None:
 
 def test_legacy_task_ir_without_exit_codes() -> None:
     """Task declarations stored before exit codes default to no declared failures."""
-    divide = results.ratio_signed.build().task('divide_signed')
+    divide = compile_graph(results.ratio_signed).task('divide_signed')
     assert isinstance(divide, ProcessTask)
     data = divide.spec.to_dict()
     data.pop('exit_codes')

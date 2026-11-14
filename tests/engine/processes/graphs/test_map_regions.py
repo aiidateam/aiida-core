@@ -18,6 +18,7 @@ loop bodies.
 import pytest
 
 from aiida.engine.launch import run_get_node
+from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.orm import DataList
 from aiida.orm.nodes.data.int import Int
 from tests.engine.processes.graphs.programs import map_regions
@@ -113,7 +114,7 @@ def test_loop_maps_execute(declaration, flag: bool, expected: list[int]) -> None
 )
 def test_branch_regions_route_collection_not_callable(declaration) -> None:
     """Branch regions route the collection while the callable stays a declaration."""
-    template = declaration.build()
+    template = compile_graph(declaration)
     assert sorted(template.inputs) == ['flag', 'values']
     [branch] = list(template.tasks)
     for body in (branch.body, branch.otherwise):
@@ -125,7 +126,7 @@ def test_branch_regions_route_collection_not_callable(declaration) -> None:
 
 def test_loop_regions_route_collection_not_callable() -> None:
     """Loop regions route the collection while the callable stays a declaration."""
-    template = map_regions.map_keyword_namespaced_in_loop.build()
+    template = compile_graph(map_regions.map_keyword_namespaced_in_loop)
     assert sorted(template.inputs) == ['flag', 'value', 'values']
     loop = next(task for task in template.tasks if type(task).__name__ == 'LoopControl')
     assert 'values' in loop.body.inputs

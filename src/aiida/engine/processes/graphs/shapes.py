@@ -168,10 +168,10 @@ def _forwarded_shape(
     exclude: tuple[str, ...],
 ) -> NamespaceShape:
     """Return a task's input contract, minus exclusions, for one graph input namespace."""
-    from aiida.engine.processes.graphs.lowering import GraphHandle
+    from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
 
     if isinstance(task, GraphHandle):
-        shape = task.build().input_shape
+        shape = compile_graph(task).input_shape
     else:
         spec = getattr(task, '_task_spec', None)
         if spec is None:

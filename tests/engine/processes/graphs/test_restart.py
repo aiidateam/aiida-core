@@ -15,6 +15,7 @@ import pytest
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import LoopControl
+from aiida.engine.processes.graphs.lowering import compile_graph
 from aiida.engine.processes.graphs.results import RestartErrors
 from aiida.orm import StructureData
 from tests.engine.processes.graphs.programs import restart
@@ -63,7 +64,7 @@ def test_absent_arm_resets_between_iterations() -> None:
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_discarded_arm_stays_out_of_loop_state() -> None:
     """A `_` element discards its arm, so the loop carries only the named value arm."""
-    spec = restart.discarded_arm.build()
+    spec = compile_graph(restart.discarded_arm)
     loop = next(entry for entry in spec.tasks if isinstance(entry, LoopControl))
     assert sorted(loop.body.outputs) == ['attempt', 'retry', 'value']
     outputs, node = run_get_node(restart.discarded_arm)

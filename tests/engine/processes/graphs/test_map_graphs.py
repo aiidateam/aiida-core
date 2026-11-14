@@ -22,7 +22,7 @@ import pytest
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import GraphIR
-from aiida.engine.processes.graphs.lowering import GraphHandle
+from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.orm import DataList
 from aiida.orm.nodes.data.int import Int
@@ -35,7 +35,7 @@ pytestmark = pytest.mark.presto
 def _launch(declaration: GraphHandle, inputs: dict, serialized: bool) -> tuple[dict, ProcessNode]:
     """Run a graph declaration directly or from its serialized IR."""
     if serialized:
-        spec = GraphIR.from_dict(json.loads(json.dumps(declaration.build().to_dict())))
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
         return run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, inputs))
     return run_get_node(declaration, **inputs)
 

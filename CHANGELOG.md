@@ -4,6 +4,11 @@
 
 ### Breaking changes
 
+#### Graph templates are private to the implementation; `GraphHandle.build` validates only
+
+`GraphHandle.build()` no longer returns the compiled `GraphIR` template; it validates the declaration (raising the same lowering diagnostics as before) and returns `None`, caching the template for the launch. The template type and its accessors are private to the implementation: `GraphIR` is not re-exported through `aiida.engine`, `aiida.engine.processes`, or `aiida.engine.processes.graphs`, and no public handle property returns it. Internal callers (engine launch, `Forward` shape resolution including nested graphs, IR tooling, and tests/benchmarks) compile through the core-only `aiida.engine.processes.graphs.lowering.compile_graph` helper, which is deliberately absent from those re-exports; it fabricates no `Data` nodes. `GraphHandle.get_launch_inputs` remains the `Launchable` adapter consumed by `run`/`submit` (it serializes the compiled template into the stored `graph` input), not an authoring or inspection API. Previously `handle.build()` returned the template and callers inspected `.tasks`/`.to_dict()`/`input_shape` off that return; migrate such callers to `compile_graph(handle)`, keeping bare `handle.build()` only where the test asserts a build diagnostic.
+
+
 #### Graphs run as a single process
 
 One `GraphProcess` now executes the whole graph: nested graphs, loop iterations, branch arms, and map elements run as checkpointable scopes of that process instead of child graph processes. Only task runs and map collectors remain child processes, dispatched with hierarchical call labels (for example `multiply_add__multiply` or `loop_1_iteration_0__decrement`). Provenance that previously contained intermediate `GraphNode` children now shows the task runs directly under the single graph node, and `GraphRun` checkpoints use a new `0.2` scope format; existing `0.1` checkpoints cannot be resumed after upgrading. The run state is checkpointed YAML-encoded (like the other process inputs), and nested scope inputs normalized from defaults are stored standalone so checkpoints can reference them; they carry no provenance links. Finish or terminate all active graph processes before upgrading.

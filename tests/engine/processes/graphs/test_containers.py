@@ -23,7 +23,7 @@ from aiida.common.exceptions import GraphValidationError
 from aiida.common.links import LinkType
 from aiida.engine.launch import run_get_node
 from aiida.engine.processes.graphs.ir import GraphIR
-from aiida.engine.processes.graphs.lowering import GraphHandle
+from aiida.engine.processes.graphs.lowering import GraphHandle, compile_graph
 from aiida.engine.processes.graphs.process import GraphProcess
 from aiida.orm import DataDict, DataList
 from aiida.orm.nodes.data.int import Int
@@ -49,7 +49,7 @@ def test_container_graphs_execute(
 ) -> None:
     """Container-producing chains return exact values, from declarations and serialized IR alike."""
     if serialized:
-        spec = GraphIR.from_dict(json.loads(json.dumps(declaration.build().to_dict())))
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(declaration).to_dict())))
         outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, inputs))
     else:
         outputs, node = run_get_node(declaration, **inputs)
@@ -63,7 +63,7 @@ def test_nested_graph_container_executes(serialized: bool) -> None:
     """An owned list flows through a nested graph boundary by value."""
     original = DataList([Int(1), Int(2)])
     if serialized:
-        spec = GraphIR.from_dict(json.loads(json.dumps(containers.outer_sum.build().to_dict())))
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(containers.outer_sum).to_dict())))
         outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, {'values': original}))
     else:
         outputs, node = run_get_node(containers.outer_sum, values=original)
@@ -76,7 +76,7 @@ def test_nested_graph_container_executes(serialized: bool) -> None:
 def test_empty_list_graph_executes(serialized: bool) -> None:
     """A task-produced empty list stores with unset element type."""
     if serialized:
-        spec = GraphIR.from_dict(json.loads(json.dumps(containers.empty_list_graph.build().to_dict())))
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(containers.empty_list_graph).to_dict())))
         outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, {}))
     else:
         outputs, node = run_get_node(containers.empty_list_graph)
@@ -93,7 +93,7 @@ def test_empty_list_graph_executes(serialized: bool) -> None:
 def test_empty_dict_graph_executes(serialized: bool) -> None:
     """A task-produced empty mapping stores with unset element type."""
     if serialized:
-        spec = GraphIR.from_dict(json.loads(json.dumps(containers.empty_dict_graph.build().to_dict())))
+        spec = GraphIR.from_dict(json.loads(json.dumps(compile_graph(containers.empty_dict_graph).to_dict())))
         outputs, node = run_get_node(GraphProcess, **GraphProcess._launch_inputs(spec, {}))
     else:
         outputs, node = run_get_node(containers.empty_dict_graph)

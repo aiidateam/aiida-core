@@ -991,15 +991,20 @@ def _combine_bool(state: _LoweringState, op: str, left: ast.expr, right: ast.exp
 
     The right side lowers inside the taken arm, so it never runs when skipped: `and` evaluates
     it only when the left side holds, `or` only when it does not. Presence and member tests on
-    the left stay branch tests instead of values, reusing the same selection machinery.
+    the left stay branch tests instead of values, reusing the same selection machinery. The left
+    side lowers before the joined wire is claimed, so a nested combination never reuses the
+    outer alias for its inner branch.
     """
-    armed = _fresh_wire(state, 'conjunction')
     if _match_none_test(left) is None and _match_member_test(state, left) is None:
-        # A computed left side wires through an alias the branch test reads.
-        state.names[armed] = _lower_bool_operand(state, left, op=op)
+        # A computed left side wires through an alias the branch test reads; claim the alias only
+        # after lowering the left side so nested combinations claim distinct wires.
+        lowered = _lower_bool_operand(state, left, op=op)
+        armed = _fresh_wire(state, 'conjunction')
+        state.names[armed] = lowered
         test: ast.expr = ast.Name(id=armed, ctx=ast.Load())
         ast.copy_location(test, left)
     else:
+        armed = _fresh_wire(state, 'conjunction')
         test = left
     taken: ast.expr = right
     skipped: ast.expr = ast.Constant(value=op == 'or')

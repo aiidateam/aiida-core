@@ -59,6 +59,14 @@ def test_guarded_divisor_branches_on_joined_comparison() -> None:
     assert spec.task_names[1:3] == ('branch_2', 'branch_3')
 
 
+def test_nested_combination_claims_distinct_wires() -> None:
+    """A nested left side lowers before the outer alias is claimed, so wires stay distinct."""
+    spec = compile_graph(booleans.mixed_guards)
+    joined = [edge.target_port for edge in spec.dependencies if edge.target_port is not None]
+    assert 'conjunction_2' in joined
+    assert joined.count('conjunction') == 0
+
+
 def test_task_calls_stay_visible_in_taken_arms() -> None:
     """The right-hand task lowers into the taken arm, never into the enclosing scope."""
     spec = compile_graph(booleans.lazy_rhs)

@@ -117,8 +117,10 @@ DATABASE_CACHE_OPTIMIZATIONS = (
     # "Most recent nodes of a type" filters: without these, SQLite picks the type index and scans the whole type.
     'CREATE INDEX IF NOT EXISTS ix_cache_db_dbnode_node_type_ctime ON db_dbnode (node_type, ctime)',
     'CREATE INDEX IF NOT EXISTS ix_cache_db_dbnode_process_type_ctime ON db_dbnode (process_type, ctime)',
-    # Planner statistics: graph traversal (``with_ancestors``/``with_descendants``) then follows the link indexes.
-    'ANALYZE',
+    # Planner statistics for the links only: graph traversal (``with_ancestors``/``with_descendants``) then follows the
+    # link indexes. Statistics on ``db_dbnode`` would make joins starting from a type filter build bloom filters that
+    # slow them down.
+    'ANALYZE db_dblink',
 )
 
 

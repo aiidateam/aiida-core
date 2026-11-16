@@ -147,6 +147,7 @@ The following skills (under `.agents/skills/`, symlinked for Claude Code at `.cl
 - `adding-a-cli-command`: `verdi` subcommands and import-time constraints
 - `adding-dependencies`: third-party dependency checklist
 - `architecture-overview`: codebase structure, key files, ABCs
+- `authoring-graphs`: graph workflow recipe, build-first testing, discovery
 - `commit-conventions`: branching, commit style, PR requirements
 - `debugging-processes`: diagnosing failed or stuck processes and the daemon
 - `deprecating-api`: deprecation warnings and removal timeline

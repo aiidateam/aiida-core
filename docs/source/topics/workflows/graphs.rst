@@ -5,7 +5,7 @@ Graphs
 
 .. versionadded:: 3.0
 
-Besides work chains and work functions, workflows can also be written as graphs: plain Python functions that connect individual steps, called tasks.
+A graph is a workflow written as a plain Python function that connects individual steps, called tasks.
 Two decorators define them:
 
 * ``@task`` marks a step, a function whose body is ordinary Python.
@@ -30,20 +30,103 @@ For example, to construct our favorite multiply-add workflow:
         product = multiply(x=x, y=y)
         return add(x=product, y=z)
 
-For workflows that pass data from step to step, graphs have these advantages over work chains:
+.. _topics:workflows:graphs:recipe:
 
-* **Less boilerplate:** inputs and outputs come from function signatures, so no ``define`` method, ``spec`` or outline is needed.
-* **No subclassing:** graphs are plain decorated functions; work chains require subclassing ``WorkChain``.
-* **Inspectable before launch:** the graph structure is a plain object that can be checked, drawn, and processed by tools, see :ref:`topics:workflows:graphs:inspecting`.
-* **Early errors:** AiiDA checks the whole graph before any task runs, and each error names its source line. A work chain only fails at runtime, when it reaches the faulty step.
-* **Fast iteration:** edit the source and resubmit. Each submission carries its own copy of the graph structure and the task bodies, so the daemon needs no restart.
-* **Recorded structure:** the graph structure is stored as an input of the graph process, so the provenance shows what was planned as well as what ran.
+Authoring recipe
+----------------
+
+The following workflow moves a value toward a target, stopping when it reaches the target or uses its step budget.
+Copy these definitions into a Python module:
+
+.. code:: python
+
+    from aiida.engine import graph, run_get_node, task
+
+
+    @task
+    def step_toward(value: int, target: int) -> int:
+        """Move one unit toward the target; staying put at the target avoids overshoot."""
+        if value < target:
+            return value + 1
+        if value > target:
+            return value - 1
+        return value
+
+
+    @task
+    def summarize(value: int, target: int, attempts: int, status: str) -> dict[str, int | str]:
+        """Record the final value, target, attempts, and status as one report."""
+        return {'value': value, 'target': target, 'attempts': attempts, 'status': status}
+
+
+    @graph
+    def converge(initial: int, target: int, max_steps: int) -> dict[str, int | str]:
+        """Step ``initial`` toward ``target`` at most ``max_steps`` times, then report."""
+        value = initial
+        attempts = 0
+        while value != target and attempts < max_steps:
+            step = step_toward(value=value, target=target)
+            value = step
+            attempts = attempts + 1
+        if value == target:
+            status = 'converged'
+        else:
+            status = 'exhausted'
+        report = summarize(value=value, target=target, attempts=attempts, status=status)
+        return report
+
+The task bodies compute the next value and the final report.
+The graph only connects them: its counter and condition are inline orchestration state, while each call to ``step_toward`` runs a calculation and records its result.
+When the loop ends, ``summarize`` creates the report node that the graph returns.
+
+Validate the graph before launching it:
+
+.. code:: python
+
+    assert converge.build() is None
+
+This checks supported syntax, wiring, and static contracts without running tasks.
+It does not execute the task bodies or guarantee that a run will succeed.
+With an AiiDA profile loaded, run a representative case and inspect the result:
+
+.. code:: python
+
+    outputs, root = run_get_node(converge, initial=0, target=3, max_steps=10)
+    assert root.is_finished_ok
+    assert outputs['result'].get_dict() == {
+        'value': 3, 'target': 3, 'attempts': 3, 'status': 'converged'
+    }
+    assert root.inputs.initial.value == 0
+
+The stored workflow node keeps the launch inputs directly under ``root.inputs``.
+Its output is the existing report node, not a copy:
+
+.. code:: python
+
+    summary = next(child for child in root.called if child.process_label == 'summarize')
+    assert outputs['result'].uuid == summary.outputs.result.uuid
+
+Also check the stopping conditions: exhausting the budget, starting at the target, and allowing no steps.
+A descending case exercises the other branch of ``step_toward``:
+
+.. code:: python
+
+    for initial, target, budget, value, attempts, status in [
+        (0, 5, 2, 2, 2, 'exhausted'),
+        (4, 4, 5, 4, 0, 'converged'),
+        (0, 3, 0, 0, 0, 'exhausted'),
+        (2, -1, 10, -1, 3, 'converged'),
+    ]:
+        outputs, root = run_get_node(converge, initial=initial, target=target, max_steps=budget)
+        assert root.is_finished_ok
+        assert outputs['result'].get_dict() == {
+            'value': value, 'target': target, 'attempts': attempts, 'status': status
+        }
 
 Graph language
 --------------
 
-AiiDA reads the source of a ``@graph`` function and builds an intermediate representation from it: a JSON-serializable graph of tasks, their typed ports, and the dependencies between them.
-The engine executes this intermediate representation.
+AiiDA reads the source of a ``@graph`` function and compiles it for the engine; the compiled representation stays an implementation detail user code never touches.
 
 .. important::
 
@@ -69,7 +152,7 @@ The graph body supports:
 
 Every call is assigned to a name, including calls to tasks without outputs; ``return`` and the tests of ``if`` and ``while`` also take inline expressions and calls directly.
 Each name is bound once; only ``if`` arms and ``while`` bodies rebind names bound before them.
-Any other construct raises a ``GraphLanguageError`` naming its source line when the intermediate representation is built.
+Any other construct raises a ``GraphLanguageError`` naming its source line when the graph is validated with ``build()``.
 For example, an inline comparison in an ``if`` condition just runs:
 
 .. code:: python
@@ -113,7 +196,7 @@ Inline results are ephemeral orchestration state, not scientific data:
 * **Root graphs never return a newly computed scalar:** returning ``n`` above would publish a value
   with no creator, breaking the rule that workflows return existing data while only tasks create new
 data. A root graph returns task outputs, graph inputs, or collector-built containers -- or nothing,
-declared explicitly with ``return {}`` like a work chain returning nothing. Use an explicit task
+declared explicitly with ``return {}``. Use an explicit task
 for a scientific result computed from inline state.
 Returning a bound literal directly fails when the graph is built, for the same reason.
 * **Nested helpers may return control state:** a subgraph can return an inline value for its caller to
@@ -276,7 +359,7 @@ The launch value can be a mapping or a model instance.
 Tasks receive the namespace as an attribute-accessible mapping, so methods defined on the model are unavailable inside the task.
 Graphs pass whole namespaces or single fields on to tasks, either by naming the whole output or by spreading it with ``**``; the original input nodes are kept.
 Missing required inputs are reported together in one ``MissingRequiredInputsError``.
-Default factories run once, when the intermediate representation is built, and must return JSON values; each launch receives its own copy.
+Default factories run once, when the graph is validated, and must return JSON values; each launch receives its own copy.
 
 .. _topics:workflows:graphs:spreading:
 
@@ -544,7 +627,7 @@ member, optionally under ``not``) lower to ephemeral boolean control values wher
 they work in an ``if`` or ``while`` test, on either side of ``and``/``or``, as named wires such as
 ``present = value is not None``, and inside selections. Only these supported identity forms read as
 booleans; arbitrary ``x is y`` identities never run and fail when the graph is built.
-The intermediate representation holds both arms; at runtime, only the selected arm runs, as a scope of the same graph process.
+Both arms are compiled; at runtime, only the selected arm runs, as a scope of the same graph process.
 With an ``else``, both arms bind the same name to values of the same type:
 
 .. code:: python
@@ -736,57 +819,13 @@ Values a task computes but does not return leave no trace in the provenance grap
 
 .. _topics:workflows:graphs:inspecting:
 
-Inspecting the intermediate representation
-------------------------------------------
+Validating graphs and inspecting runs
+--------------------------------------
 
-``multiply_add.build()`` returns the intermediate representation without running any task.
-Errors in the graph source surface here, before launch.
-Call ``build()`` while developing a graph, or from a test, to catch rejected syntax, missing inputs, and contract mismatches without launching anything: it lowers the source exactly as a launch would.
-
-``to_dict()`` returns it as a JSON-serializable ``dict``, and ``GraphIR.from_dict`` reads it back.
-The ``payload`` of each task holds its pickled copy, see :ref:`topics:workflows:graphs:where_to_define`.
-
-.. dropdown:: JSON for ``multiply_add``, abridged
-
-    .. code:: json
-
-        {
-          "identifier": "my_module:multiply_add",
-          "tasks": [
-            {
-              "name": "multiply",
-              "kind": "process",
-              "spec": {"identifier": "multiply", "executor": {"module": "my_module", "name": "multiply", "payload": "..."}}
-            },
-            {
-              "name": "add",
-              "kind": "process",
-              "spec": {"identifier": "add", "executor": {"module": "my_module", "name": "add", "payload": "..."}}
-            }
-          ],
-          "dependencies": [{"source": "multiply", "target": "add", "source_port": "result", "target_port": "x"}],
-          "inputs": {"x": [["multiply", "x"]], "y": [["multiply", "y"]], "z": [["add", "y"]]},
-          "outputs": {"result": {"task": "add", "port": "result"}}
-        }
-
-:py:func:`~aiida.engine.processes.graphs.viz.to_mermaid` returns Mermaid flowchart source, which any Mermaid renderer draws, such as `mermaid.live <https://mermaid.live>`_.
-
-.. dropdown:: Mermaid source for ``multiply_add``
-
-    .. code:: text
-
-        flowchart TD
-            in__x{{x}}
-            in__x -->|x| multiply
-            in__y{{y}}
-            in__y -->|y| multiply
-            in__z{{z}}
-            in__z -->|y| add
-            multiply["multiply"]
-            add["add"]
-            multiply -->|result -> x| add
-            out__result[/result/]
-            add -->|result| out__result
+Call ``assert workflow.build() is None`` while developing a graph, or from a test, to catch unsupported syntax, bad wiring, and static contract mismatches without launching anything.
+``build()`` only validates the declaration; the representation it compiles is an implementation detail user code never touches.
+Then run a representative case and check its outputs before trying boundary cases, as shown in :ref:`topics:workflows:graphs:recipe`; runtime failures are not caught by ``build()``.
+Inspect execution results through the launch outputs and the stored graph node: ``outputs['result']`` reads what tasks produced, while ``root.inputs.initial`` reads the flat workflow argument the run was launched with.
 
 Failures and restarts
 ---------------------

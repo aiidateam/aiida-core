@@ -1,0 +1,11 @@
+{
+  "baseline_commit": "d67ea7ac968dea7b41ac299e71760485ece72898",
+  "baseline_status": " M docs/source/topics/workflows/graphs.rst\n M src/aiida/engine/processes/graphs/__init__.py\n M src/aiida/engine/processes/graphs/lowering.py\n M tests/engine/processes/graphs/programs/loops.py\n M tests/engine/processes/graphs/programs/restart.py\n M tests/engine/processes/graphs/programs/tasks.py\n M tests/engine/processes/graphs/programs/workchains.py\n M tests/engine/processes/graphs/test_restart.py\n?? graph-one-process-report.jsonl\n?? report.html\n?? report.jsonl\n?? reports/graph-authoring-examples-eval/\n?? reports/graph-restart-inline-authoring/\n?? reports/graph-restart-inline-study/\n?? reports/workchain-vs-graph-eval/\n?? tests/benchmark/graph_restart_inline_programs.py\n?? tests/benchmark/test_graph_restart_inline.py\n?? tests/engine/processes/graphs/programs/inline_control.py\n?? tests/engine/processes/graphs/test_inline_control.py\n?? tests/engine/processes/graphs/test_loop_authoring_examples.py\n?? tests/engine/processes/graphs/test_workchain_authoring_examples.py\n",
+  "pi_version": "1.5.2",
+  "provider": "openai-codex",
+  "model": "gpt-6.1-sol",
+  "thinking": "medium",
+  "workspace_root": "/tmp/aiida-paired-workflow-eval-5nib0w6x",
+  "paired_concurrent": true,
+  "note": "Snapshot includes current tracked working-tree contents and untracked source/tests/docs. No parent conversation/session supplied. No report folders copied. Shared installed dependencies only."
+}

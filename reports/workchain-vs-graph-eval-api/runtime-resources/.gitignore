@@ -1,0 +1,7 @@
+# Immutable individual executions and diagnostics are in execution-logs.tar.xz.
+/*-case-*.json
+/*.log
+/*.csv
+/runs.jsonl
+/smoke/
+/aiida/

@@ -1,0 +1,124 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.4, pytest-9.1.1, pluggy-1.6.0
+benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /home/goscin_a/code/aiida-core/worktree/graph-benchmark
+configfile: pyproject.toml
+plugins: rerunfailures-16.6.1, regressions-2.11.0, benchmark-4.0.0, datadir-1.8.0, instafail-0.5.0, cov-7.1.0, timeout-2.4.0, asyncio-0.16.0, xdist-3.8.0
+timeout: 240.0s
+timeout method: thread
+timeout func_only: False
+collected 89 items
+
+tests/benchmark/test_graph_engine.py sssssssssssssssssss..........       [ 32%]
+tests/benchmark/test_graph_engine_inline.py ssssssssssssssssssssssssssss [ 64%]
+...............                                                          [ 80%]
+tests/benchmark/test_graph_restart.py sssssss....sss...                  [100%]/home/goscin_a/code/aiida-core/worktree/graph-benchmark/.venv/lib/python3.12/site-packages/pytest_benchmark/plugin.py:387: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "datetime": datetime.utcnow().isoformat(),
+
+Wrote benchmark data in: <_io.BufferedWriter name='/home/goscin_a/code/aiida-core/worktree/graph-benchmark/reports/graph-restart-study/benchmarks/raw-pytest-benchmark.json'>
+
+
+=============================== warnings summary ===============================
+tests/benchmark/test_graph_engine.py::test_benchmark[workchain-basic-loop]
+  /home/goscin_a/code/aiida-core/worktree/graph-benchmark/src/aiida/engine/processes/events.py:40: DeprecationWarning: There is no current event loop
+    loop = asyncio.get_event_loop()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+------------------------------------------------ benchmark: 1 tests ------------------------------------------------
+Name (time in ms)                Min     Max    Mean  StdDev  Median     IQR  Outliers       OPS  Rounds  Iterations
+--------------------------------------------------------------------------------------------------------------------
+test_benchmark_restart_ir     3.3078  5.2872  3.7121  0.5685  3.5855  0.1755       1;1  269.3908      10           1
+--------------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------- benchmark 'basic-loop': 5 tests -----------------------------------------------------------------------------------------------
+Name (time in ms)                                      Min                   Max                  Mean              StdDev                Median                 IQR            Outliers      OPS            Rounds  Iterations
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_inline[inline-basic-loop]           75.7745 (1.0)        106.4515 (1.0)         82.0798 (1.0)        9.5937 (1.0)         78.6619 (1.0)       11.1409 (1.0)           1;1  12.1833 (1.0)          10           1
+test_benchmark_inline[workchain-basic-loop]       149.9006 (1.98)       304.4027 (2.86)       177.7990 (2.17)      46.0154 (4.80)       163.6529 (2.08)      18.0284 (1.62)          1;1   5.6243 (0.46)         10           1
+test_benchmark[workchain-basic-loop]              169.1091 (2.23)       206.6392 (1.94)       187.2895 (2.28)      11.5019 (1.20)       185.6321 (2.36)      15.5671 (1.40)          4;0   5.3393 (0.44)         10           1
+test_benchmark[graph-basic-loop]                1,510.8810 (19.94)    1,927.9369 (18.11)    1,712.1062 (20.86)    131.4291 (13.70)    1,748.8076 (22.23)    205.6943 (18.46)         4;0   0.5841 (0.05)         10           1
+test_benchmark_inline[graph-basic-loop]         1,670.6937 (22.05)    1,890.0541 (17.76)    1,768.1665 (21.54)     82.8353 (8.63)     1,768.4788 (22.48)    128.6660 (11.55)         4;0   0.5656 (0.05)         10           1
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------- benchmark 'restart': 3 tests -----------------------------------------------------------------------------------------------------
+Name (time in ms)                                                Min                   Max                  Mean              StdDev                Median                 IQR            Outliers     OPS            Rounds  Iterations
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_restart_local[restart-workchain]             736.9651 (1.0)      1,186.5903 (1.0)        885.6017 (1.0)      144.1518 (1.77)       858.9250 (1.0)      220.4884 (1.56)          3;0  1.1292 (1.0)          10           1
+test_benchmark_restart_local[restart-graph]               2,275.5911 (3.09)     2,768.0666 (2.33)     2,455.3229 (2.77)     163.5294 (2.01)     2,420.4741 (2.82)     159.3258 (1.13)          4;1  0.4073 (0.36)         10           1
+test_benchmark_restart_local[restart-graph-direct-ir]     2,330.7999 (3.16)     2,560.9685 (2.16)     2,444.0897 (2.76)      81.3525 (1.0)      2,439.5109 (2.84)     140.9183 (1.0)           4;0  0.4092 (0.36)         10           1
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------- benchmark 'restart-daemon': 3 tests --------------------------------------------------------------------------------------------
+Name (time in s)                                                     Min               Max              Mean            StdDev            Median               IQR            Outliers     OPS            Rounds  Iterations
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_restart_daemon[restart-workchain-daemon]           1.0994 (1.0)      1.2070 (1.0)      1.1411 (1.0)      0.0416 (1.0)      1.1377 (1.0)      0.0531 (1.0)           2;0  0.8763 (1.0)           5           1
+test_benchmark_restart_daemon[restart-graph-daemon]               2.5615 (2.33)     2.9869 (2.47)     2.7931 (2.45)     0.1727 (4.16)     2.8639 (2.52)     0.2657 (5.01)          2;0  0.3580 (0.41)          5           1
+test_benchmark_restart_daemon[restart-graph-direct-ir-daemon]     2.7769 (2.53)     3.4680 (2.87)     3.0335 (2.66)     0.2711 (6.52)     2.9814 (2.62)     0.3525 (6.64)          1;0  0.3297 (0.38)          5           1
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------- benchmark 'serial-calcjob-loop': 5 tests ------------------------------------------------------------------------------------
+Name (time in s)                                            Min               Max              Mean            StdDev            Median               IQR            Outliers     OPS            Rounds  Iterations
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_inline[inline-serial-calcjob-loop]        2.4625 (1.0)      2.9342 (1.01)     2.7929 (1.02)     0.1403 (1.79)     2.8162 (1.03)     0.1134 (2.33)          2;1  0.3581 (0.98)         10           1
+test_benchmark[workchain-serial-calcjob-loop]            2.5021 (1.02)     3.0149 (1.04)     2.7990 (1.02)     0.1770 (2.26)     2.7911 (1.02)     0.2878 (5.93)          4;0  0.3573 (0.98)         10           1
+test_benchmark_inline[workchain-serial-calcjob-loop]     2.6500 (1.08)     2.9010 (1.0)      2.7424 (1.0)      0.0785 (1.0)      2.7375 (1.0)      0.1296 (2.67)          3;0  0.3646 (1.0)          10           1
+test_benchmark_inline[graph-serial-calcjob-loop]         4.1901 (1.70)     4.7394 (1.63)     4.4806 (1.63)     0.2057 (2.62)     4.4665 (1.63)     0.3927 (8.09)          4;0  0.2232 (0.61)         10           1
+test_benchmark[graph-serial-calcjob-loop]                4.5922 (1.86)     4.8716 (1.68)     4.7055 (1.72)     0.0840 (1.07)     4.6923 (1.71)     0.0486 (1.0)           3;2  0.2125 (0.58)         10           1
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------- benchmark 'serial-wc-loop': 5 tests -----------------------------------------------------------------------------------------------
+Name (time in ms)                                          Min                   Max                  Mean              StdDev                Median                 IQR            Outliers     OPS            Rounds  Iterations
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_inline[inline-serial-wc-loop]          103.0472 (1.0)        135.3165 (1.0)        110.6953 (1.0)       10.0225 (1.0)        106.2271 (1.0)       12.1181 (1.0)           1;1  9.0338 (1.0)          10           1
+test_benchmark_inline[workchain-serial-wc-loop]       660.6618 (6.41)       921.6800 (6.81)       780.2823 (7.05)      86.9317 (8.67)       763.4032 (7.19)     107.2835 (8.85)          4;0  1.2816 (0.14)         10           1
+test_benchmark[workchain-serial-wc-loop]              685.3465 (6.65)       931.0707 (6.88)       772.5107 (6.98)      84.5168 (8.43)       744.1961 (7.01)     120.9416 (9.98)          4;0  1.2945 (0.14)         10           1
+test_benchmark[graph-serial-wc-loop]                8,090.5584 (78.51)    8,721.4616 (64.45)    8,386.8047 (75.76)    172.9706 (17.26)    8,366.0519 (78.76)    153.2935 (12.65)         2;2  0.1192 (0.01)         10           1
+test_benchmark_inline[graph-serial-wc-loop]         8,275.9593 (80.31)    8,621.8940 (63.72)    8,443.2963 (76.28)    110.0024 (10.98)    8,442.7260 (79.48)    156.5535 (12.92)         4;0  0.1184 (0.01)         10           1
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------- benchmark 'threaded-calcjob-loop': 5 tests ------------------------------------------------------------------------------------
+Name (time in s)                                              Min               Max              Mean            StdDev            Median               IQR            Outliers     OPS            Rounds  Iterations
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_inline[inline-threaded-calcjob-loop]        2.0748 (1.0)      2.6002 (1.0)      2.3800 (1.03)     0.1682 (1.16)     2.4581 (1.08)     0.1725 (1.72)          3;0  0.4202 (0.97)         10           1
+test_benchmark_inline[graph-threaded-calcjob-loop]         2.1136 (1.02)     2.9358 (1.13)     2.4581 (1.07)     0.2716 (1.87)     2.4747 (1.09)     0.4063 (4.04)          4;0  0.4068 (0.94)         10           1
+test_benchmark[workchain-threaded-calcjob-loop]            2.1528 (1.04)     2.6913 (1.04)     2.3043 (1.0)      0.1485 (1.02)     2.2710 (1.0)      0.1005 (1.0)           2;1  0.4340 (1.0)          10           1
+test_benchmark[graph-threaded-calcjob-loop]                2.2444 (1.08)     2.7167 (1.04)     2.4684 (1.07)     0.1449 (1.0)      2.4698 (1.09)     0.2217 (2.20)          3;0  0.4051 (0.93)         10           1
+test_benchmark_inline[workchain-threaded-calcjob-loop]     2.3142 (1.12)     2.8872 (1.11)     2.5346 (1.10)     0.1851 (1.28)     2.5005 (1.10)     0.2458 (2.44)          4;0  0.3945 (0.91)         10           1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------- benchmark 'threaded-wc-loop': 5 tests -----------------------------------------------------------------------------------------------
+Name (time in ms)                                            Min                   Max                  Mean              StdDev                Median                 IQR            Outliers     OPS            Rounds  Iterations
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_inline[inline-threaded-wc-loop]          276.9018 (1.0)        431.7572 (1.0)        325.0430 (1.0)       52.3138 (1.0)        304.4195 (1.0)       56.1091 (1.0)           2;1  3.0765 (1.0)          10           1
+test_benchmark[workchain-threaded-wc-loop]              595.1790 (2.15)       854.0876 (1.98)       742.1237 (2.28)      82.8508 (1.58)       767.8854 (2.52)     115.1823 (2.05)          3;0  1.3475 (0.44)         10           1
+test_benchmark_inline[workchain-threaded-wc-loop]       602.1845 (2.17)       908.7581 (2.10)       734.3039 (2.26)      97.3516 (1.86)       708.6178 (2.33)     117.6629 (2.10)          4;0  1.3618 (0.44)         10           1
+test_benchmark_inline[graph-threaded-wc-loop]         2,341.3015 (8.46)     2,670.3289 (6.18)     2,519.6593 (7.75)     111.2323 (2.13)     2,542.7935 (8.35)     160.3501 (2.86)          4;0  0.3969 (0.13)         10           1
+test_benchmark[graph-threaded-wc-loop]                2,392.5834 (8.64)     2,781.6582 (6.44)     2,533.8873 (7.80)     142.7841 (2.73)     2,477.8449 (8.14)     243.4253 (4.34)          2;0  0.3947 (0.13)         10           1
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Legend:
+  Outliers: 1 Standard Deviation from Mean; 1.5 IQR (InterQuartile Range) from 1st Quartile and 3rd Quartile.
+  OPS: Operations Per Second, computed as 1 / Mean
+============================= slowest 5 durations ==============================
+93.09s call     tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[graph-serial-wc-loop]
+92.11s call     tests/benchmark/test_graph_engine.py::test_benchmark[graph-serial-wc-loop]
+52.03s call     tests/benchmark/test_graph_engine.py::test_benchmark[graph-serial-calcjob-loop]
+49.28s call     tests/benchmark/test_graph_engine_inline.py::test_benchmark_inline[graph-serial-calcjob-loop]
+30.72s call     tests/benchmark/test_graph_engine.py::test_benchmark[workchain-serial-calcjob-loop]
+=========================== short test summary info ============================
+SKIPPED [5] tests/benchmark/test_graph_engine.py:137: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [5] tests/benchmark/test_graph_engine.py:159: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [8] tests/benchmark/test_graph_engine.py:237: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [1] tests/benchmark/test_graph_engine.py:277: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [5] tests/benchmark/test_graph_engine_inline.py:179: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [15] tests/benchmark/test_graph_engine_inline.py:204: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [8] tests/benchmark/test_graph_engine_inline.py:274: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [1] tests/benchmark/test_graph_restart.py: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [1] tests/benchmark/test_graph_restart.py:141: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [1] tests/benchmark/test_graph_restart.py:194: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [1] tests/benchmark/test_graph_restart.py:209: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [1] tests/benchmark/test_graph_restart.py:234: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [2] tests/benchmark/test_graph_restart.py:258: Skipping non-benchmark (--benchmark-only active).
+SKIPPED [3] tests/benchmark/test_graph_restart.py:386: Skipping non-benchmark (--benchmark-only active).
+============ 32 passed, 57 skipped, 1 warning in 766.06s (0:12:46) =============

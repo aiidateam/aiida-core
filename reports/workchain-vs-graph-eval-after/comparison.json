@@ -1,0 +1,178 @@
+{
+  "workchain": {
+    "before": {
+      "arm": "workchain",
+      "provider": "openai-codex",
+      "model": "gpt-6.1-sol",
+      "thinking": "medium",
+      "started_utc": "2026-11-14T15:14:29Z",
+      "wall_seconds": 183.13176444917917,
+      "timed_out": false,
+      "agent_returncode": 0,
+      "usage": {
+        "input": 17550,
+        "output": 3481,
+        "cacheRead": 103168,
+        "cacheWrite": 0,
+        "totalTokens": 124199
+      },
+      "provider_reported_cost_usd": 0.08022680000000001,
+      "assistant_messages": 13,
+      "tool_calls": 14,
+      "errors": [],
+      "fixed_files_unchanged": {
+        "collaborators.py": true,
+        "test_acceptance.py": true
+      },
+      "validation_command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "--broker-backend=none",
+        "-q",
+        "tests/engine/processes/workflow_eval",
+        "--junitxml=/home/goscin_a/code/aiida-core/worktree/graph-benchmark/reports/workchain-vs-graph-eval/workchain/validation.xml"
+      ],
+      "validation_returncode": 0,
+      "validation_seconds": 38.78201822191477,
+      "workspace": "/tmp/aiida-paired-workflow-eval-5nib0w6x/workchain",
+      "git_status": " A tests/engine/processes/workflow_eval/solution.py\n A tests/engine/processes/workflow_eval/test_solution.py\n"
+    },
+    "after": {
+      "arm": "workchain",
+      "provider": "openai-codex",
+      "model": "gpt-6.1-sol",
+      "thinking": "medium",
+      "started_utc": "2026-11-14T17:48:55Z",
+      "wall_seconds": 112.95714278891683,
+      "timed_out": false,
+      "agent_returncode": 0,
+      "usage": {
+        "input": 19257,
+        "output": 2574,
+        "cacheRead": 54912,
+        "cacheWrite": 0,
+        "totalTokens": 76743
+      },
+      "provider_reported_cost_usd": 0.06974520000000002,
+      "assistant_messages": 9,
+      "tool_calls": 11,
+      "errors": [],
+      "fixed_files_unchanged": {
+        "collaborators.py": true,
+        "test_acceptance.py": true
+      },
+      "validation_command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "--broker-backend=none",
+        "-q",
+        "tests/engine/processes/workflow_eval",
+        "--junitxml=/home/goscin_a/code/aiida-core/worktree/graph-benchmark/reports/workchain-vs-graph-eval-after/workchain/validation.xml"
+      ],
+      "validation_returncode": 0,
+      "validation_seconds": 34.9308405444026,
+      "workspace": "/tmp/aiida-paired-workflow-eval-j1gnlju1/workchain",
+      "git_status": " A tests/engine/processes/workflow_eval/solution.py\n A tests/engine/processes/workflow_eval/test_solution.py\n"
+    },
+    "wall_seconds_change_percent": -38.319197038991284,
+    "provider_reported_cost_usd_change_percent": -13.064960836029849,
+    "assistant_messages_change_percent": -30.76923076923077,
+    "tool_calls_change_percent": -21.42857142857143,
+    "input_change_percent": 9.726495726495731,
+    "output_change_percent": -26.055731111749502,
+    "cacheRead_change_percent": -46.7741935483871,
+    "totalTokens_change_percent": -38.209647420671665
+  },
+  "graph": {
+    "before": {
+      "arm": "graph",
+      "provider": "openai-codex",
+      "model": "gpt-6.1-sol",
+      "thinking": "medium",
+      "started_utc": "2026-11-14T15:14:29Z",
+      "wall_seconds": 206.23695712909102,
+      "timed_out": false,
+      "agent_returncode": 0,
+      "usage": {
+        "input": 35805,
+        "output": 3047,
+        "cacheRead": 501120,
+        "cacheWrite": 0,
+        "totalTokens": 539972
+      },
+      "provider_reported_cost_usd": 0.152192,
+      "assistant_messages": 23,
+      "tool_calls": 22,
+      "errors": [],
+      "fixed_files_unchanged": {
+        "collaborators.py": true,
+        "test_acceptance.py": true
+      },
+      "validation_command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "--broker-backend=none",
+        "-q",
+        "tests/engine/processes/workflow_eval",
+        "--junitxml=/home/goscin_a/code/aiida-core/worktree/graph-benchmark/reports/workchain-vs-graph-eval/graph/validation.xml"
+      ],
+      "validation_returncode": 0,
+      "validation_seconds": 39.16948624700308,
+      "workspace": "/tmp/aiida-paired-workflow-eval-5nib0w6x/graph",
+      "git_status": " A tests/engine/processes/workflow_eval/solution.py\n A tests/engine/processes/workflow_eval/test_solution.py\n"
+    },
+    "after": {
+      "arm": "graph",
+      "provider": "openai-codex",
+      "model": "gpt-6.1-sol",
+      "thinking": "medium",
+      "started_utc": "2026-11-14T17:48:55Z",
+      "wall_seconds": 151.54974151030183,
+      "timed_out": false,
+      "agent_returncode": 0,
+      "usage": {
+        "input": 51067,
+        "output": 2107,
+        "cacheRead": 154240,
+        "cacheWrite": 0,
+        "totalTokens": 207414
+      },
+      "provider_reported_cost_usd": 0.138628,
+      "assistant_messages": 14,
+      "tool_calls": 13,
+      "errors": [],
+      "fixed_files_unchanged": {
+        "collaborators.py": true,
+        "test_acceptance.py": true
+      },
+      "validation_command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "--broker-backend=none",
+        "-q",
+        "tests/engine/processes/workflow_eval",
+        "--junitxml=/home/goscin_a/code/aiida-core/worktree/graph-benchmark/reports/workchain-vs-graph-eval-after/graph/validation.xml"
+      ],
+      "validation_returncode": 0,
+      "validation_seconds": 37.48990684375167,
+      "workspace": "/tmp/aiida-paired-workflow-eval-j1gnlju1/graph",
+      "git_status": " A tests/engine/processes/workflow_eval/solution.py\n A tests/engine/processes/workflow_eval/test_solution.py\n"
+    },
+    "wall_seconds_change_percent": -26.51669050012143,
+    "provider_reported_cost_usd_change_percent": -8.912426408746843,
+    "assistant_messages_change_percent": -39.13043478260869,
+    "tool_calls_change_percent": -40.90909090909091,
+    "input_change_percent": 42.625331657589726,
+    "output_change_percent": -30.85001640958319,
+    "cacheRead_change_percent": -69.22094508301404,
+    "totalTokens_change_percent": -61.588008267095326
+  }
+}

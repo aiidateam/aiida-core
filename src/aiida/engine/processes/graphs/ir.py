@@ -156,6 +156,24 @@ def _close_dynamic(
     return closed
 
 
+def _static_inputs(process_class: type[Process], declared: NamespaceShape) -> PortNamespace:
+    """Return the fixed input ports of a task process, rejecting dynamic namespaces."""
+    ports = process_class.spec().inputs
+    if declared.fields:
+        ports = _close_dynamic(ports, declared, InputPort)
+    _reject_dynamic_inputs(ports)
+    return ports
+
+
+def _static_outputs(process_class: type[Process], declared: NamespaceShape) -> PortNamespace:
+    """Return the static output ports of a task process, rejecting dynamic namespaces."""
+    ports = process_class.spec().outputs
+    if declared.fields:
+        ports = _close_dynamic(ports, declared, OutputPort, narrow=True)
+    _reject_dynamic_outputs(ports)
+    return ports
+
+
 def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
     """Return the declared ports one placement path resolves to.
 
@@ -248,15 +266,26 @@ class TaskIR:
         typevar_inputs: TypevarPositions | None = None,
         typevar_output: t.Any | None = None,
     ) -> TaskIR:
-        """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass."""
+        """Reference a decorated task function, a `CalcJob` subclass, or a `WorkChain` subclass.
+
+        Every task handle builds its declaration here, so the static port contract is checked once.
+        The check reads the live class: loading the payload while the task module imports would
+        overwrite the module's classes with their pickled state.
+
+        :raises GraphTypeCheckError: if the inputs or outputs include a dynamic namespace.
+        """
         module, name = process.__module__, process.__name__
         # Payloads travel with the template, so executors from notebooks, sibling modules, or any
         # uninstalled location resolve without re-import; import-by-reference stays the fallback.
         process_class = getattr(process, 'process_class', None)
         if not (isinstance(process_class, type) and issubclass(process_class, Process)):
             process_class = process if (isinstance(process, type) and issubclass(process, Process)) else None
+        inputs: NamespaceShape = declared_inputs or NamespaceShape()
+        outputs: NamespaceShape = declared_outputs or NamespaceShape()
         payload: str | None = None
         if process_class is not None:
+            _static_inputs(process_class, inputs)
+            _static_outputs(process_class, outputs)
             import cloudpickle
 
             module_object = sys.modules.get(module)
@@ -272,8 +301,8 @@ class TaskIR:
         return cls(
             identifier=name,
             executor=ExecutorReference(module, name, payload),
-            declared_inputs=declared_inputs or NamespaceShape(),
-            declared_outputs=declared_outputs or NamespaceShape(),
+            declared_inputs=inputs,
+            declared_outputs=outputs,
             typevar_inputs=typevar_inputs or {},
             typevar_output=typevar_output,
         )
@@ -286,24 +315,12 @@ class TaskIR:
     @property
     def inputs(self) -> PortNamespace:
         """Return the fixed input ports of the task process."""
-        ports = self.process_class.spec().inputs
-        if self.declared_inputs.fields:
-            ports = _close_dynamic(ports, self.declared_inputs, InputPort)
-        _reject_dynamic_inputs(ports)
-        return ports
+        return _static_inputs(self.process_class, self.declared_inputs)
 
     @property
     def outputs(self) -> PortNamespace:
         """Return the static output ports of the task process."""
-        ports = self.process_class.spec().outputs
-        if self.declared_outputs.fields:
-            ports = _close_dynamic(ports, self.declared_outputs, OutputPort, narrow=True)
-        _reject_dynamic_outputs(ports)
-        return ports
-
-    def check_ports(self) -> None:
-        """Raise a ``GraphTypeCheckError`` unless the inputs and outputs form a static contract."""
-        _ = self.inputs, self.outputs
+        return _static_outputs(self.process_class, self.declared_outputs)
 
     @property
     def result_port(self) -> str:

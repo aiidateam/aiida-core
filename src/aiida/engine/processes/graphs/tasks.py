@@ -23,7 +23,7 @@ from aiida.common.links import validate_link_label
 from aiida.engine.processes.calcjobs import CalcJob
 from aiida.engine.processes.functions import FunctionProcessBase, P, ProcessFunctionType, process_function
 from aiida.engine.processes.generic.ports import UNSPECIFIED, Port
-from aiida.engine.processes.graphs.ir import TaskIR, TypevarPositions, _reject_dynamic_inputs, _reject_dynamic_outputs
+from aiida.engine.processes.graphs.ir import TaskIR, TypevarPositions
 from aiida.engine.processes.graphs.shapes import (
     LeafShape,
     NamespaceShape,
@@ -368,7 +368,6 @@ class CalcJobTaskHandle:
             declared_inputs=_declared_shape(inputs),
             declared_outputs=_declared_shape(outputs, leaves=True),
         )
-        self._task_spec.check_ports()
         # Copy name and docstring, not the class state: the handle owns its task spec.
         functools.update_wrapper(self, process_class, updated=())
 
@@ -422,7 +421,6 @@ class WorkChainTaskHandle:
             declared_inputs=_declared_shape(inputs),
             declared_outputs=_declared_shape(outputs, leaves=True),
         )
-        self._task_spec.check_ports()
         # Copy name and docstring, not the class state: the handle owns its task spec.
         functools.update_wrapper(self, process_class, updated=())
 
@@ -495,7 +493,7 @@ def _check_task_contract(
 ) -> None:
     """Reject task declarations the graph runtime cannot represent.
 
-    Process classes check their ports when their task declaration is built.
+    Ports are checked when the task declaration is built, in `TaskIR.from_process`.
     """
     if is_process_function(function):
         msg = 'tasks take plain functions, not decorated process functions; pass the undecorated function instead.'
@@ -545,8 +543,4 @@ def _build_task(
     assert not inspect.isclass(function)
     decorated = process_function(node_class=CalcFunctionNode, base_class=TaskProcess)(function)
     typevar_inputs, typevar_output = _typevar_positions(function)
-    handle = FunctionTaskHandle(decorated, typevar_inputs=typevar_inputs, typevar_output=typevar_output)
-    spec = handle.process_class.spec()
-    _reject_dynamic_inputs(spec.inputs)
-    _reject_dynamic_outputs(spec.outputs)
-    return handle
+    return FunctionTaskHandle(decorated, typevar_inputs=typevar_inputs, typevar_output=typevar_output)

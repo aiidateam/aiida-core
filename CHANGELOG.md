@@ -5,6 +5,7 @@
 ### Data container input fixes
 
 * Builder `_update` serializes mapping-valued static inputs, including `DataDict`, instead of treating them as namespaces. Existing namespace-update behavior is unchanged.
+* File staging can find owned files inside `DataDict` and `DataList` inputs before those containers are stored, without cloning or detaching their members.
 
 ### Breaking changes
 

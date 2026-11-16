@@ -220,13 +220,13 @@ class ProcessBuilderNamespace(MutableMapping):
         """
         if args:
             for key, value in args[0].items():
-                if isinstance(value, Mapping):
+                if isinstance(value, Mapping) and isinstance(self._port_namespace.get(key), PortNamespace):
                     self[key].update(value)
                 else:
                     self.__setattr__(key, value)
 
         for key, value in kwds.items():
-            if isinstance(value, Mapping):
+            if isinstance(value, Mapping) and isinstance(self._port_namespace.get(key), PortNamespace):
                 self[key].update(value)
             else:
                 self.__setattr__(key, value)

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Data container input fixes
+
+* Builder `_update` serializes mapping-valued static inputs, including `DataDict`, instead of treating them as namespaces. Existing namespace-update behavior is unchanged.
+
 ### Breaking changes
 
 #### Graph provenance links use declared argument names

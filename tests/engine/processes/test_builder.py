@@ -83,6 +83,38 @@ class NestedNamespaceProcess(Process):
         spec.input_namespace('opt', required=False, dynamic=True)
 
 
+class ContainerInputProcess(Process):
+    """A static mapping-valued input requiring serialization."""
+
+    @classmethod
+    def define(cls, spec: ProcessSpec) -> None:
+        super().define(spec)
+        spec.input('bundle', valid_type=orm.DataDict, serializer=orm.DataDict, required=False)
+
+
+@pytest.mark.presto
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('as_keywords', [False, True])
+@pytest.mark.parametrize('existing', [False, True])
+def test_update_serializes_mapping_leaf(as_keywords: bool, existing: bool) -> None:
+    """Updating a mapping leaf assigns a new container without mutating the caller's data."""
+    builder = ContainerInputProcess.get_builder()
+    previous = orm.DataDict({'old': orm.Int(1)}).store()
+    if existing:
+        builder.bundle = previous
+    mapping = {'new': orm.Int(2)}
+    update = {'bundle': mapping}
+    if as_keywords:
+        builder._update(**update)
+    else:
+        builder._update(update)
+    assert isinstance(builder.bundle, orm.DataDict)
+    assert list(builder.bundle) == ['new']
+    assert builder.bundle['new'].value == 2
+    assert list(previous) == ['old']
+    assert list(mapping) == ['new']
+
+
 class MappingData(Mapping, orm.Data):  # type: ignore[misc]
     """Data sub class that is also a `Mapping`."""
 

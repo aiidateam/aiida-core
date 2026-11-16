@@ -167,6 +167,39 @@ def test_submit_script_rerunnable():
 
 
 @pytest.mark.parametrize(
+    'sched_output_path, sched_error_path, sched_join_files, expected_lines, unexpected_lines',
+    (
+        ('out.log', None, True, ('#BSUB -o out.log', '#BSUB -e out.log_'), ('#BSUB -e None',)),
+        ('out.log', 'err.log', True, ('#BSUB -o out.log', '#BSUB -e out.log_'), ('#BSUB -e err.log', '#BSUB -e None')),
+        ('out.log', 'err.log', False, ('#BSUB -o out.log', '#BSUB -e err.log'), ('#BSUB -e None', '#BSUB -e out.log_')),
+        ('out.log', None, False, ('#BSUB -o out.log',), ('#BSUB -e',)),
+    ),
+)
+def test_submit_script_output_redirection(
+    sched_output_path, sched_error_path, sched_join_files, expected_lines, unexpected_lines
+):
+    """Test the output redirection options of the submit script."""
+    from aiida.common.datastructures import CodeRunMode, JobTemplate
+
+    scheduler = LsfScheduler()
+
+    job_tmpl = JobTemplate()
+    job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=1)
+    job_tmpl.codes_info = []
+    job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+    job_tmpl.sched_output_path = sched_output_path
+    job_tmpl.sched_error_path = sched_error_path
+    job_tmpl.sched_join_files = sched_join_files
+
+    script = scheduler.get_submit_script(job_tmpl)
+    for line in expected_lines:
+        assert line in script
+    for line in unexpected_lines:
+        assert line not in script
+
+
+@pytest.mark.parametrize(
     'kwargs, exception, message',
     (
         (

@@ -139,19 +139,11 @@ class DirectScheduler(BashCliScheduler):
             lines.append(f'exec > {job_tmpl.sched_output_path}')
 
         if job_tmpl.sched_join_files:
-            # TODO: manual says:
-            # By  default both standard output and standard error are directed
-            # to a file of the name "slurm-%j.out", where the "%j" is replaced
-            # with  the  job  allocation  number.
-            # See that this automatic redirection works also if
-            # I specify a different --output file
             if job_tmpl.sched_error_path:
                 self.logger.info('sched_join_files is True, but sched_error_path is set; ignoring sched_error_path')
+            lines.append('exec 2>&1')
         elif job_tmpl.sched_error_path:
             lines.append(f'exec 2> {job_tmpl.sched_error_path}')
-        else:
-            # To avoid automatic join of files
-            lines.append('exec 2>&1')
 
         if job_tmpl.max_memory_kb:
             self.logger.warning('Physical memory limiting is not supported by the direct scheduler.')

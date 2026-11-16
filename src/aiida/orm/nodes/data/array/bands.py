@@ -235,6 +235,8 @@ class BandsData(KpointsData):
     ):
         super().__init__(**kwargs)
         self.units = units
+        if array_labels is not None:
+            self.base.attributes.set('array_labels', array_labels)
 
     def set_kpointsdata(self, kpointsdata):
         """Load the kpoints from a kpoint object.
@@ -368,18 +370,14 @@ class BandsData(KpointsData):
         return self.base.attributes.get('array_labels', None)
 
     @property
-    def units(self) -> str:
+    def units(self) -> str | None:
         """Units in which the data in bands were stored."""
-        # return copy.deepcopy(self._pbc)
-        return self.base.attributes.get('units')
+        return self.base.attributes.get('units', None)
 
     @units.setter
-    def units(self, value):
-        """Set the value of pbc, i.e. a tuple of three booleans, indicating if the
-        cell is periodic in the 1,2,3 crystal direction
-        """
-        the_str = str(value)
-        self.base.attributes.set('units', the_str)
+    def units(self, value: str | None) -> None:
+        """Set the units, preserving ``None`` as an unset value."""
+        self.base.attributes.set('units', None if value is None else str(value))
 
     def _set_pbc(self, value):
         """Validate the pbc, then store them"""

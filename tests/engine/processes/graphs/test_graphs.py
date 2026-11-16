@@ -1579,3 +1579,12 @@ def test_generic_task_breaking_narrowed_type_fails_task(declaration: GraphHandle
     assert any(
         report.endswith('task `to_float` returned `Float` for port `result`, expected `Int`') for report in reports
     )
+
+
+def test_nested_dynamic_namespace_closes_parent() -> None:
+    """Static names inside a nested dynamic namespace close every enclosing namespace."""
+    assert workchains.static_nested.build() is None
+    closed = workchains.nested_dynamic_chain._task_spec.inputs
+    assert not closed['sub'].dynamic
+    assert not closed['sub']['members'].dynamic
+    assert 'a' in closed['sub']['members']

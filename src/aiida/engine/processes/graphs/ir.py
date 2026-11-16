@@ -153,7 +153,10 @@ def _close_dynamic(
         location = f'{path}.{name}' if path else name
         existing = ports.get(name)
         if isinstance(existing, PortNamespace) and isinstance(shape, NamespaceShape):
-            closed[name] = _close_dynamic(existing, shape, port_class, location)
+            nested = _close_dynamic(existing, shape, port_class, location)
+            closed[name] = nested
+            if not nested.dynamic:
+                added = True
             continue
         if existing is not None:
             narrowed = _narrowed_port(existing, shape) if narrow else None

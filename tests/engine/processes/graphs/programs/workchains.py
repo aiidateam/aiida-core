@@ -293,3 +293,28 @@ def read_absent_static(fail: bool) -> str:
     """Read a static success arm unconditionally; absence arrives as `None`."""
     ran = flaky_static_chain(fail=fail)
     return ensure_result(value=ran.result, error=ran.error)
+
+
+class NestedDynamicChain(WorkChain):
+    """Declare a nested dynamic namespace for static specialization."""
+
+    @classmethod
+    def define(cls, spec) -> None:  # type: ignore[override]
+        super().define(spec)
+        spec.input_namespace('sub', dynamic=True)
+        spec.input_namespace('sub.members', valid_type=Int, dynamic=True)
+        spec.output('result', valid_type=Int)
+        spec.outline(cls.noop)
+
+    def noop(self):
+        """Declare the contract only; graphs build without running this."""
+
+
+nested_dynamic_chain = task(NestedDynamicChain, inputs={'sub': {'members': {'a': Int}}})
+
+
+@graph
+def static_nested(a: int) -> int:
+    """Wire a static name into a nested dynamic namespace."""
+    total = nested_dynamic_chain(sub={'members': {'a': a}})
+    return total.result

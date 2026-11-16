@@ -96,6 +96,11 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         """Return the creation timestamp of the group."""
 
     @property
+    def ctime(self) -> datetime.datetime:
+        """Return the creation timestamp of the group."""
+        return self.time
+
+    @property
     @abc.abstractmethod
     def nodes(self) -> NodeIterator:
         """Return a generator/iterator that iterates over all nodes and returns

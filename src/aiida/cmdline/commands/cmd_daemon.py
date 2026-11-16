@@ -282,12 +282,11 @@ def stop(ctx, no_wait, all_profiles, timeout):
 @click.pass_context
 @decorators.with_dbenv()
 @decorators.requires_broker
-@decorators.only_if_daemon_running()
 def restart(ctx, reset, no_wait, timeout):
     """Restart the daemon.
 
-    The daemon is stopped before being restarted with the default
-    number of workers that is started when calling `verdi daemon start` manually.
+    The daemon is stopped before being restarted with the default number of workers that is started when calling
+    `verdi daemon start` manually. If the daemon is not currently running, it will simply be started.
 
     Returns exit code 0 if the result is OK, non-zero if there was an error.
     """

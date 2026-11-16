@@ -119,3 +119,50 @@ def test_ambiguous_label_uuid(setup_computers, parameter_type):
     identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_03.uuid
+
+
+def test_shebang_param_type():
+    """Verify that `ShebangParamType` validates shebang lines."""
+    import click
+
+    from aiida.cmdline.params.types.computer import ShebangParamType
+
+    param_type = ShebangParamType()
+    assert param_type.convert('#!/bin/bash', None, None) == '#!/bin/bash'
+
+    with pytest.raises(click.BadParameter, match='The shebang line should start with the two characters #!'):
+        param_type.convert('/bin/bash', None, None)
+
+
+def test_mpirun_command_param_type_ctx_none():
+    """Verify that `MpirunCommandParamType` handles `ctx=None` without raising AttributeError."""
+    import click
+
+    from aiida.cmdline.params.types.computer import MpirunCommandParamType
+
+    param_type = MpirunCommandParamType()
+    with pytest.raises(click.BadParameter, match='Scheduler not specified for this computer!'):
+        param_type.convert('mpirun -np {tot_num_mpiprocs}', None, None)
+
+
+def test_mpirun_command_param_type_with_scheduler():
+    """Verify that `MpirunCommandParamType` validates replacement fields using scheduler resources."""
+    import click
+
+    from aiida.cmdline.params.types.computer import MpirunCommandParamType
+    from aiida.plugins.entry_point import eps_select
+
+    param_type = MpirunCommandParamType()
+    scheduler_ep = next(iter(eps_select(group='aiida.schedulers', name='core.direct')))
+
+    ctx = click.Context(click.Command('dummy'))
+    ctx.params = {'scheduler': scheduler_ep}
+
+    # Valid replacement field
+    result = param_type.convert('mpirun -np {tot_num_mpiprocs}', None, ctx)
+    assert result == 'mpirun -np {tot_num_mpiprocs}'
+
+    # Unknown replacement field
+    match = "In mpirun command there is an unknown replacement field 'invalid_key'"
+    with pytest.raises(click.BadParameter, match=match):
+        param_type.convert('mpirun -np {invalid_key}', None, ctx)

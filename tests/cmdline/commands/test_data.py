@@ -293,8 +293,10 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         bands = connect_structure_bands(strct)
 
         bands_isolated = BandsData()
+        bands_isolated.set_kpoints([[0.0, 0.0, 0.0]])
+        bands_isolated.set_bands([[0.0]])
         bands_isolated.store()
-
+        
         # Create 2 groups and add the data to one of them
         g_ne = Group(label='non_empty_group')
         g_ne.store()

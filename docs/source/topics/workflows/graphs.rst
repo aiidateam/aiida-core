@@ -496,21 +496,28 @@ A ``while`` loop retries a fallible task: its body unpacks the ``Result`` on eve
         return Ok(1.5)
 
     @task
-    def should_restart(error: StepErrors | None, attempt: int, max_attempts: int) -> bool:
-        return error is not None and attempt < max_attempts
+    def ensure(value: float | None) -> None:
+        if value is None:
+            raise ValueError('the step never succeeded.')
 
     @graph
-    def restartable(structure: StructureData, max_attempts: int) -> float:
-        attempt = zero()
+    def restartable(structure: StructureData, max_attempts: int, attempt: int = 0) -> float:
         value, error = run_step(structure=structure, attempt=attempt)
-        retry = should_restart(error=error, attempt=attempt, max_attempts=max_attempts)
+        retry = error is not None and attempt < max_attempts
         while retry:
-            attempt = step(attempt=attempt)
+            attempt = attempt + 1
             value, error = run_step(structure=structure, attempt=attempt)
-            retry = should_restart(error=error, attempt=attempt, max_attempts=max_attempts)
-        return ensure(value=value, error=error)
+            retry = error is not None and attempt < max_attempts
+        checked = ensure(value=value)  # noqa: F841 - the guard validates without feeding the return
+        return value
 
-Here ``zero`` seeds the counter, ``step`` increments it, and ``ensure`` returns the value or fails when no attempt succeeded.
+The counter and the retry flag are inline orchestration state, not tasks.
+The counter seeds from its default graph input (``attempt: int = 0``); a scalar literal binding such as ``attempt = 0`` can also initialize ephemeral orchestration state.
+The retry predicate combines error presence with the budget using short-circuiting ``and``.
+Every ``@task`` runs as its own child process with its own provenance nodes, so inlining the counter and the condition avoids a process per increment or comparison.
+The scientific step stays a task, so the returned value is still a stored task output.
+There is no inline ``raise``, so ``ensure`` fails the graph when no attempt succeeded.
+This guard costs one child process but creates no output nodes; returning the step output directly preserves its node identity.
 Each iteration rebinds every unpacked name, so an arm the latest attempt left absent reads as ``None``.
 ``_`` discards an arm without carrying it into the next iteration.
 ``RestartErrors`` names the failures of the restart machinery itself, with the statuses ``BaseRestartWorkChain`` uses (301, 302, 401, 402), so a task that gives up after the last attempt can return ``Err(RestartErrors.UNHANDLED_FAILURE)``.
@@ -613,26 +620,27 @@ Reading one before its write, assigning it on only one branch path, or reading i
             keep_going = positive(x=x)
         return x
 
+Counters and conditions stay inline: they need no ``@task``, and each ``@task`` runs as its own child process with its own provenance nodes.
+Keep orchestration inline and scientific work in tasks, so the returned value is still a stored task output:
+
 .. code:: python
 
-    @task
-    def subtract(x: int) -> int:
-        return x - 1
-
-    @task
-    def positive(x: int) -> bool:
-        return x > 0
-
     @graph
-    def count(x: int, keep_going: bool) -> int:
-        while keep_going:
-            x = subtract(x=x)
-            keep_going = positive(x=x)
-        return x
+    def refine(x: int, rounds: int, attempt: int = 0) -> int:
+        value = add(x=x, y=0)
+        retry = attempt < rounds
+        while retry:
+            value = add(x=value, y=1)
+            attempt = attempt + 1
+            retry = attempt < rounds
+        return value
+
+The counter seeds from its default graph input (``attempt: int = 0``); a bare ``0`` literal leaves no trace.
+Each iteration steps the counter with inline ``+`` and recomputes the ``<`` comparison, while ``add`` remains the only task.
 
 ``while`` takes no ``else``.
 Each iteration runs as a numbered scope of the same graph process, with hierarchical call labels such as
-``loop_1_iteration_0__subtract`` that preserve the iteration identity.
+``loop_1_iteration_0__add`` that preserve the iteration identity.
 A loop that never runs leaves its names at their values from before the loop, as in Python.
 A loop still running after 1000 iterations fails the graph process.
 

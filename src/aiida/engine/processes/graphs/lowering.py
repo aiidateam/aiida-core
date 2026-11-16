@@ -144,7 +144,11 @@ _UNARY_OPERATIONS: dict[type[ast.unaryop], OperationKind] = {
 
 
 class GraphHandle(t.Generic[P, R]):
-    """An importable source declaration that builds without executing its body."""
+    """An importable source declaration that builds without executing its body.
+
+    See :func:`graph` for the authoring contract and nested-helper composition.
+    Launch with ``run`` or ``submit``; ``build`` lowers the source early to surface diagnostics.
+    """
 
     def __init__(self, function: Callable[P, R]) -> None:
         self._definition: _SourceDefinition = _SourceDefinition.capture(function)
@@ -344,9 +348,14 @@ def task(
 ) -> t.Any:
     """Register an importable task with static ports and fixed graph inputs.
 
-    Accepts a task function, a `CalcJob` subclass, or a `WorkChain` subclass; task inputs
-    wire task outputs and graph inputs alike. `CalcJob` tasks read their metadata from the
-    launch inputs instead.
+    A task is an independent, provenance-bearing calculation: each call runs as its own child
+    process and its outputs become stored nodes. Accepts a task function, a `CalcJob` subclass,
+    or a `WorkChain` subclass; task inputs wire task outputs and graph inputs alike. `CalcJob`
+    tasks read their metadata from the launch inputs instead.
+
+    Keep counters and predicates inline in the graph (see :func:`graph`) to avoid
+    a child process per check. Validation-only tasks returning ``None`` remain useful
+    when failure must stop the graph without replacing its scientific output.
 
     :param function: the function, `CalcJob` subclass, or `WorkChain` subclass to decorate.
     :param inputs: names and node types inside dynamic input namespaces of a process class,
@@ -392,6 +401,66 @@ def graph(function: Callable[..., t.Any] | None = None) -> t.Any:
     ... def add_twice(x: int, y: int) -> int:
     ...     first = add(x=x, y=y)
     ...     return add(x=first, y=y)
+
+    A `@task` is an independent, provenance-bearing calculation, while ordinary orchestration
+    -- arithmetic (``+ - * // %``), comparisons (``< <= > >= == !=``), and ``is None`` /
+    ``is not None`` / ``is Member`` branch tests -- belongs here directly, not in `@task`
+    boolean wrappers; each `@task` call is its own child process with its own nodes, so a
+    task per increment or comparison stores a node per check. The scientific result stays an
+    existing task output, while a validation-only task returning `None` stays legitimate.
+
+    Generic retry shape (default-seeded counter and short-circuiting member check)::
+
+        @task
+        def step(x: int, attempt: int) -> Result[int, MyErrors]:
+            ...
+
+        @task
+        def ensure(value: int | None) -> None:
+            if value is None:
+                raise ValueError('the step never succeeded.')
+
+        @graph
+        def retrying(x: int, limit: int, attempt: int = 0) -> int:
+            value, error = step(x=x, attempt=attempt)
+            retry = error is MyErrors.RETRYABLE and attempt < limit
+            while retry:
+                attempt = attempt + 1
+                value, error = step(x=x, attempt=attempt)
+                retry = error is MyErrors.RETRYABLE and attempt < limit
+            checked = ensure(value=value)
+            return value
+
+    The counter seeds from its default graph input (``attempt: int = 0``); scalar
+    literals can also initialize counters and flags without creating nodes.
+    ``and`` and ``or`` short-circuit boolean checks, so the budget is evaluated only
+    for the matching error member. The graph returns the step's stored output;
+    ``ensure`` only validates and creates no output nodes.
+
+    Shared orchestration composes through nested `@graph` helpers: the callee's placements
+    inline at the call site, so a helper returning an inline comparison costs no stored
+    nodes. Bind its result and branch on it::
+
+        @task
+        def advance(x: int) -> int:
+            ...
+
+        @graph
+        def within_budget(attempt: int, limit: int) -> bool:
+            return attempt < limit
+
+        @graph
+        def spending(x: int, limit: int) -> int:
+            value = advance(x=x)
+            ok = within_budget(attempt=value, limit=limit)
+            if ok:
+                value = advance(x=value)
+            return value
+
+    `ok` is orchestration state for the branch, not scientific data: returning it as the
+    root output would fail at run time, since root graph outputs must be existing task
+    outputs or graph inputs. Create a returned value in a `@task` and return that task's
+    output instead.
 
     A graph is launched like any other process, by passing it to ``run`` or ``submit``.
 

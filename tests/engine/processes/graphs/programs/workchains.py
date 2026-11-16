@@ -6,7 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`WorkChain` tasks shared by the graph behavior suites."""
+"""`WorkChain` tasks shared by the graph behavior suites.
+
+Authoring examples illustrate the recommended shapes, including the inline retry policy;
+regression fixtures preserve historical edge-case behavior.
+"""
 
 import typing as t
 
@@ -162,6 +166,43 @@ class FlakyChain(WorkChain):
 
 
 flaky_chain = task(FlakyChain, outputs={'result': Float}, errors=ChainErrors)
+
+
+@task
+def check_chain_result(value: float | None) -> None:
+    """Validate the recovered chain result, leaving the returned node untouched."""
+    if value is None:
+        raise ValueError('the chain never succeeded.')
+
+
+@graph
+def retry_chain_allowed(error: ChainErrors | None, attempt: int, limit: int) -> bool:
+    """Factor an inline retry predicate without a child process or stored boolean."""
+    return error is ChainErrors.UNSTABLE and attempt < limit
+
+
+@graph
+def retry_chain_until_repaired(max_retries: int = 1, attempt: int = 0) -> float | None:
+    """Retry the flaky chain on its declared unstable failure, returning its own result node.
+
+    The nested graph helper combines the retryable member check with the budget.
+    The collaborator fails on attempt zero and runs repaired thereafter.
+    The trailing guard validates without replacing the chain's result node.
+
+    :param max_retries: the retry budget; `0` runs once and lets the guard fail.
+    :param attempt: the zero-based attempt the first run steps from.
+    :return: the first present chain result; the guard fails if none succeeded.
+    """
+    fail = attempt < 1
+    ran = flaky_chain(fail=fail)
+    retry = retry_chain_allowed(error=ran.error, attempt=attempt, limit=max_retries)
+    while retry:
+        attempt = attempt + 1
+        fail = attempt < 1
+        ran = flaky_chain(fail=fail)
+        retry = retry_chain_allowed(error=ran.error, attempt=attempt, limit=max_retries)
+    checked = check_chain_result(value=ran.result)  # noqa: F841 - the guard validates without feeding the return
+    return ran.result
 
 
 @task

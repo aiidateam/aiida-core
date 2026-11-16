@@ -6,7 +6,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tasks declarations shared by the graph behavior suites."""
+"""Tasks declarations shared by the graph behavior suites.
+
+The arithmetic and predicate tasks here (``add``, ``decrement``, ``is_positive``, ...) deliberately
+exercise stored provenance: each call records a calculation node. Ordinary orchestration prefers
+inline operations for counters, comparisons, and branch/loop gates, which leave no nodes behind;
+see :func:`tests.engine.processes.graphs.programs.loops.bounded_steps` and
+:func:`tests.engine.processes.graphs.programs.loops.retry_until_present` for the recommended inline
+authoring examples.
+"""
 
 import typing as t
 

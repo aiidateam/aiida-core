@@ -6,7 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Restart-loop programs: a fallible step retried until it succeeds."""
+"""Restart-loop programs: a fallible step retried until it succeeds.
+
+Counters and short-circuiting retry predicates stay inline; only the scientific
+steps, handlers, and guards run as child processes. See ``graph`` for the authoring contract.
+"""
 
 from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
 from aiida.engine.processes.graphs.lowering import graph, task
@@ -18,24 +22,6 @@ class StepErrors(ExitCodeEnum):
     """Declared failures of the `run_step` task."""
 
     UNSTABLE = ExitCode(410, 'Unstable step.')
-
-
-@task
-def zero() -> int:
-    """Seed the attempt counter."""
-    return 0
-
-
-@task
-def step(attempt: int) -> int:
-    """Count one further attempt."""
-    return attempt + 1
-
-
-@task
-def should_restart(error: StepErrors | None, attempt: int, max_attempts: int) -> bool:
-    """Decide whether another attempt remains after a declared failure."""
-    return error is not None and attempt < max_attempts
 
 
 @task
@@ -63,12 +49,6 @@ def flip_step(attempt: int) -> Result[float, StepErrors]:
 
 
 @task
-def keep_going(attempt: int) -> bool:
-    """Iterate twice."""
-    return attempt < 2
-
-
-@task
 def mark_absent() -> str:
     """Record that the previous iteration left no value arm."""
     return 'absent'
@@ -89,20 +69,17 @@ def check_recovered(marker: str, value: float | None, error: StepErrors | None) 
 
 
 @graph
-def absent_arm_resets() -> str:
+def absent_arm_resets(attempt: int = 0) -> str:
     """Rebind a `Result` in a loop; an absent arm reads as `None`, not stale state."""
-    attempt = zero()
     marker = mark_absent()
     value, error = flip_step(attempt=attempt)
-    retry = keep_going(attempt=attempt)
-    while retry:
-        attempt = step(attempt=attempt)
+    while attempt < 2:
+        attempt = attempt + 1
         if value is None:
             marker = mark_absent()
         else:
             marker = mark_present(value=value)
         value, error = flip_step(attempt=attempt)
-        retry = keep_going(attempt=attempt)
     return check_recovered(marker=marker, value=value, error=error)
 
 
@@ -115,15 +92,12 @@ def read_last(value: float | None) -> float:
 
 
 @graph
-def discarded_arm() -> float:
+def discarded_arm(attempt: int = 0) -> float:
     """Discard the error arm with `_`; only the value arm carries across iterations."""
-    attempt = zero()
     value, _ = flip_step(attempt=attempt)
-    retry = keep_going(attempt=attempt)
-    while retry:
-        attempt = step(attempt=attempt)
+    while attempt < 2:
+        attempt = attempt + 1
         value, _ = flip_step(attempt=attempt)
-        retry = keep_going(attempt=attempt)
     return read_last(value=value)
 
 
@@ -136,15 +110,21 @@ def report_unhandled(value: float | None, error: StepErrors | None) -> Result[fl
 
 
 @graph
-def restartable(structure: StructureData, max_attempts: int) -> float:
-    """Retry a fallible step until it succeeds or attempts run out."""
-    attempt = zero()
+def restartable(structure: StructureData, max_attempts: int, attempt: int = 0) -> float:
+    """Retry a fallible step until it succeeds or attempts run out.
+
+    ``attempt`` stays zero-based and the budget keeps ``attempt < max_attempts``.
+
+    :param structure: the structure the step reads.
+    :param max_attempts: the budget; retries continue while ``attempt < max_attempts``.
+    :param attempt: the zero-based attempt the first run steps from.
+    """
     value, error = run_step(structure=structure, attempt=attempt)
-    retry = should_restart(error=error, attempt=attempt, max_attempts=max_attempts)
+    retry = error is not None and attempt < max_attempts
     while retry:
-        attempt = step(attempt=attempt)
+        attempt = attempt + 1
         value, error = run_step(structure=structure, attempt=attempt)
-        retry = should_restart(error=error, attempt=attempt, max_attempts=max_attempts)
+        retry = error is not None and attempt < max_attempts
     return ensure(value=value, error=error)
 
 
@@ -212,12 +192,6 @@ def fix_chain(error: CalculationFailure | None, parameters: dict) -> dict:
 
 
 @task
-def should_retry(error: CalculationFailure | None, attempt: int, max_attempts: int) -> bool:
-    """Retry while a declared failure remains and attempts do."""
-    return error is not None and attempt < max_attempts
-
-
-@task
 def ensure_chain(value: float | None, error: CalculationFailure | None) -> float:
     """Read the recovered value, failing loudly when none remains."""
     if error is not None or value is None:
@@ -226,15 +200,19 @@ def ensure_chain(value: float | None, error: CalculationFailure | None) -> float
 
 
 @graph
-def chained_retry(parameters: dict, max_attempts: int) -> float:
-    """Retry with the handler chain until the step succeeds."""
-    attempt = zero()
+def chained_retry(parameters: dict, max_attempts: int, attempt: int = 0) -> float:
+    """Retry with the handler chain until the step succeeds.
+
+    :param parameters: the settings the handler chain updates per attempt.
+    :param max_attempts: the budget; retries continue while ``attempt < max_attempts``.
+    :param attempt: the zero-based attempt the first run steps from.
+    """
     value, error = mock_step(attempt=attempt)
     fixed = fix_chain(error=error, parameters=parameters)
-    retry = should_retry(error=error, attempt=attempt, max_attempts=max_attempts)
+    retry = error is not None and attempt < max_attempts
     while retry:
-        attempt = step(attempt=attempt)
+        attempt = attempt + 1
         value, error = mock_step(attempt=attempt)
         fixed = fix_chain(error=error, parameters=fixed)
-        retry = should_retry(error=error, attempt=attempt, max_attempts=max_attempts)
+        retry = error is not None and attempt < max_attempts
     return ensure_chain(value=value, error=error)

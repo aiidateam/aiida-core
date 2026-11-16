@@ -6,13 +6,87 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Loops declarations shared by the graph behavior suites."""
+"""Loops declarations shared by the graph behavior suites.
 
-from aiida.engine.processes.graphs.lowering import graph
+The inline authoring examples keep counters and retry predicates in the graph,
+while tasks produce the returned data. See ``graph`` for the authoring contract.
+The remaining declarations are task-based regression fixtures.
+"""
+
+from aiida.engine.processes.exit_code import ExitCode, ExitCodeEnum
+from aiida.engine.processes.graphs.lowering import graph, task
+from aiida.engine.processes.graphs.results import Err, Ok, Result
 from tests.engine.processes.graphs.programs import tasks as task_module
 from tests.engine.processes.graphs.programs.port_models import Settings
 from tests.engine.processes.graphs.programs.ports import nullable_return
 from tests.engine.processes.graphs.programs.tasks import add, arithmetic_pair, decrement, is_positive
+
+
+class TryErrors(ExitCodeEnum):
+    """Declared failures of the generic fallible step."""
+
+    RETRYABLE = ExitCode(410, 'Simulated retryable failure.')
+
+
+@task
+def try_step(x: int, attempt: int) -> Result[int, TryErrors]:
+    """Run one generic fallible step: declared failure on the first attempt, present after."""
+    if attempt < 1:
+        return Err(TryErrors.RETRYABLE)
+    return Ok(x + 1)
+
+
+@task
+def check_present(value: int | None) -> None:
+    """Validate the recovered value, leaving the returned node untouched."""
+    if value is None:
+        raise ValueError('the step never succeeded.')
+
+
+@graph
+def bounded_steps(start: int, limit: int, count: int = 0) -> int:
+    """Step a value a bounded number of times, returning the last task output.
+
+    The counter starts at its default input, advances inline, and gates the loop
+    through an inline comparison; only the ``add`` placements create nodes.
+
+    :param start: the value the first iteration steps from.
+    :param limit: the number of steps; ``0`` returns the seeded value unchanged.
+    :param count: the zero-based step the first iteration counts from.
+    :return: ``start`` stepped ``limit`` times through ``add``.
+    """
+    value = add(x=start, y=0)
+    while count < limit:
+        count = count + 1
+        value = add(x=value, y=1)
+    return value
+
+
+@graph
+def retry_until_present(start: int, limit: int, attempt: int = 0) -> int | None:
+    """Retry a generic fallible step until its value arm is present.
+
+    The member check and budget combine with short-circuiting ``and``.
+    The trailing guard validates without replacing the successful step's output.
+
+    :param start: the value the steps build from.
+    :param limit: the retry budget; retries continue while ``attempt < limit``.
+    :param attempt: the zero-based attempt the first run steps from.
+    :return: the first present step output; the guard fails if none succeeded.
+    """
+    value, error = try_step(x=start, attempt=attempt)
+    retry = error is TryErrors.RETRYABLE and attempt < limit
+    while retry:
+        attempt = attempt + 1
+        value, error = try_step(x=start, attempt=attempt)
+        retry = error is TryErrors.RETRYABLE and attempt < limit
+    checked = check_present(value=value)  # noqa: F841 - the guard validates without feeding the return
+    return value
+
+
+# --- Remaining graphs are intentionally task-based behavior regression fixtures ---
+# They keep ``@task`` predicates (for example ``is_positive``) to lock in stored-provenance
+# behavior, unlike the recommended inline authoring examples above. Left unchanged.
 
 
 @graph

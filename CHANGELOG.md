@@ -4,6 +4,8 @@
 
 ### Breaking changes
 
+`aiida.manage.configuration.create_default_user` and `verdi profile setup` now reuse an existing user with the normalized email address instead of raising an integrity error. The existing user's name and institution are preserved, allowing a new `core.psql_dos` profile to attach to initialized storage.
+
 `Orbital` and `RealhydrogenOrbital` have moved from `aiida.tools.data.orbital` to `aiida.common.datastructures`. They are re-exported from there for now due to the registered entry points.
 
 Scheduler data structures, including `JobInfo`, `JobResource`, `JobState`, and `JobTemplate`, have moved from `aiida.schedulers.datastructures` to `aiida.common.datastructures`. They are no longer re-exported from `aiida.schedulers`.

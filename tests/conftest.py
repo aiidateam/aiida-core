@@ -692,8 +692,12 @@ def config_with_profile(config_with_profile_factory):
 
 
 @pytest.fixture
-def manager():
-    """Get the ``Manager`` instance of the currently loaded profile."""
+def manager(run_aiida_broker_service):
+    """Get the ``Manager`` instance of the currently loaded profile.
+
+    Depend explicitly on the broker service so async-first sessions start it before ``event_loop`` creates a runner.
+    The service fixture is a no-op for other broker backends.
+    """
     manager = get_manager()
 
     yield manager

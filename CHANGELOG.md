@@ -4,6 +4,10 @@
 
 ### Breaking changes
 
+#### Mapped process failures retain their stored outputs
+
+Graph placements declared with `task(ProcessClass, errors=...)` now expose outputs the failed child actually stored alongside the synthesized `error` arm. Previously all success outputs were hidden on a mapped failure. Branch on `error`, not on output presence, to distinguish failure from success; only outputs the child did not store read as `None`. Function tasks returning `Err` retain their existing absent-success-arm semantics.
+
 #### `GraphNode.inputs` exposes only the declared workflow arguments, flattened
 
 `GraphNode.inputs` no longer mirrors the stored engine layout (`graph` declaration `Dict`, `graph_inputs` namespace, optional `task_metadata`); it projects the `graph_inputs` contents to the top level, so `node.inputs.<arg>` reads the workflow argument directly with mapping lookup, iteration, membership, and tab completion. The synthetic `graph`/`graph_inputs`/`task_metadata` keys stay hidden unless the workflow itself declares an input with that name, in which case the user node shadows the bookkeeping link. Stored `INPUT_WORK` links are unchanged (`graph`, `graph_inputs__...`, `task_metadata`), so existing nodes and checkpoints need no migration, and low-level `base.links` querying still exposes that layout. There is no public `.graph` accessor returning the compiled template, and `get_builder_restart` keeps round-tripping the stored nodes without exposing a `GraphIR` object. Previously `node.inputs.graph_inputs.x` (or `node.inputs.graph_inputs__...`) reached arguments; use `node.inputs.x` instead. `node.outputs` and the `inputs` of plain `WorkChain`/`CalcJob` nodes are unchanged.

@@ -1447,13 +1447,13 @@ def test_shelljob_task_missing_declared_output_fails_task(shell_code, text_file)
 @pytest.mark.parametrize(
     'command, arguments, expected, status',
     [
-        pytest.param('false', [], 'recovered from 400', 0, id='mapped-failure'),
+        pytest.param('false', [], 'recovered from 400 with 0 bytes', 0, id='mapped-failure'),
         pytest.param('cat', ['{text}'], 'one two three\n', 0, id='success'),
         pytest.param('sh', ['-c', 'echo boom 1>&2'], None, 400, id='unmapped-failure'),
     ],
 )
 def test_shelljob_task_declared_failure_branches(shell_code, text_file, command, arguments, expected, status) -> None:
-    """A mapped calculation failure recovers; an unmapped one fails the graph."""
+    """A mapped calculation failure recovers with its stored outputs; an unmapped one fails the graph."""
     outputs, node = run_get_node(
         shelljobs.recover_failing,
         text=text_file,
@@ -1468,6 +1468,13 @@ def test_shelljob_task_declared_failure_branches(shell_code, text_file, command,
     else:
         assert node.is_finished_ok
         assert outputs['result'].value == expected
+    if command == 'false':
+        failed = node.base.links.get_outgoing(link_label_filter='fail').one().node
+        assert failed.exit_status == 400
+        # The `error` arm is synthesized in the graph view only; the stored child keeps its
+        # outputs and gains no `error` link.
+        assert 'error' not in failed.outputs
+        assert 'stdout' in failed.outputs
 
 
 def test_shelljob_task_declarations_round_trip() -> None:

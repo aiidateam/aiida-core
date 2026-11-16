@@ -554,7 +554,9 @@ The enum maps the exit statuses the process may finish with onto declared member
             selected = read_stdout(content=ran.stdout)
         return selected
 
-A child finishing with a mapped status counts as completed, with its success outputs absent; other statuses fail the task as before.
+A child finishing with a mapped status counts as completed; other statuses fail the task as before.
+Every output the failed process stored stays available next to the synthesized ``error`` arm, so a retry can chain the failed run's ``remote_folder`` or read its parsed files.
+Only declared arms the run did not store read as ``None`` downstream, like the missing arm of a ``Result`` task.
 ``errors`` takes one enum or a union of them, and a process class that already declares an ``error`` output cannot take it.
 
 .. _topics:workflows:graphs:retries:

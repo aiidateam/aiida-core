@@ -521,8 +521,8 @@ class GraphRun:
     def _is_mapped_failure(self, spec: TaskIR, label: str) -> bool:
         """Return whether a run failed with a declared error mapping.
 
-        The success arms of such a failure are absent by design, like the missing
-        arm of a `Result` task, so they read as `None` downstream.
+        Stored outputs remain available beside the synthesized error. Only outputs
+        the child did not store read as `None` downstream.
         """
         if label not in self.done:
             return False
@@ -743,11 +743,21 @@ class GraphRun:
         if isinstance(task, InlineOperation):
             return {task.result_port: scope.get('values', {})[name]}
         if isinstance(task, ProcessTask):
-            node = self._node(self.done[scope['instances'][name][-1]])
-            if 'error' not in node.outputs and self._is_mapped_failure(task.spec, scope['instances'][name][-1]):
-                # A mapped failure synthesizes its member from the child exit status;
-                # absent success arms read as `None` downstream like a `Result` arm.
-                return {'error': _error_member(task.spec, scope['instances'][name][-1], node)}
+            label = scope['instances'][name][-1]
+            node = self._node(self.done[label])
+            if 'error' not in node.outputs and self._is_mapped_failure(task.spec, label):
+                # Keep stored declared outputs beside the synthesized error; absent arms read as
+                # `None` downstream without mutating the stored node.
+                declared = task.output_ports()
+                stored = {
+                    key: value
+                    for key, value in node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
+                    .nested()
+                    .items()
+                    if key in declared
+                }
+                stored['error'] = _error_member(task.spec, label, node)
+                return stored
             return node.outputs
         if isinstance(task, MapControl):
             return self._node(self.done[scope['collectors'][name]]).outputs

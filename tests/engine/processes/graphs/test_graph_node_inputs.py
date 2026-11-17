@@ -242,14 +242,14 @@ def test_child_calcjob_inputs_keep_plain_semantics(aiida_code_installed) -> None
         x=2,
         y=3,
         code=code,
-        task_metadata={'add_calc': {'options': {'custom_scheduler_commands': '# sentinel'}}},
+        runtime_config={'add_calc': {'metadata': {'options': {'custom_scheduler_commands': '# sentinel'}}}},
     )
     assert node.is_finished_ok
     assert outputs['result'].value == 5
     assert set(node.inputs) == {'x', 'y', 'code'}
-    assert 'task_metadata' not in node.inputs
+    assert 'runtime_config' not in node.inputs
     assert _stored_labels(node) == {'x', 'y', 'code'}
-    assert node.get_builder_restart()['task_metadata'].get_dict()['add_calc']['options'] == {
+    assert node.get_builder_restart()['runtime_config']['add_calc']['metadata']['options'] == {
         'custom_scheduler_commands': '# sentinel'
     }
     (child,) = node.called

@@ -40,7 +40,7 @@ from aiida.engine.processes.graphs.operations import (
 from aiida.engine.processes.graphs.shapes import LeafShape, NamespaceShape, Shape, dump_shape, load_shape
 from aiida.engine.processes.ports import InputPort, OutputPort, PortNamespace, _infer_node_types
 from aiida.engine.processes.process import Process
-from aiida.orm import DataDict, DataList
+from aiida.orm import Code, DataDict, DataList
 from aiida.orm.nodes.data.datanode import DataNode
 
 __all__ = (
@@ -95,14 +95,21 @@ def _ancestry_required(ports: PortNamespace, path: str) -> bool:
     return True
 
 
-def _reject_dynamic_inputs(ports: PortNamespace) -> None:
-    """Reject dynamic non-metadata inputs, but permit the engine's metadata options."""
+def _reject_dynamic_inputs(ports: PortNamespace, process_class: type[Process], path: tuple[str, ...] = ()) -> None:
+    """Require fixed scientific namespaces, not externally configurable execution namespaces."""
+    from aiida.engine.processes.calcjobs import CalcJob
+    from aiida.engine.processes.workchains.workchain import WorkChain
+
+    if issubclass(process_class, (CalcJob, WorkChain)) and _is_runtime_config_path(
+        process_class, process_class.spec().inputs, path
+    ):
+        return
     if ports.dynamic and ports.required:
         msg = f'graph tasks require fixed inputs; namespace `{ports.name}` is dynamic.'
         raise GraphTypeCheckError(msg)
-    for child in ports.values():
+    for name, child in ports.items():
         if isinstance(child, PortNamespace) and not child.is_metadata and (child.required or not child.dynamic):
-            _reject_dynamic_inputs(child)
+            _reject_dynamic_inputs(child, process_class, (*path, name))
 
 
 def _reject_dynamic_outputs(ports: PortNamespace) -> None:
@@ -190,7 +197,7 @@ def _static_inputs(process_class: type[Process], declared: NamespaceShape) -> Po
     ports = process_class.spec().inputs
     if declared.fields:
         ports = _close_dynamic(ports, declared, InputPort)
-    _reject_dynamic_inputs(ports)
+    _reject_dynamic_inputs(ports, process_class)
     return ports
 
 
@@ -201,6 +208,66 @@ def _static_outputs(process_class: type[Process], declared: NamespaceShape) -> P
         ports = _close_dynamic(ports, declared, OutputPort, narrow=True)
     _reject_dynamic_outputs(ports)
     return ports
+
+
+def _code_only_types(valid_type: t.Any) -> bool:
+    """Return whether every accepted non-`None` type is an `orm.Code` subclass.
+
+    At least one non-`None` type is required, so unconstrained ports, empty
+    declarations, and mixed scientific unions never classify from the type alone.
+    """
+    kinds = valid_type if isinstance(valid_type, (tuple, list)) else (valid_type,)
+    kept = tuple(kind for kind in kinds if kind is not None and kind is not type(None))
+    return bool(kept) and all(isinstance(kind, type) and issubclass(kind, Code) for kind in kept)
+
+
+def _is_runtime_config_path(
+    process_class: type[Process],
+    ports: PortNamespace,
+    segments: tuple[str, ...],
+    seen: frozenset[type[Process]] | None = None,
+) -> bool:
+    """Return whether one concrete input path may be supplied by runtime configuration.
+
+    Classification reads the declared process specification, not values or name
+    heuristics: base-process roots, `Code`-typed leaves at any depth, and
+    exposure chains preserving both. A removed port never
+    classifies; an exposed `CalcJob` namespace alone does not make its
+    scientific siblings configuration-capable.
+    """
+    from aiida.engine.processes.calcjobs import CalcJob
+    from aiida.engine.processes.workchains.workchain import WorkChain
+
+    if not segments or _port_at(ports, '.'.join(segments)) is None:
+        return False
+    base = CalcJob if issubclass(process_class, CalcJob) else WorkChain
+    if segments[0] in base.spec().inputs:
+        return True
+    port = _port_at(ports, '.'.join(segments))
+    if _code_only_types(getattr(port, 'valid_type', None)):
+        return True
+    return _is_exposed_runtime_path(process_class, segments, seen or frozenset())
+
+
+def _is_exposed_runtime_path(
+    process_class: type[Process], segments: tuple[str, ...], seen: frozenset[type[Process]]
+) -> bool:
+    """Return whether an input path classifies through an `expose_inputs` chain."""
+    if process_class in seen:
+        return False
+    seen = seen | {process_class}
+    for namespace, source_class, absorbed in process_class.spec().input_exposures():
+        if not issubclass(source_class, Process):
+            continue
+        prefix = tuple(namespace.split('.')) if namespace else ()
+        if len(segments) <= len(prefix) or tuple(segments[: len(prefix)]) != prefix:
+            continue
+        rest = segments[len(prefix) :]
+        if rest[0] not in absorbed:
+            continue
+        if _is_runtime_config_path(source_class, source_class.spec().inputs, rest, seen):
+            return True
+    return False
 
 
 def _input_ports_at(task: GraphTask, path: str) -> list[t.Any]:
@@ -395,6 +462,38 @@ class TaskIR:
         selected = self.outputs[self.result_port] if self.result_port else self.outputs
         assert isinstance(selected, (InputPort, OutputPort, PortNamespace))
         return _shape_from_port(selected)
+
+    def runtime_input_paths(self) -> frozenset[str]:
+        """Return the minimal input path prefixes runtime configuration may supply.
+
+        An unwired input at or beneath each prefix may be bound externally through
+        `runtime_config` instead of graph wiring. Base-process roots, `Code`-typed
+        leaves at any depth, and `expose_inputs` chains preserving both are
+        covered; scientific siblings of an exposed namespace are not. Plain
+        function tasks classify nothing, so the set is empty for them.
+
+        :return: the topmost configuration-capable dotted input paths.
+        """
+        from aiida.engine.processes.calcjobs import CalcJob
+        from aiida.engine.processes.workchains.workchain import WorkChain
+
+        process_class = self.process_class
+        if not (issubclass(process_class, CalcJob) or issubclass(process_class, WorkChain)):
+            return frozenset()
+        ports = self.inputs
+        found: set[str] = set()
+
+        def visit(namespace: PortNamespace, prefix: str) -> None:
+            """Collect the topmost configuration-capable paths without descending beneath them."""
+            for name, child in namespace.items():
+                path = f'{prefix}.{name}' if prefix else name
+                if _is_runtime_config_path(process_class, ports, tuple(path.split('.'))):
+                    found.add(path)
+                elif isinstance(child, PortNamespace):
+                    visit(child, path)
+
+        visit(ports, '')
+        return frozenset(found)
 
     def to_dict(self) -> dict[str, t.Any]:
         """Return the task declaration without the live process class."""

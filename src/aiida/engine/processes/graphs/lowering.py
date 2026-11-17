@@ -199,16 +199,30 @@ class GraphHandle(t.Generic[P, R]):
         the stored `graph` input alongside the `graph_inputs` namespace.
 
         Binds the function signature by name first, so every parameter arrives as a keyword.
-        Per-placement `CalcJob` options ride under `task_metadata`; standard `metadata` passes through.
+        Execution inputs ride under `runtime_config`; standard `metadata` passes through.
         """
-        # `task_metadata` carries per-placement `CalcJob` options, not graph inputs.
-        task_metadata = inputs.pop('task_metadata', None)
+        if 'task_metadata' in inputs:
+            msg = (
+                '`task_metadata` was replaced by `runtime_config`; '
+                "put task metadata under the placement's `metadata` key."
+            )
+            raise GraphValidationError(msg)
+        runtime_config = inputs.pop('runtime_config', {})
         metadata = inputs.pop('metadata', None)
+        if 'inputs' in inputs and 'inputs' not in inspect.signature(self.function).parameters:
+            scientific = inputs.pop('inputs')
+            if not isinstance(scientific, Mapping):
+                msg = '`inputs` must be a mapping of workflow arguments.'
+                raise GraphValidationError(msg)
+            if inputs.keys() & scientific.keys():
+                msg = 'workflow arguments were supplied both through `inputs` and flattened keywords.'
+                raise GraphValidationError(msg)
+            inputs = {**scientific, **inputs}
         if isinstance(metadata, Mapping) and any(
             key != 'options' and isinstance(value, Mapping) and 'options' in value for key, value in metadata.items()
         ):
             msg = (
-                'per-placement options ride under `task_metadata`, keyed by placement name; '
+                'per-placement execution inputs ride under `runtime_config`, keyed by placement name; '
                 'standard keys (label, `store_provenance`, ...) go directly under `metadata`'
             )
             raise GraphValidationError(msg)
@@ -223,7 +237,7 @@ class GraphHandle(t.Generic[P, R]):
         ]
         bound = inspect.Signature(parameters).bind_partial(**inputs)
         launch_inputs = GraphProcess._launch_inputs(
-            compile_graph(self), dict(bound.arguments), task_metadata=task_metadata
+            compile_graph(self), dict(bound.arguments), runtime_config=runtime_config
         )
         if metadata is not None:
             launch_inputs['metadata'] = metadata
@@ -2379,7 +2393,13 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         task = ProcessTask(name=instance, inputs=given, spec=narrowed)
         if narrowed is not spec:
             result_shape = narrowed.result_shape
-    missing: list[str] = _missing_required_inputs(state, instance=instance, shape=inputs, given=task.inputs)
+    if isinstance(task, ProcessTask):
+        runtime_paths = task.spec.runtime_input_paths()
+    else:
+        runtime_paths = frozenset()
+    missing: list[str] = _missing_required_inputs(
+        state, instance=instance, shape=inputs, given=task.inputs, runtime_paths=runtime_paths
+    )
     if missing:
         msg = (
             'required inputs must be wired before the graph is stored; '
@@ -2506,9 +2526,19 @@ def _lower_keywords(
 
 
 def _missing_required_inputs(
-    state: _LoweringState, instance: str, shape: NamespaceShape, given: t.Any, prefix: str = ''
+    state: _LoweringState,
+    instance: str,
+    shape: NamespaceShape,
+    given: t.Any,
+    prefix: str = '',
+    runtime_paths: frozenset[str] = frozenset(),
 ) -> list[str]:
-    """Return the required task inputs that are neither wired nor routed from graph inputs."""
+    """Return the required task inputs that are neither wired nor routed from graph inputs.
+
+    Unwired configuration-capable inputs stay buildable: explicit wiring owns an
+    input, otherwise an externally bindable one may arrive through `runtime_config`,
+    so only workflow-owned inputs are reported here.
+    """
     missing: list[str] = []
     mapping = given if isinstance(given, Mapping) else {}
     for field_name, child in shape.fields:
@@ -2516,12 +2546,27 @@ def _missing_required_inputs(
         if isinstance(child, NamespaceShape):
             missing.extend(
                 _missing_required_inputs(
-                    state, instance=instance, shape=child, given=mapping.get(field_name), prefix=path
+                    state,
+                    instance=instance,
+                    shape=child,
+                    given=mapping.get(field_name),
+                    prefix=path,
+                    runtime_paths=runtime_paths,
                 )
             )
-        elif child.required and field_name not in mapping and not _is_routed(state, instance=instance, path=path):
+        elif (
+            child.required
+            and field_name not in mapping
+            and not _is_routed(state, instance=instance, path=path)
+            and not _covered_by_runtime(path, runtime_paths)
+        ):
             missing.append(path)
     return missing
+
+
+def _covered_by_runtime(path: str, runtime_paths: frozenset[str]) -> bool:
+    """Return whether an unwired input path sits at or beneath a runtime prefix."""
+    return any(path == prefix or path.startswith(f'{prefix}.') for prefix in runtime_paths)
 
 
 def _is_routed(state: _LoweringState, instance: str, path: str) -> bool:

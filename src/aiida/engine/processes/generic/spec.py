@@ -232,6 +232,17 @@ class ProcessSpec:
             namespace_options=namespace_options,
         )
 
+    def input_exposures(self) -> tuple[tuple[str | None, type[Process], tuple[str, ...]], ...]:
+        """Return a snapshot of input exposure relationships.
+
+        :return: destination namespace, source process class and absorbed top-level names for each exposure.
+        """
+        return tuple(
+            (namespace, process_class, tuple(names))
+            for namespace, per_class in self._exposed_inputs.items()
+            for process_class, names in per_class.items()
+        )
+
     def expose_outputs(
         self,
         process_class: type[Process],

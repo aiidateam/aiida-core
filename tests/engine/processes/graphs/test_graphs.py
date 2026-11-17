@@ -1133,7 +1133,7 @@ def test_calcjob_task_runs_straight_line_graph(aiida_code_installed) -> None:
         x=2,
         y=3,
         code=code,
-        task_metadata={'add_calc': {'options': {'custom_scheduler_commands': '# sentinel'}}},
+        runtime_config={'add_calc': {'metadata': {'options': {'custom_scheduler_commands': '# sentinel'}}}},
     )
     assert node.is_finished_ok
     assert outputs['result'].value == 5
@@ -1145,10 +1145,16 @@ def test_calcjob_task_runs_straight_line_graph(aiida_code_installed) -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_nested_calcjob_graph_forwards_task_metadata(aiida_code_installed) -> None:
-    """Stashed placement metadata reaches `CalcJob` tasks in nested graphs."""
+def test_nested_calcjob_graph_forwards_runtime_config(aiida_code_installed) -> None:
+    """Scoped configuration reaches `CalcJob` tasks in nested graphs."""
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
-    outputs, node = run_get_node(calcjobs.add_nested, x=2, y=3, code=code, task_metadata={'add_calc': {'options': {}}})
+    outputs, node = run_get_node(
+        calcjobs.add_nested,
+        x=2,
+        y=3,
+        code=code,
+        runtime_config={'add_inner': {'add_calc': {'metadata': {'label': 'nested calculation'}}}},
+    )
     assert node.is_finished_ok
     assert outputs['result'].value == 5
 
@@ -1162,7 +1168,7 @@ def test_calcjob_task_chains_values(aiida_code_installed) -> None:
         x=2,
         y=3,
         code=code,
-        task_metadata={'add_calc': {'options': {}}, 'add_calc_2': {'options': {}}},
+        runtime_config={'add_calc': {'metadata': {'options': {}}}, 'add_calc_2': {'metadata': {'options': {}}}},
     )
     assert node.is_finished_ok
     assert outputs['result'].value == 8
@@ -1173,11 +1179,12 @@ def test_calcjob_task_chains_values(aiida_code_installed) -> None:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_calcjob_task_missing_metadata_fails_loudly(aiida_code_installed) -> None:
-    """A `CalcJob` placement without launch metadata names the placement."""
+def test_calcjob_task_omitted_runtime_config_uses_defaults(aiida_code_installed) -> None:
+    """No ceremonial metadata entry is needed when the process contract is satisfied."""
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
-    with pytest.raises(GraphValidationError, match='task `add_calc` is a `CalcJob` and needs launch metadata'):
-        run_get_node(calcjobs.add_single, x=2, y=3, code=code)
+    outputs, node = run_get_node(calcjobs.add_single, x=2, y=3, code=code)
+    assert node.is_finished_ok
+    assert outputs['result'].value == 5
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -1200,8 +1207,8 @@ def test_graph_metadata_forwards_to_launch_inputs() -> None:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_graph_metadata_with_nested_mapping_rejects() -> None:
-    """A mapping under `metadata` names `task_metadata` instead of passing silently."""
-    with pytest.raises(GraphValidationError, match='under `task_metadata`'):
+    """A mapping under `metadata` names `runtime_config` instead of passing silently."""
+    with pytest.raises(GraphValidationError, match='under `runtime_config`'):
         run_get_node(call_programs.multiply_add, x=1, y=2, z=3, metadata={'add_calc': {'options': {}}})
 
 
@@ -1314,13 +1321,12 @@ def test_is_finished_ok_caches_per_node(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_merge_task_metadata_rejects_non_mapping() -> None:
-    """A non-mapping stash entry fails naming the placement."""
-    from aiida.engine.processes.graphs.tasks import _merge_task_metadata
+def test_runtime_config_rejects_non_mapping() -> None:
+    """A non-mapping configuration entry fails naming the placement."""
+    from aiida.engine.processes.graphs.runtime_config import _bind_runtime_config
 
-    task = compile_graph(calcjobs.add_single).tasks[0]
-    with pytest.raises(GraphValidationError, match='must be a mapping'):
-        _merge_task_metadata(task, {'add_calc': ['options']}, {'x': 1})
+    with pytest.raises(GraphValidationError, match=r'placement `add_calc`.*expected a mapping'):
+        _bind_runtime_config(compile_graph(calcjobs.add_single), {'add_calc': ['options']})
 
 
 @pytest.mark.requires_broker
@@ -1415,7 +1421,7 @@ def test_shelljob_task_wires_declared_dynamic_ports(shell_code, text_file) -> No
         wc_code=shell_code('wc'),
         cat_arguments=['{text}'],
         wc_arguments=['-w', '{text}'],
-        task_metadata={'cat': {'options': {}}, 'count_words': {'options': {}}},
+        runtime_config={'cat': {'metadata': {'options': {}}}, 'count_words': {'metadata': {'options': {}}}},
     )
     assert node.is_finished_ok
     assert outputs['result'].get_content().split()[0] == '3'
@@ -1432,7 +1438,7 @@ def test_shelljob_task_missing_declared_output_fails_task(shell_code, text_file)
         text=text_file,
         code=shell_code('cat'),
         arguments=['{text}'],
-        task_metadata={'unproduced': {'options': {}}},
+        runtime_config={'unproduced': {'metadata': {'options': {}}}},
     )
     assert node.exit_status == GraphProcess.exit_codes.ERROR_TASK_FAILED.status
     (child,) = node.called
@@ -1459,7 +1465,7 @@ def test_shelljob_task_declared_failure_branches(shell_code, text_file, command,
         text=text_file,
         code=shell_code(command),
         arguments=arguments,
-        task_metadata={'fail': {'options': {}}},
+        runtime_config={'fail': {'metadata': {'options': {}}}},
     )
     assert node.exit_status == status
     if expected is None:
@@ -1550,13 +1556,11 @@ def test_declared_optional_input_runs(
     shell_code, text_file, declaration: GraphHandle, linked: bool, launch: dict[str, t.Any]
 ) -> None:
     """An unwired optional input stays out of the launch; a wired one arrives."""
-    metadata = {name: {'options': {}} for name in compile_graph(declaration).task_names}
     outputs, node = run_get_node(
         declaration,
         text=text_file,
         code=shell_code('cat'),
         arguments=['{text}'],
-        task_metadata=metadata,
         **launch,
     )
     assert node.is_finished_ok

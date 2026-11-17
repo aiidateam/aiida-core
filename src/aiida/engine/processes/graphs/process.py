@@ -23,7 +23,7 @@ from aiida.engine.processes.graphs.inputs import _at, _prepare_graph_inputs
 from aiida.engine.processes.graphs.ir import GraphIR, InlineOperation, MapControl, ProcessTask, _input_ports_at
 from aiida.engine.processes.graphs.par_map import _collect_dict, _collect_list
 from aiida.engine.processes.graphs.run import GraphRun, _GraphRunState, _Start
-from aiida.engine.processes.graphs.tasks import _merge_task_metadata, _needs_metadata
+from aiida.engine.processes.graphs.runtime_config import _bind_runtime_config, _merge_runtime_inputs
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.process import Process
 from aiida.engine.processes.process_spec import GraphProcessSpec, ProcessSpec
@@ -86,7 +86,7 @@ class GraphProcess(Process):
     _spec_class = GraphProcessSpec
     _GRAPH = 'graph'
     _GRAPH_INPUTS = 'graph_inputs'
-    _TASK_METADATA = 'task_metadata'
+    _RUNTIME_CONFIG = 'runtime_config'
 
     @classmethod
     def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
@@ -95,8 +95,7 @@ class GraphProcess(Process):
         spec.input(cls._GRAPH, valid_type=Dict)
         # The stored graph supplies the fixed contract for these per-instance ports.
         spec.input_namespace(cls._GRAPH_INPUTS, dynamic=True, required=False)
-        # Per-placement `CalcJob` metadata, keyed by placement name; never routed as graph inputs.
-        spec.input(cls._TASK_METADATA, valid_type=Dict, required=False, is_metadata=False)
+        spec.input_namespace(cls._RUNTIME_CONFIG, dynamic=True, required=False, non_db=True)
         spec.outputs.dynamic = True
         spec.exit_code(400, 'ERROR_TASK_FAILED', message='The task `{task}` did not finish successfully.')
 
@@ -114,6 +113,10 @@ class GraphProcess(Process):
         self._parsed_inputs = AttributesFrozendict(
             {**self.inputs, self._GRAPH_INPUTS: graph.build_input_namespace().prepare(stored).runtime}
         )
+        config = _bind_runtime_config(graph, self.inputs.get(self._RUNTIME_CONFIG, {}))
+        _store_run_nodes(config)
+        self._input_sources = AttributesFrozendict({**self._input_sources, self._RUNTIME_CONFIG: config})
+        self._parsed_inputs = AttributesFrozendict({**self.inputs, self._RUNTIME_CONFIG: config})
         self._run = GraphRun.from_dict(graph=graph, given=stored, data=self._saved)
         return super()._create_and_setup_db_record()
 
@@ -128,20 +131,20 @@ class GraphProcess(Process):
     def _setup_db_record(self) -> None:
         super()._setup_db_record()
         self.node.base.attributes.set(GraphNode.GRAPH_DEFINITION_KEY, self.inputs[self._GRAPH].get_dict())
-        metadata = self.inputs.get(self._TASK_METADATA)
-        if metadata is not None:
-            self.node.base.attributes.set(GraphNode.TASK_METADATA_KEY, metadata.get_dict())
+        config = self._input_sources.get(self._RUNTIME_CONFIG, {})
+        if config:
+            self.node.base.attributes.set(GraphNode.RUNTIME_CONFIG_KEY, self._encode_input_args(dict(config)))
 
     @classmethod
     def _launch_inputs(
-        cls, body: GraphIR, inputs: dict[str, t.Any], task_metadata: Mapping[str, Mapping[str, t.Any]] | None = None
+        cls, body: GraphIR, inputs: dict[str, t.Any], runtime_config: Mapping[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Fill graph arguments and stash per-placement `CalcJob` metadata."""
+        """Fill workflow arguments and bind execution configuration separately."""
         prepared = _prepare_graph_inputs(body.build_input_namespace(), inputs, body.identifier)
         return {
             cls._GRAPH: Dict(dict=body.to_dict()),
             cls._GRAPH_INPUTS: prepared,
-            **({cls._TASK_METADATA: Dict(dict=dict(task_metadata))} if task_metadata else {}),
+            cls._RUNTIME_CONFIG: _bind_runtime_config(body, {} if runtime_config is None else runtime_config),
         }
 
     @property
@@ -172,7 +175,7 @@ class GraphProcess(Process):
         """Checkpoint the scheduling progress and the graph input sources."""
         # The launch envelope remains checkpointed, but no longer has scientific input links.
         _store_run_nodes(self._input_sources[self._GRAPH])
-        _store_run_nodes(self._input_sources.get(self._TASK_METADATA))
+        _store_run_nodes(self._input_sources.get(self._RUNTIME_CONFIG))
         super().save_instance_state(out_state, save_context)
         run_state = self._run_state.to_dict()
         # Scope inputs must be stored before encoding: YAML checkpoints reference nodes by UUID.
@@ -239,9 +242,11 @@ class GraphProcess(Process):
         else:
             msg = f'unsupported task `{start.task.name}`.'
             raise GraphTypeCheckError(msg)
-        if _needs_metadata(start.task):
-            stored = self._stored_task_metadata()
-            inputs = _merge_task_metadata(start.task, stored, inputs)
+        if isinstance(start.task, ProcessTask):
+            configured = self.inputs.get(self._RUNTIME_CONFIG, {})
+            for part in start.config_path:
+                configured = configured.get(part, {})
+            inputs = _merge_runtime_inputs(start.task, configured, inputs)
         metadata = {**inputs.get('metadata', {}), 'call_link_label': start.instance}
         node = self.submit(process_class, **{**inputs, 'metadata': metadata})
         assert node.pk is not None
@@ -256,11 +261,6 @@ class GraphProcess(Process):
         """
         collected = _collect_list if task.container == 'list' else _collect_dict
         return collected.process_class, dict(inputs)
-
-    def _stored_task_metadata(self) -> dict[str, t.Any]:
-        """Return the launch metadata stashed per placement name."""
-        stored = self.inputs.get(self._TASK_METADATA, None)
-        return stored.get_dict() if stored is not None else {}
 
     @override
     def on_wait(self, awaitables: t.Sequence[t.Awaitable]) -> None:

@@ -202,7 +202,7 @@ def test_aliased_calcjob_executes(aiida_code_installed) -> None:
         x=2,
         y=3,
         code=code,
-        task_metadata={'scf': {'options': {}}, 'nscf': {'options': {}}},
+        runtime_config={'scf': {'metadata': {'options': {}}}, 'nscf': {'metadata': {'options': {}}}},
     )
     assert node.is_finished_ok
     assert outputs['result'].value == 8

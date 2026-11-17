@@ -213,6 +213,7 @@ class _Start:
     instance: str
     task: GraphTask
     inputs: dict[str, t.Any]
+    config_path: tuple[str, ...] = ()
 
 
 def _drops_none(task: GraphTask, path: str) -> bool:
@@ -227,9 +228,11 @@ class _Step:
 
     starts: list[_Start] = field(default_factory=list)
 
-    def begin(self, instance: str, task: GraphTask, inputs: dict[str, t.Any]) -> None:
-        """Record the dispatch of one task instance within this step."""
-        self.starts.append(_Start(instance=instance, task=task, inputs=inputs))
+    def begin(
+        self, instance: str, task: GraphTask, inputs: dict[str, t.Any], config_path: tuple[str, ...] = ()
+    ) -> None:
+        """Record the dispatch and its static configuration address."""
+        self.starts.append(_Start(instance=instance, task=task, inputs=inputs, config_path=config_path))
 
 
 @dataclass(frozen=True)
@@ -1000,8 +1003,20 @@ class GraphRun:
         else:
             label = self._claim(scope['prefix'] + name)
             scope.setdefault('instances', {}).setdefault(name, []).append(label)
-            step.begin(label, task, inputs)
+            step.begin(label, task, inputs, (*self._config_prefix(scope_key), task.name))
         self._invalidate()
+
+    def _config_prefix(self, scope_key: str) -> tuple[str, ...]:
+        """Resolve static nested-graph identity from lineage, never from call labels."""
+        scope = self.scopes[scope_key]
+        parent = scope.get('parent')
+        if parent is None:
+            return ()
+        prefix = self._config_prefix(parent)
+        placement = self._template_of(parent).task(scope['placement'])
+        if isinstance(placement, SubgraphTask):
+            return (*prefix, placement.name)
+        return prefix
 
     def _run_inline(self, scope_key: str, task: InlineOperation) -> None:
         """Evaluate one inline operation synchronously inside the scheduling fixed point.
@@ -1148,7 +1163,12 @@ class GraphRun:
             if task.spec is not None:
                 label = self._claim(scope['prefix'] + base)
                 scope.setdefault('instances', {}).setdefault(task.name, []).append(label)
-                step.begin(label, ProcessTask(name=label, inputs={}, spec=task.spec), item_inputs)
+                step.begin(
+                    label,
+                    ProcessTask(name=task.name, inputs={}, spec=task.spec),
+                    item_inputs,
+                    (*self._config_prefix(scope_key), task.name),
+                )
             else:
                 assert task.body is not None
                 child = self._new_scope(

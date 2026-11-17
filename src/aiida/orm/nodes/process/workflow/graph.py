@@ -30,7 +30,7 @@ class GraphNode(WorkflowNode):
     """
 
     GRAPH_DEFINITION_KEY = 'graph_definition'
-    TASK_METADATA_KEY = 'graph_task_metadata'
+    RUNTIME_CONFIG_KEY = 'graph_runtime_config_v1'
 
     @property
     @override
@@ -53,8 +53,10 @@ class GraphNode(WorkflowNode):
         builder = self.process_class.get_builder()
         builder['graph'] = Dict(dict=self.base.attributes.get(self.GRAPH_DEFINITION_KEY))
         builder['graph_inputs'] = self.base.links.get_incoming(link_type=LinkType.INPUT_WORK).nested()
-        if self.TASK_METADATA_KEY in self.base.attributes:
-            builder['task_metadata'] = Dict(dict=self.base.attributes.get(self.TASK_METADATA_KEY))
+        if self.RUNTIME_CONFIG_KEY in self.base.attributes:
+            from aiida.orm.utils.serialize import deserialize_unsafe
+
+            builder['runtime_config'] = deserialize_unsafe(self.base.attributes.get(self.RUNTIME_CONFIG_KEY))
         for name, value in (self.get_metadata_inputs() or {}).items():
             builder[name] = value
         return builder

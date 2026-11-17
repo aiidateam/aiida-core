@@ -9,6 +9,12 @@
 
 ### Breaking changes
 
+#### Graph execution inputs use `runtime_config`
+
+Graph launch option `task_metadata` is replaced by `runtime_config`, keyed by static placement path and containing ordinary process input mappings. Move `task_metadata={'calc': {'options': options}}` to `runtime_config={'calc': {'metadata': {'options': options}}}`. Configuration now accepts unwired base `CalcJob`/`WorkChain` inputs, Code-only typed inputs (including Code subclasses), and execution inputs preserved through exposed namespaces. Explicit graph wiring remains supported and conflicts with configuration instead of being overridden. Nested graph placements introduce a mapping level; branches, loops and mapped graph bodies do not. Empty entries are no longer mandatory for CalcJobs. Root `metadata` still configures the graph itself, and `inputs={...}` carries workflow arguments separately.
+
+Configured node references are preserved outside `orm.Dict`, with ordinary child input provenance and a versioned immutable root configuration snapshot (`graph_runtime_config_v1`, replacing `graph_task_metadata`). `GraphNode.TASK_METADATA_KEY` is removed; `GraphNode.RUNTIME_CONFIG_KEY` identifies the new snapshot. Child call-link overrides, provenance suppression and dry runs are rejected. The old launch API, stored `task_metadata` restart envelopes and checkpoints are not supported; no legacy adapter or provenance rewrite is provided.
+
 #### Graph provenance links use declared argument names
 
 New `GraphProcess` runs store `INPUT_WORK` links as `x` or `settings__factor`, rather than `graph_inputs__x` or `graph_inputs__settings__factor`. The compiled declaration and per-placement launch metadata are recorded as immutable `GraphNode` attributes (`graph_definition` and optional `graph_task_metadata`), not scientific input links named `graph` and `task_metadata`. Consequently native provenance visualizations and low-level link queries now show only declared workflow arguments. `GraphNode.inputs` retains its flat user interface, including arguments named `graph`, `graph_inputs`, or `task_metadata`, and `get_builder_restart()` reconstructs the engine launch envelope. Existing nodes retain their original links; legacy input projection, restart builders, and checkpoints remain supported, so no database migration or rewriting of stored provenance is needed. Consumers of raw links on new nodes must use the declared labels instead of the engine prefix. The earlier `GraphNode.inputs` entry below describes the input view for legacy nodes.

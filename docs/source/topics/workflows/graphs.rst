@@ -309,36 +309,96 @@ Names are scoped to their body: branch arms, loop bodies, and nested graphs each
 Generated branch, loop, and inline-operation names, as well as runtime map items and loop iteration labels, keep their automatic numbering.
 The alias is local to the call: it never mutates the task handle, so a later plain ``add(...)`` still places under its own name.
 It accepts only a non-empty string literal following the link-label contract; a variable or an invalid name fails when the graph is built.
-The compiled template, the provenance call labels, and the ``task_metadata`` entries below all carry the alias.
+The compiled template, the provenance call labels, and the ``runtime_config`` entries below all carry the alias.
 This is unrelated to the module-level ``Forward`` input alias under :ref:`spreading <topics:workflows:graphs:spreading>`, which reuses an input declaration across graphs.
 
-Calculation job options
-^^^^^^^^^^^^^^^^^^^^^^^
+Runtime configuration
+^^^^^^^^^^^^^^^^^^^^^
 
-Calls to a ``CalcJob`` task inside a graph pass all inputs except ``metadata``:
+Separate scientific wiring from execution inputs with the graph launch option ``runtime_config``.
+Each process placement takes an ordinary process input mapping, including a nested ``metadata`` mapping:
 
 .. code:: python
 
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-    from aiida.orm import Code
 
     add_calc = task(ArithmeticAddCalculation)
 
     @graph
-    def multiply_add_calc(x: int, y: int, z: int, code: Code) -> int | float:
+    def multiply_add_calc(x: int, y: int, z: int) -> int | float:
         product = multiply(x=x, y=y)
-        total = add_calc(x=product, y=z, code=code)
+        total = add_calc(x=product, y=z)
         return total.sum
 
-Scheduler options are given at launch under ``task_metadata``, keyed by placement name:
+    outputs, node = run_get_node(
+        multiply_add_calc,
+        inputs={'x': 2, 'y': 3, 'z': 4},
+        runtime_config={
+            'add_calc': {
+                'code': code,
+                'metadata': {
+                    'label': 'addition',
+                    'options': {'resources': {'num_machines': 1}, 'withmpi': False},
+                },
+            },
+        },
+    )
+
+Here ``code`` is an existing ``orm.Code`` instance, not an identifier encoded in a dictionary node.
+Both ``run`` and ``submit`` accept the same separate launch channels.
+Flattened workflow arguments such as ``x=2`` remain supported; ``runtime_config`` is never a workflow argument.
+Standard root ``metadata`` such as ``label`` applies to the graph process itself.
+
+Configuration-capable inputs are inferred from the concrete process specification:
+
+* Inputs declared by the base ``CalcJob`` or ``WorkChain`` class, when still present in the concrete class.
+  Base namespaces include their descendants and plugin extensions.
+  This covers process metadata and, for ``CalcJob``, ``code``, ``monitors`` and ``remote_folder``.
+* Inputs accepting only ``orm.Code`` subclasses, optionally together with ``None``, at any namespace depth.
+  Mixed types such as ``Code | Int`` and opaque ``Dict`` inputs do not qualify.
+* Execution inputs carried through ``spec.expose_inputs(...)``, including nested exposure chains.
+  Scientific siblings in the exposed namespace still need graph wiring.
+
+These rules apply to ``task(CalcJobSubclass)`` and ``task(WorkChainSubclass)``, not plain function tasks.
+Explicit graph wiring always owns an input, including an executable or import folder.
+Supplying that same input through configuration is an error, not an override or fallback, even if the values agree.
+A whole-namespace wire reserves all its descendants; dictionary-valued leaf ports are atomic.
+Separate namespace siblings can be wired and configured independently.
+Ordinary process defaults apply after combining the bindings.
+
+Nested graph placements introduce a configuration mapping level:
 
 .. code:: python
 
-    run_get_node(multiply_add_calc, x=2, y=3, z=4, code=code, task_metadata={'add_calc': {'options': {...}}})
+    runtime_config = {
+        'relax': {
+            'add_calc': {
+                'code': code,
+                'metadata': {'options': {'resources': {'num_machines': 1}}},
+            },
+        },
+    }
 
-Every ``CalcJob`` placement needs an entry; a missing one fails the launch with a ``GraphValidationError`` naming the placement.
-Nested graphs receive the same ``task_metadata``, keyed by their inner placement names, so give placements with different options distinct names.
-Standard ``metadata`` such as ``label`` applies to the graph process itself.
+Here ``relax`` names a nested graph placement containing ``add_calc``.
+For a WorkChain task, its exposed namespaces instead belong directly in its process input mapping, for example ``{'relax': {'base': {'pw': {'code': code}}}}``.
+Configuration never reaches through an opaque WorkChain to its unexposed children.
+Branch, loop and mapped-graph bodies introduce no configuration level; iterations and map items reuse the same static bindings.
+Aliases select placement names, not runtime call-link labels.
+
+``workflow.build()`` needs no runtime configuration.
+Launch validates supplied addresses, ownership and independently complete execution namespaces across all static branches, including bodies that may never execute.
+Validation requiring scientific task outputs occurs when the complete child inputs are available, through the normal process launch machinery.
+Missing required execution inputs fail validation; an omitted or empty placement entry is otherwise allowed.
+Unknown placements and scientific input paths are rejected.
+Child ``metadata.call_link_label`` belongs to the graph; child provenance suppression and dry runs are not supported.
+
+Configured nodes retain ordinary child provenance input links.
+The root records a configuration snapshot separately from its scientific inputs, preserving entity references through checkpoints and ``get_builder_restart()``.
+Changing caller-owned mappings after launch does not change the snapshot.
+
+``task_metadata`` is no longer supported.
+Move ``task_metadata={'add_calc': {'options': options}}`` to ``runtime_config={'add_calc': {'metadata': {'options': options}}}``.
+Historical ``task_metadata`` checkpoints and restart envelopes are not adapted.
 
 Static optional inputs, such as a restart folder, need no declaration: wire `None`
 and the input stays out of the launch; wire a node and it arrives. Unwired
@@ -895,7 +955,7 @@ These are gaps in the current implementation, expected to be closed with further
 * **Coarse error handling:** an undeclared task failure fails the graph, see `Failures and restarts`_. Declared failures branch and retry in the graph, see :ref:`topics:workflows:graphs:retries`; reusable error handlers and partial reruns are not yet available.
 * **Stored provenance only:** graphs and their tasks always store their nodes; unstored runs and unstored intermediate nodes are not supported.
 * **No dry runs:** graph metadata rejects ``dry_run``.
-* **No monitors yet:** ``CalcJob`` monitor mappings cannot be wired yet, since dictionary syntax only fills fixed namespaces.
+* **Monitor wiring:** dynamic ``CalcJob`` monitor mappings can be supplied through ``runtime_config``; graph wiring still needs a fixed namespace declaration.
 * **Local function tasks:** a function task runs in the interpreter that runs the graph, on a daemon worker when submitted. Running it on a remote computer is not yet supported.
 * **Serial loops:** a ``while`` runs one iteration at a time. Use ``par_map`` to run independent items of an owned container in parallel.
 * **No per-iteration outputs:** a graph output holds one node, so a loop cannot return one result per iteration, such as the trajectory of each relaxation step. A task can copy the values into one list node, without links to the original nodes. Container data types, in development, will hold the original nodes in one output.

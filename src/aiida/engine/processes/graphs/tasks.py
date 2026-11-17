@@ -51,9 +51,6 @@ from aiida.engine.utils import is_process_function
 from aiida.orm import CalcFunctionNode, CalcJobNode, Data, EnumData, WorkChainNode, to_aiida_type
 from aiida.orm.nodes.data.datanode import DataNode
 
-if t.TYPE_CHECKING:
-    from aiida.engine.processes.graphs.ir import ProcessTask
-
 __all__ = (
     'CalcJobTaskHandle',
     'FunctionTaskHandle',
@@ -485,7 +482,7 @@ class FunctionTaskHandle(t.Generic[P, R]):
 
 
 class CalcJobTaskHandle:
-    """A `CalcJob` subclass carrying its graph declaration, launched with per-placement metadata."""
+    """A `CalcJob` subclass carrying its graph declaration and execution input contract."""
 
     is_process_function: t.ClassVar[bool] = False
 
@@ -546,7 +543,7 @@ class CalcJobTaskHandle:
 
 
 class WorkChainTaskHandle:
-    """A `WorkChain` subclass carrying its graph declaration, wired on graph inputs only."""
+    """A `WorkChain` subclass carrying its graph declaration and execution input contract."""
 
     is_process_function: t.ClassVar[bool] = False
 
@@ -604,36 +601,6 @@ class WorkChainTaskHandle:
     def alias(self, name: str) -> PlacementHandle[t.Any, t.Any]:
         """Return an immutable handle placing this task under an explicit placement name."""
         return PlacementHandle(self, name)
-
-
-def _needs_metadata(task: t.Any) -> t.TypeGuard[ProcessTask]:
-    """Return whether a placement dispatches a `CalcJob` directly."""
-    from aiida.engine.processes.graphs.ir import ProcessTask
-
-    if not isinstance(task, ProcessTask):
-        return False
-    return issubclass(task.spec.process_class, CalcJob)
-
-
-def _merge_task_metadata(
-    task: ProcessTask, provided: Mapping[str, t.Any], inputs: dict[str, t.Any]
-) -> dict[str, t.Any]:
-    """Merge the stashed per-placement `CalcJob` metadata, failing loudly when absent."""
-    placement = task.name
-    try:
-        metadata = provided[placement]
-    except KeyError:
-        msg = (
-            f'task `{placement}` is a `CalcJob` and needs launch metadata; '
-            f"pass it keyed by placement name, e.g. `task_metadata={{'{placement}': {{...}}}}`."
-        )
-        raise GraphValidationError(msg) from None
-    if not isinstance(metadata, Mapping):
-        msg = f'task `{placement}` metadata must be a mapping of metadata inputs, not `{type(metadata)}`.'
-        raise GraphValidationError(msg)
-    # The stash wins: graph-wired inputs never carry `metadata` (it is excluded from the
-    # graph contract and popped at launch).
-    return {**inputs, 'metadata': dict(metadata)}
 
 
 def _error_codes(errors: type[ExitCodeEnum] | UnionType) -> tuple[dict[str, ExitCode], tuple[str, ...]]:

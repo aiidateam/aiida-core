@@ -9,6 +9,10 @@
 
 ### Breaking changes
 
+#### Local child completion no longer waits for database polling
+
+`Runner.call_on_process_finish` now notifies watchers directly when a child scheduled through the same runner's `submit` or `schedule` terminates, including unsuccessful exits, exceptions and kills. Local graphs and nested WorkChains consequently resume without waiting for `runner.poll.interval`, even without a broker. Callbacks still observe finalized terminal process state; execution tasks that fail or are cancelled before recording termination fall back to polling. Processes not tracked by the current runner, including children after checkpoint restoration, retain broadcast notifications and database polling. No configuration or database migration is required.
+
 #### Graph execution inputs use `runtime_config`
 
 Graph launch option `task_metadata` is replaced by `runtime_config`, keyed by static placement path and containing ordinary process input mappings. Move `task_metadata={'calc': {'options': options}}` to `runtime_config={'calc': {'metadata': {'options': options}}}`. Configuration now accepts unwired base `CalcJob`/`WorkChain` inputs, Code-only typed inputs (including Code subclasses), and execution inputs preserved through exposed namespaces. Explicit graph wiring remains supported and conflicts with configuration instead of being overridden. Nested graph placements introduce a mapping level; branches, loops and mapped graph bodies do not. Empty entries are no longer mandatory for CalcJobs. Root `metadata` still configures the graph itself, and `inputs={...}` carries workflow arguments separately.

@@ -80,7 +80,7 @@ def looped_counter(value: int, rounds: int) -> int:
         value = add(x=value, y=attempts)
         count = decrement(value=count)
         attempts = attempts + 1
-    return add(x=value, y=attempts)
+    return add.alias('add_2')(x=value, y=attempts)
 
 
 @graph

@@ -119,7 +119,7 @@ def add_single(x: Int, y: Int) -> int:
 def add_twice(x: Int, y: Int) -> int:
     """Add two numbers through two chained `WorkChain` placements."""
     first = add_chain(x=x, y=y)
-    second = add_chain(x=first.result, y=y)
+    second = add_chain.alias('add_chain_2')(x=first.result, y=y)
     return second.result
 
 

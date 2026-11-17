@@ -129,7 +129,7 @@ def nested_branch_in_loop(value: int) -> int:
     """Branch inside a loop; arms rebind loop state like assignments do."""
     total = add(x=value, y=1)
     while is_positive(value=total):
-        if is_positive(value=total):
+        if is_positive.alias('is_positive_2')(value=total):
             total = decrement(value=total)
         total = decrement(value=total)
     return total
@@ -203,7 +203,7 @@ def branch_local_join(value: int, flag: bool) -> int:
         else:
             step = add(x=total, y=0)
         total = add(x=step, y=0)
-        flag = is_positive(value=total)
+        flag = is_positive.alias('is_positive_2')(value=total)
     return total
 
 
@@ -216,7 +216,7 @@ def nested_local_loop(value: int, flag: bool) -> int:
         while is_positive(value=step):
             step = decrement(value=step)
         total = add(x=step, y=0)
-        flag = is_positive(value=total)
+        flag = is_positive.alias('is_positive_2')(value=total)
     return total
 
 
@@ -252,7 +252,7 @@ def local_leaks_after_loop(value: int, flag: bool) -> int:
     total = add(x=value, y=0)
     while flag:
         step = add(x=total, y=1)
-        total = add(x=step, y=1)
+        total = add.alias('add_2')(x=step, y=1)
         flag = is_positive(value=total)
     return step
 
@@ -277,8 +277,8 @@ def nested_loops(value: int) -> int:
         while is_positive(value=step):
             step = decrement(value=step)
         total = decrement(value=step)
-        step = decrement(value=total)
-        rough = is_positive(value=total)
+        step = decrement.alias('decrement_2')(value=total)
+        rough = is_positive.alias('is_positive_2')(value=total)
     return total
 
 
@@ -308,7 +308,7 @@ def loop_nullable_namespace(first: Settings, second: Settings, rounds: int) -> i
     """Carry a namespace with a `None` leaf across loop iterations."""
     count = add(x=rounds, y=0)
     while is_positive(value=count):
-        if is_positive(value=count):
+        if is_positive.alias('is_positive_2')(value=count):
             first = second
         count = decrement(value=count)
     return first.count

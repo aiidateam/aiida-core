@@ -137,7 +137,7 @@ def overwrite_both(value: int, flag: bool) -> int:
 def alias_both(value: int, flag: bool) -> int:
     """Select between two existing values; no task runs in the arms."""
     first = add(x=value, y=1)
-    second = add(x=value, y=2)
+    second = add.alias('add_2')(x=value, y=2)
     if flag:
         chosen = first
     else:
@@ -320,7 +320,7 @@ def loop_arm_two_names(value: int, flag: bool) -> int:
     if flag:
         while is_positive(value=total):
             total = decrement(value=total)
-            step = decrement(value=step)
+            step = decrement.alias('decrement_2')(value=step)
     else:
         total = add(x=total, y=0)
     return total
@@ -341,7 +341,7 @@ def alias_mismatched(value: int, label: str, flag: bool) -> int:
 def alias_namespace_both(value: int, flag: bool) -> ArithmeticPair:
     """Select between two whole task-output namespaces."""
     first = arithmetic_pair(x=value, y=3)
-    second = arithmetic_pair(x=value, y=4)
+    second = arithmetic_pair.alias('arithmetic_pair_2')(x=value, y=4)
     if flag:
         chosen = first
     else:

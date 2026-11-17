@@ -146,6 +146,74 @@ def aliased_map(values: DataList) -> DataList:
     return par_map(decrement.alias('step'), values)
 
 
+@graph
+def aliased_inner_scf(x: int, y: int) -> int:
+    """Place a function task under the outer alias name inside a nested graph."""
+    return add.alias('scf')(x=x, y=y)
+
+
+@graph
+def aliased_scoped_nested(x: int, y: int) -> int:
+    """Reuse one alias in the outer body and inside a nested graph; scopes keep them apart."""
+    first = add.alias('scf')(x=x, y=y)
+    return aliased_inner_scf.alias('stage')(x=first, y=y)
+
+
+# rejected at build: each placement needs its own name; repeats take `.alias('unique_name')`.
+@graph
+def duplicate_implicit(x: int, y: int) -> int:
+    """Call one task twice without aliases; the second placement reuses the task name."""
+    first = add(x=x, y=y)
+    return add(x=first, y=y)
+
+
+# rejected at build: each placement needs its own name, so one alias cannot cover two calls.
+@graph
+def duplicate_explicit(x: int, y: int) -> int:
+    """Place one task twice under one alias; each alias names a single placement."""
+    first = add.alias('scf')(x=x, y=y)
+    return add.alias('scf')(x=first, y=y)
+
+
+# rejected at build: an explicit alias cannot reuse a name another placement already holds.
+@graph
+def duplicate_mixed(x: int, y: int) -> int:
+    """Pair a bare call with an explicit alias colliding on the task name."""
+    first = add(x=x, y=y)
+    return add.alias('add')(x=first, y=y)
+
+
+# rejected at build: nested calls hide a placement; put the inner call on its own line first.
+@graph
+def duplicate_nested_argument(x: int, y: int) -> int:
+    """Nest one call inside another call to the same task; nesting never bypasses placement naming."""
+    return add(x=add(x=x, y=y), y=y)
+
+
+# rejected at build: repeated nested graphs name each subgraph placement, like tasks.
+@graph
+def duplicate_nested_graph(x: int, y: int, z: int) -> int:
+    """Place one nested graph twice without aliases."""
+    first = call_programs.multiply_add(x=x, y=y, z=z)
+    return call_programs.multiply_add(x=first, y=y, z=z)
+
+
+# rejected at build: repeated default maps share one map name; alias the callable instead.
+@graph
+def duplicate_map(values: DataList) -> DataList:
+    """Map one task twice without aliases; both maps would place as `map_decrement`."""
+    first = par_map(decrement, values)  # noqa: F841 - the first map is rejected before wiring matters
+    return par_map(decrement, values)
+
+
+# rejected at build: one map alias cannot cover two maps, like one task alias cannot cover two calls.
+@graph
+def duplicate_map_explicit(values: DataList) -> DataList:
+    """Map one aliased task twice under one map name."""
+    first = par_map(decrement.alias('step'), values)  # noqa: F841 - the first map is rejected before wiring matters
+    return par_map(decrement.alias('step'), values)
+
+
 # rejected at build: placement names are link labels and cannot be empty.
 @graph
 def alias_empty(x: int, y: int) -> int:

@@ -1922,18 +1922,27 @@ def _resolve_callable(
     _reject(state, node=expression, reason=msg)
 
 
-def _claim_explicit_name(state: _LoweringState, alias: str, node: ast.AST) -> str:
-    """Claim an explicit placement name, rejecting reuse within one graph body."""
+def _claim_placement(state: _LoweringState, name: str, node: ast.AST, *, is_map: bool = False) -> str:
+    """Claim one authored placement name, rejecting reuse within the same static body."""
     taken: set[str] = {placed.name for placed in state.tasks}
-    if alias in taken:
-        msg = f'placement name `{alias}` is already used in this graph; ' + 'use a new name for each placement instead'
+    if name in taken or state.used.get(name, 0) > 0:
+        if is_map:
+            msg = (
+                f'map placement name `{name}` is already used in this graph; '
+                + "pass a unique name with `par_map(task.alias('name'), values)` instead"
+            )
+        else:
+            msg = (
+                f'placement name `{name}` is already used in this graph; '
+                + "pass a unique name with `.alias('unique_name')` on the call instead"
+            )
         _reject(state, node=node, reason=msg)
-    state.used[alias] = max(state.used.get(alias, 0), 1)
-    return alias
+    state.used[name] = 1
+    return name
 
 
 def _claim_name(state: _LoweringState, name: str) -> str:
-    """Return a placement name unused by earlier placements."""
+    """Return an internal generated placement name, suffixing on collision."""
     state.used[name] += 1
     count = state.used[name]
     taken: set[str] = {placed.name for placed in state.tasks}
@@ -2070,9 +2079,9 @@ def _lower_par_map(state: _LoweringState, expression: ast.Call) -> _Reference:
     mapped_body: GraphIR | None = None
     mapped_spec: TaskIR | None = None
     if explicit is not None:
-        instance = _claim_explicit_name(state, explicit, node=func_expr)
+        instance = _claim_placement(state, explicit, node=func_expr, is_map=True)
     else:
-        instance = _claim_name(state, f'map_{call_name}')
+        instance = _claim_placement(state, f'map_{call_name}', node=func_expr, is_map=True)
     if isinstance(target, GraphHandle):
         mapped_body = _lower_graph(target, stack=state.stack)
         mapped_spec = None
@@ -2341,9 +2350,9 @@ def _lower_call(state: _LoweringState, expression: ast.expr) -> _Reference:
         return _lower_par_map(state, expression)
     assert isinstance(target, (FunctionTaskHandle, CalcJobTaskHandle, WorkChainTaskHandle, GraphHandle))
     if explicit is not None:
-        instance = _claim_explicit_name(state, explicit, node=expression)
+        instance = _claim_placement(state, explicit, node=expression)
     else:
-        instance = _claim_name(state, name=name)
+        instance = _claim_placement(state, name=name, node=expression)
     if isinstance(target, GraphHandle):
         body: GraphIR = _lower_graph(target, stack=state.stack)
         task: ProcessTask | SubgraphTask = SubgraphTask(name=instance, inputs={}, body=body)

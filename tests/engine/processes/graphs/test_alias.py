@@ -116,6 +116,49 @@ def test_aliased_map_builds() -> None:
     assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
 
 
+def test_aliased_scoped_nested_reuses_alias() -> None:
+    """One alias in the outer body and inside a nested graph lowers in separate scopes."""
+    spec = compile_graph(aliases.aliased_scoped_nested)
+    assert spec.task_names == ('scf', 'stage')
+    [placed] = [task for task in spec.tasks if isinstance(task, SubgraphTask)]
+    assert placed.body.task_names == ('scf',)
+    assert GraphIR.from_dict(json.loads(json.dumps(spec.to_dict()))).to_dict() == spec.to_dict()
+
+
+@pytest.mark.parametrize(
+    'declaration',
+    [
+        pytest.param(aliases.duplicate_implicit, id='implicit'),
+        pytest.param(aliases.duplicate_explicit, id='explicit'),
+        pytest.param(aliases.duplicate_mixed, id='mixed'),
+        pytest.param(aliases.duplicate_nested_graph, id='nested-graph'),
+    ],
+)
+def test_duplicate_placements_rejected(declaration: GraphHandle) -> None:
+    """Repeated placements in one body fail, naming the inline `.alias(...)` constructor."""
+    with pytest.raises(GraphLanguageError, match=r'already used in this graph.*\.alias\('):
+        declaration.build()
+
+
+def test_duplicate_nested_argument_rejected() -> None:
+    """A repeated name smuggled into a call argument still fails loudly."""
+    with pytest.raises(GraphLanguageError, match='nested calls hide a placement'):
+        aliases.duplicate_nested_argument.build()
+
+
+@pytest.mark.parametrize(
+    'declaration',
+    [
+        pytest.param(aliases.duplicate_map, id='implicit'),
+        pytest.param(aliases.duplicate_map_explicit, id='explicit'),
+    ],
+)
+def test_duplicate_maps_rejected(declaration: GraphHandle) -> None:
+    """Repeated maps in one body fail, naming the `par_map(task.alias('name'), ...)` form."""
+    with pytest.raises(GraphLanguageError, match=r'map placement name.*par_map\(task\.alias'):
+        declaration.build()
+
+
 @pytest.mark.parametrize(
     'declaration',
     [

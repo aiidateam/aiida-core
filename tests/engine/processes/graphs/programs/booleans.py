@@ -288,7 +288,7 @@ def while_present(value: int) -> int:
     current, _ = check_even(value=value)
     while current is not None:
         total = add(x=total, y=1)
-        value = add(x=value, y=1)
+        value = add.alias('add_2')(x=value, y=1)
         current, _ = check_even(value=value)
     return add(x=total, y=0)
 
@@ -301,7 +301,7 @@ def while_named_present(value: int) -> int:
     present = current is not None
     while present:
         total = add(x=total, y=1)
-        value = add(x=value, y=1)
+        value = add.alias('add_2')(x=value, y=1)
         current, _ = check_even(value=value)
         present = current is not None
     return add(x=total, y=0)

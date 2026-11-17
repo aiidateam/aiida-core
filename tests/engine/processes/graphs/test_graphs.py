@@ -856,7 +856,7 @@ def test_dictionary_leaf_is_a_single_node() -> None:
     """Dictionary leaves store as one node shared by caller and task."""
     outputs, node = run_get_node(ports.dictionary_input, values={'answer': 42})
     assert outputs['result'].value == 42
-    linked = node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('graph_inputs__values')
+    linked = node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('values')
     assert isinstance(linked, Dict)
     child = node.called[0]
     assert child.inputs.values.uuid == linked.uuid
@@ -876,7 +876,7 @@ def test_dynamic_leaf_stores_as_node() -> None:
     """A dynamic extra leaf arrives in provenance as a node."""
     _outputs, node = run_get_node(ports.input_passthrough, value=4)
     assert node.is_finished_ok
-    linked = node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('graph_inputs__value')
+    linked = node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('value')
     assert isinstance(linked, Int)
 
 

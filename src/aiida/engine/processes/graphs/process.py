@@ -90,7 +90,7 @@ class GraphProcess(Process):
 
     @classmethod
     def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
-        """Declare the stored graph and its per-instance inputs namespace."""
+        """Declare the engine launch envelope, distinct from the scientific input links."""
         super().define(spec)
         spec.input(cls._GRAPH, valid_type=Dict)
         # The stored graph supplies the fixed contract for these per-instance ports.
@@ -116,6 +116,21 @@ class GraphProcess(Process):
         )
         self._run = GraphRun.from_dict(graph=graph, given=stored, data=self._saved)
         return super()._create_and_setup_db_record()
+
+    @override
+    def _flat_inputs(self) -> dict[str, t.Any]:
+        """Link workflow arguments under their declared names, not the launch envelope."""
+        return dict(
+            super()._flatten_inputs(self._graph.build_input_namespace(), self._input_sources[self._GRAPH_INPUTS])
+        )
+
+    @override
+    def _setup_db_record(self) -> None:
+        super()._setup_db_record()
+        self.node.base.attributes.set(GraphNode.GRAPH_DEFINITION_KEY, self.inputs[self._GRAPH].get_dict())
+        metadata = self.inputs.get(self._TASK_METADATA)
+        if metadata is not None:
+            self.node.base.attributes.set(GraphNode.TASK_METADATA_KEY, metadata.get_dict())
 
     @classmethod
     def _launch_inputs(
@@ -155,6 +170,9 @@ class GraphProcess(Process):
     @override
     def save_instance_state(self, out_state: MutableMapping[str, t.Any], save_context: t.Any) -> None:
         """Checkpoint the scheduling progress and the graph input sources."""
+        # The launch envelope remains checkpointed, but no longer has scientific input links.
+        _store_run_nodes(self._input_sources[self._GRAPH])
+        _store_run_nodes(self._input_sources.get(self._TASK_METADATA))
         super().save_instance_state(out_state, save_context)
         run_state = self._run_state.to_dict()
         # Scope inputs must be stored before encoding: YAML checkpoints reference nodes by UUID.

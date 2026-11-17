@@ -6,11 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Flattened workflow arguments on `GraphNode.inputs`.
-
-The stored `INPUT_WORK` links keep the engine layout (`graph`, `graph_inputs`, optional `task_metadata`) so existing
-nodes and checkpoints need no migration; `GraphNode.inputs` projects the `graph_inputs` namespace to the top level.
-"""
+"""Workflow argument links, legacy input projection, and graph restart configuration."""
 
 import pytest
 
@@ -98,6 +94,7 @@ def test_nested_namespace_inputs_traverse() -> None:
     assert 'graph_inputs' not in node.inputs
     assert 'graph' not in node.inputs
     assert set(node.inputs) == {'config'}
+    assert _stored_labels(node) == {'config__label', 'config__settings__count', 'config__settings__nullable'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -112,7 +109,7 @@ def test_zero_inputs_expose_empty_manager() -> None:
     assert 'graph' not in node.inputs
     assert 'graph_inputs' not in node.inputs
     assert 'task_metadata' not in node.inputs
-    assert _stored_labels(node) == {'graph'}
+    assert _stored_labels(node) == set()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -124,9 +121,7 @@ def test_missing_optional_inputs_stay_absent() -> None:
     assert 'graph' not in node.inputs
     assert 'graph_inputs' not in node.inputs
     assert 'task_metadata' not in node.inputs
-    assert set(node.inputs) == {
-        label.removeprefix('graph_inputs__') for label in _stored_labels(node) if label.startswith('graph_inputs__')
-    }
+    assert set(node.inputs) == _stored_labels(node)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -163,28 +158,54 @@ def test_shadowed_engine_names_resolve_to_user_inputs() -> None:
     assert metadata_node.is_finished_ok
     assert outputs['result'].value == 9
     assert metadata_node.inputs.task_metadata.value == 9
-    for node in (graph_node, namespace_node, metadata_node):
-        stored = _stored_labels(node)
-        assert 'graph' in stored
-        assert any(label.startswith('graph_inputs__') for label in stored)
+    for node, name in ((graph_node, 'graph'), (namespace_node, 'graph_inputs'), (metadata_node, 'task_metadata')):
+        assert _stored_labels(node) == {name}
+        restarted, restarted_node = run_get_node(node.get_builder_restart())
+        assert restarted_node.is_finished_ok
+        assert restarted['result'].value == node.outputs.result.value
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_low_level_links_keep_engine_layout() -> None:
-    """`base.links` still exposes the stored namespace layout for engine introspection."""
+def test_low_level_links_use_declared_names() -> None:
+    """Provenance queries and visualizers see argument names without an engine prefix."""
     original = Int(2)
     _, node = run_get_node(call_programs.multiply_add, x=original, y=3, z=4)
     assert node.is_finished_ok
     nested = node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).nested()
-    assert set(nested) == {'graph', 'graph_inputs'}
-    assert isinstance(nested['graph'], Dict)
-    assert nested['graph_inputs']['x'].uuid == original.uuid
-    assert (
-        node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('graph_inputs__x').uuid
-        == original.uuid
-    )
+    assert set(nested) == {'x', 'y', 'z'}
+    assert nested['x'].uuid == original.uuid
+    assert node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('x').uuid == original.uuid
     with pytest.raises(NotExistent):
-        node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('x')
+        node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('graph_inputs__x')
+    assert (
+        node.base.attributes.get(GraphNode.GRAPH_DEFINITION_KEY) == compile_graph(call_programs.multiply_add).to_dict()
+    )
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_legacy_node_inputs_and_restart() -> None:
+    """Previously stored namespaced nodes remain readable and can launch new flat runs."""
+    definition = Dict(dict=compile_graph(call_programs.multiply_add).to_dict()).store()
+    original = Int(2).store()
+    node = GraphNode()
+    node.set_process_type(GraphProcess.build_process_type())
+    for label, value in {
+        'graph': definition,
+        'graph_inputs__x': original,
+        'graph_inputs__y': Int(3).store(),
+        'graph_inputs__z': Int(4).store(),
+    }.items():
+        node.base.links.add_incoming(value, LinkType.INPUT_WORK, label)
+    node.store()
+    node.seal()
+    reloaded = orm.load_node(node.pk)
+    assert set(reloaded.inputs) == {'x', 'y', 'z'}
+    assert reloaded.inputs.x.uuid == original.uuid
+    outputs, restarted = run_get_node(reloaded.get_builder_restart())
+    assert restarted.is_finished_ok
+    assert outputs['result'].value == 10
+    assert _stored_labels(restarted) == {'x', 'y', 'z'}
+    assert _stored_labels(reloaded) == {'graph', 'graph_inputs__x', 'graph_inputs__y', 'graph_inputs__z'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -205,6 +226,9 @@ def test_outputs_unchanged_and_no_graph_accessor() -> None:
     assert 'graph' in restart
     assert 'graph_inputs' in restart
     assert restart['graph_inputs']['x'].value == 2
+    restarted_outputs, restarted_node = run_get_node(restart)
+    assert restarted_node.is_finished_ok
+    assert restarted_outputs['result'].value == 10
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -224,7 +248,10 @@ def test_child_calcjob_inputs_keep_plain_semantics(aiida_code_installed) -> None
     assert outputs['result'].value == 5
     assert set(node.inputs) == {'x', 'y', 'code'}
     assert 'task_metadata' not in node.inputs
-    assert node.base.links.get_incoming(link_type=LinkType.INPUT_WORK).get_node_by_label('task_metadata') is not None
+    assert _stored_labels(node) == {'x', 'y', 'code'}
+    assert node.get_builder_restart()['task_metadata'].get_dict()['add_calc']['options'] == {
+        'custom_scheduler_commands': '# sentinel'
+    }
     (child,) = node.called
     assert set(child.inputs) == {'x', 'y', 'code'}
     assert child.get_option('custom_scheduler_commands') == '# sentinel'

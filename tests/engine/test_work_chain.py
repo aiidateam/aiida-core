@@ -1256,6 +1256,37 @@ class TestWorkChainAbortChildren:
         assert process.node.is_excepted is False
         assert process.node.is_killed is True
 
+    def test_kill_propagates_to_children_of_paused_parent(self):
+        """Regression for #7696: kill on a paused parent must still propagate to children.
+
+        For a paused process ``super().kill()`` transitions synchronously to KILLED, so
+        sampling ``has_terminated()`` afterwards skips the child-kill loop and orphans
+        live HPC jobs.
+        """
+        runner = get_manager().get_runner()
+        process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+        controller = LocalProcessController(process, runner.loop)
+
+        async def run_async():
+            await run_until_waiting(process)
+            assert await controller.pause_process(process.pid) is True
+            assert process.paused
+            assert await controller.kill_process(process.pid)
+            with pytest.raises(KilledError):
+                await process.future()
+
+        runner.schedule(process)
+        runner.loop.run_until_complete(run_async())
+
+        child = process.node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).first().node
+        assert child.is_finished_ok is False
+        assert child.is_excepted is False
+        assert child.is_killed is True
+
+        assert process.node.is_finished_ok is False
+        assert process.node.is_excepted is False
+        assert process.node.is_killed is True
+
 
 @pytest.mark.requires_broker
 class TestImmutableInputWorkchain:

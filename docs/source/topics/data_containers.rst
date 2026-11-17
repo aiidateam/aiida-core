@@ -80,7 +80,7 @@ Containers can be nested: a list may hold dicts whose value types differ from ea
 .. _topics:data_containers:copy:
 
 Insertion copies, never adopts
-=============================
+==============================
 
 Inserting a node into a container clones it, and the container owns the copy.
 The source keeps its identity and stays usable; inserting the same source twice produces two independent copies; inserting a copy copies it again.

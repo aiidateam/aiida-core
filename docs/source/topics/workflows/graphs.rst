@@ -366,7 +366,9 @@ A joined test re-evaluates from the rebound names each pass, so a bounded loop s
         while value != target and attempts < max_steps:
             value = value - 1
             attempts = attempts + 1
-return add(x=value, y=attempts) The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, scalar literal bindings such as ``attempts = 0``, ``if`` branches, or nested ``while`` loops.
+        return add(x=value, y=attempts)
+
+The body rebinds names bound before the loop, with task calls, inline assignments such as ``n = n - 1``, scalar literal bindings such as ``attempts = 0``, ``if`` branches, or nested ``while`` loops.
 A tested name must be rebound in the body; a tested call runs again after every iteration.
 An inline test re-evaluates from the rebound names.
 Names the body assigns without an enclosing binding are iteration-local, such as ``step`` below: declared on their first write, fresh every pass, never carried across iterations or visible after the loop.
@@ -429,6 +431,7 @@ Graphs can be launched like any other process, with a loaded AiiDA profile:
     # or
 
     node = submit(multiply_add, x=2, y=3, z=4)
+
 * ``run_get_node`` blocks until the graph finishes in the current interpreter.
 * ``submit`` returns the process node immediately and the daemon runs the graph in the background.
 * Calling ``multiply_add(x=2, y=3, z=4)`` directly raises a :py:class:`~aiida.common.exceptions.GraphError`, because the graph body is never executed as Python.
@@ -500,6 +503,7 @@ A task or graph called through ``.alias('scf')`` names its placement explicitly 
     def two_steps(x: int, y: int) -> int:
         first = add.alias('scf')(x=x, y=y)
         return add.alias('nscf')(x=first, y=y)
+
 * The constructor works for function tasks, ``CalcJob`` and ``WorkChain`` tasks, nested graphs, generic tasks, dotted and module call targets such as ``tasks.add.alias('scf')``, and the callable mapped with ``par_map``.
 * Each placement in one graph body needs its own name: calling one task or graph twice without aliases fails when the graph is built, as does reusing one alias for two placements or mixing a bare call with an alias on the same name.
 * The same rule covers maps: two default ``par_map`` placements over one callable share one map name and fail, so pass the alias on the callable (``par_map(task.alias('name'), values)``), which names the map placement exactly.
